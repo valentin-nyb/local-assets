@@ -86,17 +86,15 @@
 
     <script type="text/javascript">  
         var myWidget = cloudinary.createUploadWidget({
-            cloudName: 'dso3xwno0',
-            apiKey: '348952918412621',
-            uploadPreset: 'assets_unsigned', // MATCHES YOUR SCREENSHOT
-            folder: 'venue_masters',         // YOUR CHOSEN FOLDER
-            resourceType: 'video',
-            sources: ['local', 'camera', 'google_drive', 'dropbox'],
-            showPoweredBy: false, 
-            
-            // --- SETTINGS FOR LARGE 3.6GB FILES ---
-            chunkSize: 6000000,           // Send in 6MB chunks for stability
-            maxVideoFileSize: 5000000000, // Allow up to 5GB
+    cloudName: 'dso3xwno0',
+    apiKey: '348952918412621',
+    uploadPreset: 'assets_unsigned', //
+    resourceType: 'video',           //
+    
+    // --- FIX FOR 3.6GB SETS ---
+    chunkSize: 6000000,              // 6MB pieces
+    maxVideoFileSize: 5000000000     // 5GB total limit
+}, (error, result) => { /* ... */ });
             
             styles: {
                 palette: {
