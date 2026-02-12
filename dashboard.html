@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>Dashboard // local assets</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        background: '#050505',
+                        foreground: '#ffffff',
+                        card: '#0a0a0a',
+                        border: '#27272a',
+                        muted: { DEFAULT: '#27272a', foreground: '#a1a1aa' },
+                        primary: { DEFAULT: '#39FF14', foreground: '#000000', glow: 'rgba(57, 255, 20, 0.5)' },
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    backgroundImage: {
+                        'noise': "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E\")",
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #050505; color: #ffffff; -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #050505; }
+        ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #39FF14; }
+        .bg-scanlines { background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.2) 50%, rgba(0, 0, 0, 0.2)); background-size: 100% 4px; }
+        /* Joystick Styling */
+        .joystick-container { position: relative; width: 100px; height: 100px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; background: #000; box-shadow: inset 0 0 20px rgba(0,0,0,0.5); }
+        .joystick-knob { width: 40px; height: 40px; background: #222; border-radius: 50%; border: 1px solid #333; position: relative; z-index: 10; cursor: pointer; transition: transform 0.1s; }
+        .joystick-knob:active { background: #39FF14; box-shadow: 0 0 15px rgba(57, 255, 20, 0.5); }
+    </style>
+</head>
+
+<body class="font-sans antialiased bg-background text-foreground overflow-hidden h-screen w-screen flex">
+
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/80 z-40 hidden md:hidden backdrop-blur-sm transition-opacity duration-300 opacity-0"></div>
+
+    <aside id="dashboard-sidebar" class="w-64 border-r border-border bg-card flex flex-col fixed inset-y-0 left-0 z-50 transform -translate-x-full transition-transform duration-300 ease-in-out md:translate-x-0 md:static shrink-0 md:h-full">
+        <div class="h-16 flex items-center px-6 border-b border-border cursor-pointer hover:bg-white/5 transition-colors justify-between">
+            <a href="index.html" class="font-sans text-xl font-extrabold tracking-tighter text-white lowercase decoration-0">local / assets</a>
+            <button onclick="toggleSidebar()" class="md:hidden text-muted-foreground hover:text-white"><iconify-icon icon="solar:arrow-left-linear" class="text-lg"></iconify-icon></button>
+        </div>
+        
+        <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+            <button onclick="switchTab('overview')" id="btn-overview" class="w-full flex items-center gap-3 px-3 py-2 text-sm font-normal rounded-md text-white bg-white/5 transition-colors"><iconify-icon icon="solar:widget-5-linear" class="text-lg"></iconify-icon>Overview</button>
+            <button onclick="switchTab('camera')" id="btn-camera" class="w-full flex items-center gap-3 px-3 py-2 text-sm font-normal rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors"><iconify-icon icon="solar:videocamera-record-linear" class="text-lg"></iconify-icon>Camera Control</button>
+            <button onclick="switchTab('assets')" id="btn-assets" class="w-full flex items-center gap-3 px-3 py-2 text-sm font-normal rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors"><iconify-icon icon="solar:clapperboard-play-linear" class="text-lg"></iconify-icon>Assets</button>
+        </nav>
+
+        <div class="p-4 border-t border-border">
+            <div class="flex items-center gap-3 px-3 py-2 mb-2"><div class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div><span class="text-xs font-mono text-muted-foreground uppercase tracking-wider">REC: ROOM 1</span></div>
+            <button class="w-full flex items-center gap-3 px-3 py-2 text-sm font-normal rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors"><iconify-icon icon="solar:settings-linear" class="text-lg"></iconify-icon>Venue Settings</button>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col min-w-0 bg-background overflow-hidden relative w-full">
+        <div class="absolute inset-0 opacity-[0.03] pointer-events-none bg-noise z-0"></div>
+        <header class="h-16 flex items-center justify-between px-4 md:px-8 border-b border-border bg-background/50 backdrop-blur-sm z-10 shrink-0">
+            <div class="flex items-center gap-3">
+                <button onclick="toggleSidebar()" class="md:hidden text-white p-1 hover:bg-white/10 rounded-md transition-colors"><iconify-icon icon="solar:hamburger-menu-linear" class="text-xl block"></iconify-icon></button>
+                <div class="flex items-center gap-2 text-sm text-muted-foreground">
+                    <a href="index.html" class="hover:text-white cursor-pointer hidden md:inline">Home</a>
+                    <iconify-icon icon="solar:alt-arrow-right-linear" class="text-xs hidden md:inline"></iconify-icon>
+                    <span id="page-title" class="text-white font-medium">Dashboard Overview</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="hidden md:flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/10"><span class="w-2 h-2 rounded-full bg-primary"></span><span class="text-xs font-mono text-white">SYSTEM OK</span></div>
+                <div class="h-8 w-8 rounded-full bg-white flex items-center justify-center text-black font-semibold text-xs">F</div>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto scroll-smooth p-4 md:p-6 z-10 w-full pb-32">
+            <div class="max-w-[1400px] mx-auto space-y-6">
+
+                <div id="content-overview" class="space-y-6">
+                    <div onclick="switchTab('camera')" class="cursor-pointer hover:border-primary/50 transition-colors w-full bg-gradient-to-r from-red-500/10 to-transparent border border-red-500/20 rounded-xl p-6 md:p-10 relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <video autoplay loop muted playsinline class="absolute inset-0 w-full h-full object-cover opacity-60">
+                            <source src="https://res.cloudinary.com/dso3xwno0/video/upload/v1770850722/Screen_Recording_2026-02-11_at_3.50.31_PM_gqqlca.mov" type="video/mp4">
+                        </video>
+                        <div class="relative z-10">
+                            <div class="flex items-center gap-3 mb-2"><span class="inline-flex items-center gap-2 px-3 py-1 bg-red-500 text-white rounded-full text-xs font-semibold uppercase tracking-wider animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.4)]"><iconify-icon icon="solar:record-circle-linear" class="text-base"></iconify-icon> LIVE FEED</span><span class="text-red-500 font-mono text-xs tracking-wider uppercase">Room 1 // Main Floor</span></div>
+                            <h2 class="text-xl md:text-2xl font-semibold text-white tracking-tight">ARTIST: BELTRAN</h2>
+                        </div>
+                        <div class="flex gap-6 text-sm text-muted-foreground font-mono relative z-10">
+                            <div class="text-left"><span class="block text-xs text-white/50 mb-1">ELAPSED</span><span class="text-white">01:42:15</span></div>
+                            <div class="text-left"><span class="block text-xs text-white/50 mb-1">CAMERAS</span><span class="text-white">3/3 ACTIVE</span></div>
+                            <div class="text-left"><span class="block text-xs text-white/50 mb-1">BITRATE</span><span class="text-white">45 Mbps</span></div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="bg-card border border-border p-4 rounded-xl flex flex-col"><span class="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-2">Total Assets Captured</span><div class="flex items-end justify-between mt-auto"><span class="text-2xl font-semibold text-white">1,248</span><span class="text-xs text-primary font-mono bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">+12%</span></div></div>
+                        <div class="bg-card border border-border p-4 rounded-xl flex flex-col"><span class="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-2">Cloud Storage</span><div class="flex items-end justify-between mt-auto"><span class="text-2xl font-semibold text-white">42 TB</span><span class="text-xs text-muted-foreground font-mono">/ 50 TB</span></div><div class="w-full bg-[#222] h-1 mt-3 rounded-full overflow-hidden"><div class="bg-white h-full w-[84%]"></div></div></div>
+                        <div class="bg-card border border-border p-4 rounded-xl flex flex-col"><span class="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-2">Revenue Generated</span><div class="flex items-end justify-between mt-auto"><span class="text-2xl font-semibold text-white">£48,250</span><span class="text-xs text-primary font-mono bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">+24%</span></div></div>
+                        <div class="bg-card border border-border p-4 rounded-xl flex flex-col relative overflow-hidden"><div class="absolute right-0 top-0 bottom-0 w-1 bg-red-500 animate-pulse"></div><span class="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-2">Next Event</span><div class="mt-auto"><span class="block text-sm font-semibold text-white">Fabric Room 1</span><span class="text-xs text-muted-foreground font-mono">Tonight, 22:00 PM</span></div></div>
+                    </div>
+                </div>
+
+                <div id="content-camera" class="hidden space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full min-h-[600px]">
+                        <div class="lg:col-span-2 flex flex-col gap-4">
+                            <div class="flex-1 bg-black border border-border rounded-xl relative overflow-hidden group min-h-[400px]">
+                                <video autoplay loop muted playsinline class="absolute inset-0 w-full h-full object-cover opacity-60">
+                                    <source src="https://res.cloudinary.com/dso3xwno0/video/upload/v1770850722/Screen_Recording_2026-02-11_at_3.50.31_PM_gqqlca.mov" type="video/mp4">
+                                </video>
+                                <div class="absolute inset-0 bg-scanlines opacity-20 pointer-events-none"></div>
+                                <div class="absolute top-4 left-4 flex gap-2"><span class="bg-black/50 backdrop-blur border border-white/10 px-2 py-1 text-[10px] font-mono text-primary uppercase">CAM 01 [MAIN]</span><span class="bg-black/50 backdrop-blur border border-white/10 px-2 py-1 text-[10px] font-mono text-white uppercase">4K 60FPS</span></div>
+                            </div>
+                            <div class="grid grid-cols-3 gap-4 h-32">
+                                <div class="bg-black border-2 border-primary rounded-lg relative overflow-hidden cursor-pointer"><div class="absolute inset-0 bg-cover bg-center opacity-60" style="background-image: url('https://res.cloudinary.com/dso3xwno0/image/upload/v1770851279/Screenshot_2026-02-11_at_11.07.35_PM_ecpg7n.png');"></div><div class="absolute bottom-1 left-2 text-[8px] font-mono text-primary">CAM 01 // ACTIVE</div></div>
+                                <div class="bg-[#0a0a0a] border border-border rounded-lg relative overflow-hidden cursor-pointer hover:border-white/20 transition-colors group"><div class="absolute inset-0 bg-cover bg-center opacity-30 group-hover:opacity-50 transition-opacity grayscale" style="background-image: url('https://res.cloudinary.com/dso3xwno0/image/upload/v1770851138/Screenshot_2026-02-11_at_11.05.24_PM_b33ang.png');"></div><div class="absolute bottom-1 left-2 text-[8px] font-mono text-muted-foreground">CAM 02 // STBY</div></div>
+                                <div class="bg-[#0a0a0a] border border-border rounded-lg relative overflow-hidden cursor-pointer hover:border-white/20 transition-colors group"><div class="absolute inset-0 bg-cover bg-center opacity-30 group-hover:opacity-50 transition-opacity grayscale" style="background-image: url('https://res.cloudinary.com/dso3xwno0/image/upload/v1770851280/Screenshot_2026-02-11_at_11.06.28_PM_uekh1f.png');"></div><div class="absolute bottom-1 left-2 text-[8px] font-mono text-muted-foreground">CAM 03 // STBY</div></div>
+                            </div>
+                        </div>
+                        <div class="lg:col-span-1 bg-card border border-border rounded-xl p-6 flex flex-col gap-8 shadow-2xl relative overflow-hidden">
+                            <div class="flex justify-between items-center border-b border-border pb-4">
+                                <h3 class="font-mono text-xs text-primary tracking-[0.2em] uppercase flex items-center gap-2"><span class="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></span>Manual Override</h3>
+                            </div>
+                            <div class="flex-1 flex gap-6 items-center justify-between py-4">
+                                <div class="flex flex-col items-center gap-4 flex-1">
+                                    <div class="joystick-container">
+                                        <div class="joystick-knob"></div>
+                                    </div>
+                                    <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Pan / Tilt</span>
+                                </div>
+                                <div class="flex flex-col items-center gap-4">
+                                    <div class="h-48 w-12 bg-[#050505] border border-white/10 rounded-lg relative flex justify-center py-2 shadow-inner">
+                                         <div class="absolute top-1/3 left-1/2 -translate-x-1/2 w-8 h-6 bg-[#151515] border border-primary/50 rounded flex items-center justify-center shadow-[0_0_10px_rgba(57,255,20,0.2)] cursor-ns-resize hover:bg-[#222] transition-colors z-10"><div class="w-4 h-0.5 bg-primary"></div></div>
+                                    </div>
+                                    <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Zoom</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="content-assets" class="hidden space-y-6">
+                    <div class="bg-card border border-border rounded-xl p-6 md:p-10 flex flex-col items-center justify-center min-h-[500px]">
+                        <h2 class="text-2xl font-semibold text-white mb-2">Media Assets</h2>
+                        <p class="text-muted-foreground text-sm font-mono mb-8">Upload long-format sets, clips, or marketing assets.</p>
+                        <button id="upload_widget" onclick="openUploadWidget()" class="group relative px-8 py-4 bg-[#050505] border border-primary text-primary font-mono uppercase tracking-wider rounded-lg overflow-hidden transition-all hover:bg-primary hover:text-black shadow-[0_0_15px_rgba(57,255,20,0.2)]">
+                            <span class="relative z-10 flex items-center gap-3"><iconify-icon icon="solar:cloud-upload-linear" class="text-xl"></iconify-icon>Upload to Cloud</span>
+                        </button>
+                        <div id="asset-gallery" class="w-full mt-12 grid grid-cols-1 gap-6 hidden">
+                            <h3 class="text-sm font-mono text-muted-foreground uppercase tracking-wider border-b border-border pb-2 mb-4">Just Uploaded</h3>
+                            <div class="w-full aspect-video bg-black border border-border rounded-lg overflow-hidden relative">
+                                <video id="uploaded-video-player" controls class="w-full h-full object-contain"><source id="uploaded-video-source" src="" type="video/mp4"></video>
+                            </div>
+                            <div class="bg-[#111] p-4 rounded border border-border">
+                                <p class="text-xs text-primary font-mono mb-1">UPLOAD SUCCESSFUL</p>
+                                <p id="uploaded-url" class="text-[10px] text-muted-foreground break-all font-mono">https://...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function switchTab(tabName) {
+            document.getElementById('content-overview').classList.add('hidden');
+            document.getElementById('content-camera').classList.add('hidden');
+            document.getElementById('content-assets').classList.add('hidden');
+            
+            const targetContent = document.getElementById('content-' + tabName);
+            if(targetContent) targetContent.classList.remove('hidden');
+            
+            ['overview', 'camera', 'assets'].forEach(name => {
+                const btn = document.getElementById('btn-' + name);
+                if(btn) { btn.classList.remove('bg-white/5', 'text-white'); btn.classList.add('text-muted-foreground'); }
+            });
+
+            const activeBtn = document.getElementById('btn-' + tabName);
+            if(activeBtn) { activeBtn.classList.add('bg-white/5', 'text-white'); activeBtn.classList.remove('text-muted-foreground'); }
+
+            const titles = { 'overview': 'Dashboard Overview', 'camera': 'PTZ Command Center', 'assets': 'Media Asset Library' };
+            const titleElement = document.getElementById('page-title');
+            if(titleElement) titleElement.textContent = titles[tabName];
+
+            const sidebar = document.getElementById('dashboard-sidebar');
+            if (window.innerWidth < 768 && !sidebar.classList.contains('-translate-x-full')) { toggleSidebar(); }
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('dashboard-sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            const isOpen = !sidebar.classList.contains('-translate-x-full');
+            if (isOpen) {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.remove('opacity-100'); overlay.classList.add('opacity-0');
+                setTimeout(() => { overlay.classList.add('hidden'); }, 300);
+            } else {
+                sidebar.classList.remove('-translate-x-full'); overlay.classList.remove('hidden');
+                requestAnimationFrame(() => { overlay.classList.remove('opacity-0'); overlay.classList.add('opacity-100'); });
+            }
+        }
+
+        // CLOUDINARY WIDGET
+        var myWidget = cloudinary.createUploadWidget({
+            cloudName: 'dso3xwno0', 
+            uploadPreset: 'YOUR_UPLOAD_PRESET', 
+            sources: ['local', 'url', 'camera', 'google_drive'],
+            resourceType: 'video',
+            multiple: false,
+            maxFileSize: 1500000000, 
+            folder: 'local_assets_uploads',
+            styles: {
+                palette: {
+                    window: "#000000", windowBorder: "#39FF14", tabIcon: "#39FF14", menuIcons: "#FFFFFF", textDark: "#000000", textLight: "#FFFFFF", link: "#39FF14", action: "#39FF14", inactiveTabIcon: "#666666", error: "#FF0000", inProgress: "#39FF14", complete: "#20B832", sourceBg: "#1a1a1a"
+                }
+            }
+        }, (error, result) => { 
+            if (!error && result && result.event === "success") { 
+                document.getElementById('asset-gallery').classList.remove('hidden');
+                const videoPlayer = document.getElementById('uploaded-video-player');
+                const videoSource = document.getElementById('uploaded-video-source');
+                const urlDisplay = document.getElementById('uploaded-url');
+                videoSource.src = result.info.secure_url;
+                urlDisplay.textContent = result.info.secure_url;
+                videoPlayer.load();
+                videoPlayer.play();
+            }
+        });
+
+        function openUploadWidget() { myWidget.open(); }
+    </script>
+</body>
+</html>
