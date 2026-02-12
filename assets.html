@@ -200,15 +200,54 @@
             }
         }
 
-        function renderList() {
-            const list = document.getElementById('cloud-list');
-            const searchName = document.getElementById('search-name').value.toLowerCase();
-            const searchDate = document.getElementById('search-date').value;
+       function renderList() {
+    const list = document.getElementById('cloud-list');
+    const searchName = document.getElementById('search-name').value.toLowerCase();
+    const searchDate = document.getElementById('search-date').value;
 
-            const filtered = cloudAssets.filter(item => {
-                const nameMatch = item.artist.toLowerCase().includes(searchName) || item.shot.toLowerCase().includes(searchName);
-                const dateMatch = searchDate ? item.date === searchDate : true;
-                return nameMatch && dateMatch;
+    const filtered = cloudAssets.filter(item => {
+        // --- AUTO-CLEANUP LOGIC ---
+        // Hide files that contain these "trash" keywords from your screenshot
+        const isUnknown = item.artist.includes("UNKNOWN");
+        const isRandomTest = item.public_id.includes("xrerc") || item.public_id.includes("exa4f");
+        
+        if (isUnknown || isRandomTest) return false;
+
+        const nameMatch = item.artist.toLowerCase().includes(searchName) || item.shot.toLowerCase().includes(searchName);
+        const dateMatch = searchDate ? item.date === searchDate : true;
+        return nameMatch && dateMatch;
+    });
+
+    list.innerHTML = '';
+
+    if (filtered.length === 0) {
+         list.innerHTML = '<p class="text-[10px] font-mono text-zinc-600 italic">No assets found.</p>';
+         return;
+    }
+
+    filtered.forEach(item => {
+        const row = document.createElement('div');
+        row.className = "flex items-center justify-between p-3 bg-card/50 border border-border rounded-lg hover:border-primary/30 transition-colors group";
+        row.innerHTML = `
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-8 h-8 rounded bg-zinc-800 flex items-center justify-center shrink-0 text-primary">
+                    <iconify-icon icon="solar:cloud-check-bold"></iconify-icon>
+                </div>
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2">
+                        <p class="text-xs font-bold text-white truncate uppercase">${item.artist}</p>
+                        <span class="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 font-mono uppercase border border-zinc-700">${item.shot}</span>
+                    </div>
+                    <p class="text-[9px] font-mono text-zinc-500 truncate mt-0.5">${item.date} // ${item.format.toUpperCase()}</p>
+                </div>
+            </div>
+            <button onclick="playVideo('${item.url}', '${item.public_id}', '${item.format}')" class="p-2 text-zinc-400 hover:text-white">
+                <iconify-icon icon="solar:play-circle-linear" class="text-xl"></iconify-icon>
+            </button>
+        `;
+        list.appendChild(row);
+    });
+}
             });
 
             list.innerHTML = '';
