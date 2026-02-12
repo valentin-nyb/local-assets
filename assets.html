@@ -13,6 +13,7 @@
         }
     </script>
     <style>
+        /* This creates the blur effect on the page behind the widget */
         .cloudinary_sub_panel { backdrop-filter: blur(15px) !important; background: rgba(0,0,0,0.7) !important; }
         .nav-link.active { background-color: rgba(255,255,255,0.1); color: white; }
     </style>
@@ -88,11 +89,15 @@
         var myWidget = cloudinary.createUploadWidget({
             cloudName: 'dso3xwno0',
             apiKey: '348952918412621',
-            uploadPreset: 'assets_unsigned', // MATCHED TO YOUR SCREENSHOT
-            folder: 'venue_masters',         // NEW: This auto-creates a folder
+            uploadPreset: 'assets_unsigned', // MATCHES YOUR DASHBOARD PRESET
             resourceType: 'video',
             sources: ['local', 'camera', 'google_drive', 'dropbox'],
             showPoweredBy: false, 
+            
+            // --- LARGE FILE HANDLING ---
+            chunkSize: 6000000,           // 6MB chunks for reliability
+            maxVideoFileSize: 5000000000, // 5GB limit (Your file is 3.6GB)
+            
             styles: {
                 palette: {
                     window: "#050505",
@@ -133,7 +138,7 @@
                     <iconify-icon icon="solar:videocamera-record-bold" class="text-primary text-lg"></iconify-icon>
                     <div>
                         <p class="text-xs font-medium text-white">${info.original_filename}.${info.format}</p>
-                        <p class="text-[9px] font-mono text-zinc-500 uppercase tracking-tighter">${(info.bytes / 1000000).toFixed(2)} MB // ARCHIVED</p>
+                        <p class="text-[9px] font-mono text-zinc-500 uppercase tracking-tighter">${(info.bytes / 1073741824).toFixed(2)} GB // ARCHIVED</p>
                     </div>
                 </div>
                 <a href="${info.secure_url}" target="_blank" class="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-mono text-primary uppercase tracking-widest">View Asset →</a>
