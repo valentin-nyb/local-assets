@@ -13,7 +13,6 @@
         }
     </script>
     <style>
-        /* This creates the blur effect on the page behind the widget */
         .cloudinary_sub_panel { backdrop-filter: blur(15px) !important; background: rgba(0,0,0,0.7) !important; }
         .nav-link.active { background-color: rgba(255,255,255,0.1); color: white; }
     </style>
@@ -89,30 +88,30 @@
         var myWidget = cloudinary.createUploadWidget({
             cloudName: 'dso3xwno0',
             apiKey: '348952918412621',
-            uploadPreset: 'assets_unsigned', // MATCHES YOUR DASHBOARD PRESET
+            uploadPreset: 'assets_unsigned', // MATCHED TO YOUR DASHBOARD
             resourceType: 'video',
             sources: ['local', 'camera', 'google_drive', 'dropbox'],
             showPoweredBy: false, 
             
-            // --- LARGE FILE HANDLING ---
-            chunkSize: 6000000,           // 6MB chunks for reliability
-            maxVideoFileSize: 5000000000, // 5GB limit (Your file is 3.6GB)
+            // --- SETTINGS FOR 3.6GB LARGE FILES ---
+            chunkSize: 20000000,          // 20MB chunks for reliability
+            maxVideoFileSize: 5000000000, // Limit set to 5GB
             
             styles: {
                 palette: {
-                    window: "#050505",
-                    windowBorder: "#27272a",
-                    tabIcon: "#39FF14",
+                    window: "#050505",          
+                    windowBorder: "#27272a",    
+                    tabIcon: "#39FF14",         
                     menuIcons: "#FFFFFF",
                     textDark: "#000000",
                     textLight: "#FFFFFF",
                     link: "#39FF14",
-                    action: "#39FF14",
+                    action: "#39FF14",          
                     inactiveTabIcon: "#444444",
                     error: "#FF4444",
                     inProgress: "#39FF14",
                     complete: "#39FF14",
-                    sourceBg: "#050505"
+                    sourceBg: "#050505"         
                 }
             }
         }, (error, result) => {
