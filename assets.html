@@ -164,8 +164,11 @@
                 statusEl.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-primary"></span> Live';
                 
                 cloudAssets = data.resources.map(res => {
-                    const parts = res.public_id.split('_');
-                    let artist = res.public_id;
+                    // NEW: Strip the folder prefix
+                    const cleanId = res.public_id.replace('venue_masters/', '');
+                    const parts = cleanId.split('_');
+                    
+                    let artist = cleanId;
                     let date = "";
                     let shot = "MASTER";
 
@@ -225,7 +228,7 @@
                         </div>
                         <div class="min-w-0">
                             <div class="flex items-center gap-2">
-                                <p class="text-xs font-bold text-white truncate">${item.artist}</p>
+                                <p class="text-xs font-bold text-white truncate uppercase">${item.artist}</p>
                                 <span class="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 font-mono uppercase border border-zinc-700">${item.shot}</span>
                             </div>
                             <p class="text-[9px] font-mono text-zinc-500 truncate mt-0.5">${item.date} // ${item.format.toUpperCase()}</p>
@@ -294,7 +297,7 @@
             const player = document.getElementById('preview-player');
             container.classList.remove('hidden');
             player.src = url;
-            document.getElementById('video-name').textContent = `${name}.${format}`;
+            document.getElementById('video-name').textContent = name.replace('venue_masters/', '') + "." + format;
             document.getElementById('download-link').href = url;
             player.play();
             container.scrollIntoView({ behavior: 'smooth', block: 'center' });
