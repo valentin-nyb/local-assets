@@ -89,6 +89,15 @@
                         <h3 class="text-xs font-mono text-zinc-500 uppercase tracking-[0.3em]">Local Session History</h3>
                         <button onclick="clearHistory()" class="text-[9px] font-mono text-red-500 hover:text-red-400 uppercase tracking-widest">Clear Log</button>
                     </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="relative">
+                            <iconify-icon icon="solar:magnifer-linear" class="absolute left-3 top-2.5 text-zinc-500"></iconify-icon>
+                            <input type="text" id="filter-name" placeholder="Search DJ..." class="w-full bg-card border border-border rounded-lg pl-9 pr-4 py-2 text-xs focus:border-primary outline-none transition-all placeholder-zinc-600">
+                        </div>
+                        <input type="date" id="filter-date" class="w-full bg-card border border-border rounded-lg px-4 py-2 text-xs focus:border-primary outline-none transition-all text-zinc-400">
+                    </div>
+
                     <div id="local-list" class="space-y-2"></div>
                 </div>
 
@@ -143,7 +152,8 @@
                         date: eventDate
                     };
                     saveToLocalHistory(newAsset);
-                    renderLocalItem(newAsset);
+                    // Reload list (which includes the new item)
+                    filterHistory(); 
                 }
             }).open();
         }, false);
@@ -160,16 +170,63 @@
             container.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
-        // --- 4. LOCAL HISTORY LOGIC ---
+        // --- 4. LOCAL HISTORY & FILTER LOGIC ---
+        
+        // Listen for filter changes
+        document.getElementById('filter-name').addEventListener('input', filterHistory);
+        document.getElementById('filter-date').addEventListener('change', filterHistory);
+
         function loadLocalHistory() {
+            // Initial load just runs the filter with empty values (shows all)
+            filterHistory();
+        }
+
+        function filterHistory() {
             const history = JSON.parse(localStorage.getItem('uploadHistory')) || [];
+            const searchName = document.getElementById('filter-name').value.toLowerCase();
+            const searchDate = document.getElementById('filter-date').value;
+
+            const filtered = history.filter(item => {
+                const dj = (item.dj || "").toLowerCase();
+                const date = item.date || "";
+                
+                const matchesName = dj.includes(searchName);
+                const matchesDate = searchDate ? date === searchDate : true;
+
+                return matchesName && matchesDate;
+            });
+
+            renderList(filtered);
+        }
+
+        function renderList(items) {
             const list = document.getElementById('local-list');
             list.innerHTML = '';
-            if (history.length > 0) {
-                history.forEach(item => renderLocalItem(item));
-            } else {
-                list.innerHTML = '<p class="text-[10px] font-mono text-zinc-600 italic">No local uploads yet.</p>';
+
+            if (items.length === 0) {
+                list.innerHTML = '<p class="text-[10px] font-mono text-zinc-600 italic">No matching assets found.</p>';
+                return;
             }
+
+            items.forEach(info => {
+                const row = document.createElement('div');
+                row.className = "flex items-center justify-between p-3 bg-card/50 border border-border rounded-lg hover:border-primary/30 transition-colors group";
+                row.innerHTML = `
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-8 h-8 rounded bg-zinc-800 flex items-center justify-center shrink-0 text-primary">
+                            <iconify-icon icon="solar:history-bold"></iconify-icon>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-xs font-bold text-white truncate">${info.dj}</p>
+                            <p class="text-[9px] font-mono text-zinc-500 truncate">${info.name} // ${info.date}</p>
+                        </div>
+                    </div>
+                    <button onclick="playVideo('${info.url}', '${info.name}', '${info.format}')" class="p-2 text-zinc-400 hover:text-white">
+                        <iconify-icon icon="solar:play-circle-linear" class="text-xl"></iconify-icon>
+                    </button>
+                `;
+                list.appendChild(row);
+            });
         }
 
         function saveToLocalHistory(asset) {
@@ -178,33 +235,10 @@
             localStorage.setItem('uploadHistory', JSON.stringify(history));
         }
 
-        function renderLocalItem(info) {
-            const list = document.getElementById('local-list');
-            if (list.querySelector('p')) list.innerHTML = ''; 
-
-            const row = document.createElement('div');
-            row.className = "flex items-center justify-between p-3 bg-card/50 border border-border rounded-lg hover:border-primary/30 transition-colors group";
-            row.innerHTML = `
-                <div class="flex items-center gap-3 min-w-0">
-                    <div class="w-8 h-8 rounded bg-zinc-800 flex items-center justify-center shrink-0 text-primary">
-                        <iconify-icon icon="solar:history-bold"></iconify-icon>
-                    </div>
-                    <div class="min-w-0">
-                        <p class="text-xs font-bold text-white truncate">${info.dj}</p>
-                        <p class="text-[9px] font-mono text-zinc-500 truncate">${info.name} // ${info.date}</p>
-                    </div>
-                </div>
-                <button onclick="playVideo('${info.url}', '${info.name}', '${info.format}')" class="p-2 text-zinc-400 hover:text-white">
-                    <iconify-icon icon="solar:play-circle-linear" class="text-xl"></iconify-icon>
-                </button>
-            `;
-            list.prepend(row);
-        }
-
         function clearHistory() {
             if(confirm('Clear local log?')) {
                 localStorage.removeItem('uploadHistory');
-                loadLocalHistory();
+                filterHistory();
             }
         }
 
