@@ -52,7 +52,7 @@
                         <button id="upload_widget" class="px-8 py-3 bg-primary text-black font-bold rounded-full text-sm uppercase tracking-widest hover:shadow-[0_0_20px_rgba(57,255,20,0.4)] transition-all transform hover:-translate-y-0.5">
                             Start Master Upload
                         </button>
-                        <p class="mt-4 text-[10px] font-mono text-zinc-600 uppercase">Support for 4K Master Sets (Unsigned)</p>
+                        <p class="mt-4 text-[10px] font-mono text-zinc-600 uppercase">Support for 4K Master Sets</p>
                     </div>
                 </div>
 
@@ -76,14 +76,14 @@
 
                 <div class="space-y-4">
                     <div class="flex items-center justify-between border-b border-zinc-800 pb-2">
-                        <h3 class="text-xs font-mono text-zinc-500 uppercase tracking-[0.3em]">Local Session History</h3>
-                        <button onclick="clearHistory()" class="text-[9px] font-mono text-red-500 hover:text-red-400 uppercase tracking-widest">Clear Log</button>
+                        <h3 class="text-xs font-mono text-zinc-500 uppercase tracking-[0.3em]">Venue Session History</h3>
+                        <button onclick="clearHistory()" class="text-[9px] font-mono text-red-500 hover:text-red-400 uppercase tracking-widest cursor-pointer">CLEAR LOG</button>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div class="relative">
                             <iconify-icon icon="solar:magnifer-linear" class="absolute left-3 top-2.5 text-zinc-500"></iconify-icon>
-                            <input type="text" id="filter-name" placeholder="Search or Tag DJ..." class="w-full bg-card border border-border rounded-lg pl-9 pr-4 py-2 text-xs focus:border-primary outline-none transition-all placeholder-zinc-600 text-white">
+                            <input type="text" id="filter-name" placeholder="Enter DJ Name..." class="w-full bg-card border border-border rounded-lg pl-9 pr-4 py-2 text-xs focus:border-primary outline-none transition-all placeholder-zinc-600 text-white font-bold">
                         </div>
                         
                         <input type="date" id="filter-date" class="w-full bg-card border border-border rounded-lg px-4 py-2 text-xs focus:border-primary outline-none transition-all text-zinc-400">
@@ -108,14 +108,23 @@
     </main>
 
     <script type="text/javascript">  
+        // 1. LOAD HISTORY
         window.addEventListener('load', () => { loadLocalHistory(); });
 
+        // 2. UPLOAD LOGIC
         document.getElementById("upload_widget").addEventListener("click", function(){
-            const rawDjName = document.getElementById('filter-name').value || "Unknown_Artist";
+            const rawDjName = document.getElementById('filter-name').value.trim();
             const dateInput = document.getElementById('filter-date').value || new Date().toISOString().split('T')[0];
             const shotType = document.getElementById('filter-shot').value || "MASTER";
             
-            // CLEAN FILENAME: Remove special chars, spaces to underscores
+            // SECURITY: Block upload if name is missing
+            if (!rawDjName) {
+                alert("⚠️ PLEASE ENTER DJ NAME\n\nYou must type a name in the 'Enter DJ Name' box before uploading.");
+                document.getElementById('filter-name').focus();
+                return;
+            }
+
+            // Clean Name Logic
             const cleanDjName = rawDjName.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase();
             const fileName = `${cleanDjName}_${dateInput}_${shotType}`;
 
@@ -130,10 +139,8 @@
                 chunkSize: 6000000, 
                 maxVideoFileSize: 5000000000,
                 
-                // --- FIXED NAMING CONFIG ---
-                public_id: fileName,    // Sets the custom name directly
-                // REMOVED 'use_filename' to prevent unsigned error
-                
+                // NAMING
+                public_id: fileName,    
                 tags: ['venue_recording', cleanDjName, dateInput, shotType], 
                 context: { dj: cleanDjName, date: dateInput, shot: shotType },
                 
@@ -148,8 +155,10 @@
                 }
             }, (error, result) => {
                 if (!error && result && result.event === "success") {
-                    playVideo(result.info.secure_url, result.info.original_filename, result.info.format);
+                    // Play
+                    playVideo(result.info.secure_url, result.info.public_id, result.info.format);
                     
+                    // Save
                     const newAsset = {
                         url: result.info.secure_url,
                         name: result.info.public_id, 
@@ -160,6 +169,8 @@
                         shot: shotType
                     };
                     saveToLocalHistory(newAsset);
+
+                    // Clear & Refresh
                     document.getElementById('filter-name').value = ''; 
                     filterHistory(); 
                 }
@@ -177,6 +188,7 @@
             container.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
+        // 3. HISTORY & FILTER LOGIC
         document.getElementById('filter-name').addEventListener('input', filterHistory);
         document.getElementById('filter-date').addEventListener('change', filterHistory);
 
@@ -188,32 +200,48 @@
             const searchDate = document.getElementById('filter-date').value;
 
             const filtered = history.filter(item => {
+                // AUTO-HIDE OLD "UNKNOWN" FILES
+                if (item.dj === "Unknown_Artist" || item.name.includes("Unknown_Artist") || item.name.includes("UNKNOWN_ARTIST")) return false;
+
                 const dj = (item.dj || "").toLowerCase();
                 const date = item.date || "";
-                return dj.includes(searchName) && (searchDate ? date === searchDate : true);
+                
+                const matchesName = dj.includes(searchName);
+                const matchesDate = searchDate ? date === searchDate : true;
+
+                return matchesName && matchesDate;
             });
+
             renderList(filtered);
         }
 
         function renderList(items) {
             const list = document.getElementById('local-list');
             list.innerHTML = '';
+            
             if (items.length === 0) {
-                list.innerHTML = '<p class="text-[10px] font-mono text-zinc-600 italic">No matching assets found.</p>';
+                // If the user has typed something but no results
+                const searchName = document.getElementById('filter-name').value;
+                if(searchName) {
+                    list.innerHTML = '<p class="text-[10px] font-mono text-zinc-600 italic">No previous assets found. Click "Start Master Upload" to create: <b>' + searchName.toUpperCase() + '</b></p>';
+                } else {
+                    list.innerHTML = '<p class="text-[10px] font-mono text-zinc-600 italic">History is empty.</p>';
+                }
                 return;
             }
+
             items.forEach(info => {
                 const row = document.createElement('div');
                 row.className = "flex items-center justify-between p-3 bg-card/50 border border-border rounded-lg hover:border-primary/30 transition-colors group";
                 row.innerHTML = `
                     <div class="flex items-center gap-3 min-w-0">
                         <div class="w-8 h-8 rounded bg-zinc-800 flex items-center justify-center shrink-0 text-primary">
-                            <iconify-icon icon="solar:history-bold"></iconify-icon>
+                            <iconify-icon icon="solar:clapperboard-play-linear"></iconify-icon>
                         </div>
                         <div class="min-w-0">
                             <div class="flex items-center gap-2">
                                 <p class="text-xs font-bold text-white truncate">${info.dj}</p>
-                                <span class="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 font-mono">${info.shot || 'MASTER'}</span>
+                                <span class="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 font-mono uppercase border border-zinc-700">${info.shot || 'MASTER'}</span>
                             </div>
                             <p class="text-[9px] font-mono text-zinc-500 truncate mt-0.5">${info.name} // ${info.date}</p>
                         </div>
@@ -233,7 +261,7 @@
         }
 
         function clearHistory() {
-            if(confirm('Clear local log?')) {
+            if(confirm('Clear all local logs? This cannot be undone.')) {
                 localStorage.removeItem('uploadHistory');
                 filterHistory();
             }
