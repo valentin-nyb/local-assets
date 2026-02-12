@@ -44,7 +44,7 @@
         </header>
 
         <div class="flex-1 p-8 overflow-y-auto">
-            <div class="max-w-4xl mx-auto space-y-12">
+            <div class="max-w-4xl mx-auto space-y-12 pb-20">
                 
                 <div class="p-12 border-2 border-dashed border-zinc-800 rounded-3xl bg-card/30 text-center">
                     <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -67,15 +67,19 @@
                         <div class="p-6 flex items-center justify-between bg-zinc-900/30">
                             <div>
                                 <p class="text-[10px] font-mono text-primary uppercase tracking-widest mb-1">Status: Verified & Archived</p>
-                                <p id="video-name" class="text-sm font-medium text-white truncate max-w-md">Processing asset...</p>
+                                <p id="video-name" class="text-sm font-medium text-white truncate max-w-md">Processing...</p>
                             </div>
-                            <div class="flex gap-4">
-                                <p id="asset-url" class="hidden"></p>
-                                <a id="download-link" href="#" target="_blank" class="text-zinc-400 hover:text-white transition-colors">
-                                    <iconify-icon icon="solar:download-linear" class="text-xl"></iconify-icon>
-                                </a>
-                            </div>
+                            <a id="download-link" href="#" target="_blank" class="text-zinc-400 hover:text-white transition-colors">
+                                <iconify-icon icon="solar:download-linear" class="text-xl"></iconify-icon>
+                            </a>
                         </div>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <h3 class="text-xs font-mono text-zinc-500 uppercase tracking-[0.3em] border-b border-zinc-800 pb-2">Session History</h3>
+                    <div id="archive-list" class="space-y-2">
+                        <p id="empty-history" class="text-[10px] font-mono text-zinc-600 italic">No assets synced in this session.</p>
                     </div>
                 </div>
 
@@ -113,22 +117,40 @@
             }
         }, (error, result) => {
             if (!error && result && result.event === "success") {
-                console.log('Done! Asset Info: ', result.info);
-                
-                // 1. Unhide the gallery
+                // 1. Update the Main Preview
                 document.getElementById('recent-upload').classList.remove('hidden');
-                
-                // 2. Map data to the preview card
                 const player = document.getElementById('preview-player');
                 player.src = result.info.secure_url;
                 document.getElementById('video-name').textContent = result.info.original_filename + "." + result.info.format;
-                document.getElementById('asset-url').textContent = result.info.secure_url;
                 document.getElementById('download-link').href = result.info.secure_url;
-                
-                // 3. Play video automatically
                 player.play();
+
+                // 2. Add to Session History List
+                addToArchive(result.info);
             }
         });
+
+        function addToArchive(info) {
+            const list = document.getElementById('archive-list');
+            const emptyMsg = document.getElementById('empty-history');
+            if (emptyMsg) emptyMsg.remove();
+
+            const row = document.createElement('div');
+            row.className = "flex items-center justify-between p-3 bg-card/50 border border-border rounded-lg hover:border-primary/30 transition-colors group";
+            row.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <iconify-icon icon="solar:videocamera-record-bold" class="text-primary text-lg"></iconify-icon>
+                    <div>
+                        <p class="text-xs font-medium text-white">${info.original_filename}.${info.format}</p>
+                        <p class="text-[9px] font-mono text-zinc-500 uppercase tracking-tighter">${(info.bytes / 1000000).toFixed(2)} MB // ARCHIVED</p>
+                    </div>
+                </div>
+                <a href="${info.secure_url}" target="_blank" class="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-mono text-primary uppercase tracking-widest">
+                    View Asset →
+                </a>
+            `;
+            list.prepend(row);
+        }
 
         document.getElementById("upload_widget").addEventListener("click", function(){
             myWidget.open();
@@ -139,7 +161,7 @@
             document.getElementById('sidebar-overlay').classList.toggle('hidden');
         }
 
-        // Sidebar highlight script
+        // Highlight active sidebar link
         document.querySelectorAll('.nav-link').forEach(link => {
             if (link.href === window.location.href) {
                 link.classList.add('bg-white/10', 'text-white');
