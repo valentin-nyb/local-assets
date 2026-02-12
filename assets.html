@@ -1,162 +1,42 @@
-<!DOCTYPE html>
-<html lang="en" class="dark">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <title>Media Hub // local assets</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
-    <script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: { background: '#050505', card: '#0a0a0a', primary: '#39FF14', border: '#27272a' }
-                }
+<script type="text/javascript">  
+    var myWidget = cloudinary.createUploadWidget({
+        cloudName: 'dso3xwno0',
+        apiKey: '348952918412621',
+        // MATCHED TO YOUR SCREENSHOT:
+        uploadPreset: 'assets_unsigned', 
+        // NEW: This tells Cloudinary which folder to put files in
+        folder: 'venue_masters', 
+        resourceType: 'video',
+        sources: ['local', 'camera', 'google_drive', 'dropbox'],
+        showPoweredBy: false,
+        styles: {
+            palette: {
+                window: "#050505",
+                windowBorder: "#27272a",
+                tabIcon: "#39FF14",
+                menuIcons: "#FFFFFF",
+                textDark: "#000000",
+                textLight: "#FFFFFF",
+                link: "#39FF14",
+                action: "#39FF14",
+                inactiveTabIcon: "#444444",
+                error: "#FF4444",
+                inProgress: "#39FF14",
+                complete: "#39FF14",
+                sourceBg: "#0a0a0a"
             }
         }
-    </script>
-    <style>
-        /* Force a deep blur and dark overlay on the page behind the pop-up */
-        .cloudinary_sub_panel { 
-            backdrop-filter: blur(20px) !important; 
-            background-color: rgba(0, 0, 0, 0.7) !important; 
+    }, (error, result) => {
+        if (!error && result && result.event === "success") {
+            document.getElementById('recent-upload').classList.remove('hidden');
+            const player = document.getElementById('preview-player');
+            player.src = result.info.secure_url;
+            document.getElementById('video-name').textContent = result.info.original_filename + "." + result.info.format;
+            document.getElementById('download-link').href = result.info.secure_url;
+            player.play();
+            addToArchive(result.info);
         }
-        .nav-link.active { background-color: rgba(255,255,255,0.1); color: white; }
-    </style>
-</head>
-<body class="bg-background text-white h-screen w-screen flex overflow-hidden">
+    });
 
-    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/80 z-40 hidden md:hidden"></div>
-
-    <aside id="sidebar" class="w-64 border-r border-zinc-800 bg-[#0a0a0a] flex flex-col fixed inset-y-0 left-0 z-50 transform -translate-x-full transition-transform duration-300 md:translate-x-0 md:static shrink-0 h-full">
-        <div class="h-16 flex items-center px-6 border-b border-zinc-800">
-            <a href="index.html" class="font-sans text-xl font-extrabold tracking-tighter text-white lowercase decoration-0">local / assets</a>
-        </div>
-        <nav class="flex-1 p-4 space-y-2">
-            <a href="dashboard.html" class="nav-link flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors hover:bg-white/5 text-zinc-400">
-                <iconify-icon icon="solar:widget-5-linear" class="text-lg"></iconify-icon>Overview
-            </a>
-            <a href="camera.html" class="nav-link flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors hover:bg-white/5 text-zinc-400">
-                <iconify-icon icon="solar:videocamera-record-linear" class="text-lg"></iconify-icon>Camera Control
-            </a>
-            <a href="assets.html" class="nav-link active flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors hover:bg-white/5">
-                <iconify-icon icon="solar:clapperboard-play-linear" class="text-lg"></iconify-icon>Media Assets
-            </a>
-        </nav>
-    </aside>
-
-    <main class="flex-1 flex flex-col overflow-hidden">
-        <header class="h-16 flex items-center px-8 border-b border-border bg-background/50 backdrop-blur-md">
-            <span class="text-white font-medium text-sm font-mono uppercase tracking-widest text-primary">Media Asset Library</span>
-        </header>
-
-        <div class="flex-1 p-8 overflow-y-auto">
-            <div class="max-w-4xl mx-auto space-y-12 pb-20">
-                
-                <div class="p-12 border-2 border-dashed border-zinc-800 rounded-3xl bg-card/30 text-center">
-                    <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <iconify-icon icon="solar:upload-track-2-linear" class="text-2xl text-primary"></iconify-icon>
-                    </div>
-                    <h2 class="text-2xl font-bold mb-2 uppercase tracking-tight text-white">Ingest Media</h2>
-                    <p class="text-zinc-500 mb-10 font-mono text-xs uppercase tracking-widest">Protocol Archive // Secure 4K Uplink</p>
-                    <button id="upload_widget" class="px-10 py-4 bg-primary text-black font-extrabold rounded-full uppercase tracking-widest hover:shadow-[0_0_30px_rgba(57,255,20,0.5)] transition-all transform hover:-translate-y-1">
-                        Open Upload Portal
-                    </button>
-                </div>
-
-                <div id="recent-upload" class="hidden space-y-4">
-                    <h3 class="text-xs font-mono text-zinc-500 uppercase tracking-widest border-b border-zinc-800 pb-2">Recently Synced Asset</h3>
-                    <div class="bg-card border border-primary/20 rounded-2xl overflow-hidden shadow-[0_0_20px_rgba(57,255,20,0.05)]">
-                        <div class="aspect-video bg-black relative">
-                            <video id="preview-player" controls class="w-full h-full object-contain"></video>
-                        </div>
-                        <div class="p-6 flex items-center justify-between bg-zinc-900/30">
-                            <div>
-                                <p class="text-[10px] font-mono text-primary uppercase tracking-widest mb-1">Status: Verified & Archived</p>
-                                <p id="video-name" class="text-sm font-medium text-white truncate max-w-md">Processing...</p>
-                            </div>
-                            <a id="download-link" href="#" target="_blank" class="text-zinc-400 hover:text-white transition-colors font-mono text-xs uppercase tracking-widest">Download Asset</a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="space-y-4">
-                    <h3 class="text-xs font-mono text-zinc-500 uppercase tracking-[0.3em] border-b border-zinc-800 pb-2">Session History</h3>
-                    <div id="archive-list" class="space-y-2">
-                        <p id="empty-history" class="text-[10px] font-mono text-zinc-600 italic">No assets synced in this session.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <script type="text/javascript">  
-        var myWidget = cloudinary.createUploadWidget({
-            cloudName: 'dso3xwno0',
-            apiKey: '348952918412621',
-            uploadPreset: 'protocol_unsigned', 
-            resourceType: 'video',
-            sources: ['local', 'camera', 'google_drive', 'dropbox'],
-            showPoweredBy: false,
-            // Force the theme to "minimal" before applying custom colors
-            theme: "minimal", 
-            styles: {
-                palette: {
-                    window: "#000000",
-                    windowBorder: "#333333",
-                    tabIcon: "#39FF14",
-                    menuIcons: "#FFFFFF",
-                    textDark: "#000000",
-                    textLight: "#FFFFFF",
-                    link: "#39FF14",
-                    action: "#39FF14",
-                    inactiveTabIcon: "#444444",
-                    error: "#FF4444",
-                    inProgress: "#39FF14",
-                    complete: "#39FF14",
-                    sourceBg: "#050505"
-                }
-            }
-        }, (error, result) => {
-            if (!error && result && result.event === "success") {
-                document.getElementById('recent-upload').classList.remove('hidden');
-                const player = document.getElementById('preview-player');
-                player.src = result.info.secure_url;
-                document.getElementById('video-name').textContent = result.info.original_filename + "." + result.info.format;
-                document.getElementById('download-link').href = result.info.secure_url;
-                player.play();
-                addToArchive(result.info);
-            }
-        });
-
-        function addToArchive(info) {
-            const list = document.getElementById('archive-list');
-            const emptyMsg = document.getElementById('empty-history');
-            if (emptyMsg) emptyMsg.remove();
-            const row = document.createElement('div');
-            row.className = "flex items-center justify-between p-3 bg-card/50 border border-border rounded-lg hover:border-primary/30 transition-colors group";
-            row.innerHTML = `
-                <div class="flex items-center gap-3">
-                    <iconify-icon icon="solar:videocamera-record-bold" class="text-primary text-lg"></iconify-icon>
-                    <div>
-                        <p class="text-xs font-medium text-white">${info.original_filename}.${info.format}</p>
-                        <p class="text-[9px] font-mono text-zinc-500 uppercase tracking-tighter">${(info.bytes / 1048576).toFixed(2)} MB // ARCHIVED</p>
-                    </div>
-                </div>
-                <a href="${info.secure_url}" target="_blank" class="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-mono text-primary uppercase tracking-widest">View Asset →</a>
-            `;
-            list.prepend(row);
-        }
-
-        document.getElementById("upload_widget").addEventListener("click", function(){
-            myWidget.open();
-        }, false);
-
-        function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('-translate-x-full');
-            document.getElementById('sidebar-overlay').classList.toggle('hidden');
-        }
-    </script>
-</body>
-</html>
+    // ... (rest of your existing addToArchive and toggleSidebar functions)
+</script>
