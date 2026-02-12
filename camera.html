@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>PTZ Command // local assets</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { background: '#050505', card: '#0a0a0a', primary: '#39FF14', border: '#27272a' }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #050505; color: white; -webkit-font-smoothing: antialiased; }
+        .joystick-container { position: relative; width: 120px; height: 120px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; background: #000; }
+        .joystick-knob { width: 50px; height: 50px; background: #222; border-radius: 50%; border: 1px solid #333; cursor: move; transition: transform 0.1s; }
+        .joystick-knob:active { background: #39FF14; box-shadow: 0 0 20px rgba(57, 255, 20, 0.4); }
+    </style>
+</head>
+<body class="font-sans antialiased h-screen w-screen flex overflow-hidden">
+
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/80 z-40 hidden md:hidden backdrop-blur-sm"></div>
+
+    <aside id="sidebar" class="w-64 border-r border-zinc-800 bg-[#0a0a0a] flex flex-col fixed inset-y-0 left-0 z-50 transform -translate-x-full transition-transform duration-300 md:translate-x-0 md:static shrink-0 h-full">
+        <div class="h-16 flex items-center px-6 border-b border-zinc-800">
+            <a href="index.html" class="font-sans text-xl font-extrabold tracking-tighter text-white lowercase">local / assets</a>
+        </div>
+        <nav class="flex-1 p-4 space-y-2">
+            <a href="dashboard.html" class="nav-link flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors hover:bg-white/5 text-zinc-400">
+                <iconify-icon icon="solar:widget-5-linear" class="text-lg"></iconify-icon>Overview
+            </a>
+            <a href="camera.html" class="nav-link flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors hover:bg-white/5 text-zinc-400">
+                <iconify-icon icon="solar:videocamera-record-linear" class="text-lg"></iconify-icon>Camera Control
+            </a>
+            <a href="assets.html" class="nav-link flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors hover:bg-white/5 text-zinc-400">
+                <iconify-icon icon="solar:clapperboard-play-linear" class="text-lg"></iconify-icon>Media Assets
+            </a>
+        </nav>
+    </aside>
+
+    <main class="flex-1 flex flex-col min-w-0 bg-background overflow-hidden relative">
+        <header class="h-16 flex items-center justify-between px-8 border-b border-border bg-background/50 backdrop-blur-sm">
+            <div class="flex items-center gap-3">
+                <button onclick="toggleSidebar()" class="md:hidden text-white"><iconify-icon icon="solar:hamburger-menu-linear" class="text-xl"></iconify-icon></button>
+                <span class="text-white font-medium text-sm">PTZ Command Center</span>
+            </div>
+        </header>
+
+        <div class="flex-1 p-6 grid grid-cols-1 lg:grid-cols-3 gap-6 overflow-y-auto">
+            <div class="lg:col-span-2 bg-black border border-border rounded-xl relative overflow-hidden h-[500px]">
+                <video autoplay loop muted playsinline class="w-full h-full object-cover opacity-70">
+                    <source src="https://res.cloudinary.com/dso3xwno0/video/upload/v1770850722/Screen_Recording_2026-02-11_at_3.50.31_PM_gqqlca.mov" type="video/mp4">
+                </video>
+                <div class="absolute top-4 left-4 bg-black/50 border border-primary/50 text-primary px-2 py-1 font-mono text-[10px]">CAM_01 // LIVE</div>
+            </div>
+
+            <div class="bg-card border border-border rounded-xl p-8 flex flex-col items-center justify-center gap-10">
+                <div class="joystick-container">
+                    <div class="joystick-knob"></div>
+                </div>
+                <div class="w-full space-y-2">
+                    <label class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest block text-center">Optical Zoom</label>
+                    <input type="range" class="w-full accent-primary">
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+        }
+
+        document.querySelectorAll('.nav-link').forEach(link => {
+            if (link.href === window.location.href) {
+                link.classList.add('bg-white/10', 'text-white');
+                link.classList.remove('text-zinc-400');
+            }
+        });
+    </script>
+</body>
+</html>
