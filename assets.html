@@ -53,17 +53,6 @@
                         </button>
                         <p class="mt-4 text-[10px] font-mono text-zinc-600 uppercase">Support for 4K Master Sets (Unsigned)</p>
                     </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-card p-6 rounded-2xl border border-border">
-                        <div>
-                            <label class="block text-[10px] font-mono text-zinc-500 uppercase mb-2 tracking-widest">DJ / Artist Name</label>
-                            <input type="text" id="dj-tag" placeholder="e.g. BELTRAN" class="w-full bg-background border border-border rounded-lg px-4 py-3 text-sm focus:border-primary outline-none transition-all text-white placeholder-zinc-700">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-mono text-zinc-500 uppercase mb-2 tracking-widest">Venue Date</label>
-                            <input type="date" id="date-tag" class="w-full bg-background border border-border rounded-lg px-4 py-3 text-sm focus:border-primary outline-none transition-all text-white">
-                        </div>
-                    </div>
                 </div>
 
                 <div id="recent-upload" class="hidden space-y-4">
@@ -93,7 +82,7 @@
                     <div class="grid grid-cols-2 gap-4">
                         <div class="relative">
                             <iconify-icon icon="solar:magnifer-linear" class="absolute left-3 top-2.5 text-zinc-500"></iconify-icon>
-                            <input type="text" id="filter-name" placeholder="Search DJ..." class="w-full bg-card border border-border rounded-lg pl-9 pr-4 py-2 text-xs focus:border-primary outline-none transition-all placeholder-zinc-600">
+                            <input type="text" id="filter-name" placeholder="Search or Tag DJ..." class="w-full bg-card border border-border rounded-lg pl-9 pr-4 py-2 text-xs focus:border-primary outline-none transition-all placeholder-zinc-600 text-white">
                         </div>
                         <input type="date" id="filter-date" class="w-full bg-card border border-border rounded-lg px-4 py-2 text-xs focus:border-primary outline-none transition-all text-zinc-400">
                     </div>
@@ -111,10 +100,11 @@
             loadLocalHistory();
         });
 
-        // --- 2. UPLOAD WIDGET ---
+        // --- 2. UPLOAD WIDGET (Using Filter Inputs for Metadata) ---
         document.getElementById("upload_widget").addEventListener("click", function(){
-            const djName = document.getElementById('dj-tag').value || "Unknown_Artist";
-            const eventDate = document.getElementById('date-tag').value || new Date().toISOString().split('T')[0];
+            // Pulls metadata from the Search/Filter fields now
+            const djName = document.getElementById('filter-name').value || "Unknown_Artist";
+            const eventDate = document.getElementById('filter-date').value || new Date().toISOString().split('T')[0];
 
             cloudinary.createUploadWidget({
                 cloudName: 'dso3xwno0',
@@ -152,7 +142,7 @@
                         date: eventDate
                     };
                     saveToLocalHistory(newAsset);
-                    // Reload list (which includes the new item)
+                    // Reload list
                     filterHistory(); 
                 }
             }).open();
@@ -172,12 +162,10 @@
 
         // --- 4. LOCAL HISTORY & FILTER LOGIC ---
         
-        // Listen for filter changes
         document.getElementById('filter-name').addEventListener('input', filterHistory);
         document.getElementById('filter-date').addEventListener('change', filterHistory);
 
         function loadLocalHistory() {
-            // Initial load just runs the filter with empty values (shows all)
             filterHistory();
         }
 
