@@ -16,6 +16,8 @@
         .cloudinary_sub_panel { backdrop-filter: blur(15px) !important; background: rgba(0,0,0,0.7) !important; }
         .nav-link.active { background-color: rgba(255,255,255,0.1); color: white; }
         select { -webkit-appearance: none; -moz-appearance: none; appearance: none; }
+        /* Placeholder styling */
+        input::placeholder { color: #52525b; opacity: 1; }
     </style>
 </head>
 <body class="bg-background text-white h-screen w-screen flex overflow-hidden font-sans">
@@ -48,11 +50,38 @@
             <div class="max-w-5xl mx-auto space-y-12 pb-20">
                 
                 <div class="space-y-6">
-                    <div class="p-8 border border-dashed border-zinc-800 rounded-2xl bg-card/30 text-center hover:border-primary/30 transition-colors group">
-                        <button id="upload_widget" class="px-8 py-3 bg-primary text-black font-bold rounded-full text-sm uppercase tracking-widest hover:shadow-[0_0_20px_rgba(57,255,20,0.4)] transition-all transform hover:-translate-y-0.5">
-                            Start Master Upload
-                        </button>
-                        <p class="mt-4 text-[10px] font-mono text-zinc-600 uppercase">Support for 4K Master Sets</p>
+                    <div class="p-8 border border-dashed border-zinc-800 rounded-2xl bg-card/30 hover:border-primary/30 transition-colors group">
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                            <div class="relative group/input">
+                                <label class="absolute -top-2.5 left-3 bg-[#0a0a0a] px-1 text-[9px] text-zinc-500 font-mono uppercase tracking-widest group-focus-within/input:text-primary transition-colors">Artist Name</label>
+                                <input type="text" id="ingest-name" placeholder="e.g. BELTRAN" class="w-full bg-[#050505] border border-zinc-800 rounded-lg px-4 py-3 text-xs focus:border-primary outline-none transition-all text-white font-bold">
+                            </div>
+                            
+                            <div class="relative group/input">
+                                <label class="absolute -top-2.5 left-3 bg-[#0a0a0a] px-1 text-[9px] text-zinc-500 font-mono uppercase tracking-widest group-focus-within/input:text-primary transition-colors">Event Date</label>
+                                <input type="date" id="ingest-date" class="w-full bg-[#050505] border border-zinc-800 rounded-lg px-4 py-3 text-xs focus:border-primary outline-none transition-all text-zinc-400">
+                            </div>
+                            
+                            <div class="relative group/input">
+                                <label class="absolute -top-2.5 left-3 bg-[#0a0a0a] px-1 text-[9px] text-zinc-500 font-mono uppercase tracking-widest group-focus-within/input:text-primary transition-colors">Camera Angle</label>
+                                <select id="ingest-shot" class="w-full bg-[#050505] border border-zinc-800 rounded-lg px-4 py-3 text-xs focus:border-primary outline-none transition-all text-zinc-400 cursor-pointer">
+                                    <option value="MASTER">Master Cam</option>
+                                    <option value="BACK-VIEW">Back View</option>
+                                    <option value="FRONT-BOOTH">Front Booth</option>
+                                    <option value="CROWD-WIDE">Crowd Wide</option>
+                                    <option value="ROAMING">Roaming</option>
+                                </select>
+                                <iconify-icon icon="solar:alt-arrow-down-linear" class="absolute right-3 top-3.5 text-zinc-600 pointer-events-none"></iconify-icon>
+                            </div>
+                        </div>
+
+                        <div class="text-center">
+                            <button id="upload_widget" class="px-10 py-3 bg-primary text-black font-extrabold rounded-full text-xs uppercase tracking-[0.2em] hover:shadow-[0_0_25px_rgba(57,255,20,0.4)] transition-all transform hover:-translate-y-0.5">
+                                Start Master Upload
+                            </button>
+                            <p class="mt-4 text-[9px] font-mono text-zinc-600 uppercase tracking-widest">Support for 4K Master Sets (Unsigned)</p>
+                        </div>
                     </div>
                 </div>
 
@@ -74,30 +103,18 @@
                     </div>
                 </div>
 
-                <div class="space-y-4">
+                <div class="space-y-4 pt-4">
                     <div class="flex items-center justify-between border-b border-zinc-800 pb-2">
                         <h3 class="text-xs font-mono text-zinc-500 uppercase tracking-[0.3em]">Venue Session History</h3>
                         <button onclick="clearHistory()" class="text-[9px] font-mono text-red-500 hover:text-red-400 uppercase tracking-widest cursor-pointer">CLEAR LOG</button>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="grid grid-cols-2 gap-4">
                         <div class="relative">
                             <iconify-icon icon="solar:magnifer-linear" class="absolute left-3 top-2.5 text-zinc-500"></iconify-icon>
-                            <input type="text" id="filter-name" placeholder="Enter DJ Name..." class="w-full bg-card border border-border rounded-lg pl-9 pr-4 py-2 text-xs focus:border-primary outline-none transition-all placeholder-zinc-600 text-white font-bold">
+                            <input type="text" id="search-name" placeholder="Search History..." class="w-full bg-card border border-border rounded-lg pl-9 pr-4 py-2 text-xs focus:border-zinc-500 outline-none transition-all placeholder-zinc-700 text-white">
                         </div>
-                        
-                        <input type="date" id="filter-date" class="w-full bg-card border border-border rounded-lg px-4 py-2 text-xs focus:border-primary outline-none transition-all text-zinc-400">
-                        
-                        <div class="relative">
-                            <select id="filter-shot" class="w-full bg-card border border-border rounded-lg px-4 py-2 text-xs focus:border-primary outline-none transition-all text-zinc-400 cursor-pointer">
-                                <option value="MASTER">Master Cam</option>
-                                <option value="BACK-VIEW">Back View</option>
-                                <option value="FRONT-BOOTH">Front Booth</option>
-                                <option value="CROWD-WIDE">Crowd Wide</option>
-                                <option value="ROAMING">Roaming</option>
-                            </select>
-                            <iconify-icon icon="solar:alt-arrow-down-linear" class="absolute right-3 top-2.5 text-zinc-500 pointer-events-none"></iconify-icon>
-                        </div>
+                        <input type="date" id="search-date" class="w-full bg-card border border-border rounded-lg px-4 py-2 text-xs focus:border-zinc-500 outline-none transition-all text-zinc-500">
                     </div>
 
                     <div id="local-list" class="space-y-2"></div>
@@ -108,40 +125,34 @@
     </main>
 
     <script type="text/javascript">  
-        // --- SAFE INITIALIZATION ---
-        // Waits for the entire page to be ready before attaching logic
         window.onload = function() {
-            console.log("System Ready");
+            // Set Default Date in Ingest
+            document.getElementById('ingest-date').value = new Date().toISOString().split('T')[0];
             
-            // 1. Attach Upload Click Listener
+            // Listeners
             const uploadBtn = document.getElementById("upload_widget");
-            if (uploadBtn) {
-                uploadBtn.addEventListener("click", startUploadProcess, false);
-            } else {
-                console.error("Upload button not found!");
-            }
+            if (uploadBtn) uploadBtn.addEventListener("click", startUploadProcess, false);
 
-            // 2. Attach Filter Listeners
-            document.getElementById('filter-name').addEventListener('input', filterHistory);
-            document.getElementById('filter-date').addEventListener('change', filterHistory);
+            document.getElementById('search-name').addEventListener('input', filterHistory);
+            document.getElementById('search-date').addEventListener('change', filterHistory);
 
-            // 3. Load Initial History
             loadLocalHistory();
         };
 
         function startUploadProcess() {
-            const rawDjName = document.getElementById('filter-name').value.trim();
-            const dateInput = document.getElementById('filter-date').value || new Date().toISOString().split('T')[0];
-            const shotType = document.getElementById('filter-shot').value || "MASTER";
+            // 1. GET VALUES FROM INGEST BOX (TOP)
+            const rawDjName = document.getElementById('ingest-name').value.trim();
+            const dateInput = document.getElementById('ingest-date').value;
+            const shotType = document.getElementById('ingest-shot').value;
             
-            // SECURITY: Block upload if name is missing
+            // Validation
             if (!rawDjName) {
-                alert("⚠️ PLEASE ENTER DJ NAME\n\nYou must type a name in the 'Enter DJ Name' box before uploading.");
-                document.getElementById('filter-name').focus();
+                alert("⚠️ MISSING ARTIST NAME\n\nPlease enter the DJ Name inside the upload box.");
+                document.getElementById('ingest-name').focus();
                 return;
             }
 
-            // Clean Name Logic
+            // Naming Logic
             const cleanDjName = rawDjName.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase();
             const fileName = `${cleanDjName}_${dateInput}_${shotType}`;
 
@@ -172,10 +183,8 @@
                 }
             }, (error, result) => {
                 if (!error && result && result.event === "success") {
-                    // Play
                     playVideo(result.info.secure_url, result.info.public_id, result.info.format);
                     
-                    // Save
                     const newAsset = {
                         url: result.info.secure_url,
                         name: result.info.public_id, 
@@ -186,9 +195,10 @@
                         shot: shotType
                     };
                     saveToLocalHistory(newAsset);
-
-                    // Clear & Refresh
-                    document.getElementById('filter-name').value = ''; 
+                    
+                    // Clear Ingest Inputs (optional, keeps clean)
+                    document.getElementById('ingest-name').value = ''; 
+                    
                     filterHistory(); 
                 }
             }).open();
@@ -209,12 +219,13 @@
 
         function filterHistory() {
             const history = JSON.parse(localStorage.getItem('uploadHistory')) || [];
-            const searchName = document.getElementById('filter-name').value.toLowerCase();
-            const searchDate = document.getElementById('filter-date').value;
+            // 2. GET VALUES FROM SEARCH BOX (BOTTOM)
+            const searchName = document.getElementById('search-name').value.toLowerCase();
+            const searchDate = document.getElementById('search-date').value;
 
             const filtered = history.filter(item => {
-                // AUTO-HIDE OLD "UNKNOWN" FILES
-                if (item.dj === "Unknown_Artist" || item.name.includes("Unknown_Artist") || item.name.includes("UNKNOWN_ARTIST")) return false;
+                // Auto-hide bad data
+                if (item.dj === "Unknown_Artist" || item.name.includes("Unknown_Artist")) return false;
 
                 const dj = (item.dj || "").toLowerCase();
                 const date = item.date || "";
@@ -233,10 +244,9 @@
             list.innerHTML = '';
             
             if (items.length === 0) {
-                // If the user has typed something but no results
-                const searchName = document.getElementById('filter-name').value;
+                const searchName = document.getElementById('search-name').value;
                 if(searchName) {
-                    list.innerHTML = '<p class="text-[10px] font-mono text-zinc-600 italic">No previous assets found. Click "Start Master Upload" to create: <b>' + searchName.toUpperCase() + '</b></p>';
+                    list.innerHTML = '<p class="text-[10px] font-mono text-zinc-600 italic">No assets found matching "' + searchName + '"</p>';
                 } else {
                     list.innerHTML = '<p class="text-[10px] font-mono text-zinc-600 italic">History is empty.</p>';
                 }
@@ -272,13 +282,11 @@
                 const history = JSON.parse(localStorage.getItem('uploadHistory')) || [];
                 history.unshift(asset);
                 localStorage.setItem('uploadHistory', JSON.stringify(history));
-            } catch (e) {
-                console.error("Save failed", e);
-            }
+            } catch (e) { console.error(e); }
         }
 
         function clearHistory() {
-            if(confirm('Clear all local logs? This cannot be undone.')) {
+            if(confirm('Clear all local logs?')) {
                 localStorage.removeItem('uploadHistory');
                 filterHistory();
             }
