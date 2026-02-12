@@ -68,7 +68,7 @@
                 </div>
 
                 <div id="recent-upload" class="hidden space-y-4">
-                    <h3 class="text-xs font-mono text-zinc-500 uppercase tracking-widest border-b border-zinc-800 pb-2">Recently Synced Asset</h3>
+                    <h3 class="text-xs font-mono text-zinc-500 uppercase tracking-widest border-b border-zinc-800 pb-2">Last Upload Preview</h3>
                     <div class="bg-card border border-primary/20 rounded-2xl overflow-hidden shadow-[0_0_20px_rgba(57,255,20,0.05)]">
                         <div class="aspect-video bg-black relative">
                             <video id="preview-player" controls class="w-full h-full object-contain"></video>
@@ -86,10 +86,12 @@
                 </div>
 
                 <div class="space-y-4">
-                    <h3 class="text-xs font-mono text-zinc-500 uppercase tracking-[0.3em] border-b border-zinc-800 pb-2">Session History</h3>
-                    <div id="archive-list" class="space-y-2">
-                        <p id="empty-history" class="text-[10px] font-mono text-zinc-600 italic">No assets synced in this session.</p>
+                    <div class="flex items-center justify-between border-b border-zinc-800 pb-2">
+                        <h3 class="text-xs font-mono text-zinc-500 uppercase tracking-[0.3em]">Local History</h3>
+                        <button onclick="clearHistory()" class="text-[9px] font-mono text-red-500 hover:text-red-400 uppercase tracking-widest">Clear Log</button>
                     </div>
+                    <div id="archive-list" class="space-y-2">
+                        </div>
                 </div>
 
             </div>
@@ -97,9 +99,16 @@
     </main>
 
     <script type="text/javascript">  
-        // We initialize the widget logic dynamically inside the click handler 
-        // to ensure we capture the latest input values (DJ Name/Date)
-        
+        // 1. LOAD HISTORY ON STARTUP
+        window.addEventListener('load', () => {
+            const history = JSON.parse(localStorage.getItem('uploadHistory')) || [];
+            if (history.length > 0) {
+                history.forEach(item => renderHistoryItem(item));
+            } else {
+                document.getElementById('archive-list').innerHTML = '<p id="empty-history" class="text-[10px] font-mono text-zinc-600 italic">No assets synced in this session.</p>';
+            }
+        });
+
         document.getElementById("upload_widget").addEventListener("click", function(){
             const djName = document.getElementById('dj-tag').value || "Unknown_Artist";
             const eventDate = document.getElementById('date-tag').value || new Date().toISOString().split('T')[0];
@@ -112,33 +121,16 @@
                 resourceType: 'video',
                 sources: ['local', 'camera', 'google_drive'],
                 showPoweredBy: false,
-                
-                // LARGE FILE SUPPORT
                 chunkSize: 6000000, 
                 maxVideoFileSize: 5000000000,
-                
-                // DYNAMIC TAGGING
                 tags: ['venue_recording', djName, eventDate], 
-                context: {
-                    dj_name: djName, 
-                    event_date: eventDate
-                },
-
-                // STYLING
+                context: { dj_name: djName, event_date: eventDate },
                 styles: {
                     palette: {
-                        window: "#050505",
-                        windowBorder: "#27272a",
-                        tabIcon: "#39FF14",
-                        menuIcons: "#FFFFFF",
-                        textDark: "#000000",
-                        textLight: "#FFFFFF",
-                        link: "#39FF14",
-                        action: "#39FF14",
-                        inactiveTabIcon: "#444444",
-                        error: "#FF4444",
-                        inProgress: "#39FF14",
-                        complete: "#39FF14",
+                        window: "#050505", windowBorder: "#27272a", tabIcon: "#39FF14",
+                        menuIcons: "#FFFFFF", textDark: "#000000", textLight: "#FFFFFF",
+                        link: "#39FF14", action: "#39FF14", inactiveTabIcon: "#444444",
+                        error: "#FF4444", inProgress: "#39FF14", complete: "#39FF14",
                         sourceBg: "#050505"
                     }
                 }
@@ -150,19 +142,33 @@
                     document.getElementById('recent-upload').classList.remove('hidden');
                     const player = document.getElementById('preview-player');
                     player.src = result.info.secure_url;
-                    
-                    // Update Text
                     document.getElementById('video-name').textContent = result.info.original_filename + "." + result.info.format;
                     document.getElementById('download-link').href = result.info.secure_url;
                     player.play();
                     
-                    // Add to History List
-                    addToArchive(result.info);
+                    // SAVE TO LOCAL STORAGE
+                    const newAsset = {
+                        url: result.info.secure_url,
+                        name: result.info.original_filename,
+                        format: result.info.format,
+                        size: (result.info.bytes / 1073741824).toFixed(2),
+                        dj: djName,
+                        date: eventDate
+                    };
+                    
+                    saveToHistory(newAsset);
+                    renderHistoryItem(newAsset);
                 }
             }).open();
         }, false);
 
-        function addToArchive(info) {
+        function saveToHistory(asset) {
+            const history = JSON.parse(localStorage.getItem('uploadHistory')) || [];
+            history.unshift(asset); // Add to beginning of array
+            localStorage.setItem('uploadHistory', JSON.stringify(history));
+        }
+
+        function renderHistoryItem(info) {
             const list = document.getElementById('archive-list');
             const emptyMsg = document.getElementById('empty-history');
             if (emptyMsg) emptyMsg.remove();
@@ -170,16 +176,35 @@
             const row = document.createElement('div');
             row.className = "flex items-center justify-between p-3 bg-card/50 border border-border rounded-lg hover:border-primary/30 transition-colors group";
             row.innerHTML = `
-                <div class="flex items-center gap-3">
-                    <iconify-icon icon="solar:videocamera-record-bold" class="text-primary text-lg"></iconify-icon>
-                    <div>
-                        <p class="text-xs font-medium text-white text-left">${info.original_filename}.${info.format}</p>
-                        <p class="text-[9px] font-mono text-zinc-500 uppercase tracking-tighter text-left">${(info.bytes / 1073741824).toFixed(2)} GB // ARCHIVED</p>
+                <div class="flex items-center gap-3 w-full">
+                    <div class="w-8 h-8 rounded bg-primary/10 flex items-center justify-center shrink-0">
+                        <iconify-icon icon="solar:videocamera-record-bold" class="text-primary text-lg"></iconify-icon>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2">
+                            <p class="text-xs font-bold text-white truncate">${info.dj}</p>
+                            <span class="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 font-mono">${info.date}</span>
+                        </div>
+                        <p class="text-[10px] font-mono text-zinc-500 truncate mt-0.5">${info.name}.${info.format} // ${info.size} GB</p>
                     </div>
                 </div>
-                <a href="${info.secure_url}" target="_blank" class="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-mono text-primary uppercase tracking-widest">View Asset →</a>
+                <div class="flex gap-2">
+                     <a href="${info.url}" target="_blank" class="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors">
+                        <iconify-icon icon="solar:eye-linear"></iconify-icon>
+                    </a>
+                    <a href="${info.url}" download class="p-2 text-primary hover:bg-primary/10 rounded transition-colors">
+                        <iconify-icon icon="solar:download-linear"></iconify-icon>
+                    </a>
+                </div>
             `;
             list.prepend(row);
+        }
+
+        function clearHistory() {
+            if(confirm('Clear local history logs? Cloud files will remain safe.')) {
+                localStorage.removeItem('uploadHistory');
+                location.reload();
+            }
         }
 
         function toggleSidebar() {
