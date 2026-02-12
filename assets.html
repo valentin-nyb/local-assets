@@ -23,7 +23,7 @@
 
     <aside id="sidebar" class="w-64 border-r border-zinc-800 bg-[#0a0a0a] flex flex-col fixed inset-y-0 left-0 z-50 transform -translate-x-full transition-transform duration-300 md:translate-x-0 md:static shrink-0 h-full">
         <div class="h-16 flex items-center px-6 border-b border-zinc-800">
-            <a href="index.html" class="font-sans text-xl font-extrabold tracking-tighter text-white lowercase">local / assets</a>
+            <a href="index.html" class="font-sans text-xl font-extrabold tracking-tighter text-white lowercase decoration-0">local / assets</a>
         </div>
         <nav class="flex-1 p-4 space-y-2">
             <a href="dashboard.html" class="nav-link flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors hover:bg-white/5 text-zinc-400">
@@ -50,22 +50,32 @@
                     <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
                         <iconify-icon icon="solar:upload-track-2-linear" class="text-2xl text-primary"></iconify-icon>
                     </div>
-                    <h2 class="text-2xl font-bold mb-2">Ingest Media</h2>
-                    <p class="text-zinc-500 mb-10 font-mono text-xs uppercase tracking-tight">Support for 4K Master Sets & Vertical Clips</p>
+                    <h2 class="text-2xl font-bold mb-2 uppercase tracking-tight">Ingest Media</h2>
+                    <p class="text-zinc-500 mb-10 font-mono text-xs uppercase tracking-widest">Protocol Archive // Secure 4K Uplink</p>
                     
-                    <button id="upload_widget" class="px-10 py-4 bg-primary text-black font-bold rounded-full uppercase tracking-widest hover:shadow-[0_0_30px_rgba(57,255,20,0.3)] transition-all">
+                    <button id="upload_widget" class="px-10 py-4 bg-primary text-black font-extrabold rounded-full uppercase tracking-widest hover:shadow-[0_0_30px_rgba(57,255,20,0.3)] transition-all transform hover:-translate-y-1">
                         Open Upload Portal
                     </button>
                 </div>
 
                 <div id="recent-upload" class="hidden space-y-4">
                     <h3 class="text-xs font-mono text-zinc-500 uppercase tracking-widest border-b border-zinc-800 pb-2">Recently Synced Asset</h3>
-                    <div class="aspect-video bg-black rounded-xl border border-border overflow-hidden">
-                        <video id="preview-player" controls class="w-full h-full"></video>
-                    </div>
-                    <div class="p-4 bg-card border border-border rounded-lg">
-                        <p class="text-[10px] font-mono text-primary uppercase mb-1">Status: Archived to Cloud</p>
-                        <p id="asset-url" class="text-[10px] font-mono text-zinc-500 truncate"></p>
+                    <div class="bg-card border border-primary/20 rounded-2xl overflow-hidden shadow-[0_0_20px_rgba(57,255,20,0.05)]">
+                        <div class="aspect-video bg-black relative">
+                            <video id="preview-player" controls class="w-full h-full object-contain"></video>
+                        </div>
+                        <div class="p-6 flex items-center justify-between bg-zinc-900/30">
+                            <div>
+                                <p class="text-[10px] font-mono text-primary uppercase tracking-widest mb-1">Status: Verified & Archived</p>
+                                <p id="video-name" class="text-sm font-medium text-white truncate max-w-md">Processing asset...</p>
+                            </div>
+                            <div class="flex gap-4">
+                                <p id="asset-url" class="hidden"></p>
+                                <a id="download-link" href="#" target="_blank" class="text-zinc-400 hover:text-white transition-colors">
+                                    <iconify-icon icon="solar:download-linear" class="text-xl"></iconify-icon>
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -74,54 +84,48 @@
     </main>
 
     <script type="text/javascript">  
-       var myWidget = cloudinary.createUploadWidget({
-    cloudName: 'dso3xwno0',
-    apiKey: '348952918412621',
-    uploadPreset: 'protocol_unsigned', // Ensure this matches your preset name in Cloudinary
-    resourceType: 'video',
-    sources: ['local', 'url', 'camera', 'google_drive'],
-    
-    // CUSTOM STYLING TO MATCH PROTOCOL THEME
-    styles: {
-        palette: {
-            window: "#050505",          // Main window background
-            windowBorder: "#27272a",    // Subtle border to match your dashboard
-            tabIcon: "#39FF14",         // Neon green icons
-            menuIcons: "#FFFFFF",       // White menu icons
-            textDark: "#000000",        // Text color on light backgrounds
-            textLight: "#FFFFFF",       // Main text color
-            link: "#39FF14",            // Neon green links
-            action: "#39FF14",          // Main action buttons
-            inactiveTabIcon: "#666666", // Greyed out icons
-            error: "#ea580c",           // Error highlights
-            inProgress: "#39FF14",      // Progress bar color
-            complete: "#39FF14",        // Success color
-            sourceBg: "#0a0a0a"         // Background for the file selection area
-        },
-        fonts: {
-            default: null,
-            "'Inter', sans-serif": "https://fonts.googleapis.com/css2?family=Inter"
-        }
-    }
-}, (error, result) => {
-    if (!error && result && result.event === "success") {
-        console.log('Done! Asset Info: ', result.info);
-        // You can add a success message here later
-    }
-});
+        var myWidget = cloudinary.createUploadWidget({
+            cloudName: 'dso3xwno0',
+            apiKey: '348952918412621',
+            uploadPreset: 'protocol_unsigned', 
+            resourceType: 'video',
+            sources: ['local', 'url', 'camera', 'google_drive'],
+            styles: {
+                palette: {
+                    window: "#050505",
+                    windowBorder: "#27272a",
+                    tabIcon: "#39FF14",
+                    menuIcons: "#FFFFFF",
+                    textDark: "#000000",
+                    textLight: "#FFFFFF",
+                    link: "#39FF14",
+                    action: "#39FF14",
+                    inactiveTabIcon: "#666666",
+                    error: "#ea580c",
+                    inProgress: "#39FF14",
+                    complete: "#39FF14",
+                    sourceBg: "#0a0a0a"
+                },
+                fonts: {
+                    default: null,
+                    "'Inter', sans-serif": "https://fonts.googleapis.com/css2?family=Inter"
                 }
             }
-        }, (error, result) => {     
-            if (!error && result && result.event === "success") {       
+        }, (error, result) => {
+            if (!error && result && result.event === "success") {
                 console.log('Done! Asset Info: ', result.info);
                 
-                // Show the preview area
+                // 1. Unhide the gallery
                 document.getElementById('recent-upload').classList.remove('hidden');
-                document.getElementById('asset-url').textContent = result.info.secure_url;
                 
-                // Play the video in the preview
+                // 2. Map data to the preview card
                 const player = document.getElementById('preview-player');
                 player.src = result.info.secure_url;
+                document.getElementById('video-name').textContent = result.info.original_filename + "." + result.info.format;
+                document.getElementById('asset-url').textContent = result.info.secure_url;
+                document.getElementById('download-link').href = result.info.secure_url;
+                
+                // 3. Play video automatically
                 player.play();
             }
         });
@@ -134,6 +138,14 @@
             document.getElementById('sidebar').classList.toggle('-translate-x-full');
             document.getElementById('sidebar-overlay').classList.toggle('hidden');
         }
+
+        // Sidebar highlight script
+        document.querySelectorAll('.nav-link').forEach(link => {
+            if (link.href === window.location.href) {
+                link.classList.add('bg-white/10', 'text-white');
+                link.classList.remove('text-zinc-400');
+            }
+        });
     </script>
 </body>
 </html>
