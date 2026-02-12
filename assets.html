@@ -15,6 +15,8 @@
     <style>
         .cloudinary_sub_panel { backdrop-filter: blur(15px) !important; background: rgba(0,0,0,0.7) !important; }
         .nav-link.active { background-color: rgba(255,255,255,0.1); color: white; }
+        /* Custom Select Arrow Styling */
+        select { -webkit-appearance: none; -moz-appearance: none; appearance: none; }
     </style>
 </head>
 <body class="bg-background text-white h-screen w-screen flex overflow-hidden font-sans">
@@ -51,7 +53,7 @@
                         <button id="upload_widget" class="px-8 py-3 bg-primary text-black font-bold rounded-full text-sm uppercase tracking-widest hover:shadow-[0_0_20px_rgba(57,255,20,0.4)] transition-all transform hover:-translate-y-0.5">
                             Start Master Upload
                         </button>
-                        <p class="mt-4 text-[10px] font-mono text-zinc-600 uppercase">Support for 4K Master Sets (Unsigned)</p>
+                        <p class="mt-4 text-[10px] font-mono text-zinc-600 uppercase">Support for 4K Master Sets</p>
                     </div>
                 </div>
 
@@ -75,16 +77,30 @@
 
                 <div class="space-y-4">
                     <div class="flex items-center justify-between border-b border-zinc-800 pb-2">
-                        <h3 class="text-xs font-mono text-zinc-500 uppercase tracking-[0.3em]">Local Session History</h3>
+                        <h3 class="text-xs font-mono text-zinc-500 uppercase tracking-[0.3em]">Venue Session History</h3>
                         <button onclick="clearHistory()" class="text-[9px] font-mono text-red-500 hover:text-red-400 uppercase tracking-widest">Clear Log</button>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div class="relative">
                             <iconify-icon icon="solar:magnifer-linear" class="absolute left-3 top-2.5 text-zinc-500"></iconify-icon>
                             <input type="text" id="filter-name" placeholder="Search or Tag DJ..." class="w-full bg-card border border-border rounded-lg pl-9 pr-4 py-2 text-xs focus:border-primary outline-none transition-all placeholder-zinc-600 text-white">
                         </div>
+                        
                         <input type="date" id="filter-date" class="w-full bg-card border border-border rounded-lg px-4 py-2 text-xs focus:border-primary outline-none transition-all text-zinc-400">
+                        
+                        <div class="relative">
+                            <select id="filter-shot" class="w-full bg-card border border-border rounded-lg px-4 py-2 text-xs focus:border-primary outline-none transition-all text-zinc-400 cursor-pointer">
+                                <option value="MASTER">Master Cam</option>
+                                <option value="BACK-VIEW">Back View</option>
+                                <option value="FRONT-BOOTH">Front Booth</option>
+                                <option value="CROWD-WIDE">Crowd Wide</option>
+                                <option value="STAGE-RIGHT">Stage Right</option>
+                                <option value="STAGE-LEFT">Stage Left</option>
+                                <option value="ROAMING">Roaming</option>
+                            </select>
+                            <iconify-icon icon="solar:alt-arrow-down-linear" class="absolute right-3 top-2.5 text-zinc-500 pointer-events-none"></iconify-icon>
+                        </div>
                     </div>
 
                     <div id="local-list" class="space-y-2"></div>
@@ -102,9 +118,13 @@
 
         // --- 2. UPLOAD WIDGET ---
         document.getElementById("upload_widget").addEventListener("click", function(){
-            // SMART LOGIC: Pulls tags from the filter inputs below
-            const djName = document.getElementById('filter-name').value || "Unknown_Artist";
-            const eventDate = document.getElementById('filter-date').value || new Date().toISOString().split('T')[0];
+            const rawDjName = document.getElementById('filter-name').value || "Unknown_Artist";
+            const dateInput = document.getElementById('filter-date').value || new Date().toISOString().split('T')[0];
+            const shotType = document.getElementById('filter-shot').value || "MASTER";
+            
+            // Format Filename: BELTRAN_2026-02-12_BACK-VIEW
+            const cleanDjName = rawDjName.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase();
+            const fileName = `${cleanDjName}_${dateInput}_${shotType}`;
 
             cloudinary.createUploadWidget({
                 cloudName: 'dso3xwno0',
@@ -116,8 +136,14 @@
                 showPoweredBy: false,
                 chunkSize: 6000000, 
                 maxVideoFileSize: 5000000000,
-                tags: ['venue_recording', djName, eventDate], 
-                context: { dj_name: djName, event_date: eventDate },
+                
+                // NAMING & TAGGING
+                public_id: fileName,    
+                use_filename: true,     
+                unique_filename: false, 
+                tags: ['venue_recording', cleanDjName, dateInput, shotType], 
+                context: { dj: cleanDjName, date: dateInput, shot: shotType },
+                
                 styles: {
                     palette: {
                         window: "#050505", windowBorder: "#27272a", tabIcon: "#39FF14",
@@ -133,15 +159,17 @@
                     
                     const newAsset = {
                         url: result.info.secure_url,
-                        name: result.info.original_filename,
+                        name: result.info.public_id, // Shows the new custom name
                         format: result.info.format,
                         size: (result.info.bytes / 1073741824).toFixed(2),
-                        dj: djName,
-                        date: eventDate
+                        dj: cleanDjName,
+                        date: dateInput,
+                        shot: shotType
                     };
                     saveToLocalHistory(newAsset);
-                    // Refresh list to show new item
-                    document.getElementById('filter-name').value = ''; // Clear search to show new item
+                    
+                    // Reset inputs
+                    document.getElementById('filter-name').value = ''; 
                     filterHistory(); 
                 }
             }).open();
@@ -159,13 +187,12 @@
             container.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
-        // --- 4. LOCAL HISTORY & FILTER LOGIC ---
+        // --- 4. HISTORY LOGIC ---
         document.getElementById('filter-name').addEventListener('input', filterHistory);
         document.getElementById('filter-date').addEventListener('change', filterHistory);
+        // We generally don't filter history by shot type (too specific), but we save it.
 
-        function loadLocalHistory() {
-            filterHistory();
-        }
+        function loadLocalHistory() { filterHistory(); }
 
         function filterHistory() {
             const history = JSON.parse(localStorage.getItem('uploadHistory')) || [];
@@ -175,25 +202,18 @@
             const filtered = history.filter(item => {
                 const dj = (item.dj || "").toLowerCase();
                 const date = item.date || "";
-                
-                const matchesName = dj.includes(searchName);
-                const matchesDate = searchDate ? date === searchDate : true;
-
-                return matchesName && matchesDate;
+                return dj.includes(searchName) && (searchDate ? date === searchDate : true);
             });
-
             renderList(filtered);
         }
 
         function renderList(items) {
             const list = document.getElementById('local-list');
             list.innerHTML = '';
-
             if (items.length === 0) {
                 list.innerHTML = '<p class="text-[10px] font-mono text-zinc-600 italic">No matching assets found.</p>';
                 return;
             }
-
             items.forEach(info => {
                 const row = document.createElement('div');
                 row.className = "flex items-center justify-between p-3 bg-card/50 border border-border rounded-lg hover:border-primary/30 transition-colors group";
@@ -203,8 +223,11 @@
                             <iconify-icon icon="solar:history-bold"></iconify-icon>
                         </div>
                         <div class="min-w-0">
-                            <p class="text-xs font-bold text-white truncate">${info.dj}</p>
-                            <p class="text-[9px] font-mono text-zinc-500 truncate">${info.name} // ${info.date}</p>
+                            <div class="flex items-center gap-2">
+                                <p class="text-xs font-bold text-white truncate">${info.dj}</p>
+                                <span class="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 font-mono">${info.shot || 'MASTER'}</span>
+                            </div>
+                            <p class="text-[9px] font-mono text-zinc-500 truncate mt-0.5">${info.name} // ${info.date}</p>
                         </div>
                     </div>
                     <button onclick="playVideo('${info.url}', '${info.name}', '${info.format}')" class="p-2 text-zinc-400 hover:text-white">
