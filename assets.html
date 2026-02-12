@@ -47,7 +47,7 @@
             <div class="max-w-5xl mx-auto space-y-12 pb-20">
                 
                 <div class="space-y-6">
-                    <div class="p-6 border border-dashed border-zinc-800 rounded-2xl bg-card/30 text-center hover:border-primary/30 transition-colors group">
+                    <div class="p-8 border border-dashed border-zinc-800 rounded-2xl bg-card/30 text-center hover:border-primary/30 transition-colors group">
                         <button id="upload_widget" class="px-8 py-3 bg-primary text-black font-bold rounded-full text-sm uppercase tracking-widest hover:shadow-[0_0_20px_rgba(57,255,20,0.4)] transition-all transform hover:-translate-y-0.5">
                             Start Master Upload
                         </button>
@@ -100,9 +100,9 @@
             loadLocalHistory();
         });
 
-        // --- 2. UPLOAD WIDGET (Using Filter Inputs for Metadata) ---
+        // --- 2. UPLOAD WIDGET ---
         document.getElementById("upload_widget").addEventListener("click", function(){
-            // Pulls metadata from the Search/Filter fields now
+            // SMART LOGIC: Pulls tags from the filter inputs below
             const djName = document.getElementById('filter-name').value || "Unknown_Artist";
             const eventDate = document.getElementById('filter-date').value || new Date().toISOString().split('T')[0];
 
@@ -129,10 +129,8 @@
                 }
             }, (error, result) => {
                 if (!error && result && result.event === "success") {
-                    // Play
                     playVideo(result.info.secure_url, result.info.original_filename, result.info.format);
                     
-                    // Save Local
                     const newAsset = {
                         url: result.info.secure_url,
                         name: result.info.original_filename,
@@ -142,7 +140,8 @@
                         date: eventDate
                     };
                     saveToLocalHistory(newAsset);
-                    // Reload list
+                    // Refresh list to show new item
+                    document.getElementById('filter-name').value = ''; // Clear search to show new item
                     filterHistory(); 
                 }
             }).open();
@@ -161,7 +160,6 @@
         }
 
         // --- 4. LOCAL HISTORY & FILTER LOGIC ---
-        
         document.getElementById('filter-name').addEventListener('input', filterHistory);
         document.getElementById('filter-date').addEventListener('change', filterHistory);
 
