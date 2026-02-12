@@ -45,13 +45,13 @@
 
         <div class="flex-1 p-8 overflow-y-auto">
             <div class="max-w-4xl mx-auto space-y-12 pb-20">
-                <div class="p-12 border-2 border-dashed border-zinc-800 rounded-3xl bg-card/30 text-center hover:border-primary/50 transition-colors group">
-                    <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
+                <div class="p-12 border-2 border-dashed border-zinc-800 rounded-3xl bg-card/30 text-center">
+                    <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
                         <iconify-icon icon="solar:upload-track-2-linear" class="text-2xl text-primary"></iconify-icon>
                     </div>
-                    <h2 class="text-2xl font-bold mb-2 uppercase tracking-tight text-white">Ingest Media</h2>
-                    <p class="text-zinc-500 mb-10 font-mono text-xs uppercase tracking-widest">Protocol Archive // Secure 4K Uplink</p>
-                    <button id="upload_widget" class="px-10 py-4 bg-primary text-black font-extrabold rounded-full uppercase tracking-widest hover:shadow-[0_0_30px_rgba(57,255,20,0.5)] transition-all transform hover:-translate-y-1">
+                    <h2 class="text-2xl font-bold mb-2 uppercase tracking-tight text-white text-center w-full">Ingest Media</h2>
+                    <p class="text-zinc-500 mb-10 font-mono text-xs uppercase tracking-widest text-center w-full">Protocol Archive // Secure 4K Uplink</p>
+                    <button id="upload_widget" class="px-10 py-4 bg-primary text-black font-extrabold rounded-full uppercase tracking-widest hover:shadow-[0_0_30px_rgba(57,255,20,0.5)] transition-all transform hover:-translate-y-1 mx-auto block">
                         Open Upload Portal
                     </button>
                 </div>
@@ -75,9 +75,9 @@
                 </div>
 
                 <div class="space-y-4">
-                    <h3 class="text-xs font-mono text-zinc-500 uppercase tracking-[0.3em] border-b border-zinc-800 pb-2">Session History</h3>
+                    <h3 class="text-xs font-mono text-zinc-500 uppercase tracking-[0.3em] border-b border-zinc-800 pb-2 text-center w-full">Session History</h3>
                     <div id="archive-list" class="space-y-2">
-                        <p id="empty-history" class="text-[10px] font-mono text-zinc-600 italic">No assets synced in this session.</p>
+                        <p id="empty-history" class="text-[10px] font-mono text-zinc-600 italic text-center w-full">No assets synced in this session.</p>
                     </div>
                 </div>
             </div>
@@ -88,30 +88,31 @@
         var myWidget = cloudinary.createUploadWidget({
             cloudName: 'dso3xwno0',
             apiKey: '348952918412621',
-            uploadPreset: 'assets_unsigned', // MATCHED TO YOUR DASHBOARD
+            uploadPreset: 'assets_unsigned', // MATCHES YOUR SCREENSHOT
+            folder: 'venue_masters',         // YOUR CHOSEN FOLDER
             resourceType: 'video',
             sources: ['local', 'camera', 'google_drive', 'dropbox'],
             showPoweredBy: false, 
             
-            // --- SETTINGS FOR 3.6GB LARGE FILES ---
-            chunkSize: 20000000,          // 20MB chunks for reliability
-            maxVideoFileSize: 5000000000, // Limit set to 5GB
+            // --- SETTINGS FOR LARGE 3.6GB FILES ---
+            chunkSize: 6000000,           // Send in 6MB chunks for stability
+            maxVideoFileSize: 5000000000, // Allow up to 5GB
             
             styles: {
                 palette: {
-                    window: "#050505",          
-                    windowBorder: "#27272a",    
-                    tabIcon: "#39FF14",         
+                    window: "#050505",
+                    windowBorder: "#27272a",
+                    tabIcon: "#39FF14",
                     menuIcons: "#FFFFFF",
                     textDark: "#000000",
                     textLight: "#FFFFFF",
                     link: "#39FF14",
-                    action: "#39FF14",          
+                    action: "#39FF14",
                     inactiveTabIcon: "#444444",
                     error: "#FF4444",
                     inProgress: "#39FF14",
                     complete: "#39FF14",
-                    sourceBg: "#050505"         
+                    sourceBg: "#050505"
                 }
             }
         }, (error, result) => {
@@ -136,8 +137,8 @@
                 <div class="flex items-center gap-3">
                     <iconify-icon icon="solar:videocamera-record-bold" class="text-primary text-lg"></iconify-icon>
                     <div>
-                        <p class="text-xs font-medium text-white">${info.original_filename}.${info.format}</p>
-                        <p class="text-[9px] font-mono text-zinc-500 uppercase tracking-tighter">${(info.bytes / 1073741824).toFixed(2)} GB // ARCHIVED</p>
+                        <p class="text-xs font-medium text-white text-left">${info.original_filename}.${info.format}</p>
+                        <p class="text-[9px] font-mono text-zinc-500 uppercase tracking-tighter text-left">${(info.bytes / 1073741824).toFixed(2)} GB // ARCHIVED</p>
                     </div>
                 </div>
                 <a href="${info.secure_url}" target="_blank" class="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-mono text-primary uppercase tracking-widest">View Asset →</a>
