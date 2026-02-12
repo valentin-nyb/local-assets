@@ -17,8 +17,9 @@
         }
     </script>
     <style>
-        /* This adds the blur to the background behind the widget pop-up */
-        .cloudinary_sub_panel { backdrop-filter: blur(10px) !important; }
+        /* This creates the blur effect on the page behind the widget */
+        .cloudinary_sub_panel { backdrop-filter: blur(12px) !important; }
+        .nav-link.active { background-color: rgba(255,255,255,0.1); color: white; }
     </style>
 </head>
 <body class="bg-background text-white h-screen w-screen flex overflow-hidden">
@@ -36,7 +37,7 @@
             <a href="camera.html" class="nav-link flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors hover:bg-white/5 text-zinc-400">
                 <iconify-icon icon="solar:videocamera-record-linear" class="text-lg"></iconify-icon>Camera Control
             </a>
-            <a href="assets.html" class="nav-link flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors hover:bg-white/5 text-zinc-400">
+            <a href="assets.html" class="nav-link active flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors hover:bg-white/5">
                 <iconify-icon icon="solar:clapperboard-play-linear" class="text-lg"></iconify-icon>Media Assets
             </a>
         </nav>
@@ -97,11 +98,13 @@
             apiKey: '348952918412621',
             uploadPreset: 'protocol_unsigned', 
             resourceType: 'video',
-            sources: ['local', 'url', 'camera', 'google_drive'],
+            // ONLY ALLOW LOCAL FILES, CAMERA, AND GOOGLE DRIVE (Removed Web Address)
+            sources: ['local', 'camera', 'google_drive'],
+            showPoweredBy: false, // REMOVES CLOUDINARY LOGO AT BOTTOM
             styles: {
                 palette: {
-                    window: "#000000CC",        // Black with 80% transparency
-                    windowBorder: "#39FF1433",  // Neon green border with 20% transparency
+                    window: "rgba(0, 0, 0, 0.85)",     // True dark transparency
+                    windowBorder: "#39FF1433",        // Neon green faint border
                     tabIcon: "#39FF14",
                     menuIcons: "#FFFFFF",
                     textDark: "#000000",
@@ -112,7 +115,7 @@
                     error: "#FF4444",
                     inProgress: "#39FF14",
                     complete: "#39FF14",
-                    sourceBg: "#050505E6"       // Very dark grey with 90% transparency
+                    sourceBg: "rgba(5, 5, 5, 0.95)"    // Matches your background color
                 },
                 fonts: {
                     default: null,
@@ -161,13 +164,6 @@
             document.getElementById('sidebar').classList.toggle('-translate-x-full');
             document.getElementById('sidebar-overlay').classList.toggle('hidden');
         }
-
-        document.querySelectorAll('.nav-link').forEach(link => {
-            if (link.href === window.location.href) {
-                link.classList.add('bg-white/10', 'text-white');
-                link.classList.remove('text-zinc-400');
-            }
-        });
     </script>
 </body>
 </html>
