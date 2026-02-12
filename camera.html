@@ -3,33 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <title>PTZ Command // local assets</title>
+    <title>Media Hub // local assets</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
     <script>
         tailwind.config = {
-            theme: {
-                extend: {
-                    colors: { background: '#050505', card: '#0a0a0a', primary: '#39FF14', border: '#27272a' }
-                }
-            }
+            theme: { extend: { colors: { background: '#050505', card: '#0a0a0a', primary: '#39FF14', border: '#27272a' } } }
         }
     </script>
     <style>
-        body { background-color: #050505; color: white; -webkit-font-smoothing: antialiased; }
-        .joystick-container { position: relative; width: 120px; height: 120px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; background: #000; }
-        .joystick-knob { width: 50px; height: 50px; background: #222; border-radius: 50%; border: 1px solid #333; cursor: move; transition: transform 0.1s; }
-        .joystick-knob:active { background: #39FF14; box-shadow: 0 0 20px rgba(57, 255, 20, 0.4); }
+        .cloudinary_sub_panel { backdrop-filter: blur(15px) !important; background: rgba(0,0,0,0.7) !important; }
+        .nav-link.active { background-color: rgba(255,255,255,0.1); color: white; }
     </style>
 </head>
-<body class="font-sans antialiased h-screen w-screen flex overflow-hidden">
+<body class="bg-background text-white h-screen w-screen flex overflow-hidden font-sans">
 
     <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/80 z-40 hidden md:hidden backdrop-blur-sm"></div>
 
     <aside id="sidebar" class="w-64 border-r border-zinc-800 bg-[#0a0a0a] flex flex-col fixed inset-y-0 left-0 z-50 transform -translate-x-full transition-transform duration-300 md:translate-x-0 md:static shrink-0 h-full">
         <div class="h-16 flex items-center px-6 border-b border-zinc-800">
-            <a href="index.html" class="font-sans text-xl font-extrabold tracking-tighter text-white lowercase">local / assets</a>
+            <a href="index.html" class="font-sans text-xl font-extrabold tracking-tighter text-white lowercase decoration-0">local / assets</a>
         </div>
         <nav class="flex-1 p-4 space-y-2">
             <a href="dashboard.html" class="nav-link flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors hover:bg-white/5 text-zinc-400">
@@ -38,54 +32,185 @@
             <a href="camera.html" class="nav-link flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors hover:bg-white/5 text-zinc-400">
                 <iconify-icon icon="solar:videocamera-record-linear" class="text-lg"></iconify-icon>Camera Control
             </a>
-            <a href="assets.html" class="nav-link flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors hover:bg-white/5 text-zinc-400">
+            <a href="assets.html" class="nav-link active flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors hover:bg-white/5">
                 <iconify-icon icon="solar:clapperboard-play-linear" class="text-lg"></iconify-icon>Media Assets
+            </a>
+            <a href="archive.html" class="nav-link flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors hover:bg-white/5 text-zinc-400">
+                <iconify-icon icon="solar:library-linear" class="text-lg"></iconify-icon>Master Archive
             </a>
         </nav>
     </aside>
 
-    <main class="flex-1 flex flex-col min-w-0 bg-background overflow-hidden relative">
-        <header class="h-16 flex items-center justify-between px-8 border-b border-border bg-background/50 backdrop-blur-sm">
-            <div class="flex items-center gap-3">
-                <button onclick="toggleSidebar()" class="md:hidden text-white"><iconify-icon icon="solar:hamburger-menu-linear" class="text-xl"></iconify-icon></button>
-                <span class="text-white font-medium text-sm">PTZ Command Center</span>
-            </div>
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <header class="h-16 flex items-center px-8 border-b border-border bg-background/50 backdrop-blur-md shrink-0">
+            <span class="text-white font-medium text-sm font-mono uppercase tracking-widest text-primary">Media Asset Library</span>
         </header>
 
-        <div class="flex-1 p-6 grid grid-cols-1 lg:grid-cols-3 gap-6 overflow-y-auto">
-            <div class="lg:col-span-2 bg-black border border-border rounded-xl relative overflow-hidden h-[500px]">
-                <video autoplay loop muted playsinline class="w-full h-full object-cover opacity-70">
-                    <source src="https://res.cloudinary.com/dso3xwno0/video/upload/v1770850722/Screen_Recording_2026-02-11_at_3.50.31_PM_gqqlca.mov" type="video/mp4">
-                </video>
-                <div class="absolute top-4 left-4 bg-black/50 border border-primary/50 text-primary px-2 py-1 font-mono text-[10px]">CAM_01 // LIVE</div>
-            </div>
+        <div class="flex-1 p-8 overflow-y-auto">
+            <div class="max-w-4xl mx-auto space-y-8 pb-20">
+                
+                <div class="p-8 border border-dashed border-zinc-800 rounded-2xl bg-card/30 text-center hover:border-primary/30 transition-colors group">
+                    <button id="upload_widget" class="px-8 py-3 bg-primary text-black font-bold rounded-full text-sm uppercase tracking-widest hover:shadow-[0_0_20px_rgba(57,255,20,0.4)] transition-all transform hover:-translate-y-0.5">
+                        Start Master Upload
+                    </button>
+                    <p class="mt-4 text-[10px] font-mono text-zinc-600 uppercase">Support for 4K Master Sets (Unsigned)</p>
+                </div>
 
-            <div class="bg-card border border-border rounded-xl p-8 flex flex-col items-center justify-center gap-10">
-                <div class="joystick-container">
-                    <div class="joystick-knob"></div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-card p-6 rounded-2xl border border-border">
+                    <div>
+                        <label class="block text-[10px] font-mono text-zinc-500 uppercase mb-2 tracking-widest">DJ / Artist Name</label>
+                        <input type="text" id="dj-tag" placeholder="e.g. BELTRAN" class="w-full bg-background border border-border rounded-lg px-4 py-3 text-sm focus:border-primary outline-none transition-all text-white placeholder-zinc-700">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-mono text-zinc-500 uppercase mb-2 tracking-widest">Venue Date</label>
+                        <input type="date" id="date-tag" class="w-full bg-background border border-border rounded-lg px-4 py-3 text-sm focus:border-primary outline-none transition-all text-white">
+                    </div>
                 </div>
-                <div class="w-full space-y-2">
-                    <label class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest block text-center">Optical Zoom</label>
-                    <input type="range" class="w-full accent-primary">
+
+                <div id="recent-upload" class="hidden space-y-4">
+                    <h3 class="text-xs font-mono text-zinc-500 uppercase tracking-widest border-b border-zinc-800 pb-2">Last Upload Preview</h3>
+                    <div class="bg-card border border-primary/20 rounded-2xl overflow-hidden shadow-[0_0_20px_rgba(57,255,20,0.05)]">
+                        <div class="aspect-video bg-black relative">
+                            <video id="preview-player" controls class="w-full h-full object-contain"></video>
+                        </div>
+                        <div class="p-6 flex items-center justify-between bg-zinc-900/30">
+                            <div>
+                                <p class="text-[10px] font-mono text-primary uppercase tracking-widest mb-1">Status: Verified & Archived</p>
+                                <p id="video-name" class="text-sm font-medium text-white truncate max-w-md">Processing...</p>
+                            </div>
+                            <a id="download-link" href="#" target="_blank" class="text-zinc-400 hover:text-white transition-colors">
+                                <iconify-icon icon="solar:download-linear" class="text-xl"></iconify-icon>
+                            </a>
+                        </div>
+                    </div>
                 </div>
+
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between border-b border-zinc-800 pb-2">
+                        <h3 class="text-xs font-mono text-zinc-500 uppercase tracking-[0.3em]">Local History</h3>
+                        <button onclick="clearHistory()" class="text-[9px] font-mono text-red-500 hover:text-red-400 uppercase tracking-widest">Clear Log</button>
+                    </div>
+                    <div id="archive-list" class="space-y-2">
+                        </div>
+                </div>
+
             </div>
         </div>
     </main>
 
-    <script>
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('sidebar-overlay');
-            sidebar.classList.toggle('-translate-x-full');
-            overlay.classList.toggle('hidden');
-        }
-
-        document.querySelectorAll('.nav-link').forEach(link => {
-            if (link.href === window.location.href) {
-                link.classList.add('bg-white/10', 'text-white');
-                link.classList.remove('text-zinc-400');
+    <script type="text/javascript">  
+        // 1. LOAD HISTORY ON STARTUP
+        window.addEventListener('load', () => {
+            const history = JSON.parse(localStorage.getItem('uploadHistory')) || [];
+            if (history.length > 0) {
+                history.forEach(item => renderHistoryItem(item));
+            } else {
+                document.getElementById('archive-list').innerHTML = '<p id="empty-history" class="text-[10px] font-mono text-zinc-600 italic">No assets synced in this session.</p>';
             }
         });
+
+        document.getElementById("upload_widget").addEventListener("click", function(){
+            const djName = document.getElementById('dj-tag').value || "Unknown_Artist";
+            const eventDate = document.getElementById('date-tag').value || new Date().toISOString().split('T')[0];
+
+            cloudinary.createUploadWidget({
+                cloudName: 'dso3xwno0',
+                apiKey: '348952918412621',
+                uploadPreset: 'assets_unsigned',
+                folder: 'venue_masters',
+                resourceType: 'video',
+                sources: ['local', 'camera', 'google_drive'],
+                showPoweredBy: false,
+                chunkSize: 6000000, 
+                maxVideoFileSize: 5000000000,
+                tags: ['venue_recording', djName, eventDate], 
+                context: { dj_name: djName, event_date: eventDate },
+                styles: {
+                    palette: {
+                        window: "#050505", windowBorder: "#27272a", tabIcon: "#39FF14",
+                        menuIcons: "#FFFFFF", textDark: "#000000", textLight: "#FFFFFF",
+                        link: "#39FF14", action: "#39FF14", inactiveTabIcon: "#444444",
+                        error: "#FF4444", inProgress: "#39FF14", complete: "#39FF14",
+                        sourceBg: "#050505"
+                    }
+                }
+            }, (error, result) => {
+                if (!error && result && result.event === "success") {
+                    console.log("Upload Success:", result.info);
+                    
+                    // Show Preview
+                    document.getElementById('recent-upload').classList.remove('hidden');
+                    const player = document.getElementById('preview-player');
+                    player.src = result.info.secure_url;
+                    document.getElementById('video-name').textContent = result.info.original_filename + "." + result.info.format;
+                    document.getElementById('download-link').href = result.info.secure_url;
+                    player.play();
+                    
+                    // SAVE TO LOCAL STORAGE
+                    const newAsset = {
+                        url: result.info.secure_url,
+                        name: result.info.original_filename,
+                        format: result.info.format,
+                        size: (result.info.bytes / 1073741824).toFixed(2),
+                        dj: djName,
+                        date: eventDate
+                    };
+                    
+                    saveToHistory(newAsset);
+                    renderHistoryItem(newAsset);
+                }
+            }).open();
+        }, false);
+
+        function saveToHistory(asset) {
+            const history = JSON.parse(localStorage.getItem('uploadHistory')) || [];
+            history.unshift(asset); // Add to beginning of array
+            localStorage.setItem('uploadHistory', JSON.stringify(history));
+        }
+
+        function renderHistoryItem(info) {
+            const list = document.getElementById('archive-list');
+            const emptyMsg = document.getElementById('empty-history');
+            if (emptyMsg) emptyMsg.remove();
+
+            const row = document.createElement('div');
+            row.className = "flex items-center justify-between p-3 bg-card/50 border border-border rounded-lg hover:border-primary/30 transition-colors group";
+            row.innerHTML = `
+                <div class="flex items-center gap-3 w-full">
+                    <div class="w-8 h-8 rounded bg-primary/10 flex items-center justify-center shrink-0">
+                        <iconify-icon icon="solar:videocamera-record-bold" class="text-primary text-lg"></iconify-icon>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2">
+                            <p class="text-xs font-bold text-white truncate">${info.dj}</p>
+                            <span class="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 font-mono">${info.date}</span>
+                        </div>
+                        <p class="text-[10px] font-mono text-zinc-500 truncate mt-0.5">${info.name}.${info.format} // ${info.size} GB</p>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                     <a href="${info.url}" target="_blank" class="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors">
+                        <iconify-icon icon="solar:eye-linear"></iconify-icon>
+                    </a>
+                    <a href="${info.url}" download class="p-2 text-primary hover:bg-primary/10 rounded transition-colors">
+                        <iconify-icon icon="solar:download-linear"></iconify-icon>
+                    </a>
+                </div>
+            `;
+            list.prepend(row);
+        }
+
+        function clearHistory() {
+            if(confirm('Clear local history logs? Cloud files will remain safe.')) {
+                localStorage.removeItem('uploadHistory');
+                location.reload();
+            }
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('-translate-x-full');
+            document.getElementById('sidebar-overlay').classList.toggle('hidden');
+        }
     </script>
 </body>
 </html>
