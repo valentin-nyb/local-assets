@@ -108,11 +108,28 @@
     </main>
 
     <script type="text/javascript">  
-        // 1. LOAD HISTORY
-        window.addEventListener('load', () => { loadLocalHistory(); });
+        // --- SAFE INITIALIZATION ---
+        // Waits for the entire page to be ready before attaching logic
+        window.onload = function() {
+            console.log("System Ready");
+            
+            // 1. Attach Upload Click Listener
+            const uploadBtn = document.getElementById("upload_widget");
+            if (uploadBtn) {
+                uploadBtn.addEventListener("click", startUploadProcess, false);
+            } else {
+                console.error("Upload button not found!");
+            }
 
-        // 2. UPLOAD LOGIC
-        document.getElementById("upload_widget").addEventListener("click", function(){
+            // 2. Attach Filter Listeners
+            document.getElementById('filter-name').addEventListener('input', filterHistory);
+            document.getElementById('filter-date').addEventListener('change', filterHistory);
+
+            // 3. Load Initial History
+            loadLocalHistory();
+        };
+
+        function startUploadProcess() {
             const rawDjName = document.getElementById('filter-name').value.trim();
             const dateInput = document.getElementById('filter-date').value || new Date().toISOString().split('T')[0];
             const shotType = document.getElementById('filter-shot').value || "MASTER";
@@ -175,7 +192,7 @@
                     filterHistory(); 
                 }
             }).open();
-        }, false);
+        }
 
         function playVideo(url, name, format) {
             const container = document.getElementById('recent-upload');
@@ -187,10 +204,6 @@
             player.play();
             container.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-
-        // 3. HISTORY & FILTER LOGIC
-        document.getElementById('filter-name').addEventListener('input', filterHistory);
-        document.getElementById('filter-date').addEventListener('change', filterHistory);
 
         function loadLocalHistory() { filterHistory(); }
 
@@ -255,9 +268,13 @@
         }
 
         function saveToLocalHistory(asset) {
-            const history = JSON.parse(localStorage.getItem('uploadHistory')) || [];
-            history.unshift(asset);
-            localStorage.setItem('uploadHistory', JSON.stringify(history));
+            try {
+                const history = JSON.parse(localStorage.getItem('uploadHistory')) || [];
+                history.unshift(asset);
+                localStorage.setItem('uploadHistory', JSON.stringify(history));
+            } catch (e) {
+                console.error("Save failed", e);
+            }
         }
 
         function clearHistory() {
