@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+</head>
+<body class="bg-[#050505] text-white flex">
+    <main class="flex-1 p-8 overflow-y-auto">
+        <header class="mb-10 flex justify-between items-end">
+            <div>
+                <h1 class="text-2xl font-bold uppercase tracking-tighter">Master Archive</h1>
+                <p class="text-zinc-500 font-mono text-xs">Total Library Access</p>
+            </div>
+            <div class="flex gap-4">
+                <input type="text" id="searchDj" placeholder="Search DJ..." class="bg-zinc-900 border border-zinc-800 rounded-md px-4 py-2 text-sm outline-none focus:border-primary">
+                <input type="date" id="filterDate" class="bg-zinc-900 border border-zinc-800 rounded-md px-4 py-2 text-sm">
+            </div>
+        </header>
+
+        <div id="archive-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            </div>
+    </main>
+
+    <script>
+        // Logic to fetch from Cloudinary
+        async function loadArchive() {
+            // Note: In a production environment, you'd use a backend to fetch this list 
+            // for security, but for a local Mac Mini setup, we can fetch the JSON list.
+            const cloudName = 'dso3xwno0';
+            const tagName = 'venue_recording';
+            const response = await fetch(`https://res.cloudinary.com/${cloudName}/video/list/${tagName}.json`);
+            const data = await response.json();
+            
+            const grid = document.getElementById('archive-grid');
+            grid.innerHTML = data.resources.map(video => `
+                <div class="bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800 group hover:border-primary/50 transition-all">
+                    <div class="aspect-video bg-black relative">
+                        <video src="https://res.cloudinary.com/${cloudName}/video/upload/${video.public_id}.mp4" class="w-full h-full object-cover opacity-60 group-hover:opacity-100"></video>
+                    </div>
+                    <div class="p-4">
+                        <p class="text-sm font-bold uppercase truncate">${video.public_id.split('/').pop()}</p>
+                        <p class="text-[10px] font-mono text-zinc-500 mb-4">${video.created_at.split('T')[0]}</p>
+                        <a href="https://res.cloudinary.com/${cloudName}/video/upload/fl_attachment/${video.public_id}.${video.format}" 
+                           class="block text-center bg-zinc-800 hover:bg-primary hover:text-black py-2 rounded font-mono text-[10px] uppercase transition-all">
+                           Download Master
+                        </a>
+                    </div>
+                </div>
+            `).join('');
+        }
+        loadArchive();
+    </script>
+</body>
+</html>

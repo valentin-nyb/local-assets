@@ -17,7 +17,7 @@
         .nav-link.active { background-color: rgba(255,255,255,0.1); color: white; }
     </style>
 </head>
-<body class="bg-background text-white h-screen w-screen flex overflow-hidden">
+<body class="bg-background text-white h-screen w-screen flex overflow-hidden font-sans">
 
     <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/80 z-40 hidden md:hidden backdrop-blur-sm"></div>
 
@@ -35,24 +35,34 @@
             <a href="assets.html" class="nav-link active flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors hover:bg-white/5">
                 <iconify-icon icon="solar:clapperboard-play-linear" class="text-lg"></iconify-icon>Media Assets
             </a>
+            <a href="archive.html" class="nav-link flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors hover:bg-white/5 text-zinc-400">
+                <iconify-icon icon="solar:library-linear" class="text-lg"></iconify-icon>Master Archive
+            </a>
         </nav>
     </aside>
 
     <main class="flex-1 flex flex-col overflow-hidden">
-        <header class="h-16 flex items-center px-8 border-b border-border bg-background/50 backdrop-blur-md">
+        <header class="h-16 flex items-center px-8 border-b border-border bg-background/50 backdrop-blur-md shrink-0">
             <span class="text-white font-medium text-sm font-mono uppercase tracking-widest text-primary">Media Asset Library</span>
         </header>
 
         <div class="flex-1 p-8 overflow-y-auto">
-            <div class="max-w-4xl mx-auto space-y-12 pb-20">
-                <div class="p-12 border-2 border-dashed border-zinc-800 rounded-3xl bg-card/30 text-center">
-                    <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <iconify-icon icon="solar:upload-track-2-linear" class="text-2xl text-primary"></iconify-icon>
+            <div class="max-w-4xl mx-auto space-y-8 pb-20">
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-card p-6 rounded-2xl border border-border">
+                    <div>
+                        <label class="block text-[10px] font-mono text-zinc-500 uppercase mb-2 tracking-widest">DJ / Artist Name</label>
+                        <input type="text" id="dj-tag" placeholder="e.g. BELTRAN" class="w-full bg-background border border-border rounded-lg px-4 py-3 text-sm focus:border-primary outline-none transition-all text-white">
                     </div>
-                    <h2 class="text-2xl font-bold mb-2 uppercase tracking-tight text-white text-center w-full">Ingest Media</h2>
-                    <p class="text-zinc-500 mb-10 font-mono text-xs uppercase tracking-widest text-center w-full">Protocol Archive // Secure 4K Uplink</p>
-                    <button id="upload_widget" class="px-10 py-4 bg-primary text-black font-extrabold rounded-full uppercase tracking-widest hover:shadow-[0_0_30px_rgba(57,255,20,0.5)] transition-all transform hover:-translate-y-1 mx-auto block">
-                        Open Upload Portal
+                    <div>
+                        <label class="block text-[10px] font-mono text-zinc-500 uppercase mb-2 tracking-widest">Venue Date</label>
+                        <input type="date" id="date-tag" class="w-full bg-background border border-border rounded-lg px-4 py-3 text-sm focus:border-primary outline-none transition-all text-white">
+                    </div>
+                </div>
+
+                <div class="p-12 border-2 border-dashed border-zinc-800 rounded-3xl bg-card/30 text-center hover:border-primary/50 transition-colors group">
+                    <button id="upload_widget" class="px-10 py-4 bg-primary text-black font-extrabold rounded-full uppercase tracking-widest hover:shadow-[0_0_30px_rgba(57,255,20,0.5)] transition-all transform hover:-translate-y-1">
+                        Start Master Upload
                     </button>
                 </div>
 
@@ -75,60 +85,87 @@
                 </div>
 
                 <div class="space-y-4">
-                    <h3 class="text-xs font-mono text-zinc-500 uppercase tracking-[0.3em] border-b border-zinc-800 pb-2 text-center w-full">Session History</h3>
+                    <h3 class="text-xs font-mono text-zinc-500 uppercase tracking-[0.3em] border-b border-zinc-800 pb-2">Session History</h3>
                     <div id="archive-list" class="space-y-2">
-                        <p id="empty-history" class="text-[10px] font-mono text-zinc-600 italic text-center w-full">No assets synced in this session.</p>
+                        <p id="empty-history" class="text-[10px] font-mono text-zinc-600 italic">No assets synced in this session.</p>
                     </div>
                 </div>
+
             </div>
         </div>
     </main>
 
     <script type="text/javascript">  
-        var myWidget = cloudinary.createUploadWidget({
-    cloudName: 'dso3xwno0',
-    apiKey: '348952918412621',
-    uploadPreset: 'assets_unsigned', //
-    resourceType: 'video',           //
-    
-    // --- FIX FOR 3.6GB SETS ---
-    chunkSize: 6000000,              // 6MB pieces
-    maxVideoFileSize: 5000000000     // 5GB total limit
-}, (error, result) => { /* ... */ });
-            
-            styles: {
-                palette: {
-                    window: "#050505",
-                    windowBorder: "#27272a",
-                    tabIcon: "#39FF14",
-                    menuIcons: "#FFFFFF",
-                    textDark: "#000000",
-                    textLight: "#FFFFFF",
-                    link: "#39FF14",
-                    action: "#39FF14",
-                    inactiveTabIcon: "#444444",
-                    error: "#FF4444",
-                    inProgress: "#39FF14",
-                    complete: "#39FF14",
-                    sourceBg: "#050505"
+        // We initialize the widget logic dynamically inside the click handler 
+        // to ensure we capture the latest input values (DJ Name/Date)
+        
+        document.getElementById("upload_widget").addEventListener("click", function(){
+            const djName = document.getElementById('dj-tag').value || "Unknown_Artist";
+            const eventDate = document.getElementById('date-tag').value || new Date().toISOString().split('T')[0];
+
+            cloudinary.createUploadWidget({
+                cloudName: 'dso3xwno0',
+                apiKey: '348952918412621',
+                uploadPreset: 'assets_unsigned',
+                folder: 'venue_masters',
+                resourceType: 'video',
+                sources: ['local', 'camera', 'google_drive'],
+                showPoweredBy: false,
+                
+                // LARGE FILE SUPPORT
+                chunkSize: 6000000, 
+                maxVideoFileSize: 5000000000,
+                
+                // DYNAMIC TAGGING
+                tags: ['venue_recording', djName, eventDate], 
+                context: {
+                    dj_name: djName, 
+                    event_date: eventDate
+                },
+
+                // STYLING
+                styles: {
+                    palette: {
+                        window: "#050505",
+                        windowBorder: "#27272a",
+                        tabIcon: "#39FF14",
+                        menuIcons: "#FFFFFF",
+                        textDark: "#000000",
+                        textLight: "#FFFFFF",
+                        link: "#39FF14",
+                        action: "#39FF14",
+                        inactiveTabIcon: "#444444",
+                        error: "#FF4444",
+                        inProgress: "#39FF14",
+                        complete: "#39FF14",
+                        sourceBg: "#050505"
+                    }
                 }
-            }
-        }, (error, result) => {
-            if (!error && result && result.event === "success") {
-                document.getElementById('recent-upload').classList.remove('hidden');
-                const player = document.getElementById('preview-player');
-                player.src = result.info.secure_url;
-                document.getElementById('video-name').textContent = result.info.original_filename + "." + result.info.format;
-                document.getElementById('download-link').href = result.info.secure_url;
-                player.play();
-                addToArchive(result.info);
-            }
-        });
+            }, (error, result) => {
+                if (!error && result && result.event === "success") {
+                    console.log("Upload Success:", result.info);
+                    
+                    // Show Preview
+                    document.getElementById('recent-upload').classList.remove('hidden');
+                    const player = document.getElementById('preview-player');
+                    player.src = result.info.secure_url;
+                    
+                    // Update Text
+                    document.getElementById('video-name').textContent = result.info.original_filename + "." + result.info.format;
+                    document.getElementById('download-link').href = result.info.secure_url;
+                    player.play();
+                    
+                    // Add to History List
+                    addToArchive(result.info);
+                }
+            }).open();
+        }, false);
 
         function addToArchive(info) {
             const list = document.getElementById('archive-list');
             const emptyMsg = document.getElementById('empty-history');
             if (emptyMsg) emptyMsg.remove();
+
             const row = document.createElement('div');
             row.className = "flex items-center justify-between p-3 bg-card/50 border border-border rounded-lg hover:border-primary/30 transition-colors group";
             row.innerHTML = `
@@ -143,10 +180,6 @@
             `;
             list.prepend(row);
         }
-
-        document.getElementById("upload_widget").addEventListener("click", function(){
-            myWidget.open();
-        }, false);
 
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('-translate-x-full');
