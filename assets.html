@@ -18,7 +18,7 @@
     </script>
     <style>
         /* This creates the blur effect on the page behind the widget */
-        .cloudinary_sub_panel { backdrop-filter: blur(12px) !important; }
+        .cloudinary_sub_panel { backdrop-filter: blur(12px) !important; background: rgba(0,0,0,0.4) !important; }
         .nav-link.active { background-color: rgba(255,255,255,0.1); color: white; }
     </style>
 </head>
@@ -98,24 +98,25 @@
             apiKey: '348952918412621',
             uploadPreset: 'protocol_unsigned', 
             resourceType: 'video',
-            // ONLY ALLOW LOCAL FILES, CAMERA, AND GOOGLE DRIVE (Removed Web Address)
-            sources: ['local', 'camera', 'google_drive'],
-            showPoweredBy: false, // REMOVES CLOUDINARY LOGO AT BOTTOM
+            // REMOVED 'url' (web address) from sources
+            sources: ['local', 'camera', 'google_drive', 'dropbox'],
+            clientAllowedFormats: ["mp4", "mov", "avi", "webm"],
+            showPoweredBy: false,
             styles: {
                 palette: {
-                    window: "rgba(0, 0, 0, 0.85)",     // True dark transparency
-                    windowBorder: "#39FF1433",        // Neon green faint border
-                    tabIcon: "#39FF14",
+                    window: "#050505",          // Deep Black
+                    windowBorder: "#27272a",    // Dark Border
+                    tabIcon: "#39FF14",         // Neon Green
                     menuIcons: "#FFFFFF",
                     textDark: "#000000",
                     textLight: "#FFFFFF",
                     link: "#39FF14",
-                    action: "#39FF14",
+                    action: "#39FF14",          // Neon Green Buttons
                     inactiveTabIcon: "#444444",
                     error: "#FF4444",
                     inProgress: "#39FF14",
                     complete: "#39FF14",
-                    sourceBg: "rgba(5, 5, 5, 0.95)"    // Matches your background color
+                    sourceBg: "#0a0a0a"         // Dark Card color
                 },
                 fonts: {
                     default: null,
