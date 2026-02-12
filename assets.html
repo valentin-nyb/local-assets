@@ -49,18 +49,15 @@
                 
                 <div class="space-y-6">
                     <div class="p-8 border border-dashed border-zinc-800 rounded-2xl bg-card/30 hover:border-primary/30 transition-colors group">
-                        
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                             <div class="relative group/input">
                                 <label class="absolute -top-2.5 left-3 bg-[#0a0a0a] px-1 text-[9px] text-zinc-500 font-mono uppercase tracking-widest group-focus-within/input:text-primary transition-colors">Artist Name</label>
                                 <input type="text" id="ingest-name" placeholder="e.g. BELTRAN" class="w-full bg-[#050505] border border-zinc-800 rounded-lg px-4 py-3 text-xs focus:border-primary outline-none transition-all text-white font-bold">
                             </div>
-                            
                             <div class="relative group/input">
                                 <label class="absolute -top-2.5 left-3 bg-[#0a0a0a] px-1 text-[9px] text-zinc-500 font-mono uppercase tracking-widest group-focus-within/input:text-primary transition-colors">Event Date</label>
                                 <input type="date" id="ingest-date" class="w-full bg-[#050505] border border-zinc-800 rounded-lg px-4 py-3 text-xs focus:border-primary outline-none transition-all text-zinc-400">
                             </div>
-                            
                             <div class="relative group/input">
                                 <label class="absolute -top-2.5 left-3 bg-[#0a0a0a] px-1 text-[9px] text-zinc-500 font-mono uppercase tracking-widest group-focus-within/input:text-primary transition-colors">Camera Angle</label>
                                 <select id="ingest-shot" class="w-full bg-[#050505] border border-zinc-800 rounded-lg px-4 py-3 text-xs focus:border-primary outline-none transition-all text-zinc-400 cursor-pointer">
@@ -73,12 +70,10 @@
                                 <iconify-icon icon="solar:alt-arrow-down-linear" class="absolute right-3 top-3.5 text-zinc-600 pointer-events-none"></iconify-icon>
                             </div>
                         </div>
-
                         <div class="text-center">
                             <button id="upload_widget" class="px-10 py-3 bg-primary text-black font-extrabold rounded-full text-xs uppercase tracking-[0.2em] hover:shadow-[0_0_25px_rgba(57,255,20,0.4)] transition-all transform hover:-translate-y-0.5">
                                 Start Master Upload
                             </button>
-                            <p class="mt-4 text-[9px] font-mono text-zinc-600 uppercase tracking-widest">Support for 4K RAW Assets</p>
                         </div>
                     </div>
                 </div>
@@ -94,9 +89,6 @@
                                 <p id="player-status" class="text-[10px] font-mono text-primary uppercase tracking-widest mb-1">Status: Ready</p>
                                 <p id="video-name" class="text-sm font-medium text-white truncate max-w-md">Select a video...</p>
                             </div>
-                            <a id="download-link" href="#" target="_blank" class="text-zinc-400 hover:text-white transition-colors">
-                                <iconify-icon icon="solar:download-linear" class="text-xl"></iconify-icon>
-                            </a>
                         </div>
                     </div>
                 </div>
@@ -108,7 +100,6 @@
                             <span class="w-1.5 h-1.5 rounded-full bg-zinc-600"></span> Offline
                         </div>
                     </div>
-
                     <div class="grid grid-cols-2 gap-4">
                         <div class="relative">
                             <iconify-icon icon="solar:magnifer-linear" class="absolute left-3 top-2.5 text-zinc-500"></iconify-icon>
@@ -116,12 +107,8 @@
                         </div>
                         <input type="date" id="search-date" class="w-full bg-card border border-border rounded-lg px-4 py-2 text-xs focus:border-zinc-500 outline-none transition-all text-zinc-500">
                     </div>
-
-                    <div id="cloud-list" class="space-y-2">
-                        <p class="text-[10px] font-mono text-zinc-600 italic">Initializing...</p>
-                    </div>
+                    <div id="cloud-list" class="space-y-2"></div>
                 </div>
-
             </div>
         </div>
     </main>
@@ -130,55 +117,35 @@
         let cloudAssets = [];
 
         window.onload = function() {
-            // Set Default Date
             document.getElementById('ingest-date').value = new Date().toISOString().split('T')[0];
-
-            // Listeners
             const uploadBtn = document.getElementById("upload_widget");
-            if (uploadBtn) uploadBtn.addEventListener("click", startUploadProcess, false);
-
-            document.getElementById('search-name').addEventListener('input', renderList);
-            document.getElementById('search-date').addEventListener('change', renderList);
-
-            // Fetch Data
+            if (uploadBtn) uploadBtn.onclick = startUploadProcess;
+            document.getElementById('search-name').oninput = renderList;
+            document.getElementById('search-date').onchange = renderList;
             fetchCloudLibrary();
         };
 
         async function fetchCloudLibrary() {
             const statusEl = document.getElementById('connection-status');
-            const listContainer = document.getElementById('cloud-list');
             const cloudName = 'dso3xwno0';
             const tag = 'venue_recording';
-
-            statusEl.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse"></span> Connecting...';
-
             try {
                 const response = await fetch(`https://res.cloudinary.com/${cloudName}/video/list/${tag}.json`);
-                
-                if (!response.ok) {
-                    throw new Error("Access Denied. Check 'Resource List' in Cloudinary Settings.");
-                }
-
+                if (!response.ok) throw new Error("Cloud connection failed.");
                 const data = await response.json();
-                
                 statusEl.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-primary"></span> Live';
-                
                 cloudAssets = data.resources.map(res => {
-                    // NEW: Strip the folder prefix
                     const cleanId = res.public_id.replace('venue_masters/', '');
                     const parts = cleanId.split('_');
-                    
                     let artist = cleanId;
                     let date = "";
                     let shot = "MASTER";
-
                     const dateIndex = parts.findIndex(p => p.match(/^\d{4}-\d{2}-\d{2}$/));
                     if (dateIndex !== -1) {
                         artist = parts.slice(0, dateIndex).join(' ');
                         date = parts[dateIndex];
                         shot = parts.slice(dateIndex + 1).join(' ') || "MASTER";
                     }
-
                     return {
                         url: `https://res.cloudinary.com/${cloudName}/video/upload/${res.public_id}.${res.format}`,
                         public_id: res.public_id,
@@ -189,69 +156,33 @@
                         created_at: res.created_at
                     };
                 });
-
-                cloudAssets.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
                 renderList();
-
             } catch (error) {
-                console.error(error);
                 statusEl.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> Error';
-                listContainer.innerHTML = `<p class="text-[10px] font-mono text-red-400">Error: ${error.message}</p>`;
             }
         }
 
-     function renderList() {
-    const list = document.getElementById('cloud-list');
-    const searchName = document.getElementById('search-name').value.toLowerCase();
-    const searchDate = document.getElementById('search-date').value;
+        function renderList() {
+            const list = document.getElementById('cloud-list');
+            const searchName = document.getElementById('search-name').value.toLowerCase();
+            const searchDate = document.getElementById('search-date').value;
 
-    const filtered = cloudAssets.filter(item => {
-        // --- AUTO-CLEANUP LOGIC ---
-        // Hide files that contain these "trash" keywords from your screenshot
-        const isUnknown = item.artist.includes("UNKNOWN");
-        const isRandomTest = item.public_id.includes("xrerc") || item.public_id.includes("exa4f");
-        
-        if (isUnknown || isRandomTest) return false;
+            const filtered = cloudAssets.filter(item => {
+                // --- AUTO-CLEANUP LOGIC ---
+                const isUnknown = item.artist.includes("UNKNOWN");
+                const isRandomTest = item.public_id.includes("xrerc") || 
+                                   item.public_id.includes("exa4f") || 
+                                   item.public_id.includes("byc2t") || 
+                                   item.public_id.includes("fgs0g"); // Filter keys from screenshot trash
+                
+                if (isUnknown || isRandomTest) return false;
 
-        const nameMatch = item.artist.toLowerCase().includes(searchName) || item.shot.toLowerCase().includes(searchName);
-        const dateMatch = searchDate ? item.date === searchDate : true;
-        return nameMatch && dateMatch;
-    });
-
-    list.innerHTML = '';
-
-    if (filtered.length === 0) {
-         list.innerHTML = '<p class="text-[10px] font-mono text-zinc-600 italic">No assets found.</p>';
-         return;
-    }
-
-    filtered.forEach(item => {
-        const row = document.createElement('div');
-        row.className = "flex items-center justify-between p-3 bg-card/50 border border-border rounded-lg hover:border-primary/30 transition-colors group";
-        row.innerHTML = `
-            <div class="flex items-center gap-3 min-w-0">
-                <div class="w-8 h-8 rounded bg-zinc-800 flex items-center justify-center shrink-0 text-primary">
-                    <iconify-icon icon="solar:cloud-check-bold"></iconify-icon>
-                </div>
-                <div class="min-w-0">
-                    <div class="flex items-center gap-2">
-                        <p class="text-xs font-bold text-white truncate uppercase">${item.artist}</p>
-                        <span class="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 font-mono uppercase border border-zinc-700">${item.shot}</span>
-                    </div>
-                    <p class="text-[9px] font-mono text-zinc-500 truncate mt-0.5">${item.date} // ${item.format.toUpperCase()}</p>
-                </div>
-            </div>
-            <button onclick="playVideo('${item.url}', '${item.public_id}', '${item.format}')" class="p-2 text-zinc-400 hover:text-white">
-                <iconify-icon icon="solar:play-circle-linear" class="text-xl"></iconify-icon>
-            </button>
-        `;
-        list.appendChild(row);
-    });
-}
+                const nameMatch = item.artist.toLowerCase().includes(searchName) || item.shot.toLowerCase().includes(searchName);
+                const dateMatch = searchDate ? item.date === searchDate : true;
+                return nameMatch && dateMatch;
             });
 
             list.innerHTML = '';
-
             if (filtered.length === 0) {
                  list.innerHTML = '<p class="text-[10px] font-mono text-zinc-600 italic">No assets found.</p>';
                  return;
@@ -285,47 +216,21 @@
             const rawDjName = document.getElementById('ingest-name').value.trim();
             const dateInput = document.getElementById('ingest-date').value;
             const shotType = document.getElementById('ingest-shot').value;
-            
             if (!rawDjName) {
                 alert("⚠️ PLEASE ENTER ARTIST NAME");
-                document.getElementById('ingest-name').focus();
                 return;
             }
-
             const cleanDjName = rawDjName.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase();
             const fileName = `${cleanDjName}_${dateInput}_${shotType}`;
-
             cloudinary.createUploadWidget({
                 cloudName: 'dso3xwno0',
-                apiKey: '348952918412621',
                 uploadPreset: 'assets_unsigned',
                 folder: 'venue_masters',
-                resourceType: 'video',
-                sources: ['local', 'camera', 'google_drive'],
-                showPoweredBy: false,
-                chunkSize: 6000000, 
-                maxVideoFileSize: 5000000000,
                 public_id: fileName,    
-                tags: ['venue_recording', cleanDjName, dateInput, shotType], 
-                context: { dj: cleanDjName, date: dateInput, shot: shotType },
-                styles: {
-                    palette: {
-                        window: "#050505", windowBorder: "#27272a", tabIcon: "#39FF14",
-                        menuIcons: "#FFFFFF", textDark: "#000000", textLight: "#FFFFFF",
-                        link: "#39FF14", action: "#39FF14", inactiveTabIcon: "#444444",
-                        error: "#FF4444", inProgress: "#39FF14", complete: "#39FF14",
-                        sourceBg: "#050505"
-                    }
-                }
+                tags: ['venue_recording', cleanDjName, dateInput, shotType]
             }, (error, result) => {
                 if (!error && result && result.event === "success") {
-                    playVideo(result.info.secure_url, result.info.public_id, result.info.format);
-                    
-                    // REFRESH CLOUD LIST AFTER 3 SECONDS
-                    setTimeout(() => {
-                        fetchCloudLibrary();
-                    }, 3000);
-                    
+                    setTimeout(fetchCloudLibrary, 3000);
                     document.getElementById('ingest-name').value = ''; 
                 }
             }).open();
@@ -337,14 +242,8 @@
             container.classList.remove('hidden');
             player.src = url;
             document.getElementById('video-name').textContent = name.replace('venue_masters/', '') + "." + format;
-            document.getElementById('download-link').href = url;
             player.play();
-            container.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-
-        function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('-translate-x-full');
-            document.getElementById('sidebar-overlay').classList.toggle('hidden');
+            container.scrollIntoView({ behavior: 'smooth' });
         }
     </script>
 </body>
