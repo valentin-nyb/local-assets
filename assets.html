@@ -200,7 +200,8 @@
             const filtered = cloudAssets.filter(item => {
                 const isUnknown = item.artist.includes("UNKNOWN");
                 const isTrash = item.public_id.includes("xrerc") || item.public_id.includes("exa4f") || item.public_id.includes("byc2t");
-                if (isUnknown || isTrash) return false;
+                const isExcluded = item.public_id && item.public_id.includes('fgs0gukrfuxwncct97e4');
+                if (isUnknown || isTrash || isExcluded) return false;
                 return (item.artist.toLowerCase().includes(searchName) || item.shot.toLowerCase().includes(searchName)) && (searchDate ? item.date === searchDate : true);
             });
 
