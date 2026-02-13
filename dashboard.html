@@ -6,7 +6,7 @@
     <title>local / assets</title>
     
     <link rel="icon" type="image/svg+xml" href="https://res.cloudinary.com/dso3xwno0/image/upload/v1770939295/mcwp97ytys3vfyqjhymu.svg">
-    <link rel="apple-touch-icon" href="https://res.cloudinary.com/dso3xwno0/image/upload/v1770939295/mcwp97ytys3vfyqjhymu.svg">
+    <link rel="apple-touch-icon" sizes="180x180" href="https://res.cloudinary.com/dso3xwno0/image/upload/w_180,h_180,c_pad,b_black,f_png/v1770939295/mcwp97ytys3vfyqjhymu.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="local/assets">
@@ -44,7 +44,7 @@
 </head>
 <body class="font-sans antialiased bg-background text-foreground overflow-hidden h-screen w-screen flex selection:bg-primary selection:text-black">
 
-    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/80 z-40 hidden md:hidden backdrop-blur-sm transition-opacity duration-300 opacity-0"></div>
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/80 z-40 hidden md:hidden backdrop-blur-sm transition-opacity duration-300 opacity-0 cursor-pointer"></div>
 
     <aside id="sidebar" class="w-64 border-r border-border bg-card flex flex-col fixed inset-y-0 left-0 z-50 transform -translate-x-full transition-transform duration-300 ease-in-out md:translate-x-0 md:static shrink-0 md:h-full">
         <div class="h-16 flex items-center px-6 border-b border-border transition-all group justify-between">
@@ -79,18 +79,18 @@
     </aside>
 
     <main class="flex-1 flex flex-col min-w-0 bg-background overflow-hidden relative w-full">
-        <header class="h-16 flex items-center justify-between px-4 md:px-8 border-b border-border bg-background/50 backdrop-blur-md z-10 shrink-0">
-            <div class="flex items-center gap-3">
+        <header class="h-14 md:h-16 flex items-center justify-between px-4 md:px-8 border-b border-border bg-background/50 backdrop-blur-md z-10 shrink-0 w-full">
+            <div class="flex items-center gap-3 min-w-0">
                 <button onclick="toggleSidebar()" class="md:hidden text-white p-1 hover:bg-white/10 rounded-md transition-colors shrink-0">
-                    <iconify-icon icon="solar:hamburger-menu-linear" class="text-xl block"></iconify-icon>
+                    <iconify-icon icon="solar:hamburger-menu-linear" class="text-2xl block"></iconify-icon>
                 </button>
                 <div class="flex items-center gap-2 text-sm text-muted-foreground min-w-0">
                     <a href="index.html" class="hover:text-white cursor-pointer hidden md:inline transition-colors shrink-0">Home</a>
                     <iconify-icon icon="solar:alt-arrow-right-linear" class="text-xs hidden md:inline shrink-0"></iconify-icon>
-                    <span class="text-white font-medium truncate tracking-widest uppercase font-mono text-[10px] md:text-sm">Dashboard Overview</span>
+                    <span class="text-white font-medium truncate tracking-widest uppercase font-mono text-[10px] md:text-xs text-primary">Dashboard Overview</span>
                 </div>
             </div>
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-4 shrink-0">
                 <div class="hidden md:flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/10">
                     <span class="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_#39FF14]"></span>
                     <span class="text-[10px] font-mono text-white">SYSTEM OK</span>
@@ -106,17 +106,17 @@
                 </video>
                 <div class="absolute inset-0 bg-scanlines opacity-10 pointer-events-none"></div>
 
-                <div class="relative z-10">
+                <div class="relative z-10 w-full md:w-auto">
                     <div class="flex items-center gap-3 mb-3">
-                        <span class="inline-flex items-center gap-2 px-3 py-1 bg-red-500 text-white rounded-full text-[10px] font-bold uppercase tracking-widest animate-pulse">
+                        <span class="inline-flex items-center gap-2 px-3 py-1 bg-red-500 text-white rounded-full text-[10px] font-bold uppercase tracking-widest animate-pulse shrink-0">
                             <iconify-icon icon="solar:record-circle-linear"></iconify-icon> LIVE FEED
                         </span>
-                        <span class="text-white/50 font-mono text-[10px] uppercase">Room 1 // Main Floor</span>
+                        <span class="text-white/50 font-mono text-[10px] uppercase truncate">Room 1 // Main Floor</span>
                     </div>
                     <h2 class="text-3xl font-extrabold text-white tracking-tighter uppercase">Artist: Beltran</h2>
                 </div>
 
-                <div class="flex gap-10 relative z-10">
+                <div class="flex flex-wrap gap-6 md:gap-10 relative z-10">
                     <div class="text-left font-mono">
                         <span class="block text-[9px] text-muted-foreground uppercase mb-1">Elapsed</span>
                         <span class="text-lg text-white font-medium">01:42:15</span>
@@ -125,14 +125,14 @@
                         <span class="block text-[9px] text-muted-foreground uppercase mb-1">Cameras</span>
                         <span class="text-lg text-primary font-medium">3/3 ACTIVE</span>
                     </div>
-                    <div class="text-left font-mono">
+                    <div class="text-left font-mono hidden sm:block">
                         <span class="block text-[9px] text-muted-foreground uppercase mb-1">Bitrate</span>
                         <span class="text-lg text-white font-medium">45 Mbps</span>
                     </div>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 <div class="bg-card border border-border p-5 rounded-xl">
                     <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3 block">Total Assets Captured</span>
                     <div class="flex items-end justify-between">
@@ -170,29 +170,29 @@
                         <button class="text-[10px] text-muted-foreground hover:text-primary transition-colors uppercase font-mono">View All</button>
                     </div>
                     <div class="divide-y divide-border">
-                        <div class="p-5 flex items-center justify-between hover:bg-white/[0.02] transition-colors group cursor-pointer">
-                            <div class="flex items-center gap-4">
-                                <div class="w-10 h-10 bg-background border border-border flex items-center justify-center rounded-lg group-hover:border-primary/50 transition-colors">
+                        <div class="p-4 md:p-5 flex items-center justify-between hover:bg-white/[0.02] transition-colors group cursor-pointer">
+                            <div class="flex items-center gap-3 md:gap-4 min-w-0 pr-2">
+                                <div class="w-10 h-10 shrink-0 bg-background border border-border flex items-center justify-center rounded-lg group-hover:border-primary/50 transition-colors">
                                     <iconify-icon icon="solar:music-note-bold" class="text-muted-foreground group-hover:text-primary"></iconify-icon>
                                 </div>
-                                <div>
-                                    <p class="text-sm font-bold text-white uppercase tracking-tighter">Michael Bibi - 4 Hour Set</p>
-                                    <p class="text-[10px] font-mono text-muted-foreground uppercase">Oct 12, 2024 • 142 GB</p>
+                                <div class="min-w-0">
+                                    <p class="text-[11px] md:text-sm font-bold text-white uppercase tracking-tighter truncate">Michael Bibi - 4 Hour Set</p>
+                                    <p class="text-[9px] md:text-[10px] font-mono text-muted-foreground uppercase truncate">Oct 12, 2024 • 142 GB</p>
                                 </div>
                             </div>
-                            <span class="px-2 py-1 rounded text-[9px] font-mono uppercase bg-primary/10 text-primary border border-primary/20">Distributed</span>
+                            <span class="px-2 py-1 shrink-0 rounded text-[8px] md:text-[9px] font-mono uppercase bg-primary/10 text-primary border border-primary/20">Distributed</span>
                         </div>
-                        <div class="p-5 flex items-center justify-between hover:bg-white/[0.02] transition-colors group cursor-pointer">
-                            <div class="flex items-center gap-4">
-                                <div class="w-10 h-10 bg-background border border-border flex items-center justify-center rounded-lg">
+                        <div class="p-4 md:p-5 flex items-center justify-between hover:bg-white/[0.02] transition-colors group cursor-pointer">
+                            <div class="flex items-center gap-3 md:gap-4 min-w-0 pr-2">
+                                <div class="w-10 h-10 shrink-0 bg-background border border-border flex items-center justify-center rounded-lg">
                                     <iconify-icon icon="solar:music-note-bold" class="text-muted-foreground"></iconify-icon>
                                 </div>
-                                <div>
-                                    <p class="text-sm font-bold text-white uppercase tracking-tighter">PAWSA - Main Room</p>
-                                    <p class="text-[10px] font-mono text-muted-foreground uppercase">Oct 11, 2024 • 98 GB</p>
+                                <div class="min-w-0">
+                                    <p class="text-[11px] md:text-sm font-bold text-white uppercase tracking-tighter truncate">PAWSA - Main Room</p>
+                                    <p class="text-[9px] md:text-[10px] font-mono text-muted-foreground uppercase truncate">Oct 11, 2024 • 98 GB</p>
                                 </div>
                             </div>
-                            <span class="px-2 py-1 rounded text-[9px] font-mono uppercase bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">Processing</span>
+                            <span class="px-2 py-1 shrink-0 rounded text-[8px] md:text-[9px] font-mono uppercase bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">Processing</span>
                         </div>
                     </div>
                 </div>
@@ -224,21 +224,20 @@
     </main>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const videos = document.querySelectorAll('video');
-            videos.forEach(video => { video.muted = true; video.play().catch(e=>{}); });
-        });
-
+        // Sidebar Toggle Script
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebar-overlay');
             const isOpen = !sidebar.classList.contains('-translate-x-full');
+            
             if (isOpen) {
+                // Close it
                 sidebar.classList.add('-translate-x-full');
                 overlay.classList.remove('opacity-100'); 
                 overlay.classList.add('opacity-0');
                 setTimeout(() => { overlay.classList.add('hidden'); }, 300);
             } else {
+                // Open it
                 sidebar.classList.remove('-translate-x-full'); 
                 overlay.classList.remove('hidden');
                 requestAnimationFrame(() => { 
