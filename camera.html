@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <title>Camera Control</title>
+    <title>Media Hub // Camera Control</title>
+    <link rel="icon" type="image/png" href="https://res.cloudinary.com/dso3xwno0/image/upload/v1770939295/mcwp97ytys3vfyqjhymu.svg">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script>
@@ -25,15 +27,42 @@
             } 
         }
     </script>
+    <style>
+        body { background-color: #050505 !important; color: white; }
+        .nav-link.active { background-color: rgba(255,255,255,0.05); border: 1px solid #27272a; color: white; }
+        
+        /* Glassmorphism Notification */
+        #custom-alert {
+            backdrop-filter: blur(12px);
+            background: rgba(10, 10, 10, 0.8);
+            border: 1px solid rgba(57, 255, 20, 0.3);
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5), 0 0 10px rgba(57, 255, 20, 0.1);
+            transform: translate(-50%, -150%);
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        #custom-alert.show { transform: translate(-50%, 20px); }
+    </style>
 </head>
 <body class="bg-background text-white h-screen w-screen flex overflow-hidden font-sans selection:bg-primary/30">
+
+    <div id="custom-alert" class="fixed top-0 left-1/2 z-[100] px-6 py-4 rounded-xl flex items-center gap-4 min-w-[320px]">
+        <iconify-icon icon="solar:info-circle-bold" class="text-primary text-2xl"></iconify-icon>
+        <div class="flex flex-col">
+            <span class="text-[10px] font-mono text-primary uppercase tracking-widest">System Message</span>
+            <span id="alert-text" class="text-xs font-bold text-white uppercase tracking-tight"></span>
+        </div>
+    </div>
 
     <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/80 z-40 hidden md:hidden backdrop-blur-sm"></div>
 
     <aside id="sidebar" class="w-64 border-r border-zinc-800 bg-[#0a0a0a] flex flex-col fixed inset-y-0 left-0 z-50 transform -translate-x-full transition-transform duration-300 md:translate-x-0 md:static shrink-0 h-full">
         <div class="h-16 flex items-center px-6 border-b border-zinc-800">
-            <a href="index.html" class="font-sans text-xl font-extrabold tracking-tighter text-white lowercase decoration-0">local / assets</a>
-        </div>
+    <a href="index.html" class="flex items-center hover:opacity-80 transition-opacity">
+        <span class="font-sans text-xl font-extrabold tracking-tighter text-white lowercase">
+            local / assets
+        </span>
+    </a>
+</div>
         <nav class="flex-1 p-4 space-y-2">
             <a href="dashboard.html" class="nav-link flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors hover:bg-white/5 text-zinc-400">
                 <iconify-icon icon="solar:widget-5-linear" class="text-lg"></iconify-icon>Overview
@@ -133,9 +162,9 @@
                     <div class="space-y-3 mb-12">
                         <p class="text-[10px] font-mono text-zinc-500 uppercase mb-2">Quick Presets</p>
                         <div class="grid grid-cols-3 gap-2">
-                            <button class="border border-primary/50 text-primary bg-primary/5 text-[9px] py-3 rounded hover:bg-primary hover:text-black transition-all font-mono">FULL STAGE</button>
-                            <button class="border border-zinc-800 text-zinc-400 text-[9px] py-3 rounded hover:border-zinc-600 transition-all font-mono">DJ CLOSE-UP</button>
-                            <button class="border border-zinc-800 text-zinc-400 text-[9px] py-3 rounded hover:border-zinc-600 transition-all font-mono">CROWD WIDE</button>
+                            <button onclick="showAlert('Preset: Full Stage Active')" class="border border-primary/50 text-primary bg-primary/5 text-[9px] py-3 rounded hover:bg-primary hover:text-black transition-all font-mono">FULL STAGE</button>
+                            <button onclick="showAlert('Preset: DJ Close-Up Active')" class="border border-zinc-800 text-zinc-400 text-[9px] py-3 rounded hover:border-zinc-600 transition-all font-mono">DJ CLOSE-UP</button>
+                            <button onclick="showAlert('Preset: Crowd Wide Active')" class="border border-zinc-800 text-zinc-400 text-[9px] py-3 rounded hover:border-zinc-600 transition-all font-mono">CROWD WIDE</button>
                         </div>
                     </div>
 
@@ -195,6 +224,13 @@
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('-translate-x-full');
             document.getElementById('sidebar-overlay').classList.toggle('hidden');
+        }
+
+        function showAlert(msg) {
+            const box = document.getElementById('custom-alert');
+            document.getElementById('alert-text').textContent = msg;
+            box.classList.add('show');
+            setTimeout(() => box.classList.remove('show'), 3000);
         }
     </script>
 </body>
