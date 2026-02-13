@@ -70,7 +70,11 @@
     <main class="min-h-screen bg-background relative">
         <section class="min-h-screen flex flex-col md:px-8 overflow-hidden pr-4 pl-4 relative justify-center">
             <nav class="flex md:pr-8 md:pt-8 md:pb-8 md:pl-8 z-20 pt-8 pr-8 pb-8 pl-8 absolute top-0 right-0 left-0 items-center justify-between">
-                <span class="text-primary lowercase text-3xl font-extrabold tracking-tighter font-sans max-w-lg drop-shadow-[0_0_15px_rgba(57,255,20,0.3)] md:text-2xl">local / assets</span>
+                
+                <a href="index.html" class="relative h-8 w-40 flex transition-all group">
+                    <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974378/ibyostiwecnvm2cebqar.svg" class="absolute inset-0 h-full w-full object-left object-contain brightness-0 invert opacity-100 group-hover:opacity-0 transition-opacity duration-200" alt="local / assets">
+                    <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974377/eayfotlcvgq36kpwvitw.svg" class="absolute inset-0 h-full w-full object-left object-contain opacity-0 group-hover:opacity-100 transition-opacity duration-200" alt="local / assets hover">
+                </a>
                 
                 <a href="dashboard.html" class="flex border-border hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-200 uppercase group cursor-pointer text-xs tracking-wider font-mono border pt-2 pr-4 pb-2 pl-4 backdrop-blur-md gap-x-2 gap-y-2 items-center decoration-0">
                     <iconify-icon icon="solar:widget-5-linear" class="text-base"></iconify-icon>
@@ -115,13 +119,13 @@
                 <p class="font-mono text-xs tracking-[0.3em] text-primary mb-4">[ SELECT YOUR TIER ]</p>
                 <h2 class="md:text-6xl text-foreground text-4xl font-semibold tracking-tight mb-8">INFRASTRUCTURE TIERS</h2>
                 <div class="inline-flex bg-[#111] border border-border rounded-full p-1 gap-1 mb-8">
-                    <button onclick="togglePricing('distribution')" id="toggle-distro" class="px-6 py-2 rounded-full text-xs font-mono font-semibold tracking-wider transition-all bg-primary text-black">DISTRIBUTION ONLY</button>
-                    <button onclick="togglePricing('creative')" id="toggle-creative" class="px-6 py-2 rounded-full text-xs font-mono font-semibold tracking-wider transition-all text-muted-foreground hover:text-white">CREATIVE & PRODUCTION</button>
+                    <button onclick="togglePricing('distribution')" id="toggle-distro" class="px-6 py-2 rounded-full text-xs font-mono font-semibold tracking-wider transition-all text-muted-foreground hover:text-white">DISTRIBUTION ONLY</button>
+                    <button onclick="togglePricing('creative')" id="toggle-creative" class="px-6 py-2 rounded-full text-xs font-mono font-semibold tracking-wider transition-all bg-primary text-black">CREATIVE & PRODUCTION</button>
                 </div>
             </div>
 
             <div class="max-w-7xl mx-auto reveal delay-200">
-                <div id="pricing-distribution" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div id="pricing-distribution" class="hidden md:grid-cols-3 gap-6">
                     <div class="relative flex flex-col p-6 md:p-8 border border-border bg-card hover:border-border/80 transition-all hover:-translate-y-1">
                         <h3 class="text-muted-foreground text-sm tracking-wider font-mono mb-6 uppercase">Starter (Distribution)</h3>
                         <div class="mb-2"><span class="text-4xl md:text-5xl font-semibold text-foreground">£1,750</span><span class="text-muted-foreground text-lg">/mo</span></div>
@@ -163,7 +167,7 @@
                     </div>
                 </div>
 
-                <div id="pricing-creative" class="hidden grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div id="pricing-creative" class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div class="relative flex flex-col p-6 md:p-8 border border-border bg-card hover:border-border/80 transition-all hover:-translate-y-1">
                         <h3 class="text-muted-foreground text-sm tracking-wider font-mono mb-6 uppercase">Starter (Creative)</h3>
                         <div class="mb-2"><span class="text-4xl md:text-5xl font-semibold text-foreground">£2,500</span><span class="text-muted-foreground text-lg">/mo</span></div>
