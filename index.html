@@ -211,29 +211,61 @@
             </div>
         </section>
 
-        <section class="md:px-8 border-border border-t pt-24 pr-4 pb-24 pl-4 relative">
-            <div class="text-center mb-10 reveal">
-                <p class="font-mono text-xs tracking-[0.3em] text-primary mb-4">[ SELECT YOUR TIER ]</p>
-                <h2 class="md:text-6xl text-foreground text-4xl font-semibold tracking-tight mb-8 uppercase">Infrastructure Tiers</h2>
+      <section class="md:px-8 border-border border-t pt-24 pr-4 pb-24 pl-4 relative">
+    <div class="text-center mb-10 reveal">
+        <p class="font-mono text-xs tracking-[0.3em] text-primary mb-4">[ SELECT YOUR TIER ]</p>
+        <h2 class="md:text-6xl text-foreground text-4xl font-semibold tracking-tight mb-8 uppercase">Infrastructure Tiers</h2>
+        
+        <div class="inline-flex bg-[#111] border border-border rounded-full p-1 gap-1 mb-8">
+            <button onclick="togglePricing('distribution')" id="toggle-distro" class="px-6 py-2 rounded-full text-xs font-mono font-semibold tracking-wider transition-all text-muted-foreground hover:text-white">DISTRIBUTION ONLY</button>
+            <button onclick="togglePricing('creative')" id="toggle-creative" class="px-6 py-2 rounded-full text-xs font-mono font-semibold tracking-wider transition-all bg-primary text-black">CREATIVE & PRODUCTION</button>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto reveal delay-200">
+        <div id="pricing-distribution" class="hidden grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="relative flex flex-col p-6 md:p-8 border border-border bg-card hover:border-border/80 transition-all">
+                <h3 class="text-muted-foreground text-sm tracking-wider font-mono mb-6 uppercase">Starter (Distribution)</h3>
+                <div class="mb-2"><span class="text-4xl md:text-5xl font-semibold text-foreground">£1,750</span><span class="text-muted-foreground text-lg">/mo</span></div>
+                <button class="mt-8 w-full py-4 font-mono text-sm tracking-wider transition-colors border border-border text-foreground hover:border-primary hover:text-primary uppercase">Select Tier</button>
             </div>
-            </section>
+        </div>
 
-        <footer class="bg-black border-t border-white/10 py-4 px-8 mt-auto sticky bottom-0 z-20">
-            <div class="flex justify-between items-center text-[10px] font-mono text-zinc-600"><span>Protocol v2.4.0 // Connected</span><div class="flex items-center gap-2"><div class="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></div><span>System Operational</span></div></div>
-        </footer>
-    </main>
+        <div id="pricing-creative" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="relative flex flex-col p-6 md:p-8 border border-primary/50 bg-primary/5 backdrop-blur-sm transition-all">
+                <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-black px-3 py-1 text-[10px] font-bold tracking-widest uppercase">Most Popular</div>
+                <h3 class="text-primary text-sm tracking-wider font-mono mb-6 uppercase">Full Production</h3>
+                <div class="mb-2"><span class="text-4xl md:text-5xl font-semibold text-foreground">£4,500</span><span class="text-muted-foreground text-lg">/mo</span></div>
+                <ul class="space-y-3 flex-1 mt-8">
+                    <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-primary mt-0.5 text-base"></iconify-icon><span class="text-sm text-foreground">Multi-cam 4K Capture</span></li>
+                    <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-primary mt-0.5 text-base"></iconify-icon><span class="text-sm text-foreground">30+ Social Clips / Set</span></li>
+                    <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-primary mt-0.5 text-base"></iconify-icon><span class="text-sm text-foreground">Global Syndication</span></li>
+                </ul>
+                <button class="mt-8 w-full py-4 font-mono text-sm tracking-wider transition-colors bg-primary text-black hover:bg-white uppercase font-bold">Inquire Now</button>
+            </div>
+        </div>
+    </div>
+</section>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('active');
-                    }
-                });
-            }, { threshold: 0.1 });
-            document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
-        });
-    </script>
-</body>
+<script>
+    // Updated toggle logic to reflect the state
+    function togglePricing(mode) {
+        const distroSection = document.getElementById('pricing-distribution');
+        const creativeSection = document.getElementById('pricing-creative');
+        const btnDistro = document.getElementById('toggle-distro');
+        const btnCreative = document.getElementById('toggle-creative');
+
+        if (mode === 'distribution') {
+            distroSection.classList.replace('hidden', 'grid');
+            creativeSection.classList.replace('grid', 'hidden');
+            btnDistro.className = "px-6 py-2 rounded-full text-xs font-mono font-semibold tracking-wider transition-all bg-primary text-black";
+            btnCreative.className = "px-6 py-2 rounded-full text-xs font-mono font-semibold tracking-wider transition-all text-muted-foreground hover:text-white";
+        } else {
+            creativeSection.classList.replace('hidden', 'grid');
+            distroSection.classList.replace('grid', 'hidden');
+            btnCreative.className = "px-6 py-2 rounded-full text-xs font-mono font-semibold tracking-wider transition-all bg-primary text-black";
+            btnDistro.className = "px-6 py-2 rounded-full text-xs font-mono font-semibold tracking-wider transition-all text-muted-foreground hover:text-white";
+        }
+    }
+</script>
 </html>
