@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en" class="dark scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
@@ -8,9 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script>
-        tailwind.config = {
-            theme: { extend: { colors: { background: '#050505', card: '#0a0a0a', primary: '#39FF14', border: '#27272a' } } }
-        }
+        tailwind.config = { theme: { extend: { colors: { background: '#050505', card: '#0a0a0a', primary: '#39FF14', border: '#27272a' } } } }
     </script>
     <style>
         body { background-color: #050505; color: #ffffff; -webkit-font-smoothing: antialiased; }
@@ -19,37 +17,66 @@
         ::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="h-screen w-screen flex overflow-hidden">
-    <aside class="w-64 border-r border-border bg-card flex flex-col shrink-0 h-full">
+<body class="bg-background text-white h-screen w-screen flex overflow-hidden font-sans">
+    <aside class="w-64 border-r border-border bg-card flex flex-col h-full shrink-0">
         <div class="h-16 border-b border-border">
-            <a href="index" class="flex items-center w-full h-full px-6 group transition-all">
+            <a href="index" class="flex items-center w-full h-full px-6 transition-all group">
                 <div class="relative h-5 w-32">
-                    <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974378/ibyostiwecnvm2cebqar.svg" class="absolute inset-0 h-full w-auto object-contain brightness-0 invert opacity-100 group-hover:opacity-0 transition-opacity duration-200">
-                    <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974377/eayfotlcvgq36kpwvitw.svg" class="absolute inset-0 h-full w-auto object-contain opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974378/ibyostiwecnvm2cebqar.svg" class="absolute inset-0 h-full w-auto object-contain brightness-0 invert group-hover:opacity-0 transition-opacity">
+                    <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974377/eayfotlcvgq36kpwvitw.svg" class="absolute inset-0 h-full w-auto object-contain opacity-0 group-hover:opacity-100 transition-opacity">
                 </div>
             </a>
         </div>
         <nav class="flex-1 p-4 space-y-1">
             <a href="dashboard" class="nav-link active flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors"><iconify-icon icon="solar:widget-5-linear" class="text-primary"></iconify-icon>Overview</a>
-            <a href="camera" class="nav-link flex items-center gap-3 px-3 py-2 text-sm text-zinc-400 hover:text-white transition-colors"><iconify-icon icon="solar:videocamera-record-linear"></iconify-icon>Camera Control</a>
-            <a href="assets" class="nav-link flex items-center gap-3 px-3 py-2 text-sm text-zinc-400 hover:text-white transition-colors"><iconify-icon icon="solar:clapperboard-play-linear"></iconify-icon>Media Assets</a>
+            <a href="camera" class="flex items-center gap-3 px-3 py-2 text-sm text-zinc-400 hover:text-white transition-colors"><iconify-icon icon="solar:videocamera-record-linear"></iconify-icon>Camera Control</a>
+            <a href="assets" class="flex items-center gap-3 px-3 py-2 text-sm text-zinc-400 hover:text-white transition-colors"><iconify-icon icon="solar:clapperboard-play-linear"></iconify-icon>Media Assets</a>
         </nav>
     </aside>
+
     <main class="flex-1 flex flex-col overflow-hidden relative">
         <header class="h-16 flex items-center justify-between px-8 border-b border-border bg-background/50 backdrop-blur-md">
             <div class="text-sm text-zinc-500 font-mono uppercase">Home <iconify-icon icon="solar:alt-arrow-right-linear" class="mx-2 text-[10px]"></iconify-icon> <span class="text-white">Dashboard Overview</span></div>
         </header>
         <div class="flex-1 overflow-y-auto p-8 space-y-6">
-            <div class="w-full h-64 bg-card border border-border rounded-2xl relative overflow-hidden shadow-2xl">
+            <div class="w-full h-64 bg-card border border-border rounded-2xl relative overflow-hidden group shadow-2xl shrink-0">
                 <video autoplay loop muted playsinline class="absolute inset-0 w-full h-full object-cover opacity-40 grayscale hover:grayscale-0 transition-all duration-700">
                     <source src="https://res.cloudinary.com/dso3xwno0/video/upload/v1770888132/Beltran_e58al0.mov" type="video/mp4">
                 </video>
                 <div class="absolute inset-0 bg-scanlines opacity-10"></div>
-                <div class="relative z-10 p-8 h-full flex flex-col justify-end"><h2 class="text-3xl font-extrabold text-white tracking-tighter uppercase">Artist: Beltran</h2></div>
+                <div class="relative z-10 p-8 flex flex-col justify-end h-full">
+                    <span class="bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded w-fit animate-pulse mb-4 uppercase">Live Feed</span>
+                    <h2 class="text-3xl font-extrabold uppercase tracking-tighter">Artist: Beltran</h2>
+                </div>
             </div>
+
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div class="bg-card border border-border p-5 rounded-xl"><span class="text-[9px] font-mono text-zinc-500 uppercase block mb-2">Assets Captured</span><span class="text-2xl font-bold">1,248</span></div>
-                <div class="bg-card border border-border p-5 rounded-xl"><span class="text-[9px] font-mono text-zinc-500 uppercase block mb-2">Cloud Storage</span><span class="text-2xl font-bold">42 TB</span><div class="w-full bg-white/5 h-1 mt-4 rounded-full"><div class="bg-primary h-full w-[84%]"></div></div></div>
+                <div class="bg-card border border-border p-5 rounded-xl"><span class="text-[9px] font-mono text-zinc-500 uppercase block mb-2">Cloud Storage</span><span class="text-2xl font-bold">42 TB</span><div class="w-full bg-white/5 h-1 mt-4 rounded-full overflow-hidden"><div class="bg-primary h-full w-[84%]"></div></div></div>
+                <div class="bg-card border border-border p-5 rounded-xl"><span class="text-[9px] font-mono text-zinc-500 uppercase block mb-2">Revenue</span><span class="text-2xl font-bold">£48,250</span></div>
+                <div class="bg-card border border-border p-5 rounded-xl border-r-4 border-r-red-500"><span class="text-[9px] font-mono text-zinc-500 uppercase block mb-2">Next Event</span><span class="text-sm font-bold block">FABRIC ROOM 1</span><span class="text-[9px] text-zinc-500">TONIGHT, 22:00 PM</span></div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 bg-card border border-border rounded-2xl overflow-hidden">
+                    <div class="p-5 border-b border-border"><h3 class="text-xs font-bold uppercase tracking-widest">Recent Sets</h3></div>
+                    <div class="divide-y divide-border">
+                        <div class="p-4 flex items-center justify-between hover:bg-white/5 transition-all">
+                            <div class="flex items-center gap-4">
+                                <iconify-icon icon="solar:music-note-bold" class="text-zinc-500 text-xl"></iconify-icon>
+                                <div><p class="text-sm font-bold uppercase">Michael Bibi - 4 Hour Set</p><p class="text-[10px] font-mono text-zinc-500">OCT 12, 2024</p></div>
+                            </div>
+                            <span class="text-[8px] font-mono uppercase px-2 py-1 rounded bg-primary/10 text-primary border border-primary/20">Distributed</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-card border border-border rounded-2xl p-6">
+                    <h3 class="text-xs font-bold uppercase tracking-widest mb-6">System Health</h3>
+                    <div class="space-y-6">
+                        <div><div class="flex justify-between text-[10px] font-mono mb-2"><span>UPLOAD</span><span>840 MBPS</span></div><div class="w-full bg-white/5 h-1 rounded-full overflow-hidden"><div class="bg-primary h-full w-[85%]"></div></div></div>
+                        <div><div class="flex justify-between text-[10px] font-mono mb-2"><span>STORAGE</span><span>82%</span></div><div class="w-full bg-white/5 h-1 rounded-full overflow-hidden"><div class="bg-yellow-500 h-full w-[82%]"></div></div></div>
+                    </div>
+                </div>
             </div>
         </div>
     </main>
