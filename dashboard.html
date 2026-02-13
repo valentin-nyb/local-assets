@@ -5,26 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <title>local / assets</title>
     <link rel="icon" type="image/png" href="https://res.cloudinary.com/dso3xwno0/image/upload/v1770939295/mcwp97ytys3vfyqjhymu.svg">
-    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script>
         tailwind.config = {
-            darkMode: 'class',
             theme: {
                 extend: {
-                    colors: {
-                        background: '#050505',
-                        foreground: '#ffffff',
-                        card: '#0a0a0a',
-                        border: '#27272a',
-                        muted: { DEFAULT: '#27272a', foreground: '#a1a1aa' },
-                        primary: { DEFAULT: '#39FF14', foreground: '#000000', glow: 'rgba(57, 255, 20, 0.5)' },
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                        mono: ['JetBrains Mono', 'monospace'],
-                    }
+                    colors: { background: '#050505', card: '#0a0a0a', primary: '#39FF14', border: '#27272a' }
                 }
             }
         }
@@ -41,109 +28,102 @@
     <aside id="sidebar" class="w-64 border-r border-border bg-card flex flex-col shrink-0 h-full">
         <div class="h-16 border-b border-border">
             <a href="index" class="flex items-center w-full h-full px-6 transition-all group hover:bg-white/5">
-                <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974378/ibyostiwecnvm2cebqar.svg" 
-                     alt="local / assets" 
-                     class="h-5 w-auto object-contain brightness-0 invert group-hover:drop-shadow-[0_0_8px_rgba(57,255,20,0.6)] transition-all">
+                <div class="relative h-5 w-32">
+                    <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974378/ibyostiwecnvm2cebqar.svg" class="absolute inset-0 h-full w-auto object-contain brightness-0 invert opacity-100 group-hover:opacity-0 transition-opacity duration-200">
+                    <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974377/eayfotlcvgq36kpwvitw.svg" class="absolute inset-0 h-full w-auto object-contain opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow-[0_0_8px_rgba(57,255,20,0.5)]">
+                </div>
             </a>
         </div>
 
         <nav class="flex-1 p-4 space-y-1">
-            <a href="dashboard" class="nav-link active flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors">
-                <iconify-icon icon="solar:widget-5-linear" class="text-lg text-primary"></iconify-icon>Overview
-            </a>
-            <a href="camera" class="nav-link flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:text-white transition-colors">
-                <iconify-icon icon="solar:videocamera-record-linear" class="text-lg"></iconify-icon>Camera Control
-            </a>
-            <a href="assets" class="nav-link flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:text-white transition-colors">
-                <iconify-icon icon="solar:clapperboard-play-linear" class="text-lg"></iconify-icon>Media Assets
-            </a>
+            <a href="dashboard" class="nav-link active flex items-center gap-3 px-3 py-2 text-sm rounded-md"><iconify-icon icon="solar:widget-5-linear" class="text-primary"></iconify-icon>Overview</a>
+            <a href="camera" class="nav-link flex items-center gap-3 px-3 py-2 text-sm text-zinc-400 hover:text-white transition-colors"><iconify-icon icon="solar:videocamera-record-linear"></iconify-icon>Camera Control</a>
+            <a href="assets" class="nav-link flex items-center gap-3 px-3 py-2 text-sm text-zinc-400 hover:text-white transition-colors"><iconify-icon icon="solar:clapperboard-play-linear"></iconify-icon>Media Assets</a>
         </nav>
+        
         <div class="p-4 border-t border-border">
             <div class="flex items-center gap-2 text-[10px] font-mono text-red-500 animate-pulse uppercase mb-4">
                 <div class="w-2 h-2 rounded-full bg-red-500"></div> REC: ROOM 1
             </div>
-            <button class="w-full flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:text-white transition-colors">
-                <iconify-icon icon="solar:settings-linear" class="text-lg"></iconify-icon>Venue Settings
-            </button>
+            <button class="w-full flex items-center gap-3 px-3 py-2 text-sm text-zinc-500 hover:text-white transition-colors"><iconify-icon icon="solar:settings-linear"></iconify-icon>Venue Settings</button>
         </div>
     </aside>
 
     <main class="flex-1 flex flex-col overflow-hidden relative">
         <header class="h-16 flex items-center justify-between px-8 border-b border-border bg-background/50 backdrop-blur-md z-10">
-            <div class="text-sm text-muted-foreground font-mono uppercase tracking-widest">
-                Home <iconify-icon icon="solar:alt-arrow-right-linear" class="mx-2 text-[10px]"></iconify-icon> 
-                <span class="text-white">Dashboard Overview</span>
-            </div>
+            <div class="text-sm text-zinc-500 font-mono uppercase">Home <iconify-icon icon="solar:alt-arrow-right-linear" class="mx-2 text-[10px]"></iconify-icon> <span class="text-white">Dashboard Overview</span></div>
             <div class="flex items-center gap-4">
-                <div class="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/10">
-                    <span class="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_#39FF14]"></span>
-                    <span class="text-[10px] font-mono text-white">SYSTEM OK</span>
+                <div class="flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-full font-mono text-[10px] text-primary">
+                    <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span> SYSTEM OK
                 </div>
-                <div class="h-8 w-8 rounded-full bg-white flex items-center justify-center text-black font-bold text-xs">F</div>
             </div>
         </header>
 
         <div class="flex-1 overflow-y-auto p-8 space-y-6">
-            <div class="cursor-pointer hover:border-primary/50 transition-all duration-500 w-full bg-card border border-border rounded-2xl p-8 relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-6 shadow-2xl">
+            <div class="w-full h-64 bg-card border border-border rounded-2xl relative overflow-hidden group shadow-2xl">
                 <video autoplay loop muted playsinline class="absolute inset-0 w-full h-full object-cover opacity-40 grayscale hover:grayscale-0 transition-all duration-700">
                     <source src="https://res.cloudinary.com/dso3xwno0/video/upload/v1770888132/Beltran_e58al0.mov" type="video/mp4">
                 </video>
-                <div class="absolute inset-0 bg-scanlines opacity-10 pointer-events-none"></div>
-
-                <div class="relative z-10">
-                    <div class="flex items-center gap-3 mb-3">
-                        <span class="inline-flex items-center gap-2 px-3 py-1 bg-red-500 text-white rounded-full text-[10px] font-bold uppercase tracking-widest animate-pulse">
-                            <iconify-icon icon="solar:record-circle-linear"></iconify-icon> LIVE FEED
-                        </span>
-                        <span class="text-white/50 font-mono text-[10px] uppercase">Room 1 // Main Floor</span>
+                <div class="absolute inset-0 bg-scanlines opacity-10"></div>
+                <div class="relative z-10 p-8 flex flex-col justify-between h-full">
+                    <div>
+                        <span class="bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded animate-pulse">LIVE FEED</span>
+                        <h2 class="text-3xl font-extrabold uppercase tracking-tighter mt-4">Artist: Beltran</h2>
                     </div>
-                    <h2 class="text-3xl font-extrabold text-white tracking-tighter uppercase">Artist: Beltran</h2>
-                </div>
-
-                <div class="flex gap-10 relative z-10">
-                    <div class="text-left font-mono">
-                        <span class="block text-[9px] text-muted-foreground uppercase mb-1">Elapsed</span>
-                        <span class="text-lg text-white font-medium">01:42:15</span>
-                    </div>
-                    <div class="text-left font-mono">
-                        <span class="block text-[9px] text-muted-foreground uppercase mb-1">Cameras</span>
-                        <span class="text-lg text-primary font-medium">3/3 ACTIVE</span>
-                    </div>
-                    <div class="text-left font-mono">
-                        <span class="block text-[9px] text-muted-foreground uppercase mb-1">Bitrate</span>
-                        <span class="text-lg text-white font-medium">45 Mbps</span>
+                    <div class="flex gap-10 font-mono text-xs text-zinc-400">
+                        <div><span class="block text-[9px] uppercase mb-1">Elapsed</span><span class="text-white">01:42:15</span></div>
+                        <div><span class="block text-[9px] uppercase mb-1">Cameras</span><span class="text-primary">3/3 ACTIVE</span></div>
+                        <div><span class="block text-[9px] uppercase mb-1">Bitrate</span><span class="text-white">45 Mbps</span></div>
                     </div>
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div class="bg-card border border-border p-5 rounded-xl">
-                    <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3 block">Total Assets Captured</span>
-                    <div class="flex items-end justify-between">
-                        <span class="text-2xl font-bold">1,248</span>
-                        <span class="text-[10px] text-primary font-mono bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">+12%</span>
-                    </div>
+                    <span class="text-[9px] font-mono text-zinc-500 uppercase tracking-widest block mb-2">Assets Captured</span>
+                    <span class="text-2xl font-bold">1,248</span>
                 </div>
                 <div class="bg-card border border-border p-5 rounded-xl">
-                    <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3 block">Cloud Storage</span>
-                    <div class="flex items-end justify-between">
-                        <span class="text-2xl font-bold">42 TB</span>
-                        <span class="text-[10px] text-muted-foreground font-mono">/ 50 TB</span>
-                    </div>
+                    <span class="text-[9px] font-mono text-zinc-500 uppercase tracking-widest block mb-2">Cloud Storage</span>
+                    <span class="text-2xl font-bold">42 TB</span>
                     <div class="w-full bg-white/5 h-1 mt-4 rounded-full overflow-hidden"><div class="bg-primary h-full w-[84%]"></div></div>
                 </div>
                 <div class="bg-card border border-border p-5 rounded-xl">
-                    <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3 block">Revenue Generated</span>
-                    <div class="flex items-end justify-between">
-                        <span class="text-2xl font-bold">£48,250</span>
-                        <span class="text-[10px] text-primary font-mono bg-primary/10 px-2 py-0.5 rounded border border-primary/20">+24%</span>
+                    <span class="text-[9px] font-mono text-zinc-500 uppercase tracking-widest block mb-2">Revenue Generated</span>
+                    <span class="text-2xl font-bold">£48,250</span>
+                </div>
+                <div class="bg-card border border-border p-5 rounded-xl border-r-4 border-r-red-500">
+                    <span class="text-[9px] font-mono text-zinc-500 uppercase tracking-widest block mb-2">Next Event</span>
+                    <span class="text-sm font-bold block">FABRIC ROOM 1</span>
+                    <span class="text-[9px] text-zinc-500">TONIGHT, 22:00 PM</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 bg-card border border-border rounded-2xl overflow-hidden">
+                    <div class="p-5 border-b border-border flex justify-between items-center"><h3 class="text-xs font-bold uppercase tracking-widest">Recent Sets</h3></div>
+                    <div class="divide-y divide-border">
+                        <div class="p-4 flex items-center justify-between hover:bg-white/5 cursor-pointer">
+                            <div class="flex items-center gap-4">
+                                <iconify-icon icon="solar:music-note-bold" class="text-zinc-500 text-xl"></iconify-icon>
+                                <div><p class="text-sm font-bold">Michael Bibi - 4 Hour Set</p><p class="text-[10px] font-mono text-zinc-500">Oct 12, 2024 • 142 GB</p></div>
+                            </div>
+                            <span class="text-[8px] font-mono uppercase px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">Distributed</span>
+                        </div>
                     </div>
                 </div>
-                <div class="bg-card border border-border p-5 rounded-xl relative overflow-hidden">
-                    <div class="absolute right-0 top-0 bottom-0 w-1 bg-red-500 animate-pulse"></div>
-                    <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3 block">Next Event</span>
-                    <span class="block text-sm font-bold text-white uppercase tracking-tight">Fabric Room 1</span>
-                    <span class="text-[10px] text-muted-foreground font-mono uppercase">Tonight, 22:00 PM</span>
+                <div class="bg-card border border-border rounded-2xl p-6">
+                    <h3 class="text-xs font-bold uppercase tracking-widest mb-6">System Health</h3>
+                    <div class="space-y-6">
+                        <div>
+                            <div class="flex justify-between text-[10px] font-mono mb-2 uppercase"><span>Upload Bandwidth</span><span>840 Mbps</span></div>
+                            <div class="w-full bg-white/5 h-1 rounded-full overflow-hidden"><div class="bg-primary h-full w-[85%] shadow-[0_0_10px_#39FF14]"></div></div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-[10px] font-mono mb-2 uppercase"><span>NAS Storage</span><span>82%</span></div>
+                            <div class="w-full bg-white/5 h-1 rounded-full overflow-hidden"><div class="bg-yellow-500 h-full w-[82%]"></div></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

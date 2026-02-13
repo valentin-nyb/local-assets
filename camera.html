@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <title>local / assets - London</title>
+    <title>local / assets</title>
     <link rel="icon" type="image/png" href="https://res.cloudinary.com/dso3xwno0/image/upload/v1770939295/mcwp97ytys3vfyqjhymu.svg">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
@@ -13,66 +13,59 @@
         }
     </script>
     <style>
-        body { background-color: #050505 !important; color: white; }
+        body { background-color: #050505 !important; color: white; -webkit-font-smoothing: antialiased; }
         .nav-link.active { background-color: rgba(255,255,255,0.05); border: 1px solid #27272a; color: white; }
-        ::-webkit-scrollbar { display: none; }
+        .joystick-base { background: radial-gradient(circle, #1a1a1a 0%, #050505 100%); }
     </style>
 </head>
 <body class="bg-background text-white h-screen w-screen flex overflow-hidden font-sans">
-    <aside id="sidebar" class="w-64 border-r border-zinc-800 bg-[#0a0a0a] flex flex-col shrink-0 h-full">
+
+    <aside class="w-64 border-r border-zinc-800 bg-[#0a0a0a] flex flex-col shrink-0 h-full">
         <div class="h-16 border-b border-zinc-800">
             <a href="index" class="flex items-center w-full h-full px-6 transition-all group hover:bg-white/5">
-                <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974378/ibyostiwecnvm2cebqar.svg" 
-                     alt="local / assets" 
-                     class="h-5 w-auto object-contain brightness-0 invert group-hover:drop-shadow-[0_0_8px_rgba(57,255,20,0.6)] transition-all">
+                <div class="relative h-5 w-32">
+                    <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974378/ibyostiwecnvm2cebqar.svg" class="absolute inset-0 h-full w-auto object-contain brightness-0 invert opacity-100 group-hover:opacity-0 transition-opacity duration-200">
+                    <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974377/eayfotlcvgq36kpwvitw.svg" class="absolute inset-0 h-full w-auto object-contain opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow-[0_0_8px_rgba(57,255,20,0.5)]">
+                </div>
             </a>
         </div>
         <nav class="flex-1 p-4 space-y-2">
-            <a href="dashboard" class="nav-link flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors hover:bg-white/5 text-zinc-400">
-                <iconify-icon icon="solar:widget-5-linear"></iconify-icon>Overview
-            </a>
-            <a href="camera" class="nav-link active flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors">
-                <iconify-icon icon="solar:videocamera-record-linear" class="text-primary"></iconify-icon>Camera Control
-            </a>
-            <a href="assets" class="nav-link flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors hover:bg-white/5 text-zinc-400">
-                <iconify-icon icon="solar:clapperboard-play-linear"></iconify-icon>Media Assets
-            </a>
+            <a href="dashboard" class="nav-link flex items-center gap-3 px-3 py-2 text-sm text-zinc-400 hover:text-white transition-colors"><iconify-icon icon="solar:widget-5-linear"></iconify-icon>Overview</a>
+            <a href="camera" class="nav-link active flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors"><iconify-icon icon="solar:videocamera-record-linear" class="text-primary"></iconify-icon>Camera Control</a>
+            <a href="assets" class="nav-link flex items-center gap-3 px-3 py-2 text-sm text-zinc-400 hover:text-white transition-colors"><iconify-icon icon="solar:clapperboard-play-linear"></iconify-icon>Media Assets</a>
         </nav>
     </aside>
 
     <main class="flex-1 flex flex-col overflow-hidden relative">
         <header class="h-14 flex items-center justify-between px-6 border-b border-zinc-800 bg-background/50 backdrop-blur-md shrink-0 z-20">
-            <div class="flex items-center gap-2 text-xs font-mono text-zinc-500 uppercase tracking-widest">
-                <span>Home</span>
-                <iconify-icon icon="solar:alt-arrow-right-linear" class="text-[10px]"></iconify-icon>
-                <span class="text-white">PTZ Command Center</span>
-            </div>
-            <div class="flex items-center gap-4">
-                <span class="flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 rounded text-[10px] font-mono text-primary">
-                    <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span> SYSTEM OK
-                </span>
-            </div>
+            <div class="text-xs font-mono text-zinc-500 uppercase tracking-widest">Home // PTZ Command Center</div>
+            <div class="flex items-center gap-4"><span class="flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 rounded text-[10px] font-mono text-primary uppercase"><span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>System OK</span></div>
         </header>
 
         <div class="flex-1 p-6 flex gap-6 overflow-hidden">
             <div class="flex-1 flex flex-col gap-4 min-w-0">
                 <div class="flex-1 bg-black rounded-xl border border-zinc-800 relative overflow-hidden group">
-                    <video class="w-full h-full object-cover opacity-80" autoplay loop muted playsinline>
-                        <source src="https://res.cloudinary.com/dso3xwno0/video/upload/v1770852246/Beltran_xkrtfw.mov" type="video/mp4">
-                    </video>
+                    <video id="main-cam" class="w-full h-full object-cover" autoplay loop muted playsinline><source src="https://res.cloudinary.com/dso3xwno0/video/upload/v1770852246/Beltran_xkrtfw.mov" type="video/mp4"></video>
                 </div>
                 <div class="h-32 shrink-0 grid grid-cols-3 gap-4">
-                    <div class="relative rounded-lg overflow-hidden border-2 border-primary bg-zinc-900"><img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770851279/Screenshot_2026-02-11_at_11.07.35_PM_ecpg7n.png" class="w-full h-full object-cover"></div>
-                    <div class="relative rounded-lg overflow-hidden border border-zinc-800 opacity-50"><img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770901769/Screenshot_2026-02-11_at_11.06.28_PM_dcjlcs.png" class="w-full h-full object-cover"></div>
-                    <div class="relative rounded-lg overflow-hidden border border-zinc-800 opacity-50"><img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770901769/Screenshot_2026-02-11_at_11.05.24_PM_tpmqkl.png" class="w-full h-full object-cover"></div>
+                    <div class="border-2 border-primary rounded-lg overflow-hidden cursor-pointer"><img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770851279/Screenshot_2026-02-11_at_11.07.35_PM_ecpg7n.png" class="w-full h-full object-cover"></div>
+                    <div class="border border-zinc-800 opacity-50 rounded-lg overflow-hidden cursor-pointer"><img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770901769/Screenshot_2026-02-11_at_11.06.28_PM_dcjlcs.png" class="w-full h-full object-cover"></div>
+                    <div class="border border-zinc-800 opacity-50 rounded-lg overflow-hidden cursor-pointer"><img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770901769/Screenshot_2026-02-11_at_11.05.24_PM_tpmqkl.png" class="w-full h-full object-cover"></div>
                 </div>
             </div>
-            <div class="w-80 shrink-0 bg-[#0a0a0a] border border-zinc-800 rounded-xl p-6">
-                <h2 class="text-[10px] font-mono uppercase tracking-widest text-primary mb-6">Manual Override</h2>
-                <div class="space-y-4">
-                    <button class="w-full border border-zinc-800 py-3 rounded text-[10px] font-mono uppercase hover:border-primary transition-all">Full Stage</button>
-                    <button class="w-full border border-zinc-800 py-3 rounded text-[10px] font-mono uppercase hover:border-primary transition-all">DJ Close-up</button>
+
+            <div class="w-80 shrink-0 bg-[#0a0a0a] border border-zinc-800 rounded-xl p-6 flex flex-col justify-between">
+                <div>
+                    <h2 class="text-[10px] font-mono uppercase tracking-widest text-primary mb-8 flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-primary"></span> Manual Override</h2>
+                    <div class="flex flex-col items-center gap-6">
+                        <div class="w-48 h-48 rounded-full border border-zinc-800 joystick-base relative flex items-center justify-center cursor-crosshair group">
+                            <div class="absolute w-full h-[1px] bg-white/5"></div><div class="absolute h-full w-[1px] bg-white/5"></div>
+                            <div class="w-16 h-16 rounded-full bg-[#151515] border border-zinc-700 shadow-2xl group-hover:border-primary transition-colors"></div>
+                        </div>
+                        <span class="text-[9px] font-mono text-zinc-600 uppercase tracking-widest">Pan / Tilt Control</span>
+                    </div>
                 </div>
+                <div class="pt-6 border-t border-zinc-800"><div class="flex justify-between text-[10px] font-mono uppercase text-zinc-500"><span>Latency</span><span class="text-white">12ms</span></div></div>
             </div>
         </div>
     </main>
