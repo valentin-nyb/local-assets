@@ -1,43 +1,122 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en" class="dark scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <title>local / assets</title>
-    <link rel="icon" type="image/png" href="https://res.cloudinary.com/dso3xwno0/image/upload/v1770939295/mcwp97ytys3vfyqjhymu.svg">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link rel="icon" type="image/png" href="https://res.cloudinary.com/dso3xwno0/image/upload/v1770939295/mcwp97ytys3vfyqjhymu.svg">
     <script>
-        tailwind.config = { theme: { extend: { colors: { background: '#050505', card: '#0a0a0a', primary: '#39FF14', border: '#27272a' } } } }
+        tailwind.config = {
+            theme: { extend: { colors: { background: '#050505', card: '#0a0a0a', primary: '#39FF14', border: '#27272a', muted: { DEFAULT: '#27272a', foreground: '#a1a1aa' } } } }
+        }
     </script>
+    <style>
+        body { background-color: #050505; color: #ffffff; -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { display: none; }
+        .bg-scanlines { background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.2) 50%, rgba(0, 0, 0, 0.2)); background-size: 100% 4px; }
+    </style>
 </head>
-<body class="bg-background text-white h-screen w-screen flex overflow-hidden">
-    <aside class="w-64 border-r border-zinc-800 bg-[#0a0a0a] flex flex-col h-full">
-        <div class="h-16 border-b border-zinc-800">
-            <a href="index" class="flex items-center w-full h-full px-6 group transition-all">
-                <div class="relative h-5 w-32">
-                    <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974378/ibyostiwecnvm2cebqar.svg" class="absolute inset-0 h-full w-auto object-contain brightness-0 invert group-hover:opacity-0 transition-opacity">
-                    <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974377/eayfotlcvgq36kpwvitw.svg" class="absolute inset-0 h-full w-auto object-contain opacity-0 group-hover:opacity-100 transition-opacity">
-                </div>
+<body class="font-sans antialiased bg-background text-white flex overflow-hidden h-screen w-screen">
+
+    <aside class="w-64 border-r border-border bg-card flex flex-col shrink-0 h-full">
+        <div class="h-16 flex items-center px-6 border-b border-border transition-all group">
+            <a href="index" class="relative h-5 w-32">
+                <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974378/ibyostiwecnvm2cebqar.svg" class="absolute inset-0 h-full w-auto object-contain brightness-0 invert opacity-100 group-hover:opacity-0 transition-opacity duration-200">
+                <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974377/eayfotlcvgq36kpwvitw.svg" class="absolute inset-0 h-full w-auto object-contain opacity-0 group-hover:opacity-100 transition-opacity duration-200">
             </a>
         </div>
-        <nav class="flex-1 p-4 space-y-2">
-            <a href="dashboard" class="flex items-center gap-3 px-3 py-2 text-sm text-zinc-400 hover:text-white"><iconify-icon icon="solar:widget-5-linear"></iconify-icon>Overview</a>
-            <a href="camera" class="bg-white/5 border border-zinc-800 flex items-center gap-3 px-3 py-2 text-sm text-white rounded-md"><iconify-icon icon="solar:videocamera-record-linear" class="text-primary"></iconify-icon>Camera Control</a>
+        <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+            <a href="dashboard" class="w-full flex items-center gap-3 px-3 py-2 text-sm font-normal rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors"><iconify-icon icon="solar:widget-5-linear" class="text-lg"></iconify-icon>Overview</a>
+            <a href="camera" class="w-full flex items-center gap-3 px-3 py-2 text-sm font-normal rounded-md text-white bg-white/5 transition-colors"><iconify-icon icon="solar:videocamera-record-linear" class="text-lg"></iconify-icon>Camera Control</a>
+            <a href="#" class="w-full flex items-center gap-3 px-3 py-2 text-sm font-normal rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors"><iconify-icon icon="solar:calendar-linear" class="text-lg"></iconify-icon>Schedule</a>
+            <a href="assets" class="w-full flex items-center gap-3 px-3 py-2 text-sm font-normal rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors"><iconify-icon icon="solar:clapperboard-play-linear" class="text-lg"></iconify-icon>Assets</a>
+            <a href="#" class="w-full flex items-center gap-3 px-3 py-2 text-sm font-normal rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors"><iconify-icon icon="solar:wallet-linear" class="text-lg"></iconify-icon>Finance</a>
         </nav>
-    </aside>
-    <main class="flex-1 p-6 flex gap-6">
-        <div class="flex-1 bg-black rounded-xl border border-zinc-800 relative overflow-hidden group">
-            <video class="w-full h-full object-cover opacity-80" autoplay loop muted><source src="https://res.cloudinary.com/dso3xwno0/video/upload/v1770852246/Beltran_xkrtfw.mov"></video>
+        <div class="p-4 border-t border-border">
+            <div class="flex items-center gap-3 px-3 py-2 mb-2"><div class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div><span class="text-xs font-mono text-muted-foreground uppercase tracking-wider">REC: ROOM 1</span></div>
+            <button class="w-full flex items-center gap-3 px-3 py-2 text-sm font-normal rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors"><iconify-icon icon="solar:settings-linear" class="text-lg"></iconify-icon>Venue Settings</button>
         </div>
-        <div class="w-80 bg-card border border-border rounded-xl p-6 flex flex-col justify-between">
-            <h2 class="text-[10px] font-mono uppercase tracking-widest text-primary">Manual Override</h2>
-            <div class="flex flex-col items-center gap-6">
-                <div class="w-48 h-48 rounded-full border border-zinc-800 bg-black flex items-center justify-center cursor-crosshair group">
-                    <div class="w-16 h-16 rounded-full bg-[#151515] border border-zinc-700 group-hover:border-primary transition-colors"></div>
+    </aside>
+
+    <main class="flex-1 flex flex-col min-w-0 bg-background overflow-hidden relative w-full">
+        <header class="h-16 flex items-center justify-between px-4 md:px-8 border-b border-border bg-background/50 backdrop-blur-sm z-10 shrink-0">
+            <div class="flex items-center gap-2 text-sm text-muted-foreground">
+                <a href="index" class="hover:text-white transition-colors">Home</a>
+                <iconify-icon icon="solar:alt-arrow-right-linear" class="text-xs"></iconify-icon>
+                <span class="text-white font-medium">PTZ Command Center</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="hidden md:flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/10"><span class="w-2 h-2 rounded-full bg-primary"></span><span class="text-xs font-mono text-white">SYSTEM OK</span></div>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-4 md:p-6 pb-32">
+            <div class="max-w-[1400px] mx-auto">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full min-h-[600px]">
+                    <div class="lg:col-span-2 flex flex-col gap-4">
+                        <div class="flex-1 bg-black border border-border rounded-xl relative overflow-hidden group min-h-[400px]">
+                            <video autoplay loop muted playsinline class="absolute inset-0 w-full h-full object-cover opacity-60">
+                                <source src="https://res.cloudinary.com/dso3xwno0/video/upload/v1770850722/Screen_Recording_2026-02-11_at_3.50.31_PM_gqqlca.mov">
+                            </video>
+                            <div class="absolute inset-0 bg-scanlines opacity-20 pointer-events-none"></div>
+                            <div class="absolute top-4 left-4 flex gap-2"><span class="bg-black/50 backdrop-blur border border-white/10 px-2 py-1 text-[10px] font-mono text-primary uppercase">CAM 01 [MAIN]</span><span class="bg-black/50 backdrop-blur border border-white/10 px-2 py-1 text-[10px] font-mono text-white uppercase">4K 60FPS</span><span class="bg-black/50 backdrop-blur border border-white/10 px-2 py-1 text-[10px] font-mono text-white uppercase">ISO 800</span></div>
+                            <div class="absolute top-4 right-4 flex gap-2"><iconify-icon icon="solar:battery-full-linear" class="text-primary text-lg"></iconify-icon><iconify-icon icon="solar:wifi-bold" class="text-white text-lg"></iconify-icon></div>
+                            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 border border-white/20 rounded-full flex items-center justify-center pointer-events-none opacity-50"><div class="w-1 h-1 bg-primary rounded-full"></div><div class="absolute top-0 w-px h-4 bg-white/50"></div><div class="absolute bottom-0 w-px h-4 bg-white/50"></div><div class="absolute left-0 h-px w-4 bg-white/50"></div><div class="absolute right-0 h-px w-4 bg-white/50"></div></div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-4 h-32">
+                            <div class="bg-black border-2 border-primary rounded-lg relative overflow-hidden cursor-pointer"><div class="absolute inset-0 bg-cover bg-center opacity-60" style="background-image: url('https://res.cloudinary.com/dso3xwno0/image/upload/v1770851279/Screenshot_2026-02-11_at_11.07.35_PM_ecpg7n.png');"></div><div class="absolute bottom-1 left-2 text-[8px] font-mono text-primary">CAM 01 // ACTIVE</div></div>
+                            <div class="bg-[#0a0a0a] border border-border rounded-lg relative overflow-hidden cursor-pointer hover:border-white/20 transition-colors group"><div class="absolute inset-0 bg-cover bg-center opacity-30 group-hover:opacity-50 transition-opacity grayscale" style="background-image: url('https://res.cloudinary.com/dso3xwno0/image/upload/v1770851138/Screenshot_2026-02-11_at_11.05.24_PM_b33ang.png');"></div><div class="absolute bottom-1 left-2 text-[8px] font-mono text-muted-foreground">CAM 02 // STBY</div></div>
+                            <div class="bg-[#0a0a0a] border border-border rounded-lg relative overflow-hidden cursor-pointer hover:border-white/20 transition-colors group"><div class="absolute inset-0 bg-cover bg-center opacity-30 group-hover:opacity-50 transition-opacity grayscale" style="background-image: url('https://res.cloudinary.com/dso3xwno0/image/upload/v1770851280/Screenshot_2026-02-11_at_11.06.28_PM_uekh1f.png');"></div><div class="absolute bottom-1 left-2 text-[8px] font-mono text-muted-foreground">CAM 03 // STBY</div></div>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-1 bg-card border border-border rounded-xl p-6 flex flex-col gap-8 shadow-2xl relative overflow-hidden">
+                        <div class="flex justify-between items-center border-b border-border pb-4">
+                            <h3 class="font-mono text-xs text-primary tracking-[0.2em] uppercase flex items-center gap-2"><span class="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></span>Manual Override</h3>
+                            <iconify-icon icon="solar:settings-linear" class="text-muted-foreground hover:text-white cursor-pointer transition-colors"></iconify-icon>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-3 block">Quick Presets</label>
+                            <div class="grid grid-cols-3 gap-3">
+                                <button class="bg-primary/10 border border-primary text-primary text-[10px] font-mono py-3 rounded hover:bg-primary hover:text-black transition-all uppercase shadow-[0_0_10px_rgba(57,255,20,0.1)]">Main Stage</button>
+                                <button class="bg-[#111] border border-white/10 text-muted-foreground text-[10px] font-mono py-3 rounded hover:border-white/30 hover:text-white transition-all uppercase">DJ Close-up</button>
+                                <button class="bg-[#111] border border-white/10 text-muted-foreground text-[10px] font-mono py-3 rounded hover:border-white/30 hover:text-white transition-all uppercase">Crowd Wide</button>
+                            </div>
+                        </div>
+                        <div class="flex-1 flex gap-6 items-center justify-between py-4">
+                            <div class="flex flex-col items-center gap-4 flex-1">
+                                <div class="w-40 h-40 rounded-full border border-white/10 bg-[#050505] relative shadow-[inset_0_0_20px_rgba(0,0,0,1)] flex items-center justify-center group cursor-crosshair">
+                                    <div class="absolute inset-0 opacity-20"><div class="absolute top-1/2 left-0 w-full h-px bg-white"></div><div class="absolute left-1/2 top-0 h-full w-px bg-white"></div></div>
+                                    <div class="w-16 h-16 bg-[#151515] rounded-full border border-primary/40 shadow-[0_0_20px_rgba(57,255,20,0.15)] relative z-10 flex items-center justify-center transform group-hover:translate-x-2 group-hover:-translate-y-2 transition-transform duration-200"><div class="w-8 h-8 rounded-full bg-gradient-to-br from-[#222] to-black border border-white/10"></div></div>
+                                    <div class="absolute inset-2 rounded-full border border-white/5"></div><div class="absolute inset-8 rounded-full border border-white/5"></div>
+                                </div>
+                                <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Pan / Tilt</span>
+                            </div>
+                            <div class="flex flex-col items-center gap-4">
+                                <div class="h-48 w-12 bg-[#050505] border border-white/10 rounded-lg relative flex justify-center py-2 shadow-inner">
+                                    <div class="absolute right-0 top-0 bottom-0 w-3 flex flex-col justify-between py-3 pr-1 opacity-30">
+                                        <div class="w-1.5 h-px bg-white"></div><div class="w-1 h-px bg-white"></div><div class="w-1 h-px bg-white"></div><div class="w-1 h-px bg-white"></div><div class="w-1.5 h-px bg-white"></div><div class="w-1 h-px bg-white"></div><div class="w-1 h-px bg-white"></div><div class="w-1 h-px bg-white"></div><div class="w-1.5 h-px bg-white"></div>
+                                    </div>
+                                    <div class="w-px h-full bg-white/10 absolute left-1/2 -translate-x-1/2"></div>
+                                    <div class="absolute top-1/3 left-1/2 -translate-x-1/2 w-8 h-6 bg-[#151515] border border-primary/50 rounded flex items-center justify-center shadow-[0_0_10px_rgba(57,255,20,0.2)] cursor-ns-resize hover:bg-[#222] transition-colors z-10"><div class="w-4 h-0.5 bg-primary"></div></div>
+                                </div>
+                                <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Zoom</span>
+                            </div>
+                        </div>
+                        <div class="border-t border-border pt-4 mt-auto">
+                            <div class="flex justify-between items-center text-[10px] font-mono text-muted-foreground"><span>Signal: <span class="text-primary">STRONG</span></span><span>Latency: <span class="text-white">12ms</span></span></div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="pt-6 border-t border-zinc-800 text-[10px] font-mono text-zinc-500 flex justify-between"><span>Latency</span><span>12ms</span></div>
         </div>
     </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const videos = document.querySelectorAll('video');
+            videos.forEach(video => { video.muted = true; video.play().catch(e=>{}); });
+        });
+    </script>
 </body>
 </html>
