@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en" class="dark scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
@@ -8,7 +8,10 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
-    <script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
     <script>
         tailwind.config = {
             theme: { 
@@ -25,10 +28,8 @@
     </script>
     <style>
         body { background-color: #050505 !important; color: white; }
-        .cloudinary_sub_panel { backdrop-filter: blur(15px) !important; background: rgba(0,0,0,0.8) !important; }
         .nav-link.active { background-color: rgba(255,255,255,0.05); border: 1px solid #27272a; color: white; }
         select { -webkit-appearance: none; -moz-appearance: none; appearance: none; }
-        input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         
         #custom-alert {
@@ -40,6 +41,12 @@
             transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         #custom-alert.show { transform: translate(-50%, 20px); }
+
+        /* Protocol Styled Date Picker */
+        .flatpickr-calendar { background: rgba(10, 10, 10, 0.95) !important; backdrop-filter: blur(15px) !important; border: 1px solid rgba(57, 255, 20, 0.3) !important; box-shadow: 0 0 30px rgba(0, 0, 0, 0.5) !important; }
+        .flatpickr-day.selected { background: #39FF14 !important; color: black !important; border-color: #39FF14 !important; font-weight: bold; }
+        .flatpickr-current-month, .flatpickr-weekday { color: #39FF14 !important; text-transform: uppercase; font-family: 'JetBrains Mono', monospace; }
+        .flatpickr-day:hover { background: rgba(57, 255, 20, 0.2) !important; }
     </style>
 </head>
 <body class="bg-background text-white h-screen w-screen flex overflow-hidden font-sans selection:bg-primary/30">
@@ -52,7 +59,7 @@
         </div>
     </div>
 
-   <aside id="sidebar" class="w-64 border-r border-zinc-800 bg-[#0a0a0a] flex flex-col shrink-0 h-full">
+    <aside id="sidebar" class="w-64 border-r border-zinc-800 bg-[#0a0a0a] flex flex-col shrink-0 h-full">
         <div class="h-16 flex items-center px-6 border-b border-zinc-800 transition-all group justify-between">
             <a href="index.html" class="relative h-6 w-32 flex transition-all group">
                 <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974378/ibyostiwecnvm2cebqar.svg" class="absolute inset-0 h-full w-full object-left object-contain brightness-0 invert opacity-100 group-hover:opacity-0 transition-opacity duration-200" alt="logo">
@@ -88,7 +95,7 @@
                         </div>
                         <div class="relative group/input">
                             <label class="absolute -top-2.5 left-3 bg-[#050505] px-1 text-[9px] text-zinc-500 font-mono uppercase tracking-widest">Event Date</label>
-                            <input type="date" id="ingest-date" class="w-full bg-[#050505] border border-zinc-800 rounded-lg px-4 py-3 text-xs focus:border-primary outline-none transition-all text-zinc-400">
+                            <input type="text" id="ingest-date" placeholder="Select Date" class="w-full bg-[#050505] border border-zinc-800 rounded-lg px-4 py-3 text-xs focus:border-primary outline-none transition-all text-white cursor-pointer font-bold">
                         </div>
                         <div class="relative group/input">
                             <label class="absolute -top-2.5 left-3 bg-[#050505] px-1 text-[9px] text-zinc-500 font-mono uppercase tracking-widest">Camera Angle</label>
@@ -102,6 +109,7 @@
                         </div>
                     </div>
                     <div class="text-center">
+                        <input type="file" id="hidden-file-input" class="hidden" accept="video/*, image/*">
                         <button id="upload_widget" class="px-10 py-3 bg-primary text-black font-extrabold rounded-full text-[10px] uppercase tracking-[0.2em] hover:shadow-[0_0_25px_rgba(57,255,20,0.4)] transition-all transform hover:-translate-y-0.5">
                             Start Master Upload
                         </button>
@@ -135,7 +143,7 @@
                             <iconify-icon icon="solar:magnifer-linear" class="absolute left-3 top-2.5 text-zinc-500"></iconify-icon>
                             <input type="text" id="search-name" placeholder="Search Cloud Assets..." class="w-full bg-card border border-border rounded-lg pl-9 pr-4 py-2 text-xs focus:border-primary outline-none transition-all text-white font-mono">
                         </div>
-                        <input type="date" id="search-date" class="w-full bg-card border border-border rounded-lg px-4 py-2 text-xs focus:border-primary outline-none transition-all text-zinc-500">
+                        <input type="text" id="search-date" placeholder="Filter by Date" class="w-full bg-card border border-border rounded-lg px-4 py-2 text-xs focus:border-primary outline-none transition-all text-zinc-500 cursor-pointer">
                     </div>
                     <div id="cloud-list" class="space-y-2"></div>
                 </div>
@@ -147,11 +155,14 @@
         let cloudAssets = [];
 
         window.onload = function() {
-            document.getElementById('ingest-date').value = new Date().toISOString().split('T')[0];
-            const uploadBtn = document.getElementById("upload_widget");
-            if (uploadBtn) uploadBtn.onclick = startUploadProcess;
+            flatpickr("#ingest-date", { defaultDate: "today", dateFormat: "Y-m-d" });
+            flatpickr("#search-date", { dateFormat: "Y-m-d", onChange: renderList });
+            
+            // Attach native upload logic
+            document.getElementById("upload_widget").onclick = startUploadProcess;
+            document.getElementById("hidden-file-input").onchange = handleFileSelection;
+            
             document.getElementById('search-name').oninput = renderList;
-            document.getElementById('search-date').onchange = renderList;
             fetchCloudLibrary();
         };
 
@@ -200,8 +211,7 @@
             const filtered = cloudAssets.filter(item => {
                 const isUnknown = item.artist.includes("UNKNOWN");
                 const isTrash = item.public_id.includes("xrerc") || item.public_id.includes("exa4f") || item.public_id.includes("byc2t");
-                const isExcluded = item.public_id && item.public_id.includes('fgs0gukrfuxwncct97e4');
-                if (isUnknown || isTrash || isExcluded) return false;
+                if (isUnknown || isTrash) return false;
                 return (item.artist.toLowerCase().includes(searchName) || item.shot.toLowerCase().includes(searchName)) && (searchDate ? item.date === searchDate : true);
             });
 
@@ -229,26 +239,78 @@
             });
         }
 
+        // --- DIRECT NATIVE FILE UPLOAD LOGIC ---
         function startUploadProcess() {
             const rawDjName = document.getElementById('ingest-name').value.trim();
-            const dateInput = document.getElementById('ingest-date').value;
-            const shotType = document.getElementById('ingest-shot').value;
             if (!rawDjName) {
                 showAlert("Please enter Artist Name");
                 return;
             }
+            // Triggers the native computer file browser
+            document.getElementById('hidden-file-input').click();
+        }
+
+        function handleFileSelection(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const rawDjName = document.getElementById('ingest-name').value.trim();
+            const dateInput = document.getElementById('ingest-date').value;
+            const shotType = document.getElementById('ingest-shot').value;
+            
             const cleanDjName = rawDjName.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase();
             const fileName = `${cleanDjName}_${dateInput}_${shotType}`;
-            cloudinary.createUploadWidget({
-                cloudName: 'dso3xwno0', uploadPreset: 'assets_unsigned',
-                folder: 'venue_masters', public_id: fileName,    
-                tags: ['venue_recording', cleanDjName, dateInput, shotType]
-            }, (error, result) => {
-                if (!error && result && result.event === "success") {
+            const tags = ['venue_recording', cleanDjName, dateInput, shotType].join(',');
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('upload_preset', 'assets_unsigned');
+            formData.append('folder', 'venue_masters');
+            formData.append('public_id', fileName);
+            formData.append('tags', tags);
+
+            const uploadBtn = document.getElementById('upload_widget');
+            uploadBtn.disabled = true;
+            uploadBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            showAlert("Upload Started...");
+
+            // Send file directly to Cloudinary via API
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', 'https://api.cloudinary.com/v1_1/dso3xwno0/auto/upload', true);
+
+            // Live progress tracker updates the button text!
+            xhr.upload.onprogress = function(e) {
+                if (e.lengthComputable) {
+                    const percentComplete = Math.round((e.loaded / e.total) * 100);
+                    uploadBtn.innerText = `UPLOADING... ${percentComplete}%`;
+                }
+            };
+
+            xhr.onload = function() {
+                uploadBtn.disabled = false;
+                uploadBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                uploadBtn.innerText = "START MASTER UPLOAD";
+                document.getElementById('hidden-file-input').value = ""; 
+
+                if (xhr.status === 200) {
+                    showAlert("Upload Success - Syncing Library");
                     setTimeout(fetchCloudLibrary, 2000);
                     document.getElementById('ingest-name').value = ''; 
+                } else {
+                    showAlert("Upload Failed. Try again.");
+                    console.error(xhr.responseText);
                 }
-            }).open();
+            };
+
+            xhr.onerror = function() {
+                uploadBtn.disabled = false;
+                uploadBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                uploadBtn.innerText = "START MASTER UPLOAD";
+                showAlert("Network Error Occurred.");
+            };
+
+            xhr.send(formData);
         }
 
         function playVideo(url, name, format) {
