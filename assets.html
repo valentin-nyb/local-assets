@@ -3,18 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <title>local / assets - Camera Control</title>
+    <title>local / assets - London</title>
     <link rel="icon" type="image/png" href="https://res.cloudinary.com/dso3xwno0/image/upload/v1770939295/mcwp97ytys3vfyqjhymu.svg">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
-        tailwind.config = {
-            theme: { 
-                extend: { 
-                    colors: { background: '#050505', card: '#0a0a0a', primary: '#39FF14', border: '#27272a' } 
-                } 
-            } 
-        }
+        tailwind.config = { theme: { extend: { colors: { background: '#050505', card: '#0a0a0a', primary: '#39FF14', border: '#27272a' } } } }
     </script>
     <style>
         body { background-color: #050505 !important; color: white; -webkit-font-smoothing: antialiased; }
@@ -24,51 +20,37 @@
 </head>
 <body class="flex h-screen overflow-hidden">
 
-    <button onclick="toggleSidebar()" class="md:hidden fixed left-0 top-1/2 -translate-y-1/2 z-50 bg-primary text-black py-8 px-2.5 rounded-r-2xl shadow-xl active:scale-90 transition-all">
+    <button onclick="toggleSidebar()" class="md:hidden fixed left-0 top-1/2 -translate-y-1/2 z-50 bg-primary text-black py-8 px-2.5 rounded-r-2xl shadow-xl">
         <span class="font-mono text-[14px] font-black uppercase tracking-widest" style="writing-mode: vertical-rl; transform: rotate(180deg);">MENU</span>
     </button>
 
     <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/80 z-40 hidden backdrop-blur-md opacity-0 transition-opacity"></div>
 
-    <aside id="sidebar" class="w-64 border-r border-zinc-800 bg-[#0a0a0a] flex flex-col transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 h-full">
+    <aside id="sidebar" class="w-64 border-r border-zinc-800 bg-[#0a0a0a] flex flex-col transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 h-full shrink-0">
         <div class="h-16 flex items-center px-6 border-b border-zinc-800 justify-between">
-            <a href="index.html" class="relative h-6 w-32 flex transition-all">
-                <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974378/ibyostiwecnvm2cebqar.svg" class="absolute inset-0 h-full w-full object-left object-contain brightness-0 invert" alt="logo">
-            </a>
+            <span class="text-primary font-black">local / assets</span>
             <button onclick="toggleSidebar()" class="md:hidden text-zinc-500 hover:text-white"><iconify-icon icon="solar:close-circle-bold" class="text-2xl"></iconify-icon></button>
         </div>
         <nav class="flex-1 p-4 space-y-2">
             <a href="dashboard.html" class="flex items-center gap-3 px-3 py-2 text-sm text-zinc-400 hover:bg-white/5 transition-colors"><iconify-icon icon="solar:widget-5-bold"></iconify-icon>Overview</a>
-            <a href="camera.html" class="nav-link active flex items-center gap-3 px-3 py-2 text-sm rounded-md text-primary"><iconify-icon icon="solar:videocamera-record-bold"></iconify-icon>Camera Control</a>
-            <a href="assets.html" class="flex items-center gap-3 px-3 py-2 text-sm text-zinc-400 hover:bg-white/5 transition-colors"><iconify-icon icon="solar:clapperboard-play-bold"></iconify-icon>Media Assets</a>
+            <a href="camera.html" class="flex items-center gap-3 px-3 py-2 text-sm text-zinc-400 hover:bg-white/5 transition-colors"><iconify-icon icon="solar:videocamera-record-bold"></iconify-icon>Camera Control</a>
+            <a href="assets.html" class="nav-link active flex items-center gap-3 px-3 py-2 text-sm rounded-md text-primary"><iconify-icon icon="solar:clapperboard-play-bold"></iconify-icon>Media Assets</a>
         </nav>
     </aside>
 
-    <main class="flex-1 flex flex-col overflow-hidden relative">
-        <header class="h-16 border-b border-border flex items-center px-6 md:px-8 justify-between bg-background/50">
-            <span class="text-[10px] font-mono uppercase tracking-[0.3em] text-zinc-500">PTZ Command Center</span>
-            <div class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center font-bold text-xs">F</div>
-        </header>
-
-        <div class="flex-1 p-4 md:p-8 overflow-y-auto w-full">
-            <div class="max-w-6xl mx-auto space-y-6">
-                <div class="bg-black rounded-xl border border-zinc-800 relative overflow-hidden aspect-video shadow-2xl">
-                    <video class="w-full h-full object-cover" autoplay loop muted playsinline><source src="https://res.cloudinary.com/dso3xwno0/video/upload/v1770852246/Beltran_xkrtfw.mov"></video>
-                    <div class="absolute top-4 left-4 z-20 flex gap-2"><span class="bg-black/60 backdrop-blur text-primary border border-primary/30 text-[9px] font-mono px-2 py-1 rounded uppercase">Cam 01 (Main)</span></div>
-                </div>
-
-                <div class="grid grid-cols-3 gap-4 h-24 md:h-32">
-                    <div class="relative rounded-lg overflow-hidden border-2 border-primary bg-zinc-900 shadow-lg"><img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770851279/Screenshot_2026-02-11_at_11.07.35_PM_ecpg7n.png" class="w-full h-full object-cover"><span class="absolute bottom-1 left-2 text-[8px] font-bold text-primary">CAM 01</span></div>
-                    <div class="relative rounded-lg overflow-hidden border border-zinc-800 bg-zinc-900 grayscale opacity-60"><img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770901769/Screenshot_2026-02-11_at_11.06.28_PM_dcjlcs.png" class="w-full h-full object-cover"><span class="absolute bottom-1 left-2 text-[8px] font-mono text-white">CAM 02</span></div>
-                    <div class="relative rounded-lg overflow-hidden border border-zinc-800 bg-zinc-900 grayscale opacity-60"><img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770901769/Screenshot_2026-02-11_at_11.05.24_PM_tpmqkl.png" class="w-full h-full object-cover"><span class="absolute bottom-1 left-2 text-[8px] font-mono text-white">CAM 03</span></div>
-                </div>
-
-                <div class="bg-card border border-border p-6 rounded-2xl">
-                    <h2 class="text-[10px] font-mono text-primary uppercase tracking-[0.3em] mb-6">Manual Override Interface</h2>
-                    <div class="grid grid-cols-3 gap-3">
-                        <button class="border border-zinc-800 text-[10px] py-4 rounded font-mono hover:bg-primary hover:text-black transition-all uppercase">Stage</button>
-                        <button class="border border-zinc-800 text-[10px] py-4 rounded font-mono hover:bg-primary hover:text-black transition-all uppercase">Booth</button>
-                        <button class="border border-zinc-800 text-[10px] py-4 rounded font-mono hover:bg-primary hover:text-black transition-all uppercase">Crowd</button>
+    <main class="flex-1 flex flex-col overflow-hidden w-full">
+        <header class="h-16 border-b border-border flex items-center px-8 bg-background/50"><span class="text-[10px] font-mono uppercase tracking-[0.3em] text-primary">Media Assets</span></header>
+        <div class="flex-1 p-4 md:p-8 overflow-y-auto">
+            <div class="max-w-5xl mx-auto space-y-8">
+                <div class="bg-card border border-dashed border-zinc-800 p-6 md:p-8 rounded-2xl space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <input type="text" id="ingest-name" placeholder="ARTIST NAME" class="bg-[#050505] border border-zinc-800 p-4 rounded text-xs font-bold text-white uppercase outline-none focus:border-primary">
+                        <input type="text" id="ingest-date" placeholder="DATE" class="bg-[#050505] border border-zinc-800 p-4 rounded text-xs font-bold text-white uppercase">
+                        <select class="bg-[#050505] border border-zinc-800 p-4 rounded text-xs text-zinc-500"><option>MASTER CAM</option><option>BACK VIEW</option></select>
+                    </div>
+                    <div class="text-center">
+                        <input type="file" id="hidden-file-input" class="hidden">
+                        <button onclick="document.getElementById('hidden-file-input').click()" class="bg-primary text-black px-10 py-4 rounded-full font-black uppercase text-[11px] w-full md:w-auto shadow-lg">Start Master Upload</button>
                     </div>
                 </div>
             </div>
@@ -89,6 +71,7 @@
                 setTimeout(() => overlay.classList.add('hidden'), 300);
             }
         }
+        window.onload = function() { flatpickr("#ingest-date", { defaultDate: "today", dateFormat: "d M Y" }); };
     </script>
 </body>
 </html>
