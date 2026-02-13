@@ -4,245 +4,163 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <title>local / assets</title>
-    <meta name="description" content="Infrastructure for capturing, distributing, and monetizing live performance assets.">
-    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="icon" type="image/png" href="https://res.cloudinary.com/dso3xwno0/image/upload/v1770939295/mcwp97ytys3vfyqjhymu.svg">
     <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
-                        background: '#050505',
-                        foreground: '#ffffff',
-                        card: '#0a0a0a',
-                        border: '#27272a',
+                        background: '#050505', foreground: '#ffffff', card: '#0a0a0a', border: '#27272a',
                         muted: { DEFAULT: '#27272a', foreground: '#a1a1aa' },
-                        primary: { DEFAULT: '#39FF14', foreground: '#000000', glow: 'rgba(57, 255, 20, 0.5)' },
+                        primary: { DEFAULT: '#39FF14', foreground: '#000000' }
                     },
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                        mono: ['JetBrains Mono', 'monospace'],
-                    },
+                    fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
                     backgroundImage: {
                         'noise': "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E\")",
-                    },
-                    animation: {
-                        'scroll': 'scroll 30s linear infinite',
-                    },
-                    keyframes: {
-                        scroll: {
-                            '0%': { transform: 'translateX(0)' },
-                            '100%': { transform: 'translateX(-50%)' },
-                        }
                     }
                 }
             }
         }
     </script>
     <style>
-        body { background-color: #050505; color: #ffffff; -webkit-font-smoothing: antialiased; }
-        .reveal { opacity: 0; transform: translateY(20px); transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
-        .reveal.active { opacity: 1; transform: translateY(0); }
-        .delay-100 { transition-delay: 100ms; }
-        .delay-200 { transition-delay: 200ms; }
-        .delay-300 { transition-delay: 300ms; }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #050505; }
-        ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #39FF14; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        body { background-color: #050505; color: #ffffff; font-feature-settings: "ss01", "ss02", "cv01", "cv02"; -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { display: none; }
         @keyframes scanline { 0% { transform: translateY(-100%); } 100% { transform: translateY(100%); } }
-        @keyframes flicker { 0% { opacity: 0.02; } 5% { opacity: 0.05; } 10% { opacity: 0.02; } 15% { opacity: 0.06; } 20% { opacity: 0.02; } 50% { opacity: 0.02; } 55% { opacity: 0.05; } 60% { opacity: 0.02; } 100% { opacity: 0.02; } }
         .bg-scanlines { background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.2) 50%, rgba(0, 0, 0, 0.2)); background-size: 100% 4px; }
     </style>
 </head>
+<body class="font-sans antialiased bg-background text-foreground overflow-hidden h-screen w-screen flex">
+    
+    <aside id="dashboard-sidebar" class="w-64 border-r border-border bg-card flex flex-col shrink-0 h-full">
+        <div class="h-16 flex items-center px-6 border-b border-border transition-all group justify-between">
+            <a href="index" class="relative h-5 w-32">
+                <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974378/ibyostiwecnvm2cebqar.svg" class="absolute inset-0 h-full w-auto object-contain brightness-0 invert opacity-100 group-hover:opacity-0 transition-opacity duration-200">
+                <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974377/eayfotlcvgq36kpwvitw.svg" class="absolute inset-0 h-full w-auto object-contain opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            </a>
+        </div>
+        <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+            <a href="dashboard" class="w-full flex items-center gap-3 px-3 py-2 text-sm font-normal rounded-md text-white bg-white/5 transition-colors"><iconify-icon icon="solar:widget-5-linear" class="text-lg"></iconify-icon>Overview</a>
+            <a href="camera" class="w-full flex items-center gap-3 px-3 py-2 text-sm font-normal rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors"><iconify-icon icon="solar:videocamera-record-linear" class="text-lg"></iconify-icon>Camera Control</a>
+            <a href="#" class="w-full flex items-center gap-3 px-3 py-2 text-sm font-normal rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors"><iconify-icon icon="solar:calendar-linear" class="text-lg"></iconify-icon>Schedule</a>
+            <a href="assets" class="w-full flex items-center gap-3 px-3 py-2 text-sm font-normal rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors"><iconify-icon icon="solar:clapperboard-play-linear" class="text-lg"></iconify-icon>Assets</a>
+            <a href="#" class="w-full flex items-center gap-3 px-3 py-2 text-sm font-normal rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors"><iconify-icon icon="solar:wallet-linear" class="text-lg"></iconify-icon>Finance</a>
+        </nav>
+        <div class="p-4 border-t border-border">
+            <div class="flex items-center gap-3 px-3 py-2 mb-2"><div class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div><span class="text-xs font-mono text-muted-foreground uppercase tracking-wider">REC: ROOM 1</span></div>
+            <button class="w-full flex items-center gap-3 px-3 py-2 text-sm font-normal rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors"><iconify-icon icon="solar:settings-linear" class="text-lg"></iconify-icon>Venue Settings</button>
+        </div>
+    </aside>
 
-<body class="font-sans antialiased bg-background text-foreground overflow-x-hidden selection:bg-primary selection:text-black text-lg">
+    <main class="flex-1 flex flex-col min-w-0 bg-background overflow-hidden relative w-full">
+        <div class="absolute inset-0 opacity-[0.03] pointer-events-none bg-noise z-0"></div>
+        <header class="h-16 flex items-center justify-between px-4 md:px-8 border-b border-border bg-background/50 backdrop-blur-sm z-10 shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2 text-sm text-muted-foreground">
+                    <a href="index" class="hover:text-white cursor-pointer hidden md:inline transition-colors">Home</a>
+                    <iconify-icon icon="solar:alt-arrow-right-linear" class="text-xs hidden md:inline"></iconify-icon>
+                    <span class="text-white font-medium">Dashboard Overview</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="hidden md:flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/10"><span class="w-2 h-2 rounded-full bg-primary"></span><span class="text-xs font-mono text-white">SYSTEM OK</span></div>
+                <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-muted-foreground transition-colors"><iconify-icon icon="solar:bell-linear" class="text-lg"></iconify-icon></button>
+                <div class="h-8 w-8 rounded-full bg-white flex items-center justify-center text-black font-semibold text-xs">F</div>
+            </div>
+        </header>
 
-    <main class="min-h-screen bg-background relative">
-        <section class="min-h-screen flex flex-col md:px-8 overflow-hidden pr-4 pl-4 relative justify-center">
-            <nav class="flex md:pr-8 md:pt-8 md:pb-8 md:pl-8 z-20 pt-8 pr-8 pb-8 pl-8 absolute top-0 right-0 left-0 items-center justify-between">
-                <span class="text-primary lowercase text-3xl font-extrabold tracking-tighter font-sans max-w-lg drop-shadow-[0_0_15px_rgba(57,255,20,0.3)] md:text-2xl">local / assets</span>
+        <div class="flex-1 overflow-y-auto scroll-smooth p-4 md:p-6 z-10 w-full pb-32">
+            <div class="max-w-[1400px] mx-auto space-y-6">
                 
-                <a href="dashboard.html" class="flex border-border hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-200 uppercase group cursor-pointer text-xs tracking-wider font-mono border pt-2 pr-4 pb-2 pl-4 backdrop-blur-md gap-x-2 gap-y-2 items-center decoration-0">
-                    <iconify-icon icon="solar:widget-5-linear" class="text-base"></iconify-icon>
-                    <span class="hidden md:inline">Venue Dashboard</span>
+                <a href="camera" class="block cursor-pointer hover:border-primary/50 transition-colors w-full bg-gradient-to-r from-red-500/10 to-transparent border border-red-500/20 rounded-xl p-6 md:p-10 relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <video autoplay loop muted playsinline class="absolute inset-0 w-full h-full object-cover opacity-60">
+                        <source src="https://res.cloudinary.com/dso3xwno0/video/upload/v1770888132/Beltran_e58al0.mov" type="video/mp4">
+                    </video>
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-3 mb-2">
+                            <span class="inline-flex items-center gap-2 px-3 py-1 bg-red-500 text-white rounded-full text-xs font-semibold uppercase tracking-wider animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.4)]">
+                                <iconify-icon icon="solar:record-circle-linear" class="text-base"></iconify-icon> LIVE FEED
+                            </span>
+                            <span class="text-red-500 font-mono text-xs tracking-wider uppercase">Room 1 // Main Floor</span>
+                        </div>
+                        <h2 class="text-xl md:text-2xl font-semibold text-white tracking-tight">ARTIST: BELTRAN</h2>
+                    </div>
+                    <div class="flex gap-6 text-sm text-muted-foreground font-mono relative z-10">
+                        <div class="text-left"><span class="block text-xs text-white/50 mb-1">ELAPSED</span><span class="text-white">01:42:15</span></div>
+                        <div class="text-left"><span class="block text-xs text-white/50 mb-1">CAMERAS</span><span class="text-white">3/3 ACTIVE</span></div>
+                        <div class="text-left"><span class="block text-xs text-white/50 mb-1">BITRATE</span><span class="text-white">45 Mbps</span></div>
+                    </div>
                 </a>
-            </nav>
 
-            <div class="absolute inset-0 opacity-[0.05] pointer-events-none bg-noise z-0"></div>
-            <div class="absolute inset-0 pointer-events-none z-0 overflow-hidden mix-blend-overlay">
-                <div class="absolute inset-0 bg-scanlines opacity-30 pointer-events-none"></div>
-                <div class="absolute inset-0 bg-gradient-to-b from-transparent via-primary/10 to-transparent h-[20%] w-full pointer-events-none" style="animation: scanline 8s linear infinite;"></div>
-                <div class="absolute inset-0 bg-white pointer-events-none" style="animation: flicker 4s infinite;"></div>
-            </div>
-
-            <div class="relative z-10 max-w-6xl mx-auto w-full pt-20">
-                <div class="reveal active">
-                    <div class="mb-6 md:mb-8 flex items-center gap-2">
-                        <div class="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-                        <span class="font-mono text-xs md:text-sm tracking-[0.3em] text-muted-foreground uppercase">[ LIVE-VENUE ASSET-MANAGEMENT ]</span>
-                    </div>
-                    <h1 class="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-semibold uppercase tracking-tight leading-[0.9] text-foreground">
-                        <span class="block"><span class="cursor-text transition-colors duration-300 hover:text-primary hover:translate-x-2 inline-block transition-transform">TRANSFORM</span></span>
-                        <span class="block"><span class="cursor-text transition-colors duration-300 hover:text-primary hover:translate-x-2 inline-block transition-transform">YOUR LIVE-SET</span></span>
-                        <span class="block"><span class="cursor-text transition-colors duration-300 hover:text-primary">INTO</span> <span class="cursor-text transition-colors duration-300 hover:text-primary">AN</span> <span class="cursor-text transition-colors duration-300 hover:text-primary">ASSET.</span></span>
-                    </h1>
-                </div>
-            </div>
-
-            <div class="absolute bottom-0 left-0 right-0 border-t border-border bg-background/80 backdrop-blur-sm z-20">
-                <div class="overflow-hidden py-3 md:py-4 flex">
-                    <div class="flex gap-8 whitespace-nowrap animate-scroll">
-                        <div class="flex gap-8 items-center"><span class="font-mono text-xs md:text-sm tracking-[0.2em] text-muted-foreground">CAPTURE <span class="text-primary mx-2">//</span></span><span class="font-mono text-xs md:text-sm tracking-[0.2em] text-muted-foreground">DISTRIBUTE <span class="text-primary mx-2">//</span></span><span class="font-mono text-xs md:text-sm tracking-[0.2em] text-muted-foreground">MONETIZE <span class="text-primary mx-2">//</span></span><span class="font-mono text-xs md:text-sm tracking-[0.2em] text-muted-foreground">REPEAT <span class="text-primary mx-2">//</span></span></div>
-                        <div class="flex gap-8 items-center"><span class="font-mono text-xs md:text-sm tracking-[0.2em] text-muted-foreground">CAPTURE <span class="text-primary mx-2">//</span></span><span class="font-mono text-xs md:text-sm tracking-[0.2em] text-muted-foreground">DISTRIBUTE <span class="text-primary mx-2">//</span></span><span class="font-mono text-xs md:text-sm tracking-[0.2em] text-muted-foreground">MONETIZE <span class="text-primary mx-2">//</span></span><span class="font-mono text-xs md:text-sm tracking-[0.2em] text-muted-foreground">REPEAT <span class="text-primary mx-2">//</span></span></div>
-                        <div class="flex gap-8 items-center"><span class="font-mono text-xs md:text-sm tracking-[0.2em] text-muted-foreground">CAPTURE <span class="text-primary mx-2">//</span></span><span class="font-mono text-xs md:text-sm tracking-[0.2em] text-muted-foreground">DISTRIBUTE <span class="text-primary mx-2">//</span></span><span class="font-mono text-xs md:text-sm tracking-[0.2em] text-muted-foreground">MONETIZE <span class="text-primary mx-2">//</span></span><span class="font-mono text-xs md:text-sm tracking-[0.2em] text-muted-foreground">REPEAT <span class="text-primary mx-2">//</span></span></div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section class="md:px-8 border-border border-t pt-24 pr-4 pb-24 pl-4 relative">
-            <div class="text-center mb-10 reveal">
-                <p class="font-mono text-xs tracking-[0.3em] text-primary mb-4">[ SELECT YOUR TIER ]</p>
-                <h2 class="md:text-6xl text-foreground text-4xl font-semibold tracking-tight mb-8">INFRASTRUCTURE TIERS</h2>
-                <div class="inline-flex bg-[#111] border border-border rounded-full p-1 gap-1 mb-8">
-                    <button onclick="togglePricing('distribution')" id="toggle-distro" class="px-6 py-2 rounded-full text-xs font-mono font-semibold tracking-wider transition-all bg-primary text-black">DISTRIBUTION ONLY</button>
-                    <button onclick="togglePricing('creative')" id="toggle-creative" class="px-6 py-2 rounded-full text-xs font-mono font-semibold tracking-wider transition-all text-muted-foreground hover:text-white">CREATIVE & PRODUCTION</button>
-                </div>
-            </div>
-
-            <div class="max-w-7xl mx-auto reveal delay-200">
-                <div id="pricing-distribution" class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="relative flex flex-col p-6 md:p-8 border border-border bg-card hover:border-border/80 transition-all hover:-translate-y-1">
-                        <h3 class="text-muted-foreground text-sm tracking-wider font-mono mb-6 uppercase">Starter (Distribution)</h3>
-                        <div class="mb-2"><span class="text-4xl md:text-5xl font-semibold text-foreground">£1,750</span><span class="text-muted-foreground text-lg">/mo</span></div>
-                        <ul class="space-y-3 flex-1 mt-8">
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-muted-foreground mt-0.5 text-base"></iconify-icon><span class="text-sm text-foreground">Content intake & QC</span></li>
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-muted-foreground mt-0.5 text-base"></iconify-icon><span class="text-sm text-foreground">Up to 6 hours long-form DJ content</span></li>
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-muted-foreground mt-0.5 text-base"></iconify-icon><span class="text-sm text-foreground">Content Distribution</span></li>
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-muted-foreground mt-0.5 text-base"></iconify-icon><span class="text-sm text-foreground">250 GB Cloud Storage</span></li>
-                        </ul>
-                        <button class="mt-8 w-full py-4 font-mono text-sm tracking-wider transition-colors border border-border text-foreground hover:border-primary hover:text-primary uppercase group">Select Tier</button>
-                    </div>
-                    <div class="relative flex flex-col p-6 md:p-8 border border-border bg-card hover:border-border/80 transition-all hover:-translate-y-1">
-                        <h3 class="text-muted-foreground text-sm tracking-wider font-mono mb-6 uppercase">Live Set (Distribution)</h3>
-                        <div class="mb-2"><span class="text-4xl md:text-5xl font-semibold text-foreground">£3,000</span><span class="text-muted-foreground text-lg">/mo</span></div>
-                        <ul class="space-y-3 flex-1 mt-8">
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-muted-foreground mt-0.5 text-base"></iconify-icon><span class="text-sm text-foreground">Content intake & QC</span></li>
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-muted-foreground mt-0.5 text-base"></iconify-icon><span class="text-sm text-foreground">Up to 12 hours long-form DJ content</span></li>
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-muted-foreground mt-0.5 text-base"></iconify-icon><span class="text-sm text-foreground">Up to 12 Vertical Social Clips</span></li>
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-muted-foreground mt-0.5 text-base"></iconify-icon><span class="text-sm text-foreground">6 Social Media Marketing Assets</span></li>
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-muted-foreground mt-0.5 text-base"></iconify-icon><span class="text-sm text-foreground">YouTube & SoundCloud SEO</span></li>
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-muted-foreground mt-0.5 text-base"></iconify-icon><span class="text-sm text-foreground">Content Distribution & Scheduling</span></li>
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-muted-foreground mt-0.5 text-base"></iconify-icon><span class="text-sm text-foreground">Priority 48-hour Turnaround</span></li>
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-muted-foreground mt-0.5 text-base"></iconify-icon><span class="text-sm text-foreground">Quarterly Performance Reports</span></li>
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-muted-foreground mt-0.5 text-base"></iconify-icon><span class="text-sm text-foreground">500 GB cloud storage</span></li>
-                        </ul>
-                        <button class="mt-8 w-full py-4 font-mono text-sm tracking-wider transition-colors border border-border text-foreground hover:border-primary hover:text-primary uppercase group">Select Tier</button>
-                    </div>
-                    <div class="relative flex flex-col p-6 md:p-8 border border-border bg-card hover:border-border/80 transition-all hover:-translate-y-1">
-                        <h3 class="text-muted-foreground text-sm tracking-wider font-mono mb-6 uppercase">Contractual</h3>
-                        <div class="mb-2"><span class="text-4xl md:text-5xl font-semibold text-foreground">Enquire</span></div>
-                        <ul class="space-y-3 flex-1 mt-8">
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-muted-foreground mt-0.5 text-base"></iconify-icon><span class="text-sm text-foreground">Customised long-form content</span></li>
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-muted-foreground mt-0.5 text-base"></iconify-icon><span class="text-sm text-foreground">Customised vertical clips</span></li>
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-muted-foreground mt-0.5 text-base"></iconify-icon><span class="text-sm text-foreground">API for Marketing Teams</span></li>
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-muted-foreground mt-0.5 text-base"></iconify-icon><span class="text-sm text-foreground">Live Streaming</span></li>
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-muted-foreground mt-0.5 text-base"></iconify-icon><span class="text-sm text-foreground">Unlimited Cloud Storage</span></li>
-                        </ul>
-                        <button class="mt-8 w-full py-4 font-mono text-sm tracking-wider transition-colors border border-border text-foreground hover:border-primary hover:text-primary uppercase group">Contact Us</button>
-                    </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-card border border-border p-4 rounded-xl flex flex-col"><span class="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-2">Total Assets Captured</span><div class="flex items-end justify-between mt-auto"><span class="text-2xl font-semibold text-white">1,248</span><span class="text-xs text-primary font-mono bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">+12%</span></div></div>
+                    <div class="bg-card border border-border p-4 rounded-xl flex flex-col"><span class="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-2">Cloud Storage</span><div class="flex items-end justify-between mt-auto"><span class="text-2xl font-semibold text-white">42 TB</span><span class="text-xs text-muted-foreground font-mono">/ 50 TB</span></div><div class="w-full bg-[#222] h-1 mt-3 rounded-full overflow-hidden"><div class="bg-white h-full w-[84%]"></div></div></div>
+                    <div class="bg-card border border-border p-4 rounded-xl flex flex-col"><span class="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-2">Revenue Generated</span><div class="flex items-end justify-between mt-auto"><span class="text-2xl font-semibold text-white">£48,250</span><span class="text-xs text-primary font-mono bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">+24%</span></div></div>
+                    <div class="bg-card border border-border p-4 rounded-xl flex flex-col relative overflow-hidden"><div class="absolute right-0 top-0 bottom-0 w-1 bg-red-500 animate-pulse"></div><span class="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-2">Next Event</span><div class="mt-auto"><span class="block text-sm font-semibold text-white">Fabric Room 1</span><span class="text-xs text-muted-foreground font-mono">Tonight, 22:00 PM</span></div></div>
                 </div>
 
-                <div id="pricing-creative" class="hidden grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="relative flex flex-col p-6 md:p-8 border border-border bg-card hover:border-border/80 transition-all hover:-translate-y-1">
-                        <h3 class="text-muted-foreground text-sm tracking-wider font-mono mb-6 uppercase">Starter (Creative)</h3>
-                        <div class="mb-2"><span class="text-4xl md:text-5xl font-semibold text-foreground">£2,500</span><span class="text-muted-foreground text-lg">/mo</span></div>
-                        <ul class="space-y-3 flex-1 mt-8">
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-muted-foreground mt-0.5 text-base"></iconify-icon><span class="text-sm text-foreground">6 hours of filming per month</span></li>
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-muted-foreground mt-0.5 text-base"></iconify-icon><span class="text-sm text-foreground">6 hours Video edited DJ Long Form</span></li>
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-muted-foreground mt-0.5 text-base"></iconify-icon><span class="text-sm text-foreground">6 hours Audio Capture</span></li>
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-muted-foreground mt-0.5 text-base"></iconify-icon><span class="text-sm text-foreground">4 Vertical Social Clips</span></li>
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-muted-foreground mt-0.5 text-base"></iconify-icon><span class="text-sm text-foreground">4 Social Media Marketing Assets</span></li>
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-muted-foreground mt-0.5 text-base"></iconify-icon><span class="text-sm text-foreground">Youtube and SoundCloud SEO</span></li>
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-muted-foreground mt-0.5 text-base"></iconify-icon><span class="text-sm text-foreground">250 GB Cloud Storage</span></li>
-                        </ul>
-                        <button class="mt-8 w-full py-4 font-mono text-sm tracking-wider transition-colors border border-border text-foreground hover:border-primary hover:text-primary uppercase group">Select Tier</button>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2 bg-card border border-border rounded-xl flex flex-col overflow-hidden">
+                        <div class="p-4 border-b border-border flex justify-between items-center"><h3 class="text-sm font-medium text-white">Recent Sets</h3><button class="text-xs text-muted-foreground hover:text-white transition-colors">View All</button></div>
+                        <div class="divide-y divide-border">
+                            <div class="p-4 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer group">
+                                <div class="flex items-center gap-4"><div class="w-10 h-10 bg-[#151515] rounded flex items-center justify-center border border-border group-hover:border-primary/50 transition-colors"><iconify-icon icon="solar:music-note-linear" class="text-muted-foreground group-hover:text-primary"></iconify-icon></div><div><p class="text-sm text-white font-medium">Michael Bibi - 4 Hour Set</p><p class="text-xs text-muted-foreground font-mono">Oct 12, 2024 • 142 GB</p></div></div>
+                                <div class="flex items-center gap-4"><span class="hidden md:inline-block px-2 py-1 rounded text-[10px] font-mono uppercase bg-green-500/10 text-green-500 border border-green-500/20">Distributed</span><iconify-icon icon="solar:alt-arrow-right-linear" class="text-muted-foreground"></iconify-icon></div>
+                            </div>
+                            <div class="p-4 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer group">
+                                <div class="flex items-center gap-4"><div class="w-10 h-10 bg-[#151515] rounded flex items-center justify-center border border-border group-hover:border-primary/50 transition-colors"><iconify-icon icon="solar:music-note-linear" class="text-muted-foreground group-hover:text-primary"></iconify-icon></div><div><p class="text-sm text-white font-medium">PAWSA - Main Room</p><p class="text-xs text-muted-foreground font-mono">Oct 11, 2024 • 98 GB</p></div></div>
+                                <div class="flex items-center gap-4"><span class="hidden md:inline-block px-2 py-1 rounded text-[10px] font-mono uppercase bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">Processing</span><iconify-icon icon="solar:alt-arrow-right-linear" class="text-muted-foreground"></iconify-icon></div>
+                            </div>
+                            <div class="p-4 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer group">
+                                <div class="flex items-center gap-4"><div class="w-10 h-10 bg-[#151515] rounded flex items-center justify-center border border-border group-hover:border-primary/50 transition-colors"><iconify-icon icon="solar:music-note-linear" class="text-muted-foreground group-hover:text-primary"></iconify-icon></div><div><p class="text-sm text-white font-medium">Amongst Few - Special Guest</p><p class="text-xs text-muted-foreground font-mono">Oct 09, 2024 • 210 GB</p></div></div>
+                                <div class="flex items-center gap-4"><span class="hidden md:inline-block px-2 py-1 rounded text-[10px] font-mono uppercase bg-green-500/10 text-green-500 border border-green-500/20">Distributed</span><iconify-icon icon="solar:alt-arrow-right-linear" class="text-muted-foreground"></iconify-icon></div>
+                            </div>
+                            <div class="p-4 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer group">
+                                <div class="flex items-center gap-4"><div class="w-10 h-10 bg-[#151515] rounded flex items-center justify-center border border-border group-hover:border-primary/50 transition-colors"><iconify-icon icon="solar:music-note-linear" class="text-muted-foreground group-hover:text-primary"></iconify-icon></div><div><p class="text-sm text-white font-medium">Darius Syrossian</p><p class="text-xs text-muted-foreground font-mono">Oct 08, 2024 • 112 GB</p></div></div>
+                                <div class="flex items-center gap-4"><span class="hidden md:inline-block px-2 py-1 rounded text-[10px] font-mono uppercase bg-green-500/10 text-green-500 border border-green-500/20">Distributed</span><iconify-icon icon="solar:alt-arrow-right-linear" class="text-muted-foreground"></iconify-icon></div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="relative flex flex-col p-6 md:p-8 border border-primary bg-card shadow-[0_0_20px_rgba(57,255,20,0.05)] transform scale-105 z-10">
-                        <div class="absolute top-0 right-0 bg-primary text-black text-[10px] font-semibold px-3 py-1 font-mono uppercase">Most Popular</div>
-                        <h3 class="text-muted-foreground text-sm tracking-wider font-mono mb-6 uppercase">Live-Set Creative</h3>
-                        <div class="mb-2"><span class="text-4xl md:text-5xl font-semibold text-foreground">£5,500</span><span class="text-muted-foreground text-lg">/mo</span></div>
-                        <ul class="space-y-3 flex-1 mt-8">
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-primary mt-0.5 text-base"></iconify-icon><span class="text-foreground text-sm">12 hours of filming per month</span></li>
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-primary mt-0.5 text-base"></iconify-icon><span class="text-foreground text-sm">12 hours of Video edited DJ Long Form</span></li>
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-primary mt-0.5 text-base"></iconify-icon><span class="text-foreground text-sm">12 hours Audio Capture</span></li>
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-primary mt-0.5 text-base"></iconify-icon><span class="text-foreground text-sm">12 Vertical Social Clips</span></li>
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-primary mt-0.5 text-base"></iconify-icon><span class="text-foreground text-sm">Youtube and SoundCloud SEO</span></li>
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-primary mt-0.5 text-base"></iconify-icon><span class="text-foreground text-sm">Content Distribution</span></li>
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-primary mt-0.5 text-base"></iconify-icon><span class="text-foreground text-sm">500 GB Cloud Storage</span></li>
-                        </ul>
-                        <button class="mt-8 w-full py-4 font-mono text-sm tracking-wider transition-colors bg-primary text-black hover:bg-white font-semibold uppercase">Select Tier</button>
-                    </div>
-                    <div class="relative flex flex-col p-6 md:p-8 border border-border bg-card hover:border-border/80 transition-all hover:-translate-y-1">
-                        <h3 class="text-muted-foreground text-sm tracking-wider font-mono mb-6 uppercase">Contractual</h3>
-                        <div class="mb-2"><span class="text-4xl md:text-5xl font-semibold text-foreground">Enquire</span></div>
-                        <ul class="space-y-3 flex-1 mt-8">
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-muted-foreground mt-0.5 text-base"></iconify-icon><span class="text-sm text-foreground">Customised long-form content</span></li>
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-muted-foreground mt-0.5 text-base"></iconify-icon><span class="text-sm text-foreground">Customised vertical clips</span></li>
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-muted-foreground mt-0.5 text-base"></iconify-icon><span class="text-sm text-foreground">API for Marketing Teams</span></li>
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-muted-foreground mt-0.5 text-base"></iconify-icon><span class="text-sm text-foreground">Live Streaming</span></li>
-                            <li class="flex items-start gap-3"><iconify-icon icon="solar:check-circle-linear" class="text-muted-foreground mt-0.5 text-base"></iconify-icon><span class="text-sm text-foreground">Unlimited Cloud Storage</span></li>
-                        </ul>
-                        <button class="mt-8 w-full py-4 font-mono text-sm tracking-wider transition-colors border border-border text-foreground hover:border-primary hover:text-primary uppercase group">Contact Us</button>
+
+                    <div class="space-y-6">
+                        <div class="bg-card border border-border rounded-xl p-6">
+                            <h3 class="text-sm font-medium text-white mb-4">System Health</h3>
+                            <div class="space-y-4">
+                                <div><div class="flex justify-between text-xs mb-1"><span class="text-muted-foreground">Upload Bandwidth</span><span class="text-white font-mono">840 Mbps</span></div><div class="w-full bg-[#222] h-1.5 rounded-full overflow-hidden"><div class="bg-primary h-full w-[85%]"></div></div></div>
+                                <div><div class="flex justify-between text-xs mb-1"><span class="text-muted-foreground">Processing Node 01</span><span class="text-white font-mono">Idle</span></div><div class="w-full bg-[#222] h-1.5 rounded-full overflow-hidden"><div class="bg-white/20 h-full w-[10%]"></div></div></div>
+                                <div><div class="flex justify-between text-xs mb-1"><span class="text-muted-foreground">Local Storage (NAS)</span><span class="text-white font-mono">82%</span></div><div class="w-full bg-[#222] h-1.5 rounded-full overflow-hidden"><div class="bg-yellow-500 h-full w-[82%]"></div></div></div>
+                            </div>
+                        </div>
+                        <div class="bg-card border border-border rounded-xl p-6 relative overflow-hidden group">
+                            <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><iconify-icon icon="solar:clapperboard-edit-linear" class="text-6xl text-white"></iconify-icon></div>
+                            <div class="relative z-10">
+                                <div class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-4 text-white"><iconify-icon icon="solar:user-id-linear" class="text-xl"></iconify-icon></div>
+                                <h3 class="text-lg font-semibold text-white mb-2">Need a Creative Director?</h3>
+                                <p class="text-sm text-muted-foreground mb-4 font-mono">Book a live producer to direct your cameras for the next event.</p>
+                                <button class="w-full py-2 border border-white/20 text-white text-sm font-medium rounded hover:bg-white hover:text-black transition-all uppercase tracking-wide">Request Producer</button>
+                            </div>
+                        </div>
+                        <div class="bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 rounded-xl p-6 relative overflow-hidden">
+                            <div class="relative z-10">
+                                <iconify-icon icon="solar:crown-star-linear" class="text-3xl text-primary mb-3"></iconify-icon>
+                                <h3 class="text-lg font-semibold text-white mb-2">Upgrade to Pro</h3>
+                                <p class="text-sm text-muted-foreground mb-4">Unlock 8K recording and unlimited cloud archiving.</p>
+                                <button class="w-full py-2 bg-primary text-black text-sm font-semibold rounded hover:bg-white transition-colors">Upgrade Plan</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </section>
-
-        <footer class="bg-black border-t border-white/10 py-4 px-8 mt-auto sticky bottom-0 z-20">
-            <div class="flex justify-between items-center text-[10px] font-mono text-zinc-600"><span>Protocol v2.4.0 // Connected</span><div class="flex items-center gap-2"><div class="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></div><span>System Operational</span></div></div>
-        </footer>
+            
+            <footer class="bg-black border-t border-white/10 py-4 px-8 mt-auto sticky bottom-0 z-20">
+                <div class="flex justify-between items-center text-[10px] font-mono text-zinc-600"><span>Protocol v2.4.0 // Connected</span><div class="flex items-center gap-2"><div class="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></div><span>System Operational</span></div></div>
+            </footer>
+        </div>
     </main>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('active');
-                    }
-                });
-            }, { threshold: 0.1 });
-            document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
-        });
-
-        function togglePricing(mode) {
-            const distroSection = document.getElementById('pricing-distribution');
-            const creativeSection = document.getElementById('pricing-creative');
-            const btnDistro = document.getElementById('toggle-distro');
-            const btnCreative = document.getElementById('toggle-creative');
-
-            if (mode === 'distribution') {
-                distroSection.classList.remove('hidden'); distroSection.classList.add('grid');
-                creativeSection.classList.add('hidden'); creativeSection.classList.remove('grid');
-                btnDistro.classList.remove('text-muted-foreground'); btnDistro.classList.add('bg-primary', 'text-black');
-                btnCreative.classList.remove('bg-primary', 'text-black'); btnCreative.classList.add('text-muted-foreground');
-            } else {
-                creativeSection.classList.remove('hidden'); creativeSection.classList.add('grid');
-                distroSection.classList.add('hidden'); distroSection.classList.remove('grid');
-                btnCreative.classList.remove('text-muted-foreground'); btnCreative.classList.add('bg-primary', 'text-black');
-                btnDistro.classList.remove('bg-primary', 'text-black'); btnDistro.classList.add('text-muted-foreground');
-            }
-        }
-    </script>
 </body>
 </html>
