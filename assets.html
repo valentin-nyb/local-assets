@@ -11,19 +11,20 @@
         tailwind.config = { theme: { extend: { colors: { background: '#050505', card: '#0a0a0a', primary: '#39FF14', border: '#27272a' } } } }
     </script>
     <style>
-        body { background-color: #050505 !important; color: white; -webkit-font-smoothing: antialiased; }
+        body { background-color: #050505 !important; color: white; }
         .nav-link.active { background-color: rgba(255, 255, 255, 0.05); border: 1px solid #27272a; color: white; }
+        @media (max-width: 767px) { #sidebar { position: fixed; height: 100vh; z-index: 50; } }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
 
-    <button onclick="toggleSidebar()" class="md:hidden fixed left-0 top-1/2 -translate-y-1/2 z-50 bg-primary text-black py-6 px-2.5 rounded-r-2xl shadow-lg">
-        <span class="font-mono text-[13px] font-black uppercase tracking-widest" style="writing-mode: vertical-rl; transform: rotate(180deg);">MENU</span>
+    <button onclick="toggleSidebar()" class="md:hidden fixed left-0 top-1/2 -translate-y-1/2 z-50 bg-primary text-black py-8 px-2 rounded-r-2xl shadow-xl">
+        <span class="font-mono text-[14px] font-black uppercase tracking-widest" style="writing-mode: vertical-rl; transform: rotate(180deg);">MENU</span>
     </button>
 
     <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/80 z-40 hidden backdrop-blur-md opacity-0 transition-opacity"></div>
 
-    <aside id="sidebar" class="w-64 border-r border-zinc-800 bg-[#0a0a0a] flex flex-col fixed inset-y-0 left-0 z-50 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 h-full">
+    <aside id="sidebar" class="w-64 border-r border-zinc-800 bg-[#0a0a0a] flex flex-col transform -translate-x-full md:translate-x-0 transition-transform duration-300 h-full shrink-0">
         <div class="h-16 flex items-center px-6 border-b border-zinc-800 justify-between">
             <span class="text-primary font-black">local / assets</span>
             <button onclick="toggleSidebar()" class="md:hidden text-zinc-500"><iconify-icon icon="solar:close-circle-bold" class="text-2xl"></iconify-icon></button>
@@ -35,17 +36,17 @@
         </nav>
     </aside>
 
-    <main class="flex-1 flex flex-col overflow-hidden">
-        <header class="h-16 border-b border-border flex items-center px-8 bg-background/50"><span class="text-[10px] font-mono uppercase tracking-[0.3em] text-primary">Media Asset Library</span></header>
+    <main class="flex-1 flex flex-col overflow-hidden w-full">
+        <header class="h-16 border-b border-border flex items-center px-8 bg-background/50"><span class="text-[10px] font-mono uppercase tracking-[0.3em] text-primary">Media Assets</span></header>
         <div class="flex-1 p-4 md:p-8 overflow-y-auto">
             <div class="max-w-5xl mx-auto space-y-8">
-                <div class="bg-card border border-dashed border-zinc-800 p-8 rounded-2xl space-y-6">
+                <div class="bg-card border border-dashed border-zinc-800 p-6 md:p-8 rounded-2xl space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <input type="text" placeholder="ARTIST NAME" class="bg-[#050505] border border-zinc-800 p-4 rounded text-xs font-bold text-white uppercase outline-none focus:border-primary transition-all">
-                        <input type="text" placeholder="DATE" class="bg-[#050505] border border-zinc-800 p-4 rounded text-xs font-bold text-white uppercase outline-none">
+                        <input type="text" placeholder="ARTIST NAME" class="bg-[#050505] border border-zinc-800 p-4 rounded text-xs font-bold text-white uppercase outline-none focus:border-primary">
+                        <input type="text" placeholder="DATE" class="bg-[#050505] border border-zinc-800 p-4 rounded text-xs font-bold text-white uppercase">
                         <select class="bg-[#050505] border border-zinc-800 p-4 rounded text-xs text-zinc-500"><option>MASTER CAM</option><option>BACK VIEW</option></select>
                     </div>
-                    <div class="text-center"><button class="bg-primary text-black px-10 py-4 rounded-full font-black uppercase text-[11px] shadow-lg shadow-primary/20">Start Master Upload</button></div>
+                    <div class="text-center"><button class="bg-primary text-black px-10 py-4 rounded-full font-black uppercase text-[11px] w-full md:w-auto">Start Master Upload</button></div>
                 </div>
             </div>
         </div>
@@ -55,15 +56,14 @@
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebar-overlay');
-            const isOpen = !sidebar.classList.contains('-translate-x-full');
-            if (isOpen && window.innerWidth < 768) {
-                sidebar.classList.add('-translate-x-full');
-                overlay.classList.add('opacity-0');
-                setTimeout(() => overlay.classList.add('hidden'), 300);
-            } else {
+            if (sidebar.classList.contains('-translate-x-full')) {
                 sidebar.classList.remove('-translate-x-full');
                 overlay.classList.remove('hidden');
                 setTimeout(() => overlay.classList.add('opacity-100'), 10);
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('opacity-0');
+                setTimeout(() => overlay.classList.add('hidden'), 300);
             }
         }
     </script>
