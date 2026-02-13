@@ -67,12 +67,17 @@
         </div>
     </div>
 
-    <aside id="sidebar" class="w-64 border-r border-zinc-800 bg-[#0a0a0a] flex-col shrink-0 h-full hidden md:flex">
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/80 z-40 hidden md:hidden backdrop-blur-sm transition-opacity duration-300 opacity-0"></div>
+
+    <aside id="sidebar" class="w-64 border-r border-zinc-800 bg-[#0a0a0a] flex flex-col fixed inset-y-0 left-0 z-50 transform -translate-x-full transition-transform duration-300 ease-in-out md:translate-x-0 md:static shrink-0 md:h-full">
         <div class="h-16 flex items-center px-6 border-b border-zinc-800 transition-all group justify-between">
             <a href="index.html" class="relative h-6 w-32 flex transition-all group">
                 <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974378/ibyostiwecnvm2cebqar.svg" class="absolute inset-0 h-full w-full object-left object-contain brightness-0 invert opacity-100 group-hover:opacity-0 group-active:opacity-0 transition-opacity duration-200" alt="logo">
                 <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974377/eayfotlcvgq36kpwvitw.svg" class="absolute inset-0 h-full w-full object-left object-contain opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity duration-200" alt="logo hover">
             </a>
+            <button onclick="toggleSidebar()" class="md:hidden text-muted-foreground hover:text-white p-1">
+                <iconify-icon icon="solar:close-circle-linear" class="text-xl block"></iconify-icon>
+            </button>
         </div>
         <nav class="flex-1 p-4 space-y-2">
             <a href="dashboard.html" class="nav-link flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors hover:bg-white/5 text-zinc-400">
@@ -88,36 +93,50 @@
     </aside>
 
     <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-background">
-        <header class="h-16 flex items-center justify-between px-6 md:px-8 border-b border-border bg-background/50 backdrop-blur-md shrink-0">
-            <span class="text-white font-medium text-xs font-mono uppercase tracking-[0.3em] text-primary">Media Asset Library</span>
+        <header class="h-16 flex items-center justify-between px-4 md:px-8 border-b border-border bg-background/50 backdrop-blur-md shrink-0">
+            <div class="flex items-center gap-3">
+                <button onclick="toggleSidebar()" class="md:hidden text-white p-1 hover:bg-white/10 rounded-md transition-colors shrink-0">
+                    <iconify-icon icon="solar:hamburger-menu-linear" class="text-xl block"></iconify-icon>
+                </button>
+                <div class="flex items-center gap-2 text-sm text-muted-foreground min-w-0">
+                    <a href="index.html" class="hover:text-white cursor-pointer hidden md:inline transition-colors shrink-0">Home</a>
+                    <iconify-icon icon="solar:alt-arrow-right-linear" class="text-xs hidden md:inline shrink-0"></iconify-icon>
+                    <span class="text-white font-medium truncate tracking-widest uppercase font-mono text-[10px] md:text-xs text-primary">Media Asset Library</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="hidden md:flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/10"><span class="w-2 h-2 rounded-full bg-primary"></span><span class="text-xs font-mono text-white">SYSTEM OK</span></div>
+                <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-muted-foreground transition-colors"><iconify-icon icon="solar:bell-linear" class="text-lg"></iconify-icon></button>
+            </div>
         </header>
 
-        <div class="flex-1 p-4 md:p-8 overflow-y-auto scrollbar-hide">
-            <div class="max-w-5xl mx-auto space-y-8 md:space-y-12 pb-20">
+        <div class="flex-1 p-4 md:p-6 lg:p-8 overflow-y-auto scrollbar-hide">
+            <div class="max-w-5xl mx-auto space-y-8 lg:space-y-12 pb-20">
                 
-                <div class="p-5 md:p-8 border border-dashed border-zinc-800 rounded-2xl bg-card/30 hover:border-primary/20 transition-all group">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6 mb-6 md:mb-8">
+                <div class="p-6 lg:p-8 border border-dashed border-zinc-800 rounded-2xl bg-card/30 hover:border-primary/20 transition-all group">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                         <div class="relative group/input">
-                            <label class="absolute -top-2.5 left-3 bg-[#0a0a0a] px-1 text-[9px] text-zinc-500 font-mono uppercase tracking-widest group-focus-within/input:text-primary transition-colors">Artist Name</label>
-                            <input type="text" id="ingest-name" placeholder="e.g. BELTRAN" class="w-full bg-transparent border border-zinc-800 rounded-lg px-4 py-3.5 text-xs focus:border-primary outline-none transition-all text-white font-bold placeholder-zinc-700 uppercase">
+                            <label class="absolute -top-2.5 left-3 bg-[#050505] px-1 text-[9px] text-zinc-500 font-mono uppercase tracking-widest group-focus-within/input:text-primary transition-colors">Artist Name</label>
+                            <input type="text" id="ingest-name" placeholder="e.g. BELTRAN" class="w-full bg-[#050505] border border-zinc-800 rounded-lg px-4 py-3 text-xs focus:border-primary outline-none transition-all text-white font-bold placeholder-zinc-700 uppercase">
                         </div>
                         <div class="relative group/input">
-                            <label class="absolute -top-2.5 left-3 bg-[#0a0a0a] px-1 text-[9px] text-zinc-500 font-mono uppercase tracking-widest">Event Date</label>
-                            <input type="text" id="ingest-date" placeholder="Select Date" class="w-full bg-transparent border border-zinc-800 rounded-lg px-4 py-3.5 text-xs focus:border-primary outline-none transition-all text-white cursor-pointer font-bold">
+                            <label class="absolute -top-2.5 left-3 bg-[#050505] px-1 text-[9px] text-zinc-500 font-mono uppercase tracking-widest">Event Date</label>
+                            <input type="text" id="ingest-date" placeholder="Select Date" class="w-full bg-[#050505] border border-zinc-800 rounded-lg px-4 py-3 text-xs focus:border-primary outline-none transition-all text-white cursor-pointer font-bold">
                         </div>
                         <div class="relative group/input">
-                            <label class="absolute -top-2.5 left-3 bg-[#0a0a0a] px-1 text-[9px] text-zinc-500 font-mono uppercase tracking-widest">Camera Angle</label>
-                            <select id="ingest-shot" class="w-full bg-transparent border border-zinc-800 rounded-lg px-4 py-3.5 text-xs focus:border-primary outline-none transition-all text-zinc-400 cursor-pointer">
-                                <option value="MASTER" class="bg-[#050505]">Master Cam</option>
-                                <option value="BACK-VIEW" class="bg-[#050505]">Back View</option>
-                                <option value="FRONT-BOOTH" class="bg-[#050505]">Front Booth</option>
-                                <option value="CROWD-WIDE" class="bg-[#050505]">Crowd Wide</option>
-                                <option value="ROAMING" class="bg-[#050505]">Roaming</option>
+                            <label class="absolute -top-2.5 left-3 bg-[#050505] px-1 text-[9px] text-zinc-500 font-mono uppercase tracking-widest">Camera Angle</label>
+                            <select id="ingest-shot" class="w-full bg-[#050505] border border-zinc-800 rounded-lg px-4 py-3 text-xs focus:border-primary outline-none transition-all text-zinc-400 cursor-pointer">
+                                <option value="MASTER">Master Cam</option>
+                                <option value="BACK-VIEW">Back View</option>
+                                <option value="FRONT-BOOTH">Front Booth</option>
+                                <option value="CROWD-WIDE">Crowd Wide</option>
+                                <option value="ROAMING">Roaming</option>
                             </select>
                         </div>
                     </div>
                     <div class="text-center">
-                        <button id="upload_widget" class="px-8 py-3.5 md:px-10 md:py-3 w-full md:w-auto bg-primary text-black font-extrabold rounded-full text-[11px] uppercase tracking-[0.2em] hover:shadow-[0_0_25px_rgba(57,255,20,0.4)] transition-all transform hover:-translate-y-0.5">
+                        <input type="file" id="hidden-file-input" class="hidden" accept="video/*, image/*">
+                        <button id="upload_widget" class="px-8 py-3 md:px-10 w-full md:w-auto bg-primary text-black font-extrabold rounded-full text-[10px] uppercase tracking-[0.2em] hover:shadow-[0_0_25px_rgba(57,255,20,0.4)] transition-all transform hover:-translate-y-0.5">
                             UPLOAD RAW ASSET
                         </button>
                     </div>
@@ -130,7 +149,7 @@
                             <video id="preview-player" controls class="w-full h-full object-contain"></video>
                         </div>
                         <div class="p-4 flex items-center justify-between bg-zinc-900/30 border-t border-zinc-800">
-                            <div>
+                            <div class="min-w-0 pr-4">
                                 <p id="player-status" class="text-[9px] font-mono text-primary uppercase tracking-widest mb-1">Status: Ready</p>
                                 <p id="video-name" class="text-sm font-medium text-white truncate max-w-xs md:max-w-md font-mono"></p>
                             </div>
@@ -164,8 +183,10 @@
         window.onload = function() {
             flatpickr("#ingest-date", { defaultDate: "today", dateFormat: "d M Y", disableMobile: "true" });
             flatpickr("#search-date", { dateFormat: "d M Y", onChange: renderList, disableMobile: "true" });
-            const uploadBtn = document.getElementById("upload_widget");
-            if (uploadBtn) uploadBtn.onclick = startUploadProcess;
+            
+            document.getElementById("upload_widget").onclick = startUploadProcess;
+            document.getElementById("hidden-file-input").onchange = handleFileSelection;
+            
             document.getElementById('search-name').oninput = renderList;
             fetchCloudLibrary();
         };
@@ -190,7 +211,6 @@
                     const cleanId = res.public_id.replace('venue_masters/', '');
                     const parts = cleanId.split('_');
                     let artist = cleanId; let date = ""; let shot = "MASTER";
-                    
                     const dateIndex = parts.findIndex(p => p.match(/^\d{4}-\d{2}-\d{2}$/) || p.match(/^\d{2}-\w{3}-\d{4}$/));
                     if (dateIndex !== -1) {
                         artist = parts.slice(0, dateIndex).join(' ');
@@ -215,8 +235,9 @@
 
             const filtered = cloudAssets.filter(item => {
                 const isUnknown = item.artist.includes("UNKNOWN");
-                const isTrash = item.public_id.includes("xrerc") || item.public_id.includes("exa4f") || item.public_id.includes("byc2t");
+                const isTrash = item.public_id.includes("xrerc") || item.public_id.includes("exa4f") || item.public_id.includes("byc2t") || item.public_id.includes("fgs0gukr");
                 if (isUnknown || isTrash) return false;
+                
                 return (item.artist.toLowerCase().includes(searchName) || item.shot.toLowerCase().includes(searchName)) && (searchDate ? item.date === searchDate : true);
             });
 
@@ -225,19 +246,19 @@
                 const row = document.createElement('div');
                 row.className = "flex items-center justify-between p-3 md:p-4 bg-card border border-zinc-800 rounded-xl hover:border-primary/30 transition-all group";
                 row.innerHTML = `
-                    <div class="flex items-center gap-3 md:gap-4 min-w-0">
+                    <div class="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
                         <div class="w-8 h-8 md:w-10 md:h-10 rounded bg-zinc-900 border border-zinc-800 flex items-center justify-center shrink-0 text-primary group-hover:border-primary/50 transition-colors">
                             <iconify-icon icon="solar:videocamera-record-bold" class="text-lg md:text-xl"></iconify-icon>
                         </div>
-                        <div class="min-w-0">
-                            <div class="flex items-center gap-2">
+                        <div class="min-w-0 flex-1 pr-4">
+                            <div class="flex items-center gap-2 mb-0.5">
                                 <p class="text-[10px] md:text-xs font-bold text-white truncate uppercase tracking-tighter">${item.artist}</p>
                                 <span class="text-[7px] md:text-[8px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-mono uppercase border border-primary/20 shrink-0">${item.shot}</span>
                             </div>
-                            <p class="text-[8px] md:text-[9px] font-mono text-zinc-500 truncate mt-0.5 uppercase tracking-widest">${item.date} // ${item.format}</p>
+                            <p class="text-[8px] md:text-[9px] font-mono text-zinc-500 truncate uppercase tracking-widest">${item.date} // ${item.format}</p>
                         </div>
                     </div>
-                    <button onclick="playVideo('${item.url}', '${item.public_id}', '${item.format}')" class="text-zinc-600 hover:text-primary transition-colors pr-1 md:pr-2 shrink-0">
+                    <button onclick="playVideo('${item.url}', '${item.public_id}', '${item.format}')" class="text-zinc-600 hover:text-primary transition-colors shrink-0 pr-1 md:pr-2">
                         <iconify-icon icon="solar:play-circle-bold" class="text-2xl md:text-3xl"></iconify-icon>
                     </button>`;
                 list.appendChild(row);
@@ -246,29 +267,76 @@
 
         function startUploadProcess() {
             const rawDjName = document.getElementById('ingest-name').value.trim();
-            const dateInput = document.getElementById('ingest-date').value;
-            const shotType = document.getElementById('ingest-shot').value;
             if (!rawDjName) {
                 showAlert("Please enter Artist Name");
                 return;
             }
+            document.getElementById('hidden-file-input').click();
+        }
+
+        function handleFileSelection(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const rawDjName = document.getElementById('ingest-name').value.trim();
+            const dateInput = document.getElementById('ingest-date').value;
+            const shotType = document.getElementById('ingest-shot').value;
+            
             const cleanDjName = rawDjName.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase();
             
-            // Format date correctly for Cloudinary saving
             const d = new Date(dateInput);
             const formattedDate = d.toISOString().split('T')[0];
 
             const fileName = `${cleanDjName}_${formattedDate}_${shotType}`;
-            cloudinary.createUploadWidget({
-                cloudName: 'dso3xwno0', uploadPreset: 'assets_unsigned',
-                folder: 'venue_masters', public_id: fileName,    
-                tags: ['venue_recording', cleanDjName, formattedDate, shotType]
-            }, (error, result) => {
-                if (!error && result && result.event === "success") {
+            const tags = ['venue_recording', cleanDjName, formattedDate, shotType].join(',');
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('upload_preset', 'assets_unsigned');
+            formData.append('folder', 'venue_masters');
+            formData.append('public_id', fileName);
+            formData.append('tags', tags);
+
+            const uploadBtn = document.getElementById('upload_widget');
+            uploadBtn.disabled = true;
+            uploadBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            showAlert("Upload Started...");
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', 'https://api.cloudinary.com/v1_1/dso3xwno0/auto/upload', true);
+
+            xhr.upload.onprogress = function(e) {
+                if (e.lengthComputable) {
+                    const percentComplete = Math.round((e.loaded / e.total) * 100);
+                    uploadBtn.innerText = `UPLOADING... ${percentComplete}%`;
+                }
+            };
+
+            xhr.onload = function() {
+                uploadBtn.disabled = false;
+                uploadBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                uploadBtn.innerText = "UPLOAD RAW ASSET";
+                document.getElementById('hidden-file-input').value = ""; 
+
+                if (xhr.status === 200) {
+                    showAlert("Upload Success - Syncing Library");
                     setTimeout(fetchCloudLibrary, 2000);
                     document.getElementById('ingest-name').value = ''; 
+                } else {
+                    showAlert("Upload Failed. Try again.");
+                    console.error(xhr.responseText);
                 }
-            }).open();
+            };
+
+            xhr.onerror = function() {
+                uploadBtn.disabled = false;
+                uploadBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                uploadBtn.innerText = "UPLOAD RAW ASSET";
+                showAlert("Network Error Occurred.");
+            };
+
+            xhr.send(formData);
         }
 
         function playVideo(url, name, format) {
@@ -279,6 +347,25 @@
             document.getElementById('video-name').textContent = name.replace('venue_masters/', '') + "." + format;
             player.play();
             container.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            const isOpen = !sidebar.classList.contains('-translate-x-full');
+            if (isOpen) {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.remove('opacity-100'); 
+                overlay.classList.add('opacity-0');
+                setTimeout(() => { overlay.classList.add('hidden'); }, 300);
+            } else {
+                sidebar.classList.remove('-translate-x-full'); 
+                overlay.classList.remove('hidden');
+                requestAnimationFrame(() => { 
+                    overlay.classList.remove('opacity-0'); 
+                    overlay.classList.add('opacity-100'); 
+                });
+            }
         }
     </script>
 </body>
