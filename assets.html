@@ -1,13 +1,20 @@
 <!DOCTYPE html>
-<html lang="en" class="dark scroll-smooth">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <title>local / assets</title>
-    <link rel="icon" type="image/png" href="https://res.cloudinary.com/dso3xwno0/image/upload/v1770939295/mcwp97ytys3vfyqjhymu.svg">
+    <title>local / assets - London</title>
+    
+    <link rel="icon" type="image/svg+xml" href="https://res.cloudinary.com/dso3xwno0/image/upload/v1770939295/mcwp97ytys3vfyqjhymu.svg">
+    <link rel="apple-touch-icon" href="https://res.cloudinary.com/dso3xwno0/image/upload/v1770939295/mcwp97ytys3vfyqjhymu.svg">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="local/assets">
+    <meta name="theme-color" content="#050505">
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
     
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
@@ -28,6 +35,7 @@
     </script>
     <style>
         body { background-color: #050505 !important; color: white; }
+        .cloudinary_sub_panel { backdrop-filter: blur(15px) !important; background: rgba(0,0,0,0.8) !important; }
         .nav-link.active { background-color: rgba(255,255,255,0.05); border: 1px solid #27272a; color: white; }
         select { -webkit-appearance: none; -moz-appearance: none; appearance: none; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
@@ -43,8 +51,8 @@
         #custom-alert.show { transform: translate(-50%, 20px); }
 
         /* Protocol Styled Date Picker */
-        .flatpickr-calendar { background: rgba(10, 10, 10, 0.95) !important; backdrop-filter: blur(15px) !important; border: 1px solid rgba(57, 255, 20, 0.3) !important; box-shadow: 0 0 30px rgba(0, 0, 0, 0.5) !important; }
-        .flatpickr-day.selected { background: #39FF14 !important; color: black !important; border-color: #39FF14 !important; font-weight: bold; }
+        .flatpickr-calendar { background: rgba(10, 10, 10, 0.98) !important; backdrop-filter: blur(20px) !important; border: 1px solid rgba(57, 255, 20, 0.3) !important; box-shadow: 0 10px 50px rgba(0,0,0,0.9) !important; }
+        .flatpickr-day.selected { background: #39FF14 !important; color: black !important; font-weight: 900; border-color: #39FF14 !important; }
         .flatpickr-current-month, .flatpickr-weekday { color: #39FF14 !important; text-transform: uppercase; font-family: 'JetBrains Mono', monospace; }
         .flatpickr-day:hover { background: rgba(57, 255, 20, 0.2) !important; }
     </style>
@@ -59,11 +67,11 @@
         </div>
     </div>
 
-    <aside id="sidebar" class="w-64 border-r border-zinc-800 bg-[#0a0a0a] flex flex-col shrink-0 h-full">
+    <aside id="sidebar" class="w-64 border-r border-zinc-800 bg-[#0a0a0a] flex-col shrink-0 h-full hidden md:flex">
         <div class="h-16 flex items-center px-6 border-b border-zinc-800 transition-all group justify-between">
             <a href="index.html" class="relative h-6 w-32 flex transition-all group">
-                <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974378/ibyostiwecnvm2cebqar.svg" class="absolute inset-0 h-full w-full object-left object-contain brightness-0 invert opacity-100 group-hover:opacity-0 transition-opacity duration-200" alt="logo">
-                <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974377/eayfotlcvgq36kpwvitw.svg" class="absolute inset-0 h-full w-full object-left object-contain opacity-0 group-hover:opacity-100 transition-opacity duration-200" alt="logo hover">
+                <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974378/ibyostiwecnvm2cebqar.svg" class="absolute inset-0 h-full w-full object-left object-contain brightness-0 invert opacity-100 group-hover:opacity-0 group-active:opacity-0 transition-opacity duration-200" alt="logo">
+                <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974377/eayfotlcvgq36kpwvitw.svg" class="absolute inset-0 h-full w-full object-left object-contain opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity duration-200" alt="logo hover">
             </a>
         </div>
         <nav class="flex-1 p-4 space-y-2">
@@ -79,39 +87,38 @@
         </nav>
     </aside>
 
-    <main class="flex-1 flex flex-col overflow-hidden bg-background">
-        <header class="h-16 flex items-center px-8 border-b border-border bg-background/50 backdrop-blur-md shrink-0">
+    <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-background">
+        <header class="h-16 flex items-center justify-between px-6 md:px-8 border-b border-border bg-background/50 backdrop-blur-md shrink-0">
             <span class="text-white font-medium text-xs font-mono uppercase tracking-[0.3em] text-primary">Media Asset Library</span>
         </header>
 
-        <div class="flex-1 p-8 overflow-y-auto scrollbar-hide">
-            <div class="max-w-5xl mx-auto space-y-12 pb-20">
+        <div class="flex-1 p-4 md:p-8 overflow-y-auto scrollbar-hide">
+            <div class="max-w-5xl mx-auto space-y-8 md:space-y-12 pb-20">
                 
-                <div class="p-8 border border-dashed border-zinc-800 rounded-2xl bg-card/30 hover:border-primary/20 transition-all group">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="p-5 md:p-8 border border-dashed border-zinc-800 rounded-2xl bg-card/30 hover:border-primary/20 transition-all group">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6 mb-6 md:mb-8">
                         <div class="relative group/input">
-                            <label class="absolute -top-2.5 left-3 bg-[#050505] px-1 text-[9px] text-zinc-500 font-mono uppercase tracking-widest group-focus-within/input:text-primary transition-colors">Artist Name</label>
-                            <input type="text" id="ingest-name" placeholder="e.g. BELTRAN" class="w-full bg-[#050505] border border-zinc-800 rounded-lg px-4 py-3 text-xs focus:border-primary outline-none transition-all text-white font-bold placeholder-zinc-700 uppercase">
+                            <label class="absolute -top-2.5 left-3 bg-[#0a0a0a] px-1 text-[9px] text-zinc-500 font-mono uppercase tracking-widest group-focus-within/input:text-primary transition-colors">Artist Name</label>
+                            <input type="text" id="ingest-name" placeholder="e.g. BELTRAN" class="w-full bg-transparent border border-zinc-800 rounded-lg px-4 py-3.5 text-xs focus:border-primary outline-none transition-all text-white font-bold placeholder-zinc-700 uppercase">
                         </div>
                         <div class="relative group/input">
-                            <label class="absolute -top-2.5 left-3 bg-[#050505] px-1 text-[9px] text-zinc-500 font-mono uppercase tracking-widest">Event Date</label>
-                            <input type="text" id="ingest-date" placeholder="Select Date" class="w-full bg-[#050505] border border-zinc-800 rounded-lg px-4 py-3 text-xs focus:border-primary outline-none transition-all text-white cursor-pointer font-bold">
+                            <label class="absolute -top-2.5 left-3 bg-[#0a0a0a] px-1 text-[9px] text-zinc-500 font-mono uppercase tracking-widest">Event Date</label>
+                            <input type="text" id="ingest-date" placeholder="Select Date" class="w-full bg-transparent border border-zinc-800 rounded-lg px-4 py-3.5 text-xs focus:border-primary outline-none transition-all text-white cursor-pointer font-bold">
                         </div>
                         <div class="relative group/input">
-                            <label class="absolute -top-2.5 left-3 bg-[#050505] px-1 text-[9px] text-zinc-500 font-mono uppercase tracking-widest">Camera Angle</label>
-                            <select id="ingest-shot" class="w-full bg-[#050505] border border-zinc-800 rounded-lg px-4 py-3 text-xs focus:border-primary outline-none transition-all text-zinc-400 cursor-pointer">
-                                <option value="MASTER">Master Cam</option>
-                                <option value="BACK-VIEW">Back View</option>
-                                <option value="FRONT-BOOTH">Front Booth</option>
-                                <option value="CROWD-WIDE">Crowd Wide</option>
-                                <option value="ROAMING">Roaming</option>
+                            <label class="absolute -top-2.5 left-3 bg-[#0a0a0a] px-1 text-[9px] text-zinc-500 font-mono uppercase tracking-widest">Camera Angle</label>
+                            <select id="ingest-shot" class="w-full bg-transparent border border-zinc-800 rounded-lg px-4 py-3.5 text-xs focus:border-primary outline-none transition-all text-zinc-400 cursor-pointer">
+                                <option value="MASTER" class="bg-[#050505]">Master Cam</option>
+                                <option value="BACK-VIEW" class="bg-[#050505]">Back View</option>
+                                <option value="FRONT-BOOTH" class="bg-[#050505]">Front Booth</option>
+                                <option value="CROWD-WIDE" class="bg-[#050505]">Crowd Wide</option>
+                                <option value="ROAMING" class="bg-[#050505]">Roaming</option>
                             </select>
                         </div>
                     </div>
                     <div class="text-center">
-                        <input type="file" id="hidden-file-input" class="hidden" accept="video/*, image/*">
-                        <button id="upload_widget" class="px-10 py-3 bg-primary text-black font-extrabold rounded-full text-[10px] uppercase tracking-[0.2em] hover:shadow-[0_0_25px_rgba(57,255,20,0.4)] transition-all transform hover:-translate-y-0.5">
-                            Upload RAW Asset
+                        <button id="upload_widget" class="px-8 py-3.5 md:px-10 md:py-3 w-full md:w-auto bg-primary text-black font-extrabold rounded-full text-[11px] uppercase tracking-[0.2em] hover:shadow-[0_0_25px_rgba(57,255,20,0.4)] transition-all transform hover:-translate-y-0.5">
+                            UPLOAD RAW ASSET
                         </button>
                     </div>
                 </div>
@@ -125,7 +132,7 @@
                         <div class="p-4 flex items-center justify-between bg-zinc-900/30 border-t border-zinc-800">
                             <div>
                                 <p id="player-status" class="text-[9px] font-mono text-primary uppercase tracking-widest mb-1">Status: Ready</p>
-                                <p id="video-name" class="text-sm font-medium text-white truncate max-w-md font-mono"></p>
+                                <p id="video-name" class="text-sm font-medium text-white truncate max-w-xs md:max-w-md font-mono"></p>
                             </div>
                         </div>
                     </div>
@@ -134,16 +141,16 @@
                 <div class="space-y-4 pt-4">
                     <div class="flex items-center justify-between border-b border-zinc-800 pb-2">
                         <h3 class="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.3em]">Local/Assets Cloud Library</h3>
-                        <div id="connection-status" class="text-[9px] font-mono text-zinc-500 flex items-center gap-2">
+                        <div id="connection-status" class="text-[9px] font-mono text-zinc-500 flex items-center gap-2 shrink-0">
                             <span class="w-1.5 h-1.5 rounded-full bg-zinc-600"></span> Offline
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="relative">
-                            <iconify-icon icon="solar:magnifer-linear" class="absolute left-3 top-2.5 text-zinc-500"></iconify-icon>
-                            <input type="text" id="search-name" placeholder="Search Cloud Assets..." class="w-full bg-card border border-border rounded-lg pl-9 pr-4 py-2 text-xs focus:border-primary outline-none transition-all text-white font-mono">
+                            <iconify-icon icon="solar:magnifer-linear" class="absolute left-3 top-3 text-zinc-500"></iconify-icon>
+                            <input type="text" id="search-name" placeholder="Search Cloud Assets..." class="w-full bg-card border border-border rounded-lg pl-9 pr-4 py-2.5 text-xs focus:border-primary outline-none transition-all text-white font-mono">
                         </div>
-                        <input type="text" id="search-date" placeholder="Filter by Date" class="w-full bg-card border border-border rounded-lg px-4 py-2 text-xs focus:border-primary outline-none transition-all text-zinc-500 cursor-pointer">
+                        <input type="text" id="search-date" placeholder="Filter by Date" class="w-full bg-card border border-border rounded-lg px-4 py-2.5 text-xs focus:border-primary outline-none transition-all text-zinc-500 cursor-pointer">
                     </div>
                     <div id="cloud-list" class="space-y-2"></div>
                 </div>
@@ -155,13 +162,10 @@
         let cloudAssets = [];
 
         window.onload = function() {
-            flatpickr("#ingest-date", { defaultDate: "today", dateFormat: "Y-m-d" });
-            flatpickr("#search-date", { dateFormat: "Y-m-d", onChange: renderList });
-            
-            // Attach native upload logic
-            document.getElementById("upload_widget").onclick = startUploadProcess;
-            document.getElementById("hidden-file-input").onchange = handleFileSelection;
-            
+            flatpickr("#ingest-date", { defaultDate: "today", dateFormat: "d M Y", disableMobile: "true" });
+            flatpickr("#search-date", { dateFormat: "d M Y", onChange: renderList, disableMobile: "true" });
+            const uploadBtn = document.getElementById("upload_widget");
+            if (uploadBtn) uploadBtn.onclick = startUploadProcess;
             document.getElementById('search-name').oninput = renderList;
             fetchCloudLibrary();
         };
@@ -186,7 +190,8 @@
                     const cleanId = res.public_id.replace('venue_masters/', '');
                     const parts = cleanId.split('_');
                     let artist = cleanId; let date = ""; let shot = "MASTER";
-                    const dateIndex = parts.findIndex(p => p.match(/^\d{4}-\d{2}-\d{2}$/));
+                    
+                    const dateIndex = parts.findIndex(p => p.match(/^\d{4}-\d{2}-\d{2}$/) || p.match(/^\d{2}-\w{3}-\d{4}$/));
                     if (dateIndex !== -1) {
                         artist = parts.slice(0, dateIndex).join(' ');
                         date = parts[dateIndex];
@@ -218,99 +223,52 @@
             list.innerHTML = '';
             filtered.forEach(item => {
                 const row = document.createElement('div');
-                row.className = "flex items-center justify-between p-3 bg-card border border-zinc-800 rounded-lg hover:border-primary/30 transition-all group";
+                row.className = "flex items-center justify-between p-3 md:p-4 bg-card border border-zinc-800 rounded-xl hover:border-primary/30 transition-all group";
                 row.innerHTML = `
-                    <div class="flex items-center gap-4 min-w-0">
-                        <div class="w-10 h-10 rounded bg-zinc-900 border border-zinc-800 flex items-center justify-center shrink-0 text-primary group-hover:border-primary/50 transition-colors">
-                            <iconify-icon icon="solar:videocamera-record-bold" class="text-xl"></iconify-icon>
+                    <div class="flex items-center gap-3 md:gap-4 min-w-0">
+                        <div class="w-8 h-8 md:w-10 md:h-10 rounded bg-zinc-900 border border-zinc-800 flex items-center justify-center shrink-0 text-primary group-hover:border-primary/50 transition-colors">
+                            <iconify-icon icon="solar:videocamera-record-bold" class="text-lg md:text-xl"></iconify-icon>
                         </div>
                         <div class="min-w-0">
                             <div class="flex items-center gap-2">
-                                <p class="text-xs font-bold text-white truncate uppercase tracking-tighter">${item.artist}</p>
-                                <span class="text-[8px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-mono uppercase border border-primary/20">${item.shot}</span>
+                                <p class="text-[10px] md:text-xs font-bold text-white truncate uppercase tracking-tighter">${item.artist}</p>
+                                <span class="text-[7px] md:text-[8px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-mono uppercase border border-primary/20 shrink-0">${item.shot}</span>
                             </div>
-                            <p class="text-[9px] font-mono text-zinc-500 truncate mt-0.5 uppercase tracking-widest">${item.date} // ${item.format}</p>
+                            <p class="text-[8px] md:text-[9px] font-mono text-zinc-500 truncate mt-0.5 uppercase tracking-widest">${item.date} // ${item.format}</p>
                         </div>
                     </div>
-                    <button onclick="playVideo('${item.url}', '${item.public_id}', '${item.format}')" class="text-zinc-600 hover:text-primary transition-colors pr-2">
-                        <iconify-icon icon="solar:play-circle-bold" class="text-3xl"></iconify-icon>
+                    <button onclick="playVideo('${item.url}', '${item.public_id}', '${item.format}')" class="text-zinc-600 hover:text-primary transition-colors pr-1 md:pr-2 shrink-0">
+                        <iconify-icon icon="solar:play-circle-bold" class="text-2xl md:text-3xl"></iconify-icon>
                     </button>`;
                 list.appendChild(row);
             });
         }
 
-        // --- DIRECT NATIVE FILE UPLOAD LOGIC ---
         function startUploadProcess() {
             const rawDjName = document.getElementById('ingest-name').value.trim();
+            const dateInput = document.getElementById('ingest-date').value;
+            const shotType = document.getElementById('ingest-shot').value;
             if (!rawDjName) {
                 showAlert("Please enter Artist Name");
                 return;
             }
-            // Triggers the native computer file browser
-            document.getElementById('hidden-file-input').click();
-        }
-
-        function handleFileSelection(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const rawDjName = document.getElementById('ingest-name').value.trim();
-            const dateInput = document.getElementById('ingest-date').value;
-            const shotType = document.getElementById('ingest-shot').value;
-            
             const cleanDjName = rawDjName.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase();
-            const fileName = `${cleanDjName}_${dateInput}_${shotType}`;
-            const tags = ['venue_recording', cleanDjName, dateInput, shotType].join(',');
+            
+            // Format date correctly for Cloudinary saving
+            const d = new Date(dateInput);
+            const formattedDate = d.toISOString().split('T')[0];
 
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('upload_preset', 'assets_unsigned');
-            formData.append('folder', 'venue_masters');
-            formData.append('public_id', fileName);
-            formData.append('tags', tags);
-
-            const uploadBtn = document.getElementById('upload_widget');
-            uploadBtn.disabled = true;
-            uploadBtn.classList.add('opacity-50', 'cursor-not-allowed');
-
-            showAlert("Upload Started...");
-
-            // Send file directly to Cloudinary via API
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', 'https://api.cloudinary.com/v1_1/dso3xwno0/auto/upload', true);
-
-            // Live progress tracker updates the button text!
-            xhr.upload.onprogress = function(e) {
-                if (e.lengthComputable) {
-                    const percentComplete = Math.round((e.loaded / e.total) * 100);
-                    uploadBtn.innerText = `UPLOADING... ${percentComplete}%`;
-                }
-            };
-
-            xhr.onload = function() {
-                uploadBtn.disabled = false;
-                uploadBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                uploadBtn.innerText = "START MASTER UPLOAD";
-                document.getElementById('hidden-file-input').value = ""; 
-
-                if (xhr.status === 200) {
-                    showAlert("Upload Success - Syncing Library");
+            const fileName = `${cleanDjName}_${formattedDate}_${shotType}`;
+            cloudinary.createUploadWidget({
+                cloudName: 'dso3xwno0', uploadPreset: 'assets_unsigned',
+                folder: 'venue_masters', public_id: fileName,    
+                tags: ['venue_recording', cleanDjName, formattedDate, shotType]
+            }, (error, result) => {
+                if (!error && result && result.event === "success") {
                     setTimeout(fetchCloudLibrary, 2000);
                     document.getElementById('ingest-name').value = ''; 
-                } else {
-                    showAlert("Upload Failed. Try again.");
-                    console.error(xhr.responseText);
                 }
-            };
-
-            xhr.onerror = function() {
-                uploadBtn.disabled = false;
-                uploadBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                uploadBtn.innerText = "START MASTER UPLOAD";
-                showAlert("Network Error Occurred.");
-            };
-
-            xhr.send(formData);
+            }).open();
         }
 
         function playVideo(url, name, format) {
