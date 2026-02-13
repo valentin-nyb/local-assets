@@ -3,89 +3,235 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <title>local / assets</title>
+    <title>Media Hub // Camera Control</title>
+    <link rel="icon" type="image/png" href="https://res.cloudinary.com/dso3xwno0/image/upload/v1770939295/mcwp97ytys3vfyqjhymu.svg">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
-            theme: {
-                extend: {
-                    colors: { background: '#050505', card: '#0a0a0a', primary: '#39FF14', border: '#27272a' }
-                }
-            }
+            theme: { 
+                extend: { 
+                    colors: { 
+                        background: '#050505', 
+                        card: '#0a0a0a', 
+                        primary: '#39FF14', 
+                        border: '#27272a',
+                        secondary: '#1a1a1a'
+                    },
+                    fontFamily: {
+                        mono: ['Courier New', 'monospace'],
+                        sans: ['Inter', 'sans-serif']
+                    }
+                } 
+            } 
         }
     </script>
     <style>
-        body { background-color: #050505; color: white; -webkit-font-smoothing: antialiased; }
-        .joystick-container { position: relative; width: 120px; height: 120px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; background: #000; }
-        .joystick-knob { width: 50px; height: 50px; background: #222; border-radius: 50%; border: 1px solid #333; cursor: move; transition: transform 0.1s; }
-        .joystick-knob:active { background: #39FF14; box-shadow: 0 0 20px rgba(57, 255, 20, 0.4); }
+        body { background-color: #050505 !important; color: white; }
+        .nav-link.active { background-color: rgba(255,255,255,0.05); border: 1px solid #27272a; color: white; }
+        
+        /* Glassmorphism Notification */
+        #custom-alert {
+            backdrop-filter: blur(12px);
+            background: rgba(10, 10, 10, 0.8);
+            border: 1px solid rgba(57, 255, 20, 0.3);
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5), 0 0 10px rgba(57, 255, 20, 0.1);
+            transform: translate(-50%, -150%);
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        #custom-alert.show { transform: translate(-50%, 20px); }
     </style>
 </head>
-<body class="font-sans antialiased h-screen w-screen flex overflow-hidden">
+<body class="bg-background text-white h-screen w-screen flex overflow-hidden font-sans selection:bg-primary/30">
+
+    <div id="custom-alert" class="fixed top-0 left-1/2 z-[100] px-6 py-4 rounded-xl flex items-center gap-4 min-w-[320px]">
+        <iconify-icon icon="solar:info-circle-bold" class="text-primary text-2xl"></iconify-icon>
+        <div class="flex flex-col">
+            <span class="text-[10px] font-mono text-primary uppercase tracking-widest">System Message</span>
+            <span id="alert-text" class="text-xs font-bold text-white uppercase tracking-tight"></span>
+        </div>
+    </div>
 
     <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/80 z-40 hidden md:hidden backdrop-blur-sm"></div>
 
     <aside id="sidebar" class="w-64 border-r border-zinc-800 bg-[#0a0a0a] flex flex-col fixed inset-y-0 left-0 z-50 transform -translate-x-full transition-transform duration-300 md:translate-x-0 md:static shrink-0 h-full">
         <div class="h-16 flex items-center px-6 border-b border-zinc-800">
-            <a href="index.html" class="font-sans text-xl font-extrabold tracking-tighter text-white lowercase">local / assets</a>
-        </div>
+    <a href="index.html" class="flex items-center hover:opacity-80 transition-opacity">
+        <span class="font-sans text-xl font-extrabold tracking-tighter text-white lowercase">
+            local / assets
+        </span>
+    </a>
+</div>
         <nav class="flex-1 p-4 space-y-2">
             <a href="dashboard.html" class="nav-link flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors hover:bg-white/5 text-zinc-400">
                 <iconify-icon icon="solar:widget-5-linear" class="text-lg"></iconify-icon>Overview
             </a>
-            <a href="camera.html" class="nav-link flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors hover:bg-white/5 text-zinc-400">
-                <iconify-icon icon="solar:videocamera-record-linear" class="text-lg"></iconify-icon>Camera Control
+            <a href="camera.html" class="nav-link active flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors bg-white/5 text-white border border-zinc-800">
+                <iconify-icon icon="solar:videocamera-record-linear" class="text-lg text-primary"></iconify-icon>Camera Control
             </a>
             <a href="assets.html" class="nav-link flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors hover:bg-white/5 text-zinc-400">
                 <iconify-icon icon="solar:clapperboard-play-linear" class="text-lg"></iconify-icon>Media Assets
             </a>
         </nav>
+        
+        <div class="p-4 border-t border-zinc-800">
+             <div class="flex items-center gap-2 text-[10px] font-mono text-red-500 animate-pulse">
+                <div class="w-2 h-2 rounded-full bg-red-500"></div>
+                REC: ROOM 1
+             </div>
+        </div>
     </aside>
 
-    <main class="flex-1 flex flex-col min-w-0 bg-background overflow-hidden relative">
-        <header class="h-16 flex items-center justify-between px-8 border-b border-border bg-background/50 backdrop-blur-sm">
-            <div class="flex items-center gap-3">
-                <button onclick="toggleSidebar()" class="md:hidden text-white"><iconify-icon icon="solar:hamburger-menu-linear" class="text-xl"></iconify-icon></button>
-                <span class="text-white font-medium text-sm">PTZ Command Center</span>
+    <main class="flex-1 flex flex-col overflow-hidden relative">
+        
+        <header class="h-14 flex items-center justify-between px-6 border-b border-zinc-800 bg-background/50 backdrop-blur-md shrink-0 z-20">
+            <div class="flex items-center gap-2 text-xs font-mono text-zinc-500">
+                <span>Home</span>
+                <iconify-icon icon="solar:alt-arrow-right-linear"></iconify-icon>
+                <span class="text-white">PTZ Command Center</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <span class="flex items-center gap-2 px-2 py-1 bg-primary/10 border border-primary/20 rounded text-[10px] font-mono text-primary uppercase">
+                    <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                    System OK
+                </span>
+                <div class="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center">
+                    <iconify-icon icon="solar:user-circle-bold" class="text-zinc-400"></iconify-icon>
+                </div>
             </div>
         </header>
 
-        <div class="flex-1 p-6 grid grid-cols-1 lg:grid-cols-3 gap-6 overflow-y-auto">
-            <div class="lg:col-span-2 bg-black border border-border rounded-xl relative overflow-hidden h-[500px]">
-                <video autoplay loop muted playsinline class="w-full h-full object-cover opacity-70">
-                    <source src="https://res.cloudinary.com/dso3xwno0/video/upload/v1770850722/Screen_Recording_2026-02-11_at_3.50.31_PM_gqqlca.mov" type="video/mp4">
-                </video>
-                <div class="absolute top-4 left-4 bg-black/50 border border-primary/50 text-primary px-2 py-1 font-mono text-[10px]">CAM_01 // LIVE</div>
+        <div class="flex-1 p-6 flex gap-6 overflow-hidden">
+            
+            <div class="flex-1 flex flex-col gap-4 min-w-0">
+                
+                <div class="flex-1 bg-black rounded-xl border border-zinc-800 relative overflow-hidden group">
+                    <div class="absolute top-4 left-4 z-20 flex gap-2">
+                        <span class="bg-black/60 backdrop-blur text-primary border border-primary/30 text-[10px] font-mono px-2 py-1 rounded">CAM 01 (MAIN)</span>
+                        <span class="bg-black/60 backdrop-blur text-white border border-white/10 text-[10px] font-mono px-2 py-1 rounded">4K 60FPS</span>
+                        <span class="bg-black/60 backdrop-blur text-white border border-white/10 text-[10px] font-mono px-2 py-1 rounded">ISO 800</span>
+                    </div>
+                    
+                    <div class="absolute top-4 right-4 z-20">
+                         <iconify-icon icon="solar:battery-charge-linear" class="text-primary text-xl"></iconify-icon>
+                    </div>
+
+                    <div class="absolute inset-0 flex items-center justify-center pointer-events-none z-10 opacity-30">
+                        <div class="w-8 h-8 border border-white/50 rounded-full flex items-center justify-center">
+                            <div class="w-0.5 h-2 bg-white/50 absolute"></div>
+                            <div class="w-2 h-0.5 bg-white/50 absolute"></div>
+                        </div>
+                    </div>
+
+                    <video class="w-full h-full object-cover" autoplay loop muted playsinline>
+                        <source src="https://res.cloudinary.com/dso3xwno0/video/upload/v1770852246/Beltran_xkrtfw.mov" type="video/mp4">
+                    </video>
+                </div>
+
+                <div class="h-32 shrink-0 grid grid-cols-3 gap-4">
+                    <div class="relative rounded-lg overflow-hidden border-2 border-primary bg-zinc-900 cursor-pointer group">
+                        <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770851279/Screenshot_2026-02-11_at_11.07.35_PM_ecpg7n.png" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity">
+                        <span class="absolute bottom-2 left-2 text-[9px] font-bold bg-primary text-black px-1.5 py-0.5 rounded">CAM 01</span>
+                    </div>
+                    
+                    <div class="relative rounded-lg overflow-hidden border border-zinc-800 bg-zinc-900 grayscale hover:grayscale-0 transition-all cursor-pointer group">
+                        <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770901769/Screenshot_2026-02-11_at_11.06.28_PM_dcjlcs.png" class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity">
+                        <span class="absolute bottom-2 left-2 text-[9px] font-mono text-white bg-black/50 px-1.5 py-0.5 rounded">CAM 02</span>
+                    </div>
+
+                    <div class="relative rounded-lg overflow-hidden border border-zinc-800 bg-zinc-900 grayscale hover:grayscale-0 transition-all cursor-pointer group">
+                        <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770901769/Screenshot_2026-02-11_at_11.05.24_PM_tpmqkl.png" class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity">
+                        <span class="absolute bottom-2 left-2 text-[9px] font-mono text-white bg-black/50 px-1.5 py-0.5 rounded">CAM 03</span>
+                    </div>
+                </div>
+
             </div>
 
-            <div class="bg-card border border-border rounded-xl p-8 flex flex-col items-center justify-center gap-10">
-                <div class="joystick-container">
-                    <div class="joystick-knob"></div>
+            <div class="w-80 shrink-0 bg-[#0a0a0a] border border-zinc-800 rounded-xl p-6 flex flex-col justify-between">
+                
+                <div>
+                    <div class="flex items-center justify-between mb-8">
+                         <div class="flex items-center gap-2">
+                             <div class="w-1.5 h-1.5 rounded-full bg-primary"></div>
+                             <h2 class="text-xs font-mono uppercase tracking-widest text-primary">Manual Override</h2>
+                         </div>
+                         <iconify-icon icon="solar:settings-linear" class="text-zinc-500 cursor-pointer hover:text-white"></iconify-icon>
+                    </div>
+
+                    <div class="space-y-3 mb-12">
+                        <p class="text-[10px] font-mono text-zinc-500 uppercase mb-2">Quick Presets</p>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button onclick="showAlert('Preset: Full Stage Active')" class="border border-primary/50 text-primary bg-primary/5 text-[9px] py-3 rounded hover:bg-primary hover:text-black transition-all font-mono">FULL STAGE</button>
+                            <button onclick="showAlert('Preset: DJ Close-Up Active')" class="border border-zinc-800 text-zinc-400 text-[9px] py-3 rounded hover:border-zinc-600 transition-all font-mono">DJ CLOSE-UP</button>
+                            <button onclick="showAlert('Preset: Crowd Wide Active')" class="border border-zinc-800 text-zinc-400 text-[9px] py-3 rounded hover:border-zinc-600 transition-all font-mono">CROWD WIDE</button>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between px-2">
+                        
+                        <div class="flex flex-col items-center gap-4">
+                            <div class="relative w-32 h-32 rounded-full border border-zinc-800 bg-[#050505] shadow-[inset_0_0_20px_rgba(0,0,0,1)] flex items-center justify-center group cursor-crosshair">
+                                <div class="absolute inset-0 border border-primary/10 rounded-full scale-50"></div>
+                                <div class="absolute w-full h-[1px] bg-primary/10"></div>
+                                <div class="absolute h-full w-[1px] bg-primary/10"></div>
+                                
+                                <div class="w-12 h-12 rounded-full bg-[#151515] border border-zinc-700 shadow-xl flex items-center justify-center group-hover:border-primary/50 transition-colors">
+                                    <div class="w-2 h-2 rounded-full bg-zinc-500 group-hover:bg-primary"></div>
+                                </div>
+                            </div>
+                            <span class="text-[9px] font-mono text-zinc-600">PAN / TILT</span>
+                        </div>
+
+                        <div class="flex flex-col items-center gap-2 h-40">
+                             <div class="relative w-2 h-full bg-zinc-900 rounded-full border border-zinc-800 overflow-hidden">
+                                 <div class="absolute bottom-0 w-full h-[40%] bg-primary/20"></div>
+                                 <div class="absolute bottom-[40%] left-1/2 -translate-x-1/2 w-8 h-4 border border-primary/50 bg-[#0a0a0a] rounded flex items-center justify-center shadow-[0_0_15px_rgba(57,255,20,0.2)] cursor-ns-resize">
+                                     <div class="w-4 h-[1px] bg-primary"></div>
+                                 </div>
+                             </div>
+                             <span class="text-[9px] font-mono text-zinc-600">ZOOM</span>
+                        </div>
+
+                    </div>
                 </div>
-                <div class="w-full space-y-2">
-                    <label class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest block text-center">Optical Zoom</label>
-                    <input type="range" class="w-full accent-primary">
+
+                <div class="pt-6 border-t border-zinc-800">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-[10px] font-mono text-zinc-500">Signal</span>
+                        <span class="text-[10px] font-mono text-primary">STRONG</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] font-mono text-zinc-500">Latency</span>
+                        <span class="text-[10px] font-mono text-white">12 ms</span>
+                    </div>
                 </div>
+
             </div>
         </div>
+
+        <footer class="h-8 border-t border-zinc-900 bg-[#020202] flex items-center justify-between px-6 text-[9px] font-mono text-zinc-600 shrink-0">
+            <span>Protocol v2.4.0 // Connected</span>
+            <span class="flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                System Operational
+            </span>
+        </footer>
+
     </main>
 
     <script>
         function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('sidebar-overlay');
-            sidebar.classList.toggle('-translate-x-full');
-            overlay.classList.toggle('hidden');
+            document.getElementById('sidebar').classList.toggle('-translate-x-full');
+            document.getElementById('sidebar-overlay').classList.toggle('hidden');
         }
 
-        document.querySelectorAll('.nav-link').forEach(link => {
-            if (link.href === window.location.href) {
-                link.classList.add('bg-white/10', 'text-white');
-                link.classList.remove('text-zinc-400');
-            }
-        });
+        function showAlert(msg) {
+            const box = document.getElementById('custom-alert');
+            document.getElementById('alert-text').textContent = msg;
+            box.classList.add('show');
+            setTimeout(() => box.classList.remove('show'), 3000);
+        }
     </script>
 </body>
 </html>
