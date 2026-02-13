@@ -383,36 +383,42 @@
         </footer>
     </main>
 
-    <script>
-        function togglePricing(mode) {
-            const distroSection = document.getElementById('pricing-distribution');
-            const creativeSection = document.getElementById('pricing-creative');
-            const btnDistro = document.getElementById('toggle-distro');
-            const btnCreative = document.getElementById('toggle-creative');
+  <script>
+function togglePricing(type) {
+    const distroGrid = document.getElementById('pricing-distribution');
+    const creativeGrid = document.getElementById('pricing-creative');
+    const distroBtn = document.getElementById('toggle-distro');
+    const creativeBtn = document.getElementById('toggle-creative');
 
-            if (mode === 'distribution') {
-                distroSection.classList.replace('hidden', 'grid');
-                creativeSection.classList.replace('grid', 'hidden');
-                btnDistro.className = "px-6 py-2 rounded-full text-xs font-mono font-semibold tracking-wider transition-all bg-primary text-black";
-                btnCreative.className = "px-6 py-2 rounded-full text-xs font-mono font-semibold tracking-wider transition-all text-muted-foreground hover:text-white";
-            } else {
-                creativeSection.classList.replace('hidden', 'grid');
-                distroSection.classList.replace('grid', 'hidden');
-                btnCreative.className = "px-6 py-2 rounded-full text-xs font-mono font-semibold tracking-wider transition-all bg-primary text-black";
-                btnDistro.className = "px-6 py-2 rounded-full text-xs font-mono font-semibold tracking-wider transition-all text-muted-foreground hover:text-white";
-            }
-        }
+    if (type === 'distribution') {
+        // Show Distribution, Hide Creative
+        distroGrid.classList.remove('hidden');
+        creativeGrid.classList.add('hidden');
+        
+        // Update Button Styles
+        distroBtn.classList.add('bg-primary', 'text-black');
+        distroBtn.classList.remove('text-muted-foreground');
+        
+        creativeBtn.classList.remove('bg-primary', 'text-black');
+        creativeBtn.classList.add('text-muted-foreground');
+    } else {
+        // Show Creative, Hide Distribution
+        creativeGrid.classList.remove('hidden');
+        distroGrid.classList.add('hidden');
+        
+        // Update Button Styles
+        creativeBtn.classList.add('bg-primary', 'text-black');
+        creativeBtn.classList.remove('text-muted-foreground');
+        
+        distroBtn.classList.remove('bg-primary', 'text-black');
+        distroBtn.classList.add('text-muted-foreground');
+    }
+}
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('active');
-                    }
-                });
-            }, { threshold: 0.1 });
-            document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
-        });
-    </script>
+// Ensure Creative is the default view when the page loads
+document.addEventListener('DOMContentLoaded', () => {
+    togglePricing('creative');
+});
+</script>
 </body>
 </html>
