@@ -11,52 +11,32 @@
         tailwind.config = {
             theme: {
                 extend: {
-                    colors: { background: '#050505', card: '#0a0a0a', primary: '#39FF14', border: '#27272a' },
+                    colors: { background: '#050505', primary: '#39FF14', border: '#27272a' },
                     backgroundImage: { 'noise': "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E\")" }
                 }
             }
         }
     </script>
     <style>
-        body { background-color: #050505; color: #ffffff; -webkit-font-smoothing: antialiased; }
-        .bg-scanlines { background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.2) 50%, rgba(0, 0, 0, 0.2)); background-size: 100% 4px; }
+        body { background-color: #050505; color: #ffffff; overflow-x: hidden; }
+        .hero-text { font-size: 8vw; line-height: 0.9; font-weight: 900; letter-spacing: -0.05em; text-transform: uppercase; }
         @keyframes scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
         .animate-scroll { animation: scroll 30s linear infinite; }
     </style>
 </head>
-<body class="selection:bg-primary selection:text-black">
-    <main class="min-h-screen relative">
-        <section class="min-h-screen flex flex-col px-8 relative justify-center">
-            <nav class="flex z-30 absolute top-0 right-0 left-0 items-center justify-between p-8">
-                <a href="index" class="group transition-all">
-                    <div class="relative h-6 w-40">
-                        <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974378/ibyostiwecnvm2cebqar.svg" class="absolute inset-0 h-full w-auto object-contain brightness-0 invert opacity-100 group-hover:opacity-0 transition-opacity duration-200">
-                        <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974377/eayfotlcvgq36kpwvitw.svg" class="absolute inset-0 h-full w-auto object-contain opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow-[0_0_10px_rgba(57,255,20,0.5)]">
-                    </div>
-                </a>
-                <a href="dashboard" class="flex border border-border hover:bg-primary hover:text-black hover:border-primary transition-all duration-200 uppercase text-[10px] tracking-wider font-mono px-4 py-2 backdrop-blur-md gap-2 items-center">
-                    <iconify-icon icon="solar:widget-5-linear"></iconify-icon> Venue Dashboard
-                </a>
-            </nav>
-
-            <div class="absolute inset-0 opacity-[0.05] pointer-events-none bg-noise"></div>
-            <div class="absolute inset-0 bg-scanlines opacity-10 pointer-events-none"></div>
-
-            <div class="relative z-10 max-w-6xl mx-auto w-full pt-20">
-                <h1 class="text-6xl md:text-8xl font-black uppercase tracking-tighter leading-[0.9]">
-                    Transform your<br><span class="text-primary">Live-Set</span><br>into an asset.
-                </h1>
+<body class="h-screen flex flex-col">
+    <nav class="h-16 flex items-center justify-between px-8 border-b border-zinc-900 z-20">
+        <a href="index" class="group flex items-center transition-all">
+            <div class="relative h-5 w-32">
+                <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974378/ibyostiwecnvm2cebqar.svg" class="absolute inset-0 h-full w-auto object-contain brightness-0 invert opacity-100 group-hover:opacity-0 transition-opacity duration-200">
+                <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974377/eayfotlcvgq36kpwvitw.svg" class="absolute inset-0 h-full w-auto object-contain opacity-0 group-hover:opacity-100 transition-opacity duration-200">
             </div>
-
-            <div class="absolute bottom-0 left-0 right-0 border-t border-border bg-background/80 backdrop-blur-sm">
-                <div class="overflow-hidden py-4 flex">
-                    <div class="flex gap-8 whitespace-nowrap animate-scroll">
-                        <div class="flex gap-8 items-center font-mono text-xs text-zinc-500 uppercase">CAPTURE <span class="text-primary">//</span> DISTRIBUTE <span class="text-primary">//</span> MONETIZE <span class="text-primary">//</span> REPEAT <span class="text-primary">//</span></div>
-                        <div class="flex gap-8 items-center font-mono text-xs text-zinc-500 uppercase">CAPTURE <span class="text-primary">//</span> DISTRIBUTE <span class="text-primary">//</span> MONETIZE <span class="text-primary">//</span> REPEAT <span class="text-primary">//</span></div>
-                    </div>
-                </div>
-            </div>
-        </section>
+        </a>
+        <a href="dashboard" class="bg-primary text-black text-[10px] font-bold px-4 py-2 rounded-full uppercase tracking-widest hover:scale-105 transition-transform">Go to Dashboard</a>
+    </nav>
+    <main class="flex-1 flex items-center px-12 relative overflow-hidden">
+        <div class="absolute inset-0 opacity-[0.05] pointer-events-none bg-noise"></div>
+        <h1 class="hero-text relative z-10">Transform your<br><span class="text-primary">Live-Set</span><br>into an asset.</h1>
     </main>
 </body>
 </html>

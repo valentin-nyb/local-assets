@@ -2,83 +2,65 @@
 <html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <title>local / assets</title>
     <link rel="icon" type="image/png" href="https://res.cloudinary.com/dso3xwno0/image/upload/v1770939295/mcwp97ytys3vfyqjhymu.svg">
-    
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
-    <script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
+    <script src="https://upload-widget.cloudinary.com/global/all.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-
     <script>
-        tailwind.config = {
-            theme: { extend: { colors: { background: '#050505', card: '#0a0a0a', primary: '#39FF14', border: '#27272a' } } }
-        }
+        tailwind.config = { theme: { extend: { colors: { background: '#050505', card: '#0a0a0a', primary: '#39FF14', border: '#27272a' } } } }
     </script>
     <style>
         body { background-color: #050505 !important; color: white; }
         .nav-link.active { background-color: rgba(255,255,255,0.05); border: 1px solid #27272a; color: white; }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .flatpickr-calendar { background: rgba(10, 10, 10, 0.95) !important; backdrop-filter: blur(15px) !important; border: 1px solid rgba(57, 255, 20, 0.3) !important; }
-        .flatpickr-day.selected { background: #39FF14 !important; color: black !important; }
+        .flatpickr-calendar { background: rgba(10,10,10,0.95) !important; backdrop-filter: blur(15px); border: 1px solid rgba(57,255,20,0.3) !important; box-shadow: 0 0 30px rgba(0,0,0,0.5) !important; }
+        .flatpickr-day.selected { background: #39FF14 !important; color: black !important; border-color: #39FF14 !important; }
         #custom-alert { backdrop-filter: blur(12px); background: rgba(10, 10, 10, 0.8); border: 1px solid rgba(57, 255, 20, 0.3); transform: translate(-50%, -150%); transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         #custom-alert.show { transform: translate(-50%, 20px); }
     </style>
 </head>
 <body class="bg-background text-white h-screen w-screen flex overflow-hidden font-sans">
-
     <div id="custom-alert" class="fixed top-0 left-1/2 z-[100] px-6 py-4 rounded-xl flex items-center gap-4 min-w-[320px]">
         <iconify-icon icon="solar:danger-triangle-bold" class="text-primary text-2xl"></iconify-icon>
-        <div class="flex flex-col">
-            <span class="text-[10px] font-mono text-primary uppercase tracking-widest">System Message</span>
-            <span id="alert-text" class="text-xs font-bold text-white uppercase tracking-tight"></span>
-        </div>
+        <div class="flex flex-col"><span class="text-[10px] font-mono text-primary uppercase">System Message</span><span id="alert-text" class="text-xs font-bold text-white uppercase"></span></div>
     </div>
 
-    <aside class="w-64 border-r border-zinc-800 bg-[#0a0a0a] flex flex-col shrink-0 h-full">
+    <aside class="w-64 border-r border-zinc-800 bg-[#0a0a0a] flex flex-col h-full">
         <div class="h-16 border-b border-zinc-800">
-            <a href="index" class="flex items-center w-full h-full px-6 transition-all group hover:bg-white/5">
+            <a href="index" class="flex items-center w-full h-full px-6 group transition-all">
                 <div class="relative h-5 w-32">
-                    <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974378/ibyostiwecnvm2cebqar.svg" class="absolute inset-0 h-full w-auto object-contain brightness-0 invert opacity-100 group-hover:opacity-0 transition-opacity duration-200">
-                    <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974377/eayfotlcvgq36kpwvitw.svg" class="absolute inset-0 h-full w-auto object-contain opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow-[0_0_8px_rgba(57,255,20,0.5)]">
+                    <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974378/ibyostiwecnvm2cebqar.svg" class="absolute inset-0 h-full w-auto object-contain brightness-0 invert group-hover:opacity-0 transition-opacity">
+                    <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974377/eayfotlcvgq36kpwvitw.svg" class="absolute inset-0 h-full w-auto object-contain opacity-0 group-hover:opacity-100 transition-opacity">
                 </div>
             </a>
         </div>
         <nav class="flex-1 p-4 space-y-2">
-            <a href="dashboard" class="nav-link flex items-center gap-3 px-3 py-2 text-sm text-zinc-400 hover:text-white transition-colors"><iconify-icon icon="solar:widget-5-linear"></iconify-icon>Overview</a>
-            <a href="camera" class="nav-link flex items-center gap-3 px-3 py-2 text-sm text-zinc-400 hover:text-white transition-colors"><iconify-icon icon="solar:videocamera-record-linear"></iconify-icon>Camera Control</a>
-            <a href="assets" class="nav-link active flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors"><iconify-icon icon="solar:clapperboard-play-linear" class="text-primary"></iconify-icon>Media Assets</a>
+            <a href="dashboard" class="flex items-center gap-3 px-3 py-2 text-sm text-zinc-400 hover:text-white transition-colors"><iconify-icon icon="solar:widget-5-linear"></iconify-icon>Overview</a>
+            <a href="assets" class="bg-white/5 border border-zinc-800 flex items-center gap-3 px-3 py-2 text-sm text-white rounded-md transition-colors"><iconify-icon icon="solar:clapperboard-play-linear" class="text-primary"></iconify-icon>Media Assets</a>
         </nav>
     </aside>
 
     <main class="flex-1 flex flex-col overflow-hidden bg-background">
-        <header class="h-16 flex items-center px-8 border-b border-border bg-background/50 backdrop-blur-md shrink-0">
-            <span class="text-white font-medium text-xs font-mono uppercase tracking-[0.3em] text-primary">Media Asset Library</span>
-        </header>
-
-        <div class="flex-1 p-8 overflow-y-auto scrollbar-hide">
+        <header class="h-16 flex items-center px-8 border-b border-border bg-background/50 backdrop-blur-md"><span class="text-xs font-mono uppercase text-primary">Media Asset Library</span></header>
+        <div class="flex-1 p-8 overflow-y-auto">
             <div class="max-w-5xl mx-auto space-y-12 pb-20">
-                <div class="p-8 border border-dashed border-zinc-800 rounded-2xl bg-card/30 hover:border-primary/20 transition-all group">
+                <div class="p-8 border border-dashed border-zinc-800 rounded-2xl bg-card/30 hover:border-primary/20 transition-all">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                         <div class="relative"><label class="absolute -top-2.5 left-3 bg-[#050505] px-1 text-[9px] text-zinc-500 font-mono uppercase">Artist Name</label><input type="text" id="ingest-name" placeholder="E.G. BELTRAN" class="w-full bg-[#050505] border border-zinc-800 rounded-lg px-4 py-3 text-xs text-white uppercase focus:border-primary outline-none"></div>
-                        <div class="relative"><label class="absolute -top-2.5 left-3 bg-[#050505] px-1 text-[9px] text-zinc-500 font-mono uppercase">Event Date</label><input type="text" id="ingest-date" class="w-full bg-[#050505] border border-zinc-800 rounded-lg px-4 py-3 text-xs text-white cursor-pointer"></div>
-                        <div class="relative"><label class="absolute -top-2.5 left-3 bg-[#050505] px-1 text-[9px] text-zinc-500 font-mono uppercase">Angle</label><select id="ingest-shot" class="w-full bg-[#050505] border border-zinc-800 rounded-lg px-4 py-3 text-xs text-zinc-400"><option value="MASTER">Master Cam</option><option value="CROWD">Crowd Wide</option></select></div>
+                        <div class="relative"><label class="absolute -top-2.5 left-3 bg-[#050505] px-1 text-[9px] text-zinc-500 font-mono uppercase">Event Date</label><input type="text" id="ingest-date" placeholder="Select Date" class="w-full bg-[#050505] border border-zinc-800 rounded-lg px-4 py-3 text-xs text-white cursor-pointer"></div>
+                        <div class="relative"><label class="absolute -top-2.5 left-3 bg-[#050505] px-1 text-[9px] text-zinc-500 font-mono uppercase">Angle</label><select id="ingest-shot" class="w-full bg-[#050505] border border-zinc-800 rounded-lg px-4 py-3 text-xs text-zinc-400"><option value="MASTER">Master Cam</option></select></div>
                     </div>
                     <div class="text-center"><button id="upload_widget" class="px-10 py-3 bg-primary text-black font-extrabold rounded-full text-[10px] uppercase tracking-[0.2em] hover:shadow-[0_0_25px_rgba(57,255,20,0.4)] transition-all">Start Master Upload</button></div>
                 </div>
 
-                <div id="recent-upload" class="hidden space-y-4">
-                    <h3 class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest border-b border-zinc-800 pb-2">Active Preview</h3>
-                    <div class="bg-card border border-primary/20 rounded-2xl overflow-hidden shadow-2xl">
-                        <div class="aspect-video bg-black"><video id="preview-player" controls class="w-full h-full object-contain"></video></div>
-                        <div class="p-4 bg-zinc-900/30 border-t border-zinc-800"><p id="video-name" class="text-sm font-medium text-white font-mono"></p></div>
-                    </div>
-                </div>
-
                 <div class="space-y-4">
-                    <div class="flex items-center justify-between border-b border-zinc-800 pb-2"><h3 class="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.3em]">Cloud Library</h3><div id="connection-status" class="text-[9px] font-mono text-zinc-500 flex items-center gap-2">Connecting...</div></div>
+                    <div class="flex items-center justify-between border-b border-zinc-800 pb-2"><h3 class="text-[10px] font-mono text-zinc-500 uppercase">Cloud Library</h3><div id="connection-status" class="text-[9px] font-mono text-zinc-500 flex items-center gap-2">Connecting...</div></div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <input type="text" id="search-name" placeholder="Search Cloud Assets..." class="w-full bg-card border border-border rounded-lg px-4 py-2 text-xs focus:border-primary outline-none text-white font-mono">
+                        <input type="text" id="search-date" placeholder="Filter Date" class="w-full bg-card border border-border rounded-lg px-4 py-2 text-xs focus:border-primary outline-none text-zinc-500 cursor-pointer">
+                    </div>
                     <div id="cloud-list" class="space-y-2"></div>
                 </div>
             </div>
@@ -89,10 +71,19 @@
         let cloudAssets = [];
         window.onload = function() {
             flatpickr("#ingest-date", { defaultDate: "today", dateFormat: "Y-m-d" });
+            flatpickr("#search-date", { dateFormat: "Y-m-d", onChange: renderList });
+            document.getElementById('search-name').oninput = renderList;
             const uploadBtn = document.getElementById("upload_widget");
             if (uploadBtn) uploadBtn.onclick = startUploadProcess;
             fetchCloudLibrary();
         };
+
+        function showAlert(msg) {
+            const box = document.getElementById('custom-alert');
+            document.getElementById('alert-text').textContent = msg;
+            box.classList.add('show');
+            setTimeout(() => box.classList.remove('show'), 4000);
+        }
 
         async function fetchCloudLibrary() {
             const statusEl = document.getElementById('connection-status');
@@ -102,36 +93,49 @@
                 statusEl.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span> Live';
                 cloudAssets = data.resources.map(res => ({
                     url: `https://res.cloudinary.com/dso3xwno0/video/upload/${res.public_id}.${res.format}`,
-                    public_id: res.public_id, format: res.format
+                    public_id: res.public_id, format: res.format,
+                    artist: res.public_id.split('_')[1] || "UNKNOWN",
+                    date: res.public_id.split('_')[2] || ""
                 }));
                 renderList();
-            } catch (e) { statusEl.innerHTML = 'Error Connecting'; }
+            } catch (e) { statusEl.innerHTML = 'Error'; }
         }
 
         function renderList() {
             const list = document.getElementById('cloud-list');
-            list.innerHTML = cloudAssets.map(item => `
-                <div class="flex items-center justify-between p-3 bg-card border border-zinc-800 rounded-lg hover:border-primary/30 transition-all">
-                    <span class="text-xs font-mono text-white truncate">${item.public_id}</span>
-                    <button onclick="playVideo('${item.url}', '${item.public_id}')" class="text-primary"><iconify-icon icon="solar:play-circle-bold" class="text-2xl"></iconify-icon></button>
+            const searchName = document.getElementById('search-name').value.toLowerCase();
+            const searchDate = document.getElementById('search-date').value;
+
+            const filtered = cloudAssets.filter(item => {
+                const matchesName = item.public_id.toLowerCase().includes(searchName);
+                const matchesDate = searchDate ? item.date === searchDate : true;
+                return matchesName && matchesDate;
+            });
+
+            list.innerHTML = filtered.map(item => `
+                <div class="flex items-center justify-between p-3 bg-card border border-zinc-800 rounded-lg hover:border-primary/30 transition-all group">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded bg-zinc-900 border border-zinc-800 flex items-center justify-center text-primary group-hover:border-primary/50 transition-colors">
+                            <iconify-icon icon="solar:videocamera-record-bold" class="text-xl"></iconify-icon>
+                        </div>
+                        <div><p class="text-xs font-bold text-white uppercase">${item.public_id.replace('venue_masters/', '')}</p><p class="text-[9px] font-mono text-zinc-500 uppercase">${item.date || "NO DATE"}</p></div>
+                    </div>
                 </div>
             `).join('');
         }
 
         function startUploadProcess() {
-            const rawName = document.getElementById('ingest-name').value || 'UNKNOWN';
+            const name = document.getElementById('ingest-name').value || 'UNKNOWN';
             const date = document.getElementById('ingest-date').value;
             cloudinary.createUploadWidget({
                 cloudName: 'dso3xwno0', uploadPreset: 'assets_unsigned',
-                folder: 'venue_masters', public_id: `${rawName}_${date}`, tags: ['venue_recording']
-            }, (err, res) => { if (!err && res.event === "success") setTimeout(fetchCloudLibrary, 2000); }).open();
-        }
-
-        function playVideo(url, name) {
-            document.getElementById('recent-upload').classList.remove('hidden');
-            const player = document.getElementById('preview-player');
-            player.src = url; player.play();
-            document.getElementById('video-name').textContent = name;
+                folder: 'venue_masters', public_id: `venue_masters/${name}_${date}_MASTER`, tags: ['venue_recording']
+            }, (error, result) => { 
+                if (!error && result.event === "success") { 
+                    showAlert("Upload Success - Syncing Library");
+                    setTimeout(fetchCloudLibrary, 2000); 
+                } 
+            }).open();
         }
     </script>
 </body>
