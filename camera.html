@@ -3,111 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <title>local / assets - Camera Control</title>
+    <title>local / assets - Camera</title>
     <link rel="icon" type="image/png" href="https://res.cloudinary.com/dso3xwno0/image/upload/v1770939295/mcwp97ytys3vfyqjhymu.svg">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script>
-        tailwind.config = {
-            theme: { 
-                extend: { 
-                    colors: { 
-                        background: '#050505', card: '#0a0a0a', primary: '#39FF14', border: '#27272a' 
-                    } 
-                } 
-            }
-        }
+        tailwind.config = { theme: { extend: { colors: { background: '#050505', card: '#0a0a0a', primary: '#39FF14', border: '#27272a' } } } }
     </script>
     <style>
         body { background-color: #050505 !important; color: white; -webkit-font-smoothing: antialiased; }
         .nav-link.active { background-color: rgba(255, 255, 255, 0.05); border: 1px solid #27272a; color: white; }
-        #custom-alert {
-            backdrop-filter: blur(12px);
-            background: rgba(10, 10, 10, 0.8);
-            border: 1px solid rgba(57, 255, 20, 0.3);
-            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5), 0 0 10px rgba(57, 255, 20, 0.1);
-            transform: translate(-50%, -150%);
-            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        #custom-alert.show { transform: translate(-50%, 20px); }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
 
-    <div id="custom-alert" class="fixed top-0 left-1/2 z-[100] px-6 py-4 rounded-xl flex items-center gap-4 min-w-[320px]">
-        <iconify-icon icon="solar:info-circle-bold" class="text-primary text-2xl"></iconify-icon>
-        <div class="flex flex-col">
-            <span class="text-[10px] font-mono text-primary uppercase tracking-widest">System Message</span>
-            <span id="alert-text" class="text-xs font-bold text-white uppercase tracking-tight"></span>
-        </div>
-    </div>
-
-    <button onclick="toggleSidebar()" class="md:hidden fixed left-0 top-1/2 -translate-y-1/2 z-50 bg-primary text-black py-4 px-1.5 rounded-r-xl shadow-lg active:scale-95 transition-transform">
-        <span class="font-mono text-[11px] font-bold uppercase tracking-widest" style="writing-mode: vertical-rl;">Menu</span>
+    <button onclick="toggleSidebar()" class="md:hidden fixed left-0 top-1/2 -translate-y-1/2 z-50 bg-primary text-black py-6 px-2.5 rounded-r-2xl shadow-lg">
+        <span class="font-mono text-[13px] font-black uppercase tracking-widest" style="writing-mode: vertical-rl; transform: rotate(180deg);">MENU</span>
     </button>
 
-    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/80 z-40 hidden backdrop-blur-sm opacity-0 transition-opacity duration-300 cursor-pointer"></div>
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/80 z-40 hidden backdrop-blur-md opacity-0 transition-opacity"></div>
 
     <aside id="sidebar" class="w-64 border-r border-zinc-800 bg-[#0a0a0a] flex flex-col fixed inset-y-0 left-0 z-50 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 h-full">
         <div class="h-16 flex items-center px-6 border-b border-zinc-800 justify-between">
-            <a href="index.html" class="relative h-6 w-32 flex transition-all">
-                <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974378/ibyostiwecnvm2cebqar.svg" class="absolute inset-0 h-full w-full object-left object-contain brightness-0 invert" alt="logo">
-            </a>
-            <button onclick="toggleSidebar()" class="md:hidden text-zinc-500 hover:text-white"><iconify-icon icon="solar:close-circle-linear" class="text-xl"></iconify-icon></button>
+            <span class="text-primary font-black">local / assets</span>
+            <button onclick="toggleSidebar()" class="md:hidden text-zinc-500"><iconify-icon icon="solar:close-circle-bold" class="text-2xl"></iconify-icon></button>
         </div>
         <nav class="flex-1 p-4 space-y-2">
-            <a href="dashboard.html" class="nav-link flex items-center gap-3 px-3 py-2 text-sm text-zinc-400 hover:bg-white/5 rounded-md transition-colors">
-                <iconify-icon icon="solar:widget-5-linear" class="text-lg"></iconify-icon>Overview
-            </a>
-            <a href="camera.html" class="nav-link active flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors">
-                <iconify-icon icon="solar:videocamera-record-linear" class="text-lg text-primary"></iconify-icon>Camera Control
-            </a>
-            <a href="assets.html" class="nav-link flex items-center gap-3 px-3 py-2 text-sm text-zinc-400 hover:bg-white/5 rounded-md transition-colors">
-                <iconify-icon icon="solar:clapperboard-play-linear" class="text-lg"></iconify-icon>Media Assets
-            </a>
+            <a href="dashboard.html" class="flex items-center gap-3 px-3 py-2 text-sm text-zinc-400 hover:text-white transition-colors"><iconify-icon icon="solar:widget-5-bold"></iconify-icon>Overview</a>
+            <a href="camera.html" class="nav-link active flex items-center gap-3 px-3 py-2 text-sm rounded-md text-primary"><iconify-icon icon="solar:videocamera-record-bold"></iconify-icon>Camera Control</a>
+            <a href="assets.html" class="flex items-center gap-3 px-3 py-2 text-sm text-zinc-400 hover:text-white transition-colors"><iconify-icon icon="solar:clapperboard-play-bold"></iconify-icon>Media Assets</a>
         </nav>
     </aside>
 
-    <main class="flex-1 flex flex-col min-w-0 bg-background overflow-hidden relative">
+    <main class="flex-1 flex flex-col overflow-hidden relative">
         <header class="h-16 border-b border-border flex items-center px-6 md:px-8 justify-between shrink-0">
             <span class="text-[10px] font-mono uppercase tracking-[0.3em] text-zinc-500">PTZ Command Center</span>
             <div class="flex items-center gap-4">
-                <span class="hidden sm:flex items-center gap-2 px-2 py-1 bg-primary/10 border border-primary/20 rounded text-[10px] font-mono text-primary uppercase">
-                    <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span> System OK
-                </span>
+                <span class="hidden sm:flex items-center gap-2 px-2 py-1 bg-primary/10 border border-primary/20 rounded text-[10px] font-mono text-primary uppercase"><span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span> SYSTEM OK</span>
                 <div class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center font-bold text-xs">F</div>
             </div>
         </header>
 
         <div class="flex-1 p-4 md:p-8 overflow-y-auto">
             <div class="max-w-6xl mx-auto space-y-6">
-                <div class="bg-black rounded-xl border border-zinc-800 relative overflow-hidden aspect-video">
-                    <video class="w-full h-full object-cover opacity-80" autoplay loop muted playsinline>
-                        <source src="https://res.cloudinary.com/dso3xwno0/video/upload/v1770852246/Beltran_xkrtfw.mov" type="video/mp4">
-                    </video>
-                    <div class="absolute top-4 left-4 z-20 flex gap-2">
-                        <span class="bg-black/60 backdrop-blur text-primary border border-primary/30 text-[9px] font-mono px-2 py-1 rounded uppercase tracking-tighter">Cam 01 (Active)</span>
-                    </div>
+                <div class="bg-black rounded-xl border border-zinc-800 relative overflow-hidden aspect-video shadow-2xl">
+                    <video class="w-full h-full object-cover" autoplay loop muted playsinline><source src="https://res.cloudinary.com/dso3xwno0/video/upload/v1770852246/Beltran_xkrtfw.mov"></video>
+                    <div class="absolute top-4 left-4 z-20"><span class="bg-black/60 backdrop-blur text-primary border border-primary/30 text-[9px] font-mono px-2 py-1 rounded uppercase">Cam 01 (Active)</span></div>
                 </div>
-                
                 <div class="bg-card border border-border p-6 rounded-2xl">
-                    <h2 class="text-xs font-mono text-primary uppercase tracking-[0.2em] mb-4">Manual Override Interface</h2>
-                    <div class="grid grid-cols-3 gap-2">
-                        <button onclick="showAlert('Preset: Full Stage')" class="border border-zinc-800 text-[10px] py-3 rounded font-mono hover:border-primary transition-all uppercase">Stage</button>
-                        <button onclick="showAlert('Preset: DJ Close-up')" class="border border-zinc-800 text-[10px] py-3 rounded font-mono hover:border-primary transition-all uppercase">Booth</button>
-                        <button onclick="showAlert('Preset: Crowd Wide')" class="border border-zinc-800 text-[10px] py-3 rounded font-mono hover:border-primary transition-all uppercase">Crowd</button>
+                    <h2 class="text-[10px] font-mono text-primary uppercase tracking-[0.3em] mb-6">Manual Override Interface</h2>
+                    <div class="grid grid-cols-3 gap-3">
+                        <button class="border border-zinc-800 text-[10px] py-4 rounded font-mono hover:bg-primary hover:text-black transition-all">STAGE</button>
+                        <button class="border border-zinc-800 text-[10px] py-4 rounded font-mono hover:bg-primary hover:text-black transition-all">BOOTH</button>
+                        <button class="border border-zinc-800 text-[10px] py-4 rounded font-mono hover:bg-primary hover:text-black transition-all">CROWD</button>
                     </div>
                 </div>
             </div>
         </div>
-
-        <footer class="h-8 border-t border-zinc-900 bg-[#020202] flex items-center justify-between px-6 text-[9px] font-mono text-zinc-600 shrink-0">
-            <span>Protocol v2.4.0 // Camera Live</span>
-            <span class="flex items-center gap-2">
-                <span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
-                Operational
-            </span>
-        </footer>
     </main>
 
     <script>
@@ -124,13 +76,6 @@
                 overlay.classList.remove('hidden');
                 setTimeout(() => overlay.classList.add('opacity-100'), 10);
             }
-        }
-
-        function showAlert(msg) {
-            const box = document.getElementById('custom-alert');
-            document.getElementById('alert-text').textContent = msg;
-            box.classList.add('show');
-            setTimeout(() => box.classList.remove('show'), 3000);
         }
     </script>
 </body>
