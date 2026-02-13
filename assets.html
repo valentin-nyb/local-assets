@@ -20,19 +20,22 @@
         ::-webkit-scrollbar { display: none; }
         @media (max-width: 767px) { #sidebar { position: fixed; z-index: 50; height: 100vh; } }
         
-        /* BOLD READABLE VERTICAL TEXT */
-        .vertical-text { 
-            writing-mode: vertical-rl; 
-            text-orientation: mixed; 
-            transform: rotate(180deg); 
-            font-weight: 900;
+        /* Sleek Slim Flap */
+        .sleek-flap {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            transform: rotate(180deg);
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 0.3em;
+            font-size: 10px;
+            font-weight: 800;
         }
     </style>
 </head>
 <body class="bg-background text-white h-screen w-screen flex overflow-hidden font-sans">
 
-    <button onclick="toggleSidebar()" class="md:hidden fixed left-0 top-1/2 -translate-y-1/2 z-50 bg-primary text-black py-12 px-4 rounded-r-3xl shadow-[10px_0_40px_rgba(57,255,20,0.5)] active:scale-90 transition-all flex items-center justify-center">
-        <span class="vertical-text font-mono text-[18px] uppercase tracking-[0.4em]">MENU</span>
+    <button onclick="toggleSidebar()" class="md:hidden fixed left-0 top-1/2 -translate-y-1/2 z-50 bg-primary/90 backdrop-blur-md text-black py-8 px-1.5 rounded-r-lg shadow-[0_0_15px_rgba(57,255,20,0.2)] active:scale-95 transition-all flex items-center justify-center border-y border-r border-primary">
+        <span class="sleek-flap">MENU</span>
     </button>
 
     <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/90 z-40 hidden backdrop-blur-md opacity-0 transition-opacity duration-300"></div>
@@ -40,7 +43,7 @@
     <aside id="sidebar" class="w-64 border-r border-zinc-800 bg-[#0a0a0a] flex flex-col transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 shrink-0 h-full">
         <div class="h-16 flex items-center px-6 border-b border-zinc-800 justify-between">
             <span class="text-primary font-black tracking-tighter uppercase">local / assets</span>
-            <button onclick="toggleSidebar()" class="md:hidden text-zinc-500"><iconify-icon icon="solar:close-circle-bold" class="text-3xl"></iconify-icon></button>
+            <button onclick="toggleSidebar()" class="md:hidden text-zinc-500"><iconify-icon icon="solar:close-circle-bold" class="text-2xl"></iconify-icon></button>
         </div>
         <nav class="flex-1 p-4 space-y-2">
             <a href="dashboard.html" class="nav-link flex items-center gap-3 px-3 py-2 text-sm rounded-md text-zinc-400"><iconify-icon icon="solar:widget-5-bold"></iconify-icon>Overview</a>
@@ -54,49 +57,37 @@
             <span class="text-white font-medium text-xs font-mono uppercase tracking-[0.3em] text-primary">Media Asset Library</span>
         </header>
 
-        <div class="flex-1 p-4 md:p-8 overflow-y-auto w-full scrollbar-hide">
+        <div class="flex-1 p-4 md:p-8 overflow-y-auto w-full">
             <div class="max-w-5xl mx-auto space-y-12 pb-20 w-full">
                 
                 <div class="p-6 md:p-8 border border-dashed border-zinc-800 rounded-2xl bg-card/30">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        <div class="space-y-1">
-                            <label class="text-[9px] font-mono text-zinc-500 uppercase ml-1 tracking-[0.2em]">DJ Name</label>
-                            <input type="text" id="ingest-name" placeholder="E.G. PAWSA" class="w-full bg-[#050505] border border-zinc-800 rounded p-4 text-xs font-bold text-white uppercase outline-none focus:border-primary">
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-[9px] font-mono text-zinc-500 uppercase ml-1 tracking-[0.2em]">Date</label>
-                            <input type="text" id="ingest-date" class="w-full bg-[#050505] border border-zinc-800 rounded p-4 text-xs font-bold text-white uppercase">
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-[9px] font-mono text-zinc-500 uppercase ml-1 tracking-[0.2em]">Angle</label>
-                            <select id="ingest-shot" class="w-full bg-[#050505] border border-zinc-800 rounded p-4 text-xs text-white outline-none uppercase font-bold">
-                                <option value="MASTER">Master Cam</option>
-                                <option value="BACK-VIEW">Back View</option>
-                                <option value="FRONT-BOOTH">Front Booth</option>
-                            </select>
-                        </div>
+                        <input type="text" id="ingest-name" placeholder="DJ NAME" class="bg-[#050505] border border-zinc-800 rounded p-4 text-xs font-bold text-white uppercase outline-none focus:border-primary">
+                        <input type="text" id="ingest-date" class="bg-[#050505] border border-zinc-800 rounded p-4 text-xs font-bold">
+                        <select id="ingest-shot" class="bg-[#050505] border border-zinc-800 rounded p-4 text-xs text-zinc-400 font-bold">
+                            <option value="MASTER">MASTER CAM</option>
+                            <option value="BACK-VIEW">BACK VIEW</option>
+                        </select>
                     </div>
                     <div class="text-center">
                         <input type="file" id="hidden-file-input" class="hidden">
-                        <button onclick="document.getElementById('hidden-file-input').click()" class="bg-primary text-black px-10 py-4 rounded-full font-black uppercase text-[12px] w-full md:w-auto shadow-lg shadow-primary/20">START MASTER UPLOAD</button>
+                        <button onclick="document.getElementById('hidden-file-input').click()" class="bg-primary text-black px-10 py-4 rounded-full font-black uppercase text-[11px] w-full md:w-auto shadow-lg">START MASTER UPLOAD</button>
                     </div>
                 </div>
 
                 <div id="video-preview-container" class="hidden space-y-4">
-                    <h3 class="text-[10px] font-mono text-primary uppercase tracking-[0.3em] border-b border-primary/20 pb-2">Now Playing</h3>
-                    <div class="aspect-video bg-black border border-primary/30 rounded-2xl overflow-hidden shadow-2xl">
+                    <h3 class="text-[10px] font-mono text-primary uppercase tracking-[0.3em] border-b border-primary/20 pb-2">Active Preview</h3>
+                    <div class="aspect-video bg-black border border-primary/30 rounded-xl overflow-hidden shadow-2xl">
                         <video id="preview-player" controls class="w-full h-full object-contain"></video>
                     </div>
                 </div>
 
-                <div class="space-y-6 pt-4">
-                    <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
-                        <h3 class="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.3em]">Cloud Distribution History</h3>
-                        <div id="connection-status" class="text-[9px] font-mono text-primary flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span> LIVE</div>
+                <div class="space-y-4 pt-4">
+                    <div class="flex items-center justify-between border-b border-zinc-800 pb-2">
+                        <h3 class="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.3em]">Distribution History</h3>
+                        <div class="text-[9px] font-mono text-primary flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span> Live</div>
                     </div>
-                    
-                    <div id="cloud-list" class="space-y-3">
-                        </div>
+                    <div id="cloud-list" class="space-y-3"></div>
                 </div>
             </div>
         </div>
@@ -127,16 +118,12 @@
             try {
                 const response = await fetch(`https://res.cloudinary.com/dso3xwno0/video/list/venue_recording.json`);
                 const data = await response.json();
-                
                 cloudAssets = data.resources.map(res => {
-                    // PARSING: Extracts DJ Name, Date, and Shot from filename
-                    const cleanId = res.public_id.replace('venue_masters/', '');
-                    const parts = cleanId.split('_');
-                    
+                    const parts = res.public_id.replace('venue_masters/', '').split('_');
                     return {
-                        dj: parts[0] ? parts[0].replace(/-/g, ' ') : "VENUE",
+                        dj: parts[0] ? parts[0].toUpperCase() : "MICHAEL",
                         date: parts[1] || res.created_at.split('T')[0],
-                        shot: parts[2] || "MASTER",
+                        shot: parts[2] || "BIBI",
                         url: `https://res.cloudinary.com/dso3xwno0/video/upload/${res.public_id}.${res.format}`,
                         format: res.format.toUpperCase()
                     };
@@ -150,18 +137,16 @@
             list.innerHTML = '';
             cloudAssets.forEach(item => {
                 const row = document.createElement('div');
-                row.className = "p-4 bg-card border border-zinc-800 rounded-2xl flex items-center justify-between hover:border-primary/40 transition-all group";
+                row.className = "flex items-center justify-between p-4 bg-card border border-zinc-800 rounded-2xl group cursor-pointer hover:border-primary/40 transition-all";
                 row.innerHTML = `
-                    <div class="flex items-center gap-4 min-w-0 flex-1 cursor-pointer" onclick="playPreview('${item.url}')">
-                        <div class="w-12 h-12 bg-zinc-900 border border-zinc-800 flex items-center justify-center rounded-xl text-primary shrink-0">
-                            <iconify-icon icon="solar:play-bold" class="text-xl"></iconify-icon>
-                        </div>
+                    <div class="flex items-center gap-4 min-w-0 flex-1" onclick="playPreview('${item.url}')">
+                        <div class="w-12 h-12 bg-zinc-900 flex items-center justify-center rounded-xl text-primary shrink-0 shadow-lg"><iconify-icon icon="solar:play-bold" class="text-xl"></iconify-icon></div>
                         <div class="min-w-0">
                             <div class="flex items-center gap-2 mb-1">
                                 <p class="text-sm font-black uppercase text-white truncate">${item.dj}</p>
-                                <span class="text-[8px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-mono border border-primary/20">${item.shot}</span>
+                                <span class="text-[7px] px-1.5 py-0.5 rounded bg-primary text-black font-black font-mono uppercase">${item.shot}</span>
                             </div>
-                            <p class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">FABRIC LONDON // ${item.date} // ${item.format}</p>
+                            <p class="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">FABRIC LONDON // ${item.date} // ${item.format}</p>
                         </div>
                     </div>
                     <a href="${item.url}" download class="w-10 h-10 flex items-center justify-center text-zinc-600 hover:text-primary transition-colors">
