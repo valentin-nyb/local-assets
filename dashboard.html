@@ -5,21 +5,54 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <title>local / assets</title>
     <link rel="icon" type="image/png" href="https://res.cloudinary.com/dso3xwno0/image/upload/v1770939295/mcwp97ytys3vfyqjhymu.svg">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script>
         tailwind.config = {
-            theme: { extend: { colors: { background: '#050505', card: '#0a0a0a', primary: '#39FF14', border: '#27272a' } } }
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        background: '#050505',
+                        foreground: '#ffffff',
+                        card: '#0a0a0a',
+                        border: '#27272a',
+                        muted: { DEFAULT: '#27272a', foreground: '#a1a1aa' },
+                        primary: { DEFAULT: '#39FF14', foreground: '#000000', glow: 'rgba(57, 255, 20, 0.5)' },
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
         }
     </script>
     <style>
-        body { background-color: #050505; color: white; -webkit-font-smoothing: antialiased; }
+        body { background-color: #050505; color: #ffffff; -webkit-font-smoothing: antialiased; }
         .nav-link.active { background-color: rgba(255, 255, 255, 0.05); border: 1px solid #27272a; color: white; }
-        @media (max-width: 767px) { #sidebar { position: fixed; z-index: 50; height: 100vh; } }
-        .sleek-flap { writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.3em; font-size: 10px; font-weight: 800; }
+        .bg-scanlines { background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.2) 50%, rgba(0, 0, 0, 0.2)); background-size: 100% 4px; }
+        ::-webkit-scrollbar { display: none; }
+        
+        /* Mobile Overlay Fix */
+        @media (max-width: 767px) { 
+            #sidebar { position: fixed; z-index: 50; height: 100vh; } 
+        }
+
+        /* Sleek Flap Styling */
+        .sleek-flap {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            transform: rotate(180deg);
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 0.3em;
+            font-size: 10px;
+            font-weight: 800;
+        }
     </style>
 </head>
-<body class="flex h-screen overflow-hidden">
+<body class="font-sans antialiased bg-background text-foreground overflow-hidden h-screen w-screen flex selection:bg-primary selection:text-black">
 
     <button onclick="toggleSidebar()" class="md:hidden fixed left-0 top-1/2 -translate-y-1/2 z-50 bg-primary/90 backdrop-blur-md text-black py-8 px-1.5 rounded-r-lg shadow-[0_0_15px_rgba(57,255,20,0.2)] active:scale-95 transition-all flex items-center justify-center border-y border-r border-primary">
         <span class="sleek-flap">MENU</span>
@@ -27,35 +60,150 @@
 
     <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/90 z-40 hidden backdrop-blur-md opacity-0 transition-opacity duration-300"></div>
 
-    <aside id="sidebar" class="w-64 border-r border-zinc-800 bg-[#0a0a0a] flex flex-col transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 shrink-0 h-full">
-        <div class="h-16 flex items-center px-6 border-b border-zinc-800 justify-between">
-            <span class="text-primary font-black uppercase tracking-tighter">local / assets</span>
+    <aside id="sidebar" class="w-64 border-r border-zinc-800 bg-[#0a0a0a] flex flex-col shrink-0 h-full transform -translate-x-full md:translate-x-0 transition-transform duration-300">
+        <div class="h-16 flex items-center px-6 border-b border-zinc-800 transition-all group justify-between">
+            <a href="index.html" class="relative h-6 w-32 flex transition-all group">
+                <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974378/ibyostiwecnvm2cebqar.svg" class="absolute inset-0 h-full w-full object-left object-contain brightness-0 invert opacity-100 group-hover:opacity-0 transition-opacity duration-200" alt="logo">
+                <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974377/eayfotlcvgq36kpwvitw.svg" class="absolute inset-0 h-full w-full object-left object-contain opacity-0 group-hover:opacity-100 transition-opacity duration-200" alt="logo hover">
+            </a>
             <button onclick="toggleSidebar()" class="md:hidden text-zinc-500"><iconify-icon icon="solar:close-circle-bold" class="text-2xl"></iconify-icon></button>
         </div>
         <nav class="flex-1 p-4 space-y-2">
-            <a href="dashboard.html" class="nav-link active flex items-center gap-3 px-3 py-2 text-sm rounded-md text-primary"><iconify-icon icon="solar:widget-5-bold"></iconify-icon>Overview</a>
-            <a href="camera.html" class="nav-link flex items-center gap-3 px-3 py-2 text-sm text-zinc-400 hover:text-white transition-colors"><iconify-icon icon="solar:videocamera-record-bold"></iconify-icon>Camera Control</a>
-            <a href="assets.html" class="nav-link flex items-center gap-3 px-3 py-2 text-sm text-zinc-400 hover:text-white transition-colors"><iconify-icon icon="solar:clapperboard-play-bold"></iconify-icon>Media Assets</a>
+            <a href="dashboard.html" class="nav-link active flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors hover:bg-white/5 text-zinc-400">
+                <iconify-icon icon="solar:widget-5-linear" class="text-lg text-primary"></iconify-icon>Overview
+            </a>
+            <a href="camera.html" class="nav-link flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors hover:bg-white/5 text-zinc-400">
+                <iconify-icon icon="solar:videocamera-record-linear" class="text-lg"></iconify-icon>Camera Control
+            </a>
+            <a href="assets.html" class="nav-link flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors hover:bg-white/5 text-zinc-400">
+                <iconify-icon icon="solar:clapperboard-play-linear" class="text-lg"></iconify-icon>Media Assets
+            </a>
         </nav>
     </aside>
 
-    <main class="flex-1 flex flex-col overflow-hidden w-full">
-        <header class="h-16 border-b border-border flex items-center px-8 justify-between shrink-0">
-            <span class="text-[10px] font-mono uppercase tracking-[0.3em] text-zinc-500 truncate mr-2">System Overview</span>
-            <div class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center font-bold text-xs shrink-0">F</div>
+    <main class="flex-1 flex flex-col overflow-hidden relative">
+        <header class="h-16 flex items-center justify-between px-8 border-b border-border bg-background/50 backdrop-blur-md z-10 shrink-0">
+            <div class="text-sm text-muted-foreground font-mono uppercase tracking-widest truncate mr-4">
+                <span class="hidden sm:inline">Home <iconify-icon icon="solar:alt-arrow-right-linear" class="mx-2 text-[10px]"></iconify-icon></span> 
+                <span class="text-white">Dashboard Overview</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/10">
+                    <span class="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_#39FF14]"></span>
+                    <span id="system-status-text" class="text-[10px] font-mono text-white">SYSTEM OK</span>
+                </div>
+                <div class="h-8 w-8 rounded-full bg-white flex items-center justify-center text-black font-bold text-xs">F</div>
+            </div>
         </header>
 
         <div class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                <div class="bg-card border border-border p-5 rounded-xl"><p class="text-[9px] font-mono text-zinc-500 uppercase mb-2">Total Assets</p><p id="live-total" class="text-2xl font-bold">--</p></div>
-                <div class="bg-card border border-border p-5 rounded-xl"><p class="text-[9px] font-mono text-zinc-500 uppercase mb-2">Usage</p><p id="live-usage" class="text-2xl font-bold text-primary">0.0 GB</p></div>
+            <div class="cursor-pointer hover:border-primary/50 transition-all duration-500 w-full bg-card border border-border rounded-2xl p-8 relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-6 shadow-2xl">
+                <video autoplay loop muted playsinline class="absolute inset-0 w-full h-full object-cover opacity-40 grayscale hover:grayscale-0 transition-all duration-700">
+                    <source src="https://res.cloudinary.com/dso3xwno0/video/upload/v1770888132/Beltran_e58al0.mov" type="video/mp4">
+                </video>
+                <div class="absolute inset-0 bg-scanlines opacity-10 pointer-events-none"></div>
+
+                <div class="relative z-10">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="inline-flex items-center gap-2 px-3 py-1 bg-red-500 text-white rounded-full text-[10px] font-bold uppercase tracking-widest animate-pulse">
+                            <iconify-icon icon="solar:record-circle-linear"></iconify-icon> LIVE FEED
+                        </span>
+                        <span class="text-white/50 font-mono text-[10px] uppercase">Room 1 // Main Floor</span>
+                    </div>
+                    <h2 class="text-3xl font-extrabold text-white tracking-tighter uppercase">Artist: Beltran</h2>
+                </div>
+
+                <div class="flex gap-10 relative z-10 font-mono">
+                    <div class="text-left">
+                        <span class="block text-[9px] text-muted-foreground uppercase mb-1">Elapsed</span>
+                        <span class="text-lg text-white font-medium">01:42:15</span>
+                    </div>
+                    <div class="text-left">
+                        <span class="block text-[9px] text-muted-foreground uppercase mb-1">Cameras</span>
+                        <span class="text-lg text-primary font-medium">3/3 ACTIVE</span>
+                    </div>
+                </div>
             </div>
-            
-            <div class="bg-card border border-border rounded-2xl p-6 shadow-lg">
-                <h3 class="text-xs font-mono text-primary uppercase tracking-widest mb-6">Recent Distribution</h3>
-                <div class="flex justify-between items-center py-4 border-b border-zinc-900">
-                    <p class="text-sm font-bold uppercase truncate pr-4 text-white">Michael Bibi - 4H Set</p>
-                    <span class="text-[9px] font-mono bg-primary/10 text-primary px-2 py-1 rounded border border-primary/20 shrink-0">DISTRIBUTED</span>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-card border border-border p-5 rounded-xl">
+                    <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3 block">Total Assets Captured</span>
+                    <div class="flex items-end justify-between">
+                        <span id="live-asset-total" class="text-2xl font-bold">1,248</span>
+                        <span class="text-[10px] text-primary font-mono bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">+12%</span>
+                    </div>
+                </div>
+                <div class="bg-card border border-border p-5 rounded-xl">
+                    <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3 block">Cloud Storage</span>
+                    <div class="flex items-end justify-between">
+                        <span id="live-storage-usage" class="text-2xl font-bold text-primary">0.00 GB</span>
+                        <span class="text-[10px] text-muted-foreground font-mono">/ 50 TB</span>
+                    </div>
+                    <div class="w-full bg-white/5 h-1 mt-4 rounded-full overflow-hidden"><div id="storage-bar" class="bg-primary h-full w-[0%]"></div></div>
+                </div>
+                <div class="bg-card border border-border p-5 rounded-xl">
+                    <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3 block">Revenue Generated</span>
+                    <div class="flex items-end justify-between">
+                        <span class="text-2xl font-bold">£48,250</span>
+                        <span class="text-[10px] text-primary font-mono bg-primary/10 px-2 py-0.5 rounded border border-primary/20">+24%</span>
+                    </div>
+                </div>
+                <div class="bg-card border border-border p-5 rounded-xl relative overflow-hidden">
+                    <div class="absolute right-0 top-0 bottom-0 w-1 bg-red-500 animate-pulse"></div>
+                    <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3 block">Next Event</span>
+                    <span class="block text-sm font-bold text-white uppercase tracking-tight">Fabric Room 1</span>
+                    <span class="text-[10px] text-muted-foreground font-mono uppercase">Tonight, 22:00 PM</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 bg-card border border-border rounded-2xl overflow-hidden">
+                    <div class="p-5 border-b border-border flex justify-between items-center">
+                        <h3 class="text-xs font-bold uppercase tracking-widest">Recent Sets</h3>
+                        <button class="text-[10px] text-muted-foreground hover:text-primary transition-colors uppercase font-mono">View All</button>
+                    </div>
+                    <div class="divide-y divide-border">
+                        <div class="p-5 flex items-center justify-between hover:bg-white/[0.02] transition-colors group cursor-pointer">
+                            <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 bg-background border border-border flex items-center justify-center rounded-lg group-hover:border-primary/50 transition-colors">
+                                    <iconify-icon icon="solar:music-note-bold" class="text-muted-foreground group-hover:text-primary"></iconify-icon>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-bold text-white uppercase tracking-tighter">Michael Bibi - 4 Hour Set</p>
+                                    <p class="text-[10px] font-mono text-muted-foreground uppercase">Oct 12, 2024 • 142 GB</p>
+                                </div>
+                            </div>
+                            <span class="px-2 py-1 rounded text-[9px] font-mono uppercase bg-primary/10 text-primary border border-primary/20">Distributed</span>
+                        </div>
+                        <div class="p-5 flex items-center justify-between hover:bg-white/[0.02] transition-colors group cursor-pointer">
+                            <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 bg-background border border-border flex items-center justify-center rounded-lg">
+                                    <iconify-icon icon="solar:music-note-bold" class="text-muted-foreground"></iconify-icon>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-bold text-white uppercase tracking-tighter">PAWSA - Main Room</p>
+                                    <p class="text-[10px] font-mono text-muted-foreground uppercase">Oct 11, 2024 • 98 GB</p>
+                                </div>
+                            </div>
+                            <span class="px-2 py-1 rounded text-[9px] font-mono uppercase bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">Processing</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="bg-card border border-border rounded-2xl p-6">
+                        <h3 class="text-xs font-bold uppercase tracking-widest mb-6">System Health</h3>
+                        <div class="space-y-6">
+                            <div>
+                                <div class="flex justify-between text-[10px] font-mono mb-2 uppercase"><span class="text-muted-foreground">Upload Bandwidth</span><span class="text-white">840 Mbps</span></div>
+                                <div class="w-full bg-white/5 h-1 rounded-full overflow-hidden"><div class="bg-primary h-full w-[85%] shadow-[0_0_10px_#39FF14]"></div></div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-[10px] font-mono mb-2 uppercase"><span class="text-muted-foreground">Local Storage (NAS)</span><span class="text-white">82%</span></div>
+                                <div class="w-full bg-white/5 h-1 rounded-full overflow-hidden"><div class="bg-yellow-500 h-full w-[82%]"></div></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -65,31 +213,35 @@
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebar-overlay');
-            if (sidebar.classList.contains('-translate-x-full')) {
-                sidebar.classList.remove('-translate-x-full');
-                overlay.classList.remove('hidden');
-                setTimeout(() => overlay.classList.add('opacity-100'), 10);
-            } else {
+            const isOpen = !sidebar.classList.contains('-translate-x-full');
+            if (isOpen && window.innerWidth < 768) {
                 sidebar.classList.add('-translate-x-full');
                 overlay.classList.add('opacity-0');
                 setTimeout(() => overlay.classList.add('hidden'), 300);
+            } else {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+                setTimeout(() => overlay.classList.add('opacity-100'), 10);
             }
         }
 
-        async function fetchStorage() {
+        async function fetchLiveMetrics() {
             try {
                 const response = await fetch(`https://res.cloudinary.com/dso3xwno0/video/list/venue_recording.json`);
+                if (!response.ok) return;
                 const data = await response.json();
                 let totalBytes = 0;
-                data.resources.forEach(res => {
-                    const bytes = parseInt(res.bytes);
-                    if (!isNaN(bytes)) totalBytes += bytes;
-                });
-                document.getElementById('live-usage').innerText = (totalBytes / (1024*1024*1024)).toFixed(2) + ' GB';
-                document.getElementById('live-total').innerText = data.resources.length;
+                data.resources.forEach(r => totalBytes += (parseInt(r.bytes) || 0));
+                const totalGB = (totalBytes / (1024 * 1024 * 1024)).toFixed(2);
+                document.getElementById('live-storage-usage').innerText = totalGB + ' GB';
+                document.getElementById('live-asset-total').innerText = data.resources.length;
+                
+                // Update storage bar (based on 50TB cap)
+                const percent = (totalGB / 50000) * 100;
+                document.getElementById('storage-bar').style.width = Math.max(percent, 2) + '%';
             } catch (e) { console.error(e); }
         }
-        fetchStorage();
+        fetchLiveMetrics();
     </script>
 </body>
 </html>
