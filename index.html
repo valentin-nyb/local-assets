@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <title>local / assets</title>
+    <title>local / assets - London</title>
     <link rel="icon" type="image/png" href="https://res.cloudinary.com/dso3xwno0/image/upload/v1770939295/mcwp97ytys3vfyqjhymu.svg">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
@@ -12,20 +12,22 @@
             theme: {
                 extend: {
                     colors: { background: '#050505', primary: '#39FF14', border: '#27272a' },
-                    backgroundImage: { 'noise': "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E\")" }
+                    fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] }
                 }
             }
         }
     </script>
     <style>
-        body { background-color: #050505; color: #ffffff; overflow-x: hidden; }
-        .hero-text { font-size: 8vw; line-height: 0.9; font-weight: 900; letter-spacing: -0.05em; text-transform: uppercase; }
+        body { background-color: #050505; color: #ffffff; -webkit-font-smoothing: antialiased; }
+        .hero-title { font-size: clamp(3rem, 10vw, 8rem); line-height: 0.9; font-weight: 800; letter-spacing: -0.04em; text-transform: uppercase; }
         @keyframes scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
         .animate-scroll { animation: scroll 30s linear infinite; }
+        ::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="h-screen flex flex-col">
-    <nav class="h-16 flex items-center justify-between px-8 border-b border-zinc-900 z-20">
+<body class="bg-background text-white selection:bg-primary selection:text-black min-h-screen flex flex-col overflow-x-hidden">
+
+    <nav class="h-16 flex items-center justify-between px-8 border-b border-zinc-900 z-30 shrink-0">
         <a href="index" class="group flex items-center transition-all">
             <div class="relative h-5 w-32">
                 <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974378/ibyostiwecnvm2cebqar.svg" class="absolute inset-0 h-full w-auto object-contain brightness-0 invert opacity-100 group-hover:opacity-0 transition-opacity duration-200">
@@ -34,9 +36,24 @@
         </a>
         <a href="dashboard" class="bg-primary text-black text-[10px] font-bold px-4 py-2 rounded-full uppercase tracking-widest hover:scale-105 transition-transform">Go to Dashboard</a>
     </nav>
-    <main class="flex-1 flex items-center px-12 relative overflow-hidden">
-        <div class="absolute inset-0 opacity-[0.05] pointer-events-none bg-noise"></div>
-        <h1 class="hero-text relative z-10">Transform your<br><span class="text-primary">Live-Set</span><br>into an asset.</h1>
+
+    <main class="flex-1 flex flex-col justify-center px-8 md:px-12 relative">
+        <div class="max-w-7xl">
+            <h1 class="hero-title">
+                Transform your<br>
+                <span class="text-primary">Live-Set</span><br>
+                into an asset.
+            </h1>
+        </div>
     </main>
+
+    <footer class="border-t border-border bg-background/80 backdrop-blur-sm shrink-0">
+        <div class="overflow-hidden py-4 flex">
+            <div class="flex gap-8 whitespace-nowrap animate-scroll">
+                <div class="flex gap-8 items-center font-mono text-xs text-zinc-500 uppercase">CAPTURE <span class="text-primary">//</span> DISTRIBUTE <span class="text-primary">//</span> MONETIZE <span class="text-primary">//</span> REPEAT <span class="text-primary">//</span></div>
+                <div class="flex gap-8 items-center font-mono text-xs text-zinc-500 uppercase">CAPTURE <span class="text-primary">//</span> DISTRIBUTE <span class="text-primary">//</span> MONETIZE <span class="text-primary">//</span> REPEAT <span class="text-primary">//</span></div>
+            </div>
+        </div>
+    </footer>
 </body>
 </html>
