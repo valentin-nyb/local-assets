@@ -1,27 +1,22 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en" class="dark scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <title>local / assets</title>
-    <link rel="icon" type="image/svg+xml" href="https://res.cloudinary.com/dso3xwno0/image/upload/v1770939295/mcwp97ytys3vfyqjhymu.svg">
-    <link rel="apple-touch-icon" sizes="180x180" href="https://res.cloudinary.com/dso3xwno0/image/upload/w_180,h_180,c_pad,b_black,f_png/v1770939295/mcwp97ytys3vfyqjhymu.png">
+    <link rel="icon" type="image/png" href="https://res.cloudinary.com/dso3xwno0/image/upload/v1770939295/mcwp97ytys3vfyqjhymu.svg">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
-        tailwind.config = {
-            theme: { extend: { colors: { background: '#050505', card: '#0a0a0a', primary: '#39FF14', border: '#27272a' } } }
-        }
+        tailwind.config = { theme: { extend: { colors: { background: '#050505', card: '#0a0a0a', primary: '#39FF14', border: '#27272a' } } } }
     </script>
-    <style>
-        body { background-color: #050505; color: white; -webkit-font-smoothing: antialiased; }
-        .nav-link.active { background-color: rgba(255, 255, 255, 0.05); border: 1px solid #27272a; color: white; }
-    </style>
 </head>
-<body class="flex h-screen overflow-hidden">
+<body class="bg-background text-white h-screen w-screen flex overflow-hidden font-sans">
 
-    <button onclick="toggleSidebar()" class="md:hidden fixed right-0 top-1/2 -translate-y-1/2 z-50 bg-primary text-black py-4 px-1.5 rounded-l-xl shadow-lg">
-        <span class="font-mono text-[11px] font-bold uppercase tracking-widest" style="writing-mode: vertical-rl; transform: rotate(180deg);">Menu</span>
+    <button onclick="toggleSidebar()" class="md:hidden fixed left-0 top-1/2 -translate-y-1/2 z-50 bg-primary text-black py-4 px-1.5 rounded-r-xl shadow-lg">
+        <span class="font-mono text-[11px] font-bold uppercase tracking-widest" style="writing-mode: vertical-rl;">Menu</span>
     </button>
 
     <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/80 z-40 hidden backdrop-blur-sm opacity-0 transition-opacity"></div>
@@ -32,9 +27,15 @@
             <button onclick="toggleSidebar()" class="md:hidden text-zinc-500"><iconify-icon icon="solar:close-circle-linear" class="text-xl"></iconify-icon></button>
         </div>
         <nav class="flex-1 p-4 space-y-2">
-            <a href="dashboard.html" class="flex items-center gap-3 px-3 py-2 text-sm text-zinc-400 hover:bg-white/5 rounded-md"><iconify-icon icon="solar:widget-5-linear"></iconify-icon>Overview</a>
-            <a href="camera.html" class="flex items-center gap-3 px-3 py-2 text-sm text-zinc-400 hover:bg-white/5 rounded-md"><iconify-icon icon="solar:videocamera-record-linear"></iconify-icon>Camera Control</a>
-            <a href="assets.html" class="nav-link active flex items-center gap-3 px-3 py-2 text-sm rounded-md"><iconify-icon icon="solar:clapperboard-play-linear"></iconify-icon>Media Assets</a>
+            <a href="dashboard.html" class="nav-link flex items-center gap-3 px-3 py-2 text-sm text-zinc-400 hover:text-white transition-colors">
+                <iconify-icon icon="solar:widget-5-linear"></iconify-icon>Overview
+            </a>
+            <a href="camera.html" class="nav-link flex items-center gap-3 px-3 py-2 text-sm text-zinc-400 hover:text-white transition-colors">
+                <iconify-icon icon="solar:videocamera-record-linear"></iconify-icon>Camera Control
+            </a>
+            <a href="assets.html" class="nav-link active flex items-center gap-3 px-3 py-2 text-sm text-primary">
+                <iconify-icon icon="solar:clapperboard-play-linear"></iconify-icon>Media Assets
+            </a>
         </nav>
     </aside>
 
@@ -42,9 +43,23 @@
         <header class="h-16 border-b border-border flex items-center px-8">
             <span class="text-xs font-mono uppercase tracking-[0.3em] text-primary">Media Asset Library</span>
         </header>
-        <div class="p-8 overflow-y-auto">
-            <div class="bg-card border border-dashed border-border p-8 rounded-2xl text-center">
-                <button class="bg-primary text-black px-8 py-3 rounded-full font-bold uppercase text-xs">Upload Raw Asset</button>
+
+        <div class="flex-1 p-8 overflow-y-auto">
+            <div class="max-w-5xl mx-auto space-y-12">
+                <div class="p-8 border border-dashed border-zinc-800 rounded-2xl bg-card/30">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <input type="text" id="ingest-name" placeholder="ARTIST NAME" class="bg-[#050505] border border-zinc-800 rounded px-4 py-3 text-xs uppercase font-bold text-white">
+                        <input type="text" id="ingest-date" class="bg-[#050505] border border-zinc-800 rounded px-4 py-3 text-xs font-bold">
+                        <select id="ingest-shot" class="bg-[#050505] border border-zinc-800 rounded px-4 py-3 text-xs text-zinc-400">
+                            <option value="MASTER">MASTER CAM</option>
+                            <option value="BACK-VIEW">BACK VIEW</option>
+                        </select>
+                    </div>
+                    <div class="text-center">
+                        <input type="file" id="hidden-file-input" class="hidden">
+                        <button onclick="document.getElementById('hidden-file-input').click()" class="bg-primary text-black px-10 py-3 rounded-full font-extrabold text-[10px] uppercase tracking-widest">START MASTER UPLOAD</button>
+                    </div>
+                </div>
             </div>
         </div>
     </main>

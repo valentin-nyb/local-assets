@@ -4,12 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <title>local / assets - Camera Control</title>
-    
-    <link rel="icon" type="image/svg+xml" href="https://res.cloudinary.com/dso3xwno0/image/upload/v1770939295/mcwp97ytys3vfyqjhymu.svg">
-    <link rel="apple-touch-icon" sizes="180x180" href="https://res.cloudinary.com/dso3xwno0/image/upload/w_180,h_180,c_pad,b_black,f_png/v1770939295/mcwp97ytys3vfyqjhymu.png">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
+    <link rel="icon" type="image/png" href="https://res.cloudinary.com/dso3xwno0/image/upload/v1770939295/mcwp97ytys3vfyqjhymu.svg">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script>
@@ -17,10 +12,7 @@
             theme: { 
                 extend: { 
                     colors: { 
-                        background: '#050505', 
-                        card: '#0a0a0a', 
-                        primary: '#39FF14', 
-                        border: '#27272a' 
+                        background: '#050505', card: '#0a0a0a', primary: '#39FF14', border: '#27272a' 
                     } 
                 } 
             }
@@ -50,15 +42,15 @@
         </div>
     </div>
 
-    <button onclick="toggleSidebar()" class="md:hidden fixed right-0 top-1/2 -translate-y-1/2 z-50 bg-primary text-black py-4 px-1.5 rounded-l-xl shadow-[0_0_20px_rgba(57,255,20,0.4)]">
-        <span class="font-mono text-[11px] font-extrabold uppercase tracking-widest" style="writing-mode: vertical-rl; transform: rotate(180deg);">Menu</span>
+    <button onclick="toggleSidebar()" class="md:hidden fixed left-0 top-1/2 -translate-y-1/2 z-50 bg-primary text-black py-4 px-1.5 rounded-r-xl shadow-lg active:scale-95 transition-transform">
+        <span class="font-mono text-[11px] font-bold uppercase tracking-widest" style="writing-mode: vertical-rl;">Menu</span>
     </button>
 
     <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/80 z-40 hidden backdrop-blur-sm opacity-0 transition-opacity duration-300 cursor-pointer"></div>
 
     <aside id="sidebar" class="w-64 border-r border-zinc-800 bg-[#0a0a0a] flex flex-col fixed inset-y-0 left-0 z-50 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 h-full">
         <div class="h-16 flex items-center px-6 border-b border-zinc-800 justify-between">
-            <a href="index.html" class="relative h-6 w-32 flex">
+            <a href="index.html" class="relative h-6 w-32 flex transition-all">
                 <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974378/ibyostiwecnvm2cebqar.svg" class="absolute inset-0 h-full w-full object-left object-contain brightness-0 invert" alt="logo">
             </a>
             <button onclick="toggleSidebar()" class="md:hidden text-zinc-500 hover:text-white"><iconify-icon icon="solar:close-circle-linear" class="text-xl"></iconify-icon></button>
@@ -123,7 +115,6 @@
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebar-overlay');
             const isOpen = !sidebar.classList.contains('-translate-x-full');
-            
             if (isOpen && window.innerWidth < 768) {
                 sidebar.classList.add('-translate-x-full');
                 overlay.classList.add('opacity-0');
