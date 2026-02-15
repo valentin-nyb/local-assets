@@ -35,7 +35,7 @@
             grid.innerHTML = data.resources.map(video => `
                 <div class="bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800 group hover:border-primary/50 transition-all">
                     <div class="aspect-video bg-black relative">
-                        <video src="https://res.cloudinary.com/${cloudName}/video/upload/${video.public_id}.mp4" class="w-full h-full object-cover opacity-60 group-hover:opacity-100"></video>
+                        <video src="https://res.cloudinary.com/${cloudName}/video/upload/${video.public_id}.mp4" class="w-full h-full object-cover opacity-60 group-hover:opacity-100" autoplay loop muted playsinline></video>
                     </div>
                     <div class="p-4">
                         <p class="text-sm font-bold uppercase truncate">${video.public_id.split('/').pop()}</p>
