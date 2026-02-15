@@ -122,7 +122,7 @@
                 <div class="flex gap-10 relative z-10 font-mono">
                     <div class="text-left">
                         <span class="block text-[9px] text-muted-foreground uppercase mb-1">Elapsed</span>
-                        <span class="text-lg text-white font-medium">01:42:15</span>
+                        <span id="elapsed-time" class="text-lg text-white font-medium">01:42:15</span>
                     </div>
                     <div class="text-left">
                         <span class="block text-[9px] text-muted-foreground uppercase mb-1">Cameras</span>
@@ -231,7 +231,24 @@
             }
         }
 
-        async function fetchLiveMetrics() {
+        // Initialize elapsed time counter
+        const startTime = new Date();
+        startTime.setHours(0, 1, 42, 15000); // Start from 01:42:15
+        
+        function updateElapsedTime() {
+            const elapsed = Math.floor((new Date() - startTime) / 1000);
+            const hours = Math.floor(elapsed / 3600);
+            const minutes = Math.floor((elapsed % 3600) / 60);
+            const seconds = elapsed % 60;
+            document.getElementById('elapsed-time').innerText = 
+                String(hours).padStart(2, '0') + ':' + 
+                String(minutes).padStart(2, '0') + ':' + 
+                String(seconds).padStart(2, '0');
+        }
+        updateElapsedTime();
+        setInterval(updateElapsedTime, 1000);
+        
+        
             try {
                 const response = await fetch(`https://res.cloudinary.com/dso3xwno0/video/list/venue_recording.json`);
                 if (!response.ok) return;
