@@ -74,7 +74,7 @@
     <main class="min-h-screen bg-background relative">
         <section class="min-h-screen flex flex-col md:px-8 overflow-hidden pr-4 pl-4 relative justify-center">
             <nav class="flex md:pr-8 md:pt-8 md:pb-8 md:pl-8 z-20 pt-8 pr-8 pb-8 pl-8 absolute top-0 right-0 left-0 items-center justify-between">
-                <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974377/eayfotlcvgq36kpwvitw.svg" alt="logo" class="h-8">
+                <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974377/eayfotlcvgq36kpwvitw.svg" alt="logo" class="h-10">
                 <a href="dashboard.html" class="flex border-border hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-200 uppercase group cursor-pointer text-xs tracking-wider font-mono border pt-2 pr-4 pb-2 pl-4 backdrop-blur-md gap-x-2 gap-y-2 items-center decoration-0">
                     <iconify-icon icon="solar:widget-5-linear" class="text-base"></iconify-icon>
                     <span class="hidden md:inline">Venue Dashboard</span>
@@ -384,9 +384,40 @@
     </div>
 </section>
 
-        <footer class="bg-black border-t border-white/10 py-4 px-8 mt-auto sticky bottom-0 z-20">
-            <div class="flex justify-between items-center text-[10px] font-mono text-zinc-600"><span>Protocol v2.4.0 // Connected</span><div class="flex items-center gap-2"><div class="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></div><span>System Operational</span></div></div>
+        <section class="py-32 flex flex-col items-center justify-center text-center bg-background border-t border-white/5 relative overflow-hidden">
+            <div class="absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-primary/10 blur-[120px] rounded-full pointer-events-none"></div>
+            
+            <div class="reveal active">
+                <span class="font-mono text-[10px] tracking-[0.4em] text-muted-foreground uppercase mb-10 block">[ READY? ]</span>
+                
+                <button class="group relative inline-flex items-center justify-center px-32 py-5 bg-primary text-black font-black uppercase text-sm tracking-[0.2em] rounded-full hover:shadow-[0_0_50px_rgba(57,255,20,0.4)] transition-all duration-500 transform hover:scale-105 active:scale-95">
+                    START
+                </button>
+            </div>
+        </section>
+
+        <footer class="py-16 px-8 border-t border-white/5 bg-background relative z-10">
+            <div class="max-w-6xl mx-auto flex flex-col items-center justify-center text-center">
+                <div class="mb-6">
+                    <span class="font-mono text-[10px] tracking-[0.3em] text-muted-foreground uppercase">
+                        THE PROTOCOL <span class="text-primary mx-2">//</span> LIVE EVENT MONETIZATION
+                    </span>
+                </div>
+                <div class="font-mono text-[9px] text-zinc-600 uppercase tracking-widest">
+                    2026 All Rights Reserved
+                </div>
+            </div>
         </footer>
+
+        <div class="fixed bottom-0 left-0 right-0 h-10 border-t border-white/10 bg-black/80 backdrop-blur-md flex items-center justify-between px-8 z-50 pointer-events-none">
+            <div class="font-mono text-[9px] text-zinc-500 uppercase tracking-widest">
+                Protocol v2.4.0 <span class="text-primary/50 mx-2">//</span> Connected
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="w-1.5 h-1.5 bg-primary rounded-full animate-pulse shadow-[0_0_8px_#39FF14]"></div>
+                <span class="font-mono text-[9px] text-zinc-500 uppercase tracking-widest">System Operational</span>
+            </div>
+        </div>
     </main>
 
     <script>
