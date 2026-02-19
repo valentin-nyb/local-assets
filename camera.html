@@ -57,7 +57,7 @@
             <div class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center font-bold text-xs shrink-0">F</div>
         </header>
 
-        <div class="flex-1 p-6 md:p-10 flex flex-col items-center justify-center space-y-8 overflow-y-auto no-scrollbar">
+        <div class="flex-1 p-6 md:p-10 flex flex-col items-center justify-center space-y-8 overflow-y-auto no-scrollbar pb-24">
             
             <div class="w-full max-w-5xl aspect-video bg-black rounded-3xl overflow-hidden border border-white/5 relative shadow-2xl">
                 <div class="absolute top-6 left-6 z-20 flex items-center gap-2 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-md border border-primary/20">
@@ -70,8 +70,8 @@
                     <iconify-icon icon="solar:transmission-linear" class="text-primary text-lg"></iconify-icon>
                 </div>
 
-                <div class="absolute bottom-6 right-6 z-20 font-mono text-primary text-xl font-bold tracking-tighter bg-black/60 backdrop-blur px-4 py-1 rounded-lg border border-primary/30 shadow-[0_0_15px_rgba(57,255,20,0.2)]">
-                    00:00:22:47
+                <div id="timecode" class="absolute bottom-6 right-6 z-20 font-mono text-primary text-xl font-bold tracking-tighter bg-black/60 backdrop-blur px-4 py-1 rounded-lg border border-primary/30 shadow-[0_0_15px_rgba(57,255,20,0.2)]">
+                    00:00:00:00
                 </div>
 
                 <div class="absolute top-4 left-4 w-12 h-12 border-t border-l border-primary/40 rounded-tl-xl pointer-events-none"></div>
@@ -103,6 +103,23 @@
             </div>
         </div>
     </main>
+
+    <script>
+        let tc = 0;
+        function pad(n, l=2) { return n.toString().padStart(l,'0'); }
+        function updateTimecode() {
+            tc++;
+            let frames = tc % 60;
+            let seconds = Math.floor(tc / 60) % 60;
+            let minutes = Math.floor(tc / 3600) % 60;
+            let hours = Math.floor(tc / 216000) % 24;
+            const display = document.getElementById('timecode');
+            if (display) {
+                display.textContent = `${pad(hours)}:${pad(minutes)}:${pad(seconds)}:${pad(frames)}`;
+            }
+        }
+        setInterval(updateTimecode, 1000/60);
+    </script>
         let tc = 0;
         function pad(n, l=2) { return n.toString().padStart(l,'0'); }
         function updateTimecode() {
