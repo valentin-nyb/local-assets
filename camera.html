@@ -52,9 +52,9 @@
     </aside>
     <!-- Main Content -->
     <main class="flex-1 flex flex-col overflow-hidden bg-background relative">
-        <header class="h-16 flex items-center px-8 border-b border-border bg-background shrink-0 justify-between">
+        <header class="h-16 flex items-center px-8 border-b border-[#27272a] bg-background shrink-0 justify-between">
             <span class="text-[10px] font-mono uppercase tracking-[0.3em] text-primary font-bold">PTZ Command Center</span>
-            <div class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center font-bold text-xs">F</div>
+            <div class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center font-bold text-xs shrink-0">F</div>
         </header>
 
         <div class="flex-1 p-6 md:p-10 flex flex-col items-center justify-center space-y-8 overflow-y-auto no-scrollbar">
@@ -70,7 +70,7 @@
                     <iconify-icon icon="solar:transmission-linear" class="text-primary text-lg"></iconify-icon>
                 </div>
 
-                <div class="absolute bottom-6 right-6 z-20 font-mono text-primary text-xl font-bold tracking-tighter bg-black/60 backdrop-blur px-4 py-1 rounded-lg border border-primary/30">
+                <div class="absolute bottom-6 right-6 z-20 font-mono text-primary text-xl font-bold tracking-tighter bg-black/60 backdrop-blur px-4 py-1 rounded-lg border border-primary/30 shadow-[0_0_15px_rgba(57,255,20,0.2)]">
                     00:00:22:47
                 </div>
 
@@ -80,19 +80,19 @@
                 <div class="absolute bottom-4 right-4 w-12 h-12 border-b border-r border-primary/40 rounded-br-xl pointer-events-none"></div>
 
                 <video id="main-feed" class="w-full h-full object-cover" autoplay muted loop playsinline>
-                    <source src="https://res.cloudinary.com/dso3xwno0/video/upload/v1770851279/Screenshot_2026-02-11_at_11.07.35_PM_ecpg7n.mp4" type="video/mp4">
+                    <source src="https://res.cloudinary.com/dso3xwno0/video/upload/v1770888132/Beltran_e58al0.mov" type="video/mp4">
                 </video>
             </div>
 
             <div class="grid grid-cols-3 gap-4 w-full max-w-4xl">
                 <button class="aspect-video rounded-2xl overflow-hidden border-2 border-primary shadow-[0_0_15px_rgba(57,255,20,0.3)] transition-all">
-                    <img src="..." class="w-full h-full object-cover">
+                    <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770851279/Screenshot_2026-02-11_at_11.07.35_PM_ecpg7n.png" class="w-full h-full object-cover">
                 </button>
                 <button class="aspect-video rounded-2xl overflow-hidden border border-white/10 opacity-40 grayscale hover:opacity-100 hover:grayscale-0 transition-all">
-                    <img src="..." class="w-full h-full object-cover">
+                    <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770901769/Screenshot_2026-02-11_at_11.06.28_PM_dcjlcs.png" class="w-full h-full object-cover">
                 </button>
                 <button class="aspect-video rounded-2xl overflow-hidden border border-white/10 opacity-40 grayscale hover:opacity-100 hover:grayscale-0 transition-all">
-                    <img src="..." class="w-full h-full object-cover">
+                    <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770901769/Screenshot_2026-02-11_at_11.05.24_PM_tpmqkl.png" class="w-full h-full object-cover">
                 </button>
             </div>
 
@@ -103,8 +103,6 @@
             </div>
         </div>
     </main>
-    <script>
-        // Timecode HUD
         let tc = 0;
         function pad(n, l=2) { return n.toString().padStart(l,'0'); }
         function updateTimecode() {
