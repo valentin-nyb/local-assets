@@ -8,13 +8,17 @@
     <link rel="icon" type="image/svg+xml" href="favicon/favicon.svg">
     <link rel="apple-touch-icon" href="favicon/apple-touch-icon.png">
     <link rel="manifest" href="favicon/site.webmanifest">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { mono: ["'JetBrains Mono'", 'monospace'] },
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+        <script src="nav-component.js"></script>
+        <style>
+            /* Standardized sidebar styles used by the JS component */
+            .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
+            .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
+            .nav-link:hover:not(.active) { background: rgba(255, 255, 255, 0.03); color: white; }
+            body { background-color: #050505 !important; color: white; font-family: 'JetBrains Mono', monospace !important; overflow: hidden; }
+            .no-scrollbar::-webkit-scrollbar { display: none; }
+        </style>
                     <!DOCTYPE html>
                     <html lang="en" class="dark">
                     <head>
@@ -31,31 +35,7 @@
                     </head>
                     <body class="flex h-screen w-screen overflow-hidden">
 
-                        <aside id="sidebar" class="w-64 border-r border-[#27272a] bg-[#0a0a0a] flex flex-col transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 shrink-0 h-full">
-                            <div class="h-16 flex items-center px-6 border-b border-[#27272a] justify-between">
-                                <a href="index.html" class="h-6 w-32 flex">
-                                    <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974377/eayfotlcvgq36kpwvitw.svg" class="h-full w-full object-left object-contain" alt="logo">
-                                </a>
-                            </div>
-        
-                            <nav class="flex-1 p-4 space-y-2">
-                                <a href="dashboard.html" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-zinc-400 hover:bg-white/5 font-mono text-[12px] tracking-widest uppercase">
-                                    <iconify-icon icon="solar:widget-5-linear" class="text-lg"></iconify-icon>Overview
-                                </a>
-
-                                <a href="camera.html" class="nav-link active flex items-center gap-3 px-3 py-2 rounded-md bg-white/5 text-[#39FF14] border-l-2 border-[#39FF14] font-mono text-[12px] tracking-widest uppercase shadow-[inset_4px_0_10px_rgba(57,255,20,0.05)]">
-                                    <iconify-icon icon="solar:videocamera-record-linear" class="text-lg"></iconify-icon>Camera Control
-                                </a>
-
-                                <a href="assets.html" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-zinc-400 hover:bg-white/5 font-mono text-[12px] tracking-widest uppercase">
-                                    <iconify-icon icon="solar:clapperboard-play-linear" class="text-lg"></iconify-icon>Media Assets
-                                </a>
-
-                                <a href="archive.html" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-zinc-400 hover:bg-white/5 font-mono text-[12px] tracking-widest uppercase">
-                                    <iconify-icon icon="solar:archive-linear" class="text-lg"></iconify-icon>Archive
-                                </a>
-                            </nav>
-                        </aside>
+    <aside id="sidebar" class="w-64 border-r border-[#27272a] bg-[#0a0a0a] flex flex-col transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 shrink-0 h-full"></aside>
 
                         <main class="flex-1 flex flex-col bg-background relative overflow-hidden">
                             <header class="h-16 flex items-center px-8 border-b border-[#27272a] justify-between shrink-0">
