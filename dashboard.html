@@ -35,6 +35,13 @@
             }
         }
     </script>
+    <script src="nav-component.js"></script>
+    <style>
+        /* Standardized sidebar styles used by the JS component */
+        .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
+        .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
+        .nav-link:hover:not(.active) { background: rgba(255, 255, 255, 0.03); color: white; }
+    </style>
     <style>
         body { background-color: #050505; color: #ffffff; -webkit-font-smoothing: antialiased; }
         .nav-link.active { background-color: rgba(255, 255, 255, 0.05); border: 1px solid #27272a; color: white; }
@@ -66,25 +73,7 @@
 
     <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/90 z-40 hidden backdrop-blur-md opacity-0 transition-opacity duration-300"></div>
 
-    <aside id="sidebar" class="w-64 border-r border-zinc-800 bg-[#0a0a0a] flex flex-col shrink-0 h-full transform -translate-x-full md:translate-x-0 transition-transform duration-300">
-        <div class="h-16 flex items-center px-6 border-b border-zinc-800 transition-all group justify-between">
-            <a href="index.html" class="relative h-6 w-32 flex transition-all group">
-                <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974378/ibyostiwecnvm2cebqar.svg" class="absolute inset-0 h-full w-full object-left object-contain brightness-0 invert opacity-100 group-hover:opacity-0 transition-opacity duration-200" alt="logo">
-                <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974377/eayfotlcvgq36kpwvitw.svg" class="absolute inset-0 h-full w-full object-left object-contain opacity-0 group-hover:opacity-100 transition-opacity duration-200" alt="logo hover">
-            </a>
-            <button onclick="toggleSidebar()" class="md:hidden text-zinc-500"><iconify-icon icon="solar:close-circle-bold" class="text-2xl"></iconify-icon></button>
-        </div>
-        <nav class="flex-1 p-4 space-y-2">
-            <a href="dashboard.html" class="nav-link active flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors hover:bg-white/5 text-zinc-400">
-                <iconify-icon icon="solar:widget-5-linear" class="text-lg text-primary"></iconify-icon>Overview
-            </a>
-            <a href="camera.html" class="nav-link flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors hover:bg-white/5 text-zinc-400">
-                <iconify-icon icon="solar:videocamera-record-linear" class="text-lg"></iconify-icon>Camera Control
-            </a>
-            <a href="assets.html" class="nav-link flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors hover:bg-white/5 text-zinc-400">
-                <iconify-icon icon="solar:clapperboard-play-linear" class="text-lg"></iconify-icon>Media Assets
-            </a>
-        </nav>
+    <aside id="sidebar" class="w-64 border-r border-[#27272a] bg-[#0a0a0a] flex flex-col transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 shrink-0 h-full">
     </aside>
 
     <main class="flex-1 flex flex-col overflow-hidden relative">

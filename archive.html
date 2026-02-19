@@ -13,8 +13,16 @@
     <link rel="manifest" href="favicon/site.webmanifest">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <script src="nav-component.js"></script>
+    <style>
+        /* Standardized sidebar styles used by the JS component */
+        .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
+        .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
+        .nav-link:hover:not(.active) { background: rgba(255, 255, 255, 0.03); color: white; }
+    </style>
 </head>
 <body class="bg-[#050505] text-white flex">
+    <aside id="sidebar" class="w-64 border-r border-[#27272a] bg-[#0a0a0a] flex flex-col transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 shrink-0 h-full"></aside>
     <main class="flex-1 p-8 overflow-y-auto">
         <header class="mb-10 flex justify-between items-end">
             <div>

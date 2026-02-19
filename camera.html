@@ -25,6 +25,13 @@
             },
         };
     </script>
+    <script src="nav-component.js"></script>
+    <style>
+        /* Standardized sidebar styles used by the JS component */
+        .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
+        .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
+        .nav-link:hover:not(.active) { background: rgba(255, 255, 255, 0.03); color: white; }
+    </style>
     <style>
         body { background: #050505 !important; color: white; font-family: 'JetBrains Mono', monospace; overflow: hidden; }
         .sidebar-link { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 0.05em; }
@@ -41,18 +48,7 @@
     </style>
 </head>
 <body class="flex h-screen overflow-hidden bg-background">
-    <!-- Sidebar -->
-    <aside class="fixed left-0 top-0 h-full z-30 flex flex-col border-r border-border bg-background w-16 md:w-60 transition-all duration-300">
-        <div class="flex items-center justify-center md:justify-start h-16 border-b border-border px-2 md:px-6">
-            <a href="index.html" class="flex items-center h-5 w-full">
-                <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974377/eayfotlcvgq36kpwvitw.svg" alt="logo" class="h-5 w-auto object-contain">
-            </a>
-        </div>
-        <nav class="flex-1 flex flex-col gap-1 mt-4 px-1 md:px-4">
-            <a href="dashboard.html" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded transition-all text-zinc-400"><iconify-icon icon="solar:widget-5-bold"></iconify-icon><span class="hidden md:inline">Dashboard</span></a>
-            <a href="camera.html" class="sidebar-link active flex items-center gap-2 px-3 py-2 rounded transition-all"><iconify-icon icon="solar:videocamera-record-bold"></iconify-icon><span class="hidden md:inline">Camera Control</span></a>
-            <a href="assets.html" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded transition-all text-zinc-400"><iconify-icon icon="solar:clapperboard-play-bold"></iconify-icon><span class="hidden md:inline">Media Assets</span></a>
-        </nav>
+    <aside id="sidebar" class="w-64 border-r border-[#27272a] bg-[#0a0a0a] flex flex-col transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 shrink-0 h-full">
     </aside>
     <!-- Main Content -->
     <main class="flex-1 flex flex-col min-h-0 ml-16 md:ml-60 relative">
