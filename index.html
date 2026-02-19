@@ -275,7 +275,7 @@
                                 <div class="space-y-2.5 font-mono text-[9px] uppercase tracking-widest">
                                     <p class="text-primary leading-relaxed">Live Feed Room 1 // Main Floor</p>
                                     <p class="text-white">Artist: Beltran</p>
-                                    <p class="text-muted-foreground">Elapsed 01:42:15</p>
+                                    <p class="text-muted-foreground">Elapsed <span id="venue-elapsed">01:42:15</span></p>
                                     <p class="text-primary">Cameras 3/3 Active</p>
                                 </div>
                             </div>
@@ -310,6 +310,22 @@
         </section>
 
      <section class="md:px-8 border-border border-t pt-24 pr-4 pb-24 pl-4 relative">
+    <script>
+    // Live timer for Venue Control phone mockup
+    document.addEventListener('DOMContentLoaded', function() {
+        var start = 1 * 3600 + 42 * 60 + 15; // 01:42:15 in seconds
+        var el = document.getElementById('venue-elapsed');
+        function pad(n) { return n < 10 ? '0' + n : n; }
+        function update() {
+            start++;
+            var h = Math.floor(start / 3600);
+            var m = Math.floor((start % 3600) / 60);
+            var s = start % 60;
+            if (el) el.textContent = pad(h) + ':' + pad(m) + ':' + pad(s);
+        }
+        setInterval(update, 1000);
+    });
+    </script>
     <div class="text-center mb-10 reveal active">
         <p class="font-mono text-xs tracking-[0.3em] text-primary mb-4">[ SELECT YOUR TIER ]</p>
         <h2 class="md:text-6xl text-foreground text-4xl font-semibold tracking-tight mb-8">INFRASTRUCTURE TIERS</h2>
