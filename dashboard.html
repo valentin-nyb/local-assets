@@ -142,7 +142,7 @@
                 <div class="bg-card border border-border p-5 rounded-xl">
                     <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3 block">Cloud Storage</span>
                     <div class="flex items-end justify-between">
-                        <span id="live-storage-usage" class="text-2xl font-bold text-primary">250.00 GB</span>
+                        <span id="live-storage-usage" class="text-2xl font-bold text-primary">515 GB</span>
                         <span class="text-[10px] text-muted-foreground font-mono">/ 50 TB</span>
                     </div>
                     <div class="w-full bg-white/5 h-1 mt-4 rounded-full overflow-hidden"><div id="storage-bar" class="bg-primary h-full w-[0%]"></div></div>
@@ -213,17 +213,29 @@
 
         async function fetchLiveMetrics() {
             try {
-                const response = await fetch(`https://res.cloudinary.com/dso3xwno0/video/list/venue_recording.json?cb=${Date.now()}`, { cache: 'no-store' });
-                if (!response.ok) return;
-                const data = await response.json();
+                const baseUrl = 'https://res.cloudinary.com/dso3xwno0/video/list/venue_recording.json';
+                let cursor = null;
                 let totalBytes = 0;
-                data.resources.forEach(r => totalBytes += (parseInt(r.bytes) || 0));
+                let totalCount = 0;
+                let safety = 10; // avoid runaway loops
+
+                do {
+                    const url = `${baseUrl}?cb=${Date.now()}${cursor ? `&next_cursor=${cursor}` : ''}`;
+                    const response = await fetch(url, { cache: 'no-store' });
+                    if (!response.ok) break;
+                    const data = await response.json();
+                    (data.resources || []).forEach(r => totalBytes += (parseInt(r.bytes) || 0));
+                    totalCount += (data.resources || []).length;
+                    cursor = data.next_cursor;
+                    safety--;
+                } while (cursor && safety > 0);
+
                 const totalGB = (totalBytes / (1024 * 1024 * 1024)).toFixed(2);
-                document.getElementById('live-storage-usage').innerText = totalGB + ' GB';
-                document.getElementById('live-asset-total').innerText = data.resources.length;
+                document.getElementById('live-storage-usage').innerText = `${totalGB} GB`;
+                document.getElementById('live-asset-total').innerText = totalCount;
                 
                 // Update storage bar (based on 50TB cap)
-                const percent = (totalGB / 50000) * 100;
+                const percent = (Number(totalGB) / 50000) * 100;
                 document.getElementById('storage-bar').style.width = Math.max(percent, 2) + '%';
             } catch (e) { console.error(e); }
         }
