@@ -219,6 +219,15 @@
             try {
                 const response = await fetch(`https://res.cloudinary.com/dso3xwno0/video/list/venue_recording.json`);
                 const data = await response.json();
+
+                const latest = (data.resources || []).reduce((max, res) => {
+                    const t = new Date(res.created_at).getTime();
+                    return t > max ? t : max;
+                }, 0);
+                if (latest) {
+                    lastSyncTimestamp = new Date(latest).toISOString();
+                    updateLatestSyncDisplay();
+                }
                 
                 const list = document.getElementById('cloud-list');
                 list.innerHTML = '';
@@ -275,6 +284,7 @@
                     list.appendChild(row);
                 });
             } catch (e) {
+                updateLatestSyncDisplay('No assets yet');
                 document.getElementById('cloud-list').innerHTML = `
                     <div class="p-4 bg-[#0a0a0a] border border-[#27272a] rounded-2xl text-center text-zinc-500 text-[10px] font-mono uppercase tracking-widest">
                         Awaiting new master ingestion...
