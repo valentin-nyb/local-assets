@@ -76,7 +76,6 @@
                                 <p class="text-[10px] font-mono uppercase tracking-[0.3em] text-[#39FF14] mb-1">MASTER INGEST</p>
                                 <h2 class="text-2xl font-bold tracking-tight">Upload a new recording</h2>
                             </div>
-                            <span class="text-[10px] font-mono text-muted-foreground uppercase">Cloudinary: venue_recording</span>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
                             <div class="md:col-span-2">
@@ -148,6 +147,8 @@
 
     <script>
         let cloudAssets = [];
+        const CLOUD_TAG = 'venue_recording';
+        const CLOUD_LIST_URL = `https://res.cloudinary.com/dso3xwno0/video/list/${CLOUD_TAG}.json`;
 
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
@@ -169,7 +170,7 @@
             list.innerHTML = '';
             empty.classList.add('hidden');
             try {
-                const response = await fetch(`https://res.cloudinary.com/dso3xwno0/video/list/venue_recording.json?cb=${Date.now()}`);
+                const response = await fetch(`${CLOUD_LIST_URL}?cb=${Date.now()}`);
                 const data = await response.json();
                 cloudAssets = (data.resources || [])
                     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
@@ -189,6 +190,21 @@
                 console.error('Fetch error:', err);
                 list.innerHTML = '<div class="col-span-full text-sm text-red-400">Unable to load assets from Cloudinary.</div>';
             }
+        }
+
+        async function waitForAsset(publicId, attempts = 5, delayMs = 2000) {
+            for (let i = 0; i < attempts; i++) {
+                try {
+                    const response = await fetch(`${CLOUD_LIST_URL}?cb=${Date.now()}`);
+                    const data = await response.json();
+                    const found = (data.resources || []).some(res => res.public_id === publicId);
+                    if (found) return true;
+                } catch (err) {
+                    console.error('Poll error:', err);
+                }
+                await new Promise(r => setTimeout(r, delayMs));
+            }
+            return false;
         }
 
         function renderList() {
@@ -264,11 +280,14 @@
                 try {
                     const formData = new FormData();
                     formData.append('file', file);
-                    formData.append('upload_preset', 'venue_recording');
+                    formData.append('upload_preset', CLOUD_TAG);
                     
                     const safeDj = djName.toLowerCase().replace(/[^a-z0-9]/g, '_');
                     const safeDate = date.replace(/\s+/g, '_');
-                    formData.append('public_id', `venue_masters/${safeDj}_${safeDate}_${shot.toLowerCase()}`);
+                    const publicId = `venue_masters/${safeDj}_${safeDate}_${shot.toLowerCase()}`;
+                    formData.append('public_id', publicId);
+                    formData.append('tags', CLOUD_TAG);
+                    formData.append('context', `dj=${safeDj}|date=${safeDate}|shot=${shot.toLowerCase()}`);
                     
                     // Note: Changed endpoint to 'auto/upload' to handle any file type gracefully
                     const response = await fetch('https://api.cloudinary.com/v1_1/dso3xwno0/auto/upload', {
@@ -279,12 +298,12 @@
                     const responseData = await response.json(); // Intercept the exact response
                     
                     if (response.ok) {
-                        const publicId = responseData.public_id || `venue_masters/${safeDj}_${safeDate}_${shot.toLowerCase()}`;
+                        const ensuredPublicId = responseData.public_id || publicId;
                         const derivedFormat = (responseData.format || 'file').toUpperCase();
-                        const finalUrl = responseData.secure_url || responseData.url || `https://res.cloudinary.com/dso3xwno0/video/upload/${publicId}.${responseData.format || 'mp4'}`;
+                        const finalUrl = responseData.secure_url || responseData.url || `https://res.cloudinary.com/dso3xwno0/video/upload/${ensuredPublicId}.${responseData.format || 'mp4'}`;
 
                         const newItem = {
-                            id: publicId,
+                            id: ensuredPublicId,
                             dj: safeDj.toUpperCase(),
                             date,
                             shot: shot.toUpperCase(),
@@ -300,6 +319,7 @@
                         uploadBtn.innerHTML = '<iconify-icon icon="solar:check-circle-bold" class="text-lg align-middle mr-2"></iconify-icon> INGEST COMPLETE';
                         uploadBtn.classList.remove('bg-[#050505]', 'border', 'text-[#39FF14]');
                         uploadBtn.classList.add('bg-white', 'text-black');
+                        await waitForAsset(ensuredPublicId);
                         fetchCloudLibrary();
                         setTimeout(() => resetButton(uploadBtn, originalText), 3000);
                     } else {
