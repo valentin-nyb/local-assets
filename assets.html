@@ -229,41 +229,59 @@
         function setupUploadHandler() {
             const uploadBtn = document.getElementById('upload-btn');
             const fileInput = document.getElementById('hidden-file-input');
+            
             uploadBtn.addEventListener('click', () => fileInput.click());
+            
             fileInput.addEventListener('change', async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
+                
                 const djName = document.getElementById('ingest-name').value.trim();
                 const date = document.getElementById('ingest-date').value.trim();
                 const shot = document.getElementById('ingest-shot').value;
-                if (!djName || !date) {
-                    alert('SYSTEM HALT: PLEASE ENTER DJ NAME AND DATE.');
-                    return;
-                }
+                
+                if (!djName || !date) { alert('SYSTEM HALT: PLEASE ENTER DJ NAME AND DATE.'); return; }
+
                 const originalText = uploadBtn.innerHTML;
                 uploadBtn.disabled = true;
-                uploadBtn.innerHTML = '<iconify-icon icon="solar:server-square-update-linear" class="animate-spin text-lg align-middle mr-2"></iconify-icon> TRANSMITTING TO VAULT...';
+                uploadBtn.innerHTML = '<iconify-icon icon="solar:server-square-update-linear" class="animate-spin text-lg align-middle mr-2"></iconify-icon> TRANSMITTING...';
                 uploadBtn.classList.remove('bg-[#39FF14]', 'text-black', 'shadow-[0_0_20px_rgba(57,255,20,0.3)]');
                 uploadBtn.classList.add('bg-[#050505]', 'text-[#39FF14]', 'border', 'border-[#39FF14]');
+                
                 try {
                     const formData = new FormData();
                     formData.append('file', file);
                     formData.append('upload_preset', 'venue_recording');
+                    
                     const safeDj = djName.toLowerCase().replace(/[^a-z0-9]/g, '_');
                     const safeDate = date.replace(/\s+/g, '_');
                     formData.append('public_id', `venue_masters/${safeDj}_${safeDate}_${shot.toLowerCase()}`);
-                    const response = await fetch('https://api.cloudinary.com/v1_1/dso3xwno0/video/upload', { method: 'POST', body: formData });
-                    if (!response.ok) throw new Error('Upload failed');
-                    document.getElementById('ingest-name').value = '';
-                    fileInput.value = '';
-                    uploadBtn.innerHTML = '<iconify-icon icon="solar:check-circle-bold" class="text-lg align-middle mr-2"></iconify-icon> INGEST COMPLETE';
-                    uploadBtn.classList.remove('bg-[#050505]', 'border', 'text-[#39FF14]');
-                    uploadBtn.classList.add('bg-white', 'text-black');
-                    fetchCloudLibrary();
-                    setTimeout(() => resetButton(uploadBtn, originalText), 3000);
+                    
+                    // Note: Changed endpoint to 'auto/upload' to handle any file type gracefully
+                    const response = await fetch('https://api.cloudinary.com/v1_1/dso3xwno0/auto/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const responseData = await response.json(); // Intercept the exact response
+                    
+                    if (response.ok) {
+                        document.getElementById('ingest-name').value = '';
+                        fileInput.value = '';
+                        uploadBtn.innerHTML = '<iconify-icon icon="solar:check-circle-bold" class="text-lg align-middle mr-2"></iconify-icon> INGEST COMPLETE';
+                        uploadBtn.classList.remove('bg-[#050505]', 'border', 'text-[#39FF14]');
+                        uploadBtn.classList.add('bg-white', 'text-black');
+                        fetchCloudLibrary();
+                        setTimeout(() => resetButton(uploadBtn, originalText), 3000);
+                    } else {
+                        // We failed! Log the exact reason Cloudinary gave us
+                        console.error("CLOUDINARY REJECTION REASON:", responseData.error.message);
+                        alert(`UPLOAD FAILED: ${responseData.error.message}`);
+                        resetButton(uploadBtn, originalText);
+                    }
                 } catch (err) {
-                    console.error('Upload Error:', err);
-                    alert('SIGNAL LOSS: UPLOAD FAILED.');
+                    console.error('Network/CORS Error:', err);
+                    alert('CRITICAL NETWORK ERROR. Check console.');
                     resetButton(uploadBtn, originalText);
                 }
             });
