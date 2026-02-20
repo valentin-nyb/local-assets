@@ -149,6 +149,24 @@
     <script>
         let cloudAssets = [];
         let pendingAssets = [];
+        const PENDING_STORAGE_KEY = 'local_assets_pending';
+
+        function loadPendingFromStorage() {
+            try {
+                const raw = localStorage.getItem(PENDING_STORAGE_KEY);
+                return raw ? JSON.parse(raw) : [];
+            } catch (_) {
+                return [];
+            }
+        }
+
+        function savePendingToStorage() {
+            try {
+                localStorage.setItem(PENDING_STORAGE_KEY, JSON.stringify(pendingAssets));
+            } catch (_) {
+                /* noop if storage unavailable */
+            }
+        }
 
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
@@ -188,11 +206,13 @@
 
                 // Drop pending items that now exist in Cloudinary
                 pendingAssets = pendingAssets.filter(p => !latest.find(item => item.id === p.id));
+                savePendingToStorage();
                 cloudAssets = [...pendingAssets, ...latest];
                 renderList();
             } catch (err) {
                 console.error('Fetch error:', err);
-                list.innerHTML = '<div class="col-span-full text-sm text-red-400">Unable to load assets from Cloudinary.</div>';
+                renderList();
+                list.innerHTML = '<div class="col-span-full text-sm text-red-400">Unable to load assets from Cloudinary (showing pending items).</div>';
             }
         }
 
@@ -288,6 +308,7 @@
                         };
 
                         pendingAssets.unshift(newItem);
+                        savePendingToStorage();
                         cloudAssets = [newItem, ...cloudAssets];
                         renderList();
 
@@ -320,6 +341,9 @@
         }
 
         window.onload = function() {
+            pendingAssets = loadPendingFromStorage();
+            cloudAssets = [...pendingAssets];
+            renderList();
             flatpickr('#ingest-date', { defaultDate: 'today', dateFormat: 'd M Y', disableMobile: 'true' });
             fetchCloudLibrary();
             setupUploadHandler();
