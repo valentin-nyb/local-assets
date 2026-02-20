@@ -236,19 +236,30 @@
                     const cleanId = res.public_id.replace('venue_masters/', '');
                     let dj = "ARTIST";
                     let date = res.created_at.split('T')[0];
-                    let shot = "MASTER";
+                    let shot = "";
 
-                    const parts = cleanId.match(/^(.+?)_(\d{4}-\d{2}-\d{2}|\d{1,2}_[a-zA-Z]{3}_\d{4})_?(a|b|crowd|master|master_cam|booth_cam|stage_cam|crowd_cam)?$/i);
-                    if (parts) {
-                        dj = parts[1].replace(/_/g, ' ');
-                        date = parts[2].replace(/_/g, ' ');
-                        if (parts[3]) {
-                            shot = parts[3].replace('_', ' ');
-                        }
+                    const parts = cleanId.split('_');
+                    const maybeShot = (parts[parts.length - 1] || '').toLowerCase();
+                    const maybeDate = (parts[parts.length - 2] || '');
+                    const datePattern = /^\d{4}-\d{2}-\d{2}$|^\d{1,2}_[a-zA-Z]{3}_\d{4}$/;
+                    if (datePattern.test(maybeDate)) {
+                        date = maybeDate.replace(/_/g, ' ');
+                        dj = parts.slice(0, parts.length - 2).join(' ').replace(/_/g, ' ');
+                    } else {
+                        dj = cleanId.replace(/_/g, ' ');
                     }
+
+                    const shotMap = {
+                        'a': 'A CAM', 'b': 'B CAM', 'c': 'C CAM', 'crowd': 'CROWD',
+                        'master': 'MASTER', 'master cam': 'MASTER', 'master_cam': 'MASTER',
+                        'booth_cam': 'BOOTH CAM', 'stage_cam': 'STAGE CAM', 'crowd_cam': 'CROWD CAM'
+                    };
+                    if (shotMap[maybeShot]) shot = shotMap[maybeShot];
 
                     const url = `https://res.cloudinary.com/dso3xwno0/video/upload/${res.public_id}.${res.format}`;
                     const cleanDjName = dj.replace(/[0-9]/g, '').trim() || dj;
+                    const shotLabel = (shot || 'SHOT').toUpperCase();
+                    const dateLabel = date || res.created_at.split('T')[0];
 
                     const row = document.createElement('div');
                     row.className = "flex items-center justify-between p-4 bg-[#0a0a0a] border border-[#27272a] rounded-2xl group hover:border-[#39FF14]/40 transition-all cursor-pointer";
@@ -260,12 +271,12 @@
                             <div class="min-w-0 flex-1">
                                 <div class="flex items-center gap-3 mb-1">
                                     <p class="text-sm font-bold uppercase text-white truncate tracking-tight">${cleanDjName.toUpperCase()}</p>
-                                    <span class="text-[8px] px-1.5 py-0.5 rounded border border-[#39FF14]/30 text-[#39FF14] font-mono font-bold uppercase tracking-tighter shrink-0">${shot.toUpperCase()}</span>
+                                    <span class="text-[8px] px-1.5 py-0.5 rounded border border-[#39FF14]/30 text-[#39FF14] font-mono font-bold uppercase tracking-tighter shrink-0">${shotLabel}</span>
                                 </div>
 
-                                <p class="text-[9px] font-mono text-zinc-500 uppercase tracking-widest mb-0.5">FABRIC LONDON // ${date} // ${res.format.toUpperCase()}</p>
+                                <p class="text-[9px] font-mono text-zinc-500 uppercase tracking-widest mb-0.5">FABRIC LONDON // ${dateLabel} // ${res.format.toUpperCase()}</p>
 
-                                <p class="text-[9px] font-mono text-[#39FF14] uppercase tracking-widest">${shot.toUpperCase()}</p>
+                                <p class="text-[9px] font-mono text-[#39FF14] uppercase tracking-widest">${shotLabel}</p>
                             </div>
                         </div>
                         <a href="${url}" download class="w-10 h-10 flex items-center justify-center text-zinc-600 hover:text-[#39FF14] transition-colors shrink-0">
