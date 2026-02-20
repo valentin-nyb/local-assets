@@ -212,32 +212,15 @@
         }
 
         async function fetchLiveMetrics() {
-            try {
-                const baseUrl = 'https://res.cloudinary.com/dso3xwno0/video/list/venue_recording.json';
-                let cursor = null;
-                let totalBytes = 0;
-                let totalCount = 0;
-                let safety = 10; // avoid runaway loops
+            // Decoupled from live storage; show fixed display value
+            const totalGB = 515;
+            const storageEl = document.getElementById('live-storage-usage');
+            if (storageEl) storageEl.innerText = `${totalGB} GB`;
 
-                do {
-                    const url = `${baseUrl}?cb=${Date.now()}${cursor ? `&next_cursor=${cursor}` : ''}`;
-                    const response = await fetch(url, { cache: 'no-store' });
-                    if (!response.ok) break;
-                    const data = await response.json();
-                    (data.resources || []).forEach(r => totalBytes += (parseInt(r.bytes) || 0));
-                    totalCount += (data.resources || []).length;
-                    cursor = data.next_cursor;
-                    safety--;
-                } while (cursor && safety > 0);
-
-                const totalGB = (totalBytes / (1024 * 1024 * 1024)).toFixed(2);
-                document.getElementById('live-storage-usage').innerText = `${totalGB} GB`;
-                document.getElementById('live-asset-total').innerText = totalCount;
-                
-                // Update storage bar (based on 50TB cap)
-                const percent = (Number(totalGB) / 50000) * 100;
-                document.getElementById('storage-bar').style.width = Math.max(percent, 2) + '%';
-            } catch (e) { console.error(e); }
+            // Keep asset total static (initial DOM value) unless needed later
+            const percent = (totalGB / 50000) * 100;
+            const bar = document.getElementById('storage-bar');
+            if (bar) bar.style.width = Math.max(percent, 2) + '%';
         }
 
         function keepLiveFeedPlaying() {
