@@ -169,18 +169,20 @@
             list.innerHTML = '';
             empty.classList.add('hidden');
             try {
-                const response = await fetch('https://res.cloudinary.com/dso3xwno0/video/list/venue_recording.json');
+                const response = await fetch(`https://res.cloudinary.com/dso3xwno0/video/list/venue_recording.json?cb=${Date.now()}`);
                 const data = await response.json();
-                cloudAssets = (data.resources || []).map(res => {
-                    const parts = res.public_id.replace('venue_masters/', '').split('_');
-                    return {
-                        dj: parts[0] ? parts[0].toUpperCase() : 'MICHAEL',
-                        date: parts[1] || res.created_at.split('T')[0],
-                        shot: parts[2] || 'BIBI',
-                        url: `https://res.cloudinary.com/dso3xwno0/video/upload/${res.public_id}.${res.format}`,
-                        format: res.format.toUpperCase()
-                    };
-                });
+                cloudAssets = (data.resources || [])
+                    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                    .map(res => {
+                        const parts = res.public_id.replace('venue_masters/', '').split('_');
+                        return {
+                            dj: parts[0] ? parts[0].toUpperCase() : 'MICHAEL',
+                            date: parts[1] || res.created_at.split('T')[0],
+                            shot: parts[2] ? parts[2].toUpperCase() : 'BIBI',
+                            url: `https://res.cloudinary.com/dso3xwno0/video/upload/${res.public_id}.${res.format}`,
+                            format: (res.format || 'FILE').toUpperCase()
+                        };
+                    });
                 renderList();
             } catch (err) {
                 console.error('Fetch error:', err);
@@ -266,6 +268,21 @@
                     const responseData = await response.json(); // Intercept the exact response
                     
                     if (response.ok) {
+                        const publicId = responseData.public_id || `venue_masters/${safeDj}_${safeDate}_${shot.toLowerCase()}`;
+                        const derivedFormat = (responseData.format || 'file').toUpperCase();
+                        const finalUrl = responseData.secure_url || responseData.url || `https://res.cloudinary.com/dso3xwno0/video/upload/${publicId}.${responseData.format || 'mp4'}`;
+
+                        const newItem = {
+                            dj: safeDj.toUpperCase(),
+                            date,
+                            shot: shot.toUpperCase(),
+                            url: finalUrl,
+                            format: derivedFormat
+                        };
+
+                        cloudAssets.unshift(newItem);
+                        renderList();
+
                         document.getElementById('ingest-name').value = '';
                         fileInput.value = '';
                         uploadBtn.innerHTML = '<iconify-icon icon="solar:check-circle-bold" class="text-lg align-middle mr-2"></iconify-icon> INGEST COMPLETE';
