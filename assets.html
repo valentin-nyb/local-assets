@@ -112,7 +112,7 @@
                         <div class="flex justify-between"><span class="text-muted-foreground">Vault Status</span><span class="text-[#39FF14] font-semibold">Operational</span></div>
                         <div class="flex justify-between"><span class="text-muted-foreground">Uploads Today</span><span class="font-semibold">12</span></div>
                         <div class="flex justify-between"><span class="text-muted-foreground">Storage</span><span class="font-semibold">250 GB / 50 TB</span></div>
-                        <div class="flex justify-between"><span class="text-muted-foreground">Latest Sync</span><span class="font-semibold">Just now</span></div>
+                        <div class="flex justify-between"><span class="text-muted-foreground">Latest Sync</span><span id="latest-sync" class="font-semibold">--</span></div>
                     </div>
                     <div class="w-full bg-white/5 h-1 rounded-full overflow-hidden"><div class="bg-[#39FF14] h-full w-[12%]"></div></div>
                 </div>
@@ -151,6 +151,26 @@
         const CLOUD_LIST_URL = `https://res.cloudinary.com/dso3xwno0/video/list/${CLOUD_TAG}.json`;
         const REFRESH_INTERVAL = 10000;
         let refreshTimer = null;
+        let lastSyncTimestamp = null;
+
+        function formatTimeAgo(timestamp) {
+            if (!timestamp) return 'No assets yet';
+            const diffMs = Date.now() - new Date(timestamp).getTime();
+            if (diffMs < 0) return 'Just now';
+            const minutes = Math.floor(diffMs / 60000);
+            if (minutes < 1) return 'Just now';
+            if (minutes < 60) return `${minutes} min ago`;
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours} hr ago`;
+            const days = Math.floor(hours / 24);
+            return `${days} d ago`;
+        }
+
+        function updateLatestSyncDisplay(statusText) {
+            const el = document.getElementById('latest-sync');
+            if (!el) return;
+            el.textContent = statusText || formatTimeAgo(lastSyncTimestamp);
+        }
 
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
@@ -187,10 +207,20 @@
                             format: (res.format || 'FILE').toUpperCase()
                         };
                     });
+                if (data.resources && data.resources.length) {
+                    lastSyncTimestamp = data.resources.reduce((latest, res) => {
+                        const created = new Date(res.created_at).getTime();
+                        return created > latest ? created : latest;
+                    }, 0);
+                } else {
+                    lastSyncTimestamp = null;
+                }
+                updateLatestSyncDisplay();
                 renderList();
             } catch (err) {
                 console.error('Fetch error:', err);
                 list.innerHTML = '<div class="col-span-full text-sm text-red-400">Unable to load assets from Cloudinary.</div>';
+                updateLatestSyncDisplay('Sync failed');
             }
         }
 
