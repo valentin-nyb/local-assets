@@ -32,6 +32,34 @@
         @media (max-width: 767px) { #sidebar { position: fixed; z-index: 50; height: 100vh; } }
         .sleek-flap { writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.3em; font-size: 10px; font-weight: 800; }
         .bg-scanlines { background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.2) 50%, rgba(0, 0, 0, 0.2)); background-size: 100% 4px; }
+        /* Shot selector neon styling */
+        select#ingest-shot { appearance: none; background: #0f0f0f; color: #fff; border: 1px solid #27272a; box-shadow: inset 0 0 10px rgba(0,0,0,0.35); padding-right: 2.5rem; position: relative; }
+        select#ingest-shot:focus { border-color: #39ff14; outline: none; box-shadow: 0 0 0 3px rgba(57,255,20,0.12); }
+        select#ingest-shot option { background: #050505; color: #fff; }
+        /* Simple arrow indicator */
+        select#ingest-shot::-ms-expand { display: none; }
+        .select-arrow { pointer-events: none; position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); color: #39ff14; font-size: 12px; }
+        /* Flatpickr neon override to match dark deck */
+        .flatpickr-calendar { background: #050505; border: 1px solid #27272a; box-shadow: 0 10px 40px rgba(0,0,0,0.55), 0 0 25px rgba(57,255,20,0.18); font-family: 'JetBrains Mono', monospace; }
+        .flatpickr-months { background: #0a0a0a; border-bottom: 1px solid #27272a; }
+        .flatpickr-current-month input.cur-year { color: #fff; }
+        .flatpickr-current-month .cur-month { color: #fff !important; }
+        .flatpickr-monthDropdown-months { background: #0a0a0a; color: #fff !important; border: 1px solid #27272a; border-radius: 8px; }
+        .flatpickr-monthDropdown-months option { background: #050505; color: #fff; }
+        .flatpickr-current-month .flatpickr-monthDropdown-months { color: #fff !important; }
+        .flatpickr-prev-month, .flatpickr-next-month { color: #39ff14; fill: #39ff14; }
+        .flatpickr-prev-month svg, .flatpickr-next-month svg { stroke: #39ff14; fill: none; }
+        .flatpickr-prev-month:hover, .flatpickr-next-month:hover { background: rgba(57,255,20,0.08); }
+        .flatpickr-weekday, .flatpickr-weekdays { background: #050505; color: #a1a1aa; border-bottom: 1px solid #27272a; }
+        .flatpickr-day { color: #e5e5e5; border-radius: 10px; }
+        .flatpickr-day:hover, .flatpickr-day:focus { background: rgba(57,255,20,0.12); color: #39ff14; border-color: #39ff14; }
+        .flatpickr-day.today { border: 1px solid #39ff14; color: #39ff14; }
+        .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange { background: #39ff14; color: #000; box-shadow: 0 0 12px rgba(57,255,20,0.35); }
+        .flatpickr-day.inRange { background: rgba(57,255,20,0.12); border-color: #39ff14; color: #39ff14; }
+        .flatpickr-time { border-top: 1px solid #27272a; background: #0a0a0a; }
+        .flatpickr-time input { color: #fff; }
+        .flatpickr-time .flatpickr-time-separator, .flatpickr-time .flatpickr-am-pm { color: #a1a1aa; }
+        .flatpickr-arrow { fill: #39ff14; }
     </style>
 </head>
 <body class="font-sans antialiased bg-background text-foreground overflow-hidden h-screen w-screen flex selection:bg-primary selection:text-black">
@@ -80,19 +108,20 @@
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
                             <div class="md:col-span-2">
                                 <label class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">DJ Name</label>
-                                <input id="ingest-name" type="text" placeholder="e.g. Michael Bibi" class="mt-2 w-full bg-[#0f0f0f] border border-border rounded-xl px-3 py-3 text-sm focus:border-primary focus:outline-none">
+                                <input id="ingest-name" type="text" placeholder="e.g. MICHAEL BIBI" class="mt-2 w-full bg-[#0f0f0f] border border-border rounded-xl px-3 py-3 text-sm focus:border-primary focus:outline-none">
                             </div>
                             <div>
                                 <label class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Date</label>
                                 <input id="ingest-date" type="text" class="mt-2 w-full bg-[#0f0f0f] border border-border rounded-xl px-3 py-3 text-sm focus:border-primary focus:outline-none" placeholder="Pick date">
                             </div>
-                            <div>
+                            <div class="relative">
                                 <label class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Shot</label>
-                                <select id="ingest-shot" class="mt-2 w-full bg-[#0f0f0f] border border-border rounded-xl px-3 py-3 text-sm focus:border-primary focus:outline-none">
+                                <select id="ingest-shot" class="mt-2 w-full rounded-xl px-3 py-3 text-sm focus:outline-none">
                                     <option value="A">A CAM</option>
                                     <option value="B">B CAM</option>
                                     <option value="crowd">CROWD</option>
                                 </select>
+                                <span class="select-arrow">▾</span>
                             </div>
                         </div>
                         <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
@@ -187,40 +216,69 @@
         }
 
         async function fetchCloudLibrary() {
-            const list = document.getElementById('cloud-list');
-            const empty = document.getElementById('empty-state');
-            list.innerHTML = '';
-            empty.classList.add('hidden');
             try {
-                const response = await fetch(`${CLOUD_LIST_URL}?cb=${Date.now()}`, { cache: 'no-store' });
+                const response = await fetch(`https://res.cloudinary.com/dso3xwno0/video/list/venue_recording.json`);
                 const data = await response.json();
-                cloudAssets = (data.resources || [])
-                    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-                    .map(res => {
-                        const parts = res.public_id.replace('venue_masters/', '').split('_');
-                        return {
-                            id: res.public_id,
-                            dj: parts[0] ? parts[0].toUpperCase() : 'MICHAEL',
-                            date: parts[1] || res.created_at.split('T')[0],
-                            shot: parts[2] ? parts[2].toUpperCase() : 'BIBI',
-                            url: `https://res.cloudinary.com/dso3xwno0/video/upload/${res.public_id}.${res.format}`,
-                            format: (res.format || 'FILE').toUpperCase()
-                        };
-                    });
-                if (data.resources && data.resources.length) {
-                    lastSyncTimestamp = data.resources.reduce((latest, res) => {
-                        const created = new Date(res.created_at).getTime();
-                        return created > latest ? created : latest;
-                    }, 0);
-                } else {
-                    lastSyncTimestamp = null;
-                }
-                updateLatestSyncDisplay();
-                renderList();
-            } catch (err) {
-                console.error('Fetch error:', err);
-                list.innerHTML = '<div class="col-span-full text-sm text-red-400">Unable to load assets from Cloudinary.</div>';
-                updateLatestSyncDisplay('Sync failed');
+                
+                const list = document.getElementById('cloud-list');
+                list.innerHTML = '';
+                
+                data.resources.forEach(res => {
+                    const cleanId = res.public_id.replace('venue_masters/', '');
+                    
+                    let dj = "ARTIST";
+                    let date = res.created_at.split('T')[0];
+                    let shot = "MASTER";
+
+                    const shotMatch = cleanId.match(/_(MASTER_CAM|BOOTH_CAM|CROWD_CAM|STAGE_CAM|MASTER)$/i);
+                    let withoutShot = cleanId;
+                    if (shotMatch) {
+                        shot = shotMatch[1].replace('_', ' ');
+                        withoutShot = cleanId.substring(0, shotMatch.index);
+                    }
+
+                    const dateMatch = withoutShot.match(/_(\d{4}-\d{2}-\d{2}|\d{1,2}_[a-zA-Z]{3}_\d{4})$/);
+                    if (dateMatch) {
+                        date = dateMatch[1].replace(/_/g, ' ');
+                        dj = withoutShot.substring(0, dateMatch.index).replace(/_/g, ' ');
+                    } else {
+                        dj = withoutShot.replace(/_/g, ' ');
+                    }
+
+                    const url = `https://res.cloudinary.com/dso3xwno0/video/upload/${res.public_id}.${res.format}`;
+                    const cleanDjName = dj.replace(/[0-9]/g, '').trim() || dj;
+
+                    const row = document.createElement('div');
+                    row.className = "flex items-center justify-between p-4 bg-[#0a0a0a] border border-[#27272a] rounded-2xl group hover:border-[#39FF14]/40 transition-all cursor-pointer";
+                    row.innerHTML = `
+                        <div class="flex items-center gap-5 min-w-0 flex-1">
+                            <div class="w-10 h-10 bg-black border border-[#27272a] flex items-center justify-center rounded-xl text-[#39FF14] shrink-0 transition-colors group-hover:bg-[#39FF14] group-hover:text-black">
+                                <iconify-icon icon="solar:play-bold" class="text-lg"></iconify-icon>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center gap-3 mb-1">
+                                    <p class="text-sm font-bold uppercase text-white truncate tracking-tight">${cleanDjName.toUpperCase()}</p>
+                                    <span class="text-[8px] px-1.5 py-0.5 rounded border border-[#39FF14]/30 text-[#39FF14] font-mono font-bold uppercase tracking-tighter shrink-0">${shot.toUpperCase()}</span>
+                                </div>
+                                
+                                <p class="text-[9px] font-mono text-zinc-500 uppercase tracking-widest mb-0.5">FABRIC LONDON // ${res.format.toUpperCase()} MASTER</p>
+                                
+                                <p class="text-[9px] font-mono text-[#39FF14] uppercase tracking-widest">${shot.toUpperCase()}</p>
+                            </div>
+                        </div>
+                        <a href="${url}" download class="w-10 h-10 flex items-center justify-center text-zinc-600 hover:text-[#39FF14] transition-colors shrink-0">
+                            <iconify-icon icon="solar:cloud-download-bold" class="text-xl"></iconify-icon>
+                        </a>`;
+                    row.addEventListener('click', () => playPreview(url));
+                    const downloadLink = row.querySelector('a');
+                    if (downloadLink) downloadLink.addEventListener('click', (e) => e.stopPropagation());
+                    list.appendChild(row);
+                });
+            } catch (e) {
+                document.getElementById('cloud-list').innerHTML = `
+                    <div class="p-4 bg-[#0a0a0a] border border-[#27272a] rounded-2xl text-center text-zinc-500 text-[10px] font-mono uppercase tracking-widest">
+                        Awaiting new master ingestion...
+                    </div>`;
             }
         }
 

@@ -166,7 +166,7 @@
             <div class="max-w-4xl mx-auto">
                 <div class="text-center mb-16 reveal active">
                     <h2 class="md:text-3xl lg:text-4xl text-foreground text-2xl font-bold tracking-tight mb-4" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">SATURDAY NIGHT // 02:00 AM</h2>
-                    <p class="font-mono text-sm md:text-base text-muted-foreground mb-6">Location: Koko, London | Artist: Amongst Few</p>
+                    <p class="font-mono text-sm md:text-base text-muted-foreground mb-6">Location: Koko, London | Artist: AMONGST FEW</p>
                     <div class="inline-flex items-center gap-2 px-4 py-2 border border-red-500/50 bg-red-500/10 rounded-full">
                         <span class="relative flex h-3 w-3"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span></span>
                         <span class="font-mono text-xs tracking-[0.2em] text-red-500 uppercase font-bold">LIVE</span>
@@ -193,7 +193,7 @@
                             <div class="flex items-center gap-3 mb-4"><iconify-icon icon="solar:lock-keyhole-linear" class="text-primary text-xl"></iconify-icon><span class="font-mono text-xs tracking-[0.2em] text-muted-foreground">STEP 02</span></div>
                             <h3 class="md:text-xl text-foreground text-lg font-semibold font-mono mb-1">MANAGE</h3>
                             <p class="font-mono text-xs text-muted-foreground mb-4">14:00 PM</p>
-                            <div class="border border-[#333] bg-[#1a1a1a] p-3 mb-4"><p class="font-mono text-xs text-foreground/80">Artist <span class="text-primary">Amongst few</span> viewed the draft.</p></div>
+                            <div class="border border-[#333] bg-[#1a1a1a] p-3 mb-4"><p class="font-mono text-xs text-foreground/80">Artist <span class="text-primary">AMONGST FEW</span> viewed the draft.</p></div>
                             <div class="flex items-center gap-3"><div class="w-8 h-8 border-2 border-primary bg-primary/20 flex items-center justify-center rounded-full"><iconify-icon icon="solar:check-circle-linear" class="text-primary"></iconify-icon></div><span class="font-mono text-sm text-primary">APPROVED via Mobile (No emails sent)</span></div>
                         </div>
                     </div>
@@ -315,11 +315,11 @@
 
                             <div class="bg-[#111] border border-[#222] p-4 rounded-xl shrink-0">
                                 <div class="relative aspect-video rounded overflow-hidden mb-4 bg-zinc-900 border border-white/5">
-                                    <video src="https://res.cloudinary.com/dso3xwno0/video/upload/v1770888132/Beltran_e58al0.mov" class="w-full h-full object-cover" autoplay loop muted playsinline></video>
+                                    <video id="venue-live-video" src="https://res.cloudinary.com/dso3xwno0/video/upload/v1770888132/Beltran_e58al0.mov" class="w-full h-full object-cover" autoplay loop muted playsinline preload="auto"></video>
                                 </div>
                                 <div class="space-y-2.5 font-mono text-[9px] uppercase tracking-widest">
                                     <p class="text-primary leading-relaxed">Live Feed Room 1 // Main Floor</p>
-                                    <p class="text-white">Artist: Beltran</p>
+                                    <p class="text-white">Artist: MICHAEL BIBI</p>
                                     <p class="text-red-500">Elapsed <span id="venue-elapsed">01:42:15</span></p>
                                     <p class="text-primary">Cameras 3/3 Active</p>
                                 </div>
@@ -364,6 +364,15 @@
             if (el) el.textContent = pad(h) + ':' + pad(m) + ':' + pad(s);
         }
         setInterval(update, 1000);
+            var phoneVideo = document.getElementById('venue-live-video');
+            if (phoneVideo) {
+                phoneVideo.muted = true;
+                var ensurePlay = function() { phoneVideo.play().catch(function(){}); };
+                phoneVideo.addEventListener('pause', ensurePlay);
+                phoneVideo.addEventListener('ended', function(){ phoneVideo.currentTime = 0; ensurePlay(); });
+                document.addEventListener('visibilitychange', function(){ if (!document.hidden) ensurePlay(); });
+                ensurePlay();
+            }
     });
     </script>
     <div class="text-center mb-10 reveal active">
