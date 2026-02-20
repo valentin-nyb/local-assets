@@ -257,7 +257,7 @@
                     if (shotMap[maybeShot]) shot = shotMap[maybeShot];
 
                     const url = `https://res.cloudinary.com/dso3xwno0/video/upload/${res.public_id}.${res.format}`;
-                    const cleanDjName = dj.replace(/[0-9]/g, '').trim() || dj;
+                    const cleanDjName = (dj || '').replace(/_/g, ' ').trim() || dj;
                     const shotLabel = (shot || 'SHOT').toUpperCase();
                     const dateLabel = date || res.created_at.split('T')[0];
 
