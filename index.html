@@ -82,6 +82,9 @@
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         @keyframes scanline { 0% { transform: translateY(-100%); } 100% { transform: translateY(100%); } }
         .bg-scanlines { background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.2) 50%, rgba(0, 0, 0, 0.2)); background-size: 100% 4px; }
+        /* Seamless marquee ticker */
+        .animate-marquee { display: flex; width: max-content; animation: marquee 24s linear infinite; }
+        @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
     </style>
 </head>
 
