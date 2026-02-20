@@ -24,9 +24,6 @@ document.addEventListener("DOMContentLoaded", () => {
             <a href="assets.html" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('assets.html')}">
                 <iconify-icon icon="solar:clapperboard-play-linear" class="text-lg"></iconify-icon>Media Assets
             </a>
-            <a href="archive.html" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('archive.html')}">
-                <iconify-icon icon="solar:archive-linear" class="text-lg"></iconify-icon>Archive
-            </a>
         </nav>
     `;
 });
