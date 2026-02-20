@@ -148,25 +148,6 @@
 
     <script>
         let cloudAssets = [];
-        let pendingAssets = [];
-        const PENDING_STORAGE_KEY = 'local_assets_pending';
-
-        function loadPendingFromStorage() {
-            try {
-                const raw = localStorage.getItem(PENDING_STORAGE_KEY);
-                return raw ? JSON.parse(raw) : [];
-            } catch (_) {
-                return [];
-            }
-        }
-
-        function savePendingToStorage() {
-            try {
-                localStorage.setItem(PENDING_STORAGE_KEY, JSON.stringify(pendingAssets));
-            } catch (_) {
-                /* noop if storage unavailable */
-            }
-        }
 
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
@@ -190,7 +171,7 @@
             try {
                 const response = await fetch(`https://res.cloudinary.com/dso3xwno0/video/list/venue_recording.json?cb=${Date.now()}`);
                 const data = await response.json();
-                const latest = (data.resources || [])
+                cloudAssets = (data.resources || [])
                     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
                     .map(res => {
                         const parts = res.public_id.replace('venue_masters/', '').split('_');
@@ -203,16 +184,10 @@
                             format: (res.format || 'FILE').toUpperCase()
                         };
                     });
-
-                // Drop pending items that now exist in Cloudinary
-                pendingAssets = pendingAssets.filter(p => !latest.find(item => item.id === p.id));
-                savePendingToStorage();
-                cloudAssets = [...pendingAssets, ...latest];
                 renderList();
             } catch (err) {
                 console.error('Fetch error:', err);
-                renderList();
-                list.innerHTML = '<div class="col-span-full text-sm text-red-400">Unable to load assets from Cloudinary (showing pending items).</div>';
+                list.innerHTML = '<div class="col-span-full text-sm text-red-400">Unable to load assets from Cloudinary.</div>';
             }
         }
 
@@ -238,11 +213,21 @@
                             <p class="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">FABRIC LONDON // ${item.date} // ${item.format}</p>
                         </div>
                     </div>
-                    <a href="${item.url}" download class="w-10 h-10 flex items-center justify-center text-zinc-600 hover:text-primary transition-colors">
+                    <button onclick="triggerDownload('${item.url}', '${item.dj}_${item.date}_${item.shot}.${(item.format || 'file').toLowerCase()}')" class="w-10 h-10 flex items-center justify-center text-zinc-600 hover:text-primary transition-colors">
                         <iconify-icon icon="solar:cloud-download-bold" class="text-2xl"></iconify-icon>
-                    </a>`;
+                    </button>`;
                 list.appendChild(row);
             });
+        }
+
+        function triggerDownload(url, filename) {
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            link.rel = 'noopener';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         function playPreview(url) {
@@ -307,8 +292,6 @@
                             format: derivedFormat
                         };
 
-                        pendingAssets.unshift(newItem);
-                        savePendingToStorage();
                         cloudAssets = [newItem, ...cloudAssets];
                         renderList();
 
@@ -341,9 +324,6 @@
         }
 
         window.onload = function() {
-            pendingAssets = loadPendingFromStorage();
-            cloudAssets = [...pendingAssets];
-            renderList();
             flatpickr('#ingest-date', { defaultDate: 'today', dateFormat: 'd M Y', disableMobile: 'true' });
             fetchCloudLibrary();
             setupUploadHandler();
