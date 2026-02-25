@@ -102,7 +102,7 @@
                 </a>
             </nav>
 
-            <canvas id="dotCanvas" class="absolute inset-0 w-full h-full pointer-events-none" aria-hidden="true"></canvas>
+            <canvas id="dotCanvas" class="dot-grid-canvas absolute inset-0 w-full h-full pointer-events-none" aria-hidden="true"></canvas>
 
             <div class="absolute inset-0 opacity-[0.05] pointer-events-none bg-noise z-0"></div>
             <div class="absolute inset-0 pointer-events-none z-0 overflow-hidden mix-blend-overlay">
@@ -570,59 +570,73 @@
     </script>
 
     <script>
-        // Interactive dot grid background for hero
-        (() => {
-            const canvas = document.getElementById('dotCanvas');
-            if (!canvas) return;
-            const ctx = canvas.getContext('2d');
-            let dots = [];
-            const spacing = 30;
-            const mouse = { x: -1000, y: -1000 };
-            const glowRadius = 120;
+        const canvases = document.querySelectorAll('.dot-grid-canvas');
+        const mouse = { x: -1000, y: -1000 };
+        const dotsConfigs = [];
 
-            function init() {
-                canvas.width = window.innerWidth;
-                canvas.height = window.innerHeight;
-                dots = [];
-                for (let x = spacing / 2; x < canvas.width; x += spacing) {
-                    for (let y = spacing / 2; y < canvas.height; y += spacing) {
+        const SPACING = 30;
+        const DOT_SIZE = 1.2;
+        const GLOW_RADIUS = 120;
+        const COLOR_IDLE = '#1a1a1a';
+        const COLOR_ACTIVE = '57, 255, 20';
+
+        function initCanvases() {
+            canvases.forEach((canvas, index) => {
+                const rect = canvas.parentElement.getBoundingClientRect();
+                canvas.width = rect.width;
+                canvas.height = rect.height;
+
+                const dots = [];
+                for (let x = SPACING / 2; x < canvas.width; x += SPACING) {
+                    for (let y = SPACING / 2; y < canvas.height; y += SPACING) {
                         dots.push({ x, y });
                     }
                 }
-            }
+                dotsConfigs[index] = { ctx: canvas.getContext('2d'), dots, canvas };
+            });
+        }
 
-            function draw() {
+        function draw() {
+            dotsConfigs.forEach(config => {
+                const { ctx, dots, canvas } = config;
+                const rect = canvas.getBoundingClientRect();
+
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                for (const dot of dots) {
-                    const dx = mouse.x - dot.x;
-                    const dy = mouse.y - dot.y;
+
+                const localMouseX = mouse.x - rect.left;
+                const localMouseY = mouse.y - rect.top;
+
+                dots.forEach(dot => {
+                    const dx = localMouseX - dot.x;
+                    const dy = localMouseY - dot.y;
                     const distance = Math.sqrt(dx * dx + dy * dy);
-                    if (distance < glowRadius) {
-                        const opacity = 1 - distance / glowRadius;
-                        ctx.fillStyle = `rgba(57, 255, 20, ${opacity})`;
+
+                    if (distance < GLOW_RADIUS) {
+                        const opacity = 1 - (distance / GLOW_RADIUS);
+                        ctx.fillStyle = `rgba(${COLOR_ACTIVE}, ${opacity})`;
                         ctx.beginPath();
-                        ctx.arc(dot.x, dot.y, 2.2, 0, Math.PI * 2);
+                        ctx.arc(dot.x, dot.y, DOT_SIZE + 0.5, 0, Math.PI * 2);
                         ctx.fill();
                     } else {
-                        ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+                        ctx.fillStyle = COLOR_IDLE;
                         ctx.beginPath();
-                        ctx.arc(dot.x, dot.y, 1.4, 0, Math.PI * 2);
+                        ctx.arc(dot.x, dot.y, DOT_SIZE, 0, Math.PI * 2);
                         ctx.fill();
                     }
-                }
-                requestAnimationFrame(draw);
-            }
-
-            window.addEventListener('mousemove', (e) => {
-                mouse.x = e.clientX;
-                mouse.y = e.clientY;
+                });
             });
+            requestAnimationFrame(draw);
+        }
 
-            window.addEventListener('resize', init);
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+        });
 
-            init();
-            draw();
-        })();
+        window.addEventListener('resize', initCanvases);
+
+        initCanvases();
+        draw();
     </script>
 </body>
 </html>
