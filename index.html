@@ -102,6 +102,8 @@
                 </a>
             </nav>
 
+            <canvas id="dotCanvas" class="absolute inset-0 w-full h-full pointer-events-none" aria-hidden="true"></canvas>
+
             <div class="absolute inset-0 opacity-[0.05] pointer-events-none bg-noise z-0"></div>
             <div class="absolute inset-0 pointer-events-none z-0 overflow-hidden mix-blend-overlay">
                 <div class="absolute inset-0 bg-scanlines opacity-30 pointer-events-none"></div>
@@ -288,8 +290,8 @@
                                 <iconify-icon icon="solar:wallet-linear" class="text-primary text-xl"></iconify-icon>
                             </div>
                             <div class="flex flex-col">
-                                <span class="font-mono text-sm tracking-widest uppercase text-white">Live Revenue Tracking</span>
-                                <span class="font-mono text-[10px] text-muted-foreground mt-1">Monitor monetization across all platforms.</span>
+                                <span class="font-mono text-sm tracking-widest uppercase text-white">Marketing assets ready</span>
+                                <span class="font-mono text-[10px] text-muted-foreground mt-1">All assets are ready for distribution.</span>
                             </div>
                         </div>
                     </div>
@@ -565,6 +567,62 @@
             }, { threshold: 0.1 });
             document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
         });
+    </script>
+
+    <script>
+        // Interactive dot grid background for hero
+        (() => {
+            const canvas = document.getElementById('dotCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            let dots = [];
+            const spacing = 30;
+            const mouse = { x: -1000, y: -1000 };
+            const glowRadius = 120;
+
+            function init() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                dots = [];
+                for (let x = spacing / 2; x < canvas.width; x += spacing) {
+                    for (let y = spacing / 2; y < canvas.height; y += spacing) {
+                        dots.push({ x, y });
+                    }
+                }
+            }
+
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                for (const dot of dots) {
+                    const dx = mouse.x - dot.x;
+                    const dy = mouse.y - dot.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    if (distance < glowRadius) {
+                        const opacity = 1 - distance / glowRadius;
+                        ctx.fillStyle = `rgba(57, 255, 20, ${opacity})`;
+                        ctx.beginPath();
+                        ctx.arc(dot.x, dot.y, 2.2, 0, Math.PI * 2);
+                        ctx.fill();
+                    } else {
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+                        ctx.beginPath();
+                        ctx.arc(dot.x, dot.y, 1.4, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+                requestAnimationFrame(draw);
+            }
+
+            window.addEventListener('mousemove', (e) => {
+                mouse.x = e.clientX;
+                mouse.y = e.clientY;
+            });
+
+            window.addEventListener('resize', init);
+
+            init();
+            draw();
+        })();
     </script>
 </body>
 </html>
