@@ -396,144 +396,84 @@
                 const response = await fetch(`${CONFIG.WORKER_URL}/list`);
                 const data = await response.json();
 
-                cloudAssets = data.map(file => parseAssetMeta(file.Key));
-                renderList();
+                cloudAssets = Array.isArray(data) ? data : [];
+                renderList(cloudAssets);
             } catch (e) {
                 console.error("Could not load library:", e);
             }
         }
 
-        function parseAssetMeta(key) {
-            const segments = (key || '').split('/').filter(Boolean);
-            const artistSlug = segments[1] || 'unknown';
-            const subFolder = segments[2] || 'misc';
-            const fullName = segments.slice(3).join('/') || (segments[segments.length - 1] || '');
-            const ext = (fullName.split('.').pop() || '').toUpperCase();
-            const base = fullName.replace(/\.[^.]+$/, '');
-            const dateMatch = base.match(/^(\d{1,2}_[a-z]{3}_[0-9]{4})_/i);
-            const date = (dateMatch ? dateMatch[1] : 'recent').replace(/_/g, ' ').toUpperCase();
-            const dj = artistSlug.replace(/_/g, ' ').toUpperCase();
-            const sessionId = artistSlug.toLowerCase() || 'unknown';
-
-            let shot = 'ASSET';
-            let assetType = 'MASTER';
-            if (subFolder === 'masters') {
-                shot = '4K LONG-FORM MASTER';
-                assetType = 'MASTER';
-            } else if (subFolder === 'audio') {
-                shot = 'HQ AUDIO';
-                assetType = 'AUDIO';
-            } else if (subFolder === 'social-suite') {
-                shot = 'SOCIAL CLIP';
-                assetType = 'SOCIAL';
-            } else if (subFolder === 'marketing') {
-                shot = 'THUMBNAIL';
-                assetType = 'THUMB';
-            }
-
-            let icon = 'solar:play-bold';
-            let color = 'text-primary';
-            if (['MP3', 'WAV'].includes(ext)) {
-                icon = 'solar:music-note-bold';
-                color = 'text-blue-400';
-            } else if (['JPG', 'JPEG', 'PNG', 'WEBP'].includes(ext)) {
-                icon = 'solar:gallery-bold';
-                color = 'text-orange-400';
-            } else if (shot.startsWith('SOCIAL CLIP')) {
-                icon = 'solar:iphone-bold';
-                color = 'text-purple-400';
-            }
-
-            return {
-                key,
-                dj,
-                date,
-                shot,
-                assetType,
-                format: ext || 'FILE',
-                icon,
-                color,
-                sessionId,
-                sessionKey: dj,
-                url: `${CONFIG.WORKER_URL}/asset?key=${encodeURIComponent(key)}`
-            };
+        function getIcon(type) {
+            if (type === 'MASTERS') return 'solar:play-bold';
+            if (type === 'AUDIO') return 'solar:music-note-bold';
+            if (type === 'SOCIAL-SUITE') return 'solar:iphone-bold';
+            if (type === 'MARKETING') return 'solar:gallery-bold';
+            return 'solar:document-bold';
         }
 
-        function renderList() {
-            const list = document.getElementById('cloud-list');
+        function renderList(groupedData) {
+            const list = document.getElementById('cloud-list') || document.getElementById('recent-sets-list');
+            if (!list) return;
             list.innerHTML = '';
 
-            const knownAssets = cloudAssets.filter(item => item.dj && item.dj !== 'UNKNOWN');
-
-            const groupedAssets = knownAssets.reduce((acc, item) => {
-                if (!acc[item.sessionKey]) {
-                    acc[item.sessionKey] = { id: item.sessionId, dj: item.dj, date: item.date, items: [] };
-                }
-                acc[item.sessionKey].items.push(item);
-                return acc;
-            }, {});
-
-            const sessions = Object.values(groupedAssets)
-                .sort((a, b) => a.dj.localeCompare(b.dj));
-
-            if (!sessions.length) {
+            if (!Array.isArray(groupedData) || !groupedData.length) {
                 list.innerHTML = '<div class="p-4 text-[10px] font-mono text-zinc-500 uppercase tracking-widest border border-zinc-800 rounded-xl">No known artist uploads yet.</div>';
                 return;
             }
 
-            list.innerHTML = sessions.map(session => `
-                <div class="session-group border border-zinc-800 rounded-2xl overflow-hidden bg-card">
-                    <div onclick="toggleAssetPreview('${session.id}')" class="p-5 flex items-center justify-between hover:bg-white/[0.02] transition-colors cursor-pointer group">
+            groupedData.forEach(artist => {
+                if (!artist?.name || artist.name === 'UNKNOWN') return;
+
+                const folderId = `folder-${artist.slug}`;
+                const row = document.createElement('div');
+                row.className = 'session-group border border-zinc-800 rounded-2xl overflow-hidden bg-card';
+
+                row.innerHTML = `
+                    <div onclick="toggleFolder('${folderId}')" class="p-5 flex items-center justify-between hover:bg-white/[0.02] cursor-pointer group">
                         <div class="flex items-center gap-4">
-                            <div class="w-10 h-10 bg-[#050505] border border-zinc-800 flex items-center justify-center rounded-xl group-hover:border-primary/50 transition-colors">
+                            <div class="w-10 h-10 bg-zinc-900 border border-zinc-800 flex items-center justify-center rounded-xl group-hover:border-primary/50">
                                 <iconify-icon icon="solar:folder-2-bold" class="text-zinc-600 group-hover:text-primary"></iconify-icon>
                             </div>
                             <div>
-                                <p class="text-sm font-black text-white uppercase tracking-tight">${session.dj}</p>
-                                <p class="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">${session.dj} // ${session.items.length} ASSET(S)</p>
+                                <p class="text-sm font-black text-white uppercase tracking-tight">${artist.name}</p>
+                                <p class="text-[9px] font-mono text-zinc-500 uppercase">MASTERS/${artist.name} // ${artist.assets.length} ASSET(S)</p>
                             </div>
                         </div>
-                        <iconify-icon id="arrow-${session.id}" icon="solar:alt-arrow-down-linear" class="text-zinc-700 transition-transform duration-300"></iconify-icon>
+                        <iconify-icon id="arrow-${folderId}" icon="solar:alt-arrow-down-linear" class="text-zinc-700 transition-transform"></iconify-icon>
                     </div>
 
-                    <div id="folder-preview-${session.id}" class="hidden bg-black/40 border-t border-zinc-800/50 divide-y divide-zinc-800/40">
-                        ${session.items.map(item => `
-                            <div onclick="previewAssetByKey('${encodeURIComponent(item.key)}')" class="p-4 pl-12 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset cursor-pointer">
-                                <div class="flex items-center gap-4 min-w-0">
-                                    <div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-zinc-800/50 shrink-0">
-                                        <iconify-icon icon="${item.icon}" class="${item.color} text-sm"></iconify-icon>
+                    <div id="${folderId}" class="hidden bg-black/40 divide-y divide-white/5">
+                        ${(artist.assets || []).map(asset => {
+                            const format = (asset.format || (asset.key || '').split('.').pop() || 'FILE').toUpperCase();
+                            const assetUrl = `${CONFIG.WORKER_URL}/asset?key=${encodeURIComponent(asset.key || '')}`;
+                            return `
+                                <div onclick="openAssetPreviewEncoded('${encodeURIComponent(assetUrl)}', '${asset.type}', '${encodeURIComponent(artist.name)}', '${format}')" class="p-4 pl-14 flex items-center justify-between hover:bg-white/[0.03] group/asset cursor-pointer">
+                                    <div class="flex items-center gap-4">
+                                        <iconify-icon icon="${getIcon(asset.type)}" class="text-zinc-600 group-hover/asset:text-primary"></iconify-icon>
+                                        <span class="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">${asset.type} FORMAT</span>
                                     </div>
-                                    <div class="min-w-0">
-                                        <p class="text-[10px] font-bold text-zinc-300 uppercase truncate">${item.shot}</p>
-                                        <p class="text-[8px] font-mono text-zinc-600 uppercase tracking-widest">${item.format} FORMAT</p>
-                                    </div>
+                                    <iconify-icon icon="solar:cloud-download-bold" class="text-zinc-700 group-hover/asset:text-primary"></iconify-icon>
                                 </div>
-                                <div class="flex items-center gap-2">
-                                    <button onclick="previewAssetByKey('${encodeURIComponent(item.key)}'); event.stopPropagation();" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Preview">
-                                        <iconify-icon icon="solar:eye-bold" class="text-zinc-700 group-hover/asset:text-primary"></iconify-icon>
-                                    </button>
-                                    <a href="${item.url}" target="_blank" download class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download">
-                                        <iconify-icon icon="solar:cloud-download-bold" class="text-zinc-700 group-hover/asset:text-primary"></iconify-icon>
-                                    </a>
-                                </div>
-                            </div>
-                        `).join('')}
+                            `;
+                        }).join('')}
                     </div>
-                </div>
-            `).join('');
+                `;
+
+                list.appendChild(row);
+            });
         }
 
-        function toggleAssetPreview(id) {
-            const preview = document.getElementById(`folder-preview-${id}`);
-            const arrow = document.getElementById(`arrow-${id}`);
+        function toggleFolder(folderId) {
+            const preview = document.getElementById(folderId);
+            const arrow = document.getElementById(`arrow-${folderId}`);
             if (!preview || !arrow) return;
 
-            document.querySelectorAll('[id^="folder-preview-"]').forEach(el => {
-                if (el.id !== `folder-preview-${id}`) el.classList.add('hidden');
+            document.querySelectorAll('[id^="folder-"]').forEach(el => {
+                if (el.id !== folderId) el.classList.add('hidden');
             });
 
-            document.querySelectorAll('[id^="arrow-"]').forEach(el => {
-                if (el.id !== `arrow-${id}`) el.style.transform = 'rotate(0deg)';
+            document.querySelectorAll('[id^="arrow-folder-"]').forEach(el => {
+                if (el.id !== `arrow-${folderId}`) el.style.transform = 'rotate(0deg)';
             });
 
             const isHidden = preview.classList.contains('hidden');
@@ -544,6 +484,10 @@
                 preview.classList.add('hidden');
                 arrow.style.transform = 'rotate(0deg)';
             }
+        }
+
+        function openAssetPreviewEncoded(encodedUrl, type, encodedName, format) {
+            openAssetPreview(decodeURIComponent(encodedUrl), type, decodeURIComponent(encodedName), format);
         }
 
         function openAssetPreview(assetUrl, assetType, djName, format) {
@@ -611,13 +555,6 @@
 
             container.classList.remove('hidden');
             container.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-
-        function previewAssetByKey(encodedKey) {
-            const key = decodeURIComponent(encodedKey);
-            const asset = cloudAssets.find(item => item.key === key);
-            if (!asset) return;
-            openAssetPreview(asset.url, asset.assetType, asset.dj, asset.format);
         }
 
         function closePreview() {

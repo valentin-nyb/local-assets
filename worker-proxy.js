@@ -26,17 +26,37 @@ export default {
         // 2. Route: GET /list (Fetch recordings for the UI)
         if (url.pathname === "/list") {
           const result = await bucket.list({
-            prefix: url.searchParams.get("prefix") || "venue_masters/",
+            prefix: "venue_masters/",
           });
 
-          const contents = (result.objects || []).map((obj) => ({
-            Key: obj.key,
-            LastModified: obj.uploaded,
-            Size: obj.size,
-            ETag: obj.etag,
-          }));
+          const directory = {};
 
-          return new Response(JSON.stringify(contents), {
+          (result.objects || []).forEach((file) => {
+            const parts = (file.key || "").split("/");
+            if (parts.length < 4) return;
+
+            const artistSlug = parts[1];
+            const type = (parts[2] || "misc").toUpperCase();
+            const artist = artistSlug.toUpperCase().replace(/_/g, " ");
+            const format = ((file.key || "").split(".").pop() || "").toUpperCase();
+
+            if (!directory[artist]) {
+              directory[artist] = { name: artist, slug: artistSlug, assets: [] };
+            }
+
+            directory[artist].assets.push({
+              key: file.key,
+              type,
+              size: file.size,
+              lastModified: file.uploaded,
+              format,
+              url: env.R2_PUBLIC_DOMAIN
+                ? `${env.R2_PUBLIC_DOMAIN}/${file.key}`
+                : `${url.origin}/asset?key=${encodeURIComponent(file.key)}`,
+            });
+          });
+
+          return new Response(JSON.stringify(Object.values(directory)), {
             headers: { "Content-Type": "application/json", ...corsHeaders },
           });
         }
