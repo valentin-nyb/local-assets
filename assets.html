@@ -189,7 +189,8 @@
         function setupUploadHandler() {
             const uploadBtn = document.getElementById('upload-btn');
             const MULTIPART_THRESHOLD_BYTES = 95 * 1024 * 1024;
-            const MULTIPART_CHUNK_BYTES = 50 * 1024 * 1024;
+            const MULTIPART_CHUNK_BYTES = 8 * 1024 * 1024;
+            const MULTIPART_MAX_RETRIES = 3;
 
             const fileVideo = document.getElementById('file-video');
             const fileAudio = document.getElementById('file-audio');
@@ -244,20 +245,39 @@
                     const end = Math.min(start + MULTIPART_CHUNK_BYTES, file.size);
                     const chunk = file.slice(start, end);
 
-                    uploadBtn.textContent = `UPLOADING (${queueIndex}/${queueTotal}) PART ${partNumber}/${totalParts}...`;
+                    let etag = null;
+                    let lastError = null;
 
-                    const partResponse = await fetch(`${CONFIG.WORKER_URL}/multipart/part?file=${encodeURIComponent(fileName)}&uploadId=${encodeURIComponent(uploadId)}&partNumber=${partNumber}`, {
-                        method: 'PUT',
-                        body: chunk,
-                        headers: { 'Content-Type': 'application/octet-stream' }
-                    });
+                    for (let attempt = 1; attempt <= MULTIPART_MAX_RETRIES; attempt++) {
+                        uploadBtn.textContent = `UPLOADING (${queueIndex}/${queueTotal}) PART ${partNumber}/${totalParts} (TRY ${attempt}/${MULTIPART_MAX_RETRIES})...`;
 
-                    if (!partResponse.ok) {
-                        const partText = await partResponse.text();
-                        throw new Error(`Multipart part failed (${partResponse.status}): ${partText || 'No response body'}`);
+                        try {
+                            const partResponse = await fetch(`${CONFIG.WORKER_URL}/multipart/part?file=${encodeURIComponent(fileName)}&uploadId=${encodeURIComponent(uploadId)}&partNumber=${partNumber}`, {
+                                method: 'PUT',
+                                body: chunk,
+                                headers: { 'Content-Type': 'application/octet-stream' }
+                            });
+
+                            if (!partResponse.ok) {
+                                const partText = await partResponse.text();
+                                throw new Error(`Multipart part failed (${partResponse.status}): ${partText || 'No response body'}`);
+                            }
+
+                            const partJson = await partResponse.json();
+                            etag = partJson.etag;
+                            break;
+                        } catch (err) {
+                            lastError = err;
+                            if (attempt < MULTIPART_MAX_RETRIES) {
+                                await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+                            }
+                        }
                     }
 
-                    const { etag } = await partResponse.json();
+                    if (!etag) {
+                        throw new Error(lastError?.message || `Multipart part ${partNumber} failed after retries`);
+                    }
+
                     parts.push({ etag, partNumber });
                 }
 
