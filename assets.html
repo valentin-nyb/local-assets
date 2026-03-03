@@ -289,26 +289,43 @@
                 }
             }
 
-            function candidateUrls(pathWithQuery) {
-                return [`${CONFIG.WORKER_URL}${pathWithQuery}`, `${CONFIG.WORKER_FALLBACK_URL}${pathWithQuery}`];
+            function candidateUrls(pathWithQuery, preferDirect = false) {
+                const viaProxy = `${CONFIG.WORKER_URL}${pathWithQuery}`;
+                const directWorker = `${CONFIG.WORKER_FALLBACK_URL}${pathWithQuery}`;
+                return preferDirect ? [directWorker, viaProxy] : [viaProxy, directWorker];
             }
 
-            async function fetchWithFallback(pathWithQuery, options = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
+            async function fetchWithFallback(pathWithQuery, options = {}, timeoutMs = REQUEST_TIMEOUT_MS, config = {}) {
+                const { retryOnHttpError = false, preferDirect = false } = config;
                 let lastError = null;
-                for (const url of candidateUrls(pathWithQuery)) {
+                const endpointFailures = [];
+
+                for (const url of candidateUrls(pathWithQuery, preferDirect)) {
                     try {
-                        return await fetchWithTimeout(url, options, timeoutMs);
+                        const response = await fetchWithTimeout(url, options, timeoutMs);
+
+                        if (!retryOnHttpError || response.ok) {
+                            return response;
+                        }
+
+                        endpointFailures.push(`${url} => HTTP ${response.status}`);
                     } catch (err) {
                         lastError = err;
+                        endpointFailures.push(`${url} => ${err?.message || 'Network failure'}`);
                     }
                 }
-                throw lastError || new Error('Failed to fetch');
+
+                if (lastError) {
+                    throw new Error(endpointFailures.join(' | ') || lastError.message || 'Failed to fetch');
+                }
+
+                throw new Error(endpointFailures.join(' | ') || 'Failed to fetch');
             }
 
             async function uploadMultipartFile(file, fileName, fileType, queueIndex, queueTotal) {
                 const startResponse = await fetchWithFallback(`/multipart/start?file=${encodeURIComponent(fileName)}&type=${encodeURIComponent(fileType)}`, {
                     method: 'POST'
-                });
+                }, REQUEST_TIMEOUT_MS, { retryOnHttpError: true, preferDirect: true });
 
                 if (!startResponse.ok) {
                     const startText = await startResponse.text();
@@ -339,7 +356,7 @@
                                 method: 'PUT',
                                 body: chunk,
                                 headers: { 'Content-Type': 'application/octet-stream' }
-                            }, REQUEST_TIMEOUT_MS);
+                            }, REQUEST_TIMEOUT_MS, { retryOnHttpError: true, preferDirect: true });
 
                             if (!partResponse.ok) {
                                 const partText = await partResponse.text();
@@ -368,7 +385,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ parts })
-                });
+                }, REQUEST_TIMEOUT_MS, { retryOnHttpError: true, preferDirect: true });
 
                 if (!completeResponse.ok) {
                     const completeText = await completeResponse.text();
@@ -385,7 +402,7 @@
                 const formResponse = await fetchWithFallback('/upload', {
                     method: 'POST',
                     body: formData
-                }, REQUEST_TIMEOUT_MS * 5);
+                }, REQUEST_TIMEOUT_MS * 5, { retryOnHttpError: true, preferDirect: true });
 
                 if (!formResponse.ok) {
                     const formText = await formResponse.text();
@@ -398,7 +415,7 @@
                     method: 'PUT',
                     body: file,
                     headers: { 'Content-Type': fileType }
-                }, REQUEST_TIMEOUT_MS * 5);
+                }, REQUEST_TIMEOUT_MS * 5, { retryOnHttpError: true, preferDirect: true });
 
                 if (!uploadResponse.ok) {
                     const uploadText = await uploadResponse.text();
