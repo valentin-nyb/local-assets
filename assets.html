@@ -141,7 +141,8 @@
     <script>
         let cloudAssets = [];
         const CONFIG = {
-            WORKER_URL: '/api'
+            WORKER_URL: '/api',
+            WORKER_FALLBACK_URL: 'https://local-assets-worker.smackeprang-v.workers.dev'
         };
 
         window.onload = function() {
@@ -152,8 +153,8 @@
 
         function setupUploadHandler() {
             const uploadBtn = document.getElementById('upload-btn');
-            const MULTIPART_THRESHOLD_BYTES = 95 * 1024 * 1024;
-            const MULTIPART_CHUNK_BYTES = 6 * 1024 * 1024;
+            const MULTIPART_THRESHOLD_BYTES = 3 * 1024 * 1024;
+            const MULTIPART_CHUNK_BYTES = 1 * 1024 * 1024;
             const MULTIPART_MAX_RETRIES = 3;
             const REQUEST_TIMEOUT_MS = 60000;
 
@@ -203,8 +204,24 @@
                 }
             }
 
+            function candidateUrls(pathWithQuery) {
+                return [`${CONFIG.WORKER_URL}${pathWithQuery}`, `${CONFIG.WORKER_FALLBACK_URL}${pathWithQuery}`];
+            }
+
+            async function fetchWithFallback(pathWithQuery, options = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
+                let lastError = null;
+                for (const url of candidateUrls(pathWithQuery)) {
+                    try {
+                        return await fetchWithTimeout(url, options, timeoutMs);
+                    } catch (err) {
+                        lastError = err;
+                    }
+                }
+                throw lastError || new Error('Failed to fetch');
+            }
+
             async function uploadMultipartFile(file, fileName, fileType, queueIndex, queueTotal) {
-                const startResponse = await fetchWithTimeout(`${CONFIG.WORKER_URL}/multipart/start?file=${encodeURIComponent(fileName)}&type=${encodeURIComponent(fileType)}`, {
+                const startResponse = await fetchWithFallback(`/multipart/start?file=${encodeURIComponent(fileName)}&type=${encodeURIComponent(fileType)}`, {
                     method: 'POST'
                 });
 
@@ -233,7 +250,7 @@
                         uploadBtn.textContent = `UPLOADING (${queueIndex}/${queueTotal}) PART ${partNumber}/${totalParts} (TRY ${attempt}/${MULTIPART_MAX_RETRIES})...`;
 
                         try {
-                            const partResponse = await fetchWithTimeout(`${CONFIG.WORKER_URL}/multipart/part?file=${encodeURIComponent(fileName)}&uploadId=${encodeURIComponent(uploadId)}&partNumber=${partNumber}`, {
+                            const partResponse = await fetchWithFallback(`/multipart/part?file=${encodeURIComponent(fileName)}&uploadId=${encodeURIComponent(uploadId)}&partNumber=${partNumber}`, {
                                 method: 'PUT',
                                 body: chunk,
                                 headers: { 'Content-Type': 'application/octet-stream' }
@@ -262,7 +279,7 @@
                     parts.push({ etag, partNumber });
                 }
 
-                const completeResponse = await fetchWithTimeout(`${CONFIG.WORKER_URL}/multipart/complete?file=${encodeURIComponent(fileName)}&uploadId=${encodeURIComponent(uploadId)}`, {
+                const completeResponse = await fetchWithFallback(`/multipart/complete?file=${encodeURIComponent(fileName)}&uploadId=${encodeURIComponent(uploadId)}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ parts })
@@ -340,7 +357,7 @@
                         if (file.size > MULTIPART_THRESHOLD_BYTES) {
                             await uploadMultipartFile(file, fileName, fileType, queueIndex, uploadQueue.length);
                         } else {
-                            const uploadResponse = await fetchWithTimeout(`${CONFIG.WORKER_URL}/upload?file=${encodeURIComponent(fileName)}&type=${encodeURIComponent(fileType)}`, {
+                            const uploadResponse = await fetchWithFallback(`/upload?file=${encodeURIComponent(fileName)}&type=${encodeURIComponent(fileType)}`, {
                                 method: 'PUT',
                                 body: file,
                                 headers: { 'Content-Type': fileType }
