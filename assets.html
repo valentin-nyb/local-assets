@@ -112,14 +112,14 @@
                         <span class="text-zinc-600 font-mono text-[9px] uppercase tracking-widest">// 48H PRIORITY TURNAROUND</span>
                     </div>
 
-                    <div class="flex items-end justify-between border-b border-zinc-800/50 pb-8">
+                    <div class="flex items-end justify-between border-b border-zinc-800/50 pb-8 mb-8">
                         <div>
-                            <h2 id="vault-dj-title" class="text-[64px] font-[900] italic uppercase leading-[0.85] tracking-[-0.07em] text-white">
+                            <h2 id="vault-dj-title" class="text-[80px] font-[900] italic uppercase leading-[0.8] tracking-[-0.08em] text-white">
                                 AMONGST<br>FEW
                             </h2>
-                            <p id="vault-session-meta" class="text-zinc-500 font-mono text-[10px] uppercase tracking-[0.4em] mt-4">UPLOAD SESSION // 03 MAR 2026</p>
+                            <p id="vault-session-meta" class="text-zinc-500 font-mono text-[10px] uppercase tracking-[0.4em] mt-6">UPLOAD SESSION // 03 MAR 2026</p>
                         </div>
-                        <button onclick="closePreview()" class="px-6 py-2 border border-zinc-800 rounded-lg text-[9px] font-mono text-zinc-500 uppercase tracking-widest hover:text-white hover:border-zinc-600 transition-all">
+                        <button onclick="closePreview()" class="px-6 py-2 border border-zinc-800 rounded-lg text-[9px] font-mono text-zinc-500 uppercase tracking-widest hover:text-white transition-all">
                             [ CLOSE SESSION ]
                         </button>
                     </div>
@@ -428,6 +428,22 @@
             return 'solar:document-bold';
         }
 
+        function getCleanLabel(type, filename) {
+            const t = (type || '').toUpperCase();
+            const file = (filename || '').toLowerCase();
+
+            if (t === 'MASTERS' || t === 'MASTER') return 'MASTER 4K SET';
+            if (t === 'AUDIO') return 'HQ AUDIO MASTER';
+
+            if (t === 'MARKETING' || t === 'THUMB') {
+                return file.includes('vertical')
+                    ? 'MARKETING VERTICALS'
+                    : 'MARKETING THUMBNAIL';
+            }
+
+            return `${t} FORMAT`;
+        }
+
         function renderList(groupedData) {
             const list = document.getElementById('cloud-list') || document.getElementById('recent-sets-list');
             if (!list) return;
@@ -467,7 +483,7 @@
                                 <div onclick="openAssetPreviewEncoded('${encodeURIComponent(assetUrl)}', '${asset.type}', '${encodeURIComponent(artist.name)}', '${format}')" class="p-4 pl-14 flex items-center justify-between hover:bg-white/[0.03] group/asset cursor-pointer">
                                     <div class="flex items-center gap-4">
                                         <iconify-icon icon="${getIcon(asset.type)}" class="text-zinc-600 group-hover/asset:text-primary"></iconify-icon>
-                                        <span class="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">${asset.type} FORMAT</span>
+                                        <span class="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">${getCleanLabel(asset.type, asset.key)}</span>
                                     </div>
                                     <iconify-icon icon="solar:cloud-download-bold" class="text-zinc-700 group-hover/asset:text-primary"></iconify-icon>
                                 </div>
@@ -524,7 +540,7 @@
                 displayArea.innerHTML = `
                     <div class="space-y-6">
                         <p class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-                            <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span> 4K LONG-FORM MASTER
+                            <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span> MASTER 4K SET
                         </p>
                         <div class="aspect-video bg-black rounded-[32px] overflow-hidden border border-white/5 shadow-2xl">
                             <video src="${assetUrl}" class="w-full h-full object-cover" controls autoplay playsinline></video>
@@ -542,7 +558,7 @@
                 displayArea.innerHTML = `
                     <div class="space-y-6">
                         <p class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-                            <span class="w-1.5 h-1.5 rounded-full bg-primary"></span> THUMB // ${format}
+                            <span class="w-1.5 h-1.5 rounded-full bg-primary"></span> MARKETING THUMBNAIL & MARKETING VERTICALS
                         </p>
                         <img src="${assetUrl}" class="w-full aspect-video object-cover rounded-[32px] border border-white/10 shadow-2xl" alt="Thumbnail preview">
                         <a href="${assetUrl}" target="_blank" download class="w-full bg-white text-black font-black py-5 rounded-2xl text-[11px] uppercase tracking-widest flex items-center justify-center gap-2">
@@ -553,7 +569,7 @@
                 displayArea.innerHTML = `
                     <div class="space-y-6">
                         <p class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-                            <span class="w-1.5 h-1.5 rounded-full bg-primary"></span> HQ AUDIO // ${format}
+                            <span class="w-1.5 h-1.5 rounded-full bg-primary"></span> HQ AUDIO MASTER (.WAV)
                         </p>
                         <div class="bg-black rounded-[32px] overflow-hidden border border-white/5 p-6 shadow-2xl">
                             <audio src="${assetUrl}" class="w-full" controls autoplay></audio>
