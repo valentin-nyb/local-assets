@@ -468,8 +468,7 @@
 
                         if ((type || '').startsWith('SOCIAL_CLIP')) {
                             const socialIndex = Number(String(type).split('_').pop()) || 1;
-                            const socialExt = ext || 'mov';
-                            return `venue_masters/${safeDj}/${subFolder}/${safeDate}_vertical_${socialIndex}.${socialExt}`;
+                            return `venue_masters/${safeDj}/${subFolder}/asset_${socialIndex}.mov`;
                         }
 
                         return `venue_masters/${safeDj}/${subFolder}/${safeDate}_${cleanOriginal}`;
@@ -570,6 +569,7 @@
             if (type === 'MASTERS') return 'solar:play-bold';
             if (type === 'AUDIO') return 'solar:music-note-bold';
             if (type === 'SOCIAL-SUITE') return 'solar:iphone-bold';
+            if (type === 'VERTICALS') return 'solar:iphone-bold';
             if (type === 'MARKETING') return 'solar:gallery-bold';
             return 'solar:document-bold';
         }
@@ -704,8 +704,8 @@
                 return;
             }
 
-            if (normalizedType === 'SOCIAL-SUITE' || normalizedType === 'MARKETING') {
-                renderVerticalFocus(artistName, assets, normalizedType);
+            if (normalizedType === 'SOCIAL-SUITE' || normalizedType === 'VERTICALS') {
+                openVerticalSuite(artistName, assets);
                 return;
             }
 
@@ -757,15 +757,15 @@
             openAssetPreview(decodeURIComponent(encodedUrl), decodeURIComponent(encodedType), decodeURIComponent(encodedName), format);
         }
 
-        function renderVerticalFocus(artistName, clips, assetType = 'SOCIAL-SUITE') {
+        function openVerticalSuite(artistName, clips) {
             const display = document.getElementById('active-asset-display');
             const container = document.getElementById('preview-container');
             const title = document.getElementById('vault-dj-title');
             const meta = document.getElementById('vault-meta');
             if (!display || !container || !title || !meta) return;
 
-            const normalizedType = String(assetType || '').toUpperCase();
-            const label = getAssetLabel(normalizedType, clips?.[0]?.key || '');
+            const normalizedType = 'SOCIAL-SUITE';
+            const label = 'MARKETING VERTICALS';
 
             title.textContent = (artistName || 'UNKNOWN').toUpperCase();
             title.className = 'artist-hero-title';
@@ -786,7 +786,7 @@
                                 <iconify-icon icon="${icon}" class="text-zinc-600 group-hover:text-primary"></iconify-icon>
                             </div>
                             <div class="min-w-0">
-                                <p class="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">ASSET ${index + 1}</p>
+                                <p class="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">VERTICAL ASSET ${index + 1}</p>
                                 <p class="text-[11px] font-bold text-white uppercase tracking-tight">${label}</p>
                                 <p class="text-[9px] font-mono text-zinc-600 uppercase tracking-widest">${format} // ${formatBytes(asset.size)}</p>
                             </div>
@@ -796,7 +796,7 @@
                                 <iconify-icon icon="solar:play-circle-bold" class="text-xl"></iconify-icon>
                             </button>
                             <a href="${assetUrl}" download class="p-2 text-zinc-600 hover:text-primary" title="Download">
-                                <iconify-icon icon="solar:download-bold" class="text-xl"></iconify-icon>
+                                <iconify-icon icon="solar:cloud-download-bold" class="text-xl"></iconify-icon>
                             </a>
                         </div>
                     </div>
@@ -806,10 +806,10 @@
             display.innerHTML = `
                 <div class="space-y-4 animate-in fade-in slide-in-from-bottom-2">
                     <div class="flex items-center justify-between mb-6">
-                        <h3 class="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.3em]">Vertical Assets (${clips.length})</h3>
-                        <button class="text-[10px] font-black text-primary uppercase border border-primary/20 px-3 py-1 rounded-md" disabled>BULK DOWNLOAD ZIP</button>
+                        <h3 class="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.4em]">// SOCIAL SUITE (${clips.length} CLIPS)</h3>
+                        <button class="bg-zinc-900 text-[9px] font-bold text-zinc-400 px-4 py-2 rounded-lg border border-zinc-800 uppercase tracking-widest" disabled>Bulk Download</button>
                     </div>
-                    ${listHTML}
+                    <div class="max-w-3xl mx-auto">${listHTML}</div>
                 </div>
             `;
 

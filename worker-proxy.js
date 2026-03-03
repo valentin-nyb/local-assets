@@ -1,23 +1,15 @@
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, PUT, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "*",
-  "Access-Control-Max-Age": "86400",
-};
-
 export default {
   async fetch(request, env) {
-    // 1. MUST HANDLE OPTIONS FOR UPLOADS
+    // 1. CLEAR THE CORS BLOCK
+    const corsHeaders = {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, PUT, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, x-api-key",
+      "Access-Control-Max-Age": "86400",
+    };
+
     if (request.method === "OPTIONS") {
-      return new Response(null, {
-        status: 204,
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "GET, PUT, POST, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type, x-api-key",
-          "Access-Control-Max-Age": "86400",
-        },
-      });
+      return new Response(null, { headers: corsHeaders });
     }
 
     const url = new URL(request.url);
