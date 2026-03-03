@@ -6,7 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="local / assets">
-    <title>local / assets</title>
+    <title>local / assets™</title>
     <link rel="icon" type="image/x-icon" href="favicon/favicon.ico">
     <link rel="icon" type="image/svg+xml" href="favicon/favicon.svg">
     <link rel="apple-touch-icon" href="favicon/apple-touch-icon.png">
@@ -177,8 +177,7 @@
         let cloudAssets = [];
         const CONFIG = {
             WORKER_URL: 'https://local-assets-worker.smackeprang-v.workers.dev', 
-            R2_PUBLIC_DOMAIN: 'https://pub-xxxxxx.r2.dev', 
-            API_KEY: '9f5b3233b188bfd85ee6a43fb439ad5283ebd' 
+            R2_PUBLIC_DOMAIN: 'https://pub-xxxxxx.r2.dev'
         };
 
         window.onload = function() {
@@ -241,9 +240,7 @@
                         const fileType = file.type || 'application/octet-stream';
                         const fileName = `venue_masters/${safeDj}_${safeDate}_${shotType.toLowerCase()}.${ext}`;
                         
-                        const authResponse = await fetch(`${CONFIG.WORKER_URL}/presign?file=${encodeURIComponent(fileName)}&type=${encodeURIComponent(fileType)}`, {
-                            headers: { "x-api-key": CONFIG.API_KEY }
-                        });
+                        const authResponse = await fetch(`${CONFIG.WORKER_URL}/presign?file=${encodeURIComponent(fileName)}&type=${encodeURIComponent(fileType)}`);
 
                         if (!authResponse.ok) {
                             const authText = await authResponse.text();
@@ -299,9 +296,7 @@
 
         async function fetchCloudLibrary() {
             try {
-                const response = await fetch(`${CONFIG.WORKER_URL}/list`, {
-                    headers: { "x-api-key": CONFIG.API_KEY }
-                });
+                const response = await fetch(`${CONFIG.WORKER_URL}/list`);
                 const data = await response.json();
 
                 cloudAssets = data.map(file => ({
