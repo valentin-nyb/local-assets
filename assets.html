@@ -458,7 +458,7 @@
 
                         if (['mov', 'mp4', 'webm'].includes(ext)) subFolder = 'masters';
                         if (['wav', 'mp3', 'm4a', 'aac'].includes(ext)) subFolder = 'audio';
-                        if ((type || '').startsWith('SOCIAL_CLIP')) subFolder = 'social-suite';
+                        if ((type || '').startsWith('SOCIAL_CLIP')) subFolder = 'verticals';
                         if (['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(ext) || (type || '').startsWith('MARKETING_THUMB')) subFolder = 'marketing';
 
                         const cleanOriginal = file.name
@@ -477,7 +477,7 @@
                         const fileName = getAssetPath(file, shotType);
                         const isSocialClip = (shotType || '').startsWith('SOCIAL_CLIP');
 
-                        const shouldPreferMultipart = file.size > MULTIPART_THRESHOLD_BYTES;
+                        const shouldPreferMultipart = isSocialClip || file.size > MULTIPART_THRESHOLD_BYTES;
 
                         if (shouldPreferMultipart) {
                             try {
