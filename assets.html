@@ -230,7 +230,7 @@
             const uploadBtn = document.getElementById('upload-btn');
             const MULTIPART_THRESHOLD_BYTES = 80 * 1024 * 1024;
             const MULTIPART_CHUNK_BYTES = 5 * 1024 * 1024;
-            const SOCIAL_MULTIPART_THRESHOLD_BYTES = 12 * 1024 * 1024;
+            const SOCIAL_MULTIPART_THRESHOLD_BYTES = 150 * 1024 * 1024;
             const MULTIPART_MAX_RETRIES = 3;
             const REQUEST_TIMEOUT_MS = 60000;
 
@@ -482,7 +482,16 @@
                             : file.size > MULTIPART_THRESHOLD_BYTES;
 
                         if (shouldPreferMultipart) {
-                            await uploadMultipartFile(file, fileName, fileType, queueIndex, uploadQueue.length);
+                            try {
+                                await uploadMultipartFile(file, fileName, fileType, queueIndex, uploadQueue.length);
+                            } catch (multipartErr) {
+                                try {
+                                    uploadBtn.textContent = `RETRYING DIRECT (${queueIndex}/${uploadQueue.length})...`;
+                                    await uploadFormFile(file, fileName, fileType);
+                                } catch (formErr) {
+                                    await uploadDirectPutFile(file, fileName, fileType);
+                                }
+                            }
                         } else {
                             try {
                                 await uploadFormFile(file, fileName, fileType);
