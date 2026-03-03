@@ -324,16 +324,7 @@
                         if (file.size > MULTIPART_THRESHOLD_BYTES) {
                             await uploadMultipartFile(file, fileName, fileType, queueIndex, uploadQueue.length);
                         } else {
-                            const authResponse = await fetchWithTimeout(`${CONFIG.WORKER_URL}/presign?file=${encodeURIComponent(fileName)}&type=${encodeURIComponent(fileType)}`);
-
-                            if (!authResponse.ok) {
-                                const authText = await authResponse.text();
-                                throw new Error(`Presign failed (${authResponse.status}): ${authText || 'No response body'}`);
-                            }
-
-                            const { uploadUrl } = await authResponse.json();
-
-                            const uploadResponse = await fetchWithTimeout(uploadUrl, {
+                            const uploadResponse = await fetchWithTimeout(`${CONFIG.WORKER_URL}/upload?file=${encodeURIComponent(fileName)}&type=${encodeURIComponent(fileType)}`, {
                                 method: 'PUT',
                                 body: file,
                                 headers: { 'Content-Type': fileType }
