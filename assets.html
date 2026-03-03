@@ -34,17 +34,19 @@
         }
 
         .artist-hero-title {
-            font-size: clamp(44px, 7vw, 88px) !important;
-            font-weight: 900 !important;
+            font-size: clamp(80px, 12vw, 120px);
+            font-weight: 950;
             font-style: italic;
-            line-height: 0.82 !important;
-            letter-spacing: -0.1em !important;
+            line-height: 0.75;
+            letter-spacing: -0.08em;
             text-transform: uppercase;
             color: white;
-            text-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
-            white-space: nowrap !important;
-            display: block;
-            overflow: visible;
+            margin-bottom: 2rem;
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        #active-asset-display {
+            transition: opacity 0.3s ease;
         }
     </style>
 </head>
@@ -120,7 +122,7 @@
                     </button>
                 </div>
 
-                <div id="preview-container" class="hidden space-y-8 mt-4">
+                <div id="preview-container" class="hidden space-y-8 mt-4 transition-opacity duration-300">
                     <div class="flex items-center gap-3">
                         <span class="bg-primary/20 text-primary text-[8px] font-black px-2 py-0.5 rounded border border-primary/30 uppercase tracking-widest">INFRASTRUCTURE TIER ACTIVE</span>
                         <span class="text-zinc-600 font-mono text-[9px] uppercase tracking-widest">// 48H PRIORITY TURNAROUND</span>
@@ -545,70 +547,69 @@
             if (!container || !displayArea || !title || !meta) return;
 
             const upperName = (djName || 'UNKNOWN').toUpperCase();
-            title.textContent = upperName;
+            title.innerHTML = upperName.replace(' ', '<br>');
+            title.className = 'artist-hero-title';
             meta.textContent = `UPLOAD SESSION // ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()}`;
 
+            container.classList.remove('hidden', 'opacity-0');
             displayArea.innerHTML = '';
 
-            if (assetType === 'MASTER' || format === 'MOV' || format === 'MP4' || format === 'WEBM') {
+            if (assetType === 'MASTERS' || assetType === 'MASTER') {
                 displayArea.innerHTML = `
                     <div class="space-y-6">
                         <p class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-                            <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span> MASTER 4K SET
+                            <span class="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-pulse"></span> MASTER 4K SET
                         </p>
-                        <div class="aspect-video bg-black rounded-[32px] overflow-hidden border border-white/5 shadow-2xl">
-                            <video src="${assetUrl}" class="w-full h-full object-cover" controls autoplay playsinline></video>
+                        <div class="aspect-video bg-black rounded-[40px] overflow-hidden border border-white/5 shadow-2xl">
+                            <video src="${assetUrl}" class="w-full h-full object-cover" controls autoplay></video>
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <a href="${assetUrl}" target="_blank" download class="bg-white text-black font-black py-5 rounded-2xl text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-primary transition-all">
-                                <iconify-icon icon="solar:download-bold"></iconify-icon> DOWNLOAD CURRENT ASSET
-                            </a>
-                            <button onclick="window.open('${assetUrl}', '_blank', 'noopener,noreferrer')" class="bg-zinc-900 text-white font-black py-5 rounded-2xl text-[11px] uppercase tracking-widest border border-white/5 flex items-center justify-center gap-2">
-                                <iconify-icon icon="solar:link-bold"></iconify-icon> OPEN DIRECT LINK
-                            </button>
+                        <a href="${assetUrl}" target="_blank" download class="w-full bg-white text-black font-black py-5 rounded-2xl text-[11px] uppercase tracking-widest text-center block">DOWNLOAD 4K MASTER (.MOV)</a>
+                    </div>`;
+            } else if (assetType === 'AUDIO') {
+                displayArea.innerHTML = `
+                    <div class="space-y-6">
+                        <p class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-[#39FF14]"></span> HQ AUDIO MASTER (.WAV)
+                        </p>
+                        <div class="bg-zinc-900/50 p-10 rounded-[40px] border border-white/5 flex flex-col items-center">
+                            <audio src="${assetUrl}" controls class="w-full mb-8"></audio>
+                            <a href="${assetUrl}" target="_blank" download class="w-full bg-white text-black font-black py-5 rounded-2xl text-[11px] uppercase tracking-widest text-center block">DOWNLOAD HQ AUDIO</a>
                         </div>
                     </div>`;
-            } else if (assetType === 'THUMB' || format === 'PNG' || format === 'JPG' || format === 'JPEG' || format === 'WEBP' || format === 'GIF') {
+            } else if (assetType === 'MARKETING' || assetType === 'THUMB' || ['PNG', 'JPG', 'JPEG', 'WEBP', 'GIF'].includes(format)) {
                 displayArea.innerHTML = `
                     <div class="space-y-6">
                         <p class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-                            <span class="w-1.5 h-1.5 rounded-full bg-primary"></span> MARKETING THUMBNAIL & MARKETING VERTICALS
+                            <span class="w-1.5 h-1.5 rounded-full bg-[#39FF14]"></span> MARKETING THUMBNAIL
                         </p>
-                        <img src="${assetUrl}" class="w-full aspect-video object-cover rounded-[32px] border border-white/10 shadow-2xl" alt="Thumbnail preview">
-                        <a href="${assetUrl}" target="_blank" download class="w-full bg-white text-black font-black py-5 rounded-2xl text-[11px] uppercase tracking-widest flex items-center justify-center gap-2">
-                            DOWNLOAD CURRENT ASSET
-                        </a>
-                    </div>`;
-            } else if (assetType === 'AUDIO' || ['MP3', 'WAV', 'M4A', 'AAC'].includes(format)) {
-                displayArea.innerHTML = `
-                    <div class="space-y-6">
-                        <p class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-                            <span class="w-1.5 h-1.5 rounded-full bg-primary"></span> HQ AUDIO MASTER (.WAV)
-                        </p>
-                        <div class="bg-black rounded-[32px] overflow-hidden border border-white/5 p-6 shadow-2xl">
-                            <audio src="${assetUrl}" class="w-full" controls autoplay></audio>
-                        </div>
-                        <a href="${assetUrl}" target="_blank" download class="w-full bg-white text-black font-black py-5 rounded-2xl text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-primary transition-all">
-                            DOWNLOAD CURRENT ASSET
-                        </a>
+                        <img src="${assetUrl}" class="w-full aspect-video object-cover rounded-[40px] border border-white/10 shadow-2xl" alt="Marketing preview">
+                        <a href="${assetUrl}" target="_blank" download class="w-full bg-white text-black font-black py-5 rounded-2xl text-[11px] uppercase tracking-widest text-center block">DOWNLOAD MARKETING ASSET</a>
                     </div>`;
             } else {
                 displayArea.innerHTML = `
                     <div class="space-y-6">
                         <div class="bg-black rounded-[32px] overflow-hidden border border-white/5 p-6 text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Preview not available for this format.</div>
-                        <a href="${assetUrl}" target="_blank" download class="w-full bg-white text-black font-black py-5 rounded-2xl text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-primary transition-all">DOWNLOAD FILE</a>
+                        <a href="${assetUrl}" target="_blank" download class="w-full bg-white text-black font-black py-5 rounded-2xl text-[11px] uppercase tracking-widest text-center block">DOWNLOAD FILE</a>
                     </div>`;
             }
 
-            container.classList.remove('hidden');
-            container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            displayArea.scrollIntoView({ behavior: 'smooth' });
         }
 
         function closePreview() {
             const container = document.getElementById('preview-container');
             const displayArea = document.getElementById('active-asset-display');
-            if (displayArea) displayArea.innerHTML = '';
-            container.classList.add('hidden');
+            const historyList = document.getElementById('recent-sets-list') || document.getElementById('cloud-list');
+            if (!container || !displayArea) return;
+
+            container.classList.add('opacity-0');
+
+            setTimeout(() => {
+                container.classList.add('hidden');
+                container.classList.remove('opacity-0');
+                displayArea.innerHTML = '';
+                if (historyList) historyList.scrollIntoView({ behavior: 'smooth' });
+            }, 300);
         }
     </script>
 </body>
