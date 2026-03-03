@@ -125,18 +125,20 @@
                     </div>
 
                     <div class="space-y-4">
-                        <h3 class="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.3em] flex items-center gap-2">
-                            <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span> 4K Long-Form Master
+                        <h3 id="preview-asset-label" class="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.3em] flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span> ASSET PREVIEW
                         </h3>
                         <div class="aspect-video bg-black rounded-3xl overflow-hidden border border-white/5 shadow-2xl">
-                            <video id="preview-video" class="w-full h-full object-cover" controls playsinline></video>
+                            <video id="preview-video" class="w-full h-full object-cover hidden" controls playsinline></video>
+                            <audio id="preview-audio" class="w-full h-full p-6 hidden" controls></audio>
+                            <img id="preview-image" class="w-full h-full object-contain hidden" alt="asset preview">
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <a id="dl-video" href="#" class="bg-white text-black font-black py-4 rounded-xl text-center text-[10px] uppercase tracking-widest hover:bg-primary transition-all flex items-center justify-center gap-2">
-                                <iconify-icon icon="solar:download-bold"></iconify-icon> Download 4K Master (.MOV)
+                            <a id="dl-video" href="#" target="_blank" class="bg-white text-black font-black py-4 rounded-xl text-center text-[10px] uppercase tracking-widest hover:bg-primary transition-all flex items-center justify-center gap-2">
+                                <iconify-icon icon="solar:download-bold"></iconify-icon> Download Current Asset
                             </a>
-                            <a id="dl-audio" href="#" class="bg-zinc-900 text-white font-black py-4 rounded-xl text-center text-[10px] uppercase tracking-widest border border-white/5 hover:border-primary transition-all flex items-center justify-center gap-2">
-                                <iconify-icon icon="solar:music-note-bold"></iconify-icon> Download HQ Audio (WAV)
+                            <a id="dl-audio" href="#" target="_blank" class="bg-zinc-900 text-white font-black py-4 rounded-xl text-center text-[10px] uppercase tracking-widest border border-white/5 hover:border-primary transition-all flex items-center justify-center gap-2">
+                                <iconify-icon icon="solar:music-note-bold"></iconify-icon> Open Direct Link
                             </a>
                         </div>
                     </div>
@@ -457,7 +459,9 @@
             const list = document.getElementById('cloud-list');
             list.innerHTML = '';
 
-            const groupedAssets = cloudAssets.reduce((acc, item) => {
+            const knownAssets = cloudAssets.filter(item => item.dj && item.dj !== 'UNKNOWN');
+
+            const groupedAssets = knownAssets.reduce((acc, item) => {
                 if (!acc[item.sessionKey]) {
                     acc[item.sessionKey] = { id: item.sessionId, dj: item.dj, date: item.date, items: [] };
                 }
@@ -467,6 +471,11 @@
 
             const sessions = Object.values(groupedAssets)
                 .sort((a, b) => b.date.localeCompare(a.date));
+
+            if (!sessions.length) {
+                list.innerHTML = '<div class="p-4 text-[10px] font-mono text-zinc-500 uppercase tracking-widest border border-zinc-800 rounded-xl">No known artist uploads yet.</div>';
+                return;
+            }
 
             list.innerHTML = sessions.map(session => `
                 <div class="session-group border border-zinc-800 rounded-2xl overflow-hidden bg-card">
@@ -483,9 +492,9 @@
                         <iconify-icon id="arrow-${session.id}" icon="solar:alt-arrow-down-linear" class="text-zinc-700 transition-transform duration-300"></iconify-icon>
                     </div>
 
-                    <div id="preview-${session.id}" class="hidden bg-black/40 border-t border-zinc-800/50 divide-y divide-zinc-800/40">
+                    <div id="folder-preview-${session.id}" class="hidden bg-black/40 border-t border-zinc-800/50 divide-y divide-zinc-800/40">
                         ${session.items.map(item => `
-                            <div class="p-4 pl-12 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset">
+                            <div onclick="previewAssetByKey('${encodeURIComponent(item.key)}')" class="p-4 pl-12 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset cursor-pointer">
                                 <div class="flex items-center gap-4 min-w-0">
                                     <div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-zinc-800/50 shrink-0">
                                         <iconify-icon icon="${item.icon}" class="${item.color} text-sm"></iconify-icon>
@@ -496,7 +505,7 @@
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <button onclick="previewAsset('${item.url}'); event.stopPropagation();" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Preview">
+                                    <button onclick="previewAssetByKey('${encodeURIComponent(item.key)}'); event.stopPropagation();" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Preview">
                                         <iconify-icon icon="solar:eye-bold" class="text-zinc-700 group-hover/asset:text-primary"></iconify-icon>
                                     </button>
                                     <a href="${item.url}" target="_blank" download class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download">
@@ -511,12 +520,12 @@
         }
 
         function toggleAssetPreview(id) {
-            const preview = document.getElementById(`preview-${id}`);
+            const preview = document.getElementById(`folder-preview-${id}`);
             const arrow = document.getElementById(`arrow-${id}`);
             if (!preview || !arrow) return;
 
-            document.querySelectorAll('[id^="preview-"]').forEach(el => {
-                if (el.id !== `preview-${id}`) el.classList.add('hidden');
+            document.querySelectorAll('[id^="folder-preview-"]').forEach(el => {
+                if (el.id !== `folder-preview-${id}`) el.classList.add('hidden');
             });
 
             document.querySelectorAll('[id^="arrow-"]').forEach(el => {
@@ -533,8 +542,70 @@
             }
         }
 
-        function previewAsset(url) {
-            window.open(url, '_blank', 'noopener,noreferrer');
+        function previewAssetByKey(encodedKey) {
+            const key = decodeURIComponent(encodedKey);
+            const asset = cloudAssets.find(item => item.key === key);
+            if (!asset) return;
+
+            const container = document.getElementById('preview-container');
+            const title = document.getElementById('vault-dj-title');
+            const meta = document.getElementById('vault-venue-meta');
+            const assetLabel = document.getElementById('preview-asset-label');
+            const video = document.getElementById('preview-video');
+            const audio = document.getElementById('preview-audio');
+            const image = document.getElementById('preview-image');
+            const dlVideo = document.getElementById('dl-video');
+            const dlAudio = document.getElementById('dl-audio');
+
+            const hideAll = () => {
+                video.pause();
+                audio.pause();
+                video.classList.add('hidden');
+                audio.classList.add('hidden');
+                image.classList.add('hidden');
+            };
+
+            hideAll();
+
+            title.textContent = asset.dj;
+            meta.textContent = `UPLOAD SESSION // ${asset.date}`;
+            assetLabel.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span> ${asset.shot} // ${asset.format}`;
+
+            if (['MP4', 'MOV', 'WEBM'].includes(asset.format)) {
+                video.src = asset.url;
+                video.classList.remove('hidden');
+                video.play().catch(() => {});
+            } else if (['MP3', 'WAV', 'M4A', 'AAC'].includes(asset.format)) {
+                audio.src = asset.url;
+                audio.classList.remove('hidden');
+                audio.play().catch(() => {});
+            } else if (['JPG', 'JPEG', 'PNG', 'WEBP', 'GIF'].includes(asset.format)) {
+                image.src = asset.url;
+                image.classList.remove('hidden');
+            }
+
+            dlVideo.href = asset.url;
+            dlAudio.href = asset.url;
+
+            container.classList.remove('hidden');
+            container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function closePreview() {
+            const container = document.getElementById('preview-container');
+            const video = document.getElementById('preview-video');
+            const audio = document.getElementById('preview-audio');
+            const image = document.getElementById('preview-image');
+
+            video.pause();
+            audio.pause();
+            video.removeAttribute('src');
+            audio.removeAttribute('src');
+            image.removeAttribute('src');
+            video.classList.add('hidden');
+            audio.classList.add('hidden');
+            image.classList.add('hidden');
+            container.classList.add('hidden');
         }
     </script>
 </body>
