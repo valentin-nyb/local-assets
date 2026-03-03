@@ -477,9 +477,7 @@
                         const fileName = getAssetPath(file, shotType);
                         const isSocialClip = (shotType || '').startsWith('SOCIAL_CLIP');
 
-                        const shouldPreferMultipart = isSocialClip
-                            ? false
-                            : file.size > MULTIPART_THRESHOLD_BYTES;
+                        const shouldPreferMultipart = file.size > MULTIPART_THRESHOLD_BYTES;
 
                         if (shouldPreferMultipart) {
                             try {
@@ -500,9 +498,6 @@
                                     uploadBtn.textContent = `RETRYING DIRECT (${queueIndex}/${uploadQueue.length})...`;
                                     await uploadDirectPutFile(file, fileName, fileType);
                                 } catch (putErr) {
-                                    if (isSocialClip) {
-                                        throw putErr;
-                                    }
                                     // Final fallback path for non-social large uploads.
                                     uploadBtn.textContent = `RETRYING MULTIPART (${queueIndex}/${uploadQueue.length})...`;
                                     await uploadMultipartFile(file, fileName, fileType, queueIndex, uploadQueue.length);
