@@ -45,6 +45,35 @@
             transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
+        .preview-header {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            align-items: end;
+            gap: 2rem;
+            border-bottom: 1px solid #18181b;
+            padding-bottom: 2.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .btn-close-session {
+            height: fit-content;
+            padding: 0.75rem 1.5rem;
+            border: 1px solid #27272a;
+            border-radius: 0.75rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9px;
+            color: #52525b;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            transition: all 0.2s ease;
+        }
+
+        .btn-close-session:hover {
+            color: white;
+            border-color: #3f3f46;
+            background: rgba(255,255,255,0.02);
+        }
+
         #active-asset-display {
             transition: opacity 0.3s ease;
         }
@@ -122,23 +151,23 @@
                     </button>
                 </div>
 
-                <div id="preview-container" class="hidden space-y-8 mt-4 transition-opacity duration-300">
-                    <div class="flex items-center gap-3">
-                        <span class="bg-primary/20 text-primary text-[8px] font-black px-2 py-0.5 rounded border border-primary/30 uppercase tracking-widest">INFRASTRUCTURE TIER ACTIVE</span>
+                <div id="preview-container" class="hidden animate-in fade-in duration-500 transition-opacity duration-300">
+                    <div class="flex items-center gap-3 mb-6">
+                        <span class="bg-primary/10 text-primary text-[8px] font-black px-2 py-0.5 rounded border border-primary/20 uppercase tracking-widest">INFRASTRUCTURE TIER ACTIVE</span>
                         <span class="text-zinc-600 font-mono text-[9px] uppercase tracking-widest">// 48H PRIORITY TURNAROUND</span>
                     </div>
 
-                    <div class="flex flex-col md:flex-row md:items-end justify-between border-b border-zinc-900 pb-10 gap-8">
-                        <div class="min-w-0 md:min-w-[70%]">
+                    <div class="preview-header">
+                        <div>
                             <h2 id="vault-dj-title" class="artist-hero-title">AMONGST FEW</h2>
-                            <p id="vault-meta" class="text-zinc-500 font-mono text-[10px] uppercase tracking-[0.5em] mt-8">UPLOAD SESSION // 03 MAR 2026</p>
+                            <p id="vault-meta" class="text-zinc-500 font-mono text-[10px] uppercase tracking-[0.4em] mt-4">UPLOAD SESSION // 03 MAR 2026</p>
                         </div>
-                        <button onclick="closePreview()" class="h-fit px-6 py-3 border border-zinc-800 rounded-xl text-[9px] font-mono text-zinc-500 uppercase tracking-widest hover:text-white hover:border-zinc-600 transition-all md:shrink-0">
+                        <button onclick="closePreview()" class="btn-close-session">
                             [ CLOSE SESSION ]
                         </button>
                     </div>
 
-                    <div id="active-asset-display" class="pt-2 animate-in fade-in slide-in-from-bottom-4 duration-500"></div>
+                    <div id="active-asset-display" class="pt-4 max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500"></div>
                 </div>
 
                 <div class="space-y-4 pt-4">
@@ -567,14 +596,15 @@
                     </div>`;
             } else if (assetType === 'AUDIO') {
                 displayArea.innerHTML = `
-                    <div class="space-y-6">
-                        <p class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-                            <span class="w-1.5 h-1.5 rounded-full bg-[#39FF14]"></span> HQ AUDIO MASTER (.WAV)
-                        </p>
-                        <div class="bg-zinc-900/50 p-10 rounded-[40px] border border-white/5 flex flex-col items-center">
-                            <audio src="${assetUrl}" controls class="w-full mb-8"></audio>
-                            <a href="${assetUrl}" target="_blank" download class="w-full bg-white text-black font-black py-5 rounded-2xl text-[11px] uppercase tracking-widest text-center block">DOWNLOAD HQ AUDIO</a>
+                    <div class="space-y-8 py-8">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="w-1 h-1 rounded-full bg-primary"></span>
+                            <p class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">HQ AUDIO MASTER (.WAV)</p>
                         </div>
+                        <div class="bg-[#0a0a0a] border border-zinc-800/50 p-10 rounded-[32px] shadow-2xl">
+                            <audio src="${assetUrl}" controls class="w-full filter invert brightness-200"></audio>
+                        </div>
+                        <a href="${assetUrl}" target="_blank" download class="w-full bg-white text-black font-black py-5 rounded-2xl text-[11px] uppercase tracking-widest text-center block hover:bg-primary transition-all">DOWNLOAD HQ AUDIO</a>
                     </div>`;
             } else if (assetType === 'MARKETING' || assetType === 'THUMB' || ['PNG', 'JPG', 'JPEG', 'WEBP', 'GIF'].includes(format)) {
                 displayArea.innerHTML = `
