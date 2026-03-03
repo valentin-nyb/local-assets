@@ -82,8 +82,32 @@
             background: rgba(57,255,20,0.12);
         }
 
+        audio {
+            width: 100%;
+            height: 40px;
+            filter: invert(100%) hue-rotate(180deg) brightness(1.5);
+            mix-blend-mode: screen;
+            outline: none;
+        }
+
+        .audio-player-wrapper {
+            background: transparent;
+            padding: 20px 0;
+            border-radius: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
         #active-asset-display {
             transition: opacity 0.3s ease;
+        }
+
+        @media (max-width: 767px) {
+            #active-asset-display {
+                padding-left: 60px;
+                padding-right: 20px;
+            }
         }
     </style>
 </head>
@@ -171,7 +195,7 @@
                             <p id="vault-meta" class="text-zinc-500 font-mono text-[10px] uppercase tracking-[0.4em] mt-4">UPLOAD SESSION // 03 MAR 2026</p>
                         </div>
                         <button onclick="closePreview()" class="btn-close-session">
-                            [ CLOSE SESSION ]
+                            close session
                         </button>
                     </div>
 
@@ -604,15 +628,18 @@
                     </div>`;
             } else if (assetType === 'AUDIO') {
                 displayArea.innerHTML = `
-                    <div class="space-y-8 py-8">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="w-1 h-1 rounded-full bg-primary"></span>
-                            <p class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">HQ AUDIO MASTER (.WAV)</p>
+                    <div class="space-y-6 animate-in fade-in duration-500">
+                        <p class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-primary"></span> HQ AUDIO MASTER (.WAV)
+                        </p>
+
+                        <div class="audio-player-wrapper">
+                            <audio src="${assetUrl}" controls preload="metadata"></audio>
                         </div>
-                        <div class="bg-[#0a0a0a] border border-zinc-800/50 p-10 rounded-[32px] shadow-2xl">
-                            <audio src="${assetUrl}" controls class="w-full filter invert brightness-200"></audio>
-                        </div>
-                        <a href="${assetUrl}" target="_blank" download class="w-full bg-white text-black font-black py-5 rounded-2xl text-[11px] uppercase tracking-widest text-center block hover:bg-primary transition-all">DOWNLOAD HQ AUDIO</a>
+
+                        <a href="${assetUrl}" target="_blank" download class="w-full bg-white text-black font-black py-5 rounded-2xl text-[11px] uppercase tracking-widest text-center block hover:bg-primary transition-all">
+                            DOWNLOAD HQ AUDIO
+                        </a>
                     </div>`;
             } else if (assetType === 'MARKETING' || assetType === 'THUMB' || ['PNG', 'JPG', 'JPEG', 'WEBP', 'GIF'].includes(format)) {
                 displayArea.innerHTML = `
