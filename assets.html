@@ -76,28 +76,31 @@
                         <select id="ingest-shot" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs text-zinc-400 font-bold uppercase">
                             <option value="MASTER">MASTER CAM</option>
                             <option value="BOOTH">BOOTH CAM</option>
+                            <option value="BACK">BACK VIEW</option>
+                            <option value="FRONT">FRONT VIEW</option>
+                            <option value="CROWD">CROWD VIEW</option>
                         </select>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <label class="flex flex-col items-center justify-center p-6 bg-black border border-zinc-800 rounded-2xl cursor-pointer hover:border-primary/50 group">
-                            <iconify-icon icon="solar:videocamera-record-bold" class="text-2xl text-zinc-600 group-hover:text-primary"></iconify-icon>
-                            <span class="text-[8px] font-mono mt-2 text-zinc-500 uppercase">4K Video (.MOV/.MP4)</span>
+                        <label id="card-video" class="flex flex-col items-center justify-center p-6 bg-black border border-zinc-800 rounded-2xl cursor-pointer hover:border-primary/50 group transition-all">
+                            <iconify-icon icon="solar:videocamera-record-bold" class="upload-card-icon text-2xl text-zinc-600 group-hover:text-primary transition-colors"></iconify-icon>
+                            <span class="upload-card-label text-[8px] font-mono mt-2 text-zinc-500 uppercase transition-colors">4K Long Form (.MOV/.MP4)</span>
                             <input type="file" id="file-video" class="hidden" accept="video/mp4,video/quicktime">
                         </label>
-                        <label class="flex flex-col items-center justify-center p-6 bg-black border border-zinc-800 rounded-2xl cursor-pointer hover:border-primary/50 group">
-                            <iconify-icon icon="solar:music-note-bold" class="text-2xl text-zinc-600 group-hover:text-primary"></iconify-icon>
-                            <span class="text-[8px] font-mono mt-2 text-zinc-500 uppercase">HQ Audio (.WAV/.MP3)</span>
+                        <label id="card-audio" class="flex flex-col items-center justify-center p-6 bg-black border border-zinc-800 rounded-2xl cursor-pointer hover:border-primary/50 group transition-all">
+                            <iconify-icon icon="solar:music-note-bold" class="upload-card-icon text-2xl text-zinc-600 group-hover:text-primary transition-colors"></iconify-icon>
+                            <span class="upload-card-label text-[8px] font-mono mt-2 text-zinc-500 uppercase transition-colors">HQ Audio (.WAV/.MP3)</span>
                             <input type="file" id="file-audio" class="hidden" accept="audio/mpeg,audio/wav">
                         </label>
-                        <label class="flex flex-col items-center justify-center p-6 bg-black border border-zinc-800 rounded-2xl cursor-pointer hover:border-primary/50 group">
-                            <iconify-icon icon="solar:iphone-bold" class="text-2xl text-zinc-600 group-hover:text-primary"></iconify-icon>
-                            <span class="text-[8px] font-mono mt-2 text-zinc-500 uppercase">Social Pack (Mult. MP4)</span>
+                        <label id="card-social" class="flex flex-col items-center justify-center p-6 bg-black border border-zinc-800 rounded-2xl cursor-pointer hover:border-primary/50 group transition-all">
+                            <iconify-icon icon="solar:iphone-bold" class="upload-card-icon text-2xl text-zinc-600 group-hover:text-primary transition-colors"></iconify-icon>
+                            <span class="upload-card-label text-[8px] font-mono mt-2 text-zinc-500 uppercase transition-colors">Social Pack Verticals (.JPG/.MP4)</span>
                             <input type="file" id="file-social" class="hidden" multiple accept="video/mp4,video/quicktime">
                         </label>
-                        <label class="flex flex-col items-center justify-center p-6 bg-black border border-zinc-800 rounded-2xl cursor-pointer hover:border-primary/50 group">
-                            <iconify-icon icon="solar:gallery-bold" class="text-2xl text-zinc-600 group-hover:text-primary"></iconify-icon>
-                            <span class="text-[8px] font-mono mt-2 text-zinc-500 uppercase">Marketing (Mult. JPG)</span>
+                        <label id="card-marketing" class="flex flex-col items-center justify-center p-6 bg-black border border-zinc-800 rounded-2xl cursor-pointer hover:border-primary/50 group transition-all">
+                            <iconify-icon icon="solar:gallery-bold" class="upload-card-icon text-2xl text-zinc-600 group-hover:text-primary transition-colors"></iconify-icon>
+                            <span class="upload-card-label text-[8px] font-mono mt-2 text-zinc-500 uppercase transition-colors">Social Media Thumbnails (.PNG/.JPG)</span>
                             <input type="file" id="file-marketing" class="hidden" multiple accept="image/jpeg,image/png">
                         </label>
                     </div>
@@ -194,6 +197,31 @@
             const fileSocial = document.getElementById('file-social');
             const fileMarketing = document.getElementById('file-marketing');
 
+            function setCardSelected(cardId, isSelected) {
+                const card = document.getElementById(cardId);
+                if (!card) return;
+
+                const icon = card.querySelector('.upload-card-icon');
+                const label = card.querySelector('.upload-card-label');
+
+                if (isSelected) {
+                    card.classList.add('border-primary', 'bg-primary/10', 'shadow-[0_0_20px_rgba(57,255,20,0.12)]');
+                    card.classList.remove('border-zinc-800', 'bg-black');
+                    if (icon) icon.classList.replace('text-zinc-600', 'text-primary');
+                    if (label) label.classList.replace('text-zinc-500', 'text-primary');
+                } else {
+                    card.classList.remove('border-primary', 'bg-primary/10', 'shadow-[0_0_20px_rgba(57,255,20,0.12)]');
+                    card.classList.add('border-zinc-800', 'bg-black');
+                    if (icon) icon.classList.replace('text-primary', 'text-zinc-600');
+                    if (label) label.classList.replace('text-primary', 'text-zinc-500');
+                }
+            }
+
+            fileVideo.addEventListener('change', () => setCardSelected('card-video', fileVideo.files.length > 0));
+            fileAudio.addEventListener('change', () => setCardSelected('card-audio', fileAudio.files.length > 0));
+            fileSocial.addEventListener('change', () => setCardSelected('card-social', fileSocial.files.length > 0));
+            fileMarketing.addEventListener('change', () => setCardSelected('card-marketing', fileMarketing.files.length > 0));
+
             uploadBtn.onclick = async function() {
                 const djName = document.getElementById('ingest-name').value.trim();
                 const date = document.getElementById('ingest-date').value.trim();
@@ -268,6 +296,10 @@
                     fileAudio.value = '';
                     fileSocial.value = '';
                     fileMarketing.value = '';
+                    setCardSelected('card-video', false);
+                    setCardSelected('card-audio', false);
+                    setCardSelected('card-social', false);
+                    setCardSelected('card-marketing', false);
                     
                     fetchCloudLibrary();
                 } catch (err) {
