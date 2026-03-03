@@ -690,27 +690,23 @@
                     <p class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest flex items-center gap-2">
                         <span class="w-1.5 h-1.5 rounded-full bg-primary"></span> ${cleanLabel}
                     </p>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="divide-y divide-zinc-800 border border-zinc-800 rounded-2xl overflow-hidden bg-black/40">
                         ${assets.map((asset, index) => {
                             const format = (asset.format || (asset.key || '').split('.').pop() || 'FILE').toUpperCase();
                             const assetUrl = `${CONFIG.WORKER_URL}/asset?key=${encodeURIComponent(asset.key || '')}`;
-                            const isImage = normalizedType === 'MARKETING' || ['PNG', 'JPG', 'JPEG', 'WEBP', 'GIF'].includes(format);
 
                             return `
-                                <div class="bg-black border border-zinc-800 rounded-2xl overflow-hidden">
-                                    ${isImage
-                                        ? `<img src="${assetUrl}" alt="Asset ${index + 1}" class="w-full h-40 object-cover">`
-                                        : `<div class="h-40 flex items-center justify-center bg-zinc-950"><iconify-icon icon="${getIcon(normalizedType)}" class="text-3xl text-zinc-600"></iconify-icon></div>`
-                                    }
-                                    <div class="p-4 flex items-center justify-between gap-3">
-                                        <div class="min-w-0">
+                                <div class="p-4 flex items-center justify-between gap-3 hover:bg-white/[0.02]">
+                                    <div class="min-w-0 flex items-center gap-3">
+                                        <iconify-icon icon="${getIcon(normalizedType)}" class="text-zinc-600"></iconify-icon>
+                                        <div>
                                             <p class="text-[9px] font-mono text-zinc-300 uppercase tracking-widest">Asset ${index + 1}</p>
                                             <p class="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">${format} // ${formatBytes(asset.size)}</p>
                                         </div>
-                                        <button onclick="openAssetPreviewEncoded('${encodeURIComponent(assetUrl)}', '${normalizedType}', '${encodeURIComponent(artistName)}', '${format}')" class="shrink-0 px-3 py-2 border border-zinc-700 rounded-lg text-[9px] font-mono uppercase tracking-widest hover:border-primary hover:text-primary">
-                                            Preview
-                                        </button>
                                     </div>
+                                    <button onclick="openAssetPreviewEncoded('${encodeURIComponent(assetUrl)}', '${normalizedType}', '${encodeURIComponent(artistName)}', '${format}')" class="shrink-0 px-3 py-2 border border-zinc-700 rounded-lg text-[9px] font-mono uppercase tracking-widest hover:border-primary hover:text-primary">
+                                        Preview
+                                    </button>
                                 </div>`;
                         }).join('')}
                     </div>
