@@ -554,8 +554,11 @@
             try {
                 const response = await fetch(`${CONFIG.WORKER_URL}/list`);
                 const data = await response.json();
+                const hiddenSlugs = new Set(['test_artist', 'debug_api']);
 
-                cloudAssets = Array.isArray(data) ? data : [];
+                cloudAssets = Array.isArray(data)
+                    ? data.filter((artist) => !hiddenSlugs.has(String(artist?.slug || '').toLowerCase()))
+                    : [];
                 renderList(cloudAssets);
             } catch (e) {
                 console.error("Could not load library:", e);

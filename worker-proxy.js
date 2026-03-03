@@ -31,12 +31,15 @@ export default {
           });
 
           const directory = {};
+          const hiddenSlugs = new Set(["test_artist", "debug_api"]);
 
           (result.objects || []).forEach((file) => {
             const parts = (file.key || "").split("/");
             if (parts.length < 4) return;
 
             const artistSlug = parts[1];
+            if (hiddenSlugs.has((artistSlug || "").toLowerCase())) return;
+
             const type = (parts[2] || "misc").toUpperCase();
             const artist = artistSlug.toUpperCase().replace(/_/g, " ");
             const format = ((file.key || "").split(".").pop() || "").toUpperCase();
