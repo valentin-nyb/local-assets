@@ -198,7 +198,6 @@
             uploadBtn.onclick = async function() {
                 const djName = document.getElementById('ingest-name').value.trim();
                 const date = document.getElementById('ingest-date').value.trim();
-                const shot = document.getElementById('ingest-shot').value;
 
                 if (!djName || !date) {
                     alert('Please fill in DJ NAME and DATE');
@@ -226,20 +225,37 @@
                 uploadBtn.disabled = true;
 
                 try {
+                    const safeDj = djName
+                        .toLowerCase()
+                        .replace(/[^a-z0-9]+/g, '_')
+                        .replace(/^_+|_+$/g, '');
+                    const safeDate = date
+                        .toLowerCase()
+                        .replace(/[^a-z0-9]+/g, '_')
+                        .replace(/^_+|_+$/g, '');
+
                     let successCount = 0;
                     for (const { file, shotType } of uploadQueue) {
                         uploadBtn.textContent = `UPLOADING (${successCount + 1}/${uploadQueue.length})...`;
-                        const fileName = `venue_masters/${djName.toLowerCase()}_${date.replace(/\s+/g, '_')}_${shotType.toLowerCase()}.${file.name.split('.').pop()}`;
+                        const ext = (file.name.split('.').pop() || '').toLowerCase();
+                        const fileType = file.type || 'application/octet-stream';
+                        const fileName = `venue_masters/${safeDj}_${safeDate}_${shotType.toLowerCase()}.${ext}`;
                         
-                        const authResponse = await fetch(`${CONFIG.WORKER_URL}/presign?file=${fileName}&type=${file.type}`, {
+                        const authResponse = await fetch(`${CONFIG.WORKER_URL}/presign?file=${encodeURIComponent(fileName)}&type=${encodeURIComponent(fileType)}`, {
                             headers: { "x-api-key": CONFIG.API_KEY }
                         });
+
+                        if (!authResponse.ok) {
+                            const authText = await authResponse.text();
+                            throw new Error(`Presign failed (${authResponse.status}): ${authText || 'No response body'}`);
+                        }
+
                         const { uploadUrl } = await authResponse.json();
 
                         const uploadResponse = await fetch(uploadUrl, {
                             method: 'PUT',
                             body: file,
-                            headers: { 'Content-Type': file.type }
+                            headers: { 'Content-Type': fileType }
                         });
 
                         if (!uploadResponse.ok) {
