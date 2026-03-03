@@ -69,33 +69,96 @@
         <div class="flex-1 p-4 md:p-8 overflow-y-auto w-full">
             <div class="max-w-5xl mx-auto space-y-12 pb-20 w-full">
                 
-                <div class="p-6 md:p-8 border border-dashed border-zinc-800 rounded-2xl bg-card/30">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        <input type="text" id="ingest-name" placeholder="DJ NAME" class="bg-[#050505] border border-zinc-800 rounded p-4 text-xs font-bold text-white uppercase outline-none focus:border-primary">
-                        <input type="text" id="ingest-date" class="bg-[#050505] border border-zinc-800 rounded p-4 text-xs font-bold">
-                        <select id="ingest-shot" class="bg-[#050505] border border-zinc-800 rounded p-4 text-xs text-zinc-400 font-bold">
+                <div class="p-8 border border-dashed border-zinc-800 rounded-3xl bg-card/30 space-y-8">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <input type="text" id="ingest-name" placeholder="DJ NAME" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs font-bold text-white uppercase outline-none focus:border-primary">
+                        <input type="text" id="ingest-date" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs font-bold">
+                        <select id="ingest-shot" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs text-zinc-400 font-bold uppercase">
                             <option value="MASTER">MASTER CAM</option>
-                            <option value="A-CAM">A CAM</option>
-                            <option value="B-CAM">B CAM</option>
-                            <option value="STAGE-CAM">STAGE CAM</option>
-                            <option value="BOOTH-CAM">BOOTH CAM</option>
-                            <option value="CROWD">CROWD</option>
-                            <option value="BACK-VIEW">BACK VIEW</option>
-                            <option value="THUMBNAIL">THUMBNAIL</option>
-                            <option value="VERTICAL-CLIP">VERTICAL SOCIAL CLIP</option>
-                            <option value="AUDIO">MASTER AUDIO (MP3/WAV)</option>
+                            <option value="BOOTH">BOOTH CAM</option>
                         </select>
                     </div>
-                    <div class="text-center">
-                        <input type="file" id="hidden-file-input" class="hidden" accept="video/*,image/*,audio/*">
-                        <button id="upload-btn" class="bg-primary text-black px-10 py-4 rounded-full font-black uppercase text-[11px] w-full md:w-auto shadow-lg">START MASTER UPLOAD</button>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <label class="flex flex-col items-center justify-center p-6 bg-black border border-zinc-800 rounded-2xl cursor-pointer hover:border-primary/50 group">
+                            <iconify-icon icon="solar:videocamera-record-bold" class="text-2xl text-zinc-600 group-hover:text-primary"></iconify-icon>
+                            <span class="text-[8px] font-mono mt-2 text-zinc-500 uppercase">4K Video (.MOV/.MP4)</span>
+                            <input type="file" id="file-video" class="hidden" accept="video/mp4,video/quicktime">
+                        </label>
+                        <label class="flex flex-col items-center justify-center p-6 bg-black border border-zinc-800 rounded-2xl cursor-pointer hover:border-primary/50 group">
+                            <iconify-icon icon="solar:music-note-bold" class="text-2xl text-zinc-600 group-hover:text-primary"></iconify-icon>
+                            <span class="text-[8px] font-mono mt-2 text-zinc-500 uppercase">HQ Audio (.WAV/.MP3)</span>
+                            <input type="file" id="file-audio" class="hidden" accept="audio/mpeg,audio/wav">
+                        </label>
+                        <label class="flex flex-col items-center justify-center p-6 bg-black border border-zinc-800 rounded-2xl cursor-pointer hover:border-primary/50 group">
+                            <iconify-icon icon="solar:iphone-bold" class="text-2xl text-zinc-600 group-hover:text-primary"></iconify-icon>
+                            <span class="text-[8px] font-mono mt-2 text-zinc-500 uppercase">Social Pack (Mult. MP4)</span>
+                            <input type="file" id="file-social" class="hidden" multiple accept="video/mp4,video/quicktime">
+                        </label>
+                        <label class="flex flex-col items-center justify-center p-6 bg-black border border-zinc-800 rounded-2xl cursor-pointer hover:border-primary/50 group">
+                            <iconify-icon icon="solar:gallery-bold" class="text-2xl text-zinc-600 group-hover:text-primary"></iconify-icon>
+                            <span class="text-[8px] font-mono mt-2 text-zinc-500 uppercase">Marketing (Mult. JPG)</span>
+                            <input type="file" id="file-marketing" class="hidden" multiple accept="image/jpeg,image/png">
+                        </label>
                     </div>
+
+                    <button id="upload-btn" class="w-full bg-primary text-black font-black py-5 rounded-2xl uppercase tracking-[0.2em] text-[11px] hover:scale-[1.01] transition-all">
+                        PROCESS & INGEST FULL SESSION
+                    </button>
                 </div>
 
-                <div id="video-preview-container" class="hidden space-y-4">
-                    <h3 class="text-[10px] font-mono text-primary uppercase tracking-[0.3em] border-b border-primary/20 pb-2">Active Preview</h3>
-                    <div class="aspect-video bg-black border border-primary/30 rounded-xl overflow-hidden shadow-2xl">
-                        <video id="preview-player" controls autoplay loop muted playsinline class="w-full h-full object-contain"></video>
+                <div id="preview-container" class="hidden space-y-12 mt-12 pb-32">
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-3">
+                            <span class="bg-primary/20 text-primary text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-widest border border-primary/30">INFRASTRUCTURE TIER ACTIVE</span>
+                            <span class="text-zinc-600 font-mono text-[9px] uppercase tracking-widest">// 48H PRIORITY TURNAROUND</span>
+                        </div>
+                        
+                        <div class="flex items-end justify-between">
+                            <div>
+                                <h2 id="vault-dj-title" class="text-6xl font-black italic uppercase tracking-tighter text-white">DJ NAME</h2>
+                                <p id="vault-venue-meta" class="text-zinc-500 font-mono text-[10px] uppercase tracking-[0.4em] mt-2">FABRIC LONDON // 02 MAR 2026</p>
+                            </div>
+                            <button onclick="closePreview()" class="px-6 py-2 border border-zinc-800 rounded-lg text-[9px] font-mono text-zinc-500 uppercase tracking-widest hover:text-white hover:border-zinc-600">
+                                [ CLOSE SESSION ]
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <h3 class="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.3em] flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span> 4K Long-Form Master
+                        </h3>
+                        <div class="aspect-video bg-black rounded-3xl overflow-hidden border border-white/5 shadow-2xl">
+                            <video id="preview-video" class="w-full h-full object-cover" controls playsinline></video>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <a id="dl-video" href="#" class="bg-white text-black font-black py-4 rounded-xl text-center text-[10px] uppercase tracking-widest hover:bg-primary transition-all flex items-center justify-center gap-2">
+                                <iconify-icon icon="solar:download-bold"></iconify-icon> Download 4K Master (.MOV)
+                            </a>
+                            <a id="dl-audio" href="#" class="bg-zinc-900 text-white font-black py-4 rounded-xl text-center text-[10px] uppercase tracking-widest border border-white/5 hover:border-primary transition-all flex items-center justify-center gap-2">
+                                <iconify-icon icon="solar:music-note-bold"></iconify-icon> Download HQ Audio (WAV)
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="space-y-6">
+                        <div class="flex items-center justify-between border-b border-zinc-900 pb-4">
+                            <h3 class="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.3em] flex items-center gap-2">
+                                <iconify-icon icon="solar:iphone-bold" class="text-primary"></iconify-icon> Social Suite (12 Vertical Clips)
+                            </h3>
+                            <button class="px-4 py-2 bg-zinc-900 rounded-lg text-[8px] font-black uppercase text-zinc-400 hover:text-primary">BULK DOWNLOAD</button>
+                        </div>
+                        <div id="social-clips-grid" class="flex gap-4 overflow-x-auto pb-6 no-scrollbar">
+                            </div>
+                    </div>
+
+                    <div class="space-y-6">
+                        <h3 class="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.3em] flex items-center gap-2">
+                            <iconify-icon icon="solar:gallery-bold" class="text-primary"></iconify-icon> Marketing Thumbnails & Assets
+                        </h3>
+                        <div id="marketing-gallery" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            </div>
                     </div>
                 </div>
 
@@ -126,16 +189,13 @@
 
         function setupUploadHandler() {
             const uploadBtn = document.getElementById('upload-btn');
-            const fileInput = document.getElementById('hidden-file-input');
 
-            uploadBtn.onclick = function() {
-                fileInput.click();
-            };
+            const fileVideo = document.getElementById('file-video');
+            const fileAudio = document.getElementById('file-audio');
+            const fileSocial = document.getElementById('file-social');
+            const fileMarketing = document.getElementById('file-marketing');
 
-            fileInput.onchange = async function(e) {
-                const file = e.target.files[0];
-                if (!file) return;
-
+            uploadBtn.onclick = async function() {
                 const djName = document.getElementById('ingest-name').value.trim();
                 const date = document.getElementById('ingest-date').value.trim();
                 const shot = document.getElementById('ingest-shot').value;
@@ -145,37 +205,64 @@
                     return;
                 }
 
+                const uploadQueue = [];
+                
+                if (fileVideo.files.length > 0) uploadQueue.push({ file: fileVideo.files[0], shotType: 'MASTER_CAM' });
+                if (fileAudio.files.length > 0) uploadQueue.push({ file: fileAudio.files[0], shotType: 'MASTER_AUDIO' });
+                
+                for (let i = 0; i < fileSocial.files.length; i++) {
+                    uploadQueue.push({ file: fileSocial.files[i], shotType: `SOCIAL_CLIP_${i+1}` });
+                }
+                
+                for (let i = 0; i < fileMarketing.files.length; i++) {
+                    uploadQueue.push({ file: fileMarketing.files[i], shotType: `MARKETING_THUMB_${i+1}` });
+                }
+
+                if (uploadQueue.length === 0) {
+                    alert('Please select at least one file to upload.');
+                    return;
+                }
+
                 uploadBtn.disabled = true;
-                uploadBtn.textContent = 'AUTHORIZING...';
 
                 try {
-                    const fileName = `venue_masters/${djName.toLowerCase()}_${date.replace(/\s+/g, '_')}_${shot.toLowerCase()}.${file.name.split('.').pop()}`;
-                    const authResponse = await fetch(`${CONFIG.WORKER_URL}/presign?file=${fileName}&type=${file.type}`, {
-                        headers: { "x-api-key": CONFIG.API_KEY }
-                    });
-                    const { uploadUrl } = await authResponse.json();
+                    let successCount = 0;
+                    for (const { file, shotType } of uploadQueue) {
+                        uploadBtn.textContent = `UPLOADING (${successCount + 1}/${uploadQueue.length})...`;
+                        const fileName = `venue_masters/${djName.toLowerCase()}_${date.replace(/\s+/g, '_')}_${shotType.toLowerCase()}.${file.name.split('.').pop()}`;
+                        
+                        const authResponse = await fetch(`${CONFIG.WORKER_URL}/presign?file=${fileName}&type=${file.type}`, {
+                            headers: { "x-api-key": CONFIG.API_KEY }
+                        });
+                        const { uploadUrl } = await authResponse.json();
 
-                    uploadBtn.textContent = 'UPLOADING BIG FILE...';
+                        const uploadResponse = await fetch(uploadUrl, {
+                            method: 'PUT',
+                            body: file,
+                            headers: { 'Content-Type': file.type }
+                        });
 
-                    const uploadResponse = await fetch(uploadUrl, {
-                        method: 'PUT',
-                        body: file,
-                        headers: { 'Content-Type': file.type }
-                    });
-
-                    if (uploadResponse.ok) {
-                        alert('Upload to Cloudflare successful!');
-                        fileInput.value = '';
-                        fetchCloudLibrary();
-                    } else {
-                        throw new Error('Cloudflare upload failed');
+                        if (!uploadResponse.ok) {
+                            throw new Error(`Cloudflare upload failed for ${file.name}`);
+                        }
+                        successCount++;
                     }
+                    
+                    alert(`Successfully uploaded ${successCount} files!`);
+                    
+                    // Reset inputs
+                    fileVideo.value = '';
+                    fileAudio.value = '';
+                    fileSocial.value = '';
+                    fileMarketing.value = '';
+                    
+                    fetchCloudLibrary();
                 } catch (err) {
                     console.error('Upload error:', err);
                     alert('Upload error: ' + err.message);
                 } finally {
                     uploadBtn.disabled = false;
-                    uploadBtn.textContent = 'START MASTER UPLOAD';
+                    uploadBtn.textContent = 'PROCESS & INGEST FULL SESSION';
                 }
             };
         }
