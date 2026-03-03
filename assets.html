@@ -106,7 +106,7 @@
                     </button>
                 </div>
 
-                <div id="preview-container" class="hidden space-y-12 mt-12 pb-32">
+                <div id="preview-container" class="hidden mt-8 pb-12 flex flex-col gap-6">
                     <div class="space-y-4">
                         <div class="flex items-center gap-3">
                             <span class="bg-primary/20 text-primary text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-widest border border-primary/30">INFRASTRUCTURE TIER ACTIVE</span>
@@ -115,7 +115,7 @@
                         
                         <div class="flex items-end justify-between">
                             <div>
-                                <h2 id="vault-dj-title" class="text-6xl font-black italic uppercase tracking-tighter text-white">DJ NAME</h2>
+                                <h2 id="vault-dj-title" class="text-4xl md:text-5xl font-black italic uppercase tracking-tighter text-white leading-none">AMONGST FEW</h2>
                                 <p id="vault-venue-meta" class="text-zinc-500 font-mono text-[10px] uppercase tracking-[0.4em] mt-2">FABRIC LONDON // 02 MAR 2026</p>
                             </div>
                             <button onclick="closePreview()" class="px-6 py-2 border border-zinc-800 rounded-lg text-[9px] font-mono text-zinc-500 uppercase tracking-widest hover:text-white hover:border-zinc-600">
@@ -124,43 +124,7 @@
                         </div>
                     </div>
 
-                    <div class="space-y-4">
-                        <h3 id="preview-asset-label" class="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.3em] flex items-center gap-2">
-                            <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span> ASSET PREVIEW
-                        </h3>
-                        <div class="aspect-video bg-black rounded-3xl overflow-hidden border border-white/5 shadow-2xl">
-                            <video id="preview-video" class="w-full h-full object-cover hidden" controls playsinline></video>
-                            <audio id="preview-audio" class="w-full h-full p-6 hidden" controls></audio>
-                            <img id="preview-image" class="w-full h-full object-contain hidden" alt="asset preview">
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <a id="dl-video" href="#" target="_blank" class="bg-white text-black font-black py-4 rounded-xl text-center text-[10px] uppercase tracking-widest hover:bg-primary transition-all flex items-center justify-center gap-2">
-                                <iconify-icon icon="solar:download-bold"></iconify-icon> Download Current Asset
-                            </a>
-                            <a id="dl-audio" href="#" target="_blank" class="bg-zinc-900 text-white font-black py-4 rounded-xl text-center text-[10px] uppercase tracking-widest border border-white/5 hover:border-primary transition-all flex items-center justify-center gap-2">
-                                <iconify-icon icon="solar:music-note-bold"></iconify-icon> Open Direct Link
-                            </a>
-                        </div>
-                    </div>
-
-                    <div class="space-y-6">
-                        <div class="flex items-center justify-between border-b border-zinc-900 pb-4">
-                            <h3 class="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.3em] flex items-center gap-2">
-                                <iconify-icon icon="solar:iphone-bold" class="text-primary"></iconify-icon> Social Suite (12 Vertical Clips)
-                            </h3>
-                            <button class="px-4 py-2 bg-zinc-900 rounded-lg text-[8px] font-black uppercase text-zinc-400 hover:text-primary">BULK DOWNLOAD</button>
-                        </div>
-                        <div id="social-clips-grid" class="flex gap-4 overflow-x-auto pb-6 no-scrollbar">
-                            </div>
-                    </div>
-
-                    <div class="space-y-6">
-                        <h3 class="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.3em] flex items-center gap-2">
-                            <iconify-icon icon="solar:gallery-bold" class="text-primary"></iconify-icon> Marketing Thumbnails & Assets
-                        </h3>
-                        <div id="marketing-gallery" class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            </div>
-                    </div>
+                    <div id="asset-display-area" class="space-y-4"></div>
                 </div>
 
                 <div class="space-y-4 pt-4">
@@ -439,21 +403,26 @@
             const lower = base.toLowerCase();
 
             let shot = 'CAM';
+            let assetType = 'MASTER';
             let sessionBase = base;
 
             if (lower.endsWith('_master_cam')) {
                 shot = 'MASTER CAM';
+                assetType = 'MASTER';
                 sessionBase = base.slice(0, -('_master_cam'.length));
             } else if (lower.endsWith('_master_audio')) {
                 shot = 'MASTER AUDIO';
+                assetType = 'AUDIO';
                 sessionBase = base.slice(0, -('_master_audio'.length));
             } else if (/_social_clip_\d+$/i.test(base)) {
                 const match = base.match(/_social_clip_(\d+)$/i);
                 shot = `SOCIAL CLIP ${match ? match[1] : ''}`.trim();
+                assetType = 'SOCIAL';
                 sessionBase = base.replace(/_social_clip_\d+$/i, '');
             } else if (/_marketing_thumb_\d+$/i.test(base)) {
                 const match = base.match(/_marketing_thumb_(\d+)$/i);
                 shot = `THUMB ${match ? match[1] : ''}`.trim();
+                assetType = 'THUMB';
                 sessionBase = base.replace(/_marketing_thumb_\d+$/i, '');
             }
 
@@ -483,6 +452,7 @@
                 dj,
                 date,
                 shot,
+                assetType,
                 format: ext || 'FILE',
                 icon,
                 color,
@@ -579,69 +549,71 @@
             }
         }
 
-        function previewAssetByKey(encodedKey) {
-            const key = decodeURIComponent(encodedKey);
-            const asset = cloudAssets.find(item => item.key === key);
-            if (!asset) return;
-
+        function openSpecificAsset(assetUrl, assetType, djName, shotLabel, format) {
             const container = document.getElementById('preview-container');
+            const displayArea = document.getElementById('asset-display-area');
             const title = document.getElementById('vault-dj-title');
             const meta = document.getElementById('vault-venue-meta');
-            const assetLabel = document.getElementById('preview-asset-label');
-            const video = document.getElementById('preview-video');
-            const audio = document.getElementById('preview-audio');
-            const image = document.getElementById('preview-image');
-            const dlVideo = document.getElementById('dl-video');
-            const dlAudio = document.getElementById('dl-audio');
+            if (!container || !displayArea || !title || !meta) return;
 
-            const hideAll = () => {
-                video.pause();
-                audio.pause();
-                video.classList.add('hidden');
-                audio.classList.add('hidden');
-                image.classList.add('hidden');
-            };
+            title.textContent = (djName || 'UNKNOWN').toUpperCase();
+            meta.textContent = `${shotLabel || 'ASSET'} // ${format || 'FILE'} FORMAT`;
 
-            hideAll();
+            displayArea.innerHTML = '';
 
-            title.textContent = asset.dj;
-            meta.textContent = `UPLOAD SESSION // ${asset.date}`;
-            assetLabel.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span> ${asset.shot} // ${asset.format}`;
-
-            if (['MP4', 'MOV', 'WEBM'].includes(asset.format)) {
-                video.src = asset.url;
-                video.classList.remove('hidden');
-                video.play().catch(() => {});
-            } else if (['MP3', 'WAV', 'M4A', 'AAC'].includes(asset.format)) {
-                audio.src = asset.url;
-                audio.classList.remove('hidden');
-                audio.play().catch(() => {});
-            } else if (['JPG', 'JPEG', 'PNG', 'WEBP', 'GIF'].includes(asset.format)) {
-                image.src = asset.url;
-                image.classList.remove('hidden');
+            if (assetType === 'MASTER' || assetType === 'SOCIAL') {
+                displayArea.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="aspect-video bg-black rounded-3xl overflow-hidden border border-white/5">
+                            <video src="${assetUrl}" class="w-full h-full object-cover" controls autoplay playsinline></video>
+                        </div>
+                        <div class="flex gap-4">
+                            <a href="${assetUrl}" target="_blank" download class="flex-1 bg-white text-black font-black py-4 rounded-xl text-center text-[10px] uppercase tracking-widest hover:bg-primary transition-all">DOWNLOAD ${assetType === 'MASTER' ? '4K MASTER' : 'SOCIAL CLIP'}</a>
+                        </div>
+                    </div>`;
+            } else if (assetType === 'AUDIO') {
+                displayArea.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="bg-black rounded-3xl overflow-hidden border border-white/5 p-6">
+                            <audio src="${assetUrl}" class="w-full" controls autoplay></audio>
+                        </div>
+                        <div class="flex gap-4">
+                            <a href="${assetUrl}" target="_blank" download class="flex-1 bg-white text-black font-black py-4 rounded-xl text-center text-[10px] uppercase tracking-widest hover:bg-primary transition-all">DOWNLOAD HQ AUDIO</a>
+                        </div>
+                    </div>`;
+            } else if (assetType === 'THUMB' || ['JPG', 'JPEG', 'PNG', 'WEBP', 'GIF'].includes(format)) {
+                displayArea.innerHTML = `
+                    <div class="space-y-4">
+                        <img src="${assetUrl}" class="w-full aspect-video object-cover rounded-3xl border border-white/5 shadow-2xl" alt="Thumbnail preview">
+                        <div class="flex gap-4">
+                            <a href="${assetUrl}" target="_blank" download class="flex-1 bg-white text-black font-black py-4 rounded-xl text-center text-[10px] uppercase tracking-widest hover:bg-primary transition-all">DOWNLOAD THUMBNAIL</a>
+                        </div>
+                    </div>`;
+            } else {
+                displayArea.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="bg-black rounded-3xl overflow-hidden border border-white/5 p-6 text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Preview not available for this format.</div>
+                        <div class="flex gap-4">
+                            <a href="${assetUrl}" target="_blank" download class="flex-1 bg-white text-black font-black py-4 rounded-xl text-center text-[10px] uppercase tracking-widest hover:bg-primary transition-all">DOWNLOAD FILE</a>
+                        </div>
+                    </div>`;
             }
-
-            dlVideo.href = asset.url;
-            dlAudio.href = asset.url;
 
             container.classList.remove('hidden');
             container.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
+        function previewAssetByKey(encodedKey) {
+            const key = decodeURIComponent(encodedKey);
+            const asset = cloudAssets.find(item => item.key === key);
+            if (!asset) return;
+            openSpecificAsset(asset.url, asset.assetType, asset.dj, asset.shot, asset.format);
+        }
+
         function closePreview() {
             const container = document.getElementById('preview-container');
-            const video = document.getElementById('preview-video');
-            const audio = document.getElementById('preview-audio');
-            const image = document.getElementById('preview-image');
-
-            video.pause();
-            audio.pause();
-            video.removeAttribute('src');
-            audio.removeAttribute('src');
-            image.removeAttribute('src');
-            video.classList.add('hidden');
-            audio.classList.add('hidden');
-            image.classList.add('hidden');
+            const displayArea = document.getElementById('asset-display-area');
+            if (displayArea) displayArea.innerHTML = '';
             container.classList.add('hidden');
         }
     </script>
