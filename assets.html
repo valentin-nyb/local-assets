@@ -595,6 +595,14 @@
             }, {});
         }
 
+        function getCategorySortOrder(type) {
+            const t = String(type || '').toUpperCase();
+            if (t === 'MASTERS' || t === 'MASTER') return 0;
+            if (t === 'AUDIO') return 1;
+            if (t === 'MARKETING' || t === 'THUMB') return 2;
+            return 99;
+        }
+
         function slugifyId(value) {
             return String(value || '')
                 .toLowerCase()
@@ -660,7 +668,15 @@
                     </div>
 
                     <div id="${folderId}" class="hidden bg-black/40 divide-y divide-white/5">
-                        ${Object.entries(artistGroup).map(([type, assets]) => renderCategory(type, assets, artist.name)).join('')}
+                        ${Object.entries(artistGroup)
+                            .sort(([typeA], [typeB]) => {
+                                const orderA = getCategorySortOrder(typeA);
+                                const orderB = getCategorySortOrder(typeB);
+                                if (orderA !== orderB) return orderA - orderB;
+                                return String(typeA).localeCompare(String(typeB));
+                            })
+                            .map(([type, assets]) => renderCategory(type, assets, artist.name))
+                            .join('')}
                     </div>
                 `;
 
