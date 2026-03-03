@@ -4,12 +4,12 @@ export default {
     const corsHeaders = {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, PUT, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, x-api-key",
+      "Access-Control-Allow-Headers": "*",
       "Access-Control-Max-Age": "86400",
     };
 
     if (request.method === "OPTIONS") {
-      return new Response(null, { headers: corsHeaders });
+      return new Response(null, { status: 204, headers: corsHeaders });
     }
 
     const url = new URL(request.url);
