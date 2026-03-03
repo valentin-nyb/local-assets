@@ -230,7 +230,6 @@
             const uploadBtn = document.getElementById('upload-btn');
             const MULTIPART_THRESHOLD_BYTES = 80 * 1024 * 1024;
             const MULTIPART_CHUNK_BYTES = 5 * 1024 * 1024;
-            const SOCIAL_MULTIPART_THRESHOLD_BYTES = 150 * 1024 * 1024;
             const MULTIPART_MAX_RETRIES = 3;
             const REQUEST_TIMEOUT_MS = 60000;
 
@@ -476,9 +475,10 @@
                         uploadBtn.textContent = `UPLOADING (${queueIndex}/${uploadQueue.length})...`;
                         const fileType = file.type || 'application/octet-stream';
                         const fileName = getAssetPath(file, shotType);
+                        const isSocialClip = (shotType || '').startsWith('SOCIAL_CLIP');
 
-                        const shouldPreferMultipart = (shotType || '').startsWith('SOCIAL_CLIP')
-                            ? file.size > SOCIAL_MULTIPART_THRESHOLD_BYTES
+                        const shouldPreferMultipart = isSocialClip
+                            ? false
                             : file.size > MULTIPART_THRESHOLD_BYTES;
 
                         if (shouldPreferMultipart) {
@@ -500,7 +500,10 @@
                                     uploadBtn.textContent = `RETRYING DIRECT (${queueIndex}/${uploadQueue.length})...`;
                                     await uploadDirectPutFile(file, fileName, fileType);
                                 } catch (putErr) {
-                                    // Final fallback path: retry same file via multipart when direct upload flakes.
+                                    if (isSocialClip) {
+                                        throw putErr;
+                                    }
+                                    // Final fallback path for non-social large uploads.
                                     uploadBtn.textContent = `RETRYING MULTIPART (${queueIndex}/${uploadQueue.length})...`;
                                     await uploadMultipartFile(file, fileName, fileType, queueIndex, uploadQueue.length);
                                 }
