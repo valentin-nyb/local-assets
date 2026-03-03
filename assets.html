@@ -284,7 +284,8 @@
                 const cleanPath = pathWithQuery.startsWith('/') ? pathWithQuery.substring(1) : pathWithQuery;
                 const viaProxy = `${CONFIG.WORKER_URL}/${cleanPath}`;
                 const directWorker = `${CONFIG.WORKER_FALLBACK_URL}/${cleanPath}`;
-                return preferDirect ? [directWorker, viaProxy] : [viaProxy, directWorker];
+                const urls = preferDirect ? [directWorker, viaProxy] : [viaProxy, directWorker];
+                return [...new Set(urls)];
             }
 
             async function fetchWithFallback(pathWithQuery, options = {}, timeoutMs = REQUEST_TIMEOUT_MS, config = {}) {
@@ -485,7 +486,12 @@
 
                         if (file.size < UPLOAD_LIMIT_DIRECT) {
                             uploadBtn.textContent = `UPLOADING (${queueIndex}/${uploadQueue.length}) [DIRECT]...`;
-                            await uploadDirectPutFile(file, fileName, fileType);
+                            try {
+                                await uploadDirectPutFile(file, fileName, fileType);
+                            } catch (directErr) {
+                                uploadBtn.textContent = `RETRYING (${queueIndex}/${uploadQueue.length}) [MULTIPART]...`;
+                                await uploadMultipartFile(file, fileName, fileType, queueIndex, uploadQueue.length);
+                            }
                         } else {
                             uploadBtn.textContent = `UPLOADING (${queueIndex}/${uploadQueue.length}) [MULTIPART]...`;
                             await uploadMultipartFile(file, fileName, fileType, queueIndex, uploadQueue.length);
