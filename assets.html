@@ -458,13 +458,19 @@
 
                         if (['mov', 'mp4', 'webm'].includes(ext)) subFolder = 'masters';
                         if (['wav', 'mp3', 'm4a', 'aac'].includes(ext)) subFolder = 'audio';
-                        if ((type || '').startsWith('SOCIAL_CLIP')) subFolder = 'verticals';
+                        if ((type || '').startsWith('SOCIAL_CLIP')) subFolder = 'social-suite';
                         if (['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(ext) || (type || '').startsWith('MARKETING_THUMB')) subFolder = 'marketing';
 
                         const cleanOriginal = file.name
                             .toLowerCase()
                             .replace(/\s+/g, '_')
                             .replace(/[^a-z0-9._-]/g, '');
+
+                        if ((type || '').startsWith('SOCIAL_CLIP')) {
+                            const socialIndex = Number(String(type).split('_').pop()) || 1;
+                            const socialExt = ext || 'mov';
+                            return `venue_masters/${safeDj}/${subFolder}/${safeDate}_vertical_${socialIndex}.${socialExt}`;
+                        }
 
                         return `venue_masters/${safeDj}/${subFolder}/${safeDate}_${cleanOriginal}`;
                     }
@@ -698,6 +704,11 @@
                 return;
             }
 
+            if (normalizedType === 'SOCIAL-SUITE' || normalizedType === 'MARKETING') {
+                renderVerticalFocus(artistName, assets, normalizedType);
+                return;
+            }
+
             const container = document.getElementById('preview-container');
             const displayArea = document.getElementById('active-asset-display');
             const title = document.getElementById('vault-dj-title');
@@ -740,6 +751,69 @@
             `;
 
             displayArea.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function previewVerticalEncoded(encodedUrl, encodedType, encodedName, format) {
+            openAssetPreview(decodeURIComponent(encodedUrl), decodeURIComponent(encodedType), decodeURIComponent(encodedName), format);
+        }
+
+        function renderVerticalFocus(artistName, clips, assetType = 'SOCIAL-SUITE') {
+            const display = document.getElementById('active-asset-display');
+            const container = document.getElementById('preview-container');
+            const title = document.getElementById('vault-dj-title');
+            const meta = document.getElementById('vault-meta');
+            if (!display || !container || !title || !meta) return;
+
+            const normalizedType = String(assetType || '').toUpperCase();
+            const label = getAssetLabel(normalizedType, clips?.[0]?.key || '');
+
+            title.textContent = (artistName || 'UNKNOWN').toUpperCase();
+            title.className = 'artist-hero-title';
+            meta.textContent = `${label} // ${clips.length} ASSET(S)`;
+
+            container.classList.remove('hidden');
+            display.innerHTML = '';
+
+            const listHTML = (clips || []).map((asset, index) => {
+                const format = (asset.format || (asset.key || '').split('.').pop() || 'FILE').toUpperCase();
+                const assetUrl = `${CONFIG.WORKER_URL}/asset?key=${encodeURIComponent(asset.key || '')}`;
+                const icon = getIcon(normalizedType);
+
+                return `
+                    <div class="flex items-center justify-between p-5 bg-[#0a0a0a] border border-zinc-800 rounded-2xl mb-2 hover:border-primary group transition-all">
+                        <div class="flex items-center gap-4 min-w-0">
+                            <div class="w-8 h-8 bg-zinc-900 rounded-lg flex items-center justify-center">
+                                <iconify-icon icon="${icon}" class="text-zinc-600 group-hover:text-primary"></iconify-icon>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">ASSET ${index + 1}</p>
+                                <p class="text-[11px] font-bold text-white uppercase tracking-tight">${label}</p>
+                                <p class="text-[9px] font-mono text-zinc-600 uppercase tracking-widest">${format} // ${formatBytes(asset.size)}</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-2 shrink-0">
+                            <button onclick="previewVerticalEncoded('${encodeURIComponent(assetUrl)}', '${encodeURIComponent(normalizedType)}', '${encodeURIComponent(artistName)}', '${format}')" class="p-2 text-zinc-600 hover:text-white" title="Preview">
+                                <iconify-icon icon="solar:play-circle-bold" class="text-xl"></iconify-icon>
+                            </button>
+                            <a href="${assetUrl}" download class="p-2 text-zinc-600 hover:text-primary" title="Download">
+                                <iconify-icon icon="solar:download-bold" class="text-xl"></iconify-icon>
+                            </a>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            display.innerHTML = `
+                <div class="space-y-4 animate-in fade-in slide-in-from-bottom-2">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.3em]">Vertical Assets (${clips.length})</h3>
+                        <button class="text-[10px] font-black text-primary uppercase border border-primary/20 px-3 py-1 rounded-md" disabled>BULK DOWNLOAD ZIP</button>
+                    </div>
+                    ${listHTML}
+                </div>
+            `;
+
+            display.scrollIntoView({ behavior: 'smooth' });
         }
 
         function toggleFolder(folderId) {

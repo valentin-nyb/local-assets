@@ -7,11 +7,23 @@ const corsHeaders = {
 
 export default {
   async fetch(request, env) {
-    const url = new URL(request.url);
-
-    // Handle CORS preflight
+    // 1. MUST HANDLE OPTIONS FOR UPLOADS
     if (request.method === "OPTIONS") {
-      return new Response(null, { status: 204, headers: corsHeaders });
+      return new Response(null, {
+        status: 204,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, PUT, POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, x-api-key",
+          "Access-Control-Max-Age": "86400",
+        },
+      });
+    }
+
+    const url = new URL(request.url);
+    const authKey = request.headers.get("x-api-key");
+    if (env.API_KEY && authKey !== env.API_KEY) {
+      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
     }
 
     try {
