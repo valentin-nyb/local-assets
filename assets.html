@@ -43,6 +43,7 @@
             color: white;
             margin-bottom: 2rem;
             transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            white-space: nowrap;
         }
 
         .preview-header {
@@ -58,20 +59,27 @@
         .btn-close-session {
             height: fit-content;
             padding: 0.75rem 1.5rem;
-            border: 1px solid #27272a;
+            border: 1px solid #ffffff;
             border-radius: 0.75rem;
             font-family: 'JetBrains Mono', monospace;
             font-size: 9px;
-            color: #52525b;
+            color: #ffffff;
             text-transform: uppercase;
             letter-spacing: 0.2em;
             transition: all 0.2s ease;
+            background: rgba(255,255,255,0.04);
         }
 
         .btn-close-session:hover {
-            color: white;
-            border-color: #3f3f46;
-            background: rgba(255,255,255,0.02);
+            color: #ffffff;
+            border-color: #ffffff;
+            background: rgba(255,255,255,0.08);
+        }
+
+        .btn-close-session:active {
+            color: #39FF14;
+            border-color: #39FF14;
+            background: rgba(57,255,20,0.12);
         }
 
         #active-asset-display {
@@ -576,7 +584,7 @@
             if (!container || !displayArea || !title || !meta) return;
 
             const upperName = (djName || 'UNKNOWN').toUpperCase();
-            title.innerHTML = upperName.replace(' ', '<br>');
+            title.textContent = upperName;
             title.className = 'artist-hero-title';
             meta.textContent = `UPLOAD SESSION // ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()}`;
 
