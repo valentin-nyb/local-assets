@@ -217,24 +217,73 @@
         function renderList() {
             const list = document.getElementById('cloud-list');
             list.innerHTML = '';
-            cloudAssets.forEach(item => {
-                const row = document.createElement('div');
-                row.className = "flex items-center justify-between p-4 bg-card border border-zinc-800 rounded-2xl group cursor-pointer hover:border-primary/40 transition-all";
-                row.innerHTML = `
-                    <div class="flex items-center gap-4 min-w-0 flex-1" onclick="playPreview('${item.url}')">
-                        <div class="w-12 h-12 bg-zinc-900 flex items-center justify-center rounded-xl text-primary shrink-0 shadow-lg"><iconify-icon icon="solar:play-bold" class="text-xl"></iconify-icon></div>
-                        <div class="min-w-0">
-                            <div class="flex items-center gap-2 mb-1">
-                                <p class="text-sm font-black uppercase text-white truncate">${item.dj}</p>
-                                <span class="text-[7px] px-1.5 py-0.5 rounded bg-primary text-black font-black font-mono uppercase">${item.shot}</span>
-                            </div>
-                            <p class="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">FABRIC LONDON // ${item.date} // ${item.format}</p>
+
+            // Group assets by DJ and Date
+            const groupedAssets = cloudAssets.reduce((acc, item) => {
+                const key = `${item.dj}_${item.date}`;
+                if (!acc[key]) {
+                    acc[key] = {
+                        dj: item.dj,
+                        date: item.date,
+                        items: []
+                    };
+                }
+                acc[key].items.push(item);
+                return acc;
+            }, {});
+
+            Object.values(groupedAssets).forEach(group => {
+                const groupContainer = document.createElement('div');
+                groupContainer.className = "mb-6 border border-zinc-800 rounded-2xl bg-card overflow-hidden";
+                
+                // Group Header
+                const groupHeader = document.createElement('div');
+                groupHeader.className = "flex items-center justify-between p-4 bg-zinc-900/50 border-b border-zinc-800";
+                groupHeader.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-zinc-900 flex items-center justify-center rounded-lg text-primary shadow">
+                            <iconify-icon icon="solar:folder-with-files-bold" class="text-lg"></iconify-icon>
+                        </div>
+                        <div>
+                            <p class="text-sm font-black uppercase text-white tracking-wide">${group.dj}</p>
+                            <p class="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">${group.date} // ${group.items.length} Asset(s)</p>
                         </div>
                     </div>
-                    <a href="${item.url}" target="_blank" class="w-10 h-10 flex items-center justify-center text-zinc-600 hover:text-primary transition-colors">
-                        <iconify-icon icon="solar:cloud-download-bold" class="text-2xl"></iconify-icon>
-                    </a>`;
-                list.appendChild(row);
+                `;
+                groupContainer.appendChild(groupHeader);
+
+                // Group Items List
+                const itemsContainer = document.createElement('div');
+                itemsContainer.className = "divide-y divide-zinc-800/50";
+                
+                group.items.forEach(item => {
+                    const row = document.createElement('div');
+                    row.className = "flex items-center justify-between p-4 hover:bg-zinc-800/30 transition-all cursor-pointer group/item";
+                    
+                    let icon = "solar:play-bold";
+                    if (item.format === "MP3" || item.format === "WAV") icon = "solar:music-note-bold";
+                    if (item.format === "JPG" || item.format === "PNG" || item.format === "WEBP") icon = "solar:gallery-bold";
+
+                    row.innerHTML = `
+                        <div class="flex items-center gap-4 min-w-0 flex-1" onclick="playPreview('${item.url}')">
+                            <div class="w-10 h-10 bg-zinc-900 border border-zinc-800 flex items-center justify-center rounded-xl text-primary shrink-0 group-hover/item:border-primary/50 transition-colors">
+                                <iconify-icon icon="${icon}" class="text-lg"></iconify-icon>
+                            </div>
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="text-[8px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 font-bold font-mono uppercase group-hover/item:bg-primary/20 group-hover/item:text-primary transition-colors">${item.shot}</span>
+                                </div>
+                                <p class="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">${item.format} FORMAT</p>
+                            </div>
+                        </div>
+                        <a href="${item.url}" target="_blank" class="w-10 h-10 flex items-center justify-center text-zinc-600 hover:text-primary transition-colors">
+                            <iconify-icon icon="solar:cloud-download-bold" class="text-xl"></iconify-icon>
+                        </a>`;
+                    itemsContainer.appendChild(row);
+                });
+
+                groupContainer.appendChild(itemsContainer);
+                list.appendChild(groupContainer);
             });
         }
 
