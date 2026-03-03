@@ -1,10 +1,7 @@
-import { S3Client, PutObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, PUT, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "x-api-key, Content-Type",
+  "Access-Control-Allow-Headers": "Content-Type",
 };
 
 export default {
@@ -17,43 +14,69 @@ export default {
     }
 
     try {
-        // Configure the R2 Client
-        const s3 = new S3Client({
-          region: "auto",
-          endpoint: `https://${env.ACCOUNT_ID}.r2.cloudflarestorage.com`,
-          credentials: {
-            accessKeyId: env.R2_ACCESS_KEY_ID,
-            secretAccessKey: env.R2_SECRET_ACCESS_KEY,
-          },
-        });
+        const bucket = env.ASSETS_BUCKET;
 
-        // 2. Route: GET /list (Fetch recordings for the UI)
-        if (url.pathname === "/list") {
-          const command = new ListObjectsV2Command({
-            Bucket: env.R2_BUCKET_NAME,
-            Prefix: url.searchParams.get("prefix") || "venue_masters/",
-          });
-          const { Contents } = await s3.send(command);
-          return new Response(JSON.stringify(Contents || []), {
+        if (!bucket) {
+          return new Response(JSON.stringify({ error: "R2 bucket binding ASSETS_BUCKET is missing" }), {
+            status: 500,
             headers: { "Content-Type": "application/json", ...corsHeaders },
           });
         }
 
-        // 3. Route: GET /presign (Generate secure upload link)
+        // 2. Route: GET /list (Fetch recordings for the UI)
+        if (url.pathname === "/list") {
+          const result = await bucket.list({
+            prefix: url.searchParams.get("prefix") || "venue_masters/",
+          });
+
+          const contents = (result.objects || []).map((obj) => ({
+            Key: obj.key,
+            LastModified: obj.uploaded,
+            Size: obj.size,
+            ETag: obj.etag,
+          }));
+
+          return new Response(JSON.stringify(contents), {
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          });
+        }
+
+        // 3. Route: GET /presign (Return Worker upload URL)
         if (url.pathname === "/presign") {
           const fileName = url.searchParams.get("file");
           const contentType = url.searchParams.get("type") || "application/octet-stream";
 
-          const command = new PutObjectCommand({
-            Bucket: env.R2_BUCKET_NAME,
-            Key: fileName,
-            ContentType: contentType, // This MUST exactly match the Content-Type sent by the browser in the PUT request
-          });
+          if (!fileName) {
+            return new Response(JSON.stringify({ error: "Missing file query param" }), {
+              status: 400,
+              headers: { "Content-Type": "application/json", ...corsHeaders },
+            });
+          }
 
-          // URL is valid for 1 hour
-          const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 3600 });
+          const uploadUrl = `${url.origin}/upload?file=${encodeURIComponent(fileName)}&type=${encodeURIComponent(contentType)}`;
           
           return new Response(JSON.stringify({ uploadUrl }), {
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          });
+        }
+
+        // 4. Route: PUT /upload (Store file in R2 via binding)
+        if (url.pathname === "/upload" && request.method === "PUT") {
+          const fileName = url.searchParams.get("file");
+          const contentType = url.searchParams.get("type") || request.headers.get("Content-Type") || "application/octet-stream";
+
+          if (!fileName) {
+            return new Response(JSON.stringify({ error: "Missing file query param" }), {
+              status: 400,
+              headers: { "Content-Type": "application/json", ...corsHeaders },
+            });
+          }
+
+          await bucket.put(fileName, request.body, {
+            httpMetadata: { contentType },
+          });
+
+          return new Response(JSON.stringify({ ok: true, key: fileName }), {
             headers: { "Content-Type": "application/json", ...corsHeaders },
           });
         }
