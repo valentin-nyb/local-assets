@@ -41,6 +41,34 @@ export default {
           });
         }
 
+        // 2.5 Route: GET /asset (Stream object for preview/download)
+        if (url.pathname === "/asset" && request.method === "GET") {
+          const key = url.searchParams.get("key");
+
+          if (!key) {
+            return new Response(JSON.stringify({ error: "Missing key query param" }), {
+              status: 400,
+              headers: { "Content-Type": "application/json", ...corsHeaders },
+            });
+          }
+
+          const object = await bucket.get(key);
+
+          if (!object) {
+            return new Response(JSON.stringify({ error: "Object not found" }), {
+              status: 404,
+              headers: { "Content-Type": "application/json", ...corsHeaders },
+            });
+          }
+
+          const headers = new Headers(corsHeaders);
+          headers.set("Content-Type", object.httpMetadata?.contentType || "application/octet-stream");
+          headers.set("Cache-Control", "public, max-age=3600");
+          headers.set("ETag", object.httpEtag || object.etag);
+
+          return new Response(object.body, { headers });
+        }
+
         // 3. Route: GET /presign (Return Worker upload URL)
         if (url.pathname === "/presign") {
           const fileName = url.searchParams.get("file");

@@ -175,8 +175,7 @@
     <script>
         let cloudAssets = [];
         const CONFIG = {
-            WORKER_URL: 'https://local-assets-worker.smackeprang-v.workers.dev', 
-            R2_PUBLIC_DOMAIN: 'https://pub-xxxxxx.r2.dev'
+            WORKER_URL: 'https://local-assets-worker.smackeprang-v.workers.dev'
         };
 
         window.onload = function() {
@@ -387,99 +386,155 @@
                 const response = await fetch(`${CONFIG.WORKER_URL}/list`);
                 const data = await response.json();
 
-                cloudAssets = data.map(file => ({
-                    dj: file.Key.split('/')[1]?.split('_')[0].toUpperCase() || "UNKNOWN",
-                    date: file.Key.split('_')[1] || "RECENT",
-                    shot: file.Key.split('_')[2]?.split('.')[0].toUpperCase() || "CAM",
-                    url: `${CONFIG.R2_PUBLIC_DOMAIN}/${file.Key}`,
-                    format: file.Key.split('.').pop().toUpperCase()
-                }));
+                cloudAssets = data.map(file => parseAssetMeta(file.Key));
                 renderList();
             } catch (e) {
                 console.error("Could not load library:", e);
             }
         }
 
+        function parseAssetMeta(key) {
+            const fullName = (key || '').split('/').pop() || '';
+            const ext = (fullName.split('.').pop() || '').toUpperCase();
+            const base = fullName.replace(/\.[^.]+$/, '');
+            const lower = base.toLowerCase();
+
+            let shot = 'CAM';
+            let sessionBase = base;
+
+            if (lower.endsWith('_master_cam')) {
+                shot = 'MASTER CAM';
+                sessionBase = base.slice(0, -('_master_cam'.length));
+            } else if (lower.endsWith('_master_audio')) {
+                shot = 'MASTER AUDIO';
+                sessionBase = base.slice(0, -('_master_audio'.length));
+            } else if (/_social_clip_\d+$/i.test(base)) {
+                const match = base.match(/_social_clip_(\d+)$/i);
+                shot = `SOCIAL CLIP ${match ? match[1] : ''}`.trim();
+                sessionBase = base.replace(/_social_clip_\d+$/i, '');
+            } else if (/_marketing_thumb_\d+$/i.test(base)) {
+                const match = base.match(/_marketing_thumb_(\d+)$/i);
+                shot = `THUMB ${match ? match[1] : ''}`.trim();
+                sessionBase = base.replace(/_marketing_thumb_\d+$/i, '');
+            }
+
+            const tokens = sessionBase.split('_').filter(Boolean);
+            const dateTokens = tokens.length >= 3 ? tokens.slice(-3) : ['recent'];
+            const djTokens = tokens.length > 3 ? tokens.slice(0, -3) : [tokens[0] || 'unknown'];
+
+            const dj = djTokens.join(' ').toUpperCase();
+            const date = dateTokens.join(' ').toUpperCase();
+            const sessionId = `${djTokens.join('_')}_${dateTokens.join('_')}`.toLowerCase() || 'unknown_recent';
+
+            let icon = 'solar:play-bold';
+            let color = 'text-primary';
+            if (['MP3', 'WAV'].includes(ext)) {
+                icon = 'solar:music-note-bold';
+                color = 'text-blue-400';
+            } else if (['JPG', 'JPEG', 'PNG', 'WEBP'].includes(ext)) {
+                icon = 'solar:gallery-bold';
+                color = 'text-orange-400';
+            } else if (shot.startsWith('SOCIAL CLIP')) {
+                icon = 'solar:iphone-bold';
+                color = 'text-purple-400';
+            }
+
+            return {
+                key,
+                dj,
+                date,
+                shot,
+                format: ext || 'FILE',
+                icon,
+                color,
+                sessionId,
+                sessionKey: `${dj}_${date}`,
+                url: `${CONFIG.WORKER_URL}/asset?key=${encodeURIComponent(key)}`
+            };
+        }
+
         function renderList() {
             const list = document.getElementById('cloud-list');
             list.innerHTML = '';
 
-            // Group assets by DJ and Date
             const groupedAssets = cloudAssets.reduce((acc, item) => {
-                const key = `${item.dj}_${item.date}`;
-                if (!acc[key]) {
-                    acc[key] = {
-                        dj: item.dj,
-                        date: item.date,
-                        items: []
-                    };
+                if (!acc[item.sessionKey]) {
+                    acc[item.sessionKey] = { id: item.sessionId, dj: item.dj, date: item.date, items: [] };
                 }
-                acc[key].items.push(item);
+                acc[item.sessionKey].items.push(item);
                 return acc;
             }, {});
 
-            Object.values(groupedAssets).forEach(group => {
-                const groupContainer = document.createElement('div');
-                groupContainer.className = "mb-6 border border-zinc-800 rounded-2xl bg-card overflow-hidden";
-                
-                // Group Header
-                const groupHeader = document.createElement('div');
-                groupHeader.className = "flex items-center justify-between p-4 bg-zinc-900/50 border-b border-zinc-800";
-                groupHeader.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 bg-zinc-900 flex items-center justify-center rounded-lg text-primary shadow">
-                            <iconify-icon icon="solar:folder-with-files-bold" class="text-lg"></iconify-icon>
+            const sessions = Object.values(groupedAssets)
+                .sort((a, b) => b.date.localeCompare(a.date));
+
+            list.innerHTML = sessions.map(session => `
+                <div class="session-group border border-zinc-800 rounded-2xl overflow-hidden bg-card">
+                    <div onclick="toggleAssetPreview('${session.id}')" class="p-5 flex items-center justify-between hover:bg-white/[0.02] transition-colors cursor-pointer group">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 bg-[#050505] border border-zinc-800 flex items-center justify-center rounded-xl group-hover:border-primary/50 transition-colors">
+                                <iconify-icon icon="solar:folder-2-bold" class="text-zinc-600 group-hover:text-primary"></iconify-icon>
+                            </div>
+                            <div>
+                                <p class="text-sm font-black text-white uppercase tracking-tight">${session.dj}</p>
+                                <p class="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">${session.date} // ${session.items.length} ASSETS</p>
+                            </div>
                         </div>
-                        <div>
-                            <p class="text-sm font-black uppercase text-white tracking-wide">${group.dj}</p>
-                            <p class="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">${group.date} // ${group.items.length} Asset(s)</p>
-                        </div>
+                        <iconify-icon id="arrow-${session.id}" icon="solar:alt-arrow-down-linear" class="text-zinc-700 transition-transform duration-300"></iconify-icon>
                     </div>
-                `;
-                groupContainer.appendChild(groupHeader);
 
-                // Group Items List
-                const itemsContainer = document.createElement('div');
-                itemsContainer.className = "divide-y divide-zinc-800/50";
-                
-                group.items.forEach(item => {
-                    const row = document.createElement('div');
-                    row.className = "flex items-center justify-between p-4 hover:bg-zinc-800/30 transition-all cursor-pointer group/item";
-                    
-                    let icon = "solar:play-bold";
-                    if (item.format === "MP3" || item.format === "WAV") icon = "solar:music-note-bold";
-                    if (item.format === "JPG" || item.format === "PNG" || item.format === "WEBP") icon = "solar:gallery-bold";
-
-                    row.innerHTML = `
-                        <div class="flex items-center gap-4 min-w-0 flex-1" onclick="playPreview('${item.url}')">
-                            <div class="w-10 h-10 bg-zinc-900 border border-zinc-800 flex items-center justify-center rounded-xl text-primary shrink-0 group-hover/item:border-primary/50 transition-colors">
-                                <iconify-icon icon="${icon}" class="text-lg"></iconify-icon>
-                            </div>
-                            <div class="min-w-0">
-                                <div class="flex items-center gap-2 mb-1">
-                                    <span class="text-[8px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 font-bold font-mono uppercase group-hover/item:bg-primary/20 group-hover/item:text-primary transition-colors">${item.shot}</span>
+                    <div id="preview-${session.id}" class="hidden bg-black/40 border-t border-zinc-800/50 divide-y divide-zinc-800/40">
+                        ${session.items.map(item => `
+                            <div class="p-4 pl-12 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset">
+                                <div class="flex items-center gap-4 min-w-0">
+                                    <div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-zinc-800/50 shrink-0">
+                                        <iconify-icon icon="${item.icon}" class="${item.color} text-sm"></iconify-icon>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="text-[10px] font-bold text-zinc-300 uppercase truncate">${item.shot}</p>
+                                        <p class="text-[8px] font-mono text-zinc-600 uppercase tracking-widest">${item.format} FORMAT</p>
+                                    </div>
                                 </div>
-                                <p class="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">${item.format} FORMAT</p>
+                                <div class="flex items-center gap-2">
+                                    <button onclick="previewAsset('${item.url}'); event.stopPropagation();" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Preview">
+                                        <iconify-icon icon="solar:eye-bold" class="text-zinc-700 group-hover/asset:text-primary"></iconify-icon>
+                                    </button>
+                                    <a href="${item.url}" target="_blank" download class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download">
+                                        <iconify-icon icon="solar:cloud-download-bold" class="text-zinc-700 group-hover/asset:text-primary"></iconify-icon>
+                                    </a>
+                                </div>
                             </div>
-                        </div>
-                        <a href="${item.url}" target="_blank" class="w-10 h-10 flex items-center justify-center text-zinc-600 hover:text-primary transition-colors">
-                            <iconify-icon icon="solar:cloud-download-bold" class="text-xl"></iconify-icon>
-                        </a>`;
-                    itemsContainer.appendChild(row);
-                });
-
-                groupContainer.appendChild(itemsContainer);
-                list.appendChild(groupContainer);
-            });
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
         }
 
-        function playPreview(url) {
-            const container = document.getElementById('video-preview-container');
-            const player = document.getElementById('preview-player');
-            container.classList.remove('hidden');
-            player.src = url;
-            player.play();
-            container.scrollIntoView({ behavior: 'smooth' });
+        function toggleAssetPreview(id) {
+            const preview = document.getElementById(`preview-${id}`);
+            const arrow = document.getElementById(`arrow-${id}`);
+            if (!preview || !arrow) return;
+
+            document.querySelectorAll('[id^="preview-"]').forEach(el => {
+                if (el.id !== `preview-${id}`) el.classList.add('hidden');
+            });
+
+            document.querySelectorAll('[id^="arrow-"]').forEach(el => {
+                if (el.id !== `arrow-${id}`) el.style.transform = 'rotate(0deg)';
+            });
+
+            const isHidden = preview.classList.contains('hidden');
+            if (isHidden) {
+                preview.classList.remove('hidden');
+                arrow.style.transform = 'rotate(180deg)';
+            } else {
+                preview.classList.add('hidden');
+                arrow.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        function previewAsset(url) {
+            window.open(url, '_blank', 'noopener,noreferrer');
         }
     </script>
 </body>
