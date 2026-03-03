@@ -32,6 +32,17 @@
             font-size: 10px;
             font-weight: 800;
         }
+
+        .artist-hero-title {
+            font-size: clamp(78px, 15vw, 138px);
+            font-weight: 900;
+            font-style: italic;
+            line-height: 0.74;
+            letter-spacing: -0.09em;
+            text-transform: uppercase;
+            color: white;
+            text-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+        }
     </style>
 </head>
 <body class="bg-background text-white h-screen w-screen flex overflow-hidden font-sans">
@@ -106,25 +117,25 @@
                     </button>
                 </div>
 
-                <div id="preview-container" class="hidden space-y-6 animate-in fade-in duration-500">
-                    <div class="flex items-center gap-2 mb-4">
+                <div id="preview-container" class="hidden space-y-8 mt-4">
+                    <div class="flex items-center gap-3">
                         <span class="bg-primary/20 text-primary text-[8px] font-black px-2 py-0.5 rounded border border-primary/30 uppercase tracking-widest">INFRASTRUCTURE TIER ACTIVE</span>
                         <span class="text-zinc-600 font-mono text-[9px] uppercase tracking-widest">// 48H PRIORITY TURNAROUND</span>
                     </div>
 
-                    <div class="flex items-end justify-between border-b border-zinc-800/50 pb-8 mb-8">
+                    <div class="flex flex-col md:flex-row md:items-end justify-between border-b border-zinc-900 pb-10 gap-8">
                         <div>
-                            <h2 id="vault-dj-title" class="text-[80px] font-[900] italic uppercase leading-[0.8] tracking-[-0.08em] text-white">
+                            <h2 id="vault-dj-title" class="artist-hero-title">
                                 AMONGST<br>FEW
                             </h2>
-                            <p id="vault-session-meta" class="text-zinc-500 font-mono text-[10px] uppercase tracking-[0.4em] mt-6">UPLOAD SESSION // 03 MAR 2026</p>
+                            <p id="vault-meta" class="text-zinc-500 font-mono text-[10px] uppercase tracking-[0.5em] mt-8">UPLOAD SESSION // 03 MAR 2026</p>
                         </div>
-                        <button onclick="closePreview()" class="px-6 py-2 border border-zinc-800 rounded-lg text-[9px] font-mono text-zinc-500 uppercase tracking-widest hover:text-white transition-all">
+                        <button onclick="closePreview()" class="h-fit px-6 py-3 border border-zinc-800 rounded-xl text-[9px] font-mono text-zinc-500 uppercase tracking-widest hover:text-white hover:border-zinc-600 transition-all">
                             [ CLOSE SESSION ]
                         </button>
                     </div>
 
-                    <div id="active-asset-display" class="pt-4"></div>
+                    <div id="active-asset-display" class="pt-2 animate-in fade-in slide-in-from-bottom-4 duration-500"></div>
                 </div>
 
                 <div class="space-y-4 pt-4">
@@ -428,18 +439,20 @@
             return 'solar:document-bold';
         }
 
-        function getCleanLabel(type, filename) {
+        function getAssetLabel(type, filename) {
+            const name = (filename || '').toLowerCase();
             const t = (type || '').toUpperCase();
-            const file = (filename || '').toLowerCase();
 
             if (t === 'MASTERS' || t === 'MASTER') return 'MASTER 4K SET';
-            if (t === 'AUDIO') return 'HQ AUDIO MASTER';
+            if (t === 'AUDIO') return 'HQ AUDIO MASTER (.WAV)';
 
             if (t === 'MARKETING' || t === 'THUMB') {
-                return file.includes('vertical')
-                    ? 'MARKETING VERTICALS'
-                    : 'MARKETING THUMBNAIL';
+                if (name.includes('vertical')) return 'MARKETING VERTICALS';
+                if (name.includes('thumbnail') || name.includes('thumb')) return 'MARKETING THUMBNAIL';
+                return 'MARKETING ASSET';
             }
+
+            if (t === 'SOCIAL_CLIP' || t === 'SOCIAL-SUITE' || name.includes('clip')) return 'SOCIAL SUITE VERTICAL';
 
             return `${t} FORMAT`;
         }
@@ -483,7 +496,7 @@
                                 <div onclick="openAssetPreviewEncoded('${encodeURIComponent(assetUrl)}', '${asset.type}', '${encodeURIComponent(artist.name)}', '${format}')" class="p-4 pl-14 flex items-center justify-between hover:bg-white/[0.03] group/asset cursor-pointer">
                                     <div class="flex items-center gap-4">
                                         <iconify-icon icon="${getIcon(asset.type)}" class="text-zinc-600 group-hover/asset:text-primary"></iconify-icon>
-                                        <span class="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">${getCleanLabel(asset.type, asset.key)}</span>
+                                        <span class="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">${getAssetLabel(asset.type, asset.key)}</span>
                                     </div>
                                     <iconify-icon icon="solar:cloud-download-bold" class="text-zinc-700 group-hover/asset:text-primary"></iconify-icon>
                                 </div>
@@ -527,7 +540,7 @@
             const container = document.getElementById('preview-container');
             const displayArea = document.getElementById('active-asset-display');
             const title = document.getElementById('vault-dj-title');
-            const meta = document.getElementById('vault-session-meta');
+            const meta = document.getElementById('vault-meta');
             if (!container || !displayArea || !title || !meta) return;
 
             const upperName = (djName || 'UNKNOWN').toUpperCase();
