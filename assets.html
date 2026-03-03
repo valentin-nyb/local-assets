@@ -229,7 +229,7 @@
 
         function setupUploadHandler() {
             const uploadBtn = document.getElementById('upload-btn');
-            const MULTIPART_THRESHOLD_BYTES = 5 * 1024 * 1024; // 5 MB
+            const UPLOAD_LIMIT_DIRECT = 100 * 1024 * 1024; // 100 MB
             const MULTIPART_CHUNK_BYTES = 5 * 1024 * 1024;
             const MULTIPART_MAX_RETRIES = 3;
             const REQUEST_TIMEOUT_MS = 60000;
@@ -482,34 +482,13 @@
                         uploadBtn.textContent = `UPLOADING (${queueIndex}/${uploadQueue.length})...`;
                         const fileType = file.type || 'application/octet-stream';
                         const fileName = getAssetPath(file, shotType);
-                        const isSocialClip = (shotType || '').startsWith('SOCIAL_CLIP');
 
-                        const shouldPreferMultipart = isSocialClip || file.size > MULTIPART_THRESHOLD_BYTES;
-
-                        if (shouldPreferMultipart) {
-                            try {
-                                await uploadMultipartFile(file, fileName, fileType, queueIndex, uploadQueue.length);
-                            } catch (multipartErr) {
-                                try {
-                                    uploadBtn.textContent = `RETRYING DIRECT (${queueIndex}/${uploadQueue.length})...`;
-                                    await uploadFormFile(file, fileName, fileType);
-                                } catch (formErr) {
-                                    await uploadDirectPutFile(file, fileName, fileType);
-                                }
-                            }
+                        if (file.size < UPLOAD_LIMIT_DIRECT) {
+                            uploadBtn.textContent = `UPLOADING (${queueIndex}/${uploadQueue.length}) [DIRECT]...`;
+                            await uploadDirectPutFile(file, fileName, fileType);
                         } else {
-                            try {
-                                await uploadFormFile(file, fileName, fileType);
-                            } catch (directErr) {
-                                try {
-                                    uploadBtn.textContent = `RETRYING DIRECT (${queueIndex}/${uploadQueue.length})...`;
-                                    await uploadDirectPutFile(file, fileName, fileType);
-                                } catch (putErr) {
-                                    // Final fallback path for non-social large uploads.
-                                    uploadBtn.textContent = `RETRYING MULTIPART (${queueIndex}/${uploadQueue.length})...`;
-                                    await uploadMultipartFile(file, fileName, fileType, queueIndex, uploadQueue.length);
-                                }
-                            }
+                            uploadBtn.textContent = `UPLOADING (${queueIndex}/${uploadQueue.length}) [MULTIPART]...`;
+                            await uploadMultipartFile(file, fileName, fileType, queueIndex, uploadQueue.length);
                         }
 
                         successCount++;
@@ -577,16 +556,12 @@
         }
 
         function getAssetLabel(type, filename) {
-            const name = (filename || '').toLowerCase();
             const t = (type || '').toUpperCase();
-
             if (t === 'MASTERS' || t === 'MASTER') return 'MASTER 4K SET';
             if (t === 'AUDIO') return 'HQ AUDIO MASTER (.WAV)';
-            if (t === 'MARKETING' || t === 'THUMB') return 'MARKETING THUMBNAIL & VERTICALS';
-
-            if (t === 'SOCIAL_CLIP' || t === 'SOCIAL-SUITE' || name.includes('clip')) return 'SOCIAL SUITE VERTICAL';
-
-            return `${t} FORMAT`;
+            if (t === 'SOCIAL-SUITE' || t === 'VERTICALS') return 'MARKETING VERTICALS';
+            if (t === 'MARKETING') return 'MARKETING THUMBNAIL';
+            return 'ASSET';
         }
 
         function groupAssetsByType(assets) {
@@ -626,12 +601,26 @@
         function renderCategory(type, assets, artistName) {
             if (!assets?.length) return '';
             const cleanLabel = getAssetLabel(type, assets[0]?.key || '');
+            const normalizedType = String(type || '').toUpperCase();
+
+            if (normalizedType === 'SOCIAL-SUITE' || normalizedType === 'VERTICALS') {
+                return `
+                    <div onclick="openVerticalSuite('${artistName}', ${JSON.stringify(assets).replace(/"/g, '&quot;')})" 
+                         class="p-4 pl-14 flex items-center justify-between hover:bg-white/[0.03] group/cat cursor-pointer">
+                        <div class="flex items-center gap-4">
+                            <iconify-icon icon="solar:folder-with-files-bold" class="text-zinc-700 group-hover/cat:text-primary"></iconify-icon>
+                            <span class="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">${cleanLabel} (${assets.length})</span>
+                        </div>
+                        <iconify-icon icon="solar:alt-arrow-right-linear" class="text-zinc-800 group-hover/cat:text-primary transition-transform text-xs"></iconify-icon>
+                    </div>`;
+            }
 
             return `
-                <div onclick="focusCategoryEncoded('${encodeURIComponent(type)}', '${encodeURIComponent(artistName)}')" class="p-4 pl-14 flex items-center justify-between hover:bg-white/[0.03] group/cat cursor-pointer">
+                <div onclick="focusCategoryEncoded('${encodeURIComponent(type)}', '${encodeURIComponent(artistName)}')" 
+                     class="p-4 pl-14 flex items-center justify-between hover:bg-white/[0.03] group/cat cursor-pointer">
                     <div class="flex items-center gap-4">
-                        <iconify-icon icon="solar:folder-with-files-bold" class="text-zinc-700 group-hover/cat:text-primary"></iconify-icon>
-                        <span class="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">${cleanLabel} (${assets.length})</span>
+                        <iconify-icon icon="${getIcon(type)}" class="text-zinc-600 group-hover/cat:text-primary"></iconify-icon>
+                        <span class="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">${cleanLabel}</span>
                     </div>
                     <iconify-icon icon="solar:alt-arrow-right-linear" class="text-zinc-800 group-hover/cat:text-primary transition-transform text-xs"></iconify-icon>
                 </div>`;
