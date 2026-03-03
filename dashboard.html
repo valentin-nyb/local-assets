@@ -145,15 +145,13 @@
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div class="lg:col-span-2 bg-card border border-border rounded-2xl overflow-hidden">
                     <div class="p-5 border-b border-border flex justify-between items-center">
-                        <h3 class="text-xs font-bold uppercase tracking-widest">Recent Sets</h3>
-                        <button onclick="fetchRecentUploads()" class="text-[10px] text-muted-foreground hover:text-primary transition-colors uppercase font-mono flex items-center gap-1">
-                            <iconify-icon icon="solar:refresh-line-duotone" class="text-sm"></iconify-icon>
-                            Refresh
-                        </button>
+                        <h3 class="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-zinc-500">Distribution History</h3>
+                        <div class="flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-pulse"></span>
+                            <span class="text-[9px] font-mono text-[#39FF14] uppercase tracking-widest">Live</span>
+                        </div>
                     </div>
-                    <div id="recent-sets-list" class="divide-y divide-border">
-                        <div class="p-5 text-sm text-muted-foreground">Loading latest uploads…</div>
-                    </div>
+                    <div id="recent-sets-list" class="divide-y divide-border"></div>
                 </div>
 
                 <div class="space-y-6">
@@ -229,25 +227,89 @@
         async function fetchRecentUploads() {
             const container = document.getElementById('recent-sets-list');
             if (!container) return;
-            const items = [
-                { name: 'AMONGST FEW', date: '14 Feb 2026', size: '250 GB', status: 'Uploaded' },
-                { name: 'MICHAEL BIBI', date: '01 Nov 2025', size: '265 GB', status: 'Uploaded' },
+
+            const sessions = [
+                {
+                    id: 'session_01',
+                    name: 'AMONGST FEW',
+                    date: '14 Feb 2026',
+                    venue: 'FABRIC LONDON',
+                    assets: [
+                        { type: 'MASTER', label: '4K Long Form', ext: 'MOV/MP4', icon: 'solar:play-bold', color: 'text-primary' },
+                        { type: 'AUDIO', label: 'HQ Audio', ext: 'WAV/MP3', icon: 'solar:music-note-bold', color: 'text-blue-400' },
+                        { type: 'SOCIAL', label: 'Social Pack Verticals', ext: 'MP4', icon: 'solar:iphone-bold', color: 'text-purple-400' },
+                        { type: 'THUMB', label: 'Marketing Thumbnails', ext: 'JPG/PNG', icon: 'solar:gallery-bold', color: 'text-orange-400' },
+                    ],
+                },
+                {
+                    id: 'session_02',
+                    name: 'MICHAEL BIBI',
+                    date: '01 Nov 2025',
+                    venue: 'FABRIC LONDON',
+                    assets: [
+                        { type: 'MASTER', label: '4K Long Form', ext: 'MOV', icon: 'solar:play-bold', color: 'text-primary' },
+                    ],
+                },
             ];
 
-            container.innerHTML = items.map(item => `
-                <div class="p-5 flex items-center justify-between hover:bg-white/[0.02] transition-colors group cursor-pointer">
-                    <div class="flex items-center gap-4">
-                        <div class="w-10 h-10 bg-background border border-border flex items-center justify-center rounded-lg group-hover:border-primary/50 transition-colors">
-                            <iconify-icon icon="solar:music-note-bold" class="text-muted-foreground group-hover:text-primary"></iconify-icon>
+            container.innerHTML = sessions.map(session => `
+                <div class="session-group">
+                    <div onclick="toggleAssetPreview('${session.id}')" class="p-5 flex items-center justify-between hover:bg-white/[0.02] transition-colors cursor-pointer group">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 bg-[#050505] border border-border flex items-center justify-center rounded-xl group-hover:border-primary/50 transition-colors">
+                                <iconify-icon icon="solar:folder-2-bold" class="text-zinc-600 group-hover:text-primary"></iconify-icon>
+                            </div>
+                            <div>
+                                <p class="text-sm font-black text-white uppercase tracking-tight">${session.name}</p>
+                                <p class="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">${session.venue} // ${session.date}</p>
+                            </div>
                         </div>
-                        <div>
-                            <p class="text-sm font-bold text-white uppercase tracking-tighter">${item.name}</p>
-                            <p class="text-[10px] font-mono text-muted-foreground uppercase">${item.date} • ${item.size}</p>
-                        </div>
+                        <iconify-icon id="arrow-${session.id}" icon="solar:alt-arrow-down-linear" class="text-zinc-700 transition-transform duration-300"></iconify-icon>
                     </div>
-                    <span class="px-2 py-1 rounded text-[9px] font-mono uppercase bg-primary/10 text-primary border border-primary/20">${item.status}</span>
+
+                    <div id="preview-${session.id}" class="hidden bg-black/40 border-t border-border/50 divide-y divide-border/30">
+                        ${session.assets.map(asset => `
+                            <div class="p-4 pl-12 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-border/50">
+                                        <iconify-icon icon="${asset.icon}" class="${asset.color} text-sm"></iconify-icon>
+                                    </div>
+                                    <div>
+                                        <p class="text-[10px] font-bold text-zinc-300 uppercase">${asset.label}</p>
+                                        <p class="text-[8px] font-mono text-zinc-600 uppercase">${asset.ext} FORMAT</p>
+                                    </div>
+                                </div>
+                                <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors">
+                                    <iconify-icon icon="solar:cloud-download-bold" class="text-zinc-700 group-hover/asset:text-primary"></iconify-icon>
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
                 </div>
             `).join('');
+        }
+
+        function toggleAssetPreview(id) {
+            const preview = document.getElementById(`preview-${id}`);
+            const arrow = document.getElementById(`arrow-${id}`);
+            if (!preview || !arrow) return;
+
+            document.querySelectorAll('[id^="preview-"]').forEach(el => {
+                if (el.id !== `preview-${id}`) el.classList.add('hidden');
+            });
+
+            document.querySelectorAll('[id^="arrow-"]').forEach(el => {
+                if (el.id !== `arrow-${id}`) el.style.transform = 'rotate(0deg)';
+            });
+
+            const isHidden = preview.classList.contains('hidden');
+            if (isHidden) {
+                preview.classList.remove('hidden');
+                arrow.style.transform = 'rotate(180deg)';
+            } else {
+                preview.classList.add('hidden');
+                arrow.style.transform = 'rotate(0deg)';
+            }
         }
 
         fetchLiveMetrics();
