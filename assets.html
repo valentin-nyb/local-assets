@@ -99,15 +99,6 @@
             justify-content: center;
         }
 
-        .secondary-folder {
-            border-left: 1px solid rgba(255, 255, 255, 0.05);
-            margin-left: 2rem;
-        }
-
-        .asset-item-row:hover {
-            background: linear-gradient(90deg, rgba(57, 255, 20, 0.05) 0%, transparent 100%);
-        }
-
         #active-asset-display {
             transition: opacity 0.3s ease;
         }
@@ -573,12 +564,7 @@
 
             if (t === 'MASTERS' || t === 'MASTER') return 'MASTER 4K SET';
             if (t === 'AUDIO') return 'HQ AUDIO MASTER (.WAV)';
-
-            if (t === 'MARKETING' || t === 'THUMB') {
-                if (name.includes('vertical')) return 'MARKETING VERTICALS';
-                if (name.includes('thumbnail') || name.includes('thumb')) return 'MARKETING THUMBNAIL';
-                return 'MARKETING ASSET';
-            }
+            if (t === 'MARKETING' || t === 'THUMB') return 'MARKETING THUMBNAIL & VERTICALS';
 
             if (t === 'SOCIAL_CLIP' || t === 'SOCIAL-SUITE' || name.includes('clip')) return 'SOCIAL SUITE VERTICAL';
 
@@ -613,47 +599,15 @@
 
         function renderCategory(type, assets, artistName) {
             if (!assets?.length) return '';
-
-            const safeArtist = slugifyId(artistName);
-            const safeType = slugifyId(type);
-            const categoryId = `cat-${safeArtist}-${safeType}`;
             const cleanLabel = getAssetLabel(type, assets[0]?.key || '');
 
-            if (assets.length === 1) {
-                const asset = assets[0];
-                const format = (asset.format || (asset.key || '').split('.').pop() || 'FILE').toUpperCase();
-                const assetUrl = `${CONFIG.WORKER_URL}/asset?key=${encodeURIComponent(asset.key || '')}`;
-
-                return `
-                    <div onclick="openAssetPreviewEncoded('${encodeURIComponent(assetUrl)}', '${type}', '${encodeURIComponent(artistName)}', '${format}')" class="p-4 pl-14 flex items-center justify-between hover:bg-white/[0.03] group/asset cursor-pointer">
-                        <div class="flex items-center gap-4">
-                            <iconify-icon icon="${getIcon(type)}" class="text-zinc-600 group-hover/asset:text-primary"></iconify-icon>
-                            <span class="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">${cleanLabel}</span>
-                        </div>
-                        <iconify-icon icon="solar:cloud-download-bold" class="text-zinc-700 group-hover/asset:text-primary"></iconify-icon>
-                    </div>`;
-            }
-
             return `
-                <div class="secondary-folder">
-                    <div onclick="toggleFolder('${categoryId}')" class="p-4 pl-14 flex items-center justify-between hover:bg-white/5 cursor-pointer group/sec">
-                        <div class="flex items-center gap-4">
-                            <iconify-icon icon="solar:folder-with-files-bold" class="text-zinc-700 group-hover/sec:text-primary"></iconify-icon>
-                            <span class="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">${cleanLabel} (${assets.length})</span>
-                        </div>
-                        <iconify-icon id="arrow-${categoryId}" icon="solar:alt-arrow-right-linear" class="text-zinc-800 transition-transform text-xs"></iconify-icon>
+                <div onclick="focusCategoryEncoded('${encodeURIComponent(type)}', '${encodeURIComponent(artistName)}')" class="p-4 pl-14 flex items-center justify-between hover:bg-white/[0.03] group/cat cursor-pointer">
+                    <div class="flex items-center gap-4">
+                        <iconify-icon icon="solar:folder-with-files-bold" class="text-zinc-700 group-hover/cat:text-primary"></iconify-icon>
+                        <span class="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">${cleanLabel} (${assets.length})</span>
                     </div>
-                    <div id="${categoryId}" class="hidden bg-black/60 divide-y divide-white/5">
-                        ${assets.map((asset, index) => {
-                            const format = (asset.format || (asset.key || '').split('.').pop() || 'FILE').toUpperCase();
-                            const assetUrl = `${CONFIG.WORKER_URL}/asset?key=${encodeURIComponent(asset.key || '')}`;
-                            return `
-                                <div onclick="openAssetPreviewEncoded('${encodeURIComponent(assetUrl)}', '${type}', '${encodeURIComponent(artistName)}', '${format}')" class="asset-item-row p-3 pl-20 flex items-center justify-between group/item cursor-pointer">
-                                    <span class="text-[9px] font-mono text-zinc-500 uppercase group-hover/item:text-white">ASSET ${index + 1} // ${formatBytes(asset.size)}</span>
-                                    <iconify-icon icon="solar:play-circle-bold" class="text-zinc-800 group-hover/item:text-primary"></iconify-icon>
-                                </div>`;
-                        }).join('')}
-                    </div>
+                    <iconify-icon icon="solar:alt-arrow-right-linear" class="text-zinc-800 group-hover/cat:text-primary transition-transform text-xs"></iconify-icon>
                 </div>`;
         }
 
@@ -699,27 +653,90 @@
             });
         }
 
+        function focusCategoryEncoded(encodedType, encodedArtistName) {
+            focusCategory(decodeURIComponent(encodedType), decodeURIComponent(encodedArtistName));
+        }
+
+        function focusCategory(type, artistName) {
+            const normalizedType = (type || '').toUpperCase();
+            const artist = (cloudAssets || []).find(a => (a?.name || '').toUpperCase() === (artistName || '').toUpperCase());
+            const assets = (artist?.assets || []).filter(asset => (asset?.type || '').toUpperCase() === normalizedType);
+
+            if (!assets.length) return;
+
+            if (normalizedType === 'MASTERS' || normalizedType === 'MASTER') {
+                const master = assets[0];
+                const format = (master.format || (master.key || '').split('.').pop() || 'FILE').toUpperCase();
+                const assetUrl = `${CONFIG.WORKER_URL}/asset?key=${encodeURIComponent(master.key || '')}`;
+                openAssetPreview(assetUrl, normalizedType, artistName, format);
+                return;
+            }
+
+            const container = document.getElementById('preview-container');
+            const displayArea = document.getElementById('active-asset-display');
+            const title = document.getElementById('vault-dj-title');
+            const meta = document.getElementById('vault-meta');
+            if (!container || !displayArea || !title || !meta) return;
+
+            title.textContent = (artistName || 'UNKNOWN').toUpperCase();
+            title.className = 'artist-hero-title';
+
+            const cleanLabel = getAssetLabel(normalizedType, assets[0]?.key || '');
+            meta.textContent = `${cleanLabel} // ${assets.length} ASSET(S)`;
+
+            container.classList.remove('hidden', 'opacity-0');
+            displayArea.innerHTML = `
+                <div class="space-y-6">
+                    <p class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-primary"></span> ${cleanLabel}
+                    </p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        ${assets.map((asset, index) => {
+                            const format = (asset.format || (asset.key || '').split('.').pop() || 'FILE').toUpperCase();
+                            const assetUrl = `${CONFIG.WORKER_URL}/asset?key=${encodeURIComponent(asset.key || '')}`;
+                            const isImage = normalizedType === 'MARKETING' || ['PNG', 'JPG', 'JPEG', 'WEBP', 'GIF'].includes(format);
+
+                            return `
+                                <div class="bg-black border border-zinc-800 rounded-2xl overflow-hidden">
+                                    ${isImage
+                                        ? `<img src="${assetUrl}" alt="Asset ${index + 1}" class="w-full h-40 object-cover">`
+                                        : `<div class="h-40 flex items-center justify-center bg-zinc-950"><iconify-icon icon="${getIcon(normalizedType)}" class="text-3xl text-zinc-600"></iconify-icon></div>`
+                                    }
+                                    <div class="p-4 flex items-center justify-between gap-3">
+                                        <div class="min-w-0">
+                                            <p class="text-[9px] font-mono text-zinc-300 uppercase tracking-widest">Asset ${index + 1}</p>
+                                            <p class="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">${format} // ${formatBytes(asset.size)}</p>
+                                        </div>
+                                        <button onclick="openAssetPreviewEncoded('${encodeURIComponent(assetUrl)}', '${normalizedType}', '${encodeURIComponent(artistName)}', '${format}')" class="shrink-0 px-3 py-2 border border-zinc-700 rounded-lg text-[9px] font-mono uppercase tracking-widest hover:border-primary hover:text-primary">
+                                            Preview
+                                        </button>
+                                    </div>
+                                </div>`;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+
+            displayArea.scrollIntoView({ behavior: 'smooth' });
+        }
+
         function toggleFolder(folderId) {
             const preview = document.getElementById(folderId);
             const arrow = document.getElementById(`arrow-${folderId}`);
             if (!preview || !arrow) return;
 
-            const isPrimaryFolder = folderId.startsWith('folder-');
+            document.querySelectorAll('[id^="folder-"]').forEach(el => {
+                if (el.id !== folderId) el.classList.add('hidden');
+            });
 
-            if (isPrimaryFolder) {
-                document.querySelectorAll('[id^="folder-"]').forEach(el => {
-                    if (el.id !== folderId) el.classList.add('hidden');
-                });
-
-                document.querySelectorAll('[id^="arrow-folder-"]').forEach(el => {
-                    if (el.id !== `arrow-${folderId}`) el.style.transform = 'rotate(0deg)';
-                });
-            }
+            document.querySelectorAll('[id^="arrow-folder-"]').forEach(el => {
+                if (el.id !== `arrow-${folderId}`) el.style.transform = 'rotate(0deg)';
+            });
 
             const isHidden = preview.classList.contains('hidden');
             if (isHidden) {
                 preview.classList.remove('hidden');
-                arrow.style.transform = isPrimaryFolder ? 'rotate(180deg)' : 'rotate(90deg)';
+                arrow.style.transform = 'rotate(180deg)';
             } else {
                 preview.classList.add('hidden');
                 arrow.style.transform = 'rotate(0deg)';
