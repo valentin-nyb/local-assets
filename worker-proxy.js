@@ -1,7 +1,8 @@
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, PUT, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
+  "Access-Control-Max-Age": "86400",
 };
 
 export default {
@@ -10,7 +11,7 @@ export default {
 
     // Handle CORS preflight
     if (request.method === "OPTIONS") {
-        return new Response(null, { headers: corsHeaders });
+      return new Response(null, { status: 204, headers: corsHeaders });
     }
 
     try {
@@ -185,8 +186,42 @@ export default {
           });
         }
 
-        // 7. Route: PUT /upload (Store file in R2 via binding)
-        if (url.pathname === "/upload" && request.method === "PUT") {
+        // 7. Route: PUT/POST /upload (Store file in R2 via binding)
+        if (url.pathname === "/upload" && (request.method === "PUT" || request.method === "POST")) {
+          if (request.method === "POST") {
+            const form = await request.formData();
+            const keyFromForm = form.get("key");
+            const typeFromForm = form.get("type");
+            const filePart = form.get("file");
+
+            const fileName = (typeof keyFromForm === "string" && keyFromForm) || url.searchParams.get("file");
+            const contentType = (typeof typeFromForm === "string" && typeFromForm) || request.headers.get("Content-Type") || "application/octet-stream";
+
+            if (!fileName) {
+              return new Response(JSON.stringify({ error: "Missing key field" }), {
+                status: 400,
+                headers: { "Content-Type": "application/json", ...corsHeaders },
+              });
+            }
+
+            if (!filePart || typeof filePart === "string") {
+              return new Response(JSON.stringify({ error: "Missing file field" }), {
+                status: 400,
+                headers: { "Content-Type": "application/json", ...corsHeaders },
+              });
+            }
+
+            const inferredContentType = filePart.type || contentType;
+
+            await bucket.put(fileName, filePart.stream(), {
+              httpMetadata: { contentType: inferredContentType || "application/octet-stream" },
+            });
+
+            return new Response(JSON.stringify({ ok: true, key: fileName }), {
+              headers: { "Content-Type": "application/json", ...corsHeaders },
+            });
+          }
+
           const fileName = url.searchParams.get("file");
           const contentType = url.searchParams.get("type") || request.headers.get("Content-Type") || "application/octet-stream";
 

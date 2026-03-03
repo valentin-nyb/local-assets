@@ -99,6 +99,15 @@
             justify-content: center;
         }
 
+        .secondary-folder {
+            border-left: 1px solid rgba(255, 255, 255, 0.05);
+            margin-left: 2rem;
+        }
+
+        .asset-item-row:hover {
+            background: linear-gradient(90deg, rgba(57, 255, 20, 0.05) 0%, transparent 100%);
+        }
+
         #active-asset-display {
             transition: opacity 0.3s ease;
         }
@@ -367,6 +376,36 @@
                 }
             }
 
+            async function uploadFormFile(file, fileName, fileType) {
+                const formData = new FormData();
+                formData.append('file', file, file.name);
+                formData.append('key', fileName);
+                formData.append('type', fileType);
+
+                const formResponse = await fetchWithFallback('/upload', {
+                    method: 'POST',
+                    body: formData
+                }, REQUEST_TIMEOUT_MS * 5);
+
+                if (!formResponse.ok) {
+                    const formText = await formResponse.text();
+                    throw new Error(`Form upload failed (${formResponse.status}): ${formText || 'No response body'}`);
+                }
+            }
+
+            async function uploadDirectPutFile(file, fileName, fileType) {
+                const uploadResponse = await fetchWithFallback(`/upload?file=${encodeURIComponent(fileName)}&type=${encodeURIComponent(fileType)}`, {
+                    method: 'PUT',
+                    body: file,
+                    headers: { 'Content-Type': fileType }
+                }, REQUEST_TIMEOUT_MS * 5);
+
+                if (!uploadResponse.ok) {
+                    const uploadText = await uploadResponse.text();
+                    throw new Error(`Direct upload failed (${uploadResponse.status}): ${uploadText || 'No response body'}`);
+                }
+            }
+
             uploadBtn.onclick = async function() {
                 const djName = document.getElementById('ingest-name').value.trim();
                 const date = document.getElementById('ingest-date').value.trim();
@@ -438,19 +477,16 @@
                             await uploadMultipartFile(file, fileName, fileType, queueIndex, uploadQueue.length);
                         } else {
                             try {
-                                const uploadResponse = await fetchWithFallback(`/upload?file=${encodeURIComponent(fileName)}&type=${encodeURIComponent(fileType)}`, {
-                                    method: 'PUT',
-                                    body: file,
-                                    headers: { 'Content-Type': fileType }
-                                }, REQUEST_TIMEOUT_MS * 5);
-
-                                if (!uploadResponse.ok) {
-                                    throw new Error(`Cloudflare upload failed for ${file.name}`);
-                                }
+                                await uploadFormFile(file, fileName, fileType);
                             } catch (directErr) {
-                                // Fallback path: retry same file via multipart when direct upload flakes.
-                                uploadBtn.textContent = `RETRYING MULTIPART (${queueIndex}/${uploadQueue.length})...`;
-                                await uploadMultipartFile(file, fileName, fileType, queueIndex, uploadQueue.length);
+                                try {
+                                    uploadBtn.textContent = `RETRYING DIRECT (${queueIndex}/${uploadQueue.length})...`;
+                                    await uploadDirectPutFile(file, fileName, fileType);
+                                } catch (putErr) {
+                                    // Final fallback path: retry same file via multipart when direct upload flakes.
+                                    uploadBtn.textContent = `RETRYING MULTIPART (${queueIndex}/${uploadQueue.length})...`;
+                                    await uploadMultipartFile(file, fileName, fileType, queueIndex, uploadQueue.length);
+                                }
                             }
                         }
 
@@ -532,6 +568,78 @@
             return `${t} FORMAT`;
         }
 
+        function groupAssetsByType(assets) {
+            return (assets || []).reduce((acc, asset) => {
+                const key = (asset?.type || 'MISC').toUpperCase();
+                if (!acc[key]) acc[key] = [];
+                acc[key].push(asset);
+                return acc;
+            }, {});
+        }
+
+        function slugifyId(value) {
+            return String(value || '')
+                .toLowerCase()
+                .replace(/[^a-z0-9_-]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+        }
+
+        function formatBytes(bytes) {
+            const size = Number(bytes);
+            if (!Number.isFinite(size) || size <= 0) return '0 B';
+            const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const power = Math.min(Math.floor(Math.log(size) / Math.log(1024)), units.length - 1);
+            const value = size / (1024 ** power);
+            const fixed = value >= 100 || power === 0 ? 0 : 1;
+            return `${value.toFixed(fixed)} ${units[power]}`;
+        }
+
+        function renderCategory(type, assets, artistName) {
+            if (!assets?.length) return '';
+
+            const safeArtist = slugifyId(artistName);
+            const safeType = slugifyId(type);
+            const categoryId = `cat-${safeArtist}-${safeType}`;
+            const cleanLabel = getAssetLabel(type, assets[0]?.key || '');
+
+            if (assets.length === 1) {
+                const asset = assets[0];
+                const format = (asset.format || (asset.key || '').split('.').pop() || 'FILE').toUpperCase();
+                const assetUrl = `${CONFIG.WORKER_URL}/asset?key=${encodeURIComponent(asset.key || '')}`;
+
+                return `
+                    <div onclick="openAssetPreviewEncoded('${encodeURIComponent(assetUrl)}', '${type}', '${encodeURIComponent(artistName)}', '${format}')" class="p-4 pl-14 flex items-center justify-between hover:bg-white/[0.03] group/asset cursor-pointer">
+                        <div class="flex items-center gap-4">
+                            <iconify-icon icon="${getIcon(type)}" class="text-zinc-600 group-hover/asset:text-primary"></iconify-icon>
+                            <span class="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">${cleanLabel}</span>
+                        </div>
+                        <iconify-icon icon="solar:cloud-download-bold" class="text-zinc-700 group-hover/asset:text-primary"></iconify-icon>
+                    </div>`;
+            }
+
+            return `
+                <div class="secondary-folder">
+                    <div onclick="toggleFolder('${categoryId}')" class="p-4 pl-14 flex items-center justify-between hover:bg-white/5 cursor-pointer group/sec">
+                        <div class="flex items-center gap-4">
+                            <iconify-icon icon="solar:folder-with-files-bold" class="text-zinc-700 group-hover/sec:text-primary"></iconify-icon>
+                            <span class="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">${cleanLabel} (${assets.length})</span>
+                        </div>
+                        <iconify-icon id="arrow-${categoryId}" icon="solar:alt-arrow-right-linear" class="text-zinc-800 transition-transform text-xs"></iconify-icon>
+                    </div>
+                    <div id="${categoryId}" class="hidden bg-black/60 divide-y divide-white/5">
+                        ${assets.map((asset, index) => {
+                            const format = (asset.format || (asset.key || '').split('.').pop() || 'FILE').toUpperCase();
+                            const assetUrl = `${CONFIG.WORKER_URL}/asset?key=${encodeURIComponent(asset.key || '')}`;
+                            return `
+                                <div onclick="openAssetPreviewEncoded('${encodeURIComponent(assetUrl)}', '${type}', '${encodeURIComponent(artistName)}', '${format}')" class="asset-item-row p-3 pl-20 flex items-center justify-between group/item cursor-pointer">
+                                    <span class="text-[9px] font-mono text-zinc-500 uppercase group-hover/item:text-white">ASSET ${index + 1} // ${formatBytes(asset.size)}</span>
+                                    <iconify-icon icon="solar:play-circle-bold" class="text-zinc-800 group-hover/item:text-primary"></iconify-icon>
+                                </div>`;
+                        }).join('')}
+                    </div>
+                </div>`;
+        }
+
         function renderList(groupedData) {
             const list = document.getElementById('cloud-list') || document.getElementById('recent-sets-list');
             if (!list) return;
@@ -544,6 +652,8 @@
 
             groupedData.forEach(artist => {
                 if (!artist?.name || artist.name === 'UNKNOWN') return;
+
+                const artistGroup = groupAssetsByType(artist.assets || []);
 
                 const folderId = `folder-${artist.slug}`;
                 const row = document.createElement('div');
@@ -564,19 +674,7 @@
                     </div>
 
                     <div id="${folderId}" class="hidden bg-black/40 divide-y divide-white/5">
-                        ${(artist.assets || []).map(asset => {
-                            const format = (asset.format || (asset.key || '').split('.').pop() || 'FILE').toUpperCase();
-                            const assetUrl = `${CONFIG.WORKER_URL}/asset?key=${encodeURIComponent(asset.key || '')}`;
-                            return `
-                                <div onclick="openAssetPreviewEncoded('${encodeURIComponent(assetUrl)}', '${asset.type}', '${encodeURIComponent(artist.name)}', '${format}')" class="p-4 pl-14 flex items-center justify-between hover:bg-white/[0.03] group/asset cursor-pointer">
-                                    <div class="flex items-center gap-4">
-                                        <iconify-icon icon="${getIcon(asset.type)}" class="text-zinc-600 group-hover/asset:text-primary"></iconify-icon>
-                                        <span class="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">${getAssetLabel(asset.type, asset.key)}</span>
-                                    </div>
-                                    <iconify-icon icon="solar:cloud-download-bold" class="text-zinc-700 group-hover/asset:text-primary"></iconify-icon>
-                                </div>
-                            `;
-                        }).join('')}
+                        ${Object.entries(artistGroup).map(([type, assets]) => renderCategory(type, assets, artist.name)).join('')}
                     </div>
                 `;
 
@@ -589,18 +687,22 @@
             const arrow = document.getElementById(`arrow-${folderId}`);
             if (!preview || !arrow) return;
 
-            document.querySelectorAll('[id^="folder-"]').forEach(el => {
-                if (el.id !== folderId) el.classList.add('hidden');
-            });
+            const isPrimaryFolder = folderId.startsWith('folder-');
 
-            document.querySelectorAll('[id^="arrow-folder-"]').forEach(el => {
-                if (el.id !== `arrow-${folderId}`) el.style.transform = 'rotate(0deg)';
-            });
+            if (isPrimaryFolder) {
+                document.querySelectorAll('[id^="folder-"]').forEach(el => {
+                    if (el.id !== folderId) el.classList.add('hidden');
+                });
+
+                document.querySelectorAll('[id^="arrow-folder-"]').forEach(el => {
+                    if (el.id !== `arrow-${folderId}`) el.style.transform = 'rotate(0deg)';
+                });
+            }
 
             const isHidden = preview.classList.contains('hidden');
             if (isHidden) {
                 preview.classList.remove('hidden');
-                arrow.style.transform = 'rotate(180deg)';
+                arrow.style.transform = isPrimaryFolder ? 'rotate(180deg)' : 'rotate(90deg)';
             } else {
                 preview.classList.add('hidden');
                 arrow.style.transform = 'rotate(0deg)';
