@@ -91,8 +91,9 @@
         }
 
         .audio-player-wrapper {
-            background: transparent;
+            background: transparent !important;
             padding: 20px 0;
+            border: none !important;
             border-radius: 0;
             display: flex;
             align-items: center;
@@ -216,7 +217,7 @@
     <script>
         let cloudAssets = [];
         const CONFIG = {
-            WORKER_URL: '/api',
+            WORKER_URL: 'https://local-assets-worker.smackeprang-v.workers.dev',
             WORKER_FALLBACK_URL: 'https://local-assets-worker.smackeprang-v.workers.dev'
         };
 
@@ -280,8 +281,9 @@
             }
 
             function candidateUrls(pathWithQuery, preferDirect = false) {
-                const viaProxy = `${CONFIG.WORKER_URL}${pathWithQuery}`;
-                const directWorker = `${CONFIG.WORKER_FALLBACK_URL}${pathWithQuery}`;
+                const cleanPath = pathWithQuery.startsWith('/') ? pathWithQuery.substring(1) : pathWithQuery;
+                const viaProxy = `${CONFIG.WORKER_URL}/${cleanPath}`;
+                const directWorker = `${CONFIG.WORKER_FALLBACK_URL}/${cleanPath}`;
                 return preferDirect ? [directWorker, viaProxy] : [viaProxy, directWorker];
             }
 
@@ -825,7 +827,7 @@
                 if (el.id !== folderId) el.classList.add('hidden');
             });
 
-            document.querySelectorAll('[id^="arrow-folder-"]').forEach(el => {
+            document.querySelectorAll('iconify-icon[id^="arrow-folder-"]').forEach(el => {
                 if (el.id !== `arrow-${folderId}`) el.style.transform = 'rotate(0deg)';
             });
 
