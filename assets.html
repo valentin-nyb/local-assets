@@ -34,14 +34,15 @@
         }
 
         .artist-hero-title {
-            font-size: clamp(78px, 15vw, 138px);
+            font-size: clamp(96px, 16vw, 180px);
             font-weight: 900;
             font-style: italic;
-            line-height: 0.74;
+            line-height: 0.82;
             letter-spacing: -0.09em;
             text-transform: uppercase;
             color: white;
             text-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+            white-space: nowrap;
         }
     </style>
 </head>
@@ -124,13 +125,13 @@
                     </div>
 
                     <div class="flex flex-col md:flex-row md:items-end justify-between border-b border-zinc-900 pb-10 gap-8">
-                        <div>
+                        <div class="min-w-0 md:min-w-[70%]">
                             <h2 id="vault-dj-title" class="artist-hero-title">
                                 AMONGST<br>FEW
                             </h2>
                             <p id="vault-meta" class="text-zinc-500 font-mono text-[10px] uppercase tracking-[0.5em] mt-8">UPLOAD SESSION // 03 MAR 2026</p>
                         </div>
-                        <button onclick="closePreview()" class="h-fit px-6 py-3 border border-zinc-800 rounded-xl text-[9px] font-mono text-zinc-500 uppercase tracking-widest hover:text-white hover:border-zinc-600 transition-all">
+                        <button onclick="closePreview()" class="h-fit px-6 py-3 border border-zinc-800 rounded-xl text-[9px] font-mono text-zinc-500 uppercase tracking-widest hover:text-white hover:border-zinc-600 transition-all md:shrink-0">
                             [ CLOSE SESSION ]
                         </button>
                     </div>
@@ -544,7 +545,7 @@
             if (!container || !displayArea || !title || !meta) return;
 
             const upperName = (djName || 'UNKNOWN').toUpperCase();
-            title.innerHTML = upperName.replace(' ', '<br>');
+            title.textContent = upperName;
             meta.textContent = `UPLOAD SESSION // ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()}`;
 
             displayArea.innerHTML = '';
