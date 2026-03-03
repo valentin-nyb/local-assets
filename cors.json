@@ -2,18 +2,11 @@
   "rules": [
     {
       "allowed": {
-        "origins": [
-          "https://local-assets.com",
-          "https://www.local-assets.com",
-          "https://local-assets.vercel.app",
-          "http://localhost:3000",
-          "http://localhost:5173"
-        ],
-        "methods": ["GET", "PUT", "HEAD"],
+        "origins": ["*"],
+        "methods": ["GET", "PUT", "POST", "DELETE", "HEAD"],
         "headers": ["*"]
       },
-      "exposeHeaders": ["ETag"],
-      "maxAgeSeconds": 3600
+      "maxAgeSeconds": 3000
     }
   ]
 }
