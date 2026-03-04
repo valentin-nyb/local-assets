@@ -278,11 +278,25 @@
             fileSocial.addEventListener('change', () => setCardSelected('card-social', fileSocial.files.length > 0));
             fileMarketing.addEventListener('change', () => setCardSelected('card-marketing', fileMarketing.files.length > 0));
 
+            // Retry wrapper for flaky network connections
+            async function fetchWithRetry(url, options, retries = 3) {
+                for (let attempt = 1; attempt <= retries; attempt++) {
+                    try {
+                        const response = await fetch(url, options);
+                        return response;
+                    } catch (err) {
+                        console.warn(`[RETRY] Attempt ${attempt}/${retries} failed for ${options.method || 'GET'} ${url.split('?')[0]}:`, err.message);
+                        if (attempt === retries) throw err;
+                        await new Promise(r => setTimeout(r, 1000 * attempt)); // 1s, 2s, 3s backoff
+                    }
+                }
+            }
+
             async function uploadDirectPutFile(file, path, type) {
                 const uploadUrl = `${CONFIG.WORKER_URL}/upload?file=${encodeURIComponent(path)}&type=${encodeURIComponent(type)}`;
                 console.log('[UPLOAD] Direct PUT:', path, 'size:', file.size, 'type:', type);
                 
-                const response = await fetch(uploadUrl, {
+                const response = await fetchWithRetry(uploadUrl, {
                     method: 'PUT',
                     body: file,
                     headers: {
@@ -302,7 +316,7 @@
 
             async function uploadLargeFile(file, path, type) {
                 console.log('[MULTIPART] Starting:', path, 'size:', file.size, 'type:', type);
-                const startResponse = await fetch(`${CONFIG.WORKER_URL}/multipart/start?file=${encodeURIComponent(path)}&type=${encodeURIComponent(type)}`, {
+                const startResponse = await fetchWithRetry(`${CONFIG.WORKER_URL}/multipart/start?file=${encodeURIComponent(path)}&type=${encodeURIComponent(type)}`, {
                     method: 'POST',
                     headers: { 'x-api-key': CONFIG.API_KEY }
                 });
@@ -317,7 +331,7 @@
                 for (let offset = 0; offset < file.size; offset += partSize) {
                     const chunk = file.slice(offset, offset + partSize);
                     console.log(`[MULTIPART] Uploading part ${partNumber}/${totalParts} (${chunk.size} bytes)`);
-                    const partResponse = await fetch(`${CONFIG.WORKER_URL}/multipart/part?key=${encodeURIComponent(key)}&uploadId=${encodeURIComponent(uploadId)}&partNumber=${partNumber}`, {
+                    const partResponse = await fetchWithRetry(`${CONFIG.WORKER_URL}/multipart/part?key=${encodeURIComponent(key)}&uploadId=${encodeURIComponent(uploadId)}&partNumber=${partNumber}`, {
                         method: 'PUT',
                         body: chunk,
                         headers: { 'x-api-key': CONFIG.API_KEY }
@@ -330,7 +344,7 @@
                 }
 
                 console.log('[MULTIPART] Completing upload with', parts.length, 'parts');
-                const completeResponse = await fetch(`${CONFIG.WORKER_URL}/multipart/complete?key=${encodeURIComponent(key)}&uploadId=${encodeURIComponent(uploadId)}`, {
+                const completeResponse = await fetchWithRetry(`${CONFIG.WORKER_URL}/multipart/complete?key=${encodeURIComponent(key)}&uploadId=${encodeURIComponent(uploadId)}`, {
                     method: 'POST',
                     body: JSON.stringify(parts),
                     headers: { 'Content-Type': 'application/json', 'x-api-key': CONFIG.API_KEY }
