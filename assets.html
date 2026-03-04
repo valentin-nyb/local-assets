@@ -22,6 +22,7 @@
         .nav-link.active { background-color: rgba(255,255,255,0.05); border: 1px solid #27272a; color: white; }
         ::-webkit-scrollbar { display: none; }
         @media (max-width: 767px) { #sidebar { position: fixed; z-index: 50; height: 100vh; } }
+        .flatpickr-calendar { z-index: 9999 !important; }
         
         /* Sleek Slim Flap */
         .sleek-flap {
@@ -147,7 +148,7 @@
                 <div class="p-8 border border-dashed border-zinc-800 rounded-3xl bg-card/30 space-y-8">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <input type="text" id="ingest-name" placeholder="DJ NAME" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs font-bold text-white uppercase outline-none focus:border-primary">
-                        <input type="text" id="ingest-date" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs font-bold cursor-pointer" readonly placeholder="Select date">
+                        <input type="text" id="ingest-date" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs font-bold text-white cursor-pointer" readonly placeholder="Select date">
                         <select id="ingest-shot" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs text-zinc-400 font-bold uppercase">
                             <option value="MASTER">MASTER CAM</option>
                             <option value="BOOTH">BOOTH CAM</option>
@@ -225,22 +226,29 @@
             API_KEY: "your_secret_key_here"
         };
 
-        window.onload = function() {
+        document.addEventListener('DOMContentLoaded', function() {
             const ingestDate = document.getElementById('ingest-date');
             try {
                 if (typeof flatpickr === 'function') {
-                    flatpickr("#ingest-date", {
+                    flatpickr(ingestDate, {
                         defaultDate: "today",
                         dateFormat: "d M Y",
                         theme: "dark",
                         disableMobile: true,
-                        allowInput: false
+                        allowInput: false,
+                        appendTo: document.body,
+                        clickOpens: true
                     });
-                } else if (ingestDate) {
-                    ingestDate.type = 'date';
-                    ingestDate.value = new Date().toISOString().slice(0, 10);
+                    console.log('flatpickr initialized');
+                } else {
+                    console.warn('flatpickr not loaded, falling back to native');
+                    if (ingestDate) {
+                        ingestDate.type = 'date';
+                        ingestDate.value = new Date().toISOString().slice(0, 10);
+                    }
                 }
-            } catch (_) {
+            } catch (e) {
+                console.error('flatpickr init error:', e);
                 if (ingestDate) {
                     ingestDate.type = 'date';
                     ingestDate.value = new Date().toISOString().slice(0, 10);
@@ -249,7 +257,7 @@
 
             fetchCloudLibrary();
             setupUploadHandler();
-        };
+        });
 
         function setupUploadHandler() {
             const uploadBtn = document.getElementById('upload-btn');
