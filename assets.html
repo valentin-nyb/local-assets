@@ -399,6 +399,24 @@
             }
 
             async function uploadDirectPutFile(file, fileName, fileType) {
+                if ((fileType || '').toLowerCase() === 'video/quicktime') {
+                    const formData = new FormData();
+                    formData.append('file', file, file.name);
+                    formData.append('key', fileName);
+                    formData.append('type', fileType);
+
+                    const formResponse = await fetchWithFallback('/upload', {
+                        method: 'POST',
+                        body: formData
+                    }, REQUEST_TIMEOUT_MS * 5, { retryOnHttpError: true, preferDirect: true });
+
+                    if (!formResponse.ok) {
+                        const formText = await formResponse.text();
+                        throw new Error(`Direct upload failed (${formResponse.status}): ${formText || 'No response body'}`);
+                    }
+                    return;
+                }
+
                 const uploadResponse = await fetchWithFallback(`/upload?file=${encodeURIComponent(fileName)}&type=${encodeURIComponent(fileType)}`, {
                     method: 'PUT',
                     body: file,
