@@ -243,9 +243,6 @@
 
         function setupUploadHandler() {
             const uploadBtn = document.getElementById('upload-btn');
-            const UPLOAD_LIMIT_DIRECT = 10 * 1024 * 1024; // 10 MB limit to force multipart for videos
-            const MULTIPART_CHUNK_BYTES = 5 * 1024 * 1024;
-            const MULTIPART_MAX_RETRIES = 5;
             const REQUEST_TIMEOUT_MS = 120000;
 
             const fileVideo = document.getElementById('file-video');
@@ -463,18 +460,8 @@
                         const fileType = file.type || 'application/octet-stream';
                         const fileName = getAssetPath(file, shotType);
 
-                        if (file.size < UPLOAD_LIMIT_DIRECT) {
-                            uploadBtn.textContent = `UPLOADING (${queueIndex}/${uploadQueue.length}) [DIRECT]...`;
-                            try {
-                                await uploadDirectPutFile(file, fileName, fileType);
-                            } catch (directErr) {
-                                uploadBtn.textContent = `RETRYING (${queueIndex}/${uploadQueue.length}) [MULTIPART]...`;
-                                await uploadMultipartFile(file, fileName, fileType, queueIndex, uploadQueue.length);
-                            }
-                        } else {
-                            uploadBtn.textContent = `UPLOADING (${queueIndex}/${uploadQueue.length}) [MULTIPART]...`;
-                            await uploadMultipartFile(file, fileName, fileType, queueIndex, uploadQueue.length);
-                        }
+                        uploadBtn.textContent = `UPLOADING (${queueIndex}/${uploadQueue.length}) [DIRECT]...`;
+                        await uploadDirectPutFile(file, fileName, fileType);
 
                         successCount++;
                     }
