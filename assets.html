@@ -336,22 +336,9 @@
 
             async function uploadFile(file, fileName, fileType, queueIndex, queueTotal) {
                 const base = CONFIG.WORKER_URL;
-                const DIRECT_LIMIT = 95 * 1024 * 1024; // 95 MB — stay under Cloudflare's 100MB Worker limit
-                const CHUNK = 5 * 1024 * 1024; // 5 MB per multipart chunk
+                const CHUNK = 5 * 1024 * 1024; // 5 MB per chunk
 
-                if (file.size <= DIRECT_LIMIT) {
-                    // Single PUT — read entire file into ArrayBuffer first so Safari doesn't lazy-stream it
-                    uploadBtn.textContent = `UPLOADING (${queueIndex}/${queueTotal})...`;
-                    const buffer = await readBlobAsBuffer(file);
-                    const res = await fetch(
-                        `${base}/upload?file=${encodeURIComponent(fileName)}&type=${encodeURIComponent(fileType)}`,
-                        { method: 'PUT', body: buffer, headers: { 'Content-Type': fileType } }
-                    );
-                    if (!res.ok) throw new Error(`Upload failed (${res.status}): ${await res.text()}`);
-                    return;
-                }
-
-                // Large file (>95MB) — multipart with FileReader per chunk
+                // Always use multipart — it's proven to work for all file types and sizes
                 uploadBtn.textContent = `STARTING UPLOAD (${queueIndex}/${queueTotal})...`;
                 const startRes = await fetch(
                     `${base}/multipart/start?file=${encodeURIComponent(fileName)}&type=${encodeURIComponent(fileType)}`,
