@@ -399,29 +399,14 @@
             }
 
             async function uploadDirectPutFile(file, fileName, fileType) {
-                const isQuickTime = (fileType || '').toLowerCase() === 'video/quicktime' || (file?.name || '').toLowerCase().endsWith('.mov');
-                if (isQuickTime) {
-                    const formData = new FormData();
-                    formData.append('file', file, file.name);
-                    formData.append('key', fileName);
-                    formData.append('type', fileType);
-
-                    const formResponse = await fetchWithFallback('/upload', {
-                        method: 'POST',
-                        body: formData
-                    }, REQUEST_TIMEOUT_MS * 5, { retryOnHttpError: true, preferDirect: true });
-
-                    if (!formResponse.ok) {
-                        const formText = await formResponse.text();
-                        throw new Error(`Direct upload failed (${formResponse.status}): ${formText || 'No response body'}`);
-                    }
-                    return;
-                }
+                // Slicing the blob forces browsers like Safari to resolve native file objects
+                // avoiding 0-byte or 'Failed to fetch' request drops for .mov / camera roll items.
+                const fileBlob = file.slice(0, file.size, fileType || 'application/octet-stream');
 
                 const uploadResponse = await fetchWithFallback(`/upload?file=${encodeURIComponent(fileName)}&type=${encodeURIComponent(fileType)}`, {
                     method: 'PUT',
-                    body: file,
-                    headers: { 'Content-Type': fileType }
+                    body: fileBlob,
+                    headers: { 'Content-Type': fileType || 'application/octet-stream' }
                 }, REQUEST_TIMEOUT_MS * 5, { retryOnHttpError: true, preferDirect: true });
 
                 if (!uploadResponse.ok) {
