@@ -3,6 +3,10 @@ name: Deploy Worker
 on:
   push:
     branches: ["main"]
+    paths:
+      - "worker-proxy.js"
+      - "wrangler.toml"
+      - ".github/workflows/deploy.yml"
   workflow_dispatch:
 
 jobs:
@@ -20,4 +24,4 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: publish
+          command: deploy

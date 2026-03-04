@@ -215,10 +215,13 @@
     </main>
 
     <script>
+
         let cloudAssets = [];
+
         const CONFIG = {
-            WORKER_URL: 'https://local-assets-worker.smackeprang-v.workers.dev',
-            WORKER_FALLBACK_URL: 'https://local-assets-worker.smackeprang-v.workers.dev'
+            // MUST BE THE CUSTOM DOMAIN NOW
+            WORKER_URL: "https://cloud.local-assets.com", 
+            API_KEY: "your_secret_key_here"
         };
 
         window.onload = function() {
@@ -275,69 +278,62 @@
             fileSocial.addEventListener('change', () => setCardSelected('card-social', fileSocial.files.length > 0));
             fileMarketing.addEventListener('change', () => setCardSelected('card-marketing', fileMarketing.files.length > 0));
 
-            async function fetchWithTimeout(resource, options = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
-                const controller = new AbortController();
-                const timer = setTimeout(() => controller.abort(), timeoutMs);
+            async function uploadDirectPutFile(file, path, type) {
+                const contentType = type || 'application/octet-stream';
+                const CHUNK_SIZE = 50 * 1024 * 1024;
 
-                try {
-                    return await fetch(resource, { ...options, signal: controller.signal });
-                } catch (err) {
-                    if (err?.name === 'AbortError') {
-                        throw new Error(`Request timed out after ${Math.round(timeoutMs / 1000)}s`);
-                    }
-                    throw err;
-                } finally {
-                    clearTimeout(timer);
-                }
-            }
-
-            function candidateUrls(pathWithQuery, preferDirect = false) {
-                const cleanPath = pathWithQuery.startsWith('/') ? pathWithQuery.substring(1) : pathWithQuery;
-                const viaProxy = `${CONFIG.WORKER_URL}/${cleanPath}`;
-                const directWorker = `${CONFIG.WORKER_FALLBACK_URL}/${cleanPath}`;
-                const urls = preferDirect ? [directWorker, viaProxy] : [viaProxy, directWorker];
-                return [...new Set(urls)];
-            }
-
-            async function fetchWithFallback(pathWithQuery, options = {}, timeoutMs = REQUEST_TIMEOUT_MS, config = {}) {
-                const { retryOnHttpError = false, preferDirect = false } = config;
-                let lastError = null;
-                const endpointFailures = [];
-
-                for (const url of candidateUrls(pathWithQuery, preferDirect)) {
-                    try {
-                        const response = await fetchWithTimeout(url, options, timeoutMs);
-                        if (!retryOnHttpError || response.ok) {
-                            return response;
+                // Keep the direct PUT route for normal file sizes
+                if (file.size <= CHUNK_SIZE) {
+                    const uploadUrl = `${CONFIG.WORKER_URL}/upload?file=${encodeURIComponent(path)}&type=${encodeURIComponent(contentType)}`;
+                    const response = await fetch(uploadUrl, {
+                        method: 'PUT',
+                        body: file,
+                        headers: {
+                            'x-api-key': CONFIG.API_KEY,
+                            'Content-Type': contentType
                         }
-                        endpointFailures.push(`${url} => HTTP ${response.status}`);
-                    } catch (err) {
-                        lastError = err;
-                        endpointFailures.push(`${url} => ${err?.message || 'Network failure'}`);
+                    });
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(`Upload failed: ${errorText}`);
                     }
+                    return true;
                 }
 
-                if (lastError) {
-                    throw new Error(endpointFailures.join(' | ') || lastError.message || 'Failed to fetch');
+                // Multipart fallback for large assets
+                const startRes = await fetch(`${CONFIG.WORKER_URL}/multipart/start?file=${encodeURIComponent(path)}&type=${encodeURIComponent(contentType)}`, {
+                    method: 'POST',
+                    headers: { 'x-api-key': CONFIG.API_KEY }
+                });
+                if (!startRes.ok) throw new Error(`Upload start failed: ${await startRes.text()}`);
+
+                const { uploadId } = await startRes.json();
+                const parts = [];
+                const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+
+                for (let i = 0; i < totalChunks; i++) {
+                    const chunk = file.slice(i * CHUNK_SIZE, Math.min((i + 1) * CHUNK_SIZE, file.size));
+                    const partRes = await fetch(`${CONFIG.WORKER_URL}/multipart/part?file=${encodeURIComponent(path)}&uploadId=${encodeURIComponent(uploadId)}&partNumber=${i + 1}`, {
+                        method: 'PUT',
+                        body: chunk,
+                        headers: { 'x-api-key': CONFIG.API_KEY }
+                    });
+                    if (!partRes.ok) throw new Error(`Upload part ${i + 1} failed: ${await partRes.text()}`);
+                    parts.push(await partRes.json());
                 }
 
-                throw new Error(endpointFailures.join(' | ') || 'Failed to fetch');
-            }
+                const completeRes = await fetch(`${CONFIG.WORKER_URL}/multipart/complete?file=${encodeURIComponent(path)}&uploadId=${encodeURIComponent(uploadId)}`, {
+                    method: 'POST',
+                    headers: {
+                        'x-api-key': CONFIG.API_KEY,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ parts })
+                });
+                if (!completeRes.ok) throw new Error(`Upload complete failed: ${await completeRes.text()}`);
 
-            async function uploadFile(file, fileName, fileType, queueIndex, queueTotal) {
-                const base = CONFIG.WORKER_URL;
-                uploadBtn.textContent = `UPLOADING (${queueIndex}/${queueTotal})...`;
-                
-                const uploadResponse = await fetchWithFallback(`/upload?file=${encodeURIComponent(fileName)}&type=${encodeURIComponent(fileType)}`, {
-                    method: 'PUT',
-                    body: file,
-                    headers: { 'Content-Type': fileType || 'application/octet-stream' }
-                }, REQUEST_TIMEOUT_MS * 5, { retryOnHttpError: true, preferDirect: true });
-
-                if (!uploadResponse.ok) {
-                    const uploadText = await uploadResponse.text();
-                    throw new Error(`Direct upload failed (${uploadResponse.status}): ${uploadText || 'No response body'}`);
-                }
+                return true;
             }
 
             uploadBtn.onclick = async function() {
@@ -391,7 +387,7 @@
                         const queueIndex = successCount + 1;
                         const fileType = file.type || 'application/octet-stream';
                         const fileName = getAssetPath(file, shotType);
-                        await uploadFile(file, fileName, fileType, queueIndex, uploadQueue.length);
+                        await uploadDirectPutFile(file, fileName, fileType, queueIndex, uploadQueue.length);
                         successCount++;
                     }
 
@@ -453,19 +449,6 @@
             return 'solar:document-bold';
         }
 
-        function getAssetLabel(type, filename) {
-            const name = (filename || '').toLowerCase();
-            const t = (type || '').toUpperCase();
-
-            if (t === 'MASTERS' || t === 'MASTER') return 'MASTER 4K SET';
-            if (t === 'AUDIO') return 'HQ AUDIO MASTER (.WAV)';
-
-            if (name.includes('vertical')) return 'VERTICAL';
-            if (name.includes('thumbnail') || name.includes('thumb')) return 'THUMBNAIL';
-
-            return 'ASSET';
-        }
-
         function groupAssetsByType(assets) {
             return (assets || []).reduce((acc, asset) => {
                 const key = (asset?.type || 'MISC').toUpperCase();
@@ -502,7 +485,10 @@
 
         function renderCategory(type, assets, artistName) {
             if (!assets?.length) return '';
-            const cleanLabel = getAssetLabel(type, assets[0]?.key || '');
+            let cleanLabel = type;
+            if (type === 'MASTERS' || type === 'MASTER') cleanLabel = 'MASTER 4K SET';
+            else if (type === 'AUDIO') cleanLabel = 'HQ AUDIO MASTER (.WAV)';
+            else cleanLabel = (assets[0]?.key || '').toLowerCase().includes('thumb') ? 'THUMBNAILS' : 'VERTICALS';
             return `
                 <div onclick="focusCategoryEncoded('${encodeURIComponent(type)}', '${encodeURIComponent(artistName)}')" class="p-4 pl-14 flex items-center justify-between hover:bg-white/[0.03] group/cat cursor-pointer">
                     <div class="flex items-center gap-4">
@@ -565,20 +551,27 @@
             focusCategory(decodeURIComponent(encodedType), decodeURIComponent(encodedArtistName));
         }
 
+        function getAssetLabel(type, filename, index = null) {
+            const name = (filename || '').toLowerCase();
+            const base = name.includes('vertical') ? 'VERTICAL' : (name.includes('thumb') ? 'THUMBNAIL' : type);
+            return index !== null ? `${base} ${index + 1}` : base;
+        }
+
         function focusCategory(type, artistName) {
-            const artist = (cloudAssets || []).find(a => (a?.name || '') === artistName);
-            const assets = (artist?.assets || []).filter(a => (a?.type || '') === type);
+            const artist = cloudAssets.find(a => a.name === artistName);
+            const assets = artist.assets.filter(a => a.type === type.toUpperCase());
+            
             if (!assets.length) return;
 
             if (assets.length === 1) {
+                // RULE: If only one file, skip list and autoplay immediately
                 const asset = assets[0];
-                const format = (asset.key || '').split('.').pop().toUpperCase();
                 const url = `${CONFIG.WORKER_URL}/asset?key=${encodeURIComponent(asset.key)}`;
-                openAssetPreview(url, type, artistName, format);
-                return;
+                openAssetPreview(url, type, artistName, 'MOV');
+            } else {
+                // RULE: Show the numbered list
+                renderNumberedList(type, artistName, assets);
             }
-
-            renderNumberedList(type, artistName, assets);
         }
 
         function renderNumberedList(type, artistName, assets) {
@@ -600,9 +593,10 @@
                     ${assets.map((asset, i) => {
                         const format = (asset.format || (asset.key || '').split('.').pop() || 'FILE').toUpperCase();
                         const assetUrl = `${CONFIG.WORKER_URL}/asset?key=${encodeURIComponent(asset.key || '')}`;
+                        const itemLabel = getAssetLabel(type, asset.key, i);
                         return `
                             <div onclick="openAssetPreviewEncoded('${encodeURIComponent(assetUrl)}', '${type}', '${encodeURIComponent(artistName)}', '${format}')" class="flex items-center justify-between p-5 bg-[#0a0a0a] border border-zinc-800 rounded-2xl hover:border-primary cursor-pointer group transition-all">
-                                <span class="text-[9px] font-mono text-zinc-500 uppercase">${labelBase} ${i + 1}</span>
+                                <span class="text-[9px] font-mono text-zinc-500 uppercase">${itemLabel}</span>
                                 <iconify-icon icon="solar:play-circle-bold" class="text-xl text-zinc-700 group-hover:text-primary"></iconify-icon>
                             </div>
                         `;
