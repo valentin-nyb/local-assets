@@ -279,37 +279,44 @@
             fileMarketing.addEventListener('change', () => setCardSelected('card-marketing', fileMarketing.files.length > 0));
 
             async function uploadDirectPutFile(file, path, type) {
-                // We must pass 'file' and 'type' as query params to match your worker
                 const uploadUrl = `${CONFIG.WORKER_URL}/upload?file=${encodeURIComponent(path)}&type=${encodeURIComponent(type)}`;
+                console.log('[UPLOAD] Direct PUT:', path, 'size:', file.size, 'type:', type);
                 
                 const response = await fetch(uploadUrl, {
                     method: 'PUT',
-                    body: file, // Send binary directly
+                    body: file,
                     headers: {
                         'x-api-key': CONFIG.API_KEY,
-                        'Content-Type': type // Vital for video playback
+                        'Content-Type': type
                     }
                 });
 
-                if (!response.ok) throw new Error(await response.text());
+                console.log('[UPLOAD] Response status:', response.status);
+                if (!response.ok) {
+                    const text = await response.text();
+                    console.error('[UPLOAD] Failed:', text);
+                    throw new Error(text);
+                }
                 return true;
             }
 
             async function uploadLargeFile(file, path, type) {
-                // Start multipart upload
+                console.log('[MULTIPART] Starting:', path, 'size:', file.size, 'type:', type);
                 const startResponse = await fetch(`${CONFIG.WORKER_URL}/multipart/start?file=${encodeURIComponent(path)}&type=${encodeURIComponent(type)}`, {
                     method: 'POST',
                     headers: { 'x-api-key': CONFIG.API_KEY }
                 });
                 if (!startResponse.ok) throw new Error(await startResponse.text());
                 const { key, uploadId } = await startResponse.json();
+                console.log('[MULTIPART] Got uploadId, key:', key);
 
-                // Upload parts (5MB each — R2 minimum part size)
                 const partSize = 5 * 1024 * 1024;
                 const parts = [];
                 let partNumber = 1;
+                const totalParts = Math.ceil(file.size / partSize);
                 for (let offset = 0; offset < file.size; offset += partSize) {
                     const chunk = file.slice(offset, offset + partSize);
+                    console.log(`[MULTIPART] Uploading part ${partNumber}/${totalParts} (${chunk.size} bytes)`);
                     const partResponse = await fetch(`${CONFIG.WORKER_URL}/multipart/part?key=${encodeURIComponent(key)}&uploadId=${encodeURIComponent(uploadId)}&partNumber=${partNumber}`, {
                         method: 'PUT',
                         body: chunk,
@@ -317,17 +324,19 @@
                     });
                     if (!partResponse.ok) throw new Error(await partResponse.text());
                     const { etag } = await partResponse.json();
+                    console.log(`[MULTIPART] Part ${partNumber} etag:`, etag);
                     parts.push({ partNumber, etag });
                     partNumber++;
                 }
 
-                // Complete multipart upload
+                console.log('[MULTIPART] Completing upload with', parts.length, 'parts');
                 const completeResponse = await fetch(`${CONFIG.WORKER_URL}/multipart/complete?key=${encodeURIComponent(key)}&uploadId=${encodeURIComponent(uploadId)}`, {
                     method: 'POST',
                     body: JSON.stringify(parts),
                     headers: { 'Content-Type': 'application/json', 'x-api-key': CONFIG.API_KEY }
                 });
                 if (!completeResponse.ok) throw new Error(await completeResponse.text());
+                console.log('[MULTIPART] Complete!');
                 return true;
             }
 
@@ -378,20 +387,31 @@
                     }
 
                     let successCount = 0;
+                    const errors = [];
                     for (const { file, shotType } of uploadQueue) {
                         const fileType = file.type || 'application/octet-stream';
                         const fileName = getAssetPath(file, shotType);
 
-                        const isLarge = file.size > 10 * 1024 * 1024; // 10MB threshold
-                        if (isLarge) {
-                            await uploadLargeFile(file, fileName, fileType);
-                        } else {
-                            await uploadDirectPutFile(file, fileName, fileType);
+                        try {
+                            console.log(`[QUEUE] ${file.name} → ${fileName} (${(file.size/1024/1024).toFixed(1)}MB, ${fileType}, ${shotType})`);
+                            const isLarge = file.size > 10 * 1024 * 1024;
+                            if (isLarge) {
+                                await uploadLargeFile(file, fileName, fileType);
+                            } else {
+                                await uploadDirectPutFile(file, fileName, fileType);
+                            }
+                            successCount++;
+                        } catch (err) {
+                            console.error(`[QUEUE] FAILED ${file.name}:`, err);
+                            errors.push(`${file.name}: ${err.message}`);
                         }
-                        successCount++;
                     }
 
-                    alert(`Successfully uploaded ${successCount} files!`);
+                    if (errors.length > 0) {
+                        alert(`Uploaded ${successCount} files.\nFailed:\n${errors.join('\n')}`);
+                    } else {
+                        alert(`Successfully uploaded ${successCount} files!`);
+                    }
                     fileVideo.value = '';
                     fileAudio.value = '';
                     fileSocial.value = '';
