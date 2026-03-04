@@ -243,10 +243,10 @@
 
         function setupUploadHandler() {
             const uploadBtn = document.getElementById('upload-btn');
-            const UPLOAD_LIMIT_DIRECT = 100 * 1024 * 1024; // 100 MB
+            const UPLOAD_LIMIT_DIRECT = 10 * 1024 * 1024; // 10 MB limit to force multipart for videos
             const MULTIPART_CHUNK_BYTES = 5 * 1024 * 1024;
-            const MULTIPART_MAX_RETRIES = 3;
-            const REQUEST_TIMEOUT_MS = 60000;
+            const MULTIPART_MAX_RETRIES = 5;
+            const REQUEST_TIMEOUT_MS = 120000;
 
             const fileVideo = document.getElementById('file-video');
             const fileAudio = document.getElementById('file-audio');
@@ -399,13 +399,9 @@
             }
 
             async function uploadDirectPutFile(file, fileName, fileType) {
-                // Slicing the blob forces browsers like Safari to resolve native file objects
-                // avoiding 0-byte or 'Failed to fetch' request drops for .mov / camera roll items.
-                const fileBlob = file.slice(0, file.size, fileType || 'application/octet-stream');
-
                 const uploadResponse = await fetchWithFallback(`/upload?file=${encodeURIComponent(fileName)}&type=${encodeURIComponent(fileType)}`, {
                     method: 'PUT',
-                    body: fileBlob,
+                    body: file,
                     headers: { 'Content-Type': fileType || 'application/octet-stream' }
                 }, REQUEST_TIMEOUT_MS * 5, { retryOnHttpError: true, preferDirect: true });
 
