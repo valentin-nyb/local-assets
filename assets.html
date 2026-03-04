@@ -243,9 +243,6 @@
 
         function setupUploadHandler() {
             const uploadBtn = document.getElementById('upload-btn');
-            const UPLOAD_LIMIT_DIRECT = 0; // Force exclusively to Multipart to bypass 100MB Cloudflare Limit & Webkit bugs
-            const MULTIPART_CHUNK_BYTES = 5 * 1024 * 1024; // 5MB chunks
-            const MULTIPART_MAX_RETRIES = 5;
             const REQUEST_TIMEOUT_MS = 120000;
 
             const fileVideo = document.getElementById('file-video');
@@ -328,74 +325,39 @@
             }
 
             async function uploadMultipartFile(file, fileName, fileType, queueIndex, queueTotal) {
-                const startResponse = await fetchWithFallback(`/multipart/start?file=${encodeURIComponent(fileName)}&type=${encodeURIComponent(fileType)}`, {
-                    method: 'POST'
-                }, REQUEST_TIMEOUT_MS, { retryOnHttpError: true, preferDirect: true });
+                const base = CONFIG.WORKER_URL;
 
-                if (!startResponse.ok) {
-                    const startText = await startResponse.text();
-                    throw new Error(`Multipart start failed (${startResponse.status}): ${startText || 'No response body'}`);
-                }
+                // Step 1: Start
+                uploadBtn.textContent = `STARTING UPLOAD (${queueIndex}/${queueTotal})...`;
+                const startRes = await fetch(`${base}/multipart/start?file=${encodeURIComponent(fileName)}&type=${encodeURIComponent(fileType)}`, { method: 'POST' });
+                if (!startRes.ok) throw new Error(`Multipart start failed (${startRes.status}): ${await startRes.text()}`);
+                const { uploadId } = await startRes.json();
+                if (!uploadId) throw new Error('No uploadId returned from server');
 
-                const { uploadId } = await startResponse.json();
-                if (!uploadId) {
-                    throw new Error('Multipart start did not return an uploadId');
-                }
-
-                const totalParts = Math.ceil(file.size / MULTIPART_CHUNK_BYTES);
+                // Step 2: Upload 5MB chunks
+                const CHUNK = 5 * 1024 * 1024;
+                const totalParts = Math.ceil(file.size / CHUNK);
                 const parts = [];
 
-                for (let partNumber = 1; partNumber <= totalParts; partNumber++) {
-                    const start = (partNumber - 1) * MULTIPART_CHUNK_BYTES;
-                    const end = Math.min(start + MULTIPART_CHUNK_BYTES, file.size);
-                    const chunk = file.slice(start, end);
+                for (let i = 1; i <= totalParts; i++) {
+                    const chunk = file.slice((i - 1) * CHUNK, Math.min(i * CHUNK, file.size));
+                    uploadBtn.textContent = `UPLOADING (${queueIndex}/${queueTotal}) PART ${i}/${totalParts}...`;
 
-                    let etag = null;
-                    let lastError = null;
-
-                    for (let attempt = 1; attempt <= MULTIPART_MAX_RETRIES; attempt++) {
-                        uploadBtn.textContent = `UPLOADING (${queueIndex}/${queueTotal}) PART ${partNumber}/${totalParts} (TRY ${attempt}/${MULTIPART_MAX_RETRIES})...`;
-
-                        try {
-                            const partResponse = await fetchWithFallback(`/multipart/part?file=${encodeURIComponent(fileName)}&uploadId=${encodeURIComponent(uploadId)}&partNumber=${partNumber}`, {
-                                method: 'PUT',
-                                body: chunk,
-                                headers: { 'Content-Type': 'application/octet-stream' }
-                            }, REQUEST_TIMEOUT_MS, { retryOnHttpError: true, preferDirect: true });
-
-                            if (!partResponse.ok) {
-                                const partText = await partResponse.text();
-                                throw new Error(`Multipart part failed (${partResponse.status}): ${partText || 'No response body'}`);
-                            }
-
-                            const partJson = await partResponse.json();
-                            etag = partJson.etag;
-                            break;
-                        } catch (err) {
-                            lastError = err;
-                            if (attempt < MULTIPART_MAX_RETRIES) {
-                                await new Promise(resolve => setTimeout(resolve, attempt * 1000));
-                            }
-                        }
-                    }
-
-                    if (!etag) {
-                        throw new Error(lastError?.message || `Multipart part ${partNumber} failed after retries`);
-                    }
-
-                    parts.push({ etag, partNumber });
+                    const partRes = await fetch(
+                        `${base}/multipart/part?file=${encodeURIComponent(fileName)}&uploadId=${encodeURIComponent(uploadId)}&partNumber=${i}`,
+                        { method: 'PUT', body: chunk, headers: { 'Content-Type': 'application/octet-stream' } }
+                    );
+                    if (!partRes.ok) throw new Error(`Part ${i}/${totalParts} failed (${partRes.status}): ${await partRes.text()}`);
+                    parts.push(await partRes.json());
                 }
 
-                const completeResponse = await fetchWithFallback(`/multipart/complete?file=${encodeURIComponent(fileName)}&uploadId=${encodeURIComponent(uploadId)}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ parts })
-                }, REQUEST_TIMEOUT_MS, { retryOnHttpError: true, preferDirect: true });
-
-                if (!completeResponse.ok) {
-                    const completeText = await completeResponse.text();
-                    throw new Error(`Multipart complete failed (${completeResponse.status}): ${completeText || 'No response body'}`);
-                }
+                // Step 3: Complete
+                uploadBtn.textContent = `FINALISING (${queueIndex}/${queueTotal})...`;
+                const completeRes = await fetch(
+                    `${base}/multipart/complete?file=${encodeURIComponent(fileName)}&uploadId=${encodeURIComponent(uploadId)}`,
+                    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ parts }) }
+                );
+                if (!completeRes.ok) throw new Error(`Complete failed (${completeRes.status}): ${await completeRes.text()}`);
             }
 
             async function uploadDirectPutFile(file, fileName, fileType) {
@@ -466,20 +428,7 @@
                         const queueIndex = successCount + 1;
                         const fileType = file.type || 'application/octet-stream';
                         const fileName = getAssetPath(file, shotType);
-
-                        if (file.size < UPLOAD_LIMIT_DIRECT) {
-                            uploadBtn.textContent = `UPLOADING (${queueIndex}/${uploadQueue.length}) [DIRECT]...`;
-                            try {
-                                await uploadDirectPutFile(file, fileName, fileType);
-                            } catch (directErr) {
-                                uploadBtn.textContent = `RETRYING (${queueIndex}/${uploadQueue.length}) [MULTIPART]...`;
-                                await uploadMultipartFile(file, fileName, fileType, queueIndex, uploadQueue.length);
-                            }
-                        } else {
-                            uploadBtn.textContent = `UPLOADING (${queueIndex}/${uploadQueue.length}) [MULTIPART]...`;
-                            await uploadMultipartFile(file, fileName, fileType, queueIndex, uploadQueue.length);
-                        }
-
+                        await uploadMultipartFile(file, fileName, fileType, queueIndex, uploadQueue.length);
                         successCount++;
                     }
 

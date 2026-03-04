@@ -136,8 +136,8 @@ export default {
           });
         }
 
-        // 5. Route: PUT /multipart/part
-        if (url.pathname === "/multipart/part" && request.method === "PUT") {
+        // 5. Route: POST /multipart/part (FormData to bypass WAF) or PUT /multipart/part (raw)
+        if (url.pathname === "/multipart/part" && (request.method === "PUT" || request.method === "POST")) {
           const fileName = url.searchParams.get("file");
           const uploadId = url.searchParams.get("uploadId");
           const partNumber = Number(url.searchParams.get("partNumber"));
@@ -149,8 +149,23 @@ export default {
             });
           }
 
+          let partBody;
+          if (request.method === "POST") {
+            const form = await request.formData();
+            const filePart = form.get("file");
+            if (!filePart || typeof filePart === "string") {
+              return new Response(JSON.stringify({ error: "Missing file field in FormData" }), {
+                status: 400,
+                headers: { "Content-Type": "application/json", ...corsHeaders },
+              });
+            }
+            partBody = filePart.stream();
+          } else {
+            partBody = request.body;
+          }
+
           const multipart = bucket.resumeMultipartUpload(fileName, uploadId);
-          const uploadedPart = await multipart.uploadPart(partNumber, request.body);
+          const uploadedPart = await multipart.uploadPart(partNumber, partBody);
 
           return new Response(JSON.stringify({ etag: uploadedPart.etag, partNumber: uploadedPart.partNumber }), {
             headers: { "Content-Type": "application/json", ...corsHeaders },
