@@ -324,7 +324,7 @@
                 throw new Error(endpointFailures.join(' | ') || 'Failed to fetch');
             }
 
-            // Force the browser (incl. Safari) to fully load a blob into memory before sending
+            // Force the browser (incl. Safari/WebKit) to fully load a blob into RAM before sending
             function readBlobAsBuffer(blob) {
                 return new Promise((resolve, reject) => {
                     const reader = new FileReader();
@@ -336,21 +336,22 @@
 
             async function uploadFile(file, fileName, fileType, queueIndex, queueTotal) {
                 const base = CONFIG.WORKER_URL;
-                const CHUNK = 5 * 1024 * 1024; // 5 MB
+                const DIRECT_LIMIT = 95 * 1024 * 1024; // 95 MB — stay under Cloudflare's 100MB Worker limit
+                const CHUNK = 5 * 1024 * 1024; // 5 MB per multipart chunk
 
-                if (file.size <= CHUNK) {
-                    // Small file — single FormData POST, works for audio/images on all browsers
+                if (file.size <= DIRECT_LIMIT) {
+                    // Single PUT — read entire file into ArrayBuffer first so Safari doesn't lazy-stream it
                     uploadBtn.textContent = `UPLOADING (${queueIndex}/${queueTotal})...`;
-                    const form = new FormData();
-                    form.append('file', file, file.name);
-                    form.append('key', fileName);
-                    form.append('type', fileType);
-                    const res = await fetch(`${base}/upload`, { method: 'POST', body: form });
+                    const buffer = await readBlobAsBuffer(file);
+                    const res = await fetch(
+                        `${base}/upload?file=${encodeURIComponent(fileName)}&type=${encodeURIComponent(fileType)}`,
+                        { method: 'PUT', body: buffer, headers: { 'Content-Type': fileType } }
+                    );
                     if (!res.ok) throw new Error(`Upload failed (${res.status}): ${await res.text()}`);
                     return;
                 }
 
-                // Large file — multipart with FileReader to force chunk resolution in Safari
+                // Large file (>95MB) — multipart with FileReader per chunk
                 uploadBtn.textContent = `STARTING UPLOAD (${queueIndex}/${queueTotal})...`;
                 const startRes = await fetch(
                     `${base}/multipart/start?file=${encodeURIComponent(fileName)}&type=${encodeURIComponent(fileType)}`,
@@ -365,7 +366,7 @@
 
                 for (let i = 1; i <= totalParts; i++) {
                     const blob = file.slice((i - 1) * CHUNK, Math.min(i * CHUNK, file.size));
-                    const buffer = await readBlobAsBuffer(blob); // fully load into RAM before sending
+                    const buffer = await readBlobAsBuffer(blob);
                     uploadBtn.textContent = `UPLOADING (${queueIndex}/${queueTotal}) PART ${i}/${totalParts}...`;
                     const partRes = await fetch(
                         `${base}/multipart/part?file=${encodeURIComponent(fileName)}&uploadId=${encodeURIComponent(uploadId)}&partNumber=${i}`,
