@@ -302,15 +302,15 @@
                     headers: { 'x-api-key': CONFIG.API_KEY }
                 });
                 if (!startResponse.ok) throw new Error(await startResponse.text());
-                const { uploadId } = await startResponse.json();
+                const { key, uploadId } = await startResponse.json();
 
-                // Upload parts (10MB each)
-                const partSize = 10 * 1024 * 1024;
+                // Upload parts (5MB each — R2 minimum part size)
+                const partSize = 5 * 1024 * 1024;
                 const parts = [];
                 let partNumber = 1;
                 for (let offset = 0; offset < file.size; offset += partSize) {
                     const chunk = file.slice(offset, offset + partSize);
-                    const partResponse = await fetch(`${CONFIG.WORKER_URL}/multipart/part?uploadId=${uploadId}&partNumber=${partNumber}`, {
+                    const partResponse = await fetch(`${CONFIG.WORKER_URL}/multipart/part?key=${encodeURIComponent(key)}&uploadId=${encodeURIComponent(uploadId)}&partNumber=${partNumber}`, {
                         method: 'PUT',
                         body: chunk,
                         headers: { 'x-api-key': CONFIG.API_KEY }
@@ -322,7 +322,7 @@
                 }
 
                 // Complete multipart upload
-                const completeResponse = await fetch(`${CONFIG.WORKER_URL}/multipart/complete?uploadId=${uploadId}`, {
+                const completeResponse = await fetch(`${CONFIG.WORKER_URL}/multipart/complete?key=${encodeURIComponent(key)}&uploadId=${encodeURIComponent(uploadId)}`, {
                     method: 'POST',
                     body: JSON.stringify(parts),
                     headers: { 'Content-Type': 'application/json', 'x-api-key': CONFIG.API_KEY }

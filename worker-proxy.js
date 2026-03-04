@@ -1,6 +1,7 @@
 // worker-proxy.js
 export default {
   async fetch(request, env) {
+    console.log('Request:', request.method, request.url);
     const corsHeaders = {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, PUT, POST, OPTIONS",
@@ -71,7 +72,9 @@ export default {
       const fileName = url.searchParams.get("file");
       const contentType = url.searchParams.get("type") || "application/octet-stream";
       if (!fileName) return new Response("Missing file", { status: 400, headers: corsHeaders });
+      console.log('Uploading file', fileName);
       await bucket.put(fileName, request.body, { httpMetadata: { contentType } });
+      console.log('Upload successful for', fileName);
       return new Response(JSON.stringify({ success: true }), { headers: { "Content-Type": "application/json", ...corsHeaders } });
     }
 
@@ -81,24 +84,28 @@ export default {
       const contentType = url.searchParams.get("type") || "application/octet-stream";
       if (!fileName) return new Response("Missing file", { status: 400, headers: corsHeaders });
       const multipart = await bucket.createMultipartUpload(fileName, { httpMetadata: { contentType } });
-      return new Response(JSON.stringify({ uploadId: multipart.uploadId }), { headers: { "Content-Type": "application/json", ...corsHeaders } });
+      return new Response(JSON.stringify({ key: multipart.key, uploadId: multipart.uploadId }), { headers: { "Content-Type": "application/json", ...corsHeaders } });
     }
 
     // ROUTE: PUT /multipart/part
     if (url.pathname === "/multipart/part" && request.method === "PUT") {
+      const key = url.searchParams.get("key");
       const uploadId = url.searchParams.get("uploadId");
       const partNumber = parseInt(url.searchParams.get("partNumber"));
-      if (!uploadId || isNaN(partNumber)) return new Response("Missing uploadId or partNumber", { status: 400, headers: corsHeaders });
-      const part = await bucket.uploadPart(uploadId, partNumber, request.body);
+      if (!key || !uploadId || isNaN(partNumber)) return new Response("Missing key, uploadId or partNumber", { status: 400, headers: corsHeaders });
+      const multipart = env.ASSETS_BUCKET.resumeMultipartUpload(key, uploadId);
+      const part = await multipart.uploadPart(partNumber, request.body);
       return new Response(JSON.stringify({ etag: part.etag }), { headers: { "Content-Type": "application/json", ...corsHeaders } });
     }
 
     // ROUTE: POST /multipart/complete
     if (url.pathname === "/multipart/complete" && request.method === "POST") {
+      const key = url.searchParams.get("key");
       const uploadId = url.searchParams.get("uploadId");
       const parts = await request.json();
-      if (!uploadId || !parts) return new Response("Missing uploadId or parts", { status: 400, headers: corsHeaders });
-      await bucket.completeMultipartUpload(uploadId, parts);
+      if (!key || !uploadId || !parts) return new Response("Missing key, uploadId or parts", { status: 400, headers: corsHeaders });
+      const multipart = env.ASSETS_BUCKET.resumeMultipartUpload(key, uploadId);
+      await multipart.complete(parts);
       return new Response(JSON.stringify({ success: true }), { headers: { "Content-Type": "application/json", ...corsHeaders } });
     }
 
