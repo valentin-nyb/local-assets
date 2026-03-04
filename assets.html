@@ -324,57 +324,63 @@
                 throw new Error(endpointFailures.join(' | ') || 'Failed to fetch');
             }
 
-            async function uploadMultipartFile(file, fileName, fileType, queueIndex, queueTotal) {
-                const base = CONFIG.WORKER_URL;
+            // Force the browser (incl. Safari) to fully load a blob into memory before sending
+            function readBlobAsBuffer(blob) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = e => resolve(e.target.result);
+                    reader.onerror = () => reject(new Error('FileReader failed to read chunk'));
+                    reader.readAsArrayBuffer(blob);
+                });
+            }
 
-                // Step 1: Start
+            async function uploadFile(file, fileName, fileType, queueIndex, queueTotal) {
+                const base = CONFIG.WORKER_URL;
+                const CHUNK = 5 * 1024 * 1024; // 5 MB
+
+                if (file.size <= CHUNK) {
+                    // Small file — single FormData POST, works for audio/images on all browsers
+                    uploadBtn.textContent = `UPLOADING (${queueIndex}/${queueTotal})...`;
+                    const form = new FormData();
+                    form.append('file', file, file.name);
+                    form.append('key', fileName);
+                    form.append('type', fileType);
+                    const res = await fetch(`${base}/upload`, { method: 'POST', body: form });
+                    if (!res.ok) throw new Error(`Upload failed (${res.status}): ${await res.text()}`);
+                    return;
+                }
+
+                // Large file — multipart with FileReader to force chunk resolution in Safari
                 uploadBtn.textContent = `STARTING UPLOAD (${queueIndex}/${queueTotal})...`;
-                const startRes = await fetch(`${base}/multipart/start?file=${encodeURIComponent(fileName)}&type=${encodeURIComponent(fileType)}`, { method: 'POST' });
+                const startRes = await fetch(
+                    `${base}/multipart/start?file=${encodeURIComponent(fileName)}&type=${encodeURIComponent(fileType)}`,
+                    { method: 'POST' }
+                );
                 if (!startRes.ok) throw new Error(`Multipart start failed (${startRes.status}): ${await startRes.text()}`);
                 const { uploadId } = await startRes.json();
                 if (!uploadId) throw new Error('No uploadId returned from server');
 
-                // Step 2: Upload 5MB chunks
-                const CHUNK = 5 * 1024 * 1024;
                 const totalParts = Math.ceil(file.size / CHUNK);
                 const parts = [];
 
                 for (let i = 1; i <= totalParts; i++) {
-                    const chunk = file.slice((i - 1) * CHUNK, Math.min(i * CHUNK, file.size));
+                    const blob = file.slice((i - 1) * CHUNK, Math.min(i * CHUNK, file.size));
+                    const buffer = await readBlobAsBuffer(blob); // fully load into RAM before sending
                     uploadBtn.textContent = `UPLOADING (${queueIndex}/${queueTotal}) PART ${i}/${totalParts}...`;
-
                     const partRes = await fetch(
                         `${base}/multipart/part?file=${encodeURIComponent(fileName)}&uploadId=${encodeURIComponent(uploadId)}&partNumber=${i}`,
-                        { method: 'PUT', body: chunk, headers: { 'Content-Type': 'application/octet-stream' } }
+                        { method: 'PUT', body: buffer, headers: { 'Content-Type': 'application/octet-stream' } }
                     );
                     if (!partRes.ok) throw new Error(`Part ${i}/${totalParts} failed (${partRes.status}): ${await partRes.text()}`);
                     parts.push(await partRes.json());
                 }
 
-                // Step 3: Complete
                 uploadBtn.textContent = `FINALISING (${queueIndex}/${queueTotal})...`;
                 const completeRes = await fetch(
                     `${base}/multipart/complete?file=${encodeURIComponent(fileName)}&uploadId=${encodeURIComponent(uploadId)}`,
                     { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ parts }) }
                 );
                 if (!completeRes.ok) throw new Error(`Complete failed (${completeRes.status}): ${await completeRes.text()}`);
-            }
-
-            async function uploadDirectPutFile(file, fileName, fileType) {
-                // Slicing the blob forces browsers like Safari to resolve native file objects
-                // avoiding 0-byte or 'Failed to fetch' request drops for .mov / camera roll items.
-                const fileBlob = file.slice(0, file.size, fileType || 'application/octet-stream');
-
-                const uploadResponse = await fetchWithFallback(`/upload?file=${encodeURIComponent(fileName)}&type=${encodeURIComponent(fileType)}`, {
-                    method: 'PUT',
-                    body: fileBlob,
-                    headers: { 'Content-Type': fileType || 'application/octet-stream' }
-                }, REQUEST_TIMEOUT_MS * 5, { retryOnHttpError: true, preferDirect: true });
-
-                if (!uploadResponse.ok) {
-                    const uploadText = await uploadResponse.text();
-                    throw new Error(`Direct upload failed (${uploadResponse.status}): ${uploadText || 'No response body'}`);
-                }
             }
 
             uploadBtn.onclick = async function() {
@@ -428,7 +434,7 @@
                         const queueIndex = successCount + 1;
                         const fileType = file.type || 'application/octet-stream';
                         const fileName = getAssetPath(file, shotType);
-                        await uploadMultipartFile(file, fileName, fileType, queueIndex, uploadQueue.length);
+                        await uploadFile(file, fileName, fileType, queueIndex, uploadQueue.length);
                         successCount++;
                     }
 
