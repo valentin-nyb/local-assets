@@ -15,6 +15,7 @@
     <link rel="stylesheet" href="styles/tailwind.css">
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <style>
         body { background-color: #050505 !important; color: white; -webkit-font-smoothing: antialiased; }
@@ -146,7 +147,7 @@
                 <div class="p-8 border border-dashed border-zinc-800 rounded-3xl bg-card/30 space-y-8">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <input type="text" id="ingest-name" placeholder="DJ NAME" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs font-bold text-white uppercase outline-none focus:border-primary">
-                        <input type="text" id="ingest-date" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs font-bold">
+                        <input type="text" id="ingest-date" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs font-bold cursor-pointer" readonly placeholder="Select date">
                         <select id="ingest-shot" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs text-zinc-400 font-bold uppercase">
                             <option value="MASTER">MASTER CAM</option>
                             <option value="BOOTH">BOOTH CAM</option>
@@ -228,7 +229,13 @@
             const ingestDate = document.getElementById('ingest-date');
             try {
                 if (typeof flatpickr === 'function') {
-                    flatpickr("#ingest-date", { defaultDate: "today", dateFormat: "d M Y" });
+                    flatpickr("#ingest-date", {
+                        defaultDate: "today",
+                        dateFormat: "d M Y",
+                        theme: "dark",
+                        disableMobile: true,
+                        allowInput: false
+                    });
                 } else if (ingestDate) {
                     ingestDate.type = 'date';
                     ingestDate.value = new Date().toISOString().slice(0, 10);
