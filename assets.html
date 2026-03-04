@@ -486,12 +486,7 @@
 
                         if (file.size < UPLOAD_LIMIT_DIRECT) {
                             uploadBtn.textContent = `UPLOADING (${queueIndex}/${uploadQueue.length}) [DIRECT]...`;
-                            try {
-                                await uploadDirectPutFile(file, fileName, fileType);
-                            } catch (directErr) {
-                                uploadBtn.textContent = `RETRYING (${queueIndex}/${uploadQueue.length}) [MULTIPART]...`;
-                                await uploadMultipartFile(file, fileName, fileType, queueIndex, uploadQueue.length);
-                            }
+                            await uploadDirectPutFile(file, fileName, fileType);
                         } else {
                             uploadBtn.textContent = `UPLOADING (${queueIndex}/${uploadQueue.length}) [MULTIPART]...`;
                             await uploadMultipartFile(file, fileName, fileType, queueIndex, uploadQueue.length);
@@ -562,11 +557,15 @@
         }
 
         function getAssetLabel(type, filename) {
+            const name = (filename || '').toLowerCase();
             const t = (type || '').toUpperCase();
+
             if (t === 'MASTERS' || t === 'MASTER') return 'MASTER 4K SET';
             if (t === 'AUDIO') return 'HQ AUDIO MASTER (.WAV)';
-            if (t === 'SOCIAL-SUITE' || t === 'VERTICALS') return 'MARKETING VERTICALS';
-            if (t === 'MARKETING') return 'MARKETING THUMBNAIL';
+
+            if (t === 'SOCIAL-SUITE' || t === 'VERTICALS' || name.includes('vertical')) return 'VERTICAL';
+            if (t === 'MARKETING' || t === 'THUMB' || name.includes('thumb')) return 'THUMBNAIL';
+
             return 'ASSET';
         }
 
@@ -601,18 +600,18 @@
             const power = Math.min(Math.floor(Math.log(size) / Math.log(1024)), units.length - 1);
             const value = size / (1024 ** power);
             const fixed = value >= 100 || power === 0 ? 0 : 1;
-            return `${value.toFixed(fixed)} ${units[power]}`;
-        }
-
-        function renderCategory(type, assets, artistName) {
-            if (!assets?.length) return '';
-            const cleanLabel = getAssetLabel(type, assets[0]?.key || '');
-            const normalizedType = String(type || '').toUpperCase();
-
-            if (normalizedType === 'SOCIAL-SUITE' || normalizedType === 'VERTICALS') {
-                return `
+            if (assets.length === 1) {
+                const asset = assets[0];
+                const format = (asset.format || (asset.key || '').split('.').pop() || 'FILE').toUpperCase();
+                const assetUrl = `${CONFIG.WORKER_URL}/asset?key=${encodeURIComponent(asset.key || '')}`;
+                openAssetPreview(assetUrl, normalizedType, artistName, format);
                     <div onclick="openVerticalSuite('${artistName}', ${JSON.stringify(assets).replace(/"/g, '&quot;')})" 
                          class="p-4 pl-14 flex items-center justify-between hover:bg-white/[0.03] group/cat cursor-pointer">
+
+            renderMultiAssetList(normalizedType, artistName, assets);
+        }
+
+        function renderMultiAssetList(type, artistName, assets) {
                         <div class="flex items-center gap-4">
                             <iconify-icon icon="solar:folder-with-files-bold" class="text-zinc-700 group-hover/cat:text-primary"></iconify-icon>
                             <span class="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">${cleanLabel} (${assets.length})</span>
@@ -622,35 +621,23 @@
             }
 
             return `
-                <div onclick="focusCategoryEncoded('${encodeURIComponent(type)}', '${encodeURIComponent(artistName)}')" 
-                     class="p-4 pl-14 flex items-center justify-between hover:bg-white/[0.03] group/cat cursor-pointer">
+            const labelBase = getAssetLabel(type, assets[0]?.key || '');
+            meta.textContent = `${labelBase} SUITE // ${assets.length} ASSET(S)`;
                     <div class="flex items-center gap-4">
                         <iconify-icon icon="${getIcon(type)}" class="text-zinc-600 group-hover/cat:text-primary"></iconify-icon>
                         <span class="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">${cleanLabel}</span>
-                    </div>
-                    <iconify-icon icon="solar:alt-arrow-right-linear" class="text-zinc-800 group-hover/cat:text-primary transition-transform text-xs"></iconify-icon>
-                </div>`;
-        }
-
-        function renderList(groupedData) {
-            const list = document.getElementById('cloud-list') || document.getElementById('recent-sets-list');
-            if (!list) return;
-            list.innerHTML = '';
-
-            if (!Array.isArray(groupedData) || !groupedData.length) {
-                list.innerHTML = '<div class="p-4 text-[10px] font-mono text-zinc-500 uppercase tracking-widest border border-zinc-800 rounded-xl">No known artist uploads yet.</div>';
-                return;
-            }
-
-            groupedData.forEach(artist => {
-                if (!artist?.name || artist.name === 'UNKNOWN') return;
-
-                const artistGroup = groupAssetsByType(artist.assets || []);
-
-                const folderId = `folder-${artist.slug}`;
-                const row = document.createElement('div');
-                row.className = 'session-group border border-zinc-800 rounded-2xl overflow-hidden bg-card';
-
+                <div class="space-y-4 max-w-3xl mx-auto">
+                    <h3 class="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.4em] mb-6">// ${labelBase} SUITE</h3>
+                    ${assets.map((asset, i) => {
+                        const format = (asset.format || (asset.key || '').split('.').pop() || 'FILE').toUpperCase();
+                        const assetUrl = `${CONFIG.WORKER_URL}/asset?key=${encodeURIComponent(asset.key || '')}`;
+                        return `
+                            <div onclick="openAssetPreviewEncoded('${encodeURIComponent(assetUrl)}', '${type}', '${encodeURIComponent(artistName)}', '${format}')" class="flex items-center justify-between p-5 bg-[#0a0a0a] border border-zinc-800 rounded-2xl hover:border-primary cursor-pointer group transition-all">
+                                <span class="text-[9px] font-mono text-zinc-500 uppercase">${labelBase} ${i + 1}</span>
+                                <iconify-icon icon="solar:play-circle-bold" class="text-xl text-zinc-700 group-hover:text-primary"></iconify-icon>
+                            </div>
+                        `;
+                    }).join('')}
                 row.innerHTML = `
                     <div onclick="toggleFolder('${folderId}')" class="p-5 flex items-center justify-between hover:bg-white/[0.02] cursor-pointer group">
                         <div class="flex items-center gap-4">
