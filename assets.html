@@ -399,7 +399,8 @@
             }
 
             async function uploadDirectPutFile(file, fileName, fileType) {
-                if ((fileType || '').toLowerCase() === 'video/quicktime') {
+                const isQuickTime = (fileType || '').toLowerCase() === 'video/quicktime' || (file?.name || '').toLowerCase().endsWith('.mov');
+                if (isQuickTime) {
                     const formData = new FormData();
                     formData.append('file', file, file.name);
                     formData.append('key', fileName);
@@ -483,7 +484,12 @@
 
                         if (file.size < UPLOAD_LIMIT_DIRECT) {
                             uploadBtn.textContent = `UPLOADING (${queueIndex}/${uploadQueue.length}) [DIRECT]...`;
-                            await uploadDirectPutFile(file, fileName, fileType);
+                            try {
+                                await uploadDirectPutFile(file, fileName, fileType);
+                            } catch (directErr) {
+                                uploadBtn.textContent = `RETRYING (${queueIndex}/${uploadQueue.length}) [MULTIPART]...`;
+                                await uploadMultipartFile(file, fileName, fileType, queueIndex, uploadQueue.length);
+                            }
                         } else {
                             uploadBtn.textContent = `UPLOADING (${queueIndex}/${uploadQueue.length}) [MULTIPART]...`;
                             await uploadMultipartFile(file, fileName, fileType, queueIndex, uploadQueue.length);
