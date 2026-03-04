@@ -1,3 +1,5 @@
+import { AwsClient } from "aws4fetch";
+
 export default {
   async fetch(request, env) {
     // 1. CLEAR THE CORS BLOCK
@@ -96,7 +98,7 @@ export default {
           return new Response(object.body, { headers });
         }
 
-        // 3. Route: GET /presign (Return Worker upload URL)
+        // 3. Route: GET /presign (Return AWS S3 Presigned URL)
         if (url.pathname === "/presign") {
           const fileName = url.searchParams.get("file");
           const contentType = url.searchParams.get("type") || "application/octet-stream";
@@ -108,9 +110,32 @@ export default {
             });
           }
 
-          const uploadUrl = `${url.origin}/upload?file=${encodeURIComponent(fileName)}&type=${encodeURIComponent(contentType)}`;
+          if (!env.S3_ACCESS_KEY_ID || !env.S3_SECRET_ACCESS_KEY || !env.ACCOUNT_ID || !env.R2_BUCKET_NAME) {
+            return new Response(JSON.stringify({ error: "Server missing R2 S3 API credentials. Add S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, ACCOUNT_ID, and R2_BUCKET_NAME to secrets." }), {
+              status: 500,
+              headers: { "Content-Type": "application/json", ...corsHeaders },
+            });
+          }
+
+          const aws = new AwsClient({
+            accessKeyId: env.S3_ACCESS_KEY_ID,
+            secretAccessKey: env.S3_SECRET_ACCESS_KEY,
+            service: "s3",
+            region: "auto",
+          });
+
+          // Build R2 S3 API URL
+          const endpoint = `https://${env.ACCOUNT_ID}.r2.cloudflarestorage.com/${env.R2_BUCKET_NAME}/${fileName}`;
           
-          return new Response(JSON.stringify({ uploadUrl }), {
+          const signedRequest = await aws.sign(endpoint, {
+            method: "PUT",
+            aws: { signQuery: true },
+            headers: {
+              "Content-Type": contentType
+            }
+          });
+          
+          return new Response(JSON.stringify({ uploadUrl: signedRequest.url }), {
             headers: { "Content-Type": "application/json", ...corsHeaders },
           });
         }

@@ -396,15 +396,30 @@
             }
 
             async function uploadDirectPutFile(file, fileName, fileType) {
-                const uploadResponse = await fetchWithFallback(`/upload?file=${encodeURIComponent(fileName)}&type=${encodeURIComponent(fileType)}`, {
+                // Slicing the blob forces browsers like Safari to resolve native file objects
+                const fileBlob = file.slice(0, file.size, fileType || 'application/octet-stream');
+                
+                // 1. Get AWS S3 Presigned URL from the Worker
+                const presignResponse = await fetchWithFallback(`/presign?file=${encodeURIComponent(fileName)}&type=${encodeURIComponent(fileType)}`, {}, REQUEST_TIMEOUT_MS, { preferDirect: true });
+                
+                if (!presignResponse.ok) {
+                    const presignText = await presignResponse.text();
+                    throw new Error(`Failed to get presigned URL (${presignResponse.status}): ${presignText}`);
+                }
+                
+                const { uploadUrl } = await presignResponse.json();
+                if (!uploadUrl) throw new Error('Worker did not return an uploadUrl');
+
+                // 2. Upload directly to Cloudflare R2's S3 Storage layer, bypassing Worker size limits
+                const uploadResponse = await fetch(uploadUrl, {
                     method: 'PUT',
-                    body: file,
+                    body: fileBlob,
                     headers: { 'Content-Type': fileType || 'application/octet-stream' }
-                }, REQUEST_TIMEOUT_MS * 5, { retryOnHttpError: true, preferDirect: true });
+                });
 
                 if (!uploadResponse.ok) {
                     const uploadText = await uploadResponse.text();
-                    throw new Error(`Direct upload failed (${uploadResponse.status}): ${uploadText || 'No response body'}`);
+                    throw new Error(`Direct S3 upload failed (${uploadResponse.status}): ${uploadText || 'No response body'}`);
                 }
             }
 
