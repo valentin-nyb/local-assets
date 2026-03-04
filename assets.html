@@ -243,7 +243,10 @@
 
         function setupUploadHandler() {
             const uploadBtn = document.getElementById('upload-btn');
-            const REQUEST_TIMEOUT_MS = 120000;
+            const UPLOAD_LIMIT_DIRECT = 100 * 1024 * 1024; // 100 MB
+            const MULTIPART_CHUNK_BYTES = 5 * 1024 * 1024;
+            const MULTIPART_MAX_RETRIES = 3;
+            const REQUEST_TIMEOUT_MS = 60000;
 
             const fileVideo = document.getElementById('file-video');
             const fileAudio = document.getElementById('file-audio');
@@ -397,29 +400,18 @@
 
             async function uploadDirectPutFile(file, fileName, fileType) {
                 // Slicing the blob forces browsers like Safari to resolve native file objects
+                // avoiding 0-byte or 'Failed to fetch' request drops for .mov / camera roll items.
                 const fileBlob = file.slice(0, file.size, fileType || 'application/octet-stream');
-                
-                // 1. Get AWS S3 Presigned URL from the Worker
-                const presignResponse = await fetchWithFallback(`/presign?file=${encodeURIComponent(fileName)}&type=${encodeURIComponent(fileType)}`, {}, REQUEST_TIMEOUT_MS, { preferDirect: true });
-                
-                if (!presignResponse.ok) {
-                    const presignText = await presignResponse.text();
-                    throw new Error(`Failed to get presigned URL (${presignResponse.status}): ${presignText}`);
-                }
-                
-                const { uploadUrl } = await presignResponse.json();
-                if (!uploadUrl) throw new Error('Worker did not return an uploadUrl');
 
-                // 2. Upload directly to Cloudflare R2's S3 Storage layer, bypassing Worker size limits
-                const uploadResponse = await fetch(uploadUrl, {
+                const uploadResponse = await fetchWithFallback(`/upload?file=${encodeURIComponent(fileName)}&type=${encodeURIComponent(fileType)}`, {
                     method: 'PUT',
                     body: fileBlob,
                     headers: { 'Content-Type': fileType || 'application/octet-stream' }
-                });
+                }, REQUEST_TIMEOUT_MS * 5, { retryOnHttpError: true, preferDirect: true });
 
                 if (!uploadResponse.ok) {
                     const uploadText = await uploadResponse.text();
-                    throw new Error(`Direct S3 upload failed (${uploadResponse.status}): ${uploadText || 'No response body'}`);
+                    throw new Error(`Direct upload failed (${uploadResponse.status}): ${uploadText || 'No response body'}`);
                 }
             }
 
@@ -475,8 +467,18 @@
                         const fileType = file.type || 'application/octet-stream';
                         const fileName = getAssetPath(file, shotType);
 
-                        uploadBtn.textContent = `UPLOADING (${queueIndex}/${uploadQueue.length}) [DIRECT]...`;
-                        await uploadDirectPutFile(file, fileName, fileType);
+                        if (file.size < UPLOAD_LIMIT_DIRECT) {
+                            uploadBtn.textContent = `UPLOADING (${queueIndex}/${uploadQueue.length}) [DIRECT]...`;
+                            try {
+                                await uploadDirectPutFile(file, fileName, fileType);
+                            } catch (directErr) {
+                                uploadBtn.textContent = `RETRYING (${queueIndex}/${uploadQueue.length}) [MULTIPART]...`;
+                                await uploadMultipartFile(file, fileName, fileType, queueIndex, uploadQueue.length);
+                            }
+                        } else {
+                            uploadBtn.textContent = `UPLOADING (${queueIndex}/${uploadQueue.length}) [MULTIPART]...`;
+                            await uploadMultipartFile(file, fileName, fileType, queueIndex, uploadQueue.length);
+                        }
 
                         successCount++;
                     }
