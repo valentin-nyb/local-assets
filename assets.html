@@ -285,73 +285,45 @@
                         const response = await fetch(url, options);
                         return response;
                     } catch (err) {
-                        console.warn(`[RETRY] Attempt ${attempt}/${retries} failed for ${options.method || 'GET'} ${url.split('?')[0]}:`, err.message);
+                        console.warn(`[RETRY] Attempt ${attempt}/${retries} failed:`, err.message);
                         if (attempt === retries) throw err;
-                        await new Promise(r => setTimeout(r, 1000 * attempt)); // 1s, 2s, 3s backoff
+                        await new Promise(r => setTimeout(r, 1000 * attempt));
                     }
                 }
             }
 
-            async function uploadDirectPutFile(file, path, type) {
-                const uploadUrl = `${CONFIG.WORKER_URL}/upload?file=${encodeURIComponent(path)}&type=${encodeURIComponent(type)}`;
-                console.log('[UPLOAD] Direct PUT:', path, 'size:', file.size, 'type:', type);
-                
-                const response = await fetchWithRetry(uploadUrl, {
+            // Single upload function: get presigned URL → PUT directly to R2
+            async function uploadFile(file, path, type) {
+                console.log(`[UPLOAD] ${path} (${(file.size/1024/1024).toFixed(1)}MB, ${type})`);
+
+                // 1. Get presigned URL from Worker
+                console.log('[UPLOAD] Getting presigned URL...');
+                const presignRes = await fetchWithRetry(
+                    `${CONFIG.WORKER_URL}/presign-upload?file=${encodeURIComponent(path)}&type=${encodeURIComponent(type)}`,
+                    { method: 'GET', headers: { 'x-api-key': CONFIG.API_KEY } }
+                );
+                if (!presignRes.ok) {
+                    const text = await presignRes.text();
+                    console.error('[UPLOAD] Presign failed:', text);
+                    throw new Error('Presign failed: ' + text);
+                }
+                const { url: presignedUrl } = await presignRes.json();
+                console.log('[UPLOAD] Got presigned URL, uploading directly to R2...');
+
+                // 2. PUT file directly to R2 (bypasses Worker entirely)
+                const uploadRes = await fetchWithRetry(presignedUrl, {
                     method: 'PUT',
                     body: file,
-                    headers: {
-                        'x-api-key': CONFIG.API_KEY,
-                        'Content-Type': type
-                    }
+                    headers: { 'Content-Type': type }
                 });
-
-                console.log('[UPLOAD] Response status:', response.status);
-                if (!response.ok) {
-                    const text = await response.text();
-                    console.error('[UPLOAD] Failed:', text);
-                    throw new Error(text);
+                if (!uploadRes.ok) {
+                    const text = await uploadRes.text();
+                    console.error('[UPLOAD] R2 upload failed:', uploadRes.status, text);
+                    throw new Error('R2 upload failed: ' + uploadRes.status);
                 }
+                console.log('[UPLOAD] ✓ Success:', path);
                 return true;
             }
-
-            async function uploadLargeFile(file, path, type) {
-                console.log('[MULTIPART] Starting:', path, 'size:', file.size, 'type:', type);
-                const startResponse = await fetchWithRetry(`${CONFIG.WORKER_URL}/multipart/start?file=${encodeURIComponent(path)}&type=${encodeURIComponent(type)}`, {
-                    method: 'POST',
-                    headers: { 'x-api-key': CONFIG.API_KEY }
-                });
-                if (!startResponse.ok) throw new Error(await startResponse.text());
-                const { key, uploadId } = await startResponse.json();
-                console.log('[MULTIPART] Got uploadId, key:', key);
-
-                const partSize = 5 * 1024 * 1024;
-                const parts = [];
-                let partNumber = 1;
-                const totalParts = Math.ceil(file.size / partSize);
-                for (let offset = 0; offset < file.size; offset += partSize) {
-                    const chunk = file.slice(offset, offset + partSize);
-                    console.log(`[MULTIPART] Uploading part ${partNumber}/${totalParts} (${chunk.size} bytes)`);
-                    const partResponse = await fetchWithRetry(`${CONFIG.WORKER_URL}/multipart/part?key=${encodeURIComponent(key)}&uploadId=${encodeURIComponent(uploadId)}&partNumber=${partNumber}`, {
-                        method: 'PUT',
-                        body: chunk,
-                        headers: { 'x-api-key': CONFIG.API_KEY }
-                    });
-                    if (!partResponse.ok) throw new Error(await partResponse.text());
-                    const { etag } = await partResponse.json();
-                    console.log(`[MULTIPART] Part ${partNumber} etag:`, etag);
-                    parts.push({ partNumber, etag });
-                    partNumber++;
-                }
-
-                console.log('[MULTIPART] Completing upload with', parts.length, 'parts');
-                const completeResponse = await fetchWithRetry(`${CONFIG.WORKER_URL}/multipart/complete?key=${encodeURIComponent(key)}&uploadId=${encodeURIComponent(uploadId)}`, {
-                    method: 'POST',
-                    body: JSON.stringify(parts),
-                    headers: { 'Content-Type': 'application/json', 'x-api-key': CONFIG.API_KEY }
-                });
-                if (!completeResponse.ok) throw new Error(await completeResponse.text());
-                console.log('[MULTIPART] Complete!');
-                return true;
             }
 
             uploadBtn.onclick = async function() {
@@ -408,12 +380,7 @@
 
                         try {
                             console.log(`[QUEUE] ${file.name} → ${fileName} (${(file.size/1024/1024).toFixed(1)}MB, ${fileType}, ${shotType})`);
-                            const isLarge = file.size > 10 * 1024 * 1024;
-                            if (isLarge) {
-                                await uploadLargeFile(file, fileName, fileType);
-                            } else {
-                                await uploadDirectPutFile(file, fileName, fileType);
-                            }
+                            await uploadFile(file, fileName, fileType);
                             successCount++;
                         } catch (err) {
                             console.error(`[QUEUE] FAILED ${file.name}:`, err);
