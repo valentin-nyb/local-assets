@@ -259,97 +259,473 @@
             setupUploadHandler();
         });
 
-   function setupUploadHandler() {
-    const uploadBtn = document.getElementById('upload-btn');
-    const fileVideo = document.getElementById('file-video');
-    const fileAudio = document.getElementById('file-audio');
-    const fileSocial = document.getElementById('file-social');
-    const fileMarketing = document.getElementById('file-marketing');
+        function setupUploadHandler() {
+            const uploadBtn = document.getElementById('upload-btn');
+            const REQUEST_TIMEOUT_MS = 120000;
 
-    // UI State Handler
-    function setCardSelected(cardId, isSelected) {
-        const card = document.getElementById(cardId);
-        if (!card) return;
-        const icon = card.querySelector('.upload-card-icon');
-        const label = card.querySelector('.upload-card-label');
+            const fileVideo = document.getElementById('file-video');
+            const fileAudio = document.getElementById('file-audio');
+            const fileSocial = document.getElementById('file-social');
+            const fileMarketing = document.getElementById('file-marketing');
 
-        if (isSelected) {
-            card.classList.add('border-primary', 'bg-primary/10');
-            if (icon) icon.classList.replace('text-zinc-600', 'text-primary');
-        } else {
-            card.classList.remove('border-primary', 'bg-primary/10');
-            if (icon) icon.classList.replace('text-primary', 'text-zinc-600');
+            function setCardSelected(cardId, isSelected) {
+                const card = document.getElementById(cardId);
+                if (!card) return;
+
+                const icon = card.querySelector('.upload-card-icon');
+                const label = card.querySelector('.upload-card-label');
+
+                if (isSelected) {
+                    card.classList.add('border-primary', 'bg-primary/10', 'shadow-[0_0_20px_rgba(57,255,20,0.12)]');
+                    card.classList.remove('border-zinc-800', 'bg-black');
+                    if (icon) icon.classList.replace('text-zinc-600', 'text-primary');
+                    if (label) label.classList.replace('text-zinc-500', 'text-primary');
+                } else {
+                    card.classList.remove('border-primary', 'bg-primary/10', 'shadow-[0_0_20px_rgba(57,255,20,0.12)]');
+                    card.classList.add('border-zinc-800', 'bg-black');
+                    if (icon) icon.classList.replace('text-primary', 'text-zinc-600');
+                    if (label) label.classList.replace('text-primary', 'text-zinc-500');
+                }
+            }
+
+            fileVideo.addEventListener('change', () => setCardSelected('card-video', fileVideo.files.length > 0));
+            fileAudio.addEventListener('change', () => setCardSelected('card-audio', fileAudio.files.length > 0));
+            fileSocial.addEventListener('change', () => setCardSelected('card-social', fileSocial.files.length > 0));
+            fileMarketing.addEventListener('change', () => setCardSelected('card-marketing', fileMarketing.files.length > 0));
+
+            // Retry wrapper for flaky network connections
+            async function fetchWithRetry(url, options, retries = 3) {
+                for (let attempt = 1; attempt <= retries; attempt++) {
+                    try {
+                        const response = await fetch(url, options);
+                        return response;
+                    } catch (err) {
+                        console.warn(`[RETRY] Attempt ${attempt}/${retries} failed:`, err.message);
+                        if (attempt === retries) throw err;
+                        await new Promise(r => setTimeout(r, 1000 * attempt));
+                    }
+                }
+            }
+
+            // Single upload function: get presigned URL → PUT directly to R2
+            async function uploadFile(file, path, type) {
+                console.log(`[UPLOAD] ${path} (${(file.size/1024/1024).toFixed(1)}MB, ${type})`);
+
+                // 1. Get presigned URL from Worker
+                console.log('[UPLOAD] Getting presigned URL...');
+                const presignRes = await fetchWithRetry(
+                    `${CONFIG.WORKER_URL}/presign-upload?file=${encodeURIComponent(path)}&type=${encodeURIComponent(type)}`,
+                    { method: 'GET', headers: { 'x-api-key': CONFIG.API_KEY } }
+                );
+                if (!presignRes.ok) {
+                    const text = await presignRes.text();
+                    console.error('[UPLOAD] Presign failed:', text);
+                    throw new Error('Presign failed: ' + text);
+                }
+                const { url: presignedUrl } = await presignRes.json();
+                console.log('[UPLOAD] Got presigned URL, uploading directly to R2...');
+
+                // 2. PUT file directly to R2 (bypasses Worker entirely)
+                const uploadRes = await fetchWithRetry(presignedUrl, {
+                    method: 'PUT',
+                    body: file,
+                    headers: { 'Content-Type': type }
+                });
+                if (!uploadRes.ok) {
+                    const text = await uploadRes.text();
+                    console.error('[UPLOAD] R2 upload failed:', uploadRes.status, text);
+                    throw new Error('R2 upload failed: ' + uploadRes.status);
+                }
+                console.log('[UPLOAD] ✓ Success:', path);
+                return true;
+            }
+            }
+
+            uploadBtn.onclick = async function() {
+                const djName = document.getElementById('ingest-name').value.trim();
+                const date = document.getElementById('ingest-date').value.trim();
+
+                if (!djName || !date) {
+                    alert('Please fill in DJ NAME and DATE');
+                    return;
+                }
+
+                const uploadQueue = [];
+                if (fileVideo.files.length > 0) uploadQueue.push({ file: fileVideo.files[0], shotType: 'MASTER_CAM' });
+                if (fileAudio.files.length > 0) uploadQueue.push({ file: fileAudio.files[0], shotType: 'MASTER_AUDIO' });
+                for (let i = 0; i < fileSocial.files.length; i++) {
+                    uploadQueue.push({ file: fileSocial.files[i], shotType: `SOCIAL_CLIP_${i + 1}` });
+                }
+                for (let i = 0; i < fileMarketing.files.length; i++) {
+                    uploadQueue.push({ file: fileMarketing.files[i], shotType: `MARKETING_THUMB_${i + 1}` });
+                }
+
+                if (uploadQueue.length === 0) {
+                    alert('Please select at least one file to upload.');
+                    return;
+                }
+
+                uploadBtn.disabled = true;
+
+                try {
+                    const safeDj = djName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+                    const safeDate = date.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+
+                    function getAssetPath(file, type) {
+                        const ext = (file.name.split('.').pop() || '').toLowerCase();
+                        let subFolder = 'misc';
+                        if (['mov', 'mp4', 'webm'].includes(ext)) subFolder = 'masters';
+                        if (['wav', 'mp3', 'm4a', 'aac'].includes(ext)) subFolder = 'audio';
+                        if ((type || '').startsWith('SOCIAL_CLIP')) subFolder = 'social-suite';
+                        if (['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(ext) || (type || '').startsWith('MARKETING_THUMB')) subFolder = 'marketing';
+
+                        const cleanOriginal = file.name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9._-]/g, '');
+                        if ((type || '').startsWith('SOCIAL_CLIP')) {
+                            const socialIndex = Number(String(type).split('_').pop()) || 1;
+                            return `venue_masters/${safeDj}/${subFolder}/asset_${socialIndex}.mov`;
+                        }
+                        return `venue_masters/${safeDj}/${subFolder}/${safeDate}_${cleanOriginal}`;
+                    }
+
+                    let successCount = 0;
+                    const errors = [];
+                    for (const { file, shotType } of uploadQueue) {
+                        const fileType = file.type || 'application/octet-stream';
+                        const fileName = getAssetPath(file, shotType);
+
+                        try {
+                            console.log(`[QUEUE] ${file.name} → ${fileName} (${(file.size/1024/1024).toFixed(1)}MB, ${fileType}, ${shotType})`);
+                            await uploadFile(file, fileName, fileType);
+                            successCount++;
+                        } catch (err) {
+                            console.error(`[QUEUE] FAILED ${file.name}:`, err);
+                            errors.push(`${file.name}: ${err.message}`);
+                        }
+                    }
+
+                    if (errors.length > 0) {
+                        alert(`Uploaded ${successCount} files.\nFailed:\n${errors.join('\n')}`);
+                    } else {
+                        alert(`Successfully uploaded ${successCount} files!`);
+                    }
+                    fileVideo.value = '';
+                    fileAudio.value = '';
+                    fileSocial.value = '';
+                    fileMarketing.value = '';
+                    setCardSelected('card-video', false);
+                    setCardSelected('card-audio', false);
+                    setCardSelected('card-social', false);
+                    setCardSelected('card-marketing', false);
+                    fetchCloudLibrary();
+                } catch (err) {
+                    console.error('Upload error:', err);
+                    alert('Upload error: ' + err.message);
+                } finally {
+                    uploadBtn.disabled = false;
+                    uploadBtn.textContent = 'PROCESS & INGEST FULL SESSION';
+                }
+            };
         }
-    }
 
-    fileVideo.addEventListener('change', () => setCardSelected('card-video', fileVideo.files.length > 0));
-    fileAudio.addEventListener('change', () => setCardSelected('card-audio', fileAudio.files.length > 0));
-    fileSocial.addEventListener('change', () => setCardSelected('card-social', fileSocial.files.length > 0));
-    fileMarketing.addEventListener('change', () => setCardSelected('card-marketing', fileMarketing.files.length > 0));
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            if (sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+                setTimeout(() => overlay.classList.add('opacity-100'), 10);
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('opacity-0');
+                setTimeout(() => overlay.classList.add('hidden'), 300);
+            }
+        }
 
-    async function fetchWithRetry(url, options, retries = 3) {
-        for (let attempt = 1; attempt <= retries; attempt++) {
+        async function fetchCloudLibrary() {
             try {
-                return await fetch(url, options);
-            } catch (err) {
-                if (attempt === retries) throw err;
-                await new Promise(r => setTimeout(r, 1000 * attempt));
+                const response = await fetch(`${CONFIG.WORKER_URL}/list`);
+                const data = await response.json();
+                const hiddenSlugs = new Set(['test_artist', 'debug_api']);
+
+                cloudAssets = Array.isArray(data)
+                    ? data.filter((artist) => !hiddenSlugs.has(String(artist?.slug || '').toLowerCase()))
+                    : [];
+                renderList(cloudAssets);
+            } catch (e) {
+                console.error("Could not load library:", e);
             }
         }
-    }
 
-    async function uploadFile(file, path, type) {
-        const presignRes = await fetchWithRetry(
-            `${CONFIG.WORKER_URL}/presign-upload?file=${encodeURIComponent(path)}&type=${encodeURIComponent(type)}`,
-            { method: 'GET', headers: { 'x-api-key': CONFIG.API_KEY } }
-        );
-        
-        if (!presignRes.ok) throw new Error('Presign failed');
-        const { url: presignedUrl } = await presignRes.json();
-
-        const uploadRes = await fetch(presignedUrl, {
-            method: 'PUT',
-            body: file,
-            headers: { 'Content-Type': type }
-        });
-        if (!uploadRes.ok) throw new Error('R2 upload failed');
-        return true;
-    }
-
-    // THIS MUST BE INSIDE setupUploadHandler
-    uploadBtn.onclick = async function() {
-        const djName = document.getElementById('ingest-name').value.trim();
-        const date = document.getElementById('ingest-date').value.trim();
-
-        if (!djName || !date) {
-            alert('Please fill in DJ NAME and DATE');
-            return;
+        function getIcon(type) {
+            if (type === 'MASTERS') return 'solar:play-bold';
+            if (type === 'AUDIO') return 'solar:music-note-bold';
+            if (type === 'SOCIAL-SUITE') return 'solar:iphone-bold';
+            if (type === 'VERTICALS') return 'solar:iphone-bold';
+            if (type === 'MARKETING') return 'solar:gallery-bold';
+            return 'solar:document-bold';
         }
 
-        const uploadQueue = [];
-        if (fileVideo.files.length > 0) uploadQueue.push({ file: fileVideo.files[0], type: '4K_LONG_FORM' });
-        if (fileAudio.files.length > 0) uploadQueue.push({ file: fileAudio.files[0], type: 'audio' });
+        function groupAssetsByType(assets) {
+            return (assets || []).reduce((acc, asset) => {
+                const key = (asset?.type || 'MISC').toUpperCase();
+                if (!acc[key]) acc[key] = [];
+                acc[key].push(asset);
+                return acc;
+            }, {});
+        }
 
-        uploadBtn.disabled = true;
-        uploadBtn.textContent = 'UPLOADING...';
+        function getCategorySortOrder(type) {
+            const t = String(type || '').toUpperCase();
+            if (t === 'MASTERS' || t === 'MASTER') return 0;
+            if (t === 'AUDIO') return 1;
+            if (t === 'MARKETING' || t === 'THUMB') return 2;
+            return 99;
+        }
 
-        try {
-            const safeDj = djName.toUpperCase().replace(/\s+/g, '_');
+        function slugifyId(value) {
+            return String(value || '')
+                .toLowerCase()
+                .replace(/[^a-z0-9_-]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+        }
+
+        function formatBytes(bytes) {
+            const size = Number(bytes);
+            if (!Number.isFinite(size) || size <= 0) return '0 B';
+            const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const power = Math.min(Math.floor(Math.log(size) / Math.log(1024)), units.length - 1);
+            const value = size / (1024 ** power);
+            const fixed = value >= 100 || power === 0 ? 0 : 1;
+            return `${value.toFixed(fixed)} ${units[power]}`;
+        }
+
+        function renderCategory(type, assets, artistName) {
+            if (!assets?.length) return '';
+            let cleanLabel = type;
+            if (type === 'MASTERS' || type === 'MASTER') cleanLabel = 'MASTER 4K SET';
+            else if (type === 'AUDIO') cleanLabel = 'HQ AUDIO MASTER (.WAV)';
+            else cleanLabel = (assets[0]?.key || '').toLowerCase().includes('thumb') ? 'THUMBNAILS' : 'VERTICALS';
+            return `
+                <div onclick="focusCategoryEncoded('${encodeURIComponent(type)}', '${encodeURIComponent(artistName)}')" class="p-4 pl-14 flex items-center justify-between hover:bg-white/[0.03] group/cat cursor-pointer">
+                    <div class="flex items-center gap-4">
+                        <iconify-icon icon="${getIcon(type)}" class="text-zinc-600 group-hover/cat:text-primary"></iconify-icon>
+                        <span class="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">${cleanLabel}${assets.length > 1 ? ` ${assets.length}` : ''}</span>
+                    </div>
+                    <iconify-icon icon="solar:alt-arrow-right-linear" class="text-zinc-800 group-hover/cat:text-primary transition-transform text-xs"></iconify-icon>
+                </div>`;
+        }
+
+        function renderList(groupedData) {
+            const list = document.getElementById('cloud-list') || document.getElementById('recent-sets-list');
+            if (!list) return;
+            list.innerHTML = '';
+
+            if (!Array.isArray(groupedData) || !groupedData.length) {
+                list.innerHTML = '<div class="p-4 text-[10px] font-mono text-zinc-500 uppercase tracking-widest border border-zinc-800 rounded-xl">No known artist uploads yet.</div>';
+                return;
+            }
+
+            groupedData.forEach(artist => {
+                if (!artist?.name || artist.name === 'UNKNOWN') return;
+                const artistGroup = groupAssetsByType(artist.assets || []);
+                const folderId = `folder-${artist.slug}`;
+                const row = document.createElement('div');
+                row.className = 'session-group border border-zinc-800 rounded-2xl overflow-hidden bg-card';
+
+                row.innerHTML = `
+                    <div onclick="toggleFolder('${folderId}')" class="p-5 flex items-center justify-between hover:bg-white/[0.02] cursor-pointer group">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 bg-zinc-900 border border-zinc-800 flex items-center justify-center rounded-xl group-hover:border-primary/50">
+                                <iconify-icon icon="solar:folder-2-bold" class="text-zinc-600 group-hover:text-primary"></iconify-icon>
+                            </div>
+                            <div>
+                                <p class="text-sm font-black text-white uppercase tracking-tight">${artist.name}</p>
+                                <p class="text-[9px] font-mono text-zinc-500 uppercase">MASTERS/${artist.name} // ${artist.assets.length} ASSET(S)</p>
+                            </div>
+                        </div>
+                        <iconify-icon id="arrow-${folderId}" icon="solar:alt-arrow-down-linear" class="text-zinc-700 transition-transform"></iconify-icon>
+                    </div>
+
+                    <div id="${folderId}" class="hidden bg-black/40 divide-y divide-white/5">
+                        ${Object.entries(artistGroup)
+                            .sort(([typeA], [typeB]) => {
+                                const orderA = getCategorySortOrder(typeA);
+                                const orderB = getCategorySortOrder(typeB);
+                                if (orderA !== orderB) return orderA - orderB;
+                                return String(typeA).localeCompare(String(typeB));
+                            })
+                            .map(([type, groupedAssets]) => renderCategory(type, groupedAssets, artist.name))
+                            .join('')}
+                    </div>
+                `;
+
+                list.appendChild(row);
+            });
+        }
+
+        function focusCategoryEncoded(encodedType, encodedArtistName) {
+            focusCategory(decodeURIComponent(encodedType), decodeURIComponent(encodedArtistName));
+        }
+
+        function getAssetLabel(type, filename, index = null) {
+            const name = (filename || '').toLowerCase();
+            const base = name.includes('vertical') ? 'VERTICAL' : (name.includes('thumb') ? 'THUMBNAIL' : type);
+            return index !== null ? `${base} ${index + 1}` : base;
+        }
+
+        function focusCategory(type, artistName) {
+            const artist = cloudAssets.find(a => a.name === artistName);
+            const assets = artist.assets.filter(a => a.type === type.toUpperCase());
             
-            for (const item of uploadQueue) {
-                const ext = item.file.name.split('.').pop();
-                // Matching your rclone folder structure exactly
-                const path = `venue_masters/${safeDj}/${item.type}/${item.file.name}`;
-                await uploadFile(item.file, path, item.file.type);
+            if (!assets.length) return;
+
+            if (assets.length === 1) {
+                // RULE: If only one file, skip list and autoplay immediately
+                const asset = assets[0];
+                const url = `${CONFIG.WORKER_URL}/asset?key=${encodeURIComponent(asset.key)}`;
+                openAssetPreview(url, type, artistName, 'MOV');
+            } else {
+                // RULE: Show the numbered list
+                renderNumberedList(type, artistName, assets);
+            }
+        }
+
+        function renderNumberedList(type, artistName, assets) {
+            const container = document.getElementById('preview-container');
+            const displayArea = document.getElementById('active-asset-display');
+            const title = document.getElementById('vault-dj-title');
+            const meta = document.getElementById('vault-meta');
+            if (!container || !displayArea || !title || !meta) return;
+
+            const labelBase = getAssetLabel(type, assets[0]?.key || '');
+            title.textContent = (artistName || 'UNKNOWN').toUpperCase();
+            title.className = 'artist-hero-title';
+            meta.textContent = `${labelBase} SUITE // ${assets.length} ASSET(S)`;
+
+            container.classList.remove('hidden', 'opacity-0');
+            displayArea.innerHTML = `
+                <div class="space-y-4 max-w-3xl mx-auto">
+                    <h3 class="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.4em] mb-6">// ${labelBase} SUITE</h3>
+                    ${assets.map((asset, i) => {
+                        const format = (asset.format || (asset.key || '').split('.').pop() || 'FILE').toUpperCase();
+                        const assetUrl = `${CONFIG.WORKER_URL}/asset?key=${encodeURIComponent(asset.key || '')}`;
+                        const itemLabel = getAssetLabel(type, asset.key, i);
+                        return `
+                            <div onclick="openAssetPreviewEncoded('${encodeURIComponent(assetUrl)}', '${type}', '${encodeURIComponent(artistName)}', '${format}')" class="flex items-center justify-between p-5 bg-[#0a0a0a] border border-zinc-800 rounded-2xl hover:border-primary cursor-pointer group transition-all">
+                                <span class="text-[9px] font-mono text-zinc-500 uppercase">${itemLabel}</span>
+                                <iconify-icon icon="solar:play-circle-bold" class="text-xl text-zinc-700 group-hover:text-primary"></iconify-icon>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+
+            displayArea.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function toggleFolder(folderId) {
+            const preview = document.getElementById(folderId);
+            const arrow = document.getElementById(`arrow-${folderId}`);
+            if (!preview || !arrow) return;
+
+            document.querySelectorAll('[id^="folder-"]').forEach(el => {
+                if (el.id !== folderId) el.classList.add('hidden');
+            });
+
+            document.querySelectorAll('iconify-icon[id^="arrow-folder-"]').forEach(el => {
+                if (el.id !== `arrow-${folderId}`) el.style.transform = 'rotate(0deg)';
+            });
+
+            const isHidden = preview.classList.contains('hidden');
+            if (isHidden) {
+                preview.classList.remove('hidden');
+                arrow.style.transform = 'rotate(180deg)';
+            } else {
+                preview.classList.add('hidden');
+                arrow.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        function openAssetPreviewEncoded(encodedUrl, type, encodedName, format) {
+            openAssetPreview(decodeURIComponent(encodedUrl), type, decodeURIComponent(encodedName), format);
+        }
+
+        function openAssetPreview(assetUrl, assetType, djName, format) {
+            const container = document.getElementById('preview-container');
+            const displayArea = document.getElementById('active-asset-display');
+            const title = document.getElementById('vault-dj-title');
+            const meta = document.getElementById('vault-meta');
+            if (!container || !displayArea || !title || !meta) return;
+
+            const upperName = (djName || 'UNKNOWN').toUpperCase();
+            title.textContent = upperName;
+            title.className = 'artist-hero-title';
+            meta.textContent = `UPLOAD SESSION // ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()}`;
+
+            container.classList.remove('hidden', 'opacity-0');
+            displayArea.innerHTML = '';
+
+            if (assetType === 'MASTERS' || assetType === 'MASTER') {
+                displayArea.innerHTML = `
+                    <div class="space-y-6">
+                        <p class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-pulse"></span> MASTER 4K SET
+                        </p>
+                        <div class="aspect-video bg-black rounded-[40px] overflow-hidden border border-white/5 shadow-2xl">
+                            <video src="${assetUrl}" class="w-full h-full object-cover" controls autoplay></video>
+                        </div>
+                        <a href="${assetUrl}" target="_blank" download class="w-full bg-white text-black font-black py-5 rounded-2xl text-[11px] uppercase tracking-widest text-center block">DOWNLOAD 4K MASTER (.MOV)</a>
+                    </div>`;
+            } else if (assetType === 'AUDIO') {
+                displayArea.innerHTML = `
+                    <div class="space-y-6 animate-in fade-in duration-500">
+                        <p class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-primary"></span> HQ AUDIO MASTER (.WAV)
+                        </p>
+
+                        <div class="audio-player-wrapper">
+                            <audio src="${assetUrl}" controls preload="metadata"></audio>
+                        </div>
+
+                        <a href="${assetUrl}" target="_blank" download class="w-full bg-white text-black font-black py-5 rounded-2xl text-[11px] uppercase tracking-widest text-center block hover:bg-primary transition-all">
+                            DOWNLOAD HQ AUDIO
+                        </a>
+                    </div>`;
+            } else if (assetType === 'MARKETING' || assetType === 'THUMB' || ['PNG', 'JPG', 'JPEG', 'WEBP', 'GIF'].includes(format)) {
+                displayArea.innerHTML = `
+                    <div class="space-y-6">
+                        <p class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-[#39FF14]"></span> MARKETING THUMBNAIL
+                        </p>
+                        <img src="${assetUrl}" class="w-full aspect-video object-cover rounded-[40px] border border-white/10 shadow-2xl" alt="Marketing preview">
+                        <a href="${assetUrl}" target="_blank" download class="w-full bg-white text-black font-black py-5 rounded-2xl text-[11px] uppercase tracking-widest text-center block">DOWNLOAD MARKETING ASSET</a>
+                    </div>`;
+            } else {
+                displayArea.innerHTML = `
+                    <div class="space-y-6">
+                        <div class="bg-black rounded-[32px] overflow-hidden border border-white/5 p-6 text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Preview not available for this format.</div>
+                        <a href="${assetUrl}" target="_blank" download class="w-full bg-white text-black font-black py-5 rounded-2xl text-[11px] uppercase tracking-widest text-center block">DOWNLOAD FILE</a>
+                    </div>`;
             }
 
-            alert('Session Ingested Successfully');
-            fetchCloudLibrary(); 
-        } catch (err) {
-            alert('Upload failed: ' + err.message);
-        } finally {
-            uploadBtn.disabled = false;
-            uploadBtn.textContent = 'PROCESS & INGEST FULL SESSION';
+            displayArea.scrollIntoView({ behavior: 'smooth' });
         }
-    };
-} // This closes the entire handler properly.
+
+        function closePreview() {
+            const container = document.getElementById('preview-container');
+            const displayArea = document.getElementById('active-asset-display');
+            const historyList = document.getElementById('recent-sets-list') || document.getElementById('cloud-list');
+            if (!container || !displayArea) return;
+
+            container.classList.add('opacity-0');
+
+            setTimeout(() => {
+                container.classList.add('hidden');
+                container.classList.remove('opacity-0');
+                displayArea.innerHTML = '';
+                if (historyList) historyList.scrollIntoView({ behavior: 'smooth' });
+            }, 300);
+        }
+    </script>
+</body>
+</html>
