@@ -17,6 +17,24 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script>
+        function initDatePicker() {
+            var el = document.getElementById('ingest-date');
+            if (!el) return false;
+            if (typeof flatpickr !== 'function') return false;
+            flatpickr(el, {
+                defaultDate: 'today',
+                dateFormat: 'd M Y',
+                theme: 'dark',
+                disableMobile: true,
+                allowInput: false,
+                appendTo: document.body,
+                clickOpens: true
+            });
+            console.log('flatpickr initialized OK');
+            return true;
+        }
+    </script>
     <style>
         body { background-color: #050505 !important; color: white; -webkit-font-smoothing: antialiased; }
         .nav-link.active { background-color: rgba(255,255,255,0.05); border: 1px solid #27272a; color: white; }
@@ -227,32 +245,20 @@
         };
 
         document.addEventListener('DOMContentLoaded', function() {
-            const ingestDate = document.getElementById('ingest-date');
-            try {
-                if (typeof flatpickr === 'function') {
-                    flatpickr(ingestDate, {
-                        defaultDate: "today",
-                        dateFormat: "d M Y",
-                        theme: "dark",
-                        disableMobile: true,
-                        allowInput: false,
-                        appendTo: document.body,
-                        clickOpens: true
-                    });
-                    console.log('flatpickr initialized');
-                } else {
-                    console.warn('flatpickr not loaded, falling back to native');
-                    if (ingestDate) {
-                        ingestDate.type = 'date';
-                        ingestDate.value = new Date().toISOString().slice(0, 10);
+            // Try immediately, then retry a few times in case flatpickr CDN is slow
+            if (!initDatePicker()) {
+                var attempts = 0;
+                var timer = setInterval(function() {
+                    attempts++;
+                    if (initDatePicker() || attempts >= 20) {
+                        clearInterval(timer);
+                        if (attempts >= 20) {
+                            console.warn('flatpickr never loaded, using native date input');
+                            var el = document.getElementById('ingest-date');
+                            if (el) { el.type = 'date'; el.readOnly = false; el.value = new Date().toISOString().slice(0, 10); }
+                        }
                     }
-                }
-            } catch (e) {
-                console.error('flatpickr init error:', e);
-                if (ingestDate) {
-                    ingestDate.type = 'date';
-                    ingestDate.value = new Date().toISOString().slice(0, 10);
-                }
+                }, 200);
             }
 
             fetchCloudLibrary();
