@@ -23,9 +23,9 @@ async function sha256Hex(message) {
 }
 
 async function createPresignedPutUrl(objectKey, contentType, env) {
-  const accessKeyId = env.6f2dd0420dff1c0240c8f64cf52bcb92;
-  const secretAccessKey = env.3eb8c235c0cc121d905babc4e3765cf64f46191b416fba330a11023826186e32;
-  const accountId = env.460259198d4a56e53034a2bbe1f915c7;
+  const accessKeyId = env.R2_ACCESS_KEY_ID;
+  const secretAccessKey = env.R2_SECRET_ACCESS_KEY;
+  const accountId = env.ACCOUNT_ID;
   const bucketName = env.R2_BUCKET_NAME || "venue-assets";
   const host = accountId + ".r2.cloudflarestorage.com";
   const region = "auto";

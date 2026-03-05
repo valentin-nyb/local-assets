@@ -253,10 +253,11 @@
 
         let cloudAssets = [];
 
+        const API_KEY_OVERRIDE = (window.LOCAL_ASSETS_API_KEY || localStorage.getItem('LOCAL_ASSETS_API_KEY') || '').trim();
         const CONFIG = {
             // Temporarily use default Worker URL for testing
-            WORKER_URL: "https://local-assets-worker.smackeprang-v.workers.dev", 
-            API_KEY: "your_secret_key_here"
+            WORKER_URL: "cloud.local-assets.com",
+            API_KEY: API_KEY_OVERRIDE || "1mmm9dZ1MIl5xkiqlal_gBF5IqpNy_3M2WjQOiNU"
         };
 
         function getIngestDateValue() {
@@ -332,6 +333,11 @@
 
                 if (!djName || !date) {
                     alert('CRITICAL: DJ NAME & DATE REQUIRED');
+                    return;
+                }
+
+                if (!CONFIG.API_KEY || CONFIG.API_KEY === 'your_secret_key_here') {
+                    alert('Missing API key. Set LOCAL_ASSETS_API_KEY in localStorage or update CONFIG.API_KEY.');
                     return;
                 }
 
