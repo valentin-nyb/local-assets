@@ -18,18 +18,33 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
+        let datePicker = null;
+
         function initDatePicker() {
             var el = document.getElementById('ingest-date');
             if (!el) return false;
             if (typeof flatpickr !== 'function') return false;
-            flatpickr(el, {
-                defaultDate: 'today',
+            datePicker = flatpickr(el, {
+                defaultDate: new Date(),
                 dateFormat: 'd M Y',
                 theme: 'dark',
                 disableMobile: true,
                 allowInput: false,
                 appendTo: document.body,
-                clickOpens: true
+                clickOpens: true,
+                onReady: function(selectedDates, dateStr, instance) {
+                    const date = selectedDates?.[0] || instance.latestSelectedDateObj || new Date();
+                    el.dataset.iso = instance.formatDate(date, 'Y-m-d');
+                    if (!el.value) {
+                        el.value = instance.formatDate(date, instance.config.dateFormat);
+                    }
+                },
+                onChange: function(selectedDates, dateStr, instance) {
+                    const date = selectedDates?.[0];
+                    if (date) {
+                        el.dataset.iso = instance.formatDate(date, 'Y-m-d');
+                    }
+                }
             });
             console.log('flatpickr initialized OK');
             return true;
@@ -244,6 +259,17 @@
             API_KEY: "your_secret_key_here"
         };
 
+        function getIngestDateValue() {
+            const el = document.getElementById('ingest-date');
+            if (!el) return '';
+            if (el.dataset?.iso) return el.dataset.iso;
+            const raw = el.value?.trim() || '';
+            if (!raw && datePicker?.selectedDates?.length) {
+                return datePicker.formatDate(datePicker.selectedDates[0], 'Y-m-d');
+            }
+            return raw;
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             // Try immediately, then retry a few times in case flatpickr CDN is slow
             if (!initDatePicker()) {
@@ -255,10 +281,23 @@
                         if (attempts >= 20) {
                             console.warn('flatpickr never loaded, using native date input');
                             var el = document.getElementById('ingest-date');
-                            if (el) { el.type = 'date'; el.readOnly = false; el.value = new Date().toISOString().slice(0, 10); }
+                            if (el) {
+                                const iso = new Date().toISOString().slice(0, 10);
+                                el.type = 'date';
+                                el.readOnly = false;
+                                el.value = iso;
+                                el.dataset.iso = iso;
+                            }
                         }
                     }
                 }, 200);
+            }
+
+            const ingestDateEl = document.getElementById('ingest-date');
+            if (ingestDateEl) {
+                ingestDateEl.addEventListener('change', function() {
+                    if (ingestDateEl.value) ingestDateEl.dataset.iso = ingestDateEl.value;
+                });
             }
 
             fetchCloudLibrary();
@@ -267,168 +306,114 @@
 
         function setupUploadHandler() {
             const uploadBtn = document.getElementById('upload-btn');
-            const REQUEST_TIMEOUT_MS = 120000;
+            
+            // File Inputs
+            const inputs = {
+                video: document.getElementById('file-video'),
+                audio: document.getElementById('file-audio'),
+                social: document.getElementById('file-social'),
+                marketing: document.getElementById('file-marketing')
+            };
 
-            const fileVideo = document.getElementById('file-video');
-            const fileAudio = document.getElementById('file-audio');
-            const fileSocial = document.getElementById('file-social');
-            const fileMarketing = document.getElementById('file-marketing');
-
-            function setCardSelected(cardId, isSelected) {
-                const card = document.getElementById(cardId);
-                if (!card) return;
-
-                const icon = card.querySelector('.upload-card-icon');
-                const label = card.querySelector('.upload-card-label');
-
-                if (isSelected) {
-                    card.classList.add('border-primary', 'bg-primary/10', 'shadow-[0_0_20px_rgba(57,255,20,0.12)]');
-                    card.classList.remove('border-zinc-800', 'bg-black');
-                    if (icon) icon.classList.replace('text-zinc-600', 'text-primary');
-                    if (label) label.classList.replace('text-zinc-500', 'text-primary');
-                } else {
-                    card.classList.remove('border-primary', 'bg-primary/10', 'shadow-[0_0_20px_rgba(57,255,20,0.12)]');
-                    card.classList.add('border-zinc-800', 'bg-black');
-                    if (icon) icon.classList.replace('text-primary', 'text-zinc-600');
-                    if (label) label.classList.replace('text-primary', 'text-zinc-500');
-                }
-            }
-
-            fileVideo.addEventListener('change', () => setCardSelected('card-video', fileVideo.files.length > 0));
-            fileAudio.addEventListener('change', () => setCardSelected('card-audio', fileAudio.files.length > 0));
-            fileSocial.addEventListener('change', () => setCardSelected('card-social', fileSocial.files.length > 0));
-            fileMarketing.addEventListener('change', () => setCardSelected('card-marketing', fileMarketing.files.length > 0));
-
-            // Retry wrapper for flaky network connections
-            async function fetchWithRetry(url, options, retries = 3) {
-                for (let attempt = 1; attempt <= retries; attempt++) {
-                    try {
-                        const response = await fetch(url, options);
-                        return response;
-                    } catch (err) {
-                        console.warn(`[RETRY] Attempt ${attempt}/${retries} failed:`, err.message);
-                        if (attempt === retries) throw err;
-                        await new Promise(r => setTimeout(r, 1000 * attempt));
+            // Update UI when files are selected
+            Object.keys(inputs).forEach(key => {
+                inputs[key].addEventListener('change', () => {
+                    const card = document.getElementById(`card-${key}`);
+                    if (inputs[key].files.length > 0) {
+                        card.style.borderColor = '#39FF14';
+                        card.style.background = 'rgba(57,255,20,0.05)';
                     }
-                }
-            }
-
-            // Single upload function: get presigned URL → PUT directly to R2
-            async function uploadFile(file, path, type) {
-                console.log(`[UPLOAD] ${path} (${(file.size/1024/1024).toFixed(1)}MB, ${type})`);
-
-                // 1. Get presigned URL from Worker
-                console.log('[UPLOAD] Getting presigned URL...');
-                const presignRes = await fetchWithRetry(
-                    `${CONFIG.WORKER_URL}/presign-upload?file=${encodeURIComponent(path)}&type=${encodeURIComponent(type)}`,
-                    { method: 'GET', headers: { 'x-api-key': CONFIG.API_KEY } }
-                );
-                if (!presignRes.ok) {
-                    const text = await presignRes.text();
-                    console.error('[UPLOAD] Presign failed:', text);
-                    throw new Error('Presign failed: ' + text);
-                }
-                const { url: presignedUrl } = await presignRes.json();
-                console.log('[UPLOAD] Got presigned URL, uploading directly to R2...');
-
-                // 2. PUT file directly to R2 (bypasses Worker entirely)
-                const uploadRes = await fetchWithRetry(presignedUrl, {
-                    method: 'PUT',
-                    body: file,
-                    headers: { 'Content-Type': type }
                 });
-                if (!uploadRes.ok) {
-                    const text = await uploadRes.text();
-                    console.error('[UPLOAD] R2 upload failed:', uploadRes.status, text);
-                    throw new Error('R2 upload failed: ' + uploadRes.status);
-                }
-                console.log('[UPLOAD] ✓ Success:', path);
-                return true;
-            }
-            }
+            });
 
             uploadBtn.onclick = async function() {
                 const djName = document.getElementById('ingest-name').value.trim();
-                const date = document.getElementById('ingest-date').value.trim();
+                const date = getIngestDateValue();
 
                 if (!djName || !date) {
-                    alert('Please fill in DJ NAME and DATE');
-                    return;
-                }
-
-                const uploadQueue = [];
-                if (fileVideo.files.length > 0) uploadQueue.push({ file: fileVideo.files[0], shotType: 'MASTER_CAM' });
-                if (fileAudio.files.length > 0) uploadQueue.push({ file: fileAudio.files[0], shotType: 'MASTER_AUDIO' });
-                for (let i = 0; i < fileSocial.files.length; i++) {
-                    uploadQueue.push({ file: fileSocial.files[i], shotType: `SOCIAL_CLIP_${i + 1}` });
-                }
-                for (let i = 0; i < fileMarketing.files.length; i++) {
-                    uploadQueue.push({ file: fileMarketing.files[i], shotType: `MARKETING_THUMB_${i + 1}` });
-                }
-
-                if (uploadQueue.length === 0) {
-                    alert('Please select at least one file to upload.');
+                    alert('CRITICAL: DJ NAME & DATE REQUIRED');
                     return;
                 }
 
                 uploadBtn.disabled = true;
+                uploadBtn.innerHTML = `<span class="animate-pulse text-primary">INITIALIZING ENCRYPTED UPLOAD...</span>`;
+
+                const safeDj = djName.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+                const safeDate = date.replace(/-/g, '');
+
+                // Gather all selected files
+                const filesToUpload = [];
+                if (inputs.video.files[0]) {
+                    const ext = (inputs.video.files[0].name.split('.').pop() || 'mov').toLowerCase();
+                    filesToUpload.push({ file: inputs.video.files[0], path: `venue_masters/${safeDj}/masters/${safeDate}_main.${ext}` });
+                }
+                if (inputs.audio.files[0]) {
+                    const ext = (inputs.audio.files[0].name.split('.').pop() || 'wav').toLowerCase();
+                    filesToUpload.push({ file: inputs.audio.files[0], path: `venue_masters/${safeDj}/audio/${safeDate}_master.${ext}` });
+                }
+                
+                // Handle Multiple Social Clips
+                Array.from(inputs.social.files).forEach((file, i) => {
+                    const ext = (file.name.split('.').pop() || 'mp4').toLowerCase();
+                    filesToUpload.push({ file, path: `venue_masters/${safeDj}/social-suite/clip_${i+1}.${ext}` });
+                });
+
+                // Handle Marketing Thumbnails
+                Array.from(inputs.marketing.files).forEach((file, i) => {
+                    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+                    filesToUpload.push({ file, path: `venue_masters/${safeDj}/marketing/thumb_${i+1}.${ext}` });
+                });
+
+                if (filesToUpload.length === 0) {
+                    uploadBtn.innerHTML = "UPLOAD FAILED - NO FILES";
+                    uploadBtn.disabled = false;
+                    alert('Please select at least one file to upload.');
+                    return;
+                }
 
                 try {
-                    const safeDj = djName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
-                    const safeDate = date.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
-
-                    function getAssetPath(file, type) {
-                        const ext = (file.name.split('.').pop() || '').toLowerCase();
-                        let subFolder = 'misc';
-                        if (['mov', 'mp4', 'webm'].includes(ext)) subFolder = 'masters';
-                        if (['wav', 'mp3', 'm4a', 'aac'].includes(ext)) subFolder = 'audio';
-                        if ((type || '').startsWith('SOCIAL_CLIP')) subFolder = 'social-suite';
-                        if (['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(ext) || (type || '').startsWith('MARKETING_THUMB')) subFolder = 'marketing';
-
-                        const cleanOriginal = file.name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9._-]/g, '');
-                        if ((type || '').startsWith('SOCIAL_CLIP')) {
-                            const socialIndex = Number(String(type).split('_').pop()) || 1;
-                            return `venue_masters/${safeDj}/${subFolder}/asset_${socialIndex}.mov`;
+                    for (const item of filesToUpload) {
+                        uploadBtn.innerHTML = `UPLOADING: ${item.file.name.substring(0,15)}...`;
+                        
+                        // 1. Get Presigned URL
+                        const contentType = item.file.type || 'application/octet-stream';
+                        const presignReq = await fetch(`${CONFIG.WORKER_URL}/presign-upload?file=${encodeURIComponent(item.path)}&type=${encodeURIComponent(contentType)}`, {
+                            headers: { 'x-api-key': CONFIG.API_KEY }
+                        });
+                        if (!presignReq.ok) {
+                            const text = await presignReq.text();
+                            throw new Error(`Presign failed: ${text}`);
                         }
-                        return `venue_masters/${safeDj}/${subFolder}/${safeDate}_${cleanOriginal}`;
+
+                        const { url: signedUrl } = await presignReq.json();
+
+                        // 2. Direct Upload to Cloudflare R2 using XMLHttpRequest to track progress
+                        await new Promise((resolve, reject) => {
+                            const xhr = new XMLHttpRequest();
+                            xhr.open('PUT', signedUrl);
+                            xhr.setRequestHeader('Content-Type', contentType);
+                            
+                            xhr.upload.onprogress = (e) => {
+                                if (e.lengthComputable) {
+                                    const percent = Math.round((e.loaded / e.total) * 100);
+                                    uploadBtn.innerHTML = `INGESTING: ${percent}%`;
+                                }
+                            };
+
+                            xhr.onload = () => xhr.status === 200 ? resolve() : reject(new Error(`Upload failed: ${xhr.status}`));
+                            xhr.onerror = () => reject(new Error('Upload failed: network error'));
+                            xhr.send(item.file);
+                        });
                     }
 
-                    let successCount = 0;
-                    const errors = [];
-                    for (const { file, shotType } of uploadQueue) {
-                        const fileType = file.type || 'application/octet-stream';
-                        const fileName = getAssetPath(file, shotType);
+                    uploadBtn.innerHTML = "SESSION INGEST COMPLETE";
+                    uploadBtn.style.backgroundColor = "#39FF14";
+                    setTimeout(() => location.reload(), 2000);
 
-                        try {
-                            console.log(`[QUEUE] ${file.name} → ${fileName} (${(file.size/1024/1024).toFixed(1)}MB, ${fileType}, ${shotType})`);
-                            await uploadFile(file, fileName, fileType);
-                            successCount++;
-                        } catch (err) {
-                            console.error(`[QUEUE] FAILED ${file.name}:`, err);
-                            errors.push(`${file.name}: ${err.message}`);
-                        }
-                    }
-
-                    if (errors.length > 0) {
-                        alert(`Uploaded ${successCount} files.\nFailed:\n${errors.join('\n')}`);
-                    } else {
-                        alert(`Successfully uploaded ${successCount} files!`);
-                    }
-                    fileVideo.value = '';
-                    fileAudio.value = '';
-                    fileSocial.value = '';
-                    fileMarketing.value = '';
-                    setCardSelected('card-video', false);
-                    setCardSelected('card-audio', false);
-                    setCardSelected('card-social', false);
-                    setCardSelected('card-marketing', false);
-                    fetchCloudLibrary();
                 } catch (err) {
-                    console.error('Upload error:', err);
-                    alert('Upload error: ' + err.message);
-                } finally {
+                    console.error(err);
+                    uploadBtn.innerHTML = "UPLOAD FAILED - RETRY";
                     uploadBtn.disabled = false;
-                    uploadBtn.textContent = 'PROCESS & INGEST FULL SESSION';
                 }
             };
         }
