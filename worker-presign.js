@@ -124,6 +124,45 @@ export default {
       }
     }
 
+    // 1.5 Handle Mux Upload URL
+    if (url.pathname === "/get-mux-url") {
+      const apiKey = request.headers.get("x-api-key");
+      if (env.AUTH_KEY && apiKey !== env.AUTH_KEY) {
+        return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+      }
+
+      if (!env.wt1cSclqAHkUnxOJ1KSRZBIunpT45Zp+MlbuxudEcUTMDAe1kc+AAL24nxZclbTGZUEsPc9FkjB || !env.MUX_TOKEN_SECRET) {
+        return new Response(JSON.stringify({ error: "Mux credentials not configured" }), {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      try {
+        const response = await fetch("https://api.mux.com/video/v1/uploads", {
+          method: "POST",
+          headers: {
+            "Authorization": `Basic ${btoa(`${env.MUX_TOKEN_ID}:${env.MUX_TOKEN_SECRET}`)}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            new_asset_settings: { playback_policy: ["public"] },
+            cors_origin: "*",
+          }),
+        });
+
+        const data = await response.json();
+        return new Response(JSON.stringify(data.data), {
+          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ error: err.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+    }
+
     // 2. Handle Listing (The "Library")
     if (url.pathname === "/list") {
       const result = await bucket.list({ prefix: "venue_masters/" });

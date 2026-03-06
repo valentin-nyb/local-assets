@@ -17,6 +17,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
     <script>
         let datePicker = null;
 
@@ -328,6 +329,54 @@
                 });
             });
 
+            async function uploadWithProgress(url, file, contentType) {
+                return new Promise((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('PUT', url);
+                    if (contentType) xhr.setRequestHeader('Content-Type', contentType);
+
+                    xhr.upload.onprogress = (e) => {
+                        if (e.lengthComputable) {
+                            const percent = Math.round((e.loaded / e.total) * 100);
+                            uploadBtn.innerHTML = `INGESTING: ${percent}%`;
+                        }
+                    };
+
+                    xhr.onload = () => xhr.status === 200 || xhr.status === 201 ? resolve() : reject(new Error(`Upload failed: ${xhr.status}`));
+                    xhr.onerror = () => reject(new Error('Upload failed: network error'));
+                    xhr.send(file);
+                });
+            }
+
+            async function uploadFile(file, path, type) {
+                const contentType = type || 'application/octet-stream';
+
+                if (contentType.includes('video') || contentType.includes('audio')) {
+                    const res = await fetch(`${CONFIG.WORKER_URL}/get-mux-url`, {
+                        headers: { 'x-api-key': CONFIG.API_KEY }
+                    });
+                    if (!res.ok) {
+                        const text = await res.text();
+                        throw new Error(`Mux URL failed: ${text}`);
+                    }
+                    const { url: muxUrl } = await res.json();
+                    if (!muxUrl) throw new Error('Mux URL missing');
+                    return uploadWithProgress(muxUrl, file, contentType);
+                }
+
+                const presignReq = await fetch(`${CONFIG.WORKER_URL}/presign-upload?file=${encodeURIComponent(path)}&type=${encodeURIComponent(contentType)}`, {
+                    headers: { 'x-api-key': CONFIG.API_KEY }
+                });
+                if (!presignReq.ok) {
+                    const text = await presignReq.text();
+                    throw new Error(`Presign failed: ${text}`);
+                }
+
+                const { url: rawUrl } = await presignReq.json();
+                const signedUrl = String(rawUrl || '').startsWith('http') ? rawUrl : `https://${rawUrl}`;
+                return uploadWithProgress(signedUrl, file, contentType);
+            }
+
             uploadBtn.onclick = async function() {
                 const djName = document.getElementById('ingest-name').value.trim();
                 const date = getIngestDateValue();
@@ -381,37 +430,7 @@
                 try {
                     for (const item of filesToUpload) {
                         uploadBtn.innerHTML = `UPLOADING: ${item.file.name.substring(0,15)}...`;
-                        
-                        // 1. Get Presigned URL
-                        const contentType = item.file.type || 'application/octet-stream';
-                        const presignReq = await fetch(`${CONFIG.WORKER_URL}/presign-upload?file=${encodeURIComponent(item.path)}&type=${encodeURIComponent(contentType)}`, {
-                            headers: { 'x-api-key': CONFIG.API_KEY }
-                        });
-                        if (!presignReq.ok) {
-                            const text = await presignReq.text();
-                            throw new Error(`Presign failed: ${text}`);
-                        }
-
-                        const { url: rawUrl } = await presignReq.json();
-                        const signedUrl = String(rawUrl || '').startsWith('http') ? rawUrl : `https://${rawUrl}`;
-
-                        // 2. Direct Upload to Cloudflare R2 using XMLHttpRequest to track progress
-                        await new Promise((resolve, reject) => {
-                            const xhr = new XMLHttpRequest();
-                            xhr.open('PUT', signedUrl);
-                            xhr.setRequestHeader('Content-Type', contentType);
-                            
-                            xhr.upload.onprogress = (e) => {
-                                if (e.lengthComputable) {
-                                    const percent = Math.round((e.loaded / e.total) * 100);
-                                    uploadBtn.innerHTML = `INGESTING: ${percent}%`;
-                                }
-                            };
-
-                            xhr.onload = () => xhr.status === 200 ? resolve() : reject(new Error(`Upload failed: ${xhr.status}`));
-                            xhr.onerror = () => reject(new Error('Upload failed: network error'));
-                            xhr.send(item.file);
-                        });
+                        await uploadFile(item.file, item.path, item.file.type);
                     }
 
                     uploadBtn.innerHTML = "SESSION INGEST COMPLETE";
