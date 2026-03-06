@@ -392,7 +392,8 @@
                             throw new Error(`Presign failed: ${text}`);
                         }
 
-                        const { url: signedUrl } = await presignReq.json();
+                        const { url: rawUrl } = await presignReq.json();
+                        const signedUrl = String(rawUrl || '').startsWith('http') ? rawUrl : `https://${rawUrl}`;
 
                         // 2. Direct Upload to Cloudflare R2 using XMLHttpRequest to track progress
                         await new Promise((resolve, reject) => {

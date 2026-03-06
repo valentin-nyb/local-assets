@@ -23,8 +23,8 @@ async function sha256Hex(message) {
 }
 
 async function createPresignedPutUrl(objectKey, contentType, env) {
-  const accessKeyId = env.R2_ACCESS_KEY_ID;
-  const secretAccessKey = env.R2_SECRET_ACCESS_KEY;
+  const accessKeyId = env.R2_ACCESS_KEY_ID || env.S3_ACCESS_KEY_ID;
+  const secretAccessKey = env.R2_SECRET_ACCESS_KEY || env.S3_SECRET_ACCESS_KEY;
   const accountId = env.ACCOUNT_ID;
   const bucketName = env.R2_BUCKET_NAME || "venue-assets";
   const host = accountId + ".r2.cloudflarestorage.com";
@@ -112,7 +112,8 @@ export default {
 
       try {
         const signedUrl = await createPresignedPutUrl(fileName, contentType, env);
-        return new Response(JSON.stringify({ url: signedUrl }), {
+        const absoluteUrl = signedUrl.startsWith("http") ? signedUrl : `https://${signedUrl}`;
+        return new Response(JSON.stringify({ url: absoluteUrl }), {
           headers: { "Content-Type": "application/json", ...corsHeaders },
         });
       } catch (err) {
