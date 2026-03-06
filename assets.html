@@ -258,7 +258,7 @@
         const WORKER_URL_OVERRIDE = (window.LOCAL_ASSETS_WORKER_URL || localStorage.getItem('LOCAL_ASSETS_WORKER_URL') || '').trim();
         const CONFIG = {
             // Temporarily use default Worker URL for testing
-            WORKER_URL: WORKER_URL_OVERRIDE || "https://cloud.local-assets.com",
+            WORKER_URL: WORKER_URL_OVERRIDE || "https://local-assets-worker.smackeprang-v.workers.dev",
             API_KEY: API_KEY_OVERRIDE || "1mmm9dZ1MIl5xkiqlal_gBF5IqpNy_3M2WjQOiNU"
         };
 
@@ -684,16 +684,38 @@
             displayArea.innerHTML = '';
 
             if (assetType === 'MASTERS' || assetType === 'MASTER') {
-                displayArea.innerHTML = `
-                    <div class="space-y-6">
-                        <p class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-                            <span class="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-pulse"></span> MASTER 4K SET
-                        </p>
-                        <div class="aspect-video bg-black rounded-[40px] overflow-hidden border border-white/5 shadow-2xl">
-                            <video src="${assetUrl}" class="w-full h-full object-cover" controls autoplay></video>
-                        </div>
-                        <a href="${assetUrl}" target="_blank" download class="w-full bg-white text-black font-black py-5 rounded-2xl text-[11px] uppercase tracking-widest text-center block">DOWNLOAD 4K MASTER (.MOV)</a>
-                    </div>`;
+                // Try to extract playback_id from assetUrl or asset object if available
+                let playbackId = null;
+                if (window.lastMuxPlaybackId) playbackId = window.lastMuxPlaybackId;
+                // TODO: Replace with real lookup if you store playback_id per asset
+                if (playbackId) {
+                    displayArea.innerHTML = `
+                        <div class="space-y-6">
+                            <p class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                                <span class="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-pulse"></span> MASTER 4K SET (MUX)
+                            </p>
+                            <div class="aspect-video bg-black rounded-[40px] overflow-hidden border border-white/5 shadow-2xl">
+                                <iframe
+                                  src="https://player.mux.com/${playbackId}?metadata-video-title=venue-assets&video-title=venue-assets"
+                                  style="width: 100%; border: none; aspect-ratio: 16/9;"
+                                  allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+                                  allowfullscreen
+                                ></iframe>
+                            </div>
+                            <a href="https://stream.mux.com/${playbackId}/high.mp4?download=master.mp4" target="_blank" class="w-full bg-white text-black font-black py-5 rounded-2xl text-[11px] uppercase tracking-widest text-center block">DOWNLOAD 4K MASTER</a>
+                        </div>`;
+                } else {
+                    displayArea.innerHTML = `
+                        <div class="space-y-6">
+                            <p class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                                <span class="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-pulse"></span> MASTER 4K SET
+                            </p>
+                            <div class="aspect-video bg-black rounded-[40px] overflow-hidden border border-white/5 shadow-2xl">
+                                <video src="${assetUrl}" class="w-full h-full object-cover" controls autoplay></video>
+                            </div>
+                            <a href="${assetUrl}" target="_blank" download class="w-full bg-white text-black font-black py-5 rounded-2xl text-[11px] uppercase tracking-widest text-center block">DOWNLOAD 4K MASTER (.MOV)</a>
+                        </div>`;
+                }
             } else if (assetType === 'AUDIO') {
                 displayArea.innerHTML = `
                     <div class="space-y-6 animate-in fade-in duration-500">
