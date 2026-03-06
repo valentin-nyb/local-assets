@@ -254,9 +254,10 @@
         let cloudAssets = [];
 
         const API_KEY_OVERRIDE = (window.LOCAL_ASSETS_API_KEY || localStorage.getItem('LOCAL_ASSETS_API_KEY') || '').trim();
+        const WORKER_URL_OVERRIDE = (window.LOCAL_ASSETS_WORKER_URL || localStorage.getItem('LOCAL_ASSETS_WORKER_URL') || '').trim();
         const CONFIG = {
             // Temporarily use default Worker URL for testing
-            WORKER_URL: "cloud.local-assets.com",
+            WORKER_URL: WORKER_URL_OVERRIDE || "https://cloud.local-assets.com",
             API_KEY: API_KEY_OVERRIDE || "1mmm9dZ1MIl5xkiqlal_gBF5IqpNy_3M2WjQOiNU"
         };
 
