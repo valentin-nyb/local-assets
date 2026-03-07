@@ -11,8 +11,8 @@ export default async function handler(req, res) {
     res.status(400).json({ error: 'Missing asset_id' });
     return;
   }
-  const muxTokenId = process.env.49c2dd4c-5ba5-4e93-b60b-54afee697b41;
-  const muxTokenSecret = process.env.M3W9cB0gXQ2ki+nYpJc9pdWYW5q0ZlCORrd8URup4lqlUyxbiRfXssWRNdWRiQbEmIZkPSgIjTT;
+  const muxTokenId = process.env.MUX_TOKEN_ID;
+  const muxTokenSecret = process.env.MUX_TOKEN_SECRET;
   if (!muxTokenId || !muxTokenSecret) {
     res.status(500).json({ error: 'Mux credentials not set' });
     return;
