@@ -251,12 +251,32 @@
                     </div>
 
                     <div class="flex justify-end gap-3 self-start mt-2">
-                        <button onclick="showMuxPreview('${asset.id}', '${artistName}')" class="h-12 w-12 flex items-center justify-center bg-white text-black hover:bg-primary transition-all rounded-xl">
+                        <button onclick="previewAsset('${asset.id}', '${artistName}')" class="h-12 w-12 flex items-center justify-center bg-white text-black hover:bg-primary transition-all rounded-xl">
                             <iconify-icon icon="solar:play-bold" class="text-xl"></iconify-icon>
                         </button>
-                        <button onclick="showMuxPreview({ playback_ids: [{ id: 'rR8P8mSaKDzz02TsftugTUdI00cQPJX00oy' }] }, 'Test Asset')" class="h-12 w-12 flex items-center justify-center bg-primary text-black hover:bg-white transition-all rounded-xl" title="Preview Test Mux Asset">
-                            <iconify-icon icon="solar:play-bold" class="text-xl"></iconify-icon>
-                        </button>
+                                // Preview asset by fetching playback_id if not present
+                                async function previewAsset(assetId, artistName) {
+                                    // Try to find asset in localStorage with playback_ids
+                                    const history = JSON.parse(localStorage.getItem('vault-history') || '[]');
+                                    const asset = history.find(a => a.id === assetId);
+                                    if (asset && asset.playback_ids && asset.playback_ids.length > 0) {
+                                        showMuxPreview(asset, artistName);
+                                        return;
+                                    }
+                                    // Otherwise, fetch from backend
+                                    try {
+                                        const res = await fetch(`/api/get-asset?asset_id=${assetId}`);
+                                        if (!res.ok) throw new Error('Failed to fetch asset details');
+                                        const data = await res.json();
+                                        if (data && data.playback_ids && data.playback_ids.length > 0) {
+                                            showMuxPreview(data, artistName);
+                                        } else {
+                                            alert('No playback ID found for this asset.');
+                                        }
+                                    } catch (e) {
+                                        alert('Error loading asset: ' + (e.message || e));
+                                    }
+                                }
                         <button class="h-12 w-12 flex items-center justify-center border border-zinc-800 rounded-xl hover:bg-zinc-900 transition-all text-zinc-600">
                             <iconify-icon icon="solar:download-square-bold" class="text-xl"></iconify-icon>
                         </button>
