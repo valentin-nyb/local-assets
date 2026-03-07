@@ -257,9 +257,7 @@
         const API_KEY_OVERRIDE = (window.LOCAL_ASSETS_API_KEY || localStorage.getItem('LOCAL_ASSETS_API_KEY') || '').trim();
         const WORKER_URL_OVERRIDE = (window.LOCAL_ASSETS_WORKER_URL || localStorage.getItem('LOCAL_ASSETS_WORKER_URL') || '').trim();
         const CONFIG = {
-            // Temporarily use default Worker URL for testing
-            WORKER_URL: WORKER_URL_OVERRIDE || "https://local-assets-worker.smackeprang-v.workers.dev",
-            API_KEY: API_KEY_OVERRIDE || "1mmm9dZ1MIl5xkiqlal_gBF5IqpNy_3M2WjQOiNU"
+    
         };
 
         function getIngestDateValue() {
@@ -274,26 +272,30 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            // Try immediately, then retry a few times in case flatpickr CDN is slow
-            if (!initDatePicker()) {
-                var attempts = 0;
-                var timer = setInterval(function() {
-                    attempts++;
-                    if (initDatePicker() || attempts >= 20) {
-                        clearInterval(timer);
-                        if (attempts >= 20) {
-                            console.warn('flatpickr never loaded, using native date input');
-                            var el = document.getElementById('ingest-date');
-                            if (el) {
-                                const iso = new Date().toISOString().slice(0, 10);
-                                el.type = 'date';
-                                el.readOnly = false;
-                                el.value = iso;
-                                el.dataset.iso = iso;
-                            }
-                        }
-                    }
-                }, 200);
+           
+          function initDatePicker() {
+    var el = document.getElementById('ingest-date');
+    if (!el) return false;
+    
+    // Remove the readonly attribute that is locking the field
+    el.removeAttribute('readonly'); 
+    
+    if (typeof flatpickr !== 'function') return false;
+    
+    datePicker = flatpickr(el, {
+        defaultDate: new Date(),
+        dateFormat: 'd M Y',
+        theme: 'dark',
+        disableMobile: false, // Changed to false to allow mobile venue use
+        allowInput: true,     // Enabled to prevent "disabled" state
+        clickOpens: true,
+        onReady: function(selectedDates, dateStr, instance) {
+            const date = selectedDates?.[0] || new Date();
+            el.dataset.iso = instance.formatDate(date, 'Y-m-d');
+        }
+    });
+    return true;
+}
             }
 
             const ingestDateEl = document.getElementById('ingest-date');
@@ -370,7 +372,7 @@
                     return;
                 }
 
-                if (!CONFIG.API_KEY || CONFIG.API_KEY === 'your_secret_key_here') {
+                if (!CONFIG.API_KEY || CONFIG.API_KEY === 'wt1cSclqAHkUnxOJ1KSRZBIunpT45Zp+MlbuxudEcUTMDAe1kc+AAL24nxZclbTGZUEsPc9FkjB') {
                     alert('Missing API key. Set LOCAL_ASSETS_API_KEY in localStorage or update CONFIG.API_KEY.');
                     return;
                 }
