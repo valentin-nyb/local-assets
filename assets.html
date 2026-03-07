@@ -112,7 +112,7 @@
                     </div>
 
                     <button id="upload-btn" class="w-full bg-white text-black font-black py-5 rounded-2xl uppercase tracking-[0.2em] text-[11px] hover:bg-primary transition-all">
-                        INGEST FULL SESSION TO MUX
+                        INGEST FULL SESSION TO local / assets™
                     </button>
                 </div>
 
@@ -236,12 +236,20 @@
                     xhr.open('PUT', data.url);
                     xhr.upload.onprogress = (e) => {
                         const pct = Math.round((e.loaded / e.total) * 100);
-                        btn.innerHTML = `PUSHING TO MUX CLOUD: ${pct}%`;
+                        btn.innerHTML = `UPLOADING TO CLOUD: ${pct}%`;
                     };
                     xhr.onload = () => {
                         btn.innerHTML = "INGEST COMPLETE // PROCESSING...";
                         btn.style.background = "#39FF14";
-                        showMuxPreview(data.id, dj);
+                        // Save asset info to localStorage
+                        saveAssetToVault({
+                            dj,
+                            id: data.id,
+                            playback_ids: data.playback_ids,
+                            created_at: new Date().toISOString()
+                        });
+                        showMuxPreview(data, dj);
+                        renderVaultHistory();
                     };
                     xhr.onerror = () => {
                         btn.disabled = false;
@@ -267,6 +275,40 @@
                 }
             };
         }
+
+        // Save asset info to localStorage
+        function saveAssetToVault(asset) {
+            let vault = [];
+            try {
+                vault = JSON.parse(localStorage.getItem('vault-history') || '[]');
+            } catch {}
+            vault.unshift(asset);
+            localStorage.setItem('vault-history', JSON.stringify(vault.slice(0, 20)));
+        }
+
+        // Render Vault History from localStorage
+        function renderVaultHistory() {
+            let vault = [];
+            try {
+                vault = JSON.parse(localStorage.getItem('vault-history') || '[]');
+            } catch {}
+            const list = document.getElementById('cloud-list');
+            if (!vault.length) {
+                list.innerHTML = '// Awaiting new session ingest';
+                return;
+            }
+            list.innerHTML = vault.map(asset => {
+                const playbackId = asset.playback_ids?.[0]?.id || asset.id;
+                return `<div class="flex items-center justify-between border-b border-zinc-800 py-3">
+                    <span class="font-mono text-xs text-white">${asset.dj}</span>
+                    <a href="https://stream.mux.com/${playbackId}/high.mp4" target="_blank" class="text-primary underline text-xs">View</a>
+                    <span class="text-zinc-500 text-[10px]">${new Date(asset.created_at).toLocaleString()}</span>
+                </div>`;
+            }).join('');
+        }
+
+        // Render on load
+        document.addEventListener('DOMContentLoaded', renderVaultHistory);
 
         function showMuxPreview(uploadData, dj) {
             document.getElementById('preview-container').classList.remove('hidden');
