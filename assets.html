@@ -23,6 +23,44 @@
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
 
     <style>
+                /* Vertical Social Clip Container */
+                .film-strip-container {
+                    display: flex;
+                    gap: 12px;
+                    overflow-x: auto;
+                    padding-bottom: 10px;
+                    scrollbar-width: none; /* Hide scrollbar for cleaner hardware look */
+                }
+                .vertical-clip-node {
+                    flex: 0 0 80px; /* Fixed width for symmetrical strip */
+                    aspect-ratio: 9 / 16;
+                    background: #0a0a0a;
+                    border: 1px solid rgba(255,255,255,0.05);
+                    border-radius: 4px;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: flex-end;
+                    padding: 8px;
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    position: relative;
+                    overflow: hidden;
+                }
+                .vertical-clip-node:hover {
+                    border-color: var(--neon);
+                    transform: translateY(-4px);
+                    background: rgba(57, 255, 20, 0.05);
+                }
+                .clip-label {
+                    font-size: 7px;
+                    font-family: 'JetBrains Mono', monospace;
+                    font-weight: 900;
+                    color: #333;
+                    text-transform: uppercase;
+                    z-index: 10;
+                }
+                .vertical-clip-node:hover .clip-label {
+                    color: var(--neon);
+                }
         body { background-color: #050505 !important; color: white; -webkit-font-smoothing: antialiased; font-family: 'JetBrains Mono', monospace; }
         .nav-link.active { background-color: rgba(255,255,255,0.05); border: 1px solid #27272a; color: #39FF14; }
         ::-webkit-scrollbar { display: none; }
@@ -165,7 +203,64 @@
                 }
             });
             setupUploadHandler();
+            renderVaultHistory();
         });
+        function renderVaultHistory() {
+            const list = document.getElementById('cloud-list');
+            const history = JSON.parse(localStorage.getItem('vault-history') || '[]');
+            if (!history.length) {
+                list.innerHTML = '// Awaiting new session ingest';
+                return;
+            }
+            list.innerHTML = history.map(asset => {
+                const isReady = asset.status === 'ready' || true;
+                const artistName = asset.artist || asset.dj || 'ANONYMOUS';
+                return `
+                <div class="vault-grid group hover:bg-white/[0.01] transition-colors p-6 border-b border-zinc-900">
+                    <div class="space-y-6">
+                        <div>
+                            <h4 class="artist-title">${artistName}</h4>
+                            <p class="mono-label text-[7px] text-zinc-600 mt-2">ID: ${asset.id ? asset.id.substring(0,12) : ''} // 48.4 GB MASTER</p>
+                        </div>
+
+                        <div class="film-strip-container">
+                            ${[...Array(12)].map((_, i) => `
+                                <div class="vertical-clip-node group/clip cursor-pointer">
+                                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+                                    <span class="clip-label tracking-tighter">SHORT_0${i+1}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="flex gap-4">
+                            <div class="status-node py-1 px-3 border-zinc-800">
+                                <iconify-icon icon="solar:music-note-bold" class="text-zinc-600 text-[10px]"></iconify-icon>
+                                <span class="text-[7px] font-black text-zinc-500 uppercase tracking-widest">HQ_AUDIO_STEM.WAV</span>
+                            </div>
+                            <div class="status-node py-1 px-3 border-zinc-800">
+                                <iconify-icon icon="solar:gallery-bold" class="text-zinc-600 text-[10px]"></iconify-icon>
+                                <span class="text-[7px] font-black text-zinc-500 uppercase tracking-widest">6_HI_RES_THUMBS</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center">
+                        <div class="status-pill ${isReady ? 'border-primary/20' : 'border-yellow-500/20'}">
+                            <span class="relative h-1.5 w-1.5 bg-primary rounded-full"></span>
+                            <span class="text-[8px] font-black tracking-[0.2em] text-white uppercase">Archive Secured</span>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end gap-3 self-start mt-2">
+                        <button onclick="playAsset('${asset.id}', '${artistName}')" class="h-12 w-12 flex items-center justify-center bg-white text-black rounded-xl hover:bg-primary transition-all">
+                            <iconify-icon icon="solar:play-bold" class="text-xl"></iconify-icon>
+                        </button>
+                        <button class="h-12 w-12 flex items-center justify-center border border-zinc-800 rounded-xl hover:bg-zinc-900 transition-all text-zinc-600">
+                            <iconify-icon icon="solar:download-square-bold" class="text-xl"></iconify-icon>
+                        </button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
 
         function setupUploadHandler() {
             const btn = document.getElementById('upload-btn');
