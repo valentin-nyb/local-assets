@@ -238,17 +238,29 @@
                         const pct = Math.round((e.loaded / e.total) * 100);
                         btn.innerHTML = `UPLOADING TO CLOUD: ${pct}%`;
                     };
-                    xhr.onload = () => {
+                    xhr.onload = async () => {
                         btn.innerHTML = "INGEST COMPLETE // PROCESSING...";
                         btn.style.background = "#39FF14";
-                        // Save asset info to localStorage
-                        saveAssetToVault({
-                            dj,
-                            id: data.id,
-                            playback_ids: data.playback_ids,
-                            created_at: new Date().toISOString()
-                        });
-                        showMuxPreview(data, dj);
+                        // Poll for asset details from backend until playback_ids are available
+                        let asset = { id: data.id, dj, created_at: new Date().toISOString() };
+                        let tries = 0;
+                        let assetData = null;
+                        while (tries < 20) { // up to ~20s
+                            try {
+                                const res = await fetch(`/api/get-asset.js?asset_id=${data.id}`);
+                                if (res.ok) {
+                                    assetData = await res.json();
+                                    if (assetData.playback_ids && assetData.playback_ids.length) {
+                                        asset = { ...asset, playback_ids: assetData.playback_ids };
+                                        break;
+                                    }
+                                }
+                            } catch {}
+                            await new Promise(r => setTimeout(r, 1000));
+                            tries++;
+                        }
+                        saveAssetToVault(asset);
+                        showMuxPreview(asset, dj);
                         renderVaultHistory();
                     };
                     xhr.onerror = () => {
