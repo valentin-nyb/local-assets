@@ -232,7 +232,18 @@
                 } catch (e) {
                     btn.disabled = false;
                     btn.innerHTML = "UPLOAD FAILED";
-                    let msg = e && e.message ? e.message : (typeof e === 'string' ? e : JSON.stringify(e));
+                    let msg = '';
+                    if (e && typeof e === 'object') {
+                        if (e.message) {
+                            msg = e.message;
+                        } else if (e.error) {
+                            msg = e.error;
+                        } else {
+                            msg = JSON.stringify(e);
+                        }
+                    } else {
+                        msg = String(e);
+                    }
                     alert("UPLOAD ERROR: " + msg);
                 }
             };

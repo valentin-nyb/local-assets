@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   }
 
   // Optional: API key check
-  if (process.env.API_KEY && req.headers['x-api-key'] !== process.env.API_KEY) {
+  if (process.env.LOCAL_ASSETS_API_KEY && req.headers['x-api-key'] !== process.env.LOCAL_ASSETS_API_KEY) {
     res.status(401).json({ error: 'Unauthorized' });
     return;
   }
