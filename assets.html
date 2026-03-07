@@ -232,7 +232,8 @@
                 } catch (e) {
                     btn.disabled = false;
                     btn.innerHTML = "UPLOAD FAILED";
-                    alert("UPLOAD ERROR: " + (e.message || e));
+                    let msg = e && e.message ? e.message : (typeof e === 'string' ? e : JSON.stringify(e));
+                    alert("UPLOAD ERROR: " + msg);
                 }
             };
         }
