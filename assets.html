@@ -72,7 +72,7 @@
 
     <main class="flex-1 flex flex-col overflow-hidden bg-background">
         <header class="h-16 flex items-center px-8 border-b border-zinc-800 shrink-0 justify-between">
-            <span class="text-primary font-mono text-[9px] uppercase tracking-[0.4em]">Infrastructure Tier // MUX Pure Pipeline</span>
+            <span class="text-primary font-mono text-[9px] uppercase tracking-[0.4em]">Infrastructure Tier // local / assets™</span>
             <div class="flex items-center gap-2">
                 <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
                 <span class="text-[8px] font-mono text-zinc-500 uppercase">Live Connection Active</span>
@@ -311,9 +311,13 @@
             }
             list.innerHTML = vault.map(asset => {
                 const playbackId = asset.playback_ids?.[0]?.id || asset.id;
+                const isReady = asset.playback_ids && asset.playback_ids.length;
+                const status = isReady ? 'Ready' : 'Processing';
+                const color = isReady ? '#39FF14' : '#EAB308';
                 return `<div class="flex items-center justify-between border-b border-zinc-800 py-3">
                     <span class="font-mono text-xs text-white">${asset.dj}</span>
-                    <a href="https://stream.mux.com/${playbackId}/high.mp4" target="_blank" class="text-primary underline text-xs">View</a>
+                    <span class="font-mono text-xs" style="color:${color}">${status}</span>
+                    <a href="https://stream.mux.com/${playbackId}/high.mp4" target="_blank" class="text-primary underline text-xs ${isReady ? '' : 'pointer-events-none opacity-50'}">View</a>
                     <span class="text-zinc-500 text-[10px]">${new Date(asset.created_at).toLocaleString()}</span>
                 </div>`;
             }).join('');
@@ -323,23 +327,41 @@
         document.addEventListener('DOMContentLoaded', renderVaultHistory);
 
         function showMuxPreview(uploadData, dj) {
-            document.getElementById('preview-container').classList.remove('hidden');
-            document.getElementById('vault-dj-title').innerText = dj.toUpperCase();
+            const container = document.getElementById('preview-container');
             const display = document.getElementById('active-asset-display');
-            // Mux returns the playback_id inside the 'playback_ids' array of the asset
-            // We need to wait for the asset to be created to get this ID.
             const playbackId = uploadData.playback_ids?.[0]?.id || uploadData.id;
+            container.classList.remove('hidden');
+            document.getElementById('vault-dj-title').innerText = dj.toUpperCase();
+            // 1. Show a sleek 'Transcoding' state instead of a broken player
             display.innerHTML = `
-                <div class="space-y-6">
-                    <mux-player
-                        playback-id="${playbackId}"
-                        metadata-video-title="${dj}"
-                        class="w-full aspect-video shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
-                        primary-color="#39FF14"
-                        autoplay
-                    ></mux-player>
-                </div>`;
-            display.scrollIntoView({ behavior: 'smooth' });
+                <div class="w-full aspect-video bg-zinc-900 rounded-[32px] flex flex-col items-center justify-center border border-white/5 animate-pulse">
+                    <iconify-icon icon="solar:cloud-upload-bold" class="text-4xl text-primary mb-4"></iconify-icon>
+                    <p class="text-[9px] font-mono text-zinc-400 uppercase tracking-[0.5em]">Transcoding 4K Master...</p>
+                    <p class="text-[7px] font-mono text-zinc-600 uppercase mt-2">Mux is establishing global playback links</p>
+                </div>
+            `;
+            // 2. Buffer the player mount by 5 seconds to avoid the 'Network Error'
+            setTimeout(() => {
+                display.innerHTML = `
+                    <div class="space-y-6 animate-in fade-in duration-700">
+                        <mux-player
+                            playback-id="${playbackId}"
+                            metadata-video-title="${dj}"
+                            class="w-full aspect-video shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/5"
+                            primary-color="#39FF14"
+                            autoplay
+                        ></mux-player>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <a href="https://stream.mux.com/${playbackId}/high.mp4?download=${dj}_Master.mp4" 
+                               class="bg-white text-black p-5 rounded-2xl text-center font-black text-[10px] uppercase tracking-widest hover:scale-[1.02] transition-all">
+                               Download 4K Master (.MP4)
+                            </a>
+                            <button onclick="location.reload()" class="border border-white/10 text-white p-5 rounded-2xl text-center font-black text-[10px] uppercase tracking-widest">
+                               New Session Ingest
+                            </button>
+                        </div>
+                    </div>`;
+            }, 5000);
         }
     </script>
 </body>
