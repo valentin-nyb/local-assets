@@ -43,6 +43,22 @@
             margin-bottom: 2rem;
             color: white;
         }
+        #active-asset-display {
+            min-height: 400px;
+            background: #000;
+            border-radius: 40px;
+            position: relative;
+            overflow: hidden;
+        }
+        mux-player::part(error-display) {
+            display: none !important;
+        }
+        .ingest-progress-bar {
+            height: 2px;
+            background: #39FF14;
+            box-shadow: 0 0 10px #39FF14;
+            transition: width 0.4s ease;
+        }
         .upload-card-active { border-color: #39FF14 !important; background: rgba(57,255,20,0.05) !important; }
         mux-player {
             --primary-color: #39FF14;
@@ -129,8 +145,8 @@
 
                 <div class="space-y-4 pt-12">
                     <h3 class="text-[10px] font-mono text-zinc-600 uppercase tracking-[0.3em] border-b border-zinc-800 pb-2">Vault History</h3>
-                    <div id="cloud-list" class="text-zinc-500 text-[9px] font-mono uppercase tracking-widest p-10 border border-zinc-900 rounded-3xl text-center">
-                        // Awaiting new session ingest
+                    <div id="cloud-list" class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+                        <!-- Vault cards will be rendered here -->
                     </div>
                 </div>
             </div>
@@ -306,19 +322,38 @@
             } catch {}
             const list = document.getElementById('cloud-list');
             if (!vault.length) {
-                list.innerHTML = '// Awaiting new session ingest';
+                list.innerHTML = '<div class="text-zinc-500 text-[9px] font-mono uppercase tracking-widest p-10 border border-zinc-900 rounded-3xl text-center">// Awaiting new session ingest</div>';
                 return;
             }
+            list.className = "grid grid-cols-1 md:grid-cols-2 gap-4 mt-8";
             list.innerHTML = vault.map(asset => {
-                const playbackId = asset.playback_ids?.[0]?.id || asset.id;
                 const isReady = asset.playback_ids && asset.playback_ids.length;
-                const status = isReady ? 'Ready' : 'Processing';
-                const color = isReady ? '#39FF14' : '#EAB308';
-                return `<div class="flex items-center justify-between border-b border-zinc-800 py-3">
-                    <span class="font-mono text-xs text-white">${asset.dj}</span>
-                    <span class="font-mono text-xs" style="color:${color}">${status}</span>
-                    <a href="https://stream.mux.com/${playbackId}/high.mp4" target="_blank" class="text-primary underline text-xs ${isReady ? '' : 'pointer-events-none opacity-50'}">View</a>
-                    <span class="text-zinc-500 text-[10px]">${new Date(asset.created_at).toLocaleString()}</span>
+                const playbackId = asset.playback_ids?.[0]?.id || asset.id;
+                const date = asset.created_at ? new Date(asset.created_at).toLocaleDateString() : '';
+                return `
+                <div class="group relative p-6 bg-[#0a0a0a] border border-zinc-800 rounded-[24px] hover:border-primary/40 transition-all duration-500 overflow-hidden">
+                    <div class="flex flex-col gap-6">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h4 class="text-xl font-black italic tracking-tighter text-white uppercase italic leading-none">${asset.dj || asset.artist || ''}</h4>
+                                <p class="text-[8px] font-mono text-zinc-500 uppercase tracking-[0.3em] mt-2">${date} // 4K MASTER</p>
+                            </div>
+                            <div class="px-3 py-1 rounded-full border ${isReady ? 'border-primary/20 bg-primary/5' : 'border-yellow-500/20 bg-yellow-500/5'}">
+                                <span class="text-[7px] font-black uppercase tracking-widest ${isReady ? 'text-primary' : 'text-yellow-500 animate-pulse'}">
+                                    ${isReady ? 'READY' : 'TRANSCODING'}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            ${isReady 
+                                ? `<button onclick="showMuxPreview('${playbackId}', '${asset.dj || asset.artist || ''}')" class="flex-1 bg-white text-black py-4 rounded-xl text-[9px] font-black uppercase tracking-widest hover:scale-[1.02] transition-transform">VIEW ASSET</button>`
+                                : `<div class="flex-1 bg-zinc-900 text-zinc-600 py-4 rounded-xl text-[9px] font-black uppercase tracking-widest text-center cursor-wait italic border border-white/5">PROCESSING...</div>`
+                            }
+                            <button class="px-5 bg-zinc-900 border border-white/5 rounded-xl hover:bg-zinc-800 transition-colors">
+                                <iconify-icon icon="solar:download-bold" class="text-zinc-400 text-sm"></iconify-icon>
+                            </button>
+                        </div>
+                    </div>
                 </div>`;
             }).join('');
         }
