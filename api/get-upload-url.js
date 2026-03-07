@@ -19,16 +19,24 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Accept custom payload from frontend
+    let muxPayload = {
+      new_asset_settings: { playback_policy: ['public'], mp4_support: 'standard' },
+      cors_origin: '*',
+      webhook_url: 'https://local-assets.com'
+    };
+    if (req.body && typeof req.body === 'object') {
+      muxPayload = { ...muxPayload, ...req.body };
+      // Ensure webhook_url is always set
+      muxPayload.webhook_url = 'https://local-assets.com';
+    }
     const muxRes = await fetch('https://api.mux.com/video/v1/uploads', {
       method: 'POST',
       headers: {
         'Authorization': 'Basic ' + Buffer.from(muxTokenId + ':' + muxTokenSecret).toString('base64'),
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        new_asset_settings: { playback_policy: ['public'], mp4_support: 'standard' },
-        cors_origin: '*'
-      })
+      body: JSON.stringify(muxPayload)
     });
     let data = null;
     let error = null;

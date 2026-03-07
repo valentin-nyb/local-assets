@@ -193,10 +193,29 @@
                 btn.innerHTML = `<span class="animate-pulse">REQUESTING MUX UPLOAD URL...</span>`;
 
                 try {
-                    // 1. Get Direct Upload URL from Vercel API
+                    // 1. Get Direct Upload URL from Vercel API with metadata
+                    const payload = {
+                        new_asset_settings: {
+                            playback_policy: ['public'],
+                            mp4_support: 'standard',
+                            max_resolution_tier: '2160p',
+                            video_quality: 'premium',
+                            ...((inputs.video.files[0] && { input: 'video' }) || {})
+                        },
+                        meta: {
+                            title: dj,
+                            external_id: 'set-' + Date.now(),
+                            creator_id: 'venue-masters'
+                        },
+                        cors_origin: '*'
+                    };
                     const res = await fetch(CONFIG.WORKER_URL, {
                         method: 'POST',
-                        headers: { 'x-api-key': CONFIG.API_KEY }
+                        headers: {
+                            'x-api-key': CONFIG.API_KEY,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(payload)
                     });
                     let data;
                     if (!res.ok) {
