@@ -198,7 +198,20 @@
                         method: 'POST',
                         headers: { 'x-api-key': CONFIG.API_KEY }
                     });
-                    const data = await res.json();
+                    let data;
+                    if (!res.ok) {
+                        let errMsg = 'Failed to get upload URL.';
+                        try {
+                            const err = await res.json();
+                            errMsg = err.error || errMsg;
+                        } catch {}
+                        throw new Error(errMsg);
+                    } else {
+                        data = await res.json();
+                    }
+                    if (!data || !data.url || !data.id) {
+                        throw new Error('Invalid upload URL response.');
+                    }
                     // 2. High-speed Direct Upload to Mux
                     const xhr = new XMLHttpRequest();
                     xhr.open('PUT', data.url);
@@ -219,7 +232,7 @@
                 } catch (e) {
                     btn.disabled = false;
                     btn.innerHTML = "UPLOAD FAILED";
-                    alert(e.message);
+                    alert("UPLOAD ERROR: " + (e.message || e));
                 }
             };
         }

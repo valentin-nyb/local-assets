@@ -30,9 +30,19 @@ export default async function handler(req, res) {
         cors_origin: '*'
       })
     });
-    const data = await muxRes.json();
+    let data = null;
+    let error = null;
+    try {
+      data = await muxRes.json();
+    } catch (jsonErr) {
+      error = 'Invalid JSON from Mux API';
+    }
+    if (!muxRes.ok || error || !data || !data.data) {
+      res.status(muxRes.status || 500).json({ error: error || (data && data.error) || 'Failed to get upload URL from Mux' });
+      return;
+    }
     res.status(200).json(data.data);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    res.status(500).json({ error: e.message || 'Unknown error' });
   }
 }
