@@ -128,20 +128,21 @@
     </main>
 
     <script>
+        // Update: Use Vercel API as secure middleman for Mux
         const CONFIG = {
-            MUX_UPLOAD_URL: "https://api.mux.com/video/v1/uploads",
-            MUX_LIVE_URL: "https://api.mux.com/video/v1/live-streams",
+            WORKER_URL: "/api/get-upload-url", // Vercel API route
             API_KEY: "1mmm9dZ1MIl5xkiqlal_gBF5IqpNy_3M2WjQOiNU"
         };
 
-        // Initialize Flatpickr correctly
+        // Robust Flatpickr initialization for date input
         document.addEventListener('DOMContentLoaded', () => {
+            const dateInput = document.getElementById('ingest-date');
+            if (dateInput) dateInput.removeAttribute('disabled');
             flatpickr("#ingest-date", {
                 defaultDate: "today",
                 dateFormat: "d M Y",
                 theme: "dark",
-                static: true,
-                allowInput: true,
+                allowInput: false, // best UX
                 onReady: function(selectedDates, dateStr, instance) {
                     const el = document.getElementById('ingest-date');
                     el.dataset.iso = instance.formatDate(selectedDates[0] || new Date(), 'Y-m-d');
@@ -182,17 +183,10 @@
                 btn.innerHTML = `<span class="animate-pulse">REQUESTING MUX UPLOAD URL...</span>`;
 
                 try {
-                    // 1. Get Direct Upload URL from Mux
-                    const res = await fetch(CONFIG.MUX_UPLOAD_URL, {
+                    // 1. Get Direct Upload URL from Vercel API
+                    const res = await fetch(CONFIG.WORKER_URL, {
                         method: 'POST',
-                        headers: {
-                            'Authorization': 'Basic ' + btoa(CONFIG.API_KEY + ':YOUR_MUX_TOKEN_SECRET'),
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            new_asset_settings: { playback_policy: ["public"], mp4_support: "standard" },
-                            cors_origin: "*"
-                        })
+                        headers: { 'x-api-key': CONFIG.API_KEY }
                     });
                     const data = await res.json();
                     // 2. High-speed Direct Upload to Mux
