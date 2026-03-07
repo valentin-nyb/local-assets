@@ -184,24 +184,38 @@
             API_KEY: "1mmm9dZ1MIl5xkiqlal_gBF5IqpNy_3M2WjQOiNU"
         };
 
-        // Robust Flatpickr initialization for date input
         document.addEventListener('DOMContentLoaded', () => {
+            // Flatpickr initialization for date input
             const dateInput = document.getElementById('ingest-date');
             if (dateInput) dateInput.removeAttribute('disabled');
-            flatpickr("#ingest-date", {
+            flatpickr(dateInput, {
                 defaultDate: "today",
                 dateFormat: "d M Y",
                 theme: "dark",
-                allowInput: false, // best UX
+                allowInput: false,
                 onReady: function(selectedDates, dateStr, instance) {
-                    const el = document.getElementById('ingest-date');
-                    el.dataset.iso = instance.formatDate(selectedDates[0] || new Date(), 'Y-m-d');
+                    dateInput.dataset.iso = instance.formatDate(selectedDates[0] || new Date(), 'Y-m-d');
                 },
                 onChange: function(selectedDates, dateStr, instance) {
-                    const el = document.getElementById('ingest-date');
-                    el.dataset.iso = instance.formatDate(selectedDates[0] || new Date(), 'Y-m-d');
+                    dateInput.dataset.iso = instance.formatDate(selectedDates[0] || new Date(), 'Y-m-d');
                 }
             });
+
+            // File input highlight logic
+            ['video', 'audio', 'marketing'].forEach(key => {
+                const input = document.getElementById('file-' + key);
+                const card = document.getElementById('card-' + key);
+                if (input && card) {
+                    input.addEventListener('change', () => {
+                        if (input.files.length > 0) {
+                            card.classList.add('upload-card-active');
+                        } else {
+                            card.classList.remove('upload-card-active');
+                        }
+                    });
+                }
+            });
+
             setupUploadHandler();
             renderVaultHistory();
         });
@@ -254,30 +268,6 @@
                         <button onclick="previewAsset('${asset.id}', '${artistName}')" class="h-12 w-12 flex items-center justify-center bg-white text-black hover:bg-primary transition-all rounded-xl">
                             <iconify-icon icon="solar:play-bold" class="text-xl"></iconify-icon>
                         </button>
-
-                                // Preview asset by fetching playback_id if not present
-                                async function previewAsset(assetId, artistName) {
-                                    // Try to find asset in localStorage with playback_ids
-                                    const history = JSON.parse(localStorage.getItem('vault-history') || '[]');
-                                    const asset = history.find(a => a.id === assetId);
-                                    if (asset && asset.playback_ids && asset.playback_ids.length > 0) {
-                                        showMuxPreview(asset, artistName);
-                                        return;
-                                    }
-                                    // Otherwise, fetch from backend
-                                    try {
-                                        const res = await fetch(`/api/get-asset?asset_id=${assetId}`);
-                                        if (!res.ok) throw new Error('Failed to fetch asset details');
-                                        const data = await res.json();
-                                        if (data && data.playback_ids && data.playback_ids.length > 0) {
-                                            showMuxPreview(data, artistName);
-                                        } else {
-                                            alert('No playback ID found for this asset.');
-                                        }
-                                    } catch (e) {
-                                        alert('Error loading asset: ' + (e.message || e));
-                                    }
-                                }
                         <button class="h-12 w-12 flex items-center justify-center border border-zinc-800 rounded-xl hover:bg-zinc-900 transition-all text-zinc-600">
                             <iconify-icon icon="solar:download-square-bold" class="text-xl"></iconify-icon>
                         </button>
