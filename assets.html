@@ -268,12 +268,13 @@
             };
         }
 
-        function showMuxPreview(playbackId, dj) {
+        function showMuxPreview(uploadData, dj) {
             document.getElementById('preview-container').classList.remove('hidden');
             document.getElementById('vault-dj-title').innerText = dj.toUpperCase();
             const display = document.getElementById('active-asset-display');
-            
-            // Render Mux Player
+            // Mux returns the playback_id inside the 'playback_ids' array of the asset
+            // We need to wait for the asset to be created to get this ID.
+            const playbackId = uploadData.playback_ids?.[0]?.id || uploadData.id;
             display.innerHTML = `
                 <div class="space-y-6">
                     <mux-player
@@ -283,16 +284,6 @@
                         primary-color="#39FF14"
                         autoplay
                     ></mux-player>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <a href="https://stream.mux.com/${playbackId}/high.mp4?download=${dj}_Master.mp4" 
-                           class="bg-white text-black p-5 rounded-2xl text-center font-black text-[10px] uppercase tracking-widest hover:scale-[1.02] transition-all">
-                           Download 4K Master (.MP4)
-                        </a>
-                        <a href="https://stream.mux.com/${playbackId}/low.mp4?download=${dj}_Preview.mp4" 
-                           class="border border-white/10 text-white p-5 rounded-2xl text-center font-black text-[10px] uppercase tracking-widest hover:bg-white/5 transition-all">
-                           Download Mobile Proxy
-                        </a>
-                    </div>
                 </div>`;
             display.scrollIntoView({ behavior: 'smooth' });
         }
