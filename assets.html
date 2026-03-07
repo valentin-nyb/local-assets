@@ -254,6 +254,9 @@
                         <button onclick="showMuxPreview('${asset.id}', '${artistName}')" class="h-12 w-12 flex items-center justify-center bg-white text-black hover:bg-primary transition-all rounded-xl">
                             <iconify-icon icon="solar:play-bold" class="text-xl"></iconify-icon>
                         </button>
+                        <button onclick="showMuxPreview({ playback_ids: [{ id: 'rR8P8mSaKDzz02TsftugTUdI00cQPJX00oy' }] }, 'Test Asset')" class="h-12 w-12 flex items-center justify-center bg-primary text-black hover:bg-white transition-all rounded-xl" title="Preview Test Mux Asset">
+                            <iconify-icon icon="solar:play-bold" class="text-xl"></iconify-icon>
+                        </button>
                         <button class="h-12 w-12 flex items-center justify-center border border-zinc-800 rounded-xl hover:bg-zinc-900 transition-all text-zinc-600">
                             <iconify-icon icon="solar:download-square-bold" class="text-xl"></iconify-icon>
                         </button>
@@ -318,12 +321,21 @@
                     if (!res.ok) {
                         let errMsg = 'Failed to get upload URL.';
                         try {
-                            const err = await res.json();
-                            errMsg = err.error || errMsg;
+                            const text = await res.text();
+                            try {
+                                const err = JSON.parse(text);
+                                errMsg = err.error || errMsg;
+                            } catch {
+                                errMsg = text || errMsg;
+                            }
                         } catch {}
                         throw new Error(errMsg);
                     } else {
-                        data = await res.json();
+                        try {
+                            data = await res.json();
+                        } catch {
+                            throw new Error('Invalid JSON in upload URL response.');
+                        }
                     }
                     if (!data || !data.url || !data.id) {
                         throw new Error('Invalid upload URL response.');
