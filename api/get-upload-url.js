@@ -1,56 +1,31 @@
-// Vercel Serverless Function: /api/get-upload-url
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Method not allowed' });
-    return;
-  }
-
-  // Optional: API key check
-  if (process.env.LOCAL_ASSETS_API_KEY && req.headers['x-api-key'] !== process.env.LOCAL_ASSETS_API_KEY) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return;
-  }
-
-  const muxTokenId = process.env.MUX_TOKEN_ID;
-  const muxTokenSecret = process.env.MUX_TOKEN_SECRET;
-  if (!muxTokenId || !muxTokenSecret) {
-    res.status(500).json({ error: 'Mux credentials not set' });
-    return;
+  // CORS & Security
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  if (req.headers['x-api-key'] !== process.env.LOCAL_ASSETS_API_KEY) {
+    return res.status(401).json({ error: 'Unauthorized Infrastructure' }); // Fixed the 401
   }
 
   try {
-    // Accept custom payload from frontend
-    let muxPayload = {
-      new_asset_settings: { playback_policy: ['public'], mp4_support: 'standard' },
-      cors_origin: '*',
-      webhook_url: 'https://local-assets.com'
-    };
-    if (req.body && typeof req.body === 'object') {
-      muxPayload = { ...muxPayload, ...req.body };
-      // Ensure webhook_url is always set
-      muxPayload.webhook_url = 'https://local-assets.com';
-    }
-    const muxRes = await fetch('https://api.mux.com/video/v1/uploads', {
+    const response = await fetch('https://api.mux.com/video/v1/uploads', {
       method: 'POST',
       headers: {
-        'Authorization': 'Basic ' + Buffer.from(muxTokenId + ':' + muxTokenSecret).toString('base64'),
+        'Authorization': `Basic ${Buffer.from(`${process.env.MUX_TOKEN_ID}:${process.env.MUX_TOKEN_SECRET}`).toString('base64')}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(muxPayload)
+      body: JSON.stringify({
+        new_asset_settings: { 
+          playback_policy: ['public'],
+          mp4_support: 'standard', // For HQ Audio/Master
+          video_quality: 'premium', 
+          generated_subtitles: [{ name: "English", language_code: "en" }] // Bonus: For Social
+        },
+        cors_origin: '*' 
+      }),
     });
-    let data = null;
-    let error = null;
-    try {
-      data = await muxRes.json();
-    } catch (jsonErr) {
-      error = 'Invalid JSON from Mux API';
-    }
-    if (!muxRes.ok || error || !data || !data.data) {
-      res.status(muxRes.status || 500).json({ error: error || (data && data.error) || 'Failed to get upload URL from Mux' });
-      return;
-    }
-    res.status(200).json(data.data);
-  } catch (e) {
-    res.status(500).json({ error: e.message || 'Unknown error' });
+
+    const data = await response.json();
+    return res.status(200).json(data.data);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
   }
 }
