@@ -23,7 +23,18 @@ export default async function handler(req, res) {
       }),
     });
 
-    const data = await response.json();
+    let data = null;
+    let text = null;
+    try {
+      text = await response.text();
+      data = JSON.parse(text);
+    } catch (err) {
+      // If not valid JSON, return raw text as error
+      return res.status(500).json({ error: 'Mux API returned invalid JSON', raw: text });
+    }
+    if (!response.ok || !data || !data.data) {
+      return res.status(response.status || 500).json({ error: (data && data.error) || 'Failed to get upload URL from Mux', raw: data });
+    }
     return res.status(200).json(data.data);
   } catch (error) {
     return res.status(500).json({ error: error.message });

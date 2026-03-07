@@ -254,6 +254,7 @@
                         <button onclick="previewAsset('${asset.id}', '${artistName}')" class="h-12 w-12 flex items-center justify-center bg-white text-black hover:bg-primary transition-all rounded-xl">
                             <iconify-icon icon="solar:play-bold" class="text-xl"></iconify-icon>
                         </button>
+
                                 // Preview asset by fetching playback_id if not present
                                 async function previewAsset(assetId, artistName) {
                                     // Try to find asset in localStorage with playback_ids
@@ -368,9 +369,22 @@
                         btn.innerHTML = `UPLOADING TO CLOUD: ${pct}%`;
                     };
                     xhr.onload = () => {
-                        btn.innerHTML = "INGEST COMPLETE // PROCESSING...";
+                        btn.innerHTML = "INGEST COMPLETE // ARCHIVING MASTER";
                         btn.style.background = "#39FF14";
+                        const asset = {
+                            id: data.id, // This is the Upload ID
+                            artist: dj,
+                            date: document.getElementById('ingest-date').value,
+                            status: 'processing', // Will flip to 'ready' via your new webhook
+                            created_at: new Date().toISOString()
+                        };
+                        // Save to your Vault Archive
+                        let v = JSON.parse(localStorage.getItem('vault-history') || '[]');
+                        v.unshift(asset);
+                        localStorage.setItem('vault-history', JSON.stringify(v));
+                        // Launch the Playback Preview (Fixed the reference error)
                         showMuxPreview(data.id, dj);
+                        renderVaultHistory();
                     };
                     xhr.onerror = () => {
                         btn.disabled = false;
