@@ -1,3 +1,46 @@
+            <style>
+            :root { 
+                --venue-padding: 40px; 
+                --accent-neon: #39FF14; 
+            }
+
+            /* Enforced Hardware-Grade Symmetry */
+            .vault-console {
+                margin-top: 60px;
+                padding: 0 var(--venue-padding);
+            }
+
+            .vault-row { 
+                display: grid; 
+                grid-template-columns: 1fr 240px 140px; /* Rigid Alignment */
+                align-items: center; 
+                padding: 32px 0; 
+                border-bottom: 1px solid rgba(255,255,255,0.05); 
+                transition: all 0.2s ease;
+            }
+
+            .vault-row:hover { 
+                background: rgba(255,255,255,0.02); 
+            }
+
+            .mono-tag { 
+                font-family: 'JetBrains Mono', monospace; 
+                font-size: 9px; 
+                text-transform: uppercase; 
+                letter-spacing: 0.3em; 
+                color: #52525b; 
+            }
+
+            .artist-label {
+                font-size: 24px;
+                font-weight: 900;
+                font-style: italic;
+                letter-spacing: -0.05em;
+                text-transform: uppercase;
+                color: #fff;
+                line-height: 1;
+            }
+            </style>
         :root {
             --venue-padding: 40px; /* Enforced Symmetrical Padding */
             --accent-neon: #39FF14;
@@ -378,53 +421,52 @@
                 list.innerHTML = '<div class="text-zinc-500 text-[9px] font-mono uppercase tracking-widest p-10 border border-zinc-900 rounded-3xl text-center">// Awaiting new session ingest</div>';
                 return;
             }
-            // Resetting for perfect symmetry
-            list.className = "mt-12 border-t border-zinc-800/50";
-            list.innerHTML = `
-                <div class="vault-row opacity-30">
-                    <span class="mono-tag">Asset Identity / Artist</span>
-                    <span class="mono-tag text-center">Infrastructure Status</span>
-                    <span class="mono-tag text-right">Control</span>
-                </div>
-                ${vault.map(asset => {
-                    const isReady = asset.playback_ids && asset.playback_ids.length;
-                    const playbackId = asset.playback_ids?.[0]?.id || asset.id;
-                    const date = asset.created_at ? new Date(asset.created_at).toLocaleDateString() : '';
-                    return `
-                    <div class=\"vault-row\">
-                        <div class=\"flex flex-col gap-1\">
-                            <h4 class=\"text-xl font-black italic tracking-tighter text-white uppercase leading-none\">
-                                ${asset.dj || asset.artist || ''}
-                            </h4>
-                            <div class=\"flex items-center gap-3\">
-                                <span class=\"mono-tag text-[7px]\">${date}</span>
-                                <span class=\"w-1 h-1 rounded-full bg-zinc-800\"></span>
-                                <span class=\"mono-tag text-[7px] text-zinc-600\">ID: ${playbackId ? playbackId.substring(0,8) : 'PENDING'}...</span>
-                            </div>
+            // Header for the Tactical Console
+            const header = `
+                <div class=\"vault-row opacity-20 border-b-2 border-zinc-800 mb-4\">
+                    <span class=\"mono-tag\">Master Identity</span>
+                    <span class=\"mono-tag text-center\">Cloud Status</span>
+                    <span class=\"mono-tag text-right\">Command</span>
+                </div>`;
+
+            list.innerHTML = header + vault.map(asset => {
+                const isReady = asset.playback_ids && asset.playback_ids.length;
+                const playbackId = asset.playback_ids?.[0]?.id || asset.id;
+                const date = asset.created_at ? new Date(asset.created_at).toLocaleDateString() : '';
+                return `
+                <div class=\"vault-row group\">
+                    <div class=\"flex flex-col gap-2\">
+                        <h4 class=\"artist-label\">${asset.dj || asset.artist || ''}</h4>
+                        <div class=\"flex items-center gap-4\">
+                            <span class=\"mono-tag text-[7px] text-zinc-500\">${date}</span>
+                            <span class=\"w-1 h-1 rounded-full bg-zinc-800\"></span>
+                            <span class=\"mono-tag text-[7px] text-zinc-700\">4K MASTER ARCHIVE</span>
                         </div>
-                        <div class=\"flex flex-col items-center gap-2\">
-                            <div class=\"flex items-center gap-2 px-3 py-1 rounded-full border ${isReady ? 'border-primary/20 bg-primary/5' : 'border-yellow-500/20 bg-yellow-500/5'}\">
-                                <span class=\"relative flex h-1.5 w-1.5\">
-                                    <span class=\"animate-ping absolute h-full w-full rounded-full ${isReady ? 'bg-primary' : 'bg-yellow-500'} opacity-40\"></span>
-                                    <span class=\"relative rounded-full h-1.5 w-1.5 ${isReady ? 'bg-primary' : 'bg-yellow-500'}\"></span>
-                                </span>
-                                <span class=\"text-[8px] font-black uppercase tracking-widest ${isReady ? 'text-primary' : 'text-yellow-500'}\">
-                                    ${isReady ? 'MASTER READY' : 'TRANSCODING'}
-                                </span>
-                            </div>
+                    </div>
+
+                    <div class=\"flex flex-col items-center\">
+                        <div class=\"flex items-center gap-3 px-4 py-2 rounded-sm border ${isReady ? 'border-primary/20 bg-primary/5' : 'border-yellow-500/20 bg-yellow-500/5'}\">
+                            <span class=\"relative flex h-2 w-2\">
+                                <span class=\"animate-ping absolute h-full w-full rounded-full ${isReady ? 'bg-primary' : 'bg-yellow-500'} opacity-30\"></span>
+                                <span class=\"relative rounded-full h-2 w-2 ${isReady ? 'bg-primary' : 'bg-yellow-500'}\"></span>
+                            </span>
+                            <span class=\"text-[9px] font-black uppercase tracking-widest ${isReady ? 'text-primary' : 'text-yellow-500'}\">
+                                ${isReady ? 'READY' : 'TRANSCODING'}
+                            </span>
                         </div>
-                        <div class=\"flex justify-end gap-2\">
-                            ${isReady 
-                                ? `<button onclick=\"showMuxPreview('${playbackId}', '${asset.dj || asset.artist || ''}')\" class=\"p-3 bg-white text-black rounded hover:bg-primary transition-colors\">\n                                    <iconify-icon icon=\"solar:play-bold\" class=\"text-sm\"></iconify-icon>\n                                   </button>`
-                                : `<div class=\"p-3 bg-zinc-900 border border-zinc-800 text-zinc-700 rounded cursor-wait\">\n                                    <iconify-icon icon=\"solar:clock-circle-bold\" class=\"text-sm animate-spin\"></iconify-icon>\n                                   </div>`
-                            }
-                            <button class=\"p-3 border border-zinc-800 rounded hover:bg-zinc-900 transition-colors group\">
-                                <iconify-icon icon=\"solar:download-bold\" class=\"text-zinc-500 group-hover:text-white\"></iconify-icon>
-                            </button>
-                        </div>
-                    </div>`;
-                }).join('')}
-            `;
+                    </div>
+
+                    <div class=\"flex justify-end gap-3\">
+                        ${isReady 
+                            ? `<button onclick=\"showMuxPreview('${playbackId}', '${asset.dj || asset.artist || ''}')\" \n                                  class=\"h-12 w-12 flex items-center justify-center bg-white text-black hover:bg-primary transition-all\">\n                                  <iconify-icon icon=\"solar:play-bold\" class=\"text-lg\"></iconify-icon>\n                               </button>`
+                            : `<div class=\"h-12 w-12 flex items-center justify-center bg-zinc-900 border border-zinc-800 text-zinc-700\">\n                                  <iconify-icon icon=\"solar:clock-circle-bold\" class=\"text-lg animate-spin\"></iconify-icon>\n                               </div>`
+                        }
+                        <button class=\"h-12 w-12 flex items-center justify-center border border-zinc-800 hover:bg-zinc-900 hover:text-white transition-all text-zinc-600\">
+                            <iconify-icon icon=\"solar:download-square-bold\" class=\"text-lg\"></iconify-icon>
+                        </button>
+                    </div>
+                </div>`;
+            }).join('');
         }
 
         // Render on load
