@@ -3,70 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="local / assets">
-    <title>local / assets™</title>
-    <link rel="icon" type="image/x-icon" href="favicon/favicon.ico">
-    <link rel="icon" type="image/svg+xml" href="favicon/favicon.svg">
-    <link rel="apple-touch-icon" href="favicon/apple-touch-icon.png">
-    <link rel="manifest" href="favicon/site.webmanifest">
+    <title>local / assets™ // MUX EDITION</title>
+    
     <link rel="stylesheet" href="styles/tailwind.css">
-    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+    
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
-    <script>
-        let datePicker = null;
 
-        function initDatePicker() {
-            var el = document.getElementById('ingest-date');
-            if (!el) return false;
-            if (typeof flatpickr !== 'function') return false;
-            datePicker = flatpickr(el, {
-                defaultDate: new Date(),
-                dateFormat: 'd M Y',
-                theme: 'dark',
-                disableMobile: true,
-                allowInput: false,
-                appendTo: document.body,
-                clickOpens: true,
-                onReady: function(selectedDates, dateStr, instance) {
-                    const date = selectedDates?.[0] || instance.latestSelectedDateObj || new Date();
-                    el.dataset.iso = instance.formatDate(date, 'Y-m-d');
-                    if (!el.value) {
-                        el.value = instance.formatDate(date, instance.config.dateFormat);
-                    }
-                },
-                onChange: function(selectedDates, dateStr, instance) {
-                    const date = selectedDates?.[0];
-                    if (date) {
-                        el.dataset.iso = instance.formatDate(date, 'Y-m-d');
-                    }
-                }
-            });
-            console.log('flatpickr initialized OK');
-            return true;
-        }
-    </script>
     <style>
-        body { background-color: #050505 !important; color: white; -webkit-font-smoothing: antialiased; }
-        .nav-link.active { background-color: rgba(255,255,255,0.05); border: 1px solid #27272a; color: white; }
+        body { background-color: #050505 !important; color: white; -webkit-font-smoothing: antialiased; font-family: 'JetBrains Mono', monospace; }
+        .nav-link.active { background-color: rgba(255,255,255,0.05); border: 1px solid #27272a; color: #39FF14; }
         ::-webkit-scrollbar { display: none; }
-        @media (max-width: 767px) { #sidebar { position: fixed; z-index: 50; height: 100vh; } }
-        .flatpickr-calendar { z-index: 9999 !important; }
         
-        /* Sleek Slim Flap */
-        .sleek-flap {
-            writing-mode: vertical-rl;
-            text-orientation: mixed;
-            transform: rotate(180deg);
-            font-family: 'JetBrains Mono', monospace;
-            letter-spacing: 0.3em;
-            font-size: 10px;
-            font-weight: 800;
+        /* Fixed Flatpickr visibility */
+        .flatpickr-calendar { 
+            z-index: 99999 !important; 
+            background: #0a0a0a !important; 
+            border: 1px solid #27272a !important;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
         .artist-hero-title {
@@ -76,665 +33,220 @@
             line-height: 0.75;
             letter-spacing: -0.08em;
             text-transform: uppercase;
+            margin-bottom: 2rem;
             color: white;
-            margin-bottom: 2rem;
-            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-            white-space: nowrap;
         }
 
-        .preview-header {
-            display: grid;
-            grid-template-columns: 1fr auto;
-            align-items: end;
-            gap: 2rem;
-            border-bottom: 1px solid #18181b;
-            padding-bottom: 2.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .btn-close-session {
-            height: fit-content;
-            padding: 0.75rem 1.5rem;
-            border: 1px solid #ffffff;
-            border-radius: 0.75rem;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 9px;
-            color: #ffffff;
-            text-transform: uppercase;
-            letter-spacing: 0.2em;
-            transition: all 0.2s ease;
-            background: rgba(255,255,255,0.04);
-        }
-
-        .btn-close-session:hover {
-            color: #ffffff;
-            border-color: #ffffff;
-            background: rgba(255,255,255,0.08);
-        }
-
-        .btn-close-session:active {
-            color: #39FF14;
-            border-color: #39FF14;
-            background: rgba(57,255,20,0.12);
-        }
-
-        audio {
-            width: 100%;
-            height: 40px;
-            filter: invert(100%) hue-rotate(180deg) brightness(1.5);
-            mix-blend-mode: screen;
-            outline: none;
-        }
-
-        .audio-player-wrapper {
-            background: transparent !important;
-            padding: 20px 0;
-            border: none !important;
-            border-radius: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        #active-asset-display {
-            transition: opacity 0.3s ease;
-        }
-
-        @media (max-width: 767px) {
-            #active-asset-display {
-                padding-left: 60px;
-                padding-right: 20px;
-            }
+        .upload-card-active { border-color: #39FF14 !important; background: rgba(57,255,20,0.05) !important; }
+        
+        mux-player {
+            --primary-color: #39FF14;
+            --secondary-color: #000000;
+            border-radius: 24px;
+            overflow: hidden;
         }
     </style>
 </head>
-<body class="bg-background text-white h-screen w-screen flex overflow-hidden font-sans">
+<body class="h-screen w-screen flex overflow-hidden">
 
-    <button onclick="toggleSidebar()" class="md:hidden fixed left-0 top-1/2 -translate-y-1/2 z-50 bg-primary/90 backdrop-blur-md text-black py-8 px-1.5 rounded-r-lg shadow-[0_0_15px_rgba(57,255,20,0.2)] active:scale-95 transition-all flex items-center justify-center border-y border-r border-primary">
-        <span class="sleek-flap">MENU</span>
-    </button>
-
-    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/90 z-40 hidden backdrop-blur-md opacity-0 transition-opacity duration-300"></div>
-
-    <aside id="sidebar" class="w-64 border-r border-zinc-800 bg-[#0a0a0a] flex flex-col transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 shrink-0 h-full">
-        <div class="h-16 flex items-center px-6 border-b border-zinc-800 transition-all group justify-between">
-            <a href="index.html" class="relative h-6 w-32 flex transition-all group">
-                <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974378/ibyostiwecnvm2cebqar.svg" class="absolute inset-0 h-full w-full object-left object-contain brightness-0 invert opacity-100 group-hover:opacity-0 transition-opacity duration-200" alt="logo">
-                <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974377/eayfotlcvgq36kpwvitw.svg" class="absolute inset-0 h-full w-full object-left object-contain opacity-0 group-hover:opacity-100 transition-opacity duration-200" alt="logo hover">
-            </a>
-            <button onclick="toggleSidebar()" class="md:hidden text-zinc-500"><iconify-icon icon="solar:close-circle-bold" class="text-2xl"></iconify-icon></button>
+    <aside id="sidebar" class="w-64 border-r border-zinc-800 bg-[#0a0a0a] flex flex-col shrink-0 h-full">
+        <div class="h-16 flex items-center px-6 border-b border-zinc-800 justify-between">
+            <span class="font-black tracking-tighter text-xl text-white">local / assets</span>
         </div>
         <nav class="flex-1 p-4 space-y-2">
-            <a href="dashboard.html" class="nav-link flex items-center gap-3 px-3 py-2 text-sm rounded-md text-zinc-400"><iconify-icon icon="solar:widget-5-bold"></iconify-icon>Overview</a>
+            <a href="dashboard.html" class="nav-link flex items-center gap-3 px-3 py-2 text-sm text-zinc-400"><iconify-icon icon="solar:widget-5-bold"></iconify-icon>Overview</a>
             <a href="camera.html" class="nav-link flex items-center gap-3 px-3 py-2 text-sm text-zinc-400"><iconify-icon icon="solar:videocamera-record-bold"></iconify-icon>Camera Control</a>
-            <a href="assets.html" class="nav-link active flex items-center gap-3 px-3 py-2 text-sm rounded-md text-primary"><iconify-icon icon="solar:clapperboard-play-bold"></iconify-icon>Media Assets</a>
+            <a href="assets.html" class="nav-link active flex items-center gap-3 px-3 py-2 text-sm rounded-md"><iconify-icon icon="solar:clapperboard-play-bold"></iconify-icon>Media Assets</a>
         </nav>
     </aside>
 
     <main class="flex-1 flex flex-col overflow-hidden bg-background">
-        <header class="h-16 flex items-center px-8 border-b border-border shrink-0">
-            <span class="text-white font-medium text-xs font-mono uppercase tracking-[0.3em] text-primary">Media Asset Library</span>
+        <header class="h-16 flex items-center px-8 border-b border-zinc-800 shrink-0 justify-between">
+            <span class="text-primary font-mono text-[9px] uppercase tracking-[0.4em]">Infrastructure Tier // MUX Pure Pipeline</span>
+            <div class="flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                <span class="text-[8px] font-mono text-zinc-500 uppercase">Live Connection Active</span>
+            </div>
         </header>
 
-        <div class="flex-1 p-4 md:p-8 overflow-y-auto w-full">
-            <div class="max-w-[1400px] mx-auto space-y-12 pb-20 w-full">
+        <div class="flex-1 p-8 overflow-y-auto">
+            <div class="max-w-[1200px] mx-auto space-y-12 pb-20">
                 
-                <div class="p-8 border border-dashed border-zinc-800 rounded-3xl bg-card/30 space-y-8">
+                <div class="p-8 border border-dashed border-zinc-800 rounded-3xl bg-card/10 space-y-8">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <input type="text" id="ingest-name" placeholder="DJ NAME" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs font-bold text-white uppercase outline-none focus:border-primary">
-                        <input type="text" id="ingest-date" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs font-bold text-white cursor-pointer" readonly placeholder="Select date">
-                        <select id="ingest-shot" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs text-zinc-400 font-bold uppercase">
+                        <input type="text" id="ingest-name" placeholder="DJ / ARTIST NAME" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs font-bold text-white uppercase outline-none focus:border-primary">
+                        <input type="text" id="ingest-date" placeholder="SELECT DATE" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs font-bold text-white cursor-pointer outline-none">
+                        <select id="ingest-shot" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs text-zinc-400 font-bold uppercase outline-none focus:border-primary">
                             <option value="MASTER">MASTER CAM</option>
                             <option value="BOOTH">BOOTH CAM</option>
-                            <option value="BACK">BACK VIEW</option>
-                            <option value="FRONT">FRONT VIEW</option>
-                            <option value="CROWD">CROWD VIEW</option>
+                            <option value="ROBOTIC">PTZ ROBOTIC</option>
                         </select>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <label id="card-video" class="flex flex-col items-center justify-center p-6 bg-black border border-zinc-800 rounded-2xl cursor-pointer hover:border-primary/50 group transition-all">
-                            <iconify-icon icon="solar:videocamera-record-bold" class="upload-card-icon text-2xl text-zinc-600 group-hover:text-primary transition-colors"></iconify-icon>
-                            <span class="upload-card-label text-[8px] font-mono mt-2 text-zinc-500 uppercase transition-colors">4K Long Form (.MOV/.MP4)</span>
-                            <input type="file" id="file-video" class="hidden" accept="video/mp4,video/quicktime">
+                        <label id="card-video" class="flex flex-col items-center justify-center p-6 bg-black border border-zinc-800 rounded-2xl cursor-pointer hover:border-primary group transition-all">
+                            <iconify-icon icon="solar:videocamera-record-bold" class="text-2xl text-zinc-600 group-hover:text-primary"></iconify-icon>
+                            <span class="text-[8px] font-mono mt-2 text-zinc-500 uppercase">4K Video (.MOV/.MP4)</span>
+                            <input type="file" id="file-video" class="hidden" accept="video/*">
                         </label>
-                        <label id="card-audio" class="flex flex-col items-center justify-center p-6 bg-black border border-zinc-800 rounded-2xl cursor-pointer hover:border-primary/50 group transition-all">
-                            <iconify-icon icon="solar:music-note-bold" class="upload-card-icon text-2xl text-zinc-600 group-hover:text-primary transition-colors"></iconify-icon>
-                            <span class="upload-card-label text-[8px] font-mono mt-2 text-zinc-500 uppercase transition-colors">HQ Audio (.WAV/.MP3)</span>
-                            <input type="file" id="file-audio" class="hidden" accept="audio/mpeg,audio/wav">
+                        <label id="card-audio" class="flex flex-col items-center justify-center p-6 bg-black border border-zinc-800 rounded-2xl cursor-pointer hover:border-primary group transition-all">
+                            <iconify-icon icon="solar:music-note-bold" class="text-2xl text-zinc-600 group-hover:text-primary"></iconify-icon>
+                            <span class="text-[8px] font-mono mt-2 text-zinc-500 uppercase">HQ Audio (.WAV/.MP3)</span>
+                            <input type="file" id="file-audio" class="hidden" accept="audio/*">
                         </label>
-                        <label id="card-social" class="flex flex-col items-center justify-center p-6 bg-black border border-zinc-800 rounded-2xl cursor-pointer hover:border-primary/50 group transition-all">
-                            <iconify-icon icon="solar:iphone-bold" class="upload-card-icon text-2xl text-zinc-600 group-hover:text-primary transition-colors"></iconify-icon>
-                            <span class="upload-card-label text-[8px] font-mono mt-2 text-zinc-500 uppercase transition-colors">Social Pack Verticals (.JPG/.MP4)</span>
-                            <input type="file" id="file-social" class="hidden" multiple accept="video/mp4,video/quicktime">
-                        </label>
-                        <label id="card-marketing" class="flex flex-col items-center justify-center p-6 bg-black border border-zinc-800 rounded-2xl cursor-pointer hover:border-primary/50 group transition-all">
-                            <iconify-icon icon="solar:gallery-bold" class="upload-card-icon text-2xl text-zinc-600 group-hover:text-primary transition-colors"></iconify-icon>
-                            <span class="upload-card-label text-[8px] font-mono mt-2 text-zinc-500 uppercase transition-colors">Social Media Thumbnails (.PNG/.JPG)</span>
-                            <input type="file" id="file-marketing" class="hidden" multiple accept="image/jpeg,image/png">
+                        <label id="card-marketing" class="flex flex-col items-center justify-center p-6 bg-black border border-zinc-800 rounded-2xl cursor-pointer hover:border-primary group transition-all">
+                            <iconify-icon icon="solar:gallery-bold" class="text-2xl text-zinc-600 group-hover:text-primary"></iconify-icon>
+                            <span class="text-[8px] font-mono mt-2 text-zinc-500 uppercase">Marketing (.JPG/.PNG)</span>
+                            <input type="file" id="file-marketing" class="hidden" accept="image/*">
                         </label>
                     </div>
 
-                    <button id="upload-btn" class="w-full bg-primary text-black font-black py-5 rounded-2xl uppercase tracking-[0.2em] text-[11px] hover:scale-[1.01] transition-all">
-                        PROCESS & INGEST FULL SESSION
+                    <button id="upload-btn" class="w-full bg-white text-black font-black py-5 rounded-2xl uppercase tracking-[0.2em] text-[11px] hover:bg-primary transition-all">
+                        INGEST FULL SESSION TO MUX
                     </button>
                 </div>
 
-                <div id="preview-container" class="hidden animate-in fade-in duration-500 transition-opacity duration-300">
-                    <div class="flex items-center gap-3 mb-6">
-                        <span class="bg-primary/10 text-primary text-[8px] font-black px-2 py-0.5 rounded border border-primary/20 uppercase tracking-widest">INFRASTRUCTURE TIER ACTIVE</span>
-                        <span class="text-zinc-600 font-mono text-[9px] uppercase tracking-widest">// 48H PRIORITY TURNAROUND</span>
-                    </div>
-
-                    <div class="preview-header">
+                <div id="preview-container" class="hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div class="flex items-center justify-between border-b border-zinc-800 pb-8 mb-8">
                         <div>
-                            <h2 id="vault-dj-title" class="artist-hero-title">AMONGST FEW</h2>
-                            <p id="vault-meta" class="text-zinc-500 font-mono text-[10px] uppercase tracking-[0.4em] mt-4">UPLOAD SESSION // 03 MAR 2026</p>
+                            <h2 id="vault-dj-title" class="artist-hero-title">READY</h2>
+                            <p id="vault-meta" class="text-zinc-500 font-mono text-[9px] uppercase tracking-[0.4em]">4K TRANSCODING IN PROGRESS</p>
                         </div>
-                        <button onclick="closePreview()" class="btn-close-session">
-                            close session
-                        </button>
+                        <button onclick="location.reload()" class="border border-white/20 text-white px-6 py-2 rounded-xl text-[9px] uppercase tracking-widest hover:bg-white/5">new upload</button>
                     </div>
-
-                    <div id="active-asset-display" class="pt-4 max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500"></div>
+                    <div id="active-asset-display" class="max-w-4xl mx-auto"></div>
                 </div>
 
-                <div class="space-y-4 pt-4">
-                    <div class="flex items-center justify-between border-b border-zinc-800 pb-2">
-                        <h3 class="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.3em]">Distribution History</h3>
-                        <div class="text-[9px] font-mono text-primary flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span> Live</div>
+                <div class="space-y-4 pt-12">
+                    <h3 class="text-[10px] font-mono text-zinc-600 uppercase tracking-[0.3em] border-b border-zinc-800 pb-2">Vault History</h3>
+                    <div id="cloud-list" class="text-zinc-500 text-[9px] font-mono uppercase tracking-widest p-10 border border-zinc-900 rounded-3xl text-center">
+                        // Awaiting new session ingest
                     </div>
-                    <div id="cloud-list" class="space-y-3"></div>
                 </div>
             </div>
         </div>
     </main>
 
     <script>
-
-        let cloudAssets = [];
-
-        const API_KEY_OVERRIDE = (window.LOCAL_ASSETS_API_KEY || localStorage.getItem('LOCAL_ASSETS_API_KEY') || '').trim();
-        const WORKER_URL_OVERRIDE = (window.LOCAL_ASSETS_WORKER_URL || localStorage.getItem('LOCAL_ASSETS_WORKER_URL') || '').trim();
         const CONFIG = {
-    
+            MUX_UPLOAD_URL: "https://api.mux.com/video/v1/uploads",
+            MUX_LIVE_URL: "https://api.mux.com/video/v1/live-streams",
+            API_KEY: "1mmm9dZ1MIl5xkiqlal_gBF5IqpNy_3M2WjQOiNU"
         };
 
-        function getIngestDateValue() {
-            const el = document.getElementById('ingest-date');
-            if (!el) return '';
-            if (el.dataset?.iso) return el.dataset.iso;
-            const raw = el.value?.trim() || '';
-            if (!raw && datePicker?.selectedDates?.length) {
-                return datePicker.formatDate(datePicker.selectedDates[0], 'Y-m-d');
-            }
-            return raw;
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-           
-          function initDatePicker() {
-    var el = document.getElementById('ingest-date');
-    if (!el) return false;
-    
-    // Remove the readonly attribute that is locking the field
-    el.removeAttribute('readonly'); 
-    
-    if (typeof flatpickr !== 'function') return false;
-    
-    datePicker = flatpickr(el, {
-        defaultDate: new Date(),
-        dateFormat: 'd M Y',
-        theme: 'dark',
-        disableMobile: false, // Changed to false to allow mobile venue use
-        allowInput: true,     // Enabled to prevent "disabled" state
-        clickOpens: true,
-        onReady: function(selectedDates, dateStr, instance) {
-            const date = selectedDates?.[0] || new Date();
-            el.dataset.iso = instance.formatDate(date, 'Y-m-d');
-        }
-    });
-    return true;
-}
-            }
-
-            const ingestDateEl = document.getElementById('ingest-date');
-            if (ingestDateEl) {
-                ingestDateEl.addEventListener('change', function() {
-                    if (ingestDateEl.value) ingestDateEl.dataset.iso = ingestDateEl.value;
-                });
-            }
-
-            fetchCloudLibrary();
+        // Initialize Flatpickr correctly
+        document.addEventListener('DOMContentLoaded', () => {
+            flatpickr("#ingest-date", {
+                defaultDate: "today",
+                dateFormat: "d M Y",
+                theme: "dark",
+                static: true,
+                allowInput: true,
+                onReady: function(selectedDates, dateStr, instance) {
+                    const el = document.getElementById('ingest-date');
+                    el.dataset.iso = instance.formatDate(selectedDates[0] || new Date(), 'Y-m-d');
+                },
+                onChange: function(selectedDates, dateStr, instance) {
+                    const el = document.getElementById('ingest-date');
+                    el.dataset.iso = instance.formatDate(selectedDates[0] || new Date(), 'Y-m-d');
+                }
+            });
             setupUploadHandler();
         });
 
         function setupUploadHandler() {
-            const uploadBtn = document.getElementById('upload-btn');
-            
-            // File Inputs
+            const btn = document.getElementById('upload-btn');
             const inputs = {
                 video: document.getElementById('file-video'),
                 audio: document.getElementById('file-audio'),
-                social: document.getElementById('file-social'),
                 marketing: document.getElementById('file-marketing')
             };
 
-            // Update UI when files are selected
+            // Card highlight logic
             Object.keys(inputs).forEach(key => {
-                inputs[key].addEventListener('change', () => {
-                    const card = document.getElementById(`card-${key}`);
-                    if (inputs[key].files.length > 0) {
-                        card.style.borderColor = '#39FF14';
-                        card.style.background = 'rgba(57,255,20,0.05)';
+                inputs[key].onchange = () => {
+                    if(inputs[key].files.length > 0) {
+                        document.getElementById(`card-${key}`).classList.add('upload-card-active');
                     }
-                });
+                };
             });
 
-            async function uploadWithProgress(url, file, contentType) {
-                return new Promise((resolve, reject) => {
-                    const xhr = new XMLHttpRequest();
-                    xhr.open('PUT', url);
-                    if (contentType) xhr.setRequestHeader('Content-Type', contentType);
+            btn.onclick = async () => {
+                const dj = document.getElementById('ingest-name').value.trim();
+                if (!dj) return alert("CRITICAL: ARTIST NAME REQUIRED");
 
-                    xhr.upload.onprogress = (e) => {
-                        if (e.lengthComputable) {
-                            const percent = Math.round((e.loaded / e.total) * 100);
-                            uploadBtn.innerHTML = `INGESTING: ${percent}%`;
-                        }
-                    };
+                const file = inputs.video.files[0] || inputs.audio.files[0] || inputs.marketing.files[0];
+                if (!file) return alert("CRITICAL: SELECT AT LEAST ONE ASSET");
 
-                    xhr.onload = () => xhr.status === 200 || xhr.status === 201 ? resolve() : reject(new Error(`Upload failed: ${xhr.status}`));
-                    xhr.onerror = () => reject(new Error('Upload failed: network error'));
-                    xhr.send(file);
-                });
-            }
-
-          async function uploadFile(file, path, type) {
-    // Everything now goes to Mux
-    const res = await fetch(`${CONFIG.WORKER_URL}/get-mux-upload-url`, {
-        method: 'POST',
-        headers: { 'x-api-key': CONFIG.API_KEY }
-    });
-    
-    if (!res.ok) throw new Error('Mux connection failed');
-    const { url: muxUploadUrl } = await res.json();
-
-    // High-speed direct upload to Mux (No R2 involved)
-    return uploadWithProgress(muxUploadUrl, file, type);
-}
-            uploadBtn.onclick = async function() {
-                const djName = document.getElementById('ingest-name').value.trim();
-                const date = getIngestDateValue();
-
-                if (!djName || !date) {
-                    alert('CRITICAL: DJ NAME & DATE REQUIRED');
-                    return;
-                }
-
-                if (!CONFIG.API_KEY || CONFIG.API_KEY === 'wt1cSclqAHkUnxOJ1KSRZBIunpT45Zp+MlbuxudEcUTMDAe1kc+AAL24nxZclbTGZUEsPc9FkjB') {
-                    alert('Missing API key. Set LOCAL_ASSETS_API_KEY in localStorage or update CONFIG.API_KEY.');
-                    return;
-                }
-
-                uploadBtn.disabled = true;
-                uploadBtn.innerHTML = `<span class="animate-pulse text-primary">INITIALIZING ENCRYPTED UPLOAD...</span>`;
-
-                const safeDj = djName.toLowerCase().replace(/[^a-z0-9]+/g, '_');
-                const safeDate = date.replace(/-/g, '');
-
-                // Gather all selected files
-                const filesToUpload = [];
-                if (inputs.video.files[0]) {
-                    const ext = (inputs.video.files[0].name.split('.').pop() || 'mov').toLowerCase();
-                    filesToUpload.push({ file: inputs.video.files[0], path: `venue_masters/${safeDj}/masters/${safeDate}_main.${ext}` });
-                }
-                if (inputs.audio.files[0]) {
-                    const ext = (inputs.audio.files[0].name.split('.').pop() || 'wav').toLowerCase();
-                    filesToUpload.push({ file: inputs.audio.files[0], path: `venue_masters/${safeDj}/audio/${safeDate}_master.${ext}` });
-                }
-                
-                // Handle Multiple Social Clips
-                Array.from(inputs.social.files).forEach((file, i) => {
-                    const ext = (file.name.split('.').pop() || 'mp4').toLowerCase();
-                    filesToUpload.push({ file, path: `venue_masters/${safeDj}/social-suite/clip_${i+1}.${ext}` });
-                });
-
-                // Handle Marketing Thumbnails
-                Array.from(inputs.marketing.files).forEach((file, i) => {
-                    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
-                    filesToUpload.push({ file, path: `venue_masters/${safeDj}/marketing/thumb_${i+1}.${ext}` });
-                });
-
-                if (filesToUpload.length === 0) {
-                    uploadBtn.innerHTML = "UPLOAD FAILED - NO FILES";
-                    uploadBtn.disabled = false;
-                    alert('Please select at least one file to upload.');
-                    return;
-                }
+                btn.disabled = true;
+                btn.innerHTML = `<span class="animate-pulse">REQUESTING MUX UPLOAD URL...</span>`;
 
                 try {
-                    for (const item of filesToUpload) {
-                        uploadBtn.innerHTML = `UPLOADING: ${item.file.name.substring(0,15)}...`;
-                        await uploadFile(item.file, item.path, item.file.type);
-                    }
-
-                    uploadBtn.innerHTML = "SESSION INGEST COMPLETE";
-                    uploadBtn.style.backgroundColor = "#39FF14";
-                    setTimeout(() => location.reload(), 2000);
-
-                } catch (err) {
-                    console.error(err);
-                    uploadBtn.innerHTML = "UPLOAD FAILED - RETRY";
-                    uploadBtn.disabled = false;
+                    // 1. Get Direct Upload URL from Mux
+                    const res = await fetch(CONFIG.MUX_UPLOAD_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': 'Basic ' + btoa(CONFIG.API_KEY + ':YOUR_MUX_TOKEN_SECRET'),
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            new_asset_settings: { playback_policy: ["public"], mp4_support: "standard" },
+                            cors_origin: "*"
+                        })
+                    });
+                    const data = await res.json();
+                    // 2. High-speed Direct Upload to Mux
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('PUT', data.url);
+                    xhr.upload.onprogress = (e) => {
+                        const pct = Math.round((e.loaded / e.total) * 100);
+                        btn.innerHTML = `PUSHING TO MUX CLOUD: ${pct}%`;
+                    };
+                    xhr.onload = () => {
+                        btn.innerHTML = "INGEST COMPLETE // PROCESSING...";
+                        btn.style.background = "#39FF14";
+                        showMuxPreview(data.id, dj);
+                    };
+                    xhr.onerror = () => {
+                        btn.disabled = false;
+                        btn.innerHTML = "UPLOAD FAILED";
+                    };
+                    xhr.send(file);
+                } catch (e) {
+                    btn.disabled = false;
+                    btn.innerHTML = "UPLOAD FAILED";
+                    alert(e.message);
                 }
             };
         }
 
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('sidebar-overlay');
-            if (sidebar.classList.contains('-translate-x-full')) {
-                sidebar.classList.remove('-translate-x-full');
-                overlay.classList.remove('hidden');
-                setTimeout(() => overlay.classList.add('opacity-100'), 10);
-            } else {
-                sidebar.classList.add('-translate-x-full');
-                overlay.classList.add('opacity-0');
-                setTimeout(() => overlay.classList.add('hidden'), 300);
-            }
-        }
-
-        async function fetchCloudLibrary() {
-            try {
-                const response = await fetch(`${CONFIG.WORKER_URL}/list`);
-                const data = await response.json();
-                const hiddenSlugs = new Set(['test_artist', 'debug_api']);
-
-                cloudAssets = Array.isArray(data)
-                    ? data.filter((artist) => !hiddenSlugs.has(String(artist?.slug || '').toLowerCase()))
-                    : [];
-                renderList(cloudAssets);
-            } catch (e) {
-                console.error("Could not load library:", e);
-            }
-        }
-
-        function getIcon(type) {
-            if (type === 'MASTERS') return 'solar:play-bold';
-            if (type === 'AUDIO') return 'solar:music-note-bold';
-            if (type === 'SOCIAL-SUITE') return 'solar:iphone-bold';
-            if (type === 'VERTICALS') return 'solar:iphone-bold';
-            if (type === 'MARKETING') return 'solar:gallery-bold';
-            return 'solar:document-bold';
-        }
-
-        function groupAssetsByType(assets) {
-            return (assets || []).reduce((acc, asset) => {
-                const key = (asset?.type || 'MISC').toUpperCase();
-                if (!acc[key]) acc[key] = [];
-                acc[key].push(asset);
-                return acc;
-            }, {});
-        }
-
-        function getCategorySortOrder(type) {
-            const t = String(type || '').toUpperCase();
-            if (t === 'MASTERS' || t === 'MASTER') return 0;
-            if (t === 'AUDIO') return 1;
-            if (t === 'MARKETING' || t === 'THUMB') return 2;
-            return 99;
-        }
-
-        function slugifyId(value) {
-            return String(value || '')
-                .toLowerCase()
-                .replace(/[^a-z0-9_-]+/g, '-')
-                .replace(/^-+|-+$/g, '');
-        }
-
-        function formatBytes(bytes) {
-            const size = Number(bytes);
-            if (!Number.isFinite(size) || size <= 0) return '0 B';
-            const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-            const power = Math.min(Math.floor(Math.log(size) / Math.log(1024)), units.length - 1);
-            const value = size / (1024 ** power);
-            const fixed = value >= 100 || power === 0 ? 0 : 1;
-            return `${value.toFixed(fixed)} ${units[power]}`;
-        }
-
-        function renderCategory(type, assets, artistName) {
-            if (!assets?.length) return '';
-            let cleanLabel = type;
-            if (type === 'MASTERS' || type === 'MASTER') cleanLabel = 'MASTER 4K SET';
-            else if (type === 'AUDIO') cleanLabel = 'HQ AUDIO MASTER (.WAV)';
-            else cleanLabel = (assets[0]?.key || '').toLowerCase().includes('thumb') ? 'THUMBNAILS' : 'VERTICALS';
-            return `
-                <div onclick="focusCategoryEncoded('${encodeURIComponent(type)}', '${encodeURIComponent(artistName)}')" class="p-4 pl-14 flex items-center justify-between hover:bg-white/[0.03] group/cat cursor-pointer">
-                    <div class="flex items-center gap-4">
-                        <iconify-icon icon="${getIcon(type)}" class="text-zinc-600 group-hover/cat:text-primary"></iconify-icon>
-                        <span class="text-[10px] font-mono text-zinc-400 uppercase tracking-widest">${cleanLabel}${assets.length > 1 ? ` ${assets.length}` : ''}</span>
-                    </div>
-                    <iconify-icon icon="solar:alt-arrow-right-linear" class="text-zinc-800 group-hover/cat:text-primary transition-transform text-xs"></iconify-icon>
-                </div>`;
-        }
-
-        function renderList(groupedData) {
-            const list = document.getElementById('cloud-list') || document.getElementById('recent-sets-list');
-            if (!list) return;
-            list.innerHTML = '';
-
-            if (!Array.isArray(groupedData) || !groupedData.length) {
-                list.innerHTML = '<div class="p-4 text-[10px] font-mono text-zinc-500 uppercase tracking-widest border border-zinc-800 rounded-xl">No known artist uploads yet.</div>';
-                return;
-            }
-
-            groupedData.forEach(artist => {
-                if (!artist?.name || artist.name === 'UNKNOWN') return;
-                const artistGroup = groupAssetsByType(artist.assets || []);
-                const folderId = `folder-${artist.slug}`;
-                const row = document.createElement('div');
-                row.className = 'session-group border border-zinc-800 rounded-2xl overflow-hidden bg-card';
-
-                row.innerHTML = `
-                    <div onclick="toggleFolder('${folderId}')" class="p-5 flex items-center justify-between hover:bg-white/[0.02] cursor-pointer group">
-                        <div class="flex items-center gap-4">
-                            <div class="w-10 h-10 bg-zinc-900 border border-zinc-800 flex items-center justify-center rounded-xl group-hover:border-primary/50">
-                                <iconify-icon icon="solar:folder-2-bold" class="text-zinc-600 group-hover:text-primary"></iconify-icon>
-                            </div>
-                            <div>
-                                <p class="text-sm font-black text-white uppercase tracking-tight">${artist.name}</p>
-                                <p class="text-[9px] font-mono text-zinc-500 uppercase">MASTERS/${artist.name} // ${artist.assets.length} ASSET(S)</p>
-                            </div>
-                        </div>
-                        <iconify-icon id="arrow-${folderId}" icon="solar:alt-arrow-down-linear" class="text-zinc-700 transition-transform"></iconify-icon>
-                    </div>
-
-                    <div id="${folderId}" class="hidden bg-black/40 divide-y divide-white/5">
-                        ${Object.entries(artistGroup)
-                            .sort(([typeA], [typeB]) => {
-                                const orderA = getCategorySortOrder(typeA);
-                                const orderB = getCategorySortOrder(typeB);
-                                if (orderA !== orderB) return orderA - orderB;
-                                return String(typeA).localeCompare(String(typeB));
-                            })
-                            .map(([type, groupedAssets]) => renderCategory(type, groupedAssets, artist.name))
-                            .join('')}
-                    </div>
-                `;
-
-                list.appendChild(row);
-            });
-        }
-
-        function focusCategoryEncoded(encodedType, encodedArtistName) {
-            focusCategory(decodeURIComponent(encodedType), decodeURIComponent(encodedArtistName));
-        }
-
-        function getAssetLabel(type, filename, index = null) {
-            const name = (filename || '').toLowerCase();
-            const base = name.includes('vertical') ? 'VERTICAL' : (name.includes('thumb') ? 'THUMBNAIL' : type);
-            return index !== null ? `${base} ${index + 1}` : base;
-        }
-
-        function focusCategory(type, artistName) {
-            const artist = cloudAssets.find(a => a.name === artistName);
-            const assets = artist.assets.filter(a => a.type === type.toUpperCase());
+        function showMuxPreview(playbackId, dj) {
+            document.getElementById('preview-container').classList.remove('hidden');
+            document.getElementById('vault-dj-title').innerText = dj.toUpperCase();
+            const display = document.getElementById('active-asset-display');
             
-            if (!assets.length) return;
-
-            if (assets.length === 1) {
-                // RULE: If only one file, skip list and autoplay immediately
-                const asset = assets[0];
-                const url = `${CONFIG.WORKER_URL}/asset?key=${encodeURIComponent(asset.key)}`;
-                openAssetPreview(url, type, artistName, 'MOV');
-            } else {
-                // RULE: Show the numbered list
-                renderNumberedList(type, artistName, assets);
-            }
-        }
-
-        function renderNumberedList(type, artistName, assets) {
-            const container = document.getElementById('preview-container');
-            const displayArea = document.getElementById('active-asset-display');
-            const title = document.getElementById('vault-dj-title');
-            const meta = document.getElementById('vault-meta');
-            if (!container || !displayArea || !title || !meta) return;
-
-            const labelBase = getAssetLabel(type, assets[0]?.key || '');
-            title.textContent = (artistName || 'UNKNOWN').toUpperCase();
-            title.className = 'artist-hero-title';
-            meta.textContent = `${labelBase} SUITE // ${assets.length} ASSET(S)`;
-
-            container.classList.remove('hidden', 'opacity-0');
-            displayArea.innerHTML = `
-                <div class="space-y-4 max-w-3xl mx-auto">
-                    <h3 class="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.4em] mb-6">// ${labelBase} SUITE</h3>
-                    ${assets.map((asset, i) => {
-                        const format = (asset.format || (asset.key || '').split('.').pop() || 'FILE').toUpperCase();
-                        const assetUrl = `${CONFIG.WORKER_URL}/asset?key=${encodeURIComponent(asset.key || '')}`;
-                        const itemLabel = getAssetLabel(type, asset.key, i);
-                        return `
-                            <div onclick="openAssetPreviewEncoded('${encodeURIComponent(assetUrl)}', '${type}', '${encodeURIComponent(artistName)}', '${format}')" class="flex items-center justify-between p-5 bg-[#0a0a0a] border border-zinc-800 rounded-2xl hover:border-primary cursor-pointer group transition-all">
-                                <span class="text-[9px] font-mono text-zinc-500 uppercase">${itemLabel}</span>
-                                <iconify-icon icon="solar:play-circle-bold" class="text-xl text-zinc-700 group-hover:text-primary"></iconify-icon>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-            `;
-
-            displayArea.scrollIntoView({ behavior: 'smooth' });
-        }
-
-        function toggleFolder(folderId) {
-            const preview = document.getElementById(folderId);
-            const arrow = document.getElementById(`arrow-${folderId}`);
-            if (!preview || !arrow) return;
-
-            document.querySelectorAll('[id^="folder-"]').forEach(el => {
-                if (el.id !== folderId) el.classList.add('hidden');
-            });
-
-            document.querySelectorAll('iconify-icon[id^="arrow-folder-"]').forEach(el => {
-                if (el.id !== `arrow-${folderId}`) el.style.transform = 'rotate(0deg)';
-            });
-
-            const isHidden = preview.classList.contains('hidden');
-            if (isHidden) {
-                preview.classList.remove('hidden');
-                arrow.style.transform = 'rotate(180deg)';
-            } else {
-                preview.classList.add('hidden');
-                arrow.style.transform = 'rotate(0deg)';
-            }
-        }
-
-        function openAssetPreviewEncoded(encodedUrl, type, encodedName, format) {
-            openAssetPreview(decodeURIComponent(encodedUrl), type, decodeURIComponent(encodedName), format);
-        }
-
-        function openAssetPreview(assetUrl, assetType, djName, format) {
-            const container = document.getElementById('preview-container');
-            const displayArea = document.getElementById('active-asset-display');
-            const title = document.getElementById('vault-dj-title');
-            const meta = document.getElementById('vault-meta');
-            if (!container || !displayArea || !title || !meta) return;
-
-            const upperName = (djName || 'UNKNOWN').toUpperCase();
-            title.textContent = upperName;
-            title.className = 'artist-hero-title';
-            meta.textContent = `UPLOAD SESSION // ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()}`;
-
-            container.classList.remove('hidden', 'opacity-0');
-            displayArea.innerHTML = '';
-
-            // New logic for Mux video/audio preview
-            if (assetType === 'VIDEO' || assetType === 'AUDIO') {
-                // Assume assetUrl is the playback_id or asset object has playback_id
-                let playbackId = null;
-                if (typeof assetUrl === 'object' && assetUrl.playback_id) {
-                    playbackId = assetUrl.playback_id;
-                } else if (window.lastMuxPlaybackId) {
-                    playbackId = window.lastMuxPlaybackId;
-                } else if (typeof assetUrl === 'string' && assetUrl.startsWith('mux:')) {
-                    playbackId = assetUrl.replace('mux:', '');
-                } else {
-                    playbackId = assetUrl;
-                }
-                displayArea.innerHTML = `
-                    <div class="space-y-6">
-                        <mux-player
-                            playback-id="${playbackId}"
-                            metadata-video-title="Venue Master - ${djName}"
-                            class="w-full aspect-video rounded-[32px] border border-white/5 shadow-2xl"
-                            primary-color="#39FF14"
-                        ></mux-player>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <a href="https://stream.mux.com/${playbackId}/high.mp4?download=${djName}_Master.mp4" 
-                               class="bg-white text-black font-black py-4 rounded-xl text-[10px] uppercase text-center tracking-widest">
-                               Download 4K Master (.MP4)
-                            </a>
-                            <a href="https://stream.mux.com/${playbackId}/low.mp4?download=${djName}_Preview.mp4" 
-                               class="border border-white/20 text-white font-black py-4 rounded-xl text-[10px] uppercase text-center tracking-widest">
-                               Download Proxy (Mobile)
-                            </a>
-                        </div>
-                    </div>`;
-            } else if (assetType === 'MARKETING' || assetType === 'THUMB' || ['PNG', 'JPG', 'JPEG', 'WEBP', 'GIF'].includes(format)) {
-                displayArea.innerHTML = `
-                    <div class="space-y-6">
-                        <p class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-                            <span class="w-1.5 h-1.5 rounded-full bg-[#39FF14]"></span> MARKETING THUMBNAIL
-                        </p>
-                        <img src="${assetUrl}" class="w-full aspect-video object-cover rounded-[40px] border border-white/10 shadow-2xl" alt="Marketing preview">
-                        <a href="${assetUrl}" target="_blank" download class="w-full bg-white text-black font-black py-5 rounded-2xl text-[11px] uppercase tracking-widest text-center block">DOWNLOAD MARKETING ASSET</a>
-                    </div>`;
-            }
-                displayArea.innerHTML = `
-                    <div class="space-y-6">
-                        <div class="bg-black rounded-[32px] overflow-hidden border border-white/5 p-6 text-[10px] font-mono text-zinc-400 uppercase tracking-widest">Preview not available for this format.</div>
-                        <a href="${assetUrl}" target="_blank" download class="w-full bg-white text-black font-black py-5 rounded-2xl text-[11px] uppercase tracking-widest text-center block">DOWNLOAD FILE</a>
-                    </div>`;
-            }
-
-            displayArea.scrollIntoView({ behavior: 'smooth' });
-        }
-
-        function closePreview() {
-            const container = document.getElementById('preview-container');
-            const displayArea = document.getElementById('active-asset-display');
-            const historyList = document.getElementById('recent-sets-list') || document.getElementById('cloud-list');
-            if (!container || !displayArea) return;
-
-            container.classList.add('opacity-0');
-
-            setTimeout(() => {
-                container.classList.add('hidden');
-                container.classList.remove('opacity-0');
-                displayArea.innerHTML = '';
-                if (historyList) historyList.scrollIntoView({ behavior: 'smooth' });
-            }, 300);
+            // Render Mux Player
+            display.innerHTML = `
+                <div class="space-y-6">
+                    <mux-player
+                        playback-id="${playbackId}"
+                        metadata-video-title="${dj}"
+                        class="w-full aspect-video shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
+                        primary-color="#39FF14"
+                        autoplay
+                    ></mux-player>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <a href="https://stream.mux.com/${playbackId}/high.mp4?download=${dj}_Master.mp4" 
+                           class="bg-white text-black p-5 rounded-2xl text-center font-black text-[10px] uppercase tracking-widest hover:scale-[1.02] transition-all">
+                           Download 4K Master (.MP4)
+                        </a>
+                        <a href="https://stream.mux.com/${playbackId}/low.mp4?download=${dj}_Preview.mp4" 
+                           class="border border-white/10 text-white p-5 rounded-2xl text-center font-black text-[10px] uppercase tracking-widest hover:bg-white/5 transition-all">
+                           Download Mobile Proxy
+                        </a>
+                    </div>
+                </div>`;
+            display.scrollIntoView({ behavior: 'smooth' });
         }
     </script>
 </body>
