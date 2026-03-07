@@ -3,7 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <title>local / assets™ // MUX EDITION</title>
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="local / assets">
+    <title>local / assets™</title>
+    
+    <link rel="icon" type="image/x-icon" href="favicon/favicon.ico">
+    <link rel="icon" type="image/svg+xml" href="favicon/favicon.svg">
+    <link rel="apple-touch-icon" href="favicon/apple-touch-icon.png">
+    <link rel="manifest" href="favicon/site.webmanifest">
     
     <link rel="stylesheet" href="styles/tailwind.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -17,7 +26,6 @@
         body { background-color: #050505 !important; color: white; -webkit-font-smoothing: antialiased; font-family: 'JetBrains Mono', monospace; }
         .nav-link.active { background-color: rgba(255,255,255,0.05); border: 1px solid #27272a; color: #39FF14; }
         ::-webkit-scrollbar { display: none; }
-        
         /* Fixed Flatpickr visibility */
         .flatpickr-calendar { 
             z-index: 99999 !important; 
@@ -25,7 +33,6 @@
             border: 1px solid #27272a !important;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
-
         .artist-hero-title {
             font-size: clamp(32px, 4.8vw, 48px);
             font-weight: 950;
@@ -36,9 +43,7 @@
             margin-bottom: 2rem;
             color: white;
         }
-
         .upload-card-active { border-color: #39FF14 !important; background: rgba(57,255,20,0.05) !important; }
-        
         mux-player {
             --primary-color: #39FF14;
             --secondary-color: #000000;
@@ -51,7 +56,12 @@
 
     <aside id="sidebar" class="w-64 border-r border-zinc-800 bg-[#0a0a0a] flex flex-col shrink-0 h-full">
         <div class="h-16 flex items-center px-6 border-b border-zinc-800 justify-between">
-            <span class="font-black tracking-tighter text-xl text-white">local / assets</span>
+            <a href="index.html" class="relative h-6 w-32 flex transition-all group">
+                <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974378/ibyostiwecnvm2cebqar.svg" 
+                     class="absolute inset-0 h-full w-full object-left object-contain brightness-0 invert opacity-100 group-hover:opacity-0 transition-opacity duration-200" alt="logo">
+                <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974377/eayfotlcvgq36kpwvitw.svg" 
+                     class="absolute inset-0 h-full w-full object-left object-contain opacity-0 group-hover:opacity-100 transition-opacity duration-200" alt="logo hover">
+            </a>
         </div>
         <nav class="flex-1 p-4 space-y-2">
             <a href="dashboard.html" class="nav-link flex items-center gap-3 px-3 py-2 text-sm text-zinc-400"><iconify-icon icon="solar:widget-5-bold"></iconify-icon>Overview</a>
