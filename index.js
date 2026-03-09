@@ -15,7 +15,7 @@ async function createUpload() {
         mp4_support: 'standard'
       },
       cors_origin: '*',
-      webhook_url: 'https://local-assets.com/assets'
+      webhook_url: 'https://local-assets.com/api/webhook-handler'
     });
     console.log('Upload URL:', upload.url);
   } catch (err) {
