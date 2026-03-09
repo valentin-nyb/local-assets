@@ -88,6 +88,49 @@
             border-radius: 24px;
             overflow: hidden;
         }
+        /* =========================================
+           LIGHT MODE ("DAYTIME BROADCAST") OVERRIDES
+           ========================================= */
+        html.light body { 
+            background-color: #f4f4f5 !important; 
+            color: #09090b !important; 
+        }
+        html.light aside, 
+        html.light header, 
+        html.light .bg-\[\#0a0a0a\] { 
+            background-color: #ffffff !important; 
+        }
+        html.light .bg-black { 
+            background-color: #ffffff !important; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+        html.light .border-zinc-800, 
+        html.light .border-zinc-900, 
+        html.light .border-white\/20 { 
+            border-color: #e4e4e7 !important; 
+        }
+        html.light .text-white { color: #09090b !important; }
+        html.light .text-zinc-400, 
+        html.light .text-zinc-500, 
+        html.light .text-zinc-600 { 
+            color: #52525b !important; 
+        }
+        html.light .bg-white { background-color: #09090b !important; color: #ffffff !important;}
+        html.light .hover\:bg-white\/5:hover { background-color: rgba(0,0,0,0.05) !important; }
+
+        /* Hardware Nodes for Light Mode */
+        html.light .vertical-clip-node { background: #f4f4f5; border-color: #e4e4e7; }
+        html.light .status-node { background: #f4f4f5; border-color: #e4e4e7; }
+        html.light .vault-grid { border-color: #e4e4e7; }
+        html.light .clip-label { color: #71717a; }
+
+        /* Input Adjustments */
+        html.light input, html.light select { 
+            background-color: #f4f4f5 !important; 
+            border-color: #e4e4e7 !important; 
+            color: #09090b !important;
+        }
+        html.light input::placeholder { color: #a1a1aa !important; }
     </style>
 </head>
 <body class="h-screen w-screen flex overflow-hidden">
@@ -108,9 +151,11 @@
     <main class="flex-1 flex flex-col overflow-hidden bg-background">
         <header class="h-16 flex items-center px-8 border-b border-zinc-800 shrink-0 justify-between">
             <span class="text-primary font-mono text-[9px] uppercase tracking-[0.4em]">Infrastructure Tier // local / assets™</span>
-            <div class="flex items-center gap-2">
-                <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
-                <span class="text-[8px] font-mono text-zinc-500 uppercase">Live Connection Active</span>
+            <div class="flex items-center gap-6">
+                <div class="flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                    <span class="text-[8px] font-mono text-zinc-500 uppercase tracking-widest">Live Connection Active</span>
+                </div>
             </div>
         </header>
 
@@ -262,7 +307,7 @@
                     </div>
 
                     <div class="flex justify-end gap-3 self-start mt-2">
-                        <button onclick="previewAsset('${asset.id}', '${artistName}')" class="h-12 w-12 flex items-center justify-center bg-white text-black hover:bg-primary transition-all rounded-xl">
+                        <button onclick="showMuxPreview('${asset.id}', '${artistName}')" class="h-12 w-12 flex items-center justify-center bg-white text-black hover:bg-primary transition-all rounded-xl">
                             <iconify-icon icon="solar:play-bold" class="text-xl"></iconify-icon>
                         </button>
                         <button class="h-12 w-12 flex items-center justify-center border border-zinc-800 rounded-xl hover:bg-zinc-900 transition-all text-zinc-600">
