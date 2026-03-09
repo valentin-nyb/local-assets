@@ -33,13 +33,23 @@ export default async function handler(req, res) {
     });
 
     return res.status(200).json(upload);
-    
   } catch (error) {
-    // This prevents the "500" from being a mystery
+    // Enhanced error logging for debugging
     console.error("MUX_SDK_CRASH:", error);
+    console.error("MUX_ENV", {
+      MUX_TOKEN_ID: process.env.MUX_TOKEN_ID,
+      MUX_TOKEN_SECRET: process.env.MUX_TOKEN_SECRET,
+      LOCAL_ASSETS_API_KEY: process.env.LOCAL_ASSETS_API_KEY ? 'set' : 'missing'
+    });
     return res.status(500).json({ 
       error: 'Mux Communication Failed', 
-      message: error.message 
+      message: error.message,
+      stack: error.stack,
+      mux_env: {
+        MUX_TOKEN_ID: process.env.MUX_TOKEN_ID,
+        MUX_TOKEN_SECRET: process.env.MUX_TOKEN_SECRET ? 'set' : 'missing',
+        LOCAL_ASSETS_API_KEY: process.env.LOCAL_ASSETS_API_KEY ? 'set' : 'missing'
+      }
     });
   }
 }
