@@ -545,6 +545,105 @@
     </main>
 
     <script>
+                    // 1. Specialized Audio Preview with your specific Mux Iframes
+                    window.showAudioPreview = function(name) {
+                        const display = document.getElementById('active-asset-display');
+                        const previewContainer = document.getElementById('preview-container');
+                        const title = document.getElementById('vault-dj-title');
+                        let embedCode = '';
+        
+                        const artist = (name || '').toLowerCase();
+        
+                        // Exact Mux Embeds provided
+                        if (artist.includes('amongst few')) {
+                            embedCode = `<iframe src="https://player.mux.com/UAuFKzITmC8fK9eQWuh01ghglbZkANDGLZRDfebfZ8rw" style="width: 100%; border: none; aspect-ratio: 16/9;" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;" allowfullscreen></iframe>`;
+                        } else if (artist.includes('michael bibi')) {
+                            embedCode = `<iframe src="https://player.mux.com/01qdXIg3R1ObhtA1Z3SA1d01lnHxKh005JDDPPjj00vCd3M" style="width: 100%; border: none; aspect-ratio: 16/9;" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;" allowfullscreen></iframe>`;
+                        } else {
+                            embedCode = `<div class="p-10 border border-zinc-800 rounded-2xl text-zinc-600 font-mono text-[10px] uppercase tracking-widest text-center">// NO MASTER AUDIO SOURCE FOUND</div>`;
+                        }
+
+                        previewContainer.classList.remove('hidden');
+                        title.innerText = name.toUpperCase();
+                        display.innerHTML = `<div class="animate-in fade-in zoom-in duration-500">${embedCode}</div>`;
+                        display.scrollIntoView({ behavior: 'smooth' });
+                    }
+
+                    // 2. The Updated Vault Renderer
+                    function renderVaultHistory() {
+                        const list = document.getElementById('cloud-list');
+                        const history = JSON.parse(localStorage.getItem('vault-history') || '[]');
+        
+                        if (!history.length) {
+                            list.innerHTML = '<div class="p-20 opacity-20 uppercase tracking-[0.5em] text-[9px]">// Archive Offline</div>';
+                            return;
+                        }
+
+                        list.className = 'vault-history-list';
+                        list.innerHTML = history.map((asset, index) => {
+                            const name = asset.artist || asset.dj || 'ANONYMOUS';
+                            const isExpanded = index === 0 ? ' expanded' : ''; // Keep top one open
+            
+                            return `
+                            <div class="vault-card${isExpanded}" id="vault-${index}">
+                                <div class="vault-card-header" onclick="toggleVaultFolder(${index})">
+                                    <div class="vault-card-header-main">
+                                        <span class="vault-card-title">${name}</span>
+                                        <span class="vault-card-meta">ACTIVE SESSION // REF: ${asset.id ? asset.id.substring(0,8) : '0000'}</span>
+                                    </div>
+                                    <div class="vault-card-header-status">
+                                        <span class="vault-card-status">
+                                            <span style="width:8px;height:8px;background:#39FF14;border-radius:50%;margin-right:8px;display:inline-block;"></span>
+                                            Secured
+                                        </span>
+                                        <div class="vault-card-actions">
+                                            <button onclick="event.stopPropagation(); showMuxPreview('${asset.id}', '${name}')"><iconify-icon icon="solar:play-bold"></iconify-icon></button>
+                                            <button onclick="event.stopPropagation();"><iconify-icon icon="solar:download-square-bold"></iconify-icon></button>
+                                        </div>
+                                    </div>
+                                    <span class="vault-card-toggle" style="position:absolute;top:32px;right:5vw;">
+                                        <iconify-icon icon="solar:alt-arrow-right-bold" class="text-xl"></iconify-icon>
+                                    </span>
+                                </div>
+                                <div class="vault-card-details">
+                                    <div class="vault-card-divider"></div>
+                                    <div class="vault-card-clips">
+                                        ${[...Array(12)].map((_, i) => `<div class="vault-card-clip">SHORT_0${i+1}</div>`).join('')}
+                                    </div>
+                                    <div class="vault-card-stems">
+                                        <button class="vault-card-stem" onclick="event.stopPropagation(); showAudioPreview('${name}')" style="cursor:pointer;">
+                                            <iconify-icon icon="solar:music-note-bold" class="text-primary text-[10px]"></iconify-icon>
+                                            HQ_MASTER_AUDIO
+                                        </button>
+                                        <div class="vault-card-stem">
+                                            <iconify-icon icon="solar:gallery-bold" class="text-zinc-600 text-[10px]"></iconify-icon>
+                                            6_HI_RES_THUMBS
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>`;
+                        }).join('');
+                    }
+
+                    // Toggle functionality
+                    window.toggleVaultFolder = function(index) {
+                        const el = document.getElementById(`vault-${index}`);
+                        if (!el) return;
+                        const wasExpanded = el.classList.contains('expanded');
+                        document.querySelectorAll('.vault-card').forEach(c => c.classList.remove('expanded'));
+                        if (!wasExpanded) el.classList.add('expanded');
+                    }
+
+                    // Standard Preview for Video Assets
+                    function showMuxPreview(id, dj) {
+                        document.getElementById('preview-container').classList.remove('hidden');
+                        document.getElementById('vault-dj-title').innerText = dj.toUpperCase();
+                        const display = document.getElementById('active-asset-display');
+                        display.innerHTML = `<mux-player playback-id="${id}" class="w-full aspect-video" primary-color="#39FF14" autoplay></mux-player>`;
+                        display.scrollIntoView({ behavior: 'smooth' });
+                    }
+
+                    document.addEventListener('DOMContentLoaded', renderVaultHistory);
                 // Audio preview for HQ_MASTER_AUDIO
                 window.showAudioPreview = function(name) {
                     const display = document.getElementById('active-asset-display');
