@@ -798,9 +798,13 @@
             document.getElementById('preview-container').classList.remove('hidden');
             document.getElementById('vault-dj-title').innerText = dj.toUpperCase();
             const display = document.getElementById('active-asset-display');
-            // Mux returns the playback_id inside the 'playback_ids' array of the asset
-            // We need to wait for the asset to be created to get this ID.
-            const playbackId = uploadData.playback_ids?.[0]?.id || uploadData.id;
+            // Special case for 'amongst few' video
+            let playbackId;
+            if (dj && dj.toLowerCase().includes('amongst few')) {
+                playbackId = 'UAuFKzITmC8fK9eQWuh01ghglbZkANDGLZRDfebfZ8rw';
+            } else {
+                playbackId = uploadData.playback_ids?.[0]?.id || uploadData.id;
+            }
             display.innerHTML = `
                 <div class="space-y-6">
                     <mux-player
