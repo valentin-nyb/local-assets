@@ -23,6 +23,50 @@
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
 
     <style>
+                                /* Symmetrical Vault Container */
+                                .vault-entry-container {
+                                    border-bottom: 1px solid rgba(255,255,255,0.05);
+                                    background: transparent;
+                                    transition: all 0.3s ease;
+                                }
+
+                                /* The "Folder" Summary Row */
+                                .vault-summary {
+                                    display: grid;
+                                    grid-template-columns: 40px 1fr 240px 140px; /* Toggle | Identity | Status | Controls */
+                                    padding: 30px var(--p);
+                                    align-items: center;
+                                    cursor: pointer;
+                                }
+
+                                .vault-summary:hover { background: rgba(255,255,255,0.02); }
+
+                                /* Expansion Logic */
+                                .asset-tray {
+                                    max-height: 0;
+                                    overflow: hidden;
+                                    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                                    background: #030303;
+                                    padding: 0 var(--p);
+                                }
+
+                                .vault-entry-container.expanded .asset-tray {
+                                    max-height: 500px;
+                                    padding: 20px var(--p) 40px var(--p);
+                                    border-top: 1px solid rgba(255,255,255,0.02);
+                                }
+
+                                .vault-entry-container.expanded .toggle-icon { transform: rotate(90deg); }
+
+                                /* Typography Fix */
+                                .artist-summary-title {
+                                    font-size: 24px;
+                                    font-weight: 900;
+                                    font-style: italic;
+                                    text-transform: uppercase;
+                                    letter-spacing: -0.05em;
+                                    line-height: 1;
+                                }
                 /* Vertical Social Clip Container */
                 .film-strip-container {
                     display: flex;
@@ -60,6 +104,56 @@
                 }
                 .vertical-clip-node:hover .clip-label {
                     color: var(--neon);
+                }
+                /* Symmetrical Vault Console Layout */
+                .vault-entry {
+                    display: grid;
+                    grid-template-columns: 1fr 240px 140px; /* Identity | Status | Controls */
+                    padding: 40px 0;
+                    border-bottom: 1px solid rgba(255,255,255,0.05);
+                    background: transparent;
+                    transition: background 0.3s ease;
+                }
+                .vault-entry:hover {
+                    background: rgba(255,255,255,0.01);
+                }
+                .artist-identity h4 {
+                    font-size: 32px;
+                    font-weight: 950;
+                    font-style: italic;
+                    letter-spacing: -0.05em;
+                    text-transform: uppercase;
+                    line-height: 0.85;
+                    color: white;
+                }
+                /* Content Factory Strip */
+                .content-factory-strip {
+                    display: flex;
+                    gap: 12px;
+                    margin-top: 24px;
+                    overflow-x: auto;
+                    padding-bottom: 8px;
+                    scrollbar-width: none;
+                }
+                .short-node {
+                    flex: 0 0 70px;
+                    aspect-ratio: 9/16;
+                    background: #0a0a0a;
+                    border: 1px solid rgba(255,255,255,0.1);
+                    border-radius: 6px;
+                    position: relative;
+                    overflow: hidden;
+                    transition: border-color 0.3s ease;
+                }
+                .short-node:hover { border-color: #39FF14; }
+                .stem-badge {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 6px 12px;
+                    background: rgba(255,255,255,0.03);
+                    border: 1px solid rgba(255,255,255,0.05);
+                    border-radius: 4px;
                 }
         body { background-color: #050505 !important; color: white; -webkit-font-smoothing: antialiased; font-family: 'JetBrains Mono', monospace; }
         .nav-link.active { background-color: rgba(255,255,255,0.05); border: 1px solid #27272a; color: #39FF14; }
@@ -137,8 +231,8 @@
 
     <aside id="sidebar" class="w-64 border-r border-zinc-800 bg-[#0a0a0a] flex flex-col shrink-0 h-full">
         <div class="h-16 flex items-center px-6 border-b border-zinc-800 justify-between">
-            <a href="index.html" class="relative h-6 w-32 flex transition-all group">
-                 <!-- Removed Cloudinary logo references -->
+            <a href="index.html" class="relative h-6 w-32 flex items-center transition-all group">
+                <img src="logos/White@2x.png" alt="Local Assets Logotype" class="h-full object-contain" style="max-width:100%; max-height:100%;" />
             </a>
         </div>
         <nav class="flex-1 p-4 space-y-2">
@@ -264,58 +358,80 @@
         function renderVaultHistory() {
             const list = document.getElementById('cloud-list');
             const history = JSON.parse(localStorage.getItem('vault-history') || '[]');
+            
             if (!history.length) {
-                list.innerHTML = '// Awaiting new session ingest';
+                list.innerHTML = '<div class="p-20 opacity-30 uppercase tracking-widest text-[10px]">// Archive Empty</div>';
                 return;
             }
-            list.innerHTML = history.map(asset => {
+
+            list.innerHTML = history.map((asset, index) => {
                 const isReady = asset.status === 'ready' || true;
-                const artistName = asset.artist || asset.dj || 'ANONYMOUS';
+                const name = asset.artist || asset.dj || 'ANONYMOUS'; 
+                
                 return `
-                <div class="vault-grid group hover:bg-white/[0.01] transition-colors p-6 border-b border-zinc-900">
-                    <div class="space-y-6">
-                        <div>
-                            <h4 class="artist-title">${artistName}</h4>
-                            <p class="mono-label text-[7px] text-zinc-600 mt-2">ID: ${asset.id ? asset.id.substring(0,12) : ''} // 48.4 GB MASTER</p>
+                <div class="vault-entry-container" id="vault-${index}">
+                    <div class="vault-summary" onclick="toggleVaultFolder(${index})">
+                        <div class="toggle-icon transition-transform duration-300">
+                            <iconify-icon icon="solar:alt-arrow-right-bold" class="text-zinc-700"></iconify-icon>
+                        </div>
+                        
+                        <div class="flex flex-col gap-1">
+                            <h4 class="artist-summary-title">${name}</h4>
+                            <span class="text-[8px] font-mono text-zinc-600 uppercase tracking-widest">
+                                ${asset.date || '07 MAR 2026'} // REF: ${asset.id.substring(0,8)}
+                            </span>
                         </div>
 
-                        <div class="film-strip-container">
-                            ${[...Array(12)].map((_, i) => `
-                                <div class="vertical-clip-node group/clip cursor-pointer">
-                                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
-                                    <span class="clip-label tracking-tighter">SHORT_0${i+1}</span>
+                        <div class="flex justify-center">
+                            <div class="flex items-center gap-2 px-3 py-1 rounded-full border border-primary/20 bg-primary/5">
+                                <span class="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_#39FF14]"></span>
+                                <span class="text-[8px] font-black text-primary uppercase tracking-widest">Archive Secured</span>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end gap-3">
+                            <button class="h-10 w-10 flex items-center justify-center bg-white text-black hover:bg-primary transition-all rounded-lg">
+                                <iconify-icon icon="solar:play-bold" class="text-lg"></iconify-icon>
+                            </button>
+                            <button class="h-10 w-10 flex items-center justify-center border border-zinc-800 text-zinc-600 rounded-lg">
+                                <iconify-icon icon="solar:download-square-bold" class="text-lg"></iconify-icon>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="asset-tray">
+                        <div class="space-y-6">
+                            <h5 class="text-[8px] font-mono text-zinc-700 uppercase tracking-[0.3em] border-b border-zinc-900 pb-2">Content Factory Output</h5>
+                            
+                            <div class="film-strip-container">
+                                ${[...Array(12)].map((_, i) => `
+                                    <div class="vertical-clip-node group/clip cursor-pointer">
+                                        <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-60"></div>
+                                        <span class="clip-label">SHORT_0${i+1}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+
+                            <div class="flex gap-4">
+                                <div class="status-node py-1 px-3 border-zinc-800">
+                                    <iconify-icon icon="solar:music-note-bold" class="text-zinc-600 text-[10px]"></iconify-icon>
+                                    <span class="text-[7px] font-black text-zinc-500 uppercase tracking-widest">HQ_AUDIO_STEM.WAV</span>
                                 </div>
-                            `).join('')}
-                        </div>
-                        <div class="flex gap-4">
-                            <div class="status-node py-1 px-3 border-zinc-800">
-                                <iconify-icon icon="solar:music-note-bold" class="text-zinc-600 text-[10px]"></iconify-icon>
-                                <span class="text-[7px] font-black text-zinc-500 uppercase tracking-widest">HQ_AUDIO_STEM.WAV</span>
-                            </div>
-                            <div class="status-node py-1 px-3 border-zinc-800">
-                                <iconify-icon icon="solar:gallery-bold" class="text-zinc-600 text-[10px]"></iconify-icon>
-                                <span class="text-[7px] font-black text-zinc-500 uppercase tracking-widest">6_HI_RES_THUMBS</span>
+                                <div class="status-node py-1 px-3 border-zinc-800">
+                                    <iconify-icon icon="solar:gallery-bold" class="text-zinc-600 text-[10px]"></iconify-icon>
+                                    <span class="text-[7px] font-black text-zinc-500 uppercase tracking-widest">6_HI_RES_THUMBS</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-
-                    <div class="flex justify-center">
-                        <div class="status-pill ${isReady ? 'border-primary/20' : 'border-yellow-500/20'}">
-                            <span class="relative h-1.5 w-1.5 bg-primary rounded-full"></span>
-                            <span class="text-[8px] font-black tracking-[0.2em] text-white uppercase">Archive Secured</span>
-                        </div>
-                    </div>
-
-                    <div class="flex justify-end gap-3 self-start mt-2">
-                        <button onclick="showMuxPreview('${asset.id}', '${artistName}')" class="h-12 w-12 flex items-center justify-center bg-white text-black hover:bg-primary transition-all rounded-xl">
-                            <iconify-icon icon="solar:play-bold" class="text-xl"></iconify-icon>
-                        </button>
-                        <button class="h-12 w-12 flex items-center justify-center border border-zinc-800 rounded-xl hover:bg-zinc-900 transition-all text-zinc-600">
-                            <iconify-icon icon="solar:download-square-bold" class="text-xl"></iconify-icon>
-                        </button>
                     </div>
                 </div>`;
             }).join('');
+        }
+
+        // Global Toggle Function
+        window.toggleVaultFolder = function(index) {
+            const el = document.getElementById(`vault-${index}`);
+            el.classList.toggle('expanded');
         }
 
         function setupUploadHandler() {
