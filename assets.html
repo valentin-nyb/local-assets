@@ -640,7 +640,7 @@
                             `).join('')}
                         </div>
                         <div class="vault-card-stems">
-                            <div class="vault-card-stem">
+                            <div class="vault-card-stem" onclick="event.stopPropagation(); showAudioPreview('${name}')" style="cursor:pointer;">
                                 <iconify-icon icon="solar:music-note-bold" class="text-zinc-600 text-[10px]"></iconify-icon>
                                 HQ_AUDIO_STEM.WAV
                             </div>
@@ -652,6 +652,22 @@
                     </div>
                 </div>
                 `;
+                    // Audio preview for HQ_AUDIO_STEM.WAV
+                    window.showAudioPreview = function(name) {
+                        const display = document.getElementById('active-asset-display');
+                        let audioIframe = '';
+                        if (name && name.toLowerCase().includes('amongst few')) {
+                            audioIframe = `<iframe src="https://player.mux.com/00iYQgcqVM17i4FBsJsp7h401EY8eTJnmFdsYuapQnItw" style="width: 100%; border: none;" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;" allowfullscreen></iframe>`;
+                        } else if (name && name.toLowerCase().includes('michael bibi')) {
+                            audioIframe = `<iframe src="https://player.mux.com/lO014I5Jn8UR7DI02HyfHNtU1Z9JawGePVzX2OIBLA7EY" style="width: 100%; border: none;" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;" allowfullscreen></iframe>`;
+                        } else {
+                            audioIframe = `<div class='text-zinc-500 text-xs p-6 text-center'>No HQ Audio Stem available for this entry.</div>`;
+                        }
+                        document.getElementById('preview-container').classList.remove('hidden');
+                        document.getElementById('vault-dj-title').innerText = name.toUpperCase();
+                        display.innerHTML = `<div class='space-y-6'>${audioIframe}</div>`;
+                        display.scrollIntoView({ behavior: 'smooth' });
+                    }
             }).join('');
         }
 
