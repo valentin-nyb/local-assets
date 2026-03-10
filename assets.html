@@ -582,8 +582,9 @@
                         list.className = 'vault-history-list';
                         list.innerHTML = history.map((asset, index) => {
                             const name = asset.artist || asset.dj || 'ANONYMOUS';
-                            const isExpanded = index === 0 ? ' expanded' : ''; // Keep top one open
-            
+                            const isExpanded = index === 0 ? ' expanded' : '';
+                            // Escape single quotes for JS string
+                            const safeName = name.replace(/'/g, "\\'");
                             return `
                             <div class="vault-card${isExpanded}" id="vault-${index}">
                                 <div class="vault-card-header" onclick="toggleVaultFolder(${index})">
@@ -597,7 +598,7 @@
                                             Secured
                                         </span>
                                         <div class="vault-card-actions">
-                                            <button onclick="event.stopPropagation(); showMuxPreview('${asset.id}', '${name}')"><iconify-icon icon="solar:play-bold"></iconify-icon></button>
+                                            <button onclick="event.stopPropagation(); showMuxPreview('${asset.id}', '${safeName}')"><iconify-icon icon="solar:play-bold"></iconify-icon></button>
                                             <button onclick="event.stopPropagation();"><iconify-icon icon="solar:download-square-bold"></iconify-icon></button>
                                         </div>
                                     </div>
@@ -611,7 +612,7 @@
                                         ${[...Array(12)].map((_, i) => `<div class="vault-card-clip">SHORT_0${i+1}</div>`).join('')}
                                     </div>
                                     <div class="vault-card-stems">
-                                        <button class="vault-card-stem" onclick="event.stopPropagation(); showAudioPreview('${name}')" style="cursor:pointer;">
+                                        <button class="vault-card-stem" onclick="event.stopPropagation(); showAudioPreview('${safeName}')" style="cursor:pointer;">
                                             <iconify-icon icon="solar:music-note-bold" class="text-primary text-[10px]"></iconify-icon>
                                             HQ_MASTER_AUDIO
                                         </button>
