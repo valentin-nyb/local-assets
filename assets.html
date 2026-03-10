@@ -30,22 +30,22 @@
                                             gap: 32px;
                                         }
                                         .vault-card {
-                                            background: #000;
+                                            background: rgba(20,20,22,0.98);
                                             border-radius: 20px;
-                                            box-shadow: 0 4px 32px 0 rgba(0,0,0,0.18), 0 0 0 2px #39FF14;
-                                            border: none;
+                                            box-shadow: 0 4px 32px 0 rgba(0,0,0,0.12);
+                                            border: 1px solid rgba(255,255,255,0.04);
                                             transition: box-shadow 0.2s, border 0.2s, background 0.2s;
                                             overflow: hidden;
                                             margin: 0 0;
                                         }
                                         .vault-card:hover {
-                                            box-shadow: 0 8px 40px 0 rgba(57,255,20,0.13), 0 0 0 3px #39FF14;
-                                            background: #090f0a;
+                                            box-shadow: 0 8px 40px 0 rgba(57,255,20,0.08);
+                                            border-color: #39FF14;
+                                            background: rgba(30,30,32,1);
                                         }
                                         .vault-card-header {
-                                            padding: 28px calc(5vw + 48px) 24px 5vw; /* Add space for toggle and bottom */
+                                            padding: 28px 5vw 0 5vw;
                                             cursor: pointer;
-                                            position: relative;
                                         }
                                         .vault-card-header-main {
                                             display: flex;
@@ -64,7 +64,6 @@
                                             justify-content: space-between;
                                             margin-top: 18px;
                                             gap: 18px;
-                                            margin-bottom: 8px;
                                         }
                                                 /* Responsive stacked layout for vault card header on mobile */
                                                 @media (max-width: 700px) {
@@ -119,8 +118,8 @@
                                             display: flex;
                                             align-items: center;
                                             gap: 8px;
-                                            background: #000;
-                                            border: 1.5px solid #39FF14;
+                                            background: rgba(57,255,20,0.07);
+                                            border: 1px solid #39FF14;
                                             color: #39FF14;
                                             font-size: 0.7rem;
                                             font-weight: 700;
@@ -128,7 +127,6 @@
                                             padding: 4px 16px;
                                             font-family: 'JetBrains Mono', monospace;
                                             white-space: nowrap;
-                                            box-shadow: 0 0 8px 0 #39FF1433 inset, 0 1px 8px 0 #232323;
                                         }
                                         .vault-card-actions {
                                             display: flex;
@@ -143,30 +141,22 @@
                                             display: flex;
                                             align-items: center;
                                             justify-content: center;
-                                            border: 2px solid #232323;
-                                            transition: background 0.15s, color 0.15s, box-shadow 0.15s, border 0.15s;
-                                            box-shadow: 0 2px 8px 0 #232323, 0 0 0 2px #fff inset;
+                                            border: none;
+                                            transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+                                            box-shadow: 0 2px 8px 0 rgba(0,0,0,0.08);
                                         }
                                         .vault-card-actions button:hover {
                                             background: #39FF14;
                                             color: #111;
-                                            border-color: #39FF14;
-                                            box-shadow: 0 4px 16px 0 #39FF1444, 0 0 0 2px #39FF14 inset;
+                                            box-shadow: 0 4px 16px 0 rgba(57,255,20,0.12);
                                         }
                                         .vault-card-toggle {
                                             transition: transform 0.3s;
-                                            position: absolute;
-                                            top: 32px;
-                                            right: 18px;
-                                            min-width: 32px;
-                                            min-height: 32px;
+                                            margin-right: 18px;
+                                            min-width: 24px;
                                             display: flex;
                                             align-items: center;
                                             justify-content: center;
-                                            z-index: 2;
-                                            background: #000;
-                                            border-radius: 50%;
-                                            box-shadow: 0 0 0 2px #232323, 0 2px 8px 0 #232323;
                                         }
                                         .vault-card.expanded .vault-card-toggle {
                                             transform: rotate(90deg);
@@ -175,7 +165,7 @@
                                             max-height: 0;
                                             overflow: hidden;
                                             transition: max-height 0.5s cubic-bezier(0.4,0,0.2,1);
-                                            background: transparent;
+                                            background: rgba(10,10,10,0.98);
                                             padding: 0 5vw;
                                         }
                                         .vault-card.expanded .vault-card-details {
@@ -183,7 +173,9 @@
                                             padding: 24px 5vw 40px 5vw;
                                         }
                                         .vault-card-divider {
-                                            display: none;
+                                            height: 1px;
+                                            background: linear-gradient(90deg,transparent,#232323 40%,#232323 60%,transparent);
+                                            margin: 24px 0 16px 0;
                                         }
                                         .vault-card-clips {
                                             display: flex;
@@ -640,10 +632,10 @@
                             `).join('')}
                         </div>
                         <div class="vault-card-stems">
-                            <div class="vault-card-stem" onclick="event.stopPropagation(); showAudioPreview('${name}')" style="cursor:pointer;">
+                            <button class="vault-card-stem" onclick="event.stopPropagation(); showAudioPreview('${name}')" style="cursor:pointer;">
                                 <iconify-icon icon="solar:music-note-bold" class="text-zinc-600 text-[10px]"></iconify-icon>
-                                HQ_AUDIO_STEM.WAV
-                            </div>
+                                HQ_MASTER_AUDIO
+                            </button>
                             <div class="vault-card-stem">
                                 <iconify-icon icon="solar:gallery-bold" class="text-zinc-600 text-[10px]"></iconify-icon>
                                 6_HI_RES_THUMBS
@@ -652,36 +644,6 @@
                     </div>
                 </div>
                 `;
-            }).join('');
-        }
-
-        // Audio preview for HQ_AUDIO_STEM.WAV
-        window.showAudioPreview = function(name) {
-            const display = document.getElementById('active-asset-display');
-            let audioEmbed = '';
-            // Try to find the corresponding asset in localStorage for playback ID
-            const history = JSON.parse(localStorage.getItem('vault-history') || '[]');
-            let asset = history.find(a => (a.artist || a.dj || '').toLowerCase() === (name || '').toLowerCase());
-            let playbackId = asset && asset.id ? asset.id : null;
-            // Special cases for known artists
-            if (name && name.toLowerCase().includes('amongst few')) {
-                playbackId = '00iYQgcqVM17i4FBsJsp7h401EY8eTJnmFdsYuapQnItw';
-            } else if (name && name.toLowerCase().includes('michael bibi')) {
-                playbackId = 'lO014I5Jn8UR7DI02HyfHNtU1Z9JawGePVzX2OIBLA7EY';
-            }
-            if (playbackId) {
-                audioEmbed = `<audio controls style='width:100%;margin-top:24px;'>
-                    <source src="https://stream.mux.com/${playbackId}/high.mp3" type="audio/mpeg">
-                    Your browser does not support the audio element.
-                </audio>`;
-            } else {
-                audioEmbed = `<div class='text-zinc-500 text-xs p-6 text-center'>No HQ Audio Stem available for this entry.</div>`;
-            }
-            document.getElementById('preview-container').classList.remove('hidden');
-            document.getElementById('vault-dj-title').innerText = name.toUpperCase();
-            display.innerHTML = `<div class='space-y-6'>${audioEmbed}</div>`;
-            display.scrollIntoView({ behavior: 'smooth' });
-        }
             }).join('');
         }
 
@@ -825,43 +787,19 @@
             document.getElementById('preview-container').classList.remove('hidden');
             document.getElementById('vault-dj-title').innerText = dj.toUpperCase();
             const display = document.getElementById('active-asset-display');
-            // Special case for 'amongst few' and 'michael bibi' videos
-            let playbackId;
-            if (dj && dj.toLowerCase().includes('michael bibi')) {
-                display.innerHTML = `
-                    <div class="space-y-6">
-                        <iframe
-                          src="https://player.mux.com/01qdXIg3R1ObhtA1Z3SA1d01lnHxKh005JDDPPjj00vCd3M?metadata-video-title=Michael-Bibi-B2B-Maceo-Plex-Live&video-title=Michael-Bibi-B2B-Maceo-Plex-Live"
-                          style="width: 100%; border: none; aspect-ratio: 16/9;"
-                          allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
-                          allowfullscreen
-                        ></iframe>
-                    </div>`;
-            } else if (dj && dj.toLowerCase().includes('amongst few')) {
-                playbackId = 'UAuFKzITmC8fK9eQWuh01ghglbZkANDGLZRDfebfZ8rw';
-                display.innerHTML = `
-                    <div class="space-y-6">
-                        <mux-player
-                            playback-id="${playbackId}"
-                            metadata-video-title="${dj}"
-                            class="w-full aspect-video shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
-                            primary-color="#39FF14"
-                            autoplay
-                        ></mux-player>
-                    </div>`;
-            } else {
-                playbackId = uploadData.playback_ids?.[0]?.id || uploadData.id;
-                display.innerHTML = `
-                    <div class="space-y-6">
-                        <mux-player
-                            playback-id="${playbackId}"
-                            metadata-video-title="${dj}"
-                            class="w-full aspect-video shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
-                            primary-color="#39FF14"
-                            autoplay
-                        ></mux-player>
-                    </div>`;
-            }
+            // Mux returns the playback_id inside the 'playback_ids' array of the asset
+            // We need to wait for the asset to be created to get this ID.
+            const playbackId = uploadData.playback_ids?.[0]?.id || uploadData.id;
+            display.innerHTML = `
+                <div class="space-y-6">
+                    <mux-player
+                        playback-id="${playbackId}"
+                        metadata-video-title="${dj}"
+                        class="w-full aspect-video shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
+                        primary-color="#39FF14"
+                        autoplay
+                    ></mux-player>
+                </div>`;
             display.scrollIntoView({ behavior: 'smooth' });
         }
     </script>
