@@ -6,7 +6,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="local / assets">
+    <meta name="apple-mobile-web-app-title" content="local / assets™">
     <title>local / assets™</title>
     
     <link rel="icon" type="image/x-icon" href="favicon/favicon.ico">
@@ -360,7 +360,7 @@
             const history = JSON.parse(localStorage.getItem('vault-history') || '[]');
             
             if (!history.length) {
-                list.innerHTML = '<div class="p-20 opacity-30 uppercase tracking-widest text-[10px]">// Archive Empty</div>';
+                list.innerHTML = '<div class="p-20 opacity-20 uppercase tracking-[0.5em] text-[9px]">// Archive Offline</div>';
                 return;
             }
 
@@ -371,55 +371,60 @@
                 return `
                 <div class="vault-entry-container" id="vault-${index}">
                     <div class="vault-summary" onclick="toggleVaultFolder(${index})">
-                        <div class="toggle-icon transition-transform duration-300">
-                            <iconify-icon icon="solar:alt-arrow-right-bold" class="text-zinc-700"></iconify-icon>
+                        <div class="toggle-icon">
+                            <iconify-icon icon="solar:alt-arrow-right-bold" class="text-xl"></iconify-icon>
                         </div>
                         
-                        <div class="flex flex-col gap-1">
+                        <div class="flex flex-col">
                             <h4 class="artist-summary-title">${name}</h4>
-                            <span class="text-[8px] font-mono text-zinc-600 uppercase tracking-widest">
-                                ${asset.date || '07 MAR 2026'} // REF: ${asset.id.substring(0,8)}
+                            <span class="text-[8px] font-mono text-zinc-600 uppercase tracking-widest mt-1">
+                                ${asset.date || 'ACTIVE SESSION'} // REF: ${asset.id ? asset.id.substring(0,8) : '0000'}
                             </span>
                         </div>
 
                         <div class="flex justify-center">
                             <div class="flex items-center gap-2 px-3 py-1 rounded-full border border-primary/20 bg-primary/5">
-                                <span class="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_#39FF14]"></span>
-                                <span class="text-[8px] font-black text-primary uppercase tracking-widest">Archive Secured</span>
+                                <span class="w-1 h-1 rounded-full bg-primary shadow-[0_0_8px_#39FF14]"></span>
+                                <span class="text-[8px] font-black text-primary uppercase tracking-widest font-mono">Secured</span>
                             </div>
                         </div>
 
-                        <div class="flex justify-end gap-3">
-                            <button class="h-10 w-10 flex items-center justify-center bg-white text-black hover:bg-primary transition-all rounded-lg">
+                        <div class="flex justify-end gap-2">
+                            <button onclick="event.stopPropagation(); showMuxPreview('${asset.id}', '${name}')" 
+                                    class="h-10 w-10 flex items-center justify-center bg-white text-black hover:bg-primary transition-all rounded-lg">
                                 <iconify-icon icon="solar:play-bold" class="text-lg"></iconify-icon>
                             </button>
-                            <button class="h-10 w-10 flex items-center justify-center border border-zinc-800 text-zinc-600 rounded-lg">
+                            <button class="h-10 w-10 flex items-center justify-center border border-zinc-800 text-zinc-600 rounded-lg hover:text-white transition-all">
                                 <iconify-icon icon="solar:download-square-bold" class="text-lg"></iconify-icon>
                             </button>
                         </div>
                     </div>
 
                     <div class="asset-tray">
-                        <div class="space-y-6">
-                            <h5 class="text-[8px] font-mono text-zinc-700 uppercase tracking-[0.3em] border-b border-zinc-900 pb-2">Content Factory Output</h5>
+                        <div class="pt-8 space-y-8">
+                            <div class="flex items-center gap-4">
+                                <span class="h-px flex-1 bg-zinc-900"></span>
+                                <span class="text-[7px] font-mono text-zinc-700 uppercase tracking-[0.4em]">Content Factory Output</span>
+                                <span class="h-px flex-1 bg-zinc-900"></span>
+                            </div>
                             
                             <div class="film-strip-container">
                                 ${[...Array(12)].map((_, i) => `
                                     <div class="vertical-clip-node group/clip cursor-pointer">
-                                        <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-60"></div>
+                                        <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-80"></div>
                                         <span class="clip-label">SHORT_0${i+1}</span>
                                     </div>
                                 `).join('')}
                             </div>
 
-                            <div class="flex gap-4">
-                                <div class="status-node py-1 px-3 border-zinc-800">
+                            <div class="flex gap-3">
+                                <div class="stem-badge">
                                     <iconify-icon icon="solar:music-note-bold" class="text-zinc-600 text-[10px]"></iconify-icon>
-                                    <span class="text-[7px] font-black text-zinc-500 uppercase tracking-widest">HQ_AUDIO_STEM.WAV</span>
+                                    <span class="text-[7px] font-black text-zinc-500 uppercase tracking-widest font-mono">HQ_AUDIO_STEM.WAV</span>
                                 </div>
-                                <div class="status-node py-1 px-3 border-zinc-800">
+                                <div class="stem-badge">
                                     <iconify-icon icon="solar:gallery-bold" class="text-zinc-600 text-[10px]"></iconify-icon>
-                                    <span class="text-[7px] font-black text-zinc-500 uppercase tracking-widest">6_HI_RES_THUMBS</span>
+                                    <span class="text-[7px] font-black text-zinc-500 uppercase tracking-widest font-mono">6_HI_RES_THUMBS</span>
                                 </div>
                             </div>
                         </div>
