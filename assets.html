@@ -652,33 +652,36 @@
                     </div>
                 </div>
                 `;
-                    // Audio preview for HQ_AUDIO_STEM.WAV
-                    window.showAudioPreview = function(name) {
-                        const display = document.getElementById('active-asset-display');
-                        let audioEmbed = '';
-                        // Try to find the corresponding asset in localStorage for playback ID
-                        const history = JSON.parse(localStorage.getItem('vault-history') || '[]');
-                        let asset = history.find(a => (a.artist || a.dj || '').toLowerCase() === (name || '').toLowerCase());
-                        let playbackId = asset && asset.id ? asset.id : null;
-                        // Special cases for known artists
-                        if (name && name.toLowerCase().includes('amongst few')) {
-                            playbackId = '00iYQgcqVM17i4FBsJsp7h401EY8eTJnmFdsYuapQnItw';
-                        } else if (name && name.toLowerCase().includes('michael bibi')) {
-                            playbackId = 'lO014I5Jn8UR7DI02HyfHNtU1Z9JawGePVzX2OIBLA7EY';
-                        }
-                        if (playbackId) {
-                            audioEmbed = `<audio controls style='width:100%;margin-top:24px;'>
-                                <source src="https://stream.mux.com/${playbackId}/high.mp3" type="audio/mpeg">
-                                Your browser does not support the audio element.
-                            </audio>`;
-                        } else {
-                            audioEmbed = `<div class='text-zinc-500 text-xs p-6 text-center'>No HQ Audio Stem available for this entry.</div>`;
-                        }
-                        document.getElementById('preview-container').classList.remove('hidden');
-                        document.getElementById('vault-dj-title').innerText = name.toUpperCase();
-                        display.innerHTML = `<div class='space-y-6'>${audioEmbed}</div>`;
-                        display.scrollIntoView({ behavior: 'smooth' });
-                    }
+            }).join('');
+        }
+
+        // Audio preview for HQ_AUDIO_STEM.WAV
+        window.showAudioPreview = function(name) {
+            const display = document.getElementById('active-asset-display');
+            let audioEmbed = '';
+            // Try to find the corresponding asset in localStorage for playback ID
+            const history = JSON.parse(localStorage.getItem('vault-history') || '[]');
+            let asset = history.find(a => (a.artist || a.dj || '').toLowerCase() === (name || '').toLowerCase());
+            let playbackId = asset && asset.id ? asset.id : null;
+            // Special cases for known artists
+            if (name && name.toLowerCase().includes('amongst few')) {
+                playbackId = '00iYQgcqVM17i4FBsJsp7h401EY8eTJnmFdsYuapQnItw';
+            } else if (name && name.toLowerCase().includes('michael bibi')) {
+                playbackId = 'lO014I5Jn8UR7DI02HyfHNtU1Z9JawGePVzX2OIBLA7EY';
+            }
+            if (playbackId) {
+                audioEmbed = `<audio controls style='width:100%;margin-top:24px;'>
+                    <source src="https://stream.mux.com/${playbackId}/high.mp3" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>`;
+            } else {
+                audioEmbed = `<div class='text-zinc-500 text-xs p-6 text-center'>No HQ Audio Stem available for this entry.</div>`;
+            }
+            document.getElementById('preview-container').classList.remove('hidden');
+            document.getElementById('vault-dj-title').innerText = name.toUpperCase();
+            display.innerHTML = `<div class='space-y-6'>${audioEmbed}</div>`;
+            display.scrollIntoView({ behavior: 'smooth' });
+        }
             }).join('');
         }
 
