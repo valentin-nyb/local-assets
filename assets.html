@@ -44,31 +44,40 @@
                                             background: rgba(30,30,32,1);
                                         }
                                         .vault-card-header {
+                                            padding: 28px 5vw 0 5vw;
+                                            cursor: pointer;
+                                        }
+                                        .vault-card-header-main {
+                                            display: flex;
+                                            flex-direction: column;
+                                            gap: 4px;
+                                        }
+                                        .vault-card-header-row {
+                                            display: flex;
+                                            align-items: flex-end;
+                                            justify-content: space-between;
+                                            gap: 18px;
+                                        }
+                                        .vault-card-header-status {
                                             display: flex;
                                             align-items: center;
                                             justify-content: space-between;
-                                            padding: 28px 5vw 0 5vw;
-                                            cursor: pointer;
+                                            margin-top: 18px;
                                             gap: 18px;
-                                            flex-wrap: wrap;
                                         }
                                                 /* Responsive stacked layout for vault card header on mobile */
                                                 @media (max-width: 700px) {
                                                     .vault-card-header {
-                                                        flex-direction: column;
-                                                        align-items: flex-start;
-                                                        gap: 14px;
                                                         padding-top: 18px;
                                                         padding-bottom: 0;
                                                     }
-                                                    .vault-card-main {
-                                                        width: 100%;
+                                                    .vault-card-header-row, .vault-card-header-status {
+                                                        flex-direction: column;
+                                                        align-items: flex-start;
+                                                        gap: 10px;
                                                     }
-                                                    .vault-card-status, .vault-card-actions {
-                                                        margin-left: 0;
-                                                    }
-                                                    .vault-card-actions {
-                                                        margin-top: 2px;
+                                                    .vault-card-header-status {
+                                                        margin-top: 10px;
                                                     }
                                                 }
                                                 @media (max-width: 600px) {
@@ -591,24 +600,28 @@
                 return `
                 <div class="vault-card${index === 0 ? ' expanded' : ''}" id="vault-${index}">
                     <div class="vault-card-header" onclick="toggleVaultFolder(${index})">
-                        <span class="vault-card-toggle">
-                            <iconify-icon icon="solar:alt-arrow-right-bold" class="text-xl"></iconify-icon>
-                        </span>
-                        <div class="vault-card-main">
-                            <span class="vault-card-title">${name}</span>
+                        <div class="vault-card-header-main">
+                            <div class="vault-card-header-row">
+                                <span class="vault-card-title">${name}</span>
+                            </div>
                             <span class="vault-card-meta">${asset.date || 'ACTIVE SESSION'} // REF: ${asset.id ? asset.id.substring(0,8) : '0000'}</span>
                         </div>
-                        <span class="vault-card-status">
-                            <span class="w-1.5 h-1.5 rounded-full bg-primary" style="display:inline-block;width:8px;height:8px;background:#39FF14;margin-right:6px;"></span>
-                            Secured
-                        </span>
-                        <span class="vault-card-actions">
-                            <button onclick="event.stopPropagation(); showMuxPreview('${asset.id}', '${name}')" title="Preview">
-                                <iconify-icon icon="solar:play-bold" class="text-lg"></iconify-icon>
-                            </button>
-                            <button title="Download" onclick="event.stopPropagation();">
-                                <iconify-icon icon="solar:download-square-bold" class="text-lg"></iconify-icon>
-                            </button>
+                        <div class="vault-card-header-status">
+                            <span class="vault-card-status">
+                                <span class="w-1.5 h-1.5 rounded-full bg-primary" style="display:inline-block;width:8px;height:8px;background:#39FF14;margin-right:6px;"></span>
+                                Secured
+                            </span>
+                            <span class="vault-card-actions">
+                                <button onclick="event.stopPropagation(); showMuxPreview('${asset.id}', '${name}')" title="Preview">
+                                    <iconify-icon icon="solar:play-bold" class="text-lg"></iconify-icon>
+                                </button>
+                                <button title="Download" onclick="event.stopPropagation();">
+                                    <iconify-icon icon="solar:download-square-bold" class="text-lg"></iconify-icon>
+                                </button>
+                            </span>
+                        </div>
+                        <span class="vault-card-toggle" style="position:absolute;top:32px;right:5vw;">
+                            <iconify-icon icon="solar:alt-arrow-right-bold" class="text-xl"></iconify-icon>
                         </span>
                     </div>
                     <div class="vault-card-details">
