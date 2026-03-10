@@ -50,7 +50,37 @@
                                             padding: 28px 5vw 0 5vw;
                                             cursor: pointer;
                                             gap: 18px;
+                                            flex-wrap: wrap;
                                         }
+                                                /* Responsive stacked layout for vault card header on mobile */
+                                                @media (max-width: 700px) {
+                                                    .vault-card-header {
+                                                        flex-direction: column;
+                                                        align-items: flex-start;
+                                                        gap: 14px;
+                                                        padding-top: 18px;
+                                                        padding-bottom: 0;
+                                                    }
+                                                    .vault-card-main {
+                                                        width: 100%;
+                                                    }
+                                                    .vault-card-status, .vault-card-actions {
+                                                        margin-left: 0;
+                                                    }
+                                                    .vault-card-actions {
+                                                        margin-top: 2px;
+                                                    }
+                                                }
+                                                @media (max-width: 600px) {
+                                                    .vault-card-title {
+                                                        font-size: 1rem;
+                                                        font-style: normal;
+                                                        font-weight: 800;
+                                                    }
+                                                    .vault-card-meta {
+                                                        font-size: 0.6rem;
+                                                    }
+                                                }
                                         .vault-card-main {
                                             display: flex;
                                             flex-direction: column;
