@@ -44,8 +44,9 @@
                                             background: #090f0a;
                                         }
                                         .vault-card-header {
-                                            padding: 28px 5vw 0 5vw;
+                                            padding: 28px calc(5vw + 48px) 0 5vw; /* Add space for toggle */
                                             cursor: pointer;
+                                            position: relative;
                                         }
                                         .vault-card-header-main {
                                             display: flex;
@@ -154,11 +155,18 @@
                                         }
                                         .vault-card-toggle {
                                             transition: transform 0.3s;
-                                            margin-right: 18px;
-                                            min-width: 24px;
+                                            position: absolute;
+                                            top: 32px;
+                                            right: 18px;
+                                            min-width: 32px;
+                                            min-height: 32px;
                                             display: flex;
                                             align-items: center;
                                             justify-content: center;
+                                            z-index: 2;
+                                            background: #000;
+                                            border-radius: 50%;
+                                            box-shadow: 0 0 0 2px #232323, 0 2px 8px 0 #232323;
                                         }
                                         .vault-card.expanded .vault-card-toggle {
                                             transform: rotate(90deg);
