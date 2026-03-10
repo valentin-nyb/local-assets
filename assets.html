@@ -549,29 +549,24 @@
                 window.showAudioPreview = function(name) {
                     const display = document.getElementById('active-asset-display');
                     let audioEmbed = '';
-                    // Try to find the corresponding asset in localStorage for playback ID
-                    const history = JSON.parse(localStorage.getItem('vault-history') || '[]');
-                    let asset = history.find(a => (a.artist || a.dj || '').toLowerCase() === (name || '').toLowerCase());
-                    let playbackId = asset && asset.id ? asset.id : null;
-                    // Special cases for known artists
-                    if (name && name.toLowerCase().includes('amongst few')) {
-                        playbackId = '00iYQgcqVM17i4FBsJsp7h401EY8eTJnmFdsYuapQnItw';
-                    } else if (name && name.toLowerCase().includes('michael bibi')) {
-                        playbackId = 'lO014I5Jn8UR7DI02HyfHNtU1Z9JawGePVzX2OIBLA7EY';
-                    }
-                    if (playbackId) {
-                        audioEmbed = `<audio controls style='width:100%;margin-top:24px;'>
-                            <source src="https://stream.mux.com/${playbackId}/high.mp3" type="audio/mpeg">
-                            Your browser does not support the audio element.
-                        </audio>`;
+                    
+                    const nameLower = (name || '').toLowerCase();
+                    
+                    // Logic for specific artist embeds
+                    if (nameLower.includes('amongst few')) {
+                        audioEmbed = `<iframe src="https://player.mux.com/UAuFKzITmC8fK9eQWuh01ghglbZkANDGLZRDfebfZ8rw" style="width: 100%; border: none; aspect-ratio: 16/9;" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;" allowfullscreen></iframe>`;
+                    } else if (nameLower.includes('michael bibi')) {
+                        audioEmbed = `<iframe src="https://player.mux.com/01qdXIg3R1ObhtA1Z3SA1d01lnHxKh005JDDPPjj00vCd3M" style="width: 100%; border: none; aspect-ratio: 16/9;" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;" allowfullscreen></iframe>`;
                     } else {
-                        audioEmbed = `<div class='text-zinc-500 text-xs p-6 text-center'>No HQ Master Audio available for this entry.</div>`;
+                        audioEmbed = `<div class='text-zinc-500 text-xs p-6 text-center font-mono uppercase tracking-widest'>// NO MASTER AUDIO ARCHIVED FOR THIS IDENTITY</div>`;
                     }
+                    
                     document.getElementById('preview-container').classList.remove('hidden');
                     document.getElementById('vault-dj-title').innerText = name.toUpperCase();
                     display.innerHTML = `<div class='space-y-6'>${audioEmbed}</div>`;
                     display.scrollIntoView({ behavior: 'smooth' });
                 }
+
         // Update: Use Vercel API as secure middleman for Mux
         const CONFIG = {
             WORKER_URL: "/api/get-upload-url", // Vercel API route
