@@ -545,29 +545,29 @@
     </main>
 
     <script>
-                    // 1. Specialized Audio Preview with your specific Mux Iframes
-                    window.showAudioPreview = function(name) {
-                        const display = document.getElementById('active-asset-display');
-                        const previewContainer = document.getElementById('preview-container');
-                        const title = document.getElementById('vault-dj-title');
-                        let embedCode = '';
-        
-                        const artist = (name || '').toLowerCase();
-        
-                        // Exact Mux Embeds provided
-                        if (artist.includes('amongst few')) {
-                            embedCode = `<iframe src="https://player.mux.com/UAuFKzITmC8fK9eQWuh01ghglbZkANDGLZRDfebfZ8rw" style="width: 100%; border: none; aspect-ratio: 16/9;" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;" allowfullscreen></iframe>`;
-                        } else if (artist.includes('michael bibi')) {
-                            embedCode = `<iframe src="https://player.mux.com/01qdXIg3R1ObhtA1Z3SA1d01lnHxKh005JDDPPjj00vCd3M" style="width: 100%; border: none; aspect-ratio: 16/9;" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;" allowfullscreen></iframe>`;
-                        } else {
-                            embedCode = `<div class="p-10 border border-zinc-800 rounded-2xl text-zinc-600 font-mono text-[10px] uppercase tracking-widest text-center">// NO MASTER AUDIO SOURCE FOUND</div>`;
-                        }
+    // 1. Specialized Audio Preview with your specific Mux Iframes
+    window.showAudioPreview = function(name) {
+        const display = document.getElementById('active-asset-display');
+        const previewContainer = document.getElementById('preview-container');
+        const title = document.getElementById('vault-dj-title');
+        let embedCode = '';
 
-                        previewContainer.classList.remove('hidden');
-                        title.innerText = name.toUpperCase();
-                        display.innerHTML = `<div class="animate-in fade-in zoom-in duration-500">${embedCode}</div>`;
-                        display.scrollIntoView({ behavior: 'smooth' });
-                    }
+        const artist = (name || '').toLowerCase();
+
+        // Exact Mux Embeds provided
+        if (artist.includes('amongst few')) {
+            embedCode = `<iframe src="https://player.mux.com/UAuFKzITmC8fK9eQWuh01ghglbZkANDGLZRDfebfZ8rw" style="width: 100%; border: none; aspect-ratio: 16/9;" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;" allowfullscreen></iframe>`;
+        } else if (artist.includes('michael bibi')) {
+            embedCode = `<iframe src="https://player.mux.com/01qdXIg3R1ObhtA1Z3SA1d01lnHxKh005JDDPPjj00vCd3M" style="width: 100%; border: none; aspect-ratio: 16/9;" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;" allowfullscreen></iframe>`;
+        } else {
+            embedCode = `<div class="p-10 border border-zinc-800 rounded-2xl text-zinc-600 font-mono text-[10px] uppercase tracking-widest text-center">// NO MASTER AUDIO SOURCE FOUND</div>`;
+        }
+
+        previewContainer.classList.remove('hidden');
+        title.innerText = name.toUpperCase();
+        display.innerHTML = `<div class="animate-in fade-in zoom-in duration-500">${embedCode}</div>`;
+        display.scrollIntoView({ behavior: 'smooth' });
+    }
 
                     // 2. The Updated Vault Renderer
                     function renderVaultHistory() {
@@ -644,27 +644,6 @@
                     }
 
                     document.addEventListener('DOMContentLoaded', renderVaultHistory);
-                // Audio preview for HQ_MASTER_AUDIO
-                window.showAudioPreview = function(name) {
-                    const display = document.getElementById('active-asset-display');
-                    let audioEmbed = '';
-                    
-                    const nameLower = (name || '').toLowerCase();
-                    
-                    // Logic for specific artist embeds
-                    if (nameLower.includes('amongst few')) {
-                        audioEmbed = `<iframe src="https://player.mux.com/UAuFKzITmC8fK9eQWuh01ghglbZkANDGLZRDfebfZ8rw" style="width: 100%; border: none; aspect-ratio: 16/9;" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;" allowfullscreen></iframe>`;
-                    } else if (nameLower.includes('michael bibi')) {
-                        audioEmbed = `<iframe src="https://player.mux.com/01qdXIg3R1ObhtA1Z3SA1d01lnHxKh005JDDPPjj00vCd3M" style="width: 100%; border: none; aspect-ratio: 16/9;" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;" allowfullscreen></iframe>`;
-                    } else {
-                        audioEmbed = `<div class='text-zinc-500 text-xs p-6 text-center font-mono uppercase tracking-widest'>// NO MASTER AUDIO ARCHIVED FOR THIS IDENTITY</div>`;
-                    }
-                    
-                    document.getElementById('preview-container').classList.remove('hidden');
-                    document.getElementById('vault-dj-title').innerText = name.toUpperCase();
-                    display.innerHTML = `<div class='space-y-6'>${audioEmbed}</div>`;
-                    display.scrollIntoView({ behavior: 'smooth' });
-                }
 
         // Update: Use Vercel API as secure middleman for Mux
         const CONFIG = {
