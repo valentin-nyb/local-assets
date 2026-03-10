@@ -795,23 +795,43 @@
             document.getElementById('preview-container').classList.remove('hidden');
             document.getElementById('vault-dj-title').innerText = dj.toUpperCase();
             const display = document.getElementById('active-asset-display');
-            // Special case for 'amongst few' video
+            // Special case for 'amongst few' and 'michael bibi' videos
             let playbackId;
-            if (dj && dj.toLowerCase().includes('amongst few')) {
+            if (dj && dj.toLowerCase().includes('michael bibi')) {
+                display.innerHTML = `
+                    <div class="space-y-6">
+                        <iframe
+                          src="https://player.mux.com/01qdXIg3R1ObhtA1Z3SA1d01lnHxKh005JDDPPjj00vCd3M?metadata-video-title=Michael-Bibi-B2B-Maceo-Plex-Live&video-title=Michael-Bibi-B2B-Maceo-Plex-Live"
+                          style="width: 100%; border: none; aspect-ratio: 16/9;"
+                          allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+                          allowfullscreen
+                        ></iframe>
+                    </div>`;
+            } else if (dj && dj.toLowerCase().includes('amongst few')) {
                 playbackId = 'UAuFKzITmC8fK9eQWuh01ghglbZkANDGLZRDfebfZ8rw';
+                display.innerHTML = `
+                    <div class="space-y-6">
+                        <mux-player
+                            playback-id="${playbackId}"
+                            metadata-video-title="${dj}"
+                            class="w-full aspect-video shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
+                            primary-color="#39FF14"
+                            autoplay
+                        ></mux-player>
+                    </div>`;
             } else {
                 playbackId = uploadData.playback_ids?.[0]?.id || uploadData.id;
+                display.innerHTML = `
+                    <div class="space-y-6">
+                        <mux-player
+                            playback-id="${playbackId}"
+                            metadata-video-title="${dj}"
+                            class="w-full aspect-video shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
+                            primary-color="#39FF14"
+                            autoplay
+                        ></mux-player>
+                    </div>`;
             }
-            display.innerHTML = `
-                <div class="space-y-6">
-                    <mux-player
-                        playback-id="${playbackId}"
-                        metadata-video-title="${dj}"
-                        class="w-full aspect-video shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
-                        primary-color="#39FF14"
-                        autoplay
-                    ></mux-player>
-                </div>`;
             display.scrollIntoView({ behavior: 'smooth' });
         }
     </script>
