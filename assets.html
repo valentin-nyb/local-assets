@@ -36,6 +36,7 @@
                                             border: 1px solid rgba(255,255,255,0.04);
                                             transition: box-shadow 0.2s, border 0.2s, background 0.2s;
                                             overflow: hidden;
+                                            margin: 0 0;
                                         }
                                         .vault-card:hover {
                                             box-shadow: 0 8px 40px 0 rgba(57,255,20,0.08);
@@ -46,13 +47,15 @@
                                             display: flex;
                                             align-items: center;
                                             justify-content: space-between;
-                                            padding: 32px 40px 0 40px;
+                                            padding: 28px 5vw 0 5vw;
                                             cursor: pointer;
+                                            gap: 18px;
                                         }
                                         .vault-card-main {
                                             display: flex;
                                             flex-direction: column;
                                             gap: 8px;
+                                            min-width: 0;
                                         }
                                         .vault-card-title {
                                             font-size: 1.5rem;
@@ -62,6 +65,7 @@
                                             letter-spacing: -0.04em;
                                             color: #fff;
                                             line-height: 1.1;
+                                            word-break: break-word;
                                         }
                                         .vault-card-meta {
                                             font-size: 0.7rem;
@@ -69,6 +73,7 @@
                                             font-family: 'JetBrains Mono', monospace;
                                             text-transform: uppercase;
                                             letter-spacing: 0.15em;
+                                            word-break: break-word;
                                         }
                                         .vault-card-status {
                                             display: flex;
@@ -82,6 +87,7 @@
                                             border-radius: 999px;
                                             padding: 4px 16px;
                                             font-family: 'JetBrains Mono', monospace;
+                                            white-space: nowrap;
                                         }
                                         .vault-card-actions {
                                             display: flex;
@@ -107,7 +113,11 @@
                                         }
                                         .vault-card-toggle {
                                             transition: transform 0.3s;
-                                            margin-right: 24px;
+                                            margin-right: 18px;
+                                            min-width: 24px;
+                                            display: flex;
+                                            align-items: center;
+                                            justify-content: center;
                                         }
                                         .vault-card.expanded .vault-card-toggle {
                                             transform: rotate(90deg);
@@ -117,11 +127,11 @@
                                             overflow: hidden;
                                             transition: max-height 0.5s cubic-bezier(0.4,0,0.2,1);
                                             background: rgba(10,10,10,0.98);
-                                            padding: 0 40px;
+                                            padding: 0 5vw;
                                         }
                                         .vault-card.expanded .vault-card-details {
                                             max-height: 600px;
-                                            padding: 24px 40px 40px 40px;
+                                            padding: 24px 5vw 40px 5vw;
                                         }
                                         .vault-card-divider {
                                             height: 1px;
@@ -160,6 +170,7 @@
                                             display: flex;
                                             gap: 12px;
                                             margin-top: 18px;
+                                            flex-wrap: wrap;
                                         }
                                         .vault-card-stem {
                                             display: flex;
@@ -174,6 +185,35 @@
                                             font-family: 'JetBrains Mono', monospace;
                                             font-weight: 700;
                                             text-transform: uppercase;
+                                        }
+
+                                        @media (max-width: 900px) {
+                                            .vault-card-header, .vault-card-details, .vault-card.expanded .vault-card-details {
+                                                padding-left: 4vw;
+                                                padding-right: 4vw;
+                                            }
+                                        }
+                                        @media (max-width: 600px) {
+                                            .vault-history-list {
+                                                gap: 18px;
+                                            }
+                                            .vault-card {
+                                                border-radius: 12px;
+                                            }
+                                            .vault-card-header, .vault-card-details, .vault-card.expanded .vault-card-details {
+                                                padding-left: 2vw;
+                                                padding-right: 2vw;
+                                            }
+                                            .vault-card-title {
+                                                font-size: 1.1rem;
+                                            }
+                                            .vault-card-clip {
+                                                flex: 0 0 44px;
+                                                font-size: 0.5rem;
+                                            }
+                                            .vault-card-stems {
+                                                gap: 7px;
+                                            }
                                         }
                                 /* Symmetrical Vault Container */
                                 .vault-entry-container {
