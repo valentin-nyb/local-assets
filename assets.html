@@ -456,11 +456,33 @@
             color: #09090b !important;
         }
         html.light input::placeholder { color: #a1a1aa !important; }
+
+        /* Mobile Overlay Fix */
+        @media (max-width: 767px) { 
+            #sidebar { position: fixed; z-index: 50; height: 100vh; } 
+        }
+
+        /* Sleek Flap Styling */
+        .sleek-flap {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            transform: rotate(180deg);
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 0.3em;
+            font-size: 10px;
+            font-weight: 800;
+        }
     </style>
 </head>
 <body class="h-screen w-screen flex overflow-hidden">
 
-    <aside id="sidebar" class="w-64 border-r border-zinc-800 bg-[#0a0a0a] flex flex-col shrink-0 h-full">
+    <button onclick="toggleSidebar()" class="md:hidden fixed left-0 top-1/2 -translate-y-1/2 z-50 bg-primary/90 backdrop-blur-md text-black py-8 px-1.5 rounded-r-lg shadow-[0_0_15px_rgba(57,255,20,0.2)] active:scale-95 transition-all flex items-center justify-center border-y border-r border-primary">
+        <span class="sleek-flap">MENU</span>
+    </button>
+
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/90 z-40 hidden backdrop-blur-md opacity-0 transition-opacity duration-300"></div>
+
+    <aside id="sidebar" class="w-64 border-r border-zinc-800 bg-[#0a0a0a] flex flex-col transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 shrink-0 h-full">
         <div class="h-16 flex items-center px-6 border-b border-zinc-800 justify-between">
             <a href="index.html" class="relative h-6 w-32 flex items-center transition-all group">
                 <img src="logos/White@2x.png" alt="Local Assets Logotype" class="h-full object-contain" style="max-width:100%; max-height:100%;" />
@@ -651,6 +673,20 @@
             WORKER_URL: "/api/get-upload-url", // Vercel API route
             API_KEY: "1mmm9dZ1MIl5xkiqlal_gBF5IqpNy_3M2WjQOiNU"
         };
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            if (sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+                setTimeout(() => overlay.classList.add('opacity-100'), 10);
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('opacity-0');
+                setTimeout(() => overlay.classList.add('hidden'), 300);
+            }
+        }
 
         document.addEventListener('DOMContentLoaded', () => {
             // Flatpickr initialization for date input
