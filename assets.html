@@ -20,6 +20,11 @@
         .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border: 1px solid #27272a; border-left: 2px solid #39FF14; }
         .nav-link:hover:not(.active) { background: rgba(255, 255, 255, 0.03); color: white; }
         .sleek-flap { writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.3em; font-size: 10px; font-weight: 800; }
+        
+        /* Mobile Overlay Fix */
+        @media (max-width: 767px) { 
+            #sidebar { position: fixed; z-index: 50; height: 100vh; } 
+        }
     </style>
 </head>
 <body class="font-sans antialiased bg-background text-foreground overflow-hidden h-screen w-screen flex selection:bg-primary selection:text-black">
@@ -156,13 +161,15 @@
             const overlay = document.getElementById('sidebar-overlay');
             const isOpen = !sidebar.classList.contains('-translate-x-full');
 
-            if (isOpen) {
+            if (isOpen && window.innerWidth < 768) {
                 sidebar.classList.add('-translate-x-full');
                 overlay.classList.remove('opacity-100');
+                overlay.classList.add('opacity-0');
                 setTimeout(() => overlay.classList.add('hidden'), 300);
             } else {
                 sidebar.classList.remove('-translate-x-full');
                 overlay.classList.remove('hidden');
+                overlay.classList.remove('opacity-0');
                 setTimeout(() => overlay.classList.add('opacity-100'), 10);
             }
         }
