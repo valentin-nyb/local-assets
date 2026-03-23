@@ -1,4 +1,4 @@
-import { muxProxyFetch } from '../mux-proxy-client.js';
+import { muxFetch } from '../mux-proxy-client.js';
 
 export default async function handler(req, res) {
   // 1. Mandatory CORS Headers for Vercel
@@ -16,7 +16,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const muxResponse = await muxProxyFetch('/video/v1/uploads', {
+    const muxResponse = await muxFetch('/video/v1/uploads', {
       method: 'POST',
       body: JSON.stringify({
         new_asset_settings: {
@@ -41,7 +41,6 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error("MUX_SDK_CRASH:", error);
     console.error("MUX_ENV", {
-      MUX_PROXY_BASE_URL: process.env.MUX_PROXY_BASE_URL,
       LOCAL_ASSETS_API_KEY: process.env.LOCAL_ASSETS_API_KEY ? 'set' : 'missing'
     });
     return res.status(500).json({ 
@@ -49,7 +48,6 @@ export default async function handler(req, res) {
       message: error.message,
       stack: error.stack,
       mux_env: {
-        MUX_PROXY_BASE_URL: process.env.MUX_PROXY_BASE_URL || 'missing',
         LOCAL_ASSETS_API_KEY: process.env.LOCAL_ASSETS_API_KEY ? 'set' : 'missing'
       }
     });

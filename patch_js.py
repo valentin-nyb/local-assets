@@ -95,7 +95,7 @@ new_upload = """        function setupUploadHandler() {
                         });
 
                         if (!uploadResponse.ok) {
-                            throw new Error('Cloudflare upload failed for ' + file.name);
+                            throw new Error('Upload failed for ' + file.name);
                         }
                     }
 

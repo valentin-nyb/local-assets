@@ -1,10 +1,10 @@
 
 import 'dotenv/config';
-import { muxProxyFetch } from './mux-proxy-client.js';
+import { muxFetch } from './mux-proxy-client.js';
 
 async function createUpload() {
   try {
-    const response = await muxProxyFetch('/video/v1/uploads', {
+    const response = await muxFetch('/video/v1/uploads', {
       method: 'POST',
       body: JSON.stringify({
         new_asset_settings: {

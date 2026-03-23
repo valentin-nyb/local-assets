@@ -1,6 +1,6 @@
 // Function to trigger 12-part clipping
 
-import { muxProxyFetch } from '../mux-proxy-client.js';
+import { muxFetch } from '../mux-proxy-client.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -12,15 +12,12 @@ export default async function handler(req, res) {
     res.status(400).json({ error: 'Missing masterAssetId or duration' });
     return;
   }
-  if (!process.env.MUX_PROXY_BASE_URL) {
-    res.status(500).json({ error: 'MUX_PROXY_BASE_URL not set' });
-    return;
-  }
+  
   const clipDuration = duration / 12; // Split into 12 parts
   const clips = [];
   for (let i = 0; i < 12; i++) {
     const startTime = i * clipDuration;
-    const clipRequest = await muxProxyFetch('/video/v1/assets', {
+    const clipRequest = await muxFetch('/video/v1/assets', {
       method: 'POST',
       body: JSON.stringify({
         input: [{ 

@@ -1,7 +1,7 @@
 // Vercel Serverless Function: /api/get-asset.js
 // Fetches asset details from Mux by asset_id
 
-import { muxProxyFetch } from '../mux-proxy-client.js';
+import { muxFetch } from '../mux-proxy-client.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -13,12 +13,9 @@ export default async function handler(req, res) {
     res.status(400).json({ error: 'Missing asset_id' });
     return;
   }
-  if (!process.env.MUX_PROXY_BASE_URL) {
-    res.status(500).json({ error: 'MUX_PROXY_BASE_URL not set' });
-    return;
-  }
+
   try {
-    const muxRes = await muxProxyFetch(`/video/v1/assets/${asset_id}`, {
+    const muxRes = await muxFetch(`/video/v1/assets/${asset_id}`, {
       method: 'GET'
     });
     const data = await muxRes.json();
