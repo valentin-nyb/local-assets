@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en" class="dark scroll-smooth">
 <head>
@@ -9,57 +8,18 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="local / assets">
     <title>local / assets™</title>
-    <link rel="icon" type="image/x-icon" href="favicon/favicon.ico">
-    <link rel="icon" type="image/svg+xml" href="favicon/favicon.svg">
-    <link rel="apple-touch-icon" href="favicon/apple-touch-icon.png">
-    <link rel="manifest" href="favicon/site.webmanifest">
     
     <link rel="stylesheet" href="styles/tailwind.css">
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="nav-component.js"></script>
+    
     <style>
-        /* 1. Global Reset & Theme */
-        body {
-            background-color: #050505;
-            color: #ffffff;
-        }
-
-        /* 2. Scrollbar Hiding (Cross-Browser) */
-        * { scrollbar-width: none; } /* Firefox */
-        ::-webkit-scrollbar { display: none; } /* Chrome, Safari, Edge */
-
-        /* 3. Navigation Component */
-        .nav-link {
-            font-family: 'JetBrains Mono', monospace !important;
-            font-size: 12px !important;
-            border-left: 2px solid transparent;
-        }
-        /* Consolidated active state — neon left edge wins, subtle box border adds depth */
-        .nav-link.active {
-            color: #39FF14 !important;
-            background: rgba(57, 255, 20, 0.05);
-            border: 1px solid #27272a;
-            border-left: 2px solid #39FF14;
-        }
-        .nav-link:hover:not(.active) {
-            background: rgba(255, 255, 255, 0.03);
-            color: white;
-        }
-
-        /* 4. Custom UI Elements */
-        .bg-scanlines {
-            background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.2) 50%, rgba(0, 0, 0, 0.2));
-            background-size: 100% 4px;
-        }
-        .sleek-flap {
-            writing-mode: vertical-rl;
-            text-orientation: mixed;
-            transform: rotate(180deg);
-            font-family: 'JetBrains Mono', monospace;
-            letter-spacing: 0.3em;
-            font-size: 10px;
-            font-weight: 800;
-        }
+        body { background-color: #050505; color: #ffffff; -webkit-font-smoothing: antialiased; scrollbar-width: none; }
+        ::-webkit-scrollbar { display: none; }
+        .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
+        .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border: 1px solid #27272a; border-left: 2px solid #39FF14; }
+        .nav-link:hover:not(.active) { background: rgba(255, 255, 255, 0.03); color: white; }
+        .sleek-flap { writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.3em; font-size: 10px; font-weight: 800; }
     </style>
 </head>
 <body class="font-sans antialiased bg-background text-foreground overflow-hidden h-screen w-screen flex selection:bg-primary selection:text-black">
@@ -68,9 +28,9 @@
         <span class="sleek-flap">MENU</span>
     </button>
 
-    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/90 z-40 hidden backdrop-blur-sm opacity-0 transition-opacity duration-300"></div>
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/90 z-40 hidden backdrop-blur-md opacity-0 transition-opacity duration-300"></div>
 
-    <aside id="sidebar" class="w-64 border-r border-[#27272a] bg-[#0a0a0a] flex flex-col transform -translate-x-full fixed top-0 left-0 z-50 h-full md:relative md:z-auto md:translate-x-0 transition-transform duration-300 shrink-0">
+    <aside id="sidebar" class="fixed top-0 left-0 z-50 h-full w-64 border-r border-[#27272a] bg-[#0a0a0a] flex flex-col transform -translate-x-full md:relative md:z-auto md:translate-x-0 transition-transform duration-300 shrink-0">
     </aside>
 
     <main class="flex-1 flex flex-col overflow-hidden relative">
@@ -191,7 +151,6 @@
     </main>
 
     <script>
-        // 1. Fixed Sidebar Toggle Logic
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebar-overlay');
@@ -199,22 +158,20 @@
 
             if (isOpen) {
                 sidebar.classList.add('-translate-x-full');
-                overlay.classList.add('opacity-0');
+                overlay.classList.remove('opacity-100');
                 setTimeout(() => overlay.classList.add('hidden'), 300);
             } else {
                 sidebar.classList.remove('-translate-x-full');
                 overlay.classList.remove('hidden');
-                setTimeout(() => overlay.classList.remove('opacity-0'), 10);
+                setTimeout(() => overlay.classList.add('opacity-100'), 10);
             }
         }
 
         async function fetchLiveMetrics() {
-            // Decoupled from live storage; show fixed display value
             const totalGB = 515;
             const storageEl = document.getElementById('live-storage-usage');
             if (storageEl) storageEl.innerText = `${totalGB} GB`;
 
-            // Keep asset total static (initial DOM value) unless needed later
             const percent = (totalGB / 50000) * 100;
             const bar = document.getElementById('storage-bar');
             if (bar) bar.style.width = Math.max(percent, 2) + '%';
@@ -296,26 +253,26 @@
             `).join('');
         }
 
-        // 2. Refactored Toggle Asset Preview to use standard Tailwind classes
         function toggleAssetPreview(id) {
             const preview = document.getElementById(`preview-${id}`);
             const arrow = document.getElementById(`arrow-${id}`);
             if (!preview || !arrow) return;
 
-            // Reset other dropdowns
             document.querySelectorAll('[id^="preview-"]').forEach(el => {
                 if (el.id !== `preview-${id}`) el.classList.add('hidden');
             });
+
             document.querySelectorAll('[id^="arrow-"]').forEach(el => {
-                if (el.id !== `arrow-${id}`) el.classList.remove('rotate-180');
+                if (el.id !== `arrow-${id}`) el.style.transform = 'rotate(0deg)';
             });
 
-            // Toggle current dropdown
-            preview.classList.toggle('hidden');
-            if (!preview.classList.contains('hidden')) {
-                arrow.classList.add('rotate-180');
+            const isHidden = preview.classList.contains('hidden');
+            if (isHidden) {
+                preview.classList.remove('hidden');
+                arrow.style.transform = 'rotate(180deg)';
             } else {
-                arrow.classList.remove('rotate-180');
+                preview.classList.add('hidden');
+                arrow.style.transform = 'rotate(0deg)';
             }
         }
 
