@@ -1,4 +1,9 @@
-import { muxFetch } from '../mux-proxy-client.js';
+import Mux from '@mux/mux-node';
+
+const mux = new Mux({
+  tokenId: process.env.MUX_TOKEN_ID,
+  tokenSecret: process.env.MUX_TOKEN_SECRET
+});
 
 export default async function handler(req, res) {
   // 1. Mandatory CORS Headers for Vercel
@@ -8,48 +13,22 @@ export default async function handler(req, res) {
 
   // 2. Handle Browser Preflight
   if (req.method === 'OPTIONS') return res.status(200).end();
-
-  // 3. Infrastructure Key Validation
-  const apiKey = req.headers['x-api-key'];
-  if (!apiKey || apiKey !== process.env.LOCAL_ASSETS_API_KEY) {
-    return res.status(401).json({ error: 'Unauthorized Infrastructure' });
-  }
+  
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const muxResponse = await muxFetch('/video/v1/uploads', {
-      method: 'POST',
-      body: JSON.stringify({
-        new_asset_settings: {
-          playback_policy: ['public'],
-          mp4_support: 'standard',
-          master_access: 'temporary'
-        },
-        cors_origin: '*'
-      })
+    const upload = await mux.video.uploads.create({
+      new_asset_settings: { 
+        playback_policy: ['public'],
+        mp4_support: 'standard',
+        master_access: 'temporary'
+      },
+      cors_origin: '*', // Allows your frontend to upload directly
     });
 
-    const upload = await muxResponse.json();
-
-    if (!muxResponse.ok) {
-      return res.status(muxResponse.status).json({
-        error: 'Mux proxy request failed',
-        message: upload.error?.message || upload.error || 'Unknown Mux proxy error'
-      });
-    }
-
-    return res.status(200).json(upload);
+    // Return the single Mux Upload URL
+    res.status(200).json({ url: upload.url, id: upload.id });
   } catch (error) {
-    console.error("MUX_SDK_CRASH:", error);
-    console.error("MUX_ENV", {
-      LOCAL_ASSETS_API_KEY: process.env.LOCAL_ASSETS_API_KEY ? 'set' : 'missing'
-    });
-    return res.status(500).json({ 
-      error: 'Mux Communication Failed', 
-      message: error.message,
-      stack: error.stack,
-      mux_env: {
-        LOCAL_ASSETS_API_KEY: process.env.LOCAL_ASSETS_API_KEY ? 'set' : 'missing'
-      }
-    });
+    res.status(500).json({ error: error.message });
   }
 }
