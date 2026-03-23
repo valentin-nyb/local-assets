@@ -1,4 +1,7 @@
 // Function to trigger 12-part clipping
+
+import { muxProxyFetch } from '../mux-proxy-client.js';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
@@ -9,22 +12,16 @@ export default async function handler(req, res) {
     res.status(400).json({ error: 'Missing masterAssetId or duration' });
     return;
   }
-  const muxTokenId = process.env.MUX_TOKEN_ID;
-  const muxTokenSecret = process.env.MUX_TOKEN_SECRET;
-  if (!muxTokenId || !muxTokenSecret) {
-    res.status(500).json({ error: 'Mux credentials not set' });
+  if (!process.env.MUX_PROXY_BASE_URL) {
+    res.status(500).json({ error: 'MUX_PROXY_BASE_URL not set' });
     return;
   }
   const clipDuration = duration / 12; // Split into 12 parts
   const clips = [];
   for (let i = 0; i < 12; i++) {
     const startTime = i * clipDuration;
-    const clipRequest = await fetch('https://api.mux.com/video/v1/assets', {
+    const clipRequest = await muxProxyFetch('/video/v1/assets', {
       method: 'POST',
-      headers: {
-        'Authorization': 'Basic ' + Buffer.from(muxTokenId + ':' + muxTokenSecret).toString('base64'),
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({
         input: [{ 
           url: `mux://assets/${masterAssetId}`,

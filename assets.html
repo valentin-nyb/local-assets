@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en" class="dark scroll-smooth">
 <head>
@@ -6,463 +7,50 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="local / assets™">
+    <meta name="apple-mobile-web-app-title" content="local / assets">
     <title>local / assets™</title>
-    
     <link rel="icon" type="image/x-icon" href="favicon/favicon.ico">
     <link rel="icon" type="image/svg+xml" href="favicon/favicon.svg">
     <link rel="apple-touch-icon" href="favicon/apple-touch-icon.png">
     <link rel="manifest" href="favicon/site.webmanifest">
     
     <link rel="stylesheet" href="styles/tailwind.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
-    
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
-
+    <script src="nav-component.js"></script>
     <style>
-                                        /* Vault History Redesign */
-                                        .vault-history-list {
-                                            display: flex;
-                                            flex-direction: column;
-                                            gap: 32px;
-                                        }
-                                        .vault-card {
-                                            background: rgba(20,20,22,0.98);
-                                            border-radius: 20px;
-                                            box-shadow: 0 4px 32px 0 rgba(0,0,0,0.12);
-                                            border: 1px solid rgba(255,255,255,0.04);
-                                            transition: box-shadow 0.2s, border 0.2s, background 0.2s;
-                                            overflow: hidden;
-                                            margin: 0 0;
-                                        }
-                                        .vault-card:hover {
-                                            box-shadow: 0 8px 40px 0 rgba(57,255,20,0.08);
-                                            border-color: #39FF14;
-                                            background: rgba(30,30,32,1);
-                                        }
-                                        .vault-card-header {
-                                            padding: 28px 5vw 0 5vw;
-                                            cursor: pointer;
-                                        }
-                                        .vault-card-header-main {
-                                            display: flex;
-                                            flex-direction: column;
-                                            gap: 4px;
-                                        }
-                                        .vault-card-header-row {
-                                            display: flex;
-                                            align-items: flex-end;
-                                            justify-content: space-between;
-                                            gap: 18px;
-                                        }
-                                        .vault-card-header-status {
-                                            display: flex;
-                                            align-items: center;
-                                            justify-content: space-between;
-                                            margin-top: 18px;
-                                            gap: 18px;
-                                        }
-                                                /* Responsive stacked layout for vault card header on mobile */
-                                                @media (max-width: 700px) {
-                                                    .vault-card-header {
-                                                        padding-top: 18px;
-                                                        padding-bottom: 0;
-                                                    }
-                                                    .vault-card-header-row, .vault-card-header-status {
-                                                        flex-direction: column;
-                                                        align-items: flex-start;
-                                                        gap: 10px;
-                                                    }
-                                                    .vault-card-header-status {
-                                                        margin-top: 10px;
-                                                    }
-                                                }
-                                                @media (max-width: 600px) {
-                                                    .vault-card-title {
-                                                        font-size: 1rem;
-                                                        font-style: normal;
-                                                        font-weight: 800;
-                                                    }
-                                                    .vault-card-meta {
-                                                        font-size: 0.6rem;
-                                                    }
-                                                }
-                                        .vault-card-main {
-                                            display: flex;
-                                            flex-direction: column;
-                                            gap: 8px;
-                                            min-width: 0;
-                                        }
-                                        .vault-card-title {
-                                            font-size: 1.5rem;
-                                            font-weight: 900;
-                                            font-style: italic;
-                                            text-transform: uppercase;
-                                            letter-spacing: -0.04em;
-                                            color: #fff;
-                                            line-height: 1.1;
-                                            word-break: break-word;
-                                        }
-                                        .vault-card-meta {
-                                            font-size: 0.7rem;
-                                            color: #a1a1aa;
-                                            font-family: 'JetBrains Mono', monospace;
-                                            text-transform: uppercase;
-                                            letter-spacing: 0.15em;
-                                            word-break: break-word;
-                                        }
-                                        .vault-card-status {
-                                            display: flex;
-                                            align-items: center;
-                                            gap: 8px;
-                                            background: rgba(57,255,20,0.07);
-                                            border: 1px solid #39FF14;
-                                            color: #39FF14;
-                                            font-size: 0.7rem;
-                                            font-weight: 700;
-                                            border-radius: 999px;
-                                            padding: 4px 16px;
-                                            font-family: 'JetBrains Mono', monospace;
-                                            white-space: nowrap;
-                                        }
-                                        .vault-card-actions {
-                                            display: flex;
-                                            gap: 10px;
-                                        }
-                                        .vault-card-actions button {
-                                            background: #fff;
-                                            color: #111;
-                                            border-radius: 12px;
-                                            width: 38px;
-                                            height: 38px;
-                                            display: flex;
-                                            align-items: center;
-                                            justify-content: center;
-                                            border: none;
-                                            transition: background 0.15s, color 0.15s, box-shadow 0.15s;
-                                            box-shadow: 0 2px 8px 0 rgba(0,0,0,0.08);
-                                        }
-                                        .vault-card-actions button:hover {
-                                            background: #39FF14;
-                                            color: #111;
-                                            box-shadow: 0 4px 16px 0 rgba(57,255,20,0.12);
-                                        }
-                                        .vault-card-toggle {
-                                            transition: transform 0.3s;
-                                            margin-right: 18px;
-                                            min-width: 24px;
-                                            display: flex;
-                                            align-items: center;
-                                            justify-content: center;
-                                        }
-                                        .vault-card.expanded .vault-card-toggle {
-                                            transform: rotate(90deg);
-                                        }
-                                        .vault-card-details {
-                                            max-height: 0;
-                                            overflow: hidden;
-                                            transition: max-height 0.5s cubic-bezier(0.4,0,0.2,1);
-                                            background: rgba(10,10,10,0.98);
-                                            padding: 0 5vw;
-                                        }
-                                        .vault-card.expanded .vault-card-details {
-                                            max-height: 600px;
-                                            padding: 24px 5vw 40px 5vw;
-                                        }
-                                        .vault-card-divider {
-                                            height: 1px;
-                                            background: linear-gradient(90deg,transparent,#232323 40%,#232323 60%,transparent);
-                                            margin: 24px 0 16px 0;
-                                        }
-                                        .vault-card-clips {
-                                            display: flex;
-                                            gap: 10px;
-                                            overflow-x: auto;
-                                            padding-bottom: 8px;
-                                        }
-                                        .vault-card-clip {
-                                            flex: 0 0 64px;
-                                            aspect-ratio: 9/16;
-                                            background: #18181b;
-                                            border: 1.5px solid #232323;
-                                            border-radius: 8px;
-                                            display: flex;
-                                            align-items: flex-end;
-                                            justify-content: flex-start;
-                                            padding: 6px;
-                                            font-size: 0.6rem;
-                                            color: #71717a;
-                                            font-family: 'JetBrains Mono', monospace;
-                                            font-weight: 700;
-                                            text-transform: uppercase;
-                                            position: relative;
-                                            transition: border 0.2s, color 0.2s;
-                                        }
-                                        .vault-card-clip:hover {
-                                            border-color: #39FF14;
-                                            color: #39FF14;
-                                        }
-                                        .vault-card-stems {
-                                            display: flex;
-                                            gap: 12px;
-                                            margin-top: 18px;
-                                            flex-wrap: wrap;
-                                        }
-                                        .vault-card-stem {
-                                            display: flex;
-                                            align-items: center;
-                                            gap: 7px;
-                                            background: rgba(255,255,255,0.03);
-                                            border: 1px solid rgba(255,255,255,0.07);
-                                            border-radius: 6px;
-                                            padding: 7px 14px;
-                                            font-size: 0.65rem;
-                                            color: #a1a1aa;
-                                            font-family: 'JetBrains Mono', monospace;
-                                            font-weight: 700;
-                                            text-transform: uppercase;
-                                        }
-
-                                        @media (max-width: 900px) {
-                                            .vault-card-header, .vault-card-details, .vault-card.expanded .vault-card-details {
-                                                padding-left: 4vw;
-                                                padding-right: 4vw;
-                                            }
-                                        }
-                                        @media (max-width: 600px) {
-                                            .vault-history-list {
-                                                gap: 18px;
-                                            }
-                                            .vault-card {
-                                                border-radius: 12px;
-                                            }
-                                            .vault-card-header, .vault-card-details, .vault-card.expanded .vault-card-details {
-                                                padding-left: 2vw;
-                                                padding-right: 2vw;
-                                            }
-                                            .vault-card-title {
-                                                font-size: 1.1rem;
-                                            }
-                                            .vault-card-clip {
-                                                flex: 0 0 44px;
-                                                font-size: 0.5rem;
-                                            }
-                                            .vault-card-stems {
-                                                gap: 7px;
-                                            }
-                                        }
-                                /* Symmetrical Vault Container */
-                                .vault-entry-container {
-                                    border-bottom: 1px solid rgba(255,255,255,0.05);
-                                    background: transparent;
-                                    transition: all 0.3s ease;
-                                }
-
-                                /* The "Folder" Summary Row */
-                                .vault-summary {
-                                    display: grid;
-                                    grid-template-columns: 40px 1fr 240px 140px; /* Toggle | Identity | Status | Controls */
-                                    padding: 30px var(--p);
-                                    align-items: center;
-                                    cursor: pointer;
-                                }
-
-                                .vault-summary:hover { background: rgba(255,255,255,0.02); }
-
-                                /* Expansion Logic */
-                                .asset-tray {
-                                    max-height: 0;
-                                    overflow: hidden;
-                                    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-                                    background: #030303;
-                                    padding: 0 var(--p);
-                                }
-
-                                .vault-entry-container.expanded .asset-tray {
-                                    max-height: 500px;
-                                    padding: 20px var(--p) 40px var(--p);
-                                    border-top: 1px solid rgba(255,255,255,0.02);
-                                }
-
-                                .vault-entry-container.expanded .toggle-icon { transform: rotate(90deg); }
-
-                                /* Typography Fix */
-                                .artist-summary-title {
-                                    font-size: 24px;
-                                    font-weight: 900;
-                                    font-style: italic;
-                                    text-transform: uppercase;
-                                    letter-spacing: -0.05em;
-                                    line-height: 1;
-                                }
-                /* Vertical Social Clip Container */
-                .film-strip-container {
-                    display: flex;
-                    gap: 12px;
-                    overflow-x: auto;
-                    padding-bottom: 10px;
-                    scrollbar-width: none; /* Hide scrollbar for cleaner hardware look */
-                }
-                .vertical-clip-node {
-                    flex: 0 0 80px; /* Fixed width for symmetrical strip */
-                    aspect-ratio: 9 / 16;
-                    background: #0a0a0a;
-                    border: 1px solid rgba(255,255,255,0.05);
-                    border-radius: 4px;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: flex-end;
-                    padding: 8px;
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                    position: relative;
-                    overflow: hidden;
-                }
-                .vertical-clip-node:hover {
-                    border-color: var(--neon);
-                    transform: translateY(-4px);
-                    background: rgba(57, 255, 20, 0.05);
-                }
-                .clip-label {
-                    font-size: 7px;
-                    font-family: 'JetBrains Mono', monospace;
-                    font-weight: 900;
-                    color: #333;
-                    text-transform: uppercase;
-                    z-index: 10;
-                }
-                .vertical-clip-node:hover .clip-label {
-                    color: var(--neon);
-                }
-                /* Symmetrical Vault Console Layout */
-                .vault-entry {
-                    display: grid;
-                    grid-template-columns: 1fr 240px 140px; /* Identity | Status | Controls */
-                    padding: 40px 0;
-                    border-bottom: 1px solid rgba(255,255,255,0.05);
-                    background: transparent;
-                    transition: background 0.3s ease;
-                }
-                .vault-entry:hover {
-                    background: rgba(255,255,255,0.01);
-                }
-                .artist-identity h4 {
-                    font-size: 32px;
-                    font-weight: 950;
-                    font-style: italic;
-                    letter-spacing: -0.05em;
-                    text-transform: uppercase;
-                    line-height: 0.85;
-                    color: white;
-                }
-                /* Content Factory Strip */
-                .content-factory-strip {
-                    display: flex;
-                    gap: 12px;
-                    margin-top: 24px;
-                    overflow-x: auto;
-                    padding-bottom: 8px;
-                    scrollbar-width: none;
-                }
-                .short-node {
-                    flex: 0 0 70px;
-                    aspect-ratio: 9/16;
-                    background: #0a0a0a;
-                    border: 1px solid rgba(255,255,255,0.1);
-                    border-radius: 6px;
-                    position: relative;
-                    overflow: hidden;
-                    transition: border-color 0.3s ease;
-                }
-                .short-node:hover { border-color: #39FF14; }
-                .stem-badge {
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    padding: 6px 12px;
-                    background: rgba(255,255,255,0.03);
-                    border: 1px solid rgba(255,255,255,0.05);
-                    border-radius: 4px;
-                }
-        body { background-color: #050505 !important; color: white; -webkit-font-smoothing: antialiased; font-family: 'JetBrains Mono', monospace; }
-        .nav-link.active { background-color: rgba(255,255,255,0.05); border: 1px solid #27272a; color: #39FF14; }
-        ::-webkit-scrollbar { display: none; }
-        /* Fixed Flatpickr visibility */
-        .flatpickr-calendar { 
-            z-index: 99999 !important; 
-            background: #0a0a0a !important; 
-            border: 1px solid #27272a !important;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        /* 1. Global Reset & Theme */
+        body {
+            background-color: #050505;
+            color: #ffffff;
         }
-        .artist-hero-title {
-            font-size: clamp(32px, 4.8vw, 48px);
-            font-weight: 950;
-            font-style: italic;
-            line-height: 0.75;
-            letter-spacing: -0.08em;
-            text-transform: uppercase;
-            margin-bottom: 2rem;
+
+        /* 2. Scrollbar Hiding (Cross-Browser) */
+        * { scrollbar-width: none; } /* Firefox */
+        ::-webkit-scrollbar { display: none; } /* Chrome, Safari, Edge */
+
+        /* 3. Navigation Component */
+        .nav-link {
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 12px !important;
+            border-left: 2px solid transparent;
+        }
+        /* Consolidated active state — neon left edge wins, subtle box border adds depth */
+        .nav-link.active {
+            color: #39FF14 !important;
+            background: rgba(57, 255, 20, 0.05);
+            border: 1px solid #27272a;
+            border-left: 2px solid #39FF14;
+        }
+        .nav-link:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.03);
             color: white;
         }
-        .upload-card-active { border-color: #39FF14 !important; background: rgba(57,255,20,0.05) !important; }
-        mux-player {
-            --primary-color: #39FF14;
-            --secondary-color: #000000;
-            border-radius: 24px;
-            overflow: hidden;
-        }
-        /* =========================================
-           LIGHT MODE ("DAYTIME BROADCAST") OVERRIDES
-           ========================================= */
-        html.light body { 
-            background-color: #f4f4f5 !important; 
-            color: #09090b !important; 
-        }
-        html.light aside, 
-        html.light header, 
-        html.light .bg-\[\#0a0a0a\] { 
-            background-color: #ffffff !important; 
-        }
-        html.light .bg-black { 
-            background-color: #ffffff !important; 
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-        }
-        html.light .border-zinc-800, 
-        html.light .border-zinc-900, 
-        html.light .border-white\/20 { 
-            border-color: #e4e4e7 !important; 
-        }
-        html.light .text-white { color: #09090b !important; }
-        html.light .text-zinc-400, 
-        html.light .text-zinc-500, 
-        html.light .text-zinc-600 { 
-            color: #52525b !important; 
-        }
-        html.light .bg-white { background-color: #09090b !important; color: #ffffff !important;}
-        html.light .hover\:bg-white\/5:hover { background-color: rgba(0,0,0,0.05) !important; }
 
-        /* Hardware Nodes for Light Mode */
-        html.light .vertical-clip-node { background: #f4f4f5; border-color: #e4e4e7; }
-        html.light .status-node { background: #f4f4f5; border-color: #e4e4e7; }
-        html.light .vault-grid { border-color: #e4e4e7; }
-        html.light .clip-label { color: #71717a; }
-
-        /* Input Adjustments */
-        html.light input, html.light select { 
-            background-color: #f4f4f5 !important; 
-            border-color: #e4e4e7 !important; 
-            color: #09090b !important;
+        /* 4. Custom UI Elements */
+        .bg-scanlines {
+            background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.2) 50%, rgba(0, 0, 0, 0.2));
+            background-size: 100% 4px;
         }
-        html.light input::placeholder { color: #a1a1aa !important; }
-
-        /* Mobile Overlay Fix */
-        @media (max-width: 767px) { 
-            #sidebar { position: fixed; z-index: 50; height: 100vh; } 
-        }
-
-        /* Sleek Flap Styling */
         .sleek-flap {
             writing-mode: vertical-rl;
             text-orientation: mixed;
@@ -474,7 +62,7 @@
         }
     </style>
 </head>
-<body class="h-screen w-screen flex overflow-hidden">
+<body class="font-sans antialiased bg-background text-foreground overflow-hidden h-screen w-screen flex selection:bg-primary selection:text-black">
 
     <button onclick="toggleSidebar()" class="md:hidden fixed left-0 top-1/2 -translate-y-1/2 z-50 bg-primary/90 backdrop-blur-md text-black py-8 px-1.5 rounded-r-lg shadow-[0_0_15px_rgba(57,255,20,0.2)] active:scale-95 transition-all flex items-center justify-center border-y border-r border-primary">
         <span class="sleek-flap">MENU</span>
@@ -482,84 +70,120 @@
 
     <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/90 z-40 hidden backdrop-blur-md opacity-0 transition-opacity duration-300"></div>
 
-    <aside id="sidebar" class="w-64 border-r border-zinc-800 bg-[#0a0a0a] flex flex-col transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 shrink-0 h-full">
-        <div class="h-16 flex items-center px-6 border-b border-zinc-800 justify-between">
-            <a href="index.html" class="relative h-6 w-32 flex items-center transition-all group">
-                <img src="logos/White@2x.png" alt="Local Assets Logotype" class="h-full object-contain" style="max-width:100%; max-height:100%;" />
-            </a>
-        </div>
-        <nav class="flex-1 p-4 space-y-2">
-            <a href="dashboard.html" class="nav-link flex items-center gap-3 px-3 py-2 text-sm text-zinc-400"><iconify-icon icon="solar:widget-5-bold"></iconify-icon>Overview</a>
-            <a href="camera.html" class="nav-link flex items-center gap-3 px-3 py-2 text-sm text-zinc-400"><iconify-icon icon="solar:videocamera-record-bold"></iconify-icon>Camera Control</a>
-            <a href="assets.html" class="nav-link active flex items-center gap-3 px-3 py-2 text-sm rounded-md"><iconify-icon icon="solar:clapperboard-play-bold"></iconify-icon>Media Assets</a>
-        </nav>
+    <aside id="sidebar" class="w-64 border-r border-[#27272a] bg-[#0a0a0a] flex flex-col transform -translate-x-full fixed z-50 h-screen md:relative md:z-auto md:translate-x-0 md:h-full transition-transform duration-300 shrink-0">
     </aside>
 
-    <main class="flex-1 flex flex-col overflow-hidden bg-background">
-        <header class="h-16 flex items-center px-8 border-b border-zinc-800 shrink-0 justify-between">
-            <span class="text-primary font-mono text-[9px] uppercase tracking-[0.4em]">Infrastructure Tier // local / assets™</span>
+    <main class="flex-1 flex flex-col overflow-hidden relative">
+        <header class="h-16 flex items-center px-8 border-b border-[#27272a] bg-[#050505] shrink-0 justify-between w-full z-40">
+            <div class="flex items-center gap-3">
+                <span class="text-zinc-600 text-[10px] font-mono uppercase tracking-[0.3em] hidden md:inline">
+                    // LOCAL_ASSETS
+                </span>
+                <iconify-icon icon="solar:alt-arrow-right-linear" class="text-zinc-700 hidden md:block"></iconify-icon>
+                <h1 class="text-[10px] font-mono uppercase tracking-[0.3em] text-[#39FF14] font-bold m-0">
+                    DASHBOARD OVERVIEW
+                </h1>
+            </div>
             <div class="flex items-center gap-6">
-                <div class="flex items-center gap-2">
-                    <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
-                    <span class="text-[8px] font-mono text-zinc-500 uppercase tracking-widest">Live Connection Active</span>
+                <div class="hidden md:flex items-center gap-2 bg-[#0a0a0a] border border-[#27272a] px-3 py-1.5 rounded-md shadow-[inset_0_0_10px_rgba(0,0,0,0.5)]">
+                    <span class="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-pulse"></span>
+                    <span class="text-[9px] font-mono text-[#39FF14] uppercase tracking-widest">System OK</span>
+                </div>
+                <div class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center font-bold text-xs shrink-0 cursor-pointer hover:scale-105 transition-transform shadow-[0_0_10px_rgba(255,255,255,0.1)]">
+                    F
                 </div>
             </div>
         </header>
 
-        <div class="flex-1 p-8 overflow-y-auto">
-            <div class="max-w-[1200px] mx-auto space-y-12 pb-20">
-                
-                <div class="p-8 border border-dashed border-zinc-800 rounded-3xl bg-card/10 space-y-8">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <input type="text" id="ingest-name" name="ingest-name" placeholder="DJ / ARTIST NAME" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs font-bold text-white uppercase outline-none focus:border-primary">
-                        <input type="text" id="ingest-date" name="ingest-date" placeholder="SELECT DATE" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs font-bold text-white cursor-pointer outline-none">
-                        <select id="ingest-shot" name="ingest-shot" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs text-zinc-400 font-bold uppercase outline-none focus:border-primary">
-                            <option value="MASTER">MASTER CAM</option>
-                            <option value="BOOTH">BOOTH CAM</option>
-                            <option value="BOOTH">CROWD CAM</option>
-                            <option value="ROBOTIC">PTZ 1</option>
-                            <option value="ROBOTIC">PTZ 2</option>
-                        </select>
-                    </div>
+        <div class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
+            <div class="flex justify-between items-center mb-6">
+                <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Local Assets // Admin</span>
+                <div class="w-2 h-2 bg-primary rounded-full animate-pulse shadow-[0_0_8px_#39FF14]"></div>
+            </div>
+            <div class="cursor-pointer hover:border-primary/50 transition-all duration-500 w-full bg-card border border-border rounded-2xl p-8 relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-6 shadow-2xl">
+                <video id="live-feed-video" autoplay loop muted playsinline preload="auto" class="absolute inset-0 w-full h-full object-cover opacity-40 grayscale hover:grayscale-0 transition-all duration-700">
+                    <source src="https://res.cloudinary.com/dso3xwno0/video/upload/v1770888132/Beltran_e58al0.mov" type="video/mp4">
+                </video>
+                <div class="absolute inset-0 bg-scanlines opacity-10 pointer-events-none"></div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <label id="card-video" class="flex flex-col items-center justify-center p-6 bg-black border border-zinc-800 rounded-2xl cursor-pointer hover:border-primary group transition-all">
-                            <iconify-icon icon="solar:videocamera-record-bold" class="text-2xl text-zinc-600 group-hover:text-primary"></iconify-icon>
-                            <span class="text-[8px] font-mono mt-2 text-zinc-500 uppercase">4K Video (.MOV/.MP4)</span>
-                            <input type="file" id="file-video" name="file-video" class="hidden" accept="video/*">
-                        </label>
-                        <label id="card-audio" class="flex flex-col items-center justify-center p-6 bg-black border border-zinc-800 rounded-2xl cursor-pointer hover:border-primary group transition-all">
-                            <iconify-icon icon="solar:music-note-bold" class="text-2xl text-zinc-600 group-hover:text-primary"></iconify-icon>
-                            <span class="text-[8px] font-mono mt-2 text-zinc-500 uppercase">HQ Audio (.WAV/.MP3)</span>
-                            <input type="file" id="file-audio" name="file-audio" class="hidden" accept="audio/*">
-                        </label>
-                        <label id="card-marketing" class="flex flex-col items-center justify-center p-6 bg-black border border-zinc-800 rounded-2xl cursor-pointer hover:border-primary group transition-all">
-                            <iconify-icon icon="solar:gallery-bold" class="text-2xl text-zinc-600 group-hover:text-primary"></iconify-icon>
-                            <span class="text-[8px] font-mono mt-2 text-zinc-500 uppercase">Marketing (.JPG/.PNG)</span>
-                            <input type="file" id="file-marketing" name="file-marketing" class="hidden" accept="image/*">
-                        </label>
+                <div class="relative z-10">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="inline-flex items-center gap-2 px-3 py-1 bg-red-500 text-white rounded-full text-[10px] font-bold uppercase tracking-widest animate-pulse">
+                            <iconify-icon icon="solar:record-circle-linear"></iconify-icon> LIVE FEED
+                        </span>
+                        <span class="text-white/50 font-mono text-[10px] uppercase">Room 1 // Main Floor</span>
                     </div>
-
-                    <button id="upload-btn" class="w-full bg-white text-black font-black py-5 rounded-2xl uppercase tracking-[0.2em] text-[11px] hover:bg-primary transition-all">
-                        INGEST FULL SESSION TO local / assets™
-                    </button>
+                    <h2 class="text-3xl font-extrabold text-white tracking-tighter uppercase">Artist: Beltran</h2>
                 </div>
 
-                <div id="preview-container" class="hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div class="flex items-center justify-between border-b border-zinc-800 pb-8 mb-8">
-                        <div>
-                            <h2 id="vault-dj-title" class="artist-hero-title">READY</h2>
-                            <p id="vault-meta" class="text-zinc-500 font-mono text-[9px] uppercase tracking-[0.4em]">4K TRANSCODING IN PROGRESS</p>
+                <div class="flex gap-10 relative z-10 font-mono">
+                    <div class="text-left">
+                        <span class="block text-[9px] text-muted-foreground uppercase mb-1">Elapsed</span>
+                        <span class="text-lg text-white font-medium">01:42:15</span>
+                    </div>
+                    <div class="text-left">
+                        <span class="block text-[9px] text-muted-foreground uppercase mb-1">Cameras</span>
+                        <span class="text-lg text-primary font-medium">3/3 ACTIVE</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-card border border-border p-5 rounded-xl">
+                    <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3 block">Total Assets Captured</span>
+                    <div class="flex flex-col items-start gap-1">
+                        <span id="live-asset-total" class="text-2xl font-bold leading-tight">1,248</span>
+                        <span class="text-[10px] text-primary font-mono bg-primary/10 px-2 py-0.5 rounded border border-primary/20 leading-none">+12%</span>
+                    </div>
+                </div>
+                <div class="bg-card border border-border p-5 rounded-xl">
+                    <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3 block">Cloud Storage</span>
+                    <div class="flex items-end justify-between">
+                        <span id="live-storage-usage" class="text-2xl font-bold text-primary">515 GB</span>
+                        <span class="text-[10px] text-muted-foreground font-mono">/ 50 TB</span>
+                    </div>
+                    <div class="w-full bg-white/5 h-1 mt-4 rounded-full overflow-hidden"><div id="storage-bar" class="bg-primary h-full w-[0%]"></div></div>
+                </div>
+                <div class="bg-card border border-border p-5 rounded-xl">
+                    <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3 block">Revenue Generated</span>
+                    <div class="flex flex-col items-start gap-1">
+                        <span class="text-2xl font-bold leading-tight">£48,250</span>
+                        <span class="text-[10px] text-primary font-mono bg-primary/10 px-2 py-0.5 rounded border border-primary/20 leading-none">+24%</span>
+                    </div>
+                </div>
+                <div class="bg-card border border-border p-5 rounded-xl relative overflow-hidden">
+                    <div class="absolute right-0 top-0 bottom-0 w-1 bg-red-500 animate-pulse"></div>
+                    <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3 block">Next Event</span>
+                    <span class="block text-sm font-bold text-white uppercase tracking-tight">Koko: Room 1</span>
+                    <span class="text-[10px] text-muted-foreground font-mono uppercase">Tonight, 22:00 PM</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 bg-card border border-border rounded-2xl overflow-hidden">
+                    <div class="p-5 border-b border-border flex justify-between items-center">
+                        <h3 class="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-zinc-500">Distribution History</h3>
+                        <div class="flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-pulse"></span>
+                            <span class="text-[9px] font-mono text-[#39FF14] uppercase tracking-widest">Live</span>
                         </div>
-                        <button onclick="location.reload()" class="border border-white/20 text-white px-6 py-2 rounded-xl text-[9px] uppercase tracking-widest hover:bg-white/5">new upload</button>
                     </div>
-                    <div id="active-asset-display" class="max-w-4xl mx-auto"></div>
+                    <div id="recent-sets-list" class="divide-y divide-border"></div>
                 </div>
 
-                <div class="space-y-4 pt-12">
-                    <h3 class="text-[10px] font-mono text-zinc-600 uppercase tracking-[0.3em] border-b border-zinc-800 pb-2">Vault History</h3>
-                    <div id="cloud-list" class="text-zinc-500 text-[9px] font-mono uppercase tracking-widest p-10 border border-zinc-900 rounded-3xl text-center">
-                        // Awaiting new session ingest
+                <div class="space-y-6">
+                    <div class="bg-card border border-border rounded-2xl p-6">
+                        <h3 class="text-xs font-bold uppercase tracking-widest mb-6">System Health</h3>
+                        <div class="space-y-6">
+                            <div>
+                                <div class="flex justify-between text-[10px] font-mono mb-2 uppercase"><span class="text-muted-foreground">Upload Bandwidth</span><span class="text-white">840 Mbps</span></div>
+                                <div class="w-full bg-white/5 h-1 rounded-full overflow-hidden"><div class="bg-primary h-full w-[85%] shadow-[0_0_10px_#39FF14]"></div></div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-[10px] font-mono mb-2 uppercase"><span class="text-muted-foreground">Local Storage (NAS)</span><span class="text-white">1.03%</span></div>
+                                <div class="w-full bg-white/5 h-1 rounded-full overflow-hidden"><div class="bg-yellow-500 h-full" style="width: 1.03%;"></div></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -567,384 +191,137 @@
     </main>
 
     <script>
-    // 1. Specialized Audio Preview with your specific Mux Iframes
-    window.showAudioPreview = function(name) {
-        const display = document.getElementById('active-asset-display');
-        const previewContainer = document.getElementById('preview-container');
-        const title = document.getElementById('vault-dj-title');
-        let embedCode = '';
-
-        const artist = (name || '').toLowerCase();
-
-        // Updated Mux Embeds provided by user
-        if (artist.includes('amongst few')) {
-            embedCode = `<iframe src="https://player.mux.com/00iYQgcqVM17i4FBsJsp7h401EY8eTJnmFdsYuapQnItw?metadata-video-title=HQ_MASTER_AUDIO+-+Amongst+Few+Set+Ministry+of+Sound+x+Balearic+Black+Cab+&video-title=HQ_MASTER_AUDIO+-+Amongst+Few+Set+Ministry+of+Sound+x+Balearic+Black+Cab+" style="width: 100%; border: none;" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;" allowfullscreen></iframe>`;
-        } else if (artist.includes('michael bibi')) {
-            embedCode = `<iframe src="https://player.mux.com/lO014I5Jn8UR7DI02HyfHNtU1Z9JawGePVzX2OIBLA7EY" style="width: 100%; border: none;" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;" allowfullscreen></iframe>`;
-        } else {
-            embedCode = `<div class="p-10 border border-zinc-800 rounded-2xl text-zinc-600 font-mono text-[10px] uppercase tracking-widest text-center">// NO MASTER AUDIO SOURCE FOUND</div>`;
-        }
-
-        previewContainer.classList.remove('hidden');
-        title.innerText = name.toUpperCase();
-        display.innerHTML = `<div class="animate-in fade-in zoom-in duration-500">${embedCode}</div>`;
-        display.scrollIntoView({ behavior: 'smooth' });
-    }
-
-                    // 2. The Updated Vault Renderer
-                    function renderVaultHistory() {
-                        const list = document.getElementById('cloud-list');
-                        const history = JSON.parse(localStorage.getItem('vault-history') || '[]');
-        
-                        if (!history.length) {
-                            list.innerHTML = '<div class="p-20 opacity-20 uppercase tracking-[0.5em] text-[9px]">// Archive Offline</div>';
-                            return;
-                        }
-
-                        list.className = 'vault-history-list';
-                        list.innerHTML = history.map((asset, index) => {
-                            const name = asset.artist || asset.dj || 'ANONYMOUS';
-                            const isExpanded = index === 0 ? ' expanded' : '';
-                            // Escape single quotes for JS string
-                            const safeName = name.replace(/'/g, "\\'");
-                            return `
-                            <div class="vault-card${isExpanded}" id="vault-${index}">
-                                <div class="vault-card-header" onclick="toggleVaultFolder(${index})">
-                                    <div class="vault-card-header-main">
-                                        <span class="vault-card-title">${name}</span>
-                                        <span class="vault-card-meta">ACTIVE SESSION // REF: ${asset.id ? asset.id.substring(0,8) : '0000'}</span>
-                                    </div>
-                                    <div class="vault-card-header-status">
-                                        <span class="vault-card-status">
-                                            <span style="width:8px;height:8px;background:#39FF14;border-radius:50%;margin-right:8px;display:inline-block;"></span>
-                                            Secured
-                                        </span>
-                                        <div class="vault-card-actions">
-                                            <button onclick="event.stopPropagation(); showMuxPreview('${asset.id}', '${safeName}')"><iconify-icon icon="solar:play-bold"></iconify-icon></button>
-                                            <button onclick="event.stopPropagation();"><iconify-icon icon="solar:download-square-bold"></iconify-icon></button>
-                                        </div>
-                                    </div>
-                                    <span class="vault-card-toggle" style="position:absolute;top:32px;right:5vw;">
-                                        <iconify-icon icon="solar:alt-arrow-right-bold" class="text-xl"></iconify-icon>
-                                    </span>
-                                </div>
-                                <div class="vault-card-details">
-                                    <div class="vault-card-divider"></div>
-                                    <div class="vault-card-clips">
-                                        ${[...Array(12)].map((_, i) => `<div class="vault-card-clip">SHORT_0${i+1}</div>`).join('')}
-                                    </div>
-                                    <div class="vault-card-stems">
-                                        <button class="vault-card-stem" onclick="event.stopPropagation(); showAudioPreview('${safeName}')" style="cursor:pointer;">
-                                            <iconify-icon icon="solar:music-note-bold" class="text-primary text-[10px]"></iconify-icon>
-                                            HQ_MASTER_AUDIO
-                                        </button>
-                                        <div class="vault-card-stem">
-                                            <iconify-icon icon="solar:gallery-bold" class="text-zinc-600 text-[10px]"></iconify-icon>
-                                            6_HI_RES_THUMBS
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>`;
-                        }).join('');
-                    }
-
-                    // Toggle functionality
-                    window.toggleVaultFolder = function(index) {
-                        const el = document.getElementById(`vault-${index}`);
-                        if (!el) return;
-                        const wasExpanded = el.classList.contains('expanded');
-                        document.querySelectorAll('.vault-card').forEach(c => c.classList.remove('expanded'));
-                        if (!wasExpanded) el.classList.add('expanded');
-                    }
-
-                    // Standard Preview for Video Assets
-                    function showMuxPreview(id, dj) {
-                        document.getElementById('preview-container').classList.remove('hidden');
-                        document.getElementById('vault-dj-title').innerText = dj.toUpperCase();
-                        const display = document.getElementById('active-asset-display');
-                        display.innerHTML = `<mux-player playback-id="${id}" class="w-full aspect-video" primary-color="#39FF14" autoplay></mux-player>`;
-                        display.scrollIntoView({ behavior: 'smooth' });
-                    }
-
-                    document.addEventListener('DOMContentLoaded', renderVaultHistory);
-
-        // Update: Use Vercel API as secure middleman for Mux
-        const CONFIG = {
-            WORKER_URL: "/api/get-upload-url", // Vercel API route
-            API_KEY: "1mmm9dZ1MIl5xkiqlal_gBF5IqpNy_3M2WjQOiNU"
-        };
-
+        // 1. Fixed Sidebar Toggle Logic
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebar-overlay');
-            if (sidebar.classList.contains('-translate-x-full')) {
-                sidebar.classList.remove('-translate-x-full');
-                overlay.classList.remove('hidden');
-                setTimeout(() => overlay.classList.add('opacity-100'), 10);
-            } else {
+            const isOpen = !sidebar.classList.contains('-translate-x-full');
+
+            if (isOpen) {
                 sidebar.classList.add('-translate-x-full');
                 overlay.classList.add('opacity-0');
                 setTimeout(() => overlay.classList.add('hidden'), 300);
+            } else {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+                setTimeout(() => overlay.classList.remove('opacity-0'), 10);
             }
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            // Flatpickr initialization for date input
-            const dateInput = document.getElementById('ingest-date');
-            if (dateInput) dateInput.removeAttribute('disabled');
-            flatpickr(dateInput, {
-                defaultDate: "today",
-                dateFormat: "d M Y",
-                theme: "dark",
-                allowInput: false,
-                onReady: function(selectedDates, dateStr, instance) {
-                    dateInput.dataset.iso = instance.formatDate(selectedDates[0] || new Date(), 'Y-m-d');
+        async function fetchLiveMetrics() {
+            // Decoupled from live storage; show fixed display value
+            const totalGB = 515;
+            const storageEl = document.getElementById('live-storage-usage');
+            if (storageEl) storageEl.innerText = `${totalGB} GB`;
+
+            // Keep asset total static (initial DOM value) unless needed later
+            const percent = (totalGB / 50000) * 100;
+            const bar = document.getElementById('storage-bar');
+            if (bar) bar.style.width = Math.max(percent, 2) + '%';
+        }
+
+        function keepLiveFeedPlaying() {
+            const video = document.getElementById('live-feed-video');
+            if (!video) return;
+            video.muted = true;
+            const attemptPlay = () => { video.play().catch(() => {}); };
+            video.addEventListener('pause', attemptPlay);
+            video.addEventListener('ended', () => { video.currentTime = 0; attemptPlay(); });
+            document.addEventListener('visibilitychange', () => { if (!document.hidden) attemptPlay(); });
+            attemptPlay();
+        }
+
+        async function fetchRecentUploads() {
+            const container = document.getElementById('recent-sets-list');
+            if (!container) return;
+
+            const sessions = [
+                {
+                    id: 'session_01',
+                    name: 'AMONGST FEW',
+                    date: '14 Feb 2026',
+                    venue: 'FABRIC LONDON',
+                    assets: [
+                        { type: 'MASTER', label: '4K Long Form', ext: 'MOV/MP4', icon: 'solar:play-bold', color: 'text-primary' },
+                        { type: 'AUDIO', label: 'HQ Audio', ext: 'WAV/MP3', icon: 'solar:music-note-bold', color: 'text-blue-400' },
+                        { type: 'SOCIAL', label: 'Social Pack Verticals', ext: 'MP4', icon: 'solar:iphone-bold', color: 'text-purple-400' },
+                        { type: 'THUMB', label: 'Marketing Thumbnails', ext: 'JPG/PNG', icon: 'solar:gallery-bold', color: 'text-orange-400' },
+                    ],
                 },
-                onChange: function(selectedDates, dateStr, instance) {
-                    dateInput.dataset.iso = instance.formatDate(selectedDates[0] || new Date(), 'Y-m-d');
-                }
-            });
+                {
+                    id: 'session_02',
+                    name: 'MICHAEL BIBI',
+                    date: '01 Nov 2025',
+                    venue: 'FABRIC LONDON',
+                    assets: [
+                        { type: 'MASTER', label: '4K Long Form', ext: 'MOV', icon: 'solar:play-bold', color: 'text-primary' },
+                    ],
+                },
+            ];
 
-            // File input highlight logic
-            ['video', 'audio', 'marketing'].forEach(key => {
-                const input = document.getElementById('file-' + key);
-                const card = document.getElementById('card-' + key);
-                if (input && card) {
-                    input.addEventListener('change', () => {
-                        if (input.files.length > 0) {
-                            card.classList.add('upload-card-active');
-                        } else {
-                            card.classList.remove('upload-card-active');
-                        }
-                    });
-                }
-            });
-
-            setupUploadHandler();
-            renderVaultHistory();
-        });
-        function renderVaultHistory() {
-            const list = document.getElementById('cloud-list');
-            const history = JSON.parse(localStorage.getItem('vault-history') || '[]');
-    
-            if (!history.length) {
-                list.innerHTML = '<div class="p-20 opacity-20 uppercase tracking-[0.5em] text-[9px]">// Archive Offline</div>';
-                return;
-            }
-
-            list.className = 'vault-history-list';
-            list.innerHTML = history.map((asset, index) => {
-                const isReady = asset.status === 'ready' || true;
-                const name = asset.artist || asset.dj || 'ANONYMOUS';
-        
-                return `
-                <div class="vault-card${index === 0 ? ' expanded' : ''}" id="vault-${index}">
-                    <div class="vault-card-header" onclick="toggleVaultFolder(${index})">
-                        <div class="vault-card-header-main">
-                            <div class="vault-card-header-row">
-                                <span class="vault-card-title">${name}</span>
+            container.innerHTML = sessions.map(session => `
+                <div class="session-group">
+                    <div onclick="toggleAssetPreview('${session.id}')" class="p-5 flex items-center justify-between hover:bg-white/[0.02] transition-colors cursor-pointer group">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 bg-[#050505] border border-border flex items-center justify-center rounded-xl group-hover:border-primary/50 transition-colors">
+                                <iconify-icon icon="solar:folder-2-bold" class="text-zinc-600 group-hover:text-primary"></iconify-icon>
                             </div>
-                            <span class="vault-card-meta">${asset.date || 'ACTIVE SESSION'} // REF: ${asset.id ? asset.id.substring(0,8) : '0000'}</span>
+                            <div>
+                                <p class="text-sm font-black text-white uppercase tracking-tight">${session.name}</p>
+                                <p class="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">${session.venue} // ${session.date}</p>
+                            </div>
                         </div>
-                        <div class="vault-card-header-status">
-                            <span class="vault-card-status">
-                                <span class="w-1.5 h-1.5 rounded-full" style="display:inline-block;width:8px;height:8px;background:#39FF14;margin-right:6px;"></span>
-                                Secured
-                            </span>
-                            <span class="vault-card-actions">
-                                <button onclick="event.stopPropagation(); showMuxPreview('${asset.id}', '${name}')" title="Preview">
-                                    <iconify-icon icon="solar:play-bold" class="text-lg"></iconify-icon>
-                                </button>
-                                <button title="Download" onclick="event.stopPropagation();">
-                                    <iconify-icon icon="solar:download-square-bold" class="text-lg"></iconify-icon>
-                                </button>
-                            </span>
-                        </div>
-                        <span class="vault-card-toggle" style="position:absolute;top:32px;right:5vw;">
-                            <iconify-icon icon="solar:alt-arrow-right-bold" class="text-xl"></iconify-icon>
-                        </span>
+                        <iconify-icon id="arrow-${session.id}" icon="solar:alt-arrow-down-linear" class="text-zinc-700 transition-transform duration-300"></iconify-icon>
                     </div>
-                    <div class="vault-card-details">
-                        <div class="vault-card-divider"></div>
-                
-                        <div class="vault-card-clips">
-                            ${[...Array(12)].map((_, i) => `
-                                <div class="vault-card-clip">SHORT_0${i+1}</div>
-                            `).join('')}
-                        </div>
 
-                        <div class="vault-card-stems">
-                            <button class="vault-card-stem" onclick="event.stopPropagation(); showAudioPreview('${name}')" style="cursor:pointer; outline:none;">
-                                <iconify-icon icon="solar:music-note-bold" class="text-zinc-600 text-[10px]"></iconify-icon>
-                                HQ_MASTER_AUDIO
-                            </button>
-                    
-                            <div class="vault-card-stem">
-                                <iconify-icon icon="solar:gallery-bold" class="text-zinc-600 text-[10px]"></iconify-icon>
-                                6_HI_RES_THUMBS
+                    <div id="preview-${session.id}" class="hidden bg-black/40 border-t border-border/50 divide-y divide-border/30">
+                        ${session.assets.map(asset => `
+                            <div class="p-4 pl-12 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-border/50">
+                                        <iconify-icon icon="${asset.icon}" class="${asset.color} text-sm"></iconify-icon>
+                                    </div>
+                                    <div>
+                                        <p class="text-[10px] font-bold text-zinc-300 uppercase">${asset.label}</p>
+                                        <p class="text-[8px] font-mono text-zinc-600 uppercase">${asset.ext} FORMAT</p>
+                                    </div>
+                                </div>
+                                <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors">
+                                    <iconify-icon icon="solar:cloud-download-bold" class="text-zinc-700 group-hover/asset:text-primary"></iconify-icon>
+                                </button>
                             </div>
-                        </div>
+                        `).join('')}
                     </div>
                 </div>
-                `;
-            }).join('');
+            `).join('');
         }
 
-        // Global Toggle Function
-        window.toggleVaultFolder = function(index) {
-            const el = document.getElementById(`vault-${index}`);
-            if (!el) return;
-            const expanded = el.classList.contains('expanded');
-            // Collapse all
-            document.querySelectorAll('.vault-card.expanded').forEach(card => card.classList.remove('expanded'));
-            // Expand only if it was not already expanded
-            if (!expanded) el.classList.add('expanded');
-        }
+        // 2. Refactored Toggle Asset Preview to use standard Tailwind classes
+        function toggleAssetPreview(id) {
+            const preview = document.getElementById(`preview-${id}`);
+            const arrow = document.getElementById(`arrow-${id}`);
+            if (!preview || !arrow) return;
 
-        function setupUploadHandler() {
-            const btn = document.getElementById('upload-btn');
-            const inputs = {
-                video: document.getElementById('file-video'),
-                audio: document.getElementById('file-audio'),
-                marketing: document.getElementById('file-marketing')
-            };
-
-            // Card highlight logic
-            Object.keys(inputs).forEach(key => {
-                inputs[key].onchange = () => {
-                    if(inputs[key].files.length > 0) {
-                        document.getElementById(`card-${key}`).classList.add('upload-card-active');
-                    }
-                };
+            // Reset other dropdowns
+            document.querySelectorAll('[id^="preview-"]').forEach(el => {
+                if (el.id !== `preview-${id}`) el.classList.add('hidden');
+            });
+            document.querySelectorAll('[id^="arrow-"]').forEach(el => {
+                if (el.id !== `arrow-${id}`) el.classList.remove('rotate-180');
             });
 
-            btn.onclick = async () => {
-                const dj = document.getElementById('ingest-name').value.trim();
-                if (!dj) return alert("CRITICAL: ARTIST NAME REQUIRED");
-
-                const file = inputs.video.files[0] || inputs.audio.files[0] || inputs.marketing.files[0];
-                if (!file) return alert("CRITICAL: SELECT AT LEAST ONE ASSET");
-
-                btn.disabled = true;
-                btn.innerHTML = `<span class="animate-pulse">REQUESTING MUX UPLOAD URL...</span>`;
-
-                try {
-                    // 1. Get Direct Upload URL from Vercel API with metadata
-                    const payload = {
-                        new_asset_settings: {
-                            playback_policy: ['public'],
-                            mp4_support: 'standard',
-                            max_resolution_tier: '2160p',
-                            video_quality: 'premium',
-                            ...((inputs.video.files[0] && { input: 'video' }) || {})
-                        },
-                        meta: {
-                            title: dj,
-                            external_id: 'set-' + Date.now(),
-                            creator_id: 'venue-masters'
-                        },
-                        cors_origin: '*'
-                    };
-                    const res = await fetch(CONFIG.WORKER_URL, {
-                        method: 'POST',
-                        headers: {
-                            'x-api-key': CONFIG.API_KEY,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(payload)
-                    });
-                    let data;
-                    if (!res.ok) {
-                        let errMsg = 'Failed to get upload URL.';
-                        try {
-                            const text = await res.text();
-                            try {
-                                const err = JSON.parse(text);
-                                errMsg = err.error || errMsg;
-                            } catch {
-                                errMsg = text || errMsg;
-                            }
-                        } catch {}
-                        throw new Error(errMsg);
-                    } else {
-                        try {
-                            data = await res.json();
-                        } catch {
-                            throw new Error('Invalid JSON in upload URL response.');
-                        }
-                    }
-                    if (!data || !data.url || !data.id) {
-                        throw new Error('Invalid upload URL response.');
-                    }
-                    // 2. High-speed Direct Upload to Mux
-                    const xhr = new XMLHttpRequest();
-                    xhr.open('PUT', data.url);
-                    xhr.upload.onprogress = (e) => {
-                        const pct = Math.round((e.loaded / e.total) * 100);
-                        btn.innerHTML = `UPLOADING TO CLOUD: ${pct}%`;
-                    };
-                    xhr.onload = () => {
-                        btn.innerHTML = "INGEST COMPLETE // ARCHIVING MASTER";
-                        btn.style.background = "#39FF14";
-                        const asset = {
-                            id: data.id, // This is the Upload ID
-                            artist: dj,
-                            date: document.getElementById('ingest-date').value,
-                            status: 'processing', // Will flip to 'ready' via your new webhook
-                            created_at: new Date().toISOString()
-                        };
-                        // Save to your Vault Archive
-                        let v = JSON.parse(localStorage.getItem('vault-history') || '[]');
-                        v.unshift(asset);
-                        localStorage.setItem('vault-history', JSON.stringify(v));
-                        // Launch the Playback Preview (Fixed the reference error)
-                        showMuxPreview(data.id, dj);
-                        renderVaultHistory();
-                    };
-                    xhr.onerror = () => {
-                        btn.disabled = false;
-                        btn.innerHTML = "UPLOAD FAILED";
-                    };
-                    xhr.send(file);
-                } catch (e) {
-                    btn.disabled = false;
-                    btn.innerHTML = "UPLOAD FAILED";
-                    let msg = '';
-                    if (e && typeof e === 'object') {
-                        if (e.message) {
-                            msg = e.message;
-                        } else if (e.error) {
-                            msg = e.error;
-                        } else {
-                            msg = JSON.stringify(e);
-                        }
-                    } else {
-                        msg = String(e);
-                    }
-                    alert("UPLOAD ERROR: " + msg);
-                }
-            };
+            // Toggle current dropdown
+            preview.classList.toggle('hidden');
+            if (!preview.classList.contains('hidden')) {
+                arrow.classList.add('rotate-180');
+            } else {
+                arrow.classList.remove('rotate-180');
+            }
         }
 
-        function showMuxPreview(uploadData, dj) {
-            document.getElementById('preview-container').classList.remove('hidden');
-            document.getElementById('vault-dj-title').innerText = dj.toUpperCase();
-            const display = document.getElementById('active-asset-display');
-            // Mux returns the playback_id inside the 'playback_ids' array of the asset
-            // We need to wait for the asset to be created to get this ID.
-            const playbackId = uploadData.playback_ids?.[0]?.id || uploadData.id;
-            display.innerHTML = `
-                <div class="space-y-6">
-                    <mux-player
-                        playback-id="${playbackId}"
-                        metadata-video-title="${dj}"
-                        class="w-full aspect-video shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
-                        primary-color="#39FF14"
-                        autoplay
-                    ></mux-player>
-                </div>`;
-            display.scrollIntoView({ behavior: 'smooth' });
-        }
+        fetchLiveMetrics();
+        fetchRecentUploads();
+        keepLiveFeedPlaying();
     </script>
 </body>
 </html>

@@ -1,27 +1,58 @@
-name: Deploy Worker
+name: Deploy
 
 on:
   push:
     branches: ["main"]
-    paths:
-      - "worker-proxy.js"
-      - "wrangler.toml"
-      - ".github/workflows/deploy.yml"
   workflow_dispatch:
 
 jobs:
-  deploy:
+  deploy-vercel:
+    name: Deploy to Vercel
     runs-on: ubuntu-latest
     concurrency:
-      group: cloudflare-worker-deploy
+      group: vercel-deploy
       cancel-in-progress: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Publish Worker
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull Vercel Environment
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to Vercel
+        run: vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+  deploy-mux-worker:
+    name: Deploy Mux Proxy Worker
+    runs-on: ubuntu-latest
+    concurrency:
+      group: cloudflare-worker-deploy
+      cancel-in-progress: true
+    if: |
+      contains(github.event.commits[0].modified, 'worker-proxy.js') ||
+      contains(github.event.commits[0].modified, 'wrangler.toml') ||
+      github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Publish Mux Proxy Worker
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          secrets: |
+            MUX_TOKEN_ID
+            MUX_TOKEN_SECRET
           command: deploy
+        env:
+          MUX_TOKEN_ID: ${{ secrets.MUX_TOKEN_ID }}
+          MUX_TOKEN_SECRET: ${{ secrets.MUX_TOKEN_SECRET }}

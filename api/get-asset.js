@@ -1,6 +1,8 @@
 // Vercel Serverless Function: /api/get-asset.js
 // Fetches asset details from Mux by asset_id
 
+import { muxProxyFetch } from '../mux-proxy-client.js';
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     res.status(405).json({ error: 'Method not allowed' });
@@ -11,19 +13,13 @@ export default async function handler(req, res) {
     res.status(400).json({ error: 'Missing asset_id' });
     return;
   }
-  const muxTokenId = process.env.MUX_TOKEN_ID;
-  const muxTokenSecret = process.env.MUX_TOKEN_SECRET;
-  if (!muxTokenId || !muxTokenSecret) {
-    res.status(500).json({ error: 'Mux credentials not set' });
+  if (!process.env.MUX_PROXY_BASE_URL) {
+    res.status(500).json({ error: 'MUX_PROXY_BASE_URL not set' });
     return;
   }
   try {
-    const muxRes = await fetch(`https://api.mux.com/video/v1/assets/${asset_id}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': 'Basic ' + Buffer.from(muxTokenId + ':' + muxTokenSecret).toString('base64'),
-        'Content-Type': 'application/json',
-      }
+    const muxRes = await muxProxyFetch(`/video/v1/assets/${asset_id}`, {
+      method: 'GET'
     });
     const data = await muxRes.json();
     if (!muxRes.ok || !data.data) {

@@ -2,19 +2,25 @@ document.addEventListener("DOMContentLoaded", () => {
     const sidebar = document.getElementById("sidebar");
     if (!sidebar) return;
 
-    // Get the current filename (e.g., "dashboard.html")
-    const currentPage = window.location.pathname.split("/").pop() || "index.html";
+    // Handles both /dashboard.html and extensionless /dashboard (Vercel/Netlify)
+    const currentPath = window.location.pathname.split("/").pop() || "dashboard.html";
 
-    // Helper to check if the link should be active
-    const isActive = (path) => currentPage === path ? "active" : "text-zinc-400";
+    // Strip .html before comparing so both URL styles match
+    const isActive = (path) => {
+        const baseName = path.replace('.html', '');
+        return currentPath.includes(baseName) ? "active" : "text-zinc-400";
+    };
 
     sidebar.innerHTML = `
-        <div class="h-16 flex items-center px-6 border-b border-[#27272a] justify-between">
+        <div class="h-16 flex items-center px-6 border-b border-[#27272a] justify-between shrink-0">
             <a href="index.html" class="h-6 w-32 flex">
                 <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974377/eayfotlcvgq36kpwvitw.svg" class="h-full w-full object-left object-contain" alt="logo">
             </a>
+            <button onclick="toggleSidebar()" class="md:hidden text-zinc-400 hover:text-white transition-colors">
+                <iconify-icon icon="solar:close-circle-linear" class="text-2xl"></iconify-icon>
+            </button>
         </div>
-        <nav class="flex-1 p-4 space-y-2">
+        <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
             <a href="dashboard.html" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('dashboard.html')}">
                 <iconify-icon icon="solar:widget-5-linear" class="text-lg"></iconify-icon>Overview
             </a>

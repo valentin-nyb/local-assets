@@ -1,10 +1,4 @@
-import Mux from '@mux/mux-node';
-
-// Initialize SDK with Vercel Environment Variables
-const mux = new Mux({
-  tokenId: process.env.MUX_TOKEN_ID,
-  tokenSecret: process.env.MUX_TOKEN_SECRET
-});
+import { muxProxyFetch } from '../mux-proxy-client.js';
 
 export default async function handler(req, res) {
   // 1. Mandatory CORS Headers for Vercel
@@ -22,23 +16,32 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 4. Create Direct Upload URL via Official SDK
-    const upload = await mux.video.uploads.create({
-      new_asset_settings: {
-        playback_policy: ['public'],
-        mp4_support: 'standard', // For HQ Audio extraction
-        master_access: 'temporary' // Required for your 12-part social clips
-      },
-      cors_origin: '*' // Essential for direct browser-to-mux streaming
+    const muxResponse = await muxProxyFetch('/video/v1/uploads', {
+      method: 'POST',
+      body: JSON.stringify({
+        new_asset_settings: {
+          playback_policy: ['public'],
+          mp4_support: 'standard',
+          master_access: 'temporary'
+        },
+        cors_origin: '*'
+      })
     });
+
+    const upload = await muxResponse.json();
+
+    if (!muxResponse.ok) {
+      return res.status(muxResponse.status).json({
+        error: 'Mux proxy request failed',
+        message: upload.error?.message || upload.error || 'Unknown Mux proxy error'
+      });
+    }
 
     return res.status(200).json(upload);
   } catch (error) {
-    // Enhanced error logging for debugging
     console.error("MUX_SDK_CRASH:", error);
     console.error("MUX_ENV", {
-      MUX_TOKEN_ID: process.env.MUX_TOKEN_ID,
-      MUX_TOKEN_SECRET: process.env.MUX_TOKEN_SECRET,
+      MUX_PROXY_BASE_URL: process.env.MUX_PROXY_BASE_URL,
       LOCAL_ASSETS_API_KEY: process.env.LOCAL_ASSETS_API_KEY ? 'set' : 'missing'
     });
     return res.status(500).json({ 
@@ -46,8 +49,7 @@ export default async function handler(req, res) {
       message: error.message,
       stack: error.stack,
       mux_env: {
-        MUX_TOKEN_ID: process.env.MUX_TOKEN_ID,
-        MUX_TOKEN_SECRET: process.env.MUX_TOKEN_SECRET ? 'set' : 'missing',
+        MUX_PROXY_BASE_URL: process.env.MUX_PROXY_BASE_URL || 'missing',
         LOCAL_ASSETS_API_KEY: process.env.LOCAL_ASSETS_API_KEY ? 'set' : 'missing'
       }
     });

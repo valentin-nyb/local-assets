@@ -1,15 +1,6 @@
-name = "local-assets-worker"
-main = "worker-presign.js"
+name = "local-assets-mux-proxy"
+main = "worker-proxy.js"
 compatibility_date = "2024-04-01"
 
 [vars]
-ACCOUNT_ID = "460259198d4a56e53034a2bbe1f915c7"
-R2_BUCKET_NAME = "venue-assets"
-
-[[r2_buckets]]
-binding = "MY_BUCKET"
-bucket_name = "venue-assets"
-
-[[r2_buckets]]
-binding = "ASSETS_BUCKET"
-bucket_name = "venue-assets"
+MUX_API_BASE = "https://api.mux.com"
