@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
     sidebar.innerHTML = `
         <div class="h-16 flex items-center px-6 border-b border-[#27272a] justify-between shrink-0">
             <a href="index.html" class="h-6 w-32 flex">
-                <img src="https://res.cloudinary.com/dso3xwno0/image/upload/v1770974377/eayfotlcvgq36kpwvitw.svg" class="h-full w-full object-left object-contain" alt="logo">
+                <img src="logos/White@2x.png" class="h-full w-full object-left object-contain" alt="logo">
             </a>
             <button onclick="toggleSidebar()" class="md:hidden text-zinc-400 hover:text-white transition-colors">
                 <iconify-icon icon="solar:close-circle-linear" class="text-2xl"></iconify-icon>
