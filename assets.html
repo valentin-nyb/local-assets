@@ -23,7 +23,17 @@
         
         /* Mobile Overlay Fix */
         @media (max-width: 767px) { 
-            #sidebar { position: fixed; z-index: 50; height: 100vh; } 
+            #sidebar { 
+                position: fixed; 
+                z-index: 50; 
+                height: 100vh; 
+                left: 0; 
+                top: 0; 
+            } 
+        }
+
+        #sidebar {
+            border-right: 1px solid rgba(255,255,255,0.05);
         }
     </style>
 </head>
@@ -159,13 +169,17 @@
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebar-overlay');
-            const isOpen = !sidebar.classList.contains('-translate-x-full');
-            if (isOpen && window.innerWidth < 768) {
-                sidebar.classList.add('-translate-x-full');
+            
+            // Toggle the classes directly
+            sidebar.classList.toggle('-translate-x-full');
+            
+            // Handle the overlay visibility
+            if (sidebar.classList.contains('-translate-x-full')) {
+                // Closing
                 overlay.classList.add('opacity-0');
                 setTimeout(() => overlay.classList.add('hidden'), 300);
             } else {
-                sidebar.classList.remove('-translate-x-full');
+                // Opening
                 overlay.classList.remove('hidden');
                 setTimeout(() => overlay.classList.remove('opacity-0'), 10);
             }
