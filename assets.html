@@ -8,34 +8,49 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="local / assets">
     <title>local / assets™</title>
+    <link rel="icon" type="image/x-icon" href="favicon/favicon.ico">
+    <link rel="icon" type="image/svg+xml" href="favicon/favicon.svg">
+    <link rel="apple-touch-icon" href="favicon/apple-touch-icon.png">
+    <link rel="manifest" href="favicon/site.webmanifest">
     
     <link rel="stylesheet" href="styles/tailwind.css">
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="nav-component.js"></script>
-    
     <style>
-        body { background-color: #050505; color: #ffffff; -webkit-font-smoothing: antialiased; scrollbar-width: none; }
-        ::-webkit-scrollbar { display: none; }
+        /* Standardized sidebar styles used by the JS component */
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
-        .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border: 1px solid #27272a; border-left: 2px solid #39FF14; }
+        .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
         .nav-link:hover:not(.active) { background: rgba(255, 255, 255, 0.03); color: white; }
-        .sleek-flap { writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.3em; font-size: 10px; font-weight: 800; }
+    </style>
+    <style>
+        body { background-color: #050505; color: #ffffff; -webkit-font-smoothing: antialiased; }
+        .nav-link.active { background-color: rgba(255, 255, 255, 0.05); border: 1px solid #27272a; color: white; }
+        .bg-scanlines { background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.2) 50%, rgba(0, 0, 0, 0.2)); background-size: 100% 4px; }
+        ::-webkit-scrollbar { display: none; }
         
         /* Mobile Overlay Fix */
         @media (max-width: 767px) { 
-            #sidebar { 
-                position: fixed; 
-                z-index: 50; 
-                height: 100vh; 
-                left: 0; 
-                top: 0; 
-            } 
+            #sidebar { position: fixed; z-index: 50; height: 100vh; } 
         }
 
-        #sidebar {
-            border-right: 1px solid rgba(255,255,255,0.05);
+        /* Sleek Flap Styling */
+        .sleek-flap {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            transform: rotate(180deg);
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 0.3em;
+            font-size: 10px;
+            font-weight: 800;
         }
     </style>
+<style>         :root { --p: 40px; --neon: #39FF14; }         body { background-color: #050505 !important; color: white; -webkit-font-smoothing: antialiased; font-family: 'JetBrains Mono', monospace; }                  /* Ingest Card */         .ingest-card { border: 1px dashed #27272a; background: rgba(255,255,255,0.02); border-radius: 24px; padding: var(--p); }         .upload-node { background: #000; border: 1px solid #1a1a1a; border-radius: 16px; transition: all 0.3s ease; cursor: pointer; }         .upload-node:hover { border-color: var(--neon); background: rgba(57,255,20,0.05); }         .upload-node.active { border-color: var(--neon); background: rgba(57,255,20,0.1); }          /* Vault Card */         .vault-card { background: #000; border: 1px solid #111; border-radius: 24px; margin-bottom: 24px; overflow: hidden; }         .vault-card.expanded { border-color: var(--neon); }         .vault-card-header { display: flex; align-items: center; justify-content: space-between; padding: 32px var(--p); cursor: pointer; }         .asset-tray { max-height: 0; overflow: hidden; transition: all 0.5s ease; background: rgba(0,0,0,0.3); }         .vault-card.expanded .asset-tray { max-height: 800px; padding: 0 var(--p) 40px var(--p); }     </style>
+
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+        <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
+    
 </head>
 <body class="font-sans antialiased bg-background text-foreground overflow-hidden h-screen w-screen flex selection:bg-primary selection:text-black">
 
@@ -48,255 +63,11 @@
     <aside id="sidebar" class="w-64 border-r border-[#27272a] bg-[#0a0a0a] flex flex-col transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 shrink-0 h-full">
     </aside>
 
-    <main class="flex-1 flex flex-col overflow-hidden relative">
-        <header class="h-16 flex items-center px-8 border-b border-[#27272a] bg-[#050505] shrink-0 justify-between w-full z-40">
-            <div class="flex items-center gap-3">
-                <span class="text-zinc-600 text-[10px] font-mono uppercase tracking-[0.3em] hidden md:inline">
-                    // LOCAL_ASSETS
-                </span>
-                <iconify-icon icon="solar:alt-arrow-right-linear" class="text-zinc-700 hidden md:block"></iconify-icon>
-                <h1 class="text-[10px] font-mono uppercase tracking-[0.3em] text-[#39FF14] font-bold m-0">
-                    DASHBOARD OVERVIEW
-                </h1>
-            </div>
-            <div class="flex items-center gap-6">
-                <div class="hidden md:flex items-center gap-2 bg-[#0a0a0a] border border-[#27272a] px-3 py-1.5 rounded-md shadow-[inset_0_0_10px_rgba(0,0,0,0.5)]">
-                    <span class="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-pulse"></span>
-                    <span class="text-[9px] font-mono text-[#39FF14] uppercase tracking-widest">System OK</span>
-                </div>
-                <div class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center font-bold text-xs shrink-0 cursor-pointer hover:scale-105 transition-transform shadow-[0_0_10px_rgba(255,255,255,0.1)]">
-                    F
-                </div>
-            </div>
-        </header>
-
-        <div class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
-            <div class="flex justify-between items-center mb-6">
-                <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Local Assets // Admin</span>
-                <div class="w-2 h-2 bg-primary rounded-full animate-pulse shadow-[0_0_8px_#39FF14]"></div>
-            </div>
-            <div class="cursor-pointer hover:border-primary/50 transition-all duration-500 w-full bg-card border border-border rounded-2xl p-8 relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-6 shadow-2xl">
-                <video id="live-feed-video" autoplay loop muted playsinline preload="auto" class="absolute inset-0 w-full h-full object-cover opacity-40 grayscale hover:grayscale-0 transition-all duration-700">
-                    <source src="https://stream.mux.com/VZtzUzIL5lyYWglrq9QO7gQ028YrZLQz1I0073tJz4R8/high.mp4" type="video/mp4">
-                </video>
-                <div class="absolute inset-0 bg-scanlines opacity-10 pointer-events-none"></div>
-
-                <div class="relative z-10">
-                    <div class="flex items-center gap-3 mb-3">
-                        <span class="inline-flex items-center gap-2 px-3 py-1 bg-red-500 text-white rounded-full text-[10px] font-bold uppercase tracking-widest animate-pulse">
-                            <iconify-icon icon="solar:record-circle-linear"></iconify-icon> LIVE FEED
-                        </span>
-                        <span class="text-white/50 font-mono text-[10px] uppercase">Room 1 // Main Floor</span>
-                    </div>
-                    <h2 class="text-3xl font-extrabold text-white tracking-tighter uppercase">Artist: Beltran</h2>
-                </div>
-
-                <div class="flex gap-10 relative z-10 font-mono">
-                    <div class="text-left">
-                        <span class="block text-[9px] text-muted-foreground uppercase mb-1">Elapsed</span>
-                        <span class="text-lg text-white font-medium">01:42:15</span>
-                    </div>
-                    <div class="text-left">
-                        <span class="block text-[9px] text-muted-foreground uppercase mb-1">Cameras</span>
-                        <span class="text-lg text-primary font-medium">3/3 ACTIVE</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div class="bg-card border border-border p-5 rounded-xl">
-                    <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3 block">Total Assets Captured</span>
-                    <div class="flex flex-col items-start gap-1">
-                        <span id="live-asset-total" class="text-2xl font-bold leading-tight">1,248</span>
-                        <span class="text-[10px] text-primary font-mono bg-primary/10 px-2 py-0.5 rounded border border-primary/20 leading-none">+12%</span>
-                    </div>
-                </div>
-                <div class="bg-card border border-border p-5 rounded-xl">
-                    <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3 block">Cloud Storage</span>
-                    <div class="flex items-end justify-between">
-                        <span id="live-storage-usage" class="text-2xl font-bold text-primary">515 GB</span>
-                        <span class="text-[10px] text-muted-foreground font-mono">/ 50 TB</span>
-                    </div>
-                    <div class="w-full bg-white/5 h-1 mt-4 rounded-full overflow-hidden"><div id="storage-bar" class="bg-primary h-full w-[0%]"></div></div>
-                </div>
-                <div class="bg-card border border-border p-5 rounded-xl">
-                    <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3 block">Revenue Generated</span>
-                    <div class="flex flex-col items-start gap-1">
-                        <span class="text-2xl font-bold leading-tight">£48,250</span>
-                        <span class="text-[10px] text-primary font-mono bg-primary/10 px-2 py-0.5 rounded border border-primary/20 leading-none">+24%</span>
-                    </div>
-                </div>
-                <div class="bg-card border border-border p-5 rounded-xl relative overflow-hidden">
-                    <div class="absolute right-0 top-0 bottom-0 w-1 bg-red-500 animate-pulse"></div>
-                    <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3 block">Next Event</span>
-                    <span class="block text-sm font-bold text-white uppercase tracking-tight">Koko: Room 1</span>
-                    <span class="text-[10px] text-muted-foreground font-mono uppercase">Tonight, 22:00 PM</span>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="lg:col-span-2 bg-card border border-border rounded-2xl overflow-hidden">
-                    <div class="p-5 border-b border-border flex justify-between items-center">
-                        <h3 class="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-zinc-500">Distribution History</h3>
-                        <div class="flex items-center gap-2">
-                            <span class="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-pulse"></span>
-                            <span class="text-[9px] font-mono text-[#39FF14] uppercase tracking-widest">Live</span>
-                        </div>
-                    </div>
-                    <div id="recent-sets-list" class="divide-y divide-border"></div>
-                </div>
-
-                <div class="space-y-6">
-                    <div class="bg-card border border-border rounded-2xl p-6">
-                        <h3 class="text-xs font-bold uppercase tracking-widest mb-6">System Health</h3>
-                        <div class="space-y-6">
-                            <div>
-                                <div class="flex justify-between text-[10px] font-mono mb-2 uppercase"><span class="text-muted-foreground">Upload Bandwidth</span><span class="text-white">840 Mbps</span></div>
-                                <div class="w-full bg-white/5 h-1 rounded-full overflow-hidden"><div class="bg-primary h-full w-[85%] shadow-[0_0_10px_#39FF14]"></div></div>
-                            </div>
-                            <div>
-                                <div class="flex justify-between text-[10px] font-mono mb-2 uppercase"><span class="text-muted-foreground">Local Storage (NAS)</span><span class="text-white">1.03%</span></div>
-                                <div class="w-full bg-white/5 h-1 rounded-full overflow-hidden"><div class="bg-yellow-500 h-full" style="width: 1.03%;"></div></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <script>
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('sidebar-overlay');
-            
-            // Toggle the classes directly
-            sidebar.classList.toggle('-translate-x-full');
-            
-            // Handle the overlay visibility
-            if (sidebar.classList.contains('-translate-x-full')) {
-                // Closing
-                overlay.classList.add('opacity-0');
-                setTimeout(() => overlay.classList.add('hidden'), 300);
-            } else {
-                // Opening
-                overlay.classList.remove('hidden');
-                setTimeout(() => overlay.classList.remove('opacity-0'), 10);
-            }
-        }
-
-        async function fetchLiveMetrics() {
-            const totalGB = 515;
-            const storageEl = document.getElementById('live-storage-usage');
-            if (storageEl) storageEl.innerText = `${totalGB} GB`;
-
-            const percent = (totalGB / 50000) * 100;
-            const bar = document.getElementById('storage-bar');
-            if (bar) bar.style.width = Math.max(percent, 2) + '%';
-        }
-
-        function keepLiveFeedPlaying() {
-            const video = document.getElementById('live-feed-video');
-            if (!video) return;
-            video.muted = true;
-            const attemptPlay = () => { video.play().catch(() => {}); };
-            video.addEventListener('pause', attemptPlay);
-            video.addEventListener('ended', () => { video.currentTime = 0; attemptPlay(); });
-            document.addEventListener('visibilitychange', () => { if (!document.hidden) attemptPlay(); });
-            attemptPlay();
-        }
-
-        async function fetchRecentUploads() {
-            const container = document.getElementById('recent-sets-list');
-            if (!container) return;
-
-            const sessions = [
-                {
-                    id: 'session_01',
-                    name: 'AMONGST FEW',
-                    date: '14 Feb 2026',
-                    venue: 'FABRIC LONDON',
-                    assets: [
-                        { type: 'MASTER', label: '4K Long Form', ext: 'MOV/MP4', icon: 'solar:play-bold', color: 'text-primary' },
-                        { type: 'AUDIO', label: 'HQ Audio', ext: 'WAV/MP3', icon: 'solar:music-note-bold', color: 'text-blue-400' },
-                        { type: 'SOCIAL', label: 'Social Pack Verticals', ext: 'MP4', icon: 'solar:iphone-bold', color: 'text-purple-400' },
-                        { type: 'THUMB', label: 'Marketing Thumbnails', ext: 'JPG/PNG', icon: 'solar:gallery-bold', color: 'text-orange-400' },
-                    ],
-                },
-                {
-                    id: 'session_02',
-                    name: 'MICHAEL BIBI',
-                    date: '01 Nov 2025',
-                    venue: 'FABRIC LONDON',
-                    assets: [
-                        { type: 'MASTER', label: '4K Long Form', ext: 'MOV', icon: 'solar:play-bold', color: 'text-primary' },
-                    ],
-                },
-            ];
-
-            container.innerHTML = sessions.map(session => `
-                <div class="session-group">
-                    <div onclick="toggleAssetPreview('${session.id}')" class="p-5 flex items-center justify-between hover:bg-white/[0.02] transition-colors cursor-pointer group">
-                        <div class="flex items-center gap-4">
-                            <div class="w-10 h-10 bg-[#050505] border border-border flex items-center justify-center rounded-xl group-hover:border-primary/50 transition-colors">
-                                <iconify-icon icon="solar:folder-2-bold" class="text-zinc-600 group-hover:text-primary"></iconify-icon>
-                            </div>
-                            <div>
-                                <p class="text-sm font-black text-white uppercase tracking-tight">${session.name}</p>
-                                <p class="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">${session.venue} // ${session.date}</p>
-                            </div>
-                        </div>
-                        <iconify-icon id="arrow-${session.id}" icon="solar:alt-arrow-down-linear" class="text-zinc-700 transition-transform duration-300"></iconify-icon>
-                    </div>
-
-                    <div id="preview-${session.id}" class="hidden bg-black/40 border-t border-border/50 divide-y divide-border/30">
-                        ${session.assets.map(asset => `
-                            <div class="p-4 pl-12 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset">
-                                <div class="flex items-center gap-4">
-                                    <div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-border/50">
-                                        <iconify-icon icon="${asset.icon}" class="${asset.color} text-sm"></iconify-icon>
-                                    </div>
-                                    <div>
-                                        <p class="text-[10px] font-bold text-zinc-300 uppercase">${asset.label}</p>
-                                        <p class="text-[8px] font-mono text-zinc-600 uppercase">${asset.ext} FORMAT</p>
-                                    </div>
-                                </div>
-                                <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors">
-                                    <iconify-icon icon="solar:cloud-download-bold" class="text-zinc-700 group-hover/asset:text-primary"></iconify-icon>
-                                </button>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function toggleAssetPreview(id) {
-            const preview = document.getElementById(`preview-${id}`);
-            const arrow = document.getElementById(`arrow-${id}`);
-            if (!preview || !arrow) return;
-
-            document.querySelectorAll('[id^="preview-"]').forEach(el => {
-                if (el.id !== `preview-${id}`) el.classList.add('hidden');
-            });
-
-            document.querySelectorAll('[id^="arrow-"]').forEach(el => {
-                if (el.id !== `arrow-${id}`) el.style.transform = 'rotate(0deg)';
-            });
-
-            const isHidden = preview.classList.contains('hidden');
-            if (isHidden) {
-                preview.classList.remove('hidden');
-                arrow.style.transform = 'rotate(180deg)';
-            } else {
-                preview.classList.add('hidden');
-                arrow.style.transform = 'rotate(0deg)';
-            }
-        }
-
-        fetchLiveMetrics();
-        fetchRecentUploads();
-        keepLiveFeedPlaying();
-    </script>
+    <main class="flex-1 flex flex-col overflow-hidden relative bg-background">
+         <header class="h-16 flex items-center px-8 border-b border-zinc-800 justify-between">             <span class="text-primary font-mono text-[9px] uppercase tracking-[0.4em]">Infrastructure Tier // London</span>             <div class="flex items-center gap-2">                 <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>                 <span class="text-[8px] font-mono text-zinc-500">LIVE MUX UPLOAD ACTIVE</span>             </div>         </header>          <div class="flex-1 p-8 overflow-y-auto">             <div class="max-w-[1200px] mx-auto space-y-12 pb-20">                                  <div class="ingest-card space-y-8">                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">                         <input type="text" id="ingest-name" placeholder="DJ / ARTIST NAME" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs font-bold text-white uppercase outline-none focus:border-primary">                         <input type="text" id="ingest-date" placeholder="SELECT DATE" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs font-bold text-white outline-none">                         <select id="ingest-shot" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs text-zinc-400 font-bold uppercase outline-none">                             <option value="MASTER">MASTER CAM</option>                             <option value="BOOTH">BOOTH CAM</option>                         </select>                     </div>                      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">                         <label class="upload-node p-6 flex flex-col items-center justify-center gap-2" id="node-video">                             <iconify-icon icon="solar:videocamera-record-bold" class="text-2xl text-zinc-600"></iconify-icon>                             <span class="text-[8px] font-mono uppercase text-zinc-500">4K Master (.MOV)</span>                             <input type="file" id="file-video" class="hidden" accept="video/*" onchange="markActive('video')">                         </label>                         <div class="upload-node p-6 flex flex-col items-center justify-center gap-2 opacity-30 cursor-not-allowed">                             <iconify-icon icon="solar:music-note-bold" class="text-2xl text-zinc-600"></iconify-icon>                             <span class="text-[8px] font-mono uppercase text-zinc-500">HQ Audio (Auto-Extract)</span>                         </div>                         <div class="upload-node p-6 flex flex-col items-center justify-center gap-2 opacity-30 cursor-not-allowed">                             <iconify-icon icon="solar:gallery-bold" class="text-2xl text-zinc-600"></iconify-icon>                             <span class="text-[8px] font-mono uppercase text-zinc-500">Marketing (Auto-Gen)</span>                         </div>                     </div>                      <button id="upload-btn" class="w-full bg-white text-black font-black py-5 rounded-2xl uppercase tracking-[0.2em] text-[11px] hover:bg-primary transition-all">                         INGEST FULL SESSION TO MUX CLOUD                     </button>                 </div>                  <div id="preview-container" class="hidden border-b border-zinc-800 pb-12">                     <h2 id="vault-dj-title" class="text-3xl font-black italic mb-6"></h2>                     <div id="active-asset-display" class="max-w-4xl mx-auto"></div>                 </div>                  <div class="space-y-4">                     <h3 class="text-[10px] font-mono text-zinc-600 uppercase tracking-[0.3em] border-b border-zinc-800 pb-2">Vault History</h3>                     <div id="cloud-list"></div>                 </div>             </div>         </div>     
+</main>
+<script>
+         // Ingest Logic         const uploadBtn = document.getElementById('upload-btn');                  function markActive(type) { document.getElementById(`node-${type}`).classList.add('active'); }          uploadBtn.onclick = async () => {             const file = document.getElementById('file-video').files[0];             const name = document.getElementById('ingest-name').value;             if (!file || !name) return alert("CRITICAL: NAME AND FILE REQUIRED");              uploadBtn.disabled = true;             uploadBtn.innerHTML = "REQUESTING MUX ACCESS...";              try {                 const response = await fetch('/api/get-upload-url', { method: 'POST' });                 const { url, id } = await response.json();                  const xhr = new XMLHttpRequest();                 xhr.open('PUT', url);                 xhr.upload.onprogress = (e) => {                     const pct = Math.round((e.loaded / e.total) * 100);                     uploadBtn.innerHTML = `UPLOADING TO MUX: ${pct}%`;                 };                  xhr.onload = () => {                     uploadBtn.innerHTML = "INGEST COMPLETE // ARCHIVED";                     uploadBtn.style.background = "#39FF14";                     saveToHistory(id, name);                     renderVaultHistory();                 };                 xhr.send(file);             } catch (err) { alert("UPLOAD ERROR: CHECK API"); uploadBtn.disabled = false; }         };          function saveToHistory(id, artist) {             let h = JSON.parse(localStorage.getItem('vault-history') || '[]');             h.unshift({ id, artist, date: new Date().toLocaleDateString() });             localStorage.setItem('vault-history', JSON.stringify(h));         }          // Mux Audio Embeds         window.showAudioPreview = function(name) {             const display = document.getElementById('active-asset-display');             const artist = (name || '').toLowerCase();             let iframe = artist.includes('amongst few')                  ? `<iframe src="https://player.mux.com/UAuFKzITmC8fK9eQWuh01ghglbZkANDGLZRDfebfZ8rw" style="width:100%; border:none; aspect-ratio:16/9;" allowfullscreen></iframe>`                 : `<iframe src="https://player.mux.com/01qdXIg3R1ObhtA1Z3SA1d01lnHxKh005JDDPPjj00vCd3M" style="width:100%; border:none; aspect-ratio:16/9;" allowfullscreen></iframe>`;              document.getElementById('preview-container').classList.remove('hidden');             document.getElementById('vault-dj-title').innerText = name.toUpperCase();             display.innerHTML = iframe;             display.scrollIntoView({ behavior: 'smooth' });         }          function renderVaultHistory() {             const list = document.getElementById('cloud-list');             const history = JSON.parse(localStorage.getItem('vault-history') || '[{"artist":"AMONGST FEW","id":"PZQVTWSV"},{"artist":"MICHAEL BIBI","id":"1VBDES5U"}]');                          list.innerHTML = history.map((asset, index) => `                 <div class="vault-card" id="vault-${index}">                     <div class="vault-card-header" onclick="toggleVaultFolder(${index})">                         <div>                             <h4 class="text-2xl font-black italic uppercase">${asset.artist}</h4>                             <span class="text-[8px] font-mono text-zinc-600 uppercase">Archive Secured // ${asset.date || 'FEB 2026'}</span>                         </div>                         <button class="bg-white text-black h-12 w-12 rounded-xl flex items-center justify-center hover:bg-primary transition-all">                             <iconify-icon icon="solar:play-bold"></iconify-icon>                         </button>                     </div>                     <div class="asset-tray">                         <div class="flex gap-4 pt-4">                             <button class="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-[9px] font-black hover:border-primary" onclick="event.stopPropagation(); showAudioPreview('${asset.artist}')">                                 HQ_MASTER_AUDIO                             </button>                         </div>                     </div>                 </div>`).join('');         }          window.toggleVaultFolder = (i) => document.getElementById(`vault-${i}`).classList.toggle('expanded');         document.addEventListener('DOMContentLoaded', () => {             flatpickr("#ingest-date", { defaultDate: "today", theme: "dark" });             renderVaultHistory();         });     
+</script>
 </body>
 </html>
