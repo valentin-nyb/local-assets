@@ -67,7 +67,115 @@
          <header class="h-16 flex items-center px-8 border-b border-zinc-800 justify-between">             <span class="text-primary font-mono text-[9px] uppercase tracking-[0.4em]">Infrastructure Tier // London</span>             <div class="flex items-center gap-2">                 <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>                 <span class="text-[8px] font-mono text-zinc-500">LIVE MUX UPLOAD ACTIVE</span>             </div>         </header>          <div class="flex-1 p-8 overflow-y-auto">             <div class="max-w-[1200px] mx-auto space-y-12 pb-20">                                  <div class="ingest-card space-y-8">                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">                         <input type="text" id="ingest-name" placeholder="DJ / ARTIST NAME" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs font-bold text-white uppercase outline-none focus:border-primary">                         <input type="text" id="ingest-date" placeholder="SELECT DATE" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs font-bold text-white outline-none">                         <select id="ingest-shot" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs text-zinc-400 font-bold uppercase outline-none">                             <option value="MASTER">MASTER CAM</option>                             <option value="BOOTH">BOOTH CAM</option>                         </select>                     </div>                      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">                         <label class="upload-node p-6 flex flex-col items-center justify-center gap-2" id="node-video">                             <iconify-icon icon="solar:videocamera-record-bold" class="text-2xl text-zinc-600"></iconify-icon>                             <span class="text-[8px] font-mono uppercase text-zinc-500">4K Master (.MOV)</span>                             <input type="file" id="file-video" class="hidden" accept="video/*" onchange="markActive('video')">                         </label>                         <div class="upload-node p-6 flex flex-col items-center justify-center gap-2 opacity-30 cursor-not-allowed">                             <iconify-icon icon="solar:music-note-bold" class="text-2xl text-zinc-600"></iconify-icon>                             <span class="text-[8px] font-mono uppercase text-zinc-500">HQ Audio (Auto-Extract)</span>                         </div>                         <div class="upload-node p-6 flex flex-col items-center justify-center gap-2 opacity-30 cursor-not-allowed">                             <iconify-icon icon="solar:gallery-bold" class="text-2xl text-zinc-600"></iconify-icon>                             <span class="text-[8px] font-mono uppercase text-zinc-500">Marketing (Auto-Gen)</span>                         </div>                     </div>                      <button id="upload-btn" class="w-full bg-white text-black font-black py-5 rounded-2xl uppercase tracking-[0.2em] text-[11px] hover:bg-primary transition-all">                         INGEST FULL SESSION TO MUX CLOUD                     </button>                 </div>                  <div id="preview-container" class="hidden border-b border-zinc-800 pb-12">                     <h2 id="vault-dj-title" class="text-3xl font-black italic mb-6"></h2>                     <div id="active-asset-display" class="max-w-4xl mx-auto"></div>                 </div>                  <div class="space-y-4">                     <h3 class="text-[10px] font-mono text-zinc-600 uppercase tracking-[0.3em] border-b border-zinc-800 pb-2">Vault History</h3>                     <div id="cloud-list"></div>                 </div>             </div>         </div>     
 </main>
 <script>
-         // Ingest Logic         const uploadBtn = document.getElementById('upload-btn');                  function markActive(type) { document.getElementById(`node-${type}`).classList.add('active'); }          uploadBtn.onclick = async () => {             const file = document.getElementById('file-video').files[0];             const name = document.getElementById('ingest-name').value;             if (!file || !name) return alert("CRITICAL: NAME AND FILE REQUIRED");              uploadBtn.disabled = true;             uploadBtn.innerHTML = "REQUESTING MUX ACCESS...";              try {                 const response = await fetch('/api/get-upload-url', { method: 'POST' });                 const { url, id } = await response.json();                  const xhr = new XMLHttpRequest();                 xhr.open('PUT', url);                 xhr.upload.onprogress = (e) => {                     const pct = Math.round((e.loaded / e.total) * 100);                     uploadBtn.innerHTML = `UPLOADING TO MUX: ${pct}%`;                 };                  xhr.onload = () => {                     uploadBtn.innerHTML = "INGEST COMPLETE // ARCHIVED";                     uploadBtn.style.background = "#39FF14";                     saveToHistory(id, name);                     renderVaultHistory();                 };                 xhr.send(file);             } catch (err) { alert("UPLOAD ERROR: CHECK API"); uploadBtn.disabled = false; }         };          function saveToHistory(id, artist) {             let h = JSON.parse(localStorage.getItem('vault-history') || '[]');             h.unshift({ id, artist, date: new Date().toLocaleDateString() });             localStorage.setItem('vault-history', JSON.stringify(h));         }          // Mux Audio Embeds         window.showAudioPreview = function(name) {             const display = document.getElementById('active-asset-display');             const artist = (name || '').toLowerCase();             let iframe = artist.includes('amongst few')                  ? `<iframe src="https://player.mux.com/UAuFKzITmC8fK9eQWuh01ghglbZkANDGLZRDfebfZ8rw" style="width:100%; border:none; aspect-ratio:16/9;" allowfullscreen></iframe>`                 : `<iframe src="https://player.mux.com/01qdXIg3R1ObhtA1Z3SA1d01lnHxKh005JDDPPjj00vCd3M" style="width:100%; border:none; aspect-ratio:16/9;" allowfullscreen></iframe>`;              document.getElementById('preview-container').classList.remove('hidden');             document.getElementById('vault-dj-title').innerText = name.toUpperCase();             display.innerHTML = iframe;             display.scrollIntoView({ behavior: 'smooth' });         }          function renderVaultHistory() {             const list = document.getElementById('cloud-list');             const history = JSON.parse(localStorage.getItem('vault-history') || '[{"artist":"AMONGST FEW","id":"PZQVTWSV"},{"artist":"MICHAEL BIBI","id":"1VBDES5U"}]');                          list.innerHTML = history.map((asset, index) => `                 <div class="vault-card" id="vault-${index}">                     <div class="vault-card-header" onclick="toggleVaultFolder(${index})">                         <div>                             <h4 class="text-2xl font-black italic uppercase">${asset.artist}</h4>                             <span class="text-[8px] font-mono text-zinc-600 uppercase">Archive Secured // ${asset.date || 'FEB 2026'}</span>                         </div>                         <button class="bg-white text-black h-12 w-12 rounded-xl flex items-center justify-center hover:bg-primary transition-all">                             <iconify-icon icon="solar:play-bold"></iconify-icon>                         </button>                     </div>                     <div class="asset-tray">                         <div class="flex gap-4 pt-4">                             <button class="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-[9px] font-black hover:border-primary" onclick="event.stopPropagation(); showAudioPreview('${asset.artist}')">                                 HQ_MASTER_AUDIO                             </button>                         </div>                     </div>                 </div>`).join('');         }          window.toggleVaultFolder = (i) => document.getElementById(`vault-${i}`).classList.toggle('expanded');         document.addEventListener('DOMContentLoaded', () => {             flatpickr("#ingest-date", { defaultDate: "today", theme: "dark" });             renderVaultHistory();         });     
+    window.markActive = function(type) {
+        var node = document.getElementById('node-' + type);
+        if (node) node.classList.add('active');
+    };
+
+    window.onload = function() {
+        var uploadBtn = document.getElementById('upload-btn');
+
+        uploadBtn.onclick = async function() {
+            var file = document.getElementById('file-video').files[0];
+            var name = document.getElementById('ingest-name').value;
+            if (!file || !name) return alert("Missing File or Name");
+
+            uploadBtn.disabled = true;
+            uploadBtn.innerHTML = "PREPARING MUX HANDSHAKE...";
+
+            try {
+                var response = await fetch('/api/get-upload-url', { method: 'POST' });
+                if (!response.ok) throw new Error("API failed: " + response.status);
+                var data = await response.json();
+                var url = data.url;
+                var id = data.id;
+
+                var xhr = new XMLHttpRequest();
+                xhr.open('PUT', url);
+                xhr.upload.onprogress = function(e) {
+                    var pct = Math.round((e.loaded / e.total) * 100);
+                    uploadBtn.innerHTML = 'UPLOADING: ' + pct + '%';
+                };
+                xhr.onload = function() {
+                    if (xhr.status === 200) {
+                        uploadBtn.innerHTML = "INGEST COMPLETE";
+                        uploadBtn.style.background = "#39FF14";
+                        saveToHistory(id, name);
+                        renderVaultHistory();
+                    } else {
+                        alert("Upload Failed at Mux Edge");
+                        uploadBtn.disabled = false;
+                    }
+                };
+                xhr.onerror = function() {
+                    alert("Network error during upload");
+                    uploadBtn.disabled = false;
+                };
+                xhr.send(file);
+            } catch (err) {
+                console.error(err);
+                alert(err.message);
+                uploadBtn.disabled = false;
+                uploadBtn.innerHTML = "INGEST FULL SESSION TO MUX CLOUD";
+            }
+        };
+
+        flatpickr("#ingest-date", { defaultDate: "today", theme: "dark" });
+        renderVaultHistory();
+    };
+
+    function saveToHistory(id, artist) {
+        var h = JSON.parse(localStorage.getItem('vault-history') || '[]');
+        h.unshift({ id: id, artist: artist, date: new Date().toLocaleDateString() });
+        localStorage.setItem('vault-history', JSON.stringify(h));
+    }
+
+    window.showAudioPreview = function(name) {
+        var display = document.getElementById('active-asset-display');
+        var artist = (name || '').toLowerCase();
+        var iframe;
+        if (artist.indexOf('amongst few') >= 0) {
+            iframe = '<iframe src="https://player.mux.com/UAuFKzITmC8fK9eQWuh01ghglbZkANDGLZRDfebfZ8rw" style="width:100%;border:none;aspect-ratio:16/9;" allowfullscreen><\/iframe>';
+        } else {
+            iframe = '<iframe src="https://player.mux.com/01qdXIg3R1ObhtA1Z3SA1d01lnHxKh005JDDPPjj00vCd3M" style="width:100%;border:none;aspect-ratio:16/9;" allowfullscreen><\/iframe>';
+        }
+        document.getElementById('preview-container').classList.remove('hidden');
+        document.getElementById('vault-dj-title').innerText = name.toUpperCase();
+        display.innerHTML = iframe;
+        display.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    function renderVaultHistory() {
+        var list = document.getElementById('cloud-list');
+        var history = JSON.parse(localStorage.getItem('vault-history') || '[{"artist":"AMONGST FEW","id":"PZQVTWSV"},{"artist":"MICHAEL BIBI","id":"1VBDES5U"}]');
+        var html = '';
+        for (var i = 0; i < history.length; i++) {
+            var asset = history[i];
+            html += '<div class="vault-card" id="vault-' + i + '">'
+                + '<div class="vault-card-header" onclick="toggleVaultFolder(' + i + ')">'
+                + '<div>'
+                + '<h4 class="text-2xl font-black italic uppercase">' + asset.artist + '</h4>'
+                + '<span class="text-[8px] font-mono text-zinc-600 uppercase">Archive Secured // ' + (asset.date || 'FEB 2026') + '</span>'
+                + '</div>'
+                + '<button class="bg-white text-black h-12 w-12 rounded-xl flex items-center justify-center hover:bg-primary transition-all">'
+                + '<iconify-icon icon="solar:play-bold"></iconify-icon>'
+                + '</button>'
+                + '</div>'
+                + '<div class="asset-tray">'
+                + '<div class="flex gap-4 pt-4">'
+                + '<button class="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-[9px] font-black hover:border-primary" onclick="event.stopPropagation(); showAudioPreview(\'' + asset.artist + '\')">'
+                + 'HQ_MASTER_AUDIO'
+                + '</button>'
+                + '</div>'
+                + '</div>'
+                + '</div>';
+        }
+        list.innerHTML = html;
+    }
+
+    window.toggleVaultFolder = function(i) {
+        document.getElementById('vault-' + i).classList.toggle('expanded');
+    };
 </script>
 </body>
 </html>
