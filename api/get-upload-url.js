@@ -1,34 +1,28 @@
+// api/get-upload-url.js
 import Mux from '@mux/mux-node';
 
-const mux = new Mux({
-  tokenId: process.env.MUX_TOKEN_ID,
-  tokenSecret: process.env.MUX_TOKEN_SECRET
-});
+const { Video } = new Mux(process.env.MUX_TOKEN_ID, process.env.MUX_TOKEN_SECRET);
 
 export default async function handler(req, res) {
-  // 1. Mandatory CORS Headers for Vercel
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-api-key');
-
-  // 2. Handle Browser Preflight
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
   try {
-    const upload = await mux.video.uploads.create({
+    const upload = await Video.Uploads.create({
       new_asset_settings: { 
-        playback_policy: ['public'],
-        mp4_support: 'standard',
-        master_access: 'temporary'
+        playback_policy: 'public',
+        // THIS ENABLES DOWNLOADS:
+        static_renditions: 'request' 
       },
-      cors_origin: '*', // Allows your frontend to upload directly
+      cors_origin: '*', // Allows your localhost to talk to Mux
     });
 
-    // Return the single Mux Upload URL
-    res.status(200).json({ url: upload.url, id: upload.id });
+    // We return both the upload URL and the ID
+    res.status(200).json({ 
+      url: upload.url, 
+      id: upload.id 
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('MUX_CONNECTION_ERROR:', error);
+    res.status(500).json({ error: 'Mux Handshake Failed' });
   }
 }
