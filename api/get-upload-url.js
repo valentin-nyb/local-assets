@@ -12,11 +12,8 @@ export default async function handler(req, res) {
     const upload = await mux.video.uploads.create({
       new_asset_settings: {
         playback_policy: ['public'],
-        // 'plus' or 'high_definition' is required for AI Reframing features
-        video_quality: 'plus', 
-        generated_subtitles: [{ language_code: 'en', name: 'Internal_AI' }],
-        // This enables the AI to scan for highlights
-        static_renditions: 'request'
+        // Let's remove video_quality, generated_subtitles, and static_renditions 
+        // to isolate the 400 Bad Request error.
       },
       cors_origin: '*',
     });
