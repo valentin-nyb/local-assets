@@ -1,6 +1,5 @@
 import Mux from '@mux/mux-node';
 
-// Initialize Mux with the DEFINITIVE keys
 const mux = new Mux({
   tokenId: process.env.MUX_TOKEN_ID,
   tokenSecret: process.env.MUX_TOKEN_SECRET
@@ -14,8 +13,7 @@ export default async function handler(req, res) {
 
     const upload = await mux.video.uploads.create({
       new_asset_settings: {
-        playback_policy: 'public',
-        static_renditions: 'request'
+        playback_policy: ['public'],
       },
       cors_origin: '*',
     });
@@ -25,6 +23,6 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('CRITICAL MUX ERROR:', error.message);
-    return res.status(500).json({ error: "Check Vercel Logs for Mux Auth Error" });
+    return res.status(500).json({ error: error.message });
   }
 }
