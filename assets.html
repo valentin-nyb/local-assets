@@ -88,6 +88,13 @@
             try {
                 var response = await fetch('/api/get-upload-url', { method: 'POST' });
                 var data = await response.json();
+
+                if (!data.url) {
+                    console.error('Server Error:', data.error);
+                    uploadBtn.innerHTML = 'AUTH FAILED - CHECK KEYS';
+                    return;
+                }
+
                 var url = data.url;
                 var id = data.id;
 
