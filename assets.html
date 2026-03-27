@@ -86,7 +86,7 @@
             uploadBtn.innerHTML = "REQUESTING MUX ACCESS...";
 
             try {
-                var response = await fetch('/api/get-upload-url', { method: 'POST' });
+                var response = await fetch('https://local-assets.com/api/get-upload-url', { method: 'POST' });
                 var data = await response.json();
 
                 if (!data.url) {
