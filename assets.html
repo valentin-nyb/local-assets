@@ -77,23 +77,19 @@
 
         uploadBtn.onclick = async function() {
             var file = document.getElementById('file-video').files[0];
-            var name = document.getElementById('ingest-name').value;
-            if (!file || !name) return alert("Missing File or Name");
+            var artist = document.getElementById('ingest-name').value;
+            var date = document.getElementById('ingest-date').value;
+
+            if (!file || !artist) return alert("Artist and File are required.");
 
             uploadBtn.disabled = true;
-            uploadBtn.innerHTML = "PREPARING MUX HANDSHAKE...";
+            uploadBtn.innerHTML = "REQUESTING MUX ACCESS...";
 
-<<<<<<< HEAD
-        uploadBtn.disabled = true;
-        uploadBtn.innerHTML = "PREPARING LOCAL/UPLOAD...";
-=======
             try {
                 var response = await fetch('/api/get-upload-url', { method: 'POST' });
-                if (!response.ok) throw new Error("API failed: " + response.status);
                 var data = await response.json();
                 var url = data.url;
                 var id = data.id;
->>>>>>> 741864d99c918020b64f9140f409822a84ce3ce0
 
                 var xhr = new XMLHttpRequest();
                 xhr.open('PUT', url);
@@ -103,25 +99,17 @@
                 };
                 xhr.onload = function() {
                     if (xhr.status === 200) {
-                        uploadBtn.innerHTML = "INGEST COMPLETE";
+                        uploadBtn.innerHTML = "PROCESSING VIDEO...";
                         uploadBtn.style.background = "#39FF14";
-                        saveToHistory(id, name);
+                        saveToHistory(id, artist, date);
                         renderVaultHistory();
-                    } else {
-                        alert("Upload Failed at Mux Edge");
-                        uploadBtn.disabled = false;
+                        pollForPlaybackId(id);
                     }
-                };
-                xhr.onerror = function() {
-                    alert("Network error during upload");
-                    uploadBtn.disabled = false;
                 };
                 xhr.send(file);
             } catch (err) {
-                console.error(err);
-                alert(err.message);
+                alert("Upload Failed: Check if 'npx vercel dev' is running");
                 uploadBtn.disabled = false;
-                uploadBtn.innerHTML = "INGEST FULL LOCAL/SESSION";
             }
         };
 
@@ -129,51 +117,81 @@
         renderVaultHistory();
     };
 
-    function saveToHistory(id, artist) {
+    function saveToHistory(id, artist, date) {
         var h = JSON.parse(localStorage.getItem('vault-history') || '[]');
-        h.unshift({ id: id, artist: artist, date: new Date().toLocaleDateString() });
+        h.unshift({ id: id, artist: artist, date: date || new Date().toLocaleDateString() });
         localStorage.setItem('vault-history', JSON.stringify(h));
     }
 
-    window.showAudioPreview = function(name) {
-        var display = document.getElementById('active-asset-display');
-        var artist = (name || '').toLowerCase();
-        var iframe;
-        if (artist.indexOf('amongst few') >= 0) {
-            iframe = '<iframe src="https://player.mux.com/UAuFKzITmC8fK9eQWuh01ghglbZkANDGLZRDfebfZ8rw" style="width:100%;border:none;aspect-ratio:16/9;" allowfullscreen><\/iframe>';
-        } else {
-            iframe = '<iframe src="https://player.mux.com/01qdXIg3R1ObhtA1Z3SA1d01lnHxKh005JDDPPjj00vCd3M" style="width:100%;border:none;aspect-ratio:16/9;" allowfullscreen><\/iframe>';
+    async function pollForPlaybackId(uploadId) {
+        var checkStatus = setInterval(function() {
+            try {
+                console.log("Checking if Mux has finished processing...");
+                renderVaultHistory();
+            } catch (e) {
+                clearInterval(checkStatus);
+            }
+        }, 5000);
+    }
+
+    var sessions = [
+        {
+            id: 'session_saba_saba',
+            name: 'AMONGST FEW',
+            date: '27 Mar 2026',
+            playbackId: 'r55lk7leV2PQUUWI8ChvkyFYRSzN00005m19t02wGSShTY',
+            venue: 'SABA SABA',
+            assets: [
+                { type: 'MASTER', label: '4K Master', ext: 'MOV', icon: 'solar:play-bold', color: 'text-primary' },
+                { type: 'AUDIO', label: 'HQ Audio', ext: 'WAV', icon: 'solar:music-note-bold', color: 'text-blue-400' }
+            ]
         }
+    ];
+
+    window.showAudioPreview = function(playbackId, name) {
+        var display = document.getElementById('active-asset-display');
         document.getElementById('preview-container').classList.remove('hidden');
-        document.getElementById('vault-dj-title').innerText = name.toUpperCase();
-        display.innerHTML = iframe;
+        document.getElementById('vault-dj-title').innerText = (name || '').toUpperCase();
+        display.innerHTML = '<iframe src="https://player.mux.com/' + playbackId + '" style="width:100%;border:none;aspect-ratio:16/9;" allowfullscreen></iframe>';
         display.scrollIntoView({ behavior: 'smooth' });
     };
 
     function renderVaultHistory() {
         var list = document.getElementById('cloud-list');
-        var history = JSON.parse(localStorage.getItem('vault-history') || '[{"artist":"AMONGST FEW","id":"PZQVTWSV"},{"artist":"MICHAEL BIBI","id":"1VBDES5U"}]');
+        var localUploads = JSON.parse(localStorage.getItem('vault-history') || '[]');
+        var allSessions = sessions.concat(localUploads);
         var html = '';
-        for (var i = 0; i < history.length; i++) {
-            var asset = history[i];
+        for (var i = 0; i < allSessions.length; i++) {
+            var s = allSessions[i];
+            var artistName = s.name || s.artist || 'UNKNOWN';
+            var dateStr = s.date || '';
+            var pid = s.playbackId || '';
             html += '<div class="vault-card" id="vault-' + i + '">'
                 + '<div class="vault-card-header" onclick="toggleVaultFolder(' + i + ')">'
                 + '<div>'
-                + '<h4 class="text-2xl font-black italic uppercase">' + asset.artist + '</h4>'
-                + '<span class="text-[8px] font-mono text-zinc-600 uppercase">Archive Secured // ' + (asset.date || 'FEB 2026') + '</span>'
+                + '<h4 class="text-2xl font-black italic uppercase">' + artistName + '</h4>'
+                + '<span class="text-[8px] font-mono text-zinc-600 uppercase">' + (s.venue ? s.venue + ' // ' : 'Archive Secured // ') + dateStr + '</span>'
                 + '</div>'
                 + '<button class="bg-white text-black h-12 w-12 rounded-xl flex items-center justify-center hover:bg-primary transition-all">'
                 + '<iconify-icon icon="solar:play-bold"></iconify-icon>'
                 + '</button>'
                 + '</div>'
                 + '<div class="asset-tray">'
-                + '<div class="flex gap-4 pt-4">'
-                + '<button class="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-[9px] font-black hover:border-primary" onclick="event.stopPropagation(); showAudioPreview(\'' + asset.artist + '\')">'
-                + 'HQ_MASTER_AUDIO'
-                + '</button>'
-                + '</div>'
-                + '</div>'
-                + '</div>';
+                + '<div class="flex gap-4 pt-4">';
+            if (pid) {
+                html += '<button class="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-[9px] font-black hover:border-primary" onclick="event.stopPropagation(); showAudioPreview(\'' + pid + '\', \'' + artistName + '\')">'
+                    + 'PLAY SESSION'
+                    + '</button>';
+            }
+            if (s.assets) {
+                for (var j = 0; j < s.assets.length; j++) {
+                    var a = s.assets[j];
+                    html += '<span class="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-[9px] font-black ' + a.color + '">'
+                        + '<iconify-icon icon="' + a.icon + '" class="mr-1"></iconify-icon>' + a.label + ' .' + a.ext
+                        + '</span>';
+                }
+            }
+            html += '</div></div></div>';
         }
         list.innerHTML = html;
     }
