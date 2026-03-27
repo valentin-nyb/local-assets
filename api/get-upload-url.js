@@ -12,6 +12,7 @@ export default async function handler(req, res) {
     const upload = await mux.video.uploads.create({
       new_asset_settings: {
         playback_policy: ['public'],
+        video_quality: 'high_definition'
         // Forcing High Definition Video Quality for auto vertical reframing availability down the line
         video_quality: 'high_definition'
       },
