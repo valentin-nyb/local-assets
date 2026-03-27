@@ -86,7 +86,7 @@
             uploadBtn.innerHTML = "REQUESTING MUX ACCESS...";
 
             try {
-                var response = await fetch('https://local-assets.com/api/get-upload-url', { method: 'POST' });
+                var response = await fetch(window.location.protocol === 'file:' ? 'https://local-assets-valentinsmacks-projects.vercel.app/api/get-upload-url' : '/api/get-upload-url', { method: 'POST' });
                 var data = await response.json();
 
                 if (!data.url) {
