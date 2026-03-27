@@ -6,23 +6,24 @@ const mux = new Mux({
 });
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
+  if (req.method !== 'POST') return res.status(405).send('Use POST');
 
   try {
-    console.log("Attempting to create Mux upload...");
-
     const upload = await mux.video.uploads.create({
       new_asset_settings: {
         playback_policy: ['public'],
+        // 'plus' or 'high_definition' is required for AI Reframing features
+        video_quality: 'plus', 
+        generated_subtitles: [{ language_code: 'en', name: 'Internal_AI' }],
+        // This enables the AI to scan for highlights
+        static_renditions: 'request'
       },
       cors_origin: '*',
     });
 
-    console.log("Mux Upload Created:", upload.id);
-    return res.status(200).json({ url: upload.url, id: upload.id });
-
+    res.status(200).json({ url: upload.url, id: upload.id });
   } catch (error) {
-    console.error('CRITICAL MUX ERROR:', error.message);
-    return res.status(500).json({ error: error.message });
+    console.error('Mux Error:', error);
+    res.status(500).json({ error: error.message || "Check Vercel Logs for Mux Auth Error" });
   }
 }
