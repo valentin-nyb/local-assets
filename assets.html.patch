@@ -1,0 +1,19 @@
+--- assets.html
++++ assets.html
+@@ss}
+s.html && git commit -m "fix(mux): enable high_definition + fix domains" && git push origin main && yes | npx vercel --prod --yes
+ cat << 'EOF' > /tmp/assets_patch.js
+const fs = require('fs');
+let html = fs.readFileSync('/Users/valentin/local-assets/assets.html', 'utf8');
+
+// Replace the fetch logic for get-upload-url
+const oldFetch = "var response = await fetch(window.location.protocol === 'file:' ? 'https://local-assets-valentinsmacks-projects.vercel.app/api/get-upload-url' : '/api/get-upload-url', { method: 'POST' });";
+
+const newFetch = `var endpoint = (window.location.protocol === 'file:' || window.location.hostname.includes('vercel.app'))
+  ? 'https://local-assets-valentinsmacks-projects.vercel.app/api/get-upload-url'
+  : (window.location.hostname.includes('local-assets.com') ? 'https://local-assets.com/api/get-upload-url' : '/api/get-upload-url');
+var response = await fetch(endpoint, { method: 'POST' });`;
+
+html = html.replace(oldFetch, newFetch);
+
+fs.writeFileSync('/Users/valentin/local-assets/assets.html', html);
