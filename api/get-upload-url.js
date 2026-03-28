@@ -14,10 +14,10 @@ export default async function handler(req, res) {
 
   try {
     const upload = await mux.video.uploads.create({
-      new_asset_settings: { 
-        playback_policy: ['public'], // <-- THE COMMA MUST BE HERE
-        video_quality: 'plus',       // This line was causing the error
-        static_renditions: 'request' 
+      new_asset_settings: {
+        playback_policy: ['public'],
+        video_quality: 'plus',
+        static_renditions: 'request'
       },
       cors_origin: '*',
     });
