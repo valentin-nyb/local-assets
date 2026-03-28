@@ -15,16 +15,14 @@ export default async function handler(req, res) {
   try {
     const upload = await mux.video.uploads.create({
       new_asset_settings: { 
-        playback_policy: ['public'],
-        // 'plus' is required for AI Smart-Cropping/Re-framing
-        video_quality: 'plus',
+        playback_policy: ['public'], // <-- THE COMMA MUST BE HERE
+        video_quality: 'plus',       // This line was causing the error
         static_renditions: 'request' 
       },
       cors_origin: '*',
     });
     return res.status(200).json({ url: upload.url, id: upload.id });
   } catch (error) {
-    console.error('MUX_UPLOAD_ERROR:', error.message);
     return res.status(500).json({ error: error.message });
   }
 }
