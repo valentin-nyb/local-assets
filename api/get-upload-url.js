@@ -1,3 +1,4 @@
+import Mux from '@mux/mux-node';
 
 const mux = new Mux({
   tokenId: process.env.MUX_TOKEN_ID,
