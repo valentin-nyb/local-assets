@@ -1,7 +1,6 @@
 import Mux from '@mux/mux-node';
 
 const mux = new Mux({
-  // We use the EXACT names shown in your screenshot
   tokenId: (process.env.assets_MUX_TOKEN_ID || '').trim(),
   tokenSecret: (process.env.assets_MUX_TOKEN_SECRET || '').trim()
 });
@@ -26,6 +25,6 @@ export default async function handler(req, res) {
     return res.status(200).json({ url: upload.url, id: upload.id });
   } catch (error) {
     console.error('MUX_ERROR:', error.message);
-    return res.status(400).json({ error: error.message });
+    return res.status(500).json({ error: error.message });
   }
 }
