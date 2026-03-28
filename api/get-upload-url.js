@@ -14,14 +14,18 @@ export default async function handler(req, res) {
 
   try {
     const upload = await mux.video.uploads.create({
-      new_asset_settings: {
+      new_asset_settings: { 
         playback_policy: ['public'],
-        video_quality: 'plus',
-        static_renditions: 'request'
+        static_renditions: 'request' 
       },
       cors_origin: '*',
     });
-    return res.status(200).json({ url: upload.url, id: upload.id });
+
+    // We return exactly what the next-video JSON needs
+    return res.status(200).json({ 
+      uploadId: upload.id, 
+      url: upload.url 
+    });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
