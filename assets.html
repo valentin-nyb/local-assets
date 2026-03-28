@@ -115,8 +115,10 @@
                 };
                 xhr.send(file);
             } catch (err) {
-                alert("Upload Failed: Check if 'npx vercel dev' is running");
+                console.error("Upload Logic Error:", err);
+                alert("CONNECTION ERROR: " + err.message);
                 uploadBtn.disabled = false;
+                uploadBtn.innerHTML = "RETRY INGEST";
             }
         };
 
