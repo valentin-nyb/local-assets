@@ -1,8 +1,8 @@
 import Mux from '@mux/mux-node';
 
 const mux = new Mux({
-  tokenId: (process.env.assets_MUX_TOKEN_ID || '').trim(),
-  tokenSecret: (process.env.assets_MUX_TOKEN_SECRET || '').trim()
+  tokenId: (process.env.MUX_TOKEN_ID || '').trim(),
+  tokenSecret: (process.env.MUX_TOKEN_SECRET || '').trim()
 });
 
 export default async function handler(req, res) {
