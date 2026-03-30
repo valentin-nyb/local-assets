@@ -117,44 +117,58 @@
 
     // THE MAGIC: Fetches live data from Mux via your new API
     async function loadVault() {
-        const list = document.getElementById('cloud-list');
-        try {
-            const res = await fetch('/api/list-assets');
-            const assets = await res.json();
-            
-            list.innerHTML = assets.map((asset, i) => {
-                const pid = asset.playback_ids?.[0]?.id;
-                const status = asset.status;
-                const isReady = status === 'ready';
+    const list = document.getElementById('cloud-list');
+    try {
+        const res = await fetch('/api/list-assets');
+        const data = await res.json();
 
-                return `
-                <div class="vault-card ${isReady ? '' : 'opacity-50'}" id="vault-${i}">
-                    <div class="vault-card-header" onclick="toggleVaultFolder(${i})">
-                        <div>
-                            <h4 class="text-2xl font-black italic uppercase">SESSION_${asset.id.slice(-4)}</h4>
-                            <span class="text-[8px] font-mono ${isReady ? 'text-primary' : 'text-zinc-500'} uppercase">
-                                ${status.toUpperCase()} // ${new Date(asset.created_at * 1000).toLocaleDateString()}
-                            </span>
-                        </div>
-                        ${isReady ? `
-                            <button class="bg-white text-black h-12 w-12 rounded-xl flex items-center justify-center hover:bg-primary transition-all">
-                                <iconify-icon icon="solar:play-bold"></iconify-icon>
-                            </button>
-                        ` : ''}
-                    </div>
-                    <div class="asset-tray">
-                        <div class="flex gap-4 pt-4">
-                            ${pid ? `<button class="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-[9px] font-black hover:border-primary" 
-                                onclick="event.stopPropagation(); showPreview('${pid}')">PLAY SESSION</button>` : ''}
-                            <span class="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-[9px] font-black text-primary">4K MASTER .MOV</span>
-                        </div>
-                    </div>
-                </div>`;
-            }).join('');
-        } catch (e) {
-            list.innerHTML = `<p class="text-red-500 font-mono text-xs">VAULT OFFLINE: ${e.message}</p>`;
+        // Safety Net: If the API sent an error instead of a list
+        if (data.error) {
+            list.innerHTML = `<p class="text-red-500 font-mono text-[10px] uppercase">VAULT ERROR: ${data.error}</p>`;
+            return;
         }
+
+        // Handle both direct arrays and Mux's data wrapper
+        const assets = Array.isArray(data) ? data : (data.data || []);
+
+        if (assets.length === 0) {
+            list.innerHTML = `<p class="text-zinc-500 font-mono text-[10px] uppercase">VAULT EMPTY // NO ASSETS FOUND</p>`;
+            return;
+        }
+
+        list.innerHTML = assets.map((asset, i) => {
+            const pid = asset.playback_ids?.[0]?.id;
+            const status = asset.status;
+            const isReady = status === 'ready';
+
+            return `
+            <div class="vault-card ${isReady ? '' : 'opacity-50'}" id="vault-${i}">
+                <div class="vault-card-header" onclick="toggleVaultFolder(${i})">
+                    <div>
+                        <h4 class="text-2xl font-black italic uppercase">${asset.id.slice(-6)}</h4>
+                        <span class="text-[8px] font-mono ${isReady ? 'text-primary' : 'text-zinc-500'} uppercase">
+                            ${status.toUpperCase()} // ${new Date(asset.created_at * 1000).toLocaleDateString()}
+                        </span>
+                    </div>
+                    ${isReady ? `
+                        <button class="bg-white text-black h-12 w-12 rounded-xl flex items-center justify-center hover:bg-primary transition-all">
+                            <iconify-icon icon="solar:play-bold"></iconify-icon>
+                        </button>
+                    ` : ''}
+                </div>
+                <div class="asset-tray">
+                    <div class="flex gap-4 pt-4">
+                        ${pid ? `<button class="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-[9px] font-black hover:border-primary" 
+                            onclick="event.stopPropagation(); showPreview('${pid}')">PLAY SESSION</button>` : ''}
+                        <span class="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-[9px] font-black text-primary">4K MASTER .MOV</span>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+    } catch (e) {
+        list.innerHTML = `<p class="text-red-500 font-mono text-[10px] uppercase">VAULT OFFLINE: ${e.message}</p>`;
     }
+}
 
     window.showPreview = (pid) => {
         const display = document.getElementById('active-asset-display');
