@@ -1,23 +1,18 @@
+// This helper ensures all Mux requests use your new high-power keys
 export async function muxFetch(path, options = {}) {
-  const { MUX_TOKEN_ID, MUX_TOKEN_SECRET } = process.env;
+  const tokenId = process.env.PROD_MUX_TOKEN_ID;
+  const tokenSecret = process.env.PROD_MUX_TOKEN_SECRET;
 
-  if (!MUX_TOKEN_ID || !MUX_TOKEN_SECRET) {
-    throw new Error('Missing MUX_TOKEN_ID or MUX_TOKEN_SECRET environment variables');
-  }
+  const auth = btoa(`${tokenId}:${tokenSecret}`);
 
-  const credentials = Buffer.from(`${MUX_TOKEN_ID}:${MUX_TOKEN_SECRET}`).toString('base64');
-  const headers = new Headers(options.headers || {});
-
-  headers.set('Authorization', `Basic ${credentials}`);
-
-  if (options.body && !headers.has('Content-Type')) {
-    headers.set('Content-Type', 'application/json');
-  }
-
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  
-  return fetch(`https://api.mux.com${normalizedPath}`, {
+  const res = await fetch(`https://api.mux.com${path}`, {
     ...options,
-    headers
+    headers: {
+      ...options.headers,
+      'Authorization': `Basic ${auth}`,
+      'Content-Type': 'application/json',
+    },
   });
+
+  return res;
 }

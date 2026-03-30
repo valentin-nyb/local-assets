@@ -1,30 +1,17 @@
-// Vercel Serverless Function: /api/get-asset.js
-// Fetches asset details from Mux by asset_id
-
 import { muxFetch } from '../mux-proxy-client.js';
 
 export default async function handler(req, res) {
-  if (req.method !== 'GET') {
-    res.status(405).json({ error: 'Method not allowed' });
-    return;
-  }
   const { asset_id } = req.query;
-  if (!asset_id) {
-    res.status(400).json({ error: 'Missing asset_id' });
-    return;
-  }
+  if (!asset_id) return res.status(400).json({ error: 'Missing asset_id' });
 
   try {
-    const muxRes = await muxFetch(`/video/v1/assets/${asset_id}`, {
-      method: 'GET'
-    });
-    const data = await muxRes.json();
-    if (!muxRes.ok || !data.data) {
-      res.status(muxRes.status || 500).json({ error: data.error || 'Failed to fetch asset from Mux' });
-      return;
-    }
-    res.status(200).json(data.data);
+    const response = await muxFetch(`/video/v1/assets/${asset_id}`);
+    const data = await response.json();
+    
+    if (!response.ok) throw new Error(data.error?.messages?.[0] || 'Mux Error');
+    
+    return res.status(200).json(data.data);
   } catch (e) {
-    res.status(500).json({ error: e.message || 'Unknown error' });
+    return res.status(500).json({ error: e.message });
   }
 }
