@@ -1,30 +1,33 @@
 import Mux from '@mux/mux-node';
 
+const mux = new Mux({
+  tokenId: (process.env.PROD_MUX_TOKEN_ID || '').trim(),
+  tokenSecret: (process.env.PROD_MUX_TOKEN_SECRET || '').trim()
+});
+
 export default async function handler(req, res) {
-  console.log("--- MUX DEBUG START ---");
-  console.log("ID exists:", !!process.env.PROD_MUX_TOKEN_ID);
-  console.log("Secret exists:", !!process.env.PROD_MUX_TOKEN_SECRET);
-  console.log("ID Prefix:", process.env.PROD_MUX_TOKEN_ID?.substring(0, 4)); 
-  console.log("--- MUX DEBUG END ---");
-
-  const mux = new Mux({
-    tokenId: (process.env.PROD_MUX_TOKEN_ID || '').trim(),
-    tokenSecret: (process.env.PROD_MUX_TOKEN_SECRET || '').trim()
-  });
-
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
   if (req.method === 'OPTIONS') return res.status(200).end();
+
+  // Get the artist name from the web request
+  const { artistName } = req.query;
 
   try {
     const upload = await mux.video.uploads.create({
-      new_asset_settings: { playback_policy: ['public'], video_quality: 'plus' },
-      cors_origin: '*'
+      new_asset_settings: { 
+        playback_policy: ['public'],
+        video_quality: 'plus',
+        master_access: 'preview',
+        // This labels the video in Mux with the Artist Name
+        passthrough: artistName || 'UNKNOWN_SESSION'
+      },
+      cors_origin: '*',
     });
     return res.status(200).json({ url: upload.url, id: upload.id });
-  } catch (e) {
-    console.error("FULL ERROR:", e);
-    return res.status(500).json({ error: e.message });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
   }
 }
