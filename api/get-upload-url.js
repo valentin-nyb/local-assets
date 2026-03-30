@@ -1,8 +1,8 @@
 import Mux from '@mux/mux-node';
 
 const mux = new Mux({
-  tokenId: (process.env.PROD_MUX_TOKEN_ID || '').trim(),
-  tokenSecret: (process.env.PROD_MUX_TOKEN_SECRET || '').trim()
+  tokenId: process.env.PROD_MUX_TOKEN_ID,
+  tokenSecret: process.env.PROD_MUX_TOKEN_SECRET
 });
 
 export default async function handler(req, res) {
@@ -18,11 +18,10 @@ export default async function handler(req, res) {
         playback_policy: ['public'],
         video_quality: 'plus' 
       },
-      cors_origin: '*',
+      cors_origin: '*'
     });
     return res.status(200).json({ url: upload.url, id: upload.id });
-  } catch (error) {
-    console.error("MUX_ERROR:", error.message);
-    return res.status(500).json({ error: error.message });
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
   }
 }
