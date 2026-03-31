@@ -20,7 +20,6 @@ export default async function handler(req, res) {
         playback_policy: ['public'],
         video_quality: 'plus',
         master_access: 'preview',
-        // THE FIX: This sends the name to Mux
         passthrough: String(artistName).toUpperCase() 
       },
       cors_origin: '*',
