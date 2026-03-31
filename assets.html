@@ -140,12 +140,13 @@
             const status = asset.status;
             const isReady = status === 'ready';
 
+            const artistTitle = asset.passthrough || "PROCESSING_ID_" + asset.id.slice(-4);
+            
             return `
-            <div class="vault-card ${isReady ? '' : 'opacity-50'}" id="vault-${i}">
-                <div class="vault-card-header" onclick="toggleVaultFolder(${i})">
-                    <div>
-                        <h4 class="text-2xl font-black italic uppercase">${asset.id.slice(-6)}</h4>
-                        <span class="text-[8px] font-mono ${isReady ? 'text-primary' : 'text-zinc-500'} uppercase">
+    <div class="vault-card ${isReady ? '' : 'opacity-40'}" id="vault-${i}">
+        <div class="vault-card-header" onclick="toggleVaultFolder(${i})">
+            <div>
+                <h4 class="text-2xl font-black italic uppercase">${artistTitle}</h4>
                             ${status.toUpperCase()} // ${new Date(asset.created_at * 1000).toLocaleDateString()}
                         </span>
                     </div>
