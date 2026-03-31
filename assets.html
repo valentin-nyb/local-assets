@@ -80,9 +80,8 @@
 
     window.onload = function() {
         flatpickr("#ingest-date", { defaultDate: "today", theme: "dark" });
-        loadVault(); const artistTitle = asset.passthrough || "PROCESSING_ID_" + asset.id.slice(-4);
-        <h4 class="text-2xl font-black italic uppercase">${artistTitle}</h4>
-       
+        loadVault(); // Load the real Mux data immediately
+        
         const uploadBtn = document.getElementById('upload-btn');
         uploadBtn.onclick = async function() {
             const file = document.getElementById('file-video').files[0];
