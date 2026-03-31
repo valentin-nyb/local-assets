@@ -103,6 +103,12 @@
                     })
                 });
                 const data = await response.json();
+                if (!data.url) {
+                    alert ("API ERROR: " (data.error || JSON.stringify(data)));
+                    uploadBtn.disabled = false;
+                    uploadBtn.innerHTML = "INGEST FULL LOCAL/SESSION";
+                    return;
+                }
 
                 // 2. Upload the file directly to Mux
                 const xhr = new XMLHttpRequest();
