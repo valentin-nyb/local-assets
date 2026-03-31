@@ -92,10 +92,19 @@
             uploadBtn.innerHTML = "CONNECTING TO LOCAL/ASSETS™...";
 
             try {
-                const response = await fetch('/api/get-upload-url', { method: 'POST' });
-                const data = await response.json();
-                
+                const response = await fetch('/api/get-upload-url', {method: 'POST',
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({
+                artistName: artist
+                })
+            });    
+                const date = document.getElementById('ingest-date').value;
+                const shot = document.getElementById('ingest-shot').value;
                 const xhr = new XMLHttpRequest();
+                body: JSON.stringify({ 
+                    artistName: `${artist} // ${date} // ${shot}`
+                })
+                
                 xhr.open('PUT', data.url);
                 xhr.upload.onprogress = (e) => {
                     const pct = Math.round((e.loaded / e.total) * 100);
