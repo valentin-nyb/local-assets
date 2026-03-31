@@ -80,8 +80,9 @@
 
     window.onload = function() {
         flatpickr("#ingest-date", { defaultDate: "today", theme: "dark" });
-        loadVault(); // Load the real Mux data immediately
-        
+        loadVault(); const artistTitle = asset.passthrough || "PROCESSING_ID_" + asset.id.slice(-4);
+        <h4 class="text-2xl font-black italic uppercase">${artistTitle}</h4>
+       
         const uploadBtn = document.getElementById('upload-btn');
         uploadBtn.onclick = async function() {
             const file = document.getElementById('file-video').files[0];
@@ -115,7 +116,6 @@
         };
     };
 
-    // THE MAGIC: Fetches live data from Mux via your new API
     async function loadVault() {
     const list = document.getElementById('cloud-list');
     try {
