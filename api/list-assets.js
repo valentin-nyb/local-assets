@@ -1,14 +1,14 @@
-const { default: Mux } = require('@mux/mux-node');
+import Mux from '@mux/mux-node';
 
-const mux = new Mux({
+const Mux = require('@mux/mux-node').default;
   tokenId: process.env.PROD_MUX_TOKEN_ID,
   tokenSecret: process.env.PROD_MUX_TOKEN_SECRET
 });
 
 module.exports = async function handler(req, res) {
   try {
-    const response = await mux.video.assets.list({ limit: 25 });
-    const assets = response.data ?? response;
+    // Fetches the 25 most recent videos from your Mux account
+    const assets = await mux.video.assets.list({ limit: 25 });
     return res.status(200).json(assets);
   } catch (e) {
     return res.status(500).json({ error: e.message });

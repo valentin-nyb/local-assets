@@ -67,6 +67,7 @@
          <header class="h-16 flex items-center px-8 border-b border-zinc-800 justify-between">             <span class="text-primary font-mono text-[9px] uppercase tracking-[0.4em]">Infrastructure Tier // London</span>             <div class="flex items-center gap-2">                 <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>                 <span class="text-[8px] font-mono text-zinc-500">LIVE MUX UPLOAD ACTIVE</span>             </div>         </header>          <div class="flex-1 p-8 overflow-y-auto">             <div class="max-w-[1200px] mx-auto space-y-12 pb-20">                                  <div class="ingest-card space-y-8">                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">                         <input type="text" id="ingest-name" placeholder="DJ / ARTIST NAME" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs font-bold text-white uppercase outline-none focus:border-primary">                         <input type="text" id="ingest-date" placeholder="SELECT DATE" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs font-bold text-white outline-none">                         <select id="ingest-shot" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs text-zinc-400 font-bold uppercase outline-none">                             <option value="MASTER">MASTER CAM</option>                             <option value="BOOTH">BOOTH CAM</option>                         </select>                     </div>                      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">                         <label class="upload-node p-6 flex flex-col items-center justify-center gap-2" id="node-video">                             <iconify-icon icon="solar:videocamera-record-bold" class="text-2xl text-zinc-600"></iconify-icon>                             <span class="text-[8px] font-mono uppercase text-zinc-500">4K Master (.MOV)</span>                             <input type="file" id="file-video" class="hidden" accept="video/*" onchange="markActive('video')">                         </label>                         <div class="upload-node p-6 flex flex-col items-center justify-center gap-2 opacity-30 cursor-not-allowed">                             <iconify-icon icon="solar:music-note-bold" class="text-2xl text-zinc-600"></iconify-icon>                             <span class="text-[8px] font-mono uppercase text-zinc-500">HQ Audio (Auto-Extract)</span>                         </div>                         <div class="upload-node p-6 flex flex-col items-center justify-center gap-2 opacity-30 cursor-not-allowed">                             <iconify-icon icon="solar:gallery-bold" class="text-2xl text-zinc-600"></iconify-icon>                             <span class="text-[8px] font-mono uppercase text-zinc-500">Marketing (Auto-Gen)</span>                         </div>                     </div>                      <button id="upload-btn" class="w-full bg-white text-black font-black py-5 rounded-2xl uppercase tracking-[0.2em] text-[11px] hover:bg-primary transition-all">                         INGEST FULL LOCAL/SESSION                     </button>                 </div>                  <div id="preview-container" class="hidden border-b border-zinc-800 pb-12">                     <h2 id="vault-dj-title" class="text-3xl font-black italic mb-6"></h2>                     <div id="active-asset-display" class="max-w-4xl mx-auto"></div>                 </div>                  <div class="space-y-4">                     <h3 class="text-[10px] font-mono text-zinc-600 uppercase tracking-[0.3em] border-b border-zinc-800 pb-2">Vault History</h3>                     <div id="cloud-list"></div>                 </div>             </div>         </div>     
 </main>
 <script>
+    // Toggle Sidebar for Mobile
     window.toggleSidebar = () => {
         const sb = document.getElementById('sidebar');
         const ov = document.getElementById('sidebar-overlay');
@@ -79,39 +80,29 @@
 
     window.onload = function() {
         flatpickr("#ingest-date", { defaultDate: "today", theme: "dark" });
-        loadVault();
-
+        loadVault(); // Load the real Mux data immediately
+        
         const uploadBtn = document.getElementById('upload-btn');
         uploadBtn.onclick = async function() {
             const file = document.getElementById('file-video').files[0];
             const artist = document.getElementById('ingest-name').value;
-            const date = document.getElementById('ingest-date').value;
-            const shot = document.getElementById('ingest-shot').value;
-
             if (!file || !artist) return alert("Artist and File are required.");
 
             uploadBtn.disabled = true;
             uploadBtn.innerHTML = "CONNECTING TO LOCAL/ASSETS™...";
 
             try {
-                const response = await fetch('/api/get-upload-url', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        artistName: `${artist} // ${date} // ${shot}`
-                    })
-                });
-
-                const data = await response.json();
-
-                if (!data.url) {
-                    console.error('No URL in response:', data);
-                    uploadBtn.innerHTML = "INGEST FULL LOCAL/SESSION";
-                    uploadBtn.disabled = false;
-                    return;
-                }
-
+                const response = await fetch('/api/get-upload-url', {method: 'POST',
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({
+                artistName: artist
+                })
+            });    
+                const date = document.getElementById('ingest-date').value;
+                const shot = document.getElementById('ingest-shot').value;
                 const xhr = new XMLHttpRequest();
+                body: JSON.stringify({ 
+                    
                 xhr.open('PUT', data.url);
                 xhr.upload.onprogress = (e) => {
                     const pct = Math.round((e.loaded / e.total) * 100);
@@ -120,91 +111,76 @@
                 xhr.onload = () => {
                     uploadBtn.innerHTML = "SENT TO VAULT";
                     uploadBtn.style.background = "#39FF14";
-                    setTimeout(loadVault, 5000);
-                };
-                xhr.onerror = () => {
-                    console.error('XHR upload failed');
-                    uploadBtn.innerHTML = "INGEST FULL LOCAL/SESSION";
-                    uploadBtn.disabled = false;
+                    // Refresh the list after a few seconds so Mux has time to process
+                    setTimeout(loadVault, 5000); 
                 };
                 xhr.send(file);
-
             } catch (err) {
-                console.error('Upload exception:', err);
-                uploadBtn.innerHTML = "INGEST FULL LOCAL/SESSION";
+                alert("UPLOAD ERROR: " + err.message);
                 uploadBtn.disabled = false;
             }
         };
     };
 
     async function loadVault() {
-        const list = document.getElementById('cloud-list');
-        try {
-            const res = await fetch('/api/list-assets');
-            const data = await res.json();
+    const list = document.getElementById('cloud-list');
+    try {
+        const res = await fetch('/api/list-assets');
+        const data = await res.json();
 
-            if (data.error) {
-                list.innerHTML = `<p class="text-red-500 font-mono text-[10px] uppercase">VAULT ERROR: ${data.error}</p>`;
-                return;
-            }
-
-            const assets = Array.isArray(data) ? data : (data.data || []);
-
-            if (assets.length === 0) {
-                list.innerHTML = `<p class="text-zinc-500 font-mono text-[10px] uppercase">VAULT EMPTY // NO ASSETS FOUND</p>`;
-                return;
-            }
-
-            list.innerHTML = assets.map((asset, i) => {
-                const pid = asset.playback_ids?.[0]?.id;
-                const status = asset.status;
-                const isReady = status === 'ready';
-                const artistTitle = asset.passthrough || 'UNLABELLED SESSION';
-                const date = new Date(asset.created_at * 1000).toLocaleDateString('en-GB', {
-                    day: '2-digit', month: 'short', year: 'numeric'
-                }).toUpperCase();
-
-                return `
-                <div class="vault-card ${isReady ? '' : 'opacity-40'}" id="vault-${i}">
-                    <div class="vault-card-header" onclick="toggleVaultFolder(${i})">
-                        <div class="flex flex-col gap-1">
-                            <h4 class="text-2xl font-black italic uppercase">${artistTitle}</h4>
-                            <span class="text-[9px] font-mono text-zinc-500 tracking-widest">
-                                ${status.toUpperCase()} // ${date}
-                            </span>
-                        </div>
-                        ${isReady ? `
-                            <button class="bg-white text-black h-12 w-12 rounded-xl flex items-center justify-center hover:bg-primary transition-all shrink-0">
-                                <iconify-icon icon="solar:play-bold"></iconify-icon>
-                            </button>
-                        ` : `
-                            <span class="text-[9px] font-mono text-zinc-600 uppercase tracking-widest">PROCESSING...</span>
-                        `}
-                    </div>
-                    <div class="asset-tray">
-                        <div class="flex gap-4 pt-4">
-                            ${pid ? `
-                                <button class="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-[9px] font-black hover:border-primary transition-all"
-                                    onclick="event.stopPropagation(); showPreview('${pid}', '${artistTitle}')">
-                                    ▶ PLAY SESSION
-                                </button>` : ''}
-                            <span class="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-[9px] font-black text-primary">4K MASTER</span>
-                            <span class="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-[9px] font-black text-zinc-500">ID: ${asset.id.slice(-8).toUpperCase()}</span>
-                        </div>
-                    </div>
-                </div>`;
-            }).join('');
-
-        } catch (e) {
-            list.innerHTML = `<p class="text-red-500 font-mono text-[10px] uppercase">VAULT OFFLINE: ${e.message}</p>`;
+        // Safety Net: If the API sent an error instead of a list
+        if (data.error) {
+            list.innerHTML = `<p class="text-red-500 font-mono text-[10px] uppercase">VAULT ERROR: ${data.error}</p>`;
+            return;
         }
-    }
 
-    window.showPreview = (pid, title) => {
-        document.getElementById('vault-dj-title').textContent = title || 'SESSION PLAYBACK';
+        // Handle both direct arrays and Mux's data wrapper
+        const assets = Array.isArray(data) ? data : (data.data || []);
+
+        if (assets.length === 0) {
+            list.innerHTML = `<p class="text-zinc-500 font-mono text-[10px] uppercase">VAULT EMPTY // NO ASSETS FOUND</p>`;
+            return;
+        }
+
+        list.innerHTML = assets.map((asset, i) => {
+            const pid = asset.playback_ids?.[0]?.id;
+            const status = asset.status;
+            const isReady = status === 'ready';
+
+            const artistTitle = asset.passthrough || "PROCESSING_ID_" + asset.id.slice(-4);
+            
+            return `
+    <div class="vault-card ${isReady ? '' : 'opacity-40'}" id="vault-${i}">
+        <div class="vault-card-header" onclick="toggleVaultFolder(${i})">
+            <div>
+                <h4 class="text-2xl font-black italic uppercase">${artistTitle}</h4>
+                            ${status.toUpperCase()} // ${new Date(asset.created_at * 1000).toLocaleDateString()}
+                        </span>
+                    </div>
+                    ${isReady ? `
+                        <button class="bg-white text-black h-12 w-12 rounded-xl flex items-center justify-center hover:bg-primary transition-all">
+                            <iconify-icon icon="solar:play-bold"></iconify-icon>
+                        </button>
+                    ` : ''}
+                </div>
+                <div class="asset-tray">
+                    <div class="flex gap-4 pt-4">
+                        ${pid ? `<button class="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-[9px] font-black hover:border-primary" 
+                            onclick="event.stopPropagation(); showPreview('${pid}')">PLAY SESSION</button>` : ''}
+                        <span class="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-[9px] font-black text-primary">4K MASTER .MOV</span>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+    } catch (e) {
+        list.innerHTML = `<p class="text-red-500 font-mono text-[10px] uppercase">VAULT OFFLINE: ${e.message}</p>`;
+    }
+}
+
+    window.showPreview = (pid) => {
         const display = document.getElementById('active-asset-display');
         document.getElementById('preview-container').classList.remove('hidden');
-        display.innerHTML = `<mux-player playback-id="${pid}" style="width:100%;aspect-ratio:16/9;" autoplay></mux-player>`;
+        display.innerHTML = `<iframe src="https://player.mux.com/${pid}" style="width:100%;border:none;aspect-ratio:16/9;" allowfullscreen></iframe>`;
         display.scrollIntoView({ behavior: 'smooth' });
     };
 
