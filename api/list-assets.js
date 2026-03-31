@@ -1,11 +1,11 @@
 import Mux from '@mux/mux-node';
 
-const mux = new Mux({
+const Mux = require('@mux/mux-node').default;
   tokenId: process.env.PROD_MUX_TOKEN_ID,
   tokenSecret: process.env.PROD_MUX_TOKEN_SECRET
 });
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   try {
     // Fetches the 25 most recent videos from your Mux account
     const assets = await mux.video.assets.list({ limit: 25 });
