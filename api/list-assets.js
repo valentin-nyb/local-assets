@@ -1,3 +1,4 @@
+// patch-assets.mjs — run once with: node patch-assets.mjs
 import Mux from '@mux/mux-node';
 
 const mux = new Mux({
@@ -5,13 +6,13 @@ const mux = new Mux({
   tokenSecret: process.env.PROD_MUX_TOKEN_SECRET
 });
 
-export default async function handler(req, res) {
-  try {
-    const assets = await mux.video.assets.list({ limit: 25 });
-    // Important: Mux returns a list object, we send it directly
-    return res.status(200).json(assets);
-  } catch (e) {
-    console.error("LIST_ASSETS_ERROR:", e.message);
-    return res.status(500).json({ error: e.message });
-  }
+const patches = [
+  { id: 'YOUR_ASSET_ID_1', name: 'DJ NAME // 31 Mar 2026 // MASTER' },
+  { id: 'YOUR_ASSET_ID_2', name: 'DJ NAME // 31 Mar 2026 // BOOTH' },
+  { id: 'YOUR_ASSET_ID_3', name: 'DJ NAME // 31 Mar 2026 // MASTER' },
+];
+
+for (const { id, name } of patches) {
+  await mux.video.assets.update(id, { passthrough: name });
+  console.log(`✓ Patched ${id} → ${name}`);
 }
