@@ -12,7 +12,11 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   // Try to find the name in query params OR the request body
-  const artistName = req.query.artistName || (req.body && req.body.artistName) || (req.body && req.body.passthrough) || 'SESSION_ARCHIVE';
+  let body = req.body;
+  if (typeof body === 'string') {
+    try { body = JSON.parse(body); } catch(e) {}
+  }
+  const artistName = req.query.artistName || (body && body.artistName) || (body && body.passthrough) || 'SESSION_ARCHIVE';
 
   try {
     const upload = await mux.video.uploads.create({
