@@ -1,8 +1,8 @@
 import Mux from '@mux/mux-node';
 
 const mux = new Mux({
-  tokenId: (process.env.PROD_MUX_TOKEN_ID || '').trim(),
-  tokenSecret: (process.env.PROD_MUX_TOKEN_SECRET || '').trim()
+  tokenId: (process.env.PROD_MUX_TOKEN_ID || process.env.MUX_TOKEN_ID || '').trim(),
+  tokenSecret: (process.env.PROD_MUX_TOKEN_SECRET || process.env.MUX_TOKEN_SECRET || '').trim()
 });
 
 export default async function handler(req, res) {
@@ -22,8 +22,6 @@ export default async function handler(req, res) {
     const upload = await mux.video.uploads.create({
       new_asset_settings: { 
         playback_policy: ['public'],
-        video_quality: 'plus',
-        master_access: 'preview',
         passthrough: String(artistName).toUpperCase() 
       },
       cors_origin: '*',
