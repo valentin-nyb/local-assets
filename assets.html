@@ -93,7 +93,11 @@
             uploadBtn.innerHTML = "CONNECTING TO LOCAL/ASSETS™...";
 
             try {
-                const response = await fetch('/api/get-upload-url', { method: 'POST' });
+                const response = await fetch('/api/get-upload-url', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ artistName: artist })
+                });
                 const data = await response.json();
                 
                 const xhr = new XMLHttpRequest();
@@ -146,7 +150,7 @@
             <div class="vault-card ${isReady ? '' : 'opacity-50'}" id="vault-${i}">
                 <div class="vault-card-header" onclick="toggleVaultFolder(${i})">
                     <div>
-                        <h4 class="text-2xl font-black italic uppercase">${asset.id.slice(-6)}</h4>
+                        <h4 class="text-2xl font-black italic uppercase">${asset.passthrough || asset.id.slice(-6)}</h4>
                         <span class="text-[8px] font-mono ${isReady ? 'text-primary' : 'text-zinc-500'} uppercase">
                             ${status.toUpperCase()} // ${new Date(asset.created_at * 1000).toLocaleDateString()}
                         </span>
