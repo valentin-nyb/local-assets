@@ -15,6 +15,7 @@
 
     <link rel="stylesheet" href="styles/tailwind.css">
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
     <script src="nav-component.js"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
@@ -79,9 +80,7 @@
                     <div class="absolute bottom-2 left-2 w-6 h-6 md:bottom-4 md:left-4 md:w-12 md:h-12 border-b border-l border-[#39FF14]/40 rounded-bl-lg md:rounded-bl-xl pointer-events-none"></div>
                     <div class="absolute bottom-2 right-2 w-6 h-6 md:bottom-4 md:right-4 md:w-12 md:h-12 border-b border-r border-[#39FF14]/40 rounded-br-lg md:rounded-br-xl pointer-events-none"></div>
 
-                    <video id="main-feed" class="w-full h-full object-cover" autoplay muted loop playsinline>
-                        <source src="https://player.mux.com/LujDrL3Wt13h98TRkMPgmiEBb1fsoLnhtvM28025RxKU" type="video/mp4">
-                    </video>
+                    <mux-player id="main-feed" playback-id="LujDrL3Wt13h98TRkMPgmiEBb1fsoLnhtvM28025RxKU" autoplay muted loop stream-type="on-demand" default-hidden-captions class="w-full h-full" style="--controls: none; --media-object-fit: cover; aspect-ratio: 16/9;"></mux-player>
                 </div>
 
                 <div class="grid grid-cols-3 gap-2 md:gap-4 w-full shrink-0">
