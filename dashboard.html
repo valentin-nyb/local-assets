@@ -85,7 +85,7 @@
                 <div class="w-2 h-2 bg-primary rounded-full animate-pulse shadow-[0_0_8px_#39FF14]"></div>
             </div>
             <div class="cursor-pointer hover:border-primary/50 transition-all duration-500 w-full bg-card border border-border rounded-2xl p-8 relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-6 shadow-2xl">
-                <mux-player id="live-feed-video" playback-id="N7Hn1XGHYkXzNPUC8a6hXmIJ02C02YNAhIV01LtVNxq1lM" autoplay muted loop stream-type="on-demand" default-hidden-captions class="absolute inset-0 w-full h-full object-cover opacity-40 grayscale hover:grayscale-0 transition-all duration-700" style="--controls: none; --media-object-fit: cover;"></mux-player>
+                <mux-player id="live-feed-video" playback-id="N7Hn1XGHYkXzNPUC8a6hXmIJ02C02YNAhIV01LtVNxq1lM" autoplay muted loop playsinline stream-type="on-demand" default-hidden-captions class="absolute inset-0 w-full h-full object-cover opacity-40 grayscale hover:grayscale-0 transition-all duration-700" style="--controls: none; --media-object-fit: cover; pointer-events: none;"></mux-player>
                 <div class="absolute inset-0 bg-scanlines opacity-10 pointer-events-none"></div>
 
                 <div class="relative z-10">
@@ -95,7 +95,7 @@
                         </span>
                         <span class="text-white/50 font-mono text-[10px] uppercase">Room 1 // Main Floor</span>
                     </div>
-                    <h2 class="text-3xl font-extrabold text-white tracking-tighter uppercase">Artist: AMONGST FEW</h2>
+                    <h2 class="text-3xl font-extrabold text-white tracking-tighter uppercase">AMONGST FEW</h2>
                 </div>
 
                 <div class="flex gap-10 relative z-10 font-mono">
@@ -201,13 +201,21 @@
         }
 
         function keepLiveFeedPlaying() {
-            const video = document.getElementById('live-feed-video');
-            if (!video) return;
-            video.muted = true;
-            const attemptPlay = () => { video.play().catch(() => {}); };
-            video.addEventListener('pause', attemptPlay);
-            video.addEventListener('ended', () => { video.currentTime = 0; attemptPlay(); });
+            const player = document.getElementById('live-feed-video');
+            if (!player) return;
+            const attemptPlay = () => {
+                player.muted = true;
+                player.play().catch(() => {});
+            };
+            // Re-play if paused or ended
+            player.addEventListener('pause', attemptPlay);
+            player.addEventListener('ended', () => { player.currentTime = 0; attemptPlay(); });
+            // Resume when tab becomes visible again
             document.addEventListener('visibilitychange', () => { if (!document.hidden) attemptPlay(); });
+            // iOS / mobile: user interaction unlocks autoplay
+            document.addEventListener('touchstart', attemptPlay, { once: true });
+            document.addEventListener('click', attemptPlay, { once: true });
+            // Initial play
             attemptPlay();
         }
 

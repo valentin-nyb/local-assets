@@ -80,7 +80,7 @@
                     <div class="absolute bottom-2 left-2 w-6 h-6 md:bottom-4 md:left-4 md:w-12 md:h-12 border-b border-l border-[#39FF14]/40 rounded-bl-lg md:rounded-bl-xl pointer-events-none"></div>
                     <div class="absolute bottom-2 right-2 w-6 h-6 md:bottom-4 md:right-4 md:w-12 md:h-12 border-b border-r border-[#39FF14]/40 rounded-br-lg md:rounded-br-xl pointer-events-none"></div>
 
-                    <mux-player id="main-feed" playback-id="LujDrL3Wt13h98TRkMPgmiEBb1fsoLnhtvM28025RxKU" autoplay muted loop stream-type="on-demand" default-hidden-captions class="w-full h-full" style="--controls: none; --media-object-fit: cover; aspect-ratio: 16/9;"></mux-player>
+                    <mux-player id="main-feed" playback-id="LujDrL3Wt13h98TRkMPgmiEBb1fsoLnhtvM28025RxKU" autoplay muted loop playsinline stream-type="on-demand" default-hidden-captions class="w-full h-full" style="--controls: none; --media-object-fit: cover; aspect-ratio: 16/9; pointer-events: none;"></mux-player>
                 </div>
 
                 <div class="grid grid-cols-3 gap-2 md:gap-4 w-full shrink-0">
@@ -131,6 +131,19 @@
             }
         }
         setInterval(updateTimecode, 1000 / 60);
+
+        // Keep main feed always playing on all devices
+        (function() {
+            const player = document.getElementById('main-feed');
+            if (!player) return;
+            const attemptPlay = () => { player.muted = true; player.play().catch(() => {}); };
+            player.addEventListener('pause', attemptPlay);
+            player.addEventListener('ended', () => { player.currentTime = 0; attemptPlay(); });
+            document.addEventListener('visibilitychange', () => { if (!document.hidden) attemptPlay(); });
+            document.addEventListener('touchstart', attemptPlay, { once: true });
+            document.addEventListener('click', attemptPlay, { once: true });
+            attemptPlay();
+        })();
 
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
