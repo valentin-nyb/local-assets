@@ -304,7 +304,7 @@
                             const linkedMuxAsset = muxLookup[lookupKey];
                             const pid = linkedMuxAsset?.playback_ids?.[0]?.id;
                             const isLinked = !!pid;
-                            const linkedLabel = asset.type === 'MASTER' ? 'IN VAULT — LINKED FROM ASSETS' : 'IN VAULT — UPLOADED';
+                            const linkedLabel = 'IN VAULT — UPLOADED';
                             return `
                             <div class="p-4 pl-12 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-${uid}" ${isLinked ? 'style="border-left: 2px solid #39FF14;"' : ''}>
                                 ${isLinked ? `
