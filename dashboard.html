@@ -335,10 +335,12 @@
                             const isLinked = !!linkedMuxAsset;
                             const pid = linkedMuxAsset?.playback_ids?.[0]?.id;
                             const srFiles = linkedMuxAsset?.static_renditions?.files || [];
+                            const srStatus = linkedMuxAsset?.static_renditions?.status;
                             const srReady = srFiles.find(f => f.status === 'ready');
-                            const dlFile = srReady ? srReady.name : null;
-                            const dlExt = srReady ? srReady.ext : 'mp4';
-                            const linkedLabel = isLinked && !pid ? 'IN VAULT — PROCESSING' : srReady ? 'IN VAULT — UPLOADED' : srFiles.some(f => f.status === 'preparing') ? 'IN VAULT — PREPARING' : 'IN VAULT — UPLOADED';
+                            const isAudioAsset = asset.type === 'AUDIO';
+                            const dlFile = srReady ? srReady.name : (srStatus === 'ready' ? (isAudioAsset ? 'audio.m4a' : 'highest.mp4') : null);
+                            const dlExt = srReady ? srReady.ext : (isAudioAsset ? 'm4a' : 'mp4');
+                            const linkedLabel = isLinked && !pid ? 'IN VAULT — PROCESSING' : (srReady || srStatus === 'ready') ? 'IN VAULT — UPLOADED' : srFiles.some(f => f.status === 'preparing') || srStatus === 'preparing' ? 'IN VAULT — PREPARING' : 'IN VAULT — UPLOADED';
                             const isThumb = asset.type === 'THUMB';
                             return `
                             <div class="p-4 pl-12 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-${uid}" ${isLinked ? 'style="border-left: 2px solid #39FF14;"' : ''}>
