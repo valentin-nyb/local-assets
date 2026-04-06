@@ -23,7 +23,7 @@ export default async function handler(req, res) {
       new_asset_settings: { 
         playback_policy: ['public'],
         passthrough: String(artistName).toUpperCase(),
-        mp4_support: 'standard'
+        static_renditions: [{ resolution: 'highest' }]
       },
       cors_origin: '*',
     });
