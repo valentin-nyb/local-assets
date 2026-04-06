@@ -22,7 +22,8 @@ export default async function handler(req, res) {
     const upload = await mux.video.uploads.create({
       new_asset_settings: { 
         playback_policy: ['public'],
-        passthrough: String(artistName).toUpperCase() 
+        passthrough: String(artistName).toUpperCase(),
+        mp4_support: 'standard'
       },
       cors_origin: '*',
     });
