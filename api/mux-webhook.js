@@ -21,8 +21,8 @@ export default async function handler(req, res) {
                 const d = new Date((data.created_at || Date.now() / 1000) * 1000);
                 const dateStr = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
                 const title = pt + ' \u2014 ' + dateStr;
-                await mux.video.assets.update(assetId, { meta: { video_title: title } });
-                console.log('Set video_title:', title);
+                await mux.video.assets.update(assetId, { name: title });
+                console.log('Set asset name:', title);
             }
         } catch (e) {
             console.log('Failed to set video_title:', e.message);

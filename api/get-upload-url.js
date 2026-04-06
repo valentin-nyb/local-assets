@@ -28,7 +28,7 @@ export default async function handler(req, res) {
       new_asset_settings: { 
         playback_policy: ['public'],
         passthrough: String(artistName).toUpperCase(),
-        meta: { video_title: videoTitle },
+        name: videoTitle,
         static_renditions: [{ resolution: srResolution }]
       },
       cors_origin: '*',

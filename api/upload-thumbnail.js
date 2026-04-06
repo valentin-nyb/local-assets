@@ -56,7 +56,7 @@ export default async function handler(req, res) {
         ],
         playback_policy: ['public'],
         passthrough,
-        meta: { video_title: passthrough + ' \u2014 ' + new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase() },
+        name: passthrough + ' \u2014 ' + new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase(),
         static_renditions: [{ resolution: 'highest' }]
       })
     });
