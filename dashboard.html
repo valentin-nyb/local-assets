@@ -123,7 +123,7 @@
                 <div class="bg-card border border-border p-5 rounded-xl">
                     <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3 block">Cloud Storage</span>
                     <div class="flex items-end justify-between">
-                        <span id="live-storage-usage" class="text-2xl font-bold text-primary">515 GB</span>
+                        <span id="live-storage-usage" class="text-2xl font-bold text-primary">—</span>
                         <span class="text-[10px] text-muted-foreground font-mono">/ 50 TB</span>
                     </div>
                     <div class="w-full bg-white/5 h-1 mt-4 rounded-full overflow-hidden"><div id="storage-bar" class="bg-primary h-full w-[0%]"></div></div>
@@ -191,15 +191,7 @@
         }
 
         async function fetchLiveMetrics() {
-            // Decoupled from live storage; show fixed display value
-            const totalGB = 515;
-            const storageEl = document.getElementById('live-storage-usage');
-            if (storageEl) storageEl.innerText = `${totalGB} GB`;
-
-            // Keep asset total static (initial DOM value) unless needed later
-            const percent = (totalGB / 50000) * 100;
-            const bar = document.getElementById('storage-bar');
-            if (bar) bar.style.width = Math.max(percent, 2) + '%';
+            // Storage + asset count are updated by fetchRecentUploads()
         }
 
         function formatDateReadable(dateStr) {
@@ -236,6 +228,28 @@
             const growthPct = olderCount > 0 ? Math.round((recentCount / olderCount) * 100) : (recentCount > 0 ? 100 : 0);
             const pctEl = document.getElementById('growth-pct');
             if (pctEl) pctEl.textContent = '+' + growthPct + '%';
+
+            // Calculate real cloud storage from static rendition file sizes
+            let totalBytes = 0;
+            for (const a of muxAssets) {
+                const srf = a.static_renditions?.files || [];
+                for (const f of srf) {
+                    totalBytes += f.filesize || 0;
+                }
+            }
+            const storageEl = document.getElementById('live-storage-usage');
+            if (storageEl) {
+                if (totalBytes >= 1024 ** 4) {
+                    storageEl.textContent = (totalBytes / (1024 ** 4)).toFixed(2) + ' TB';
+                } else if (totalBytes >= 1024 ** 3) {
+                    storageEl.textContent = (totalBytes / (1024 ** 3)).toFixed(1) + ' GB';
+                } else {
+                    storageEl.textContent = (totalBytes / (1024 ** 2)).toFixed(1) + ' MB';
+                }
+            }
+            const storagePercent = (totalBytes / (50 * 1024 ** 4)) * 100;
+            const bar = document.getElementById('storage-bar');
+            if (bar) bar.style.width = Math.max(storagePercent, 0.5) + '%';
 
             // Build a lookup: passthrough (uppercase) → asset (with or without playback ID)
             const muxLookup = {};
