@@ -28,15 +28,19 @@ export default async function handler(req, res) {
     const errors = [];
 
     for (const asset of list) {
-      // Skip if static renditions already exist (ready or preparing)
-      const srStatus = asset.static_renditions?.status;
-      if (srStatus === 'ready' || srStatus === 'preparing') {
+      // Skip if static renditions already exist
+      const srFiles = asset.static_renditions?.files || [];
+      const hasReady = srFiles.some(f => f.status === 'ready' || f.status === 'preparing');
+      if (hasReady) {
         skipped++;
         continue;
       }
+      // Determine if audio-only (no video tracks)
+      const hasVideo = asset.tracks?.some(t => t.type === 'video');
+      const resolution = hasVideo ? 'highest' : 'audio-only';
       try {
         const resp = await muxPost(`/video/v1/assets/${asset.id}/static-renditions`, {
-          resolution: 'highest'
+          resolution
         });
         if (resp.status >= 200 && resp.status < 300) {
           created++;

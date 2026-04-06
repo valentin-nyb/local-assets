@@ -313,7 +313,11 @@
                             const linkedMuxAsset = findLinked(lookupKey);
                             const isLinked = !!linkedMuxAsset;
                             const pid = linkedMuxAsset?.playback_ids?.[0]?.id;
-                            const linkedLabel = isLinked && !pid ? 'IN VAULT — PROCESSING' : 'IN VAULT — UPLOADED';
+                            const srFiles = linkedMuxAsset?.static_renditions?.files || [];
+                            const srReady = srFiles.find(f => f.status === 'ready');
+                            const srPreparing = srFiles.find(f => f.status === 'preparing');
+                            const dlFile = srReady ? srReady.name : null;
+                            const linkedLabel = isLinked && !pid ? 'IN VAULT — PROCESSING' : srReady ? 'IN VAULT — UPLOADED' : srPreparing ? 'IN VAULT — MP4 PREPARING' : 'IN VAULT — UPLOADED';
                             return `
                             <div class="p-4 pl-12 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-${uid}" ${isLinked ? 'style="border-left: 2px solid #39FF14;"' : ''}>
                                 ${isLinked ? `
@@ -327,9 +331,12 @@
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2 shrink-0">
-                                    ${pid ? `<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download MP4" onclick="window.open('https://stream.mux.com/${pid}/highest.mp4', '_blank')">
+                                    ${pid && dlFile ? `<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download" onclick="window.open('https://stream.mux.com/${pid}/${dlFile}', '_blank')">
                                         <iconify-icon icon="solar:cloud-download-bold" class="text-primary"></iconify-icon>
                                     </button>
+                                    <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Stream" onclick="window.open('https://stream.mux.com/${pid}', '_blank')">
+                                        <iconify-icon icon="solar:play-bold" class="text-primary"></iconify-icon>
+                                    </button>` : pid && srPreparing ? `<span class="text-[8px] font-mono text-yellow-500 uppercase">MP4 PREPARING</span>
                                     <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Stream" onclick="window.open('https://stream.mux.com/${pid}', '_blank')">
                                         <iconify-icon icon="solar:play-bold" class="text-primary"></iconify-icon>
                                     </button>` : `<span class="text-[8px] font-mono text-yellow-500 uppercase">PROCESSING</span>`}
