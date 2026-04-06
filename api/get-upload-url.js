@@ -20,12 +20,15 @@ export default async function handler(req, res) {
 
   const isAudio = String(artistName).toUpperCase().includes('// AUDIO');
   const srResolution = isAudio ? 'audio-only' : 'highest';
+  const dateStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+  const videoTitle = String(artistName).toUpperCase() + ' — ' + dateStr;
 
   try {
     const upload = await mux.video.uploads.create({
       new_asset_settings: { 
         playback_policy: ['public'],
         passthrough: String(artistName).toUpperCase(),
+        meta: { video_title: videoTitle },
         static_renditions: [{ resolution: srResolution }]
       },
       cors_origin: '*',
