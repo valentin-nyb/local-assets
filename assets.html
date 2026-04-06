@@ -133,8 +133,10 @@
             return;
         }
 
-        // Handle both direct arrays and Mux's data wrapper
-        const assets = Array.isArray(data) ? data : (data.data || []);
+        // Handle both direct arrays and Mux's data wrapper — video only
+        const assets = (Array.isArray(data) ? data : (data.data || [])).filter(a =>
+            a.tracks?.some(t => t.type === 'video')
+        );
 
         if (assets.length === 0) {
             list.innerHTML = `<p class="text-zinc-500 font-mono text-[10px] uppercase">VAULT EMPTY // NO ASSETS FOUND</p>`;

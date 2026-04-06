@@ -229,34 +229,45 @@
             for (const a of muxAssets) {
                 if (a.passthrough && a.playback_ids?.[0]?.id) {
                     const key = a.passthrough.toUpperCase().trim();
-                    // Keep the most recent (first in list) per name
                     if (!muxLookup[key]) muxLookup[key] = a;
                 }
             }
 
-            const sessions = [
-                {
-                    id: 'session_01',
-                    name: 'AMONGST FEW',
-                    date: '14 Feb 2026',
-                    venue: 'KOKO LONDON',
-                    assets: [
-                        { type: 'MASTER', label: '4K Long Form', ext: 'MOV/MP4', icon: 'solar:play-bold', color: 'text-primary' },
-                        { type: 'AUDIO', label: 'HQ Audio', ext: 'WAV/MP3', icon: 'solar:music-note-bold', color: 'text-primary' },
-                        { type: 'SOCIAL', label: 'Social Pack Verticals', ext: 'MP4', icon: 'solar:iphone-bold', color: 'text-primary' },
-                        { type: 'THUMB', label: 'Marketing Thumbnails', ext: 'JPG/PNG', icon: 'solar:gallery-bold', color: 'text-primary' },
-                    ],
-                },
-                {
-                    id: 'session_02',
-                    name: 'MICHAEL BIBI',
-                    date: '01 Nov 2025',
-                    venue: 'KOKO LONDON',
-                    assets: [
-                        { type: 'MASTER', label: '4K Long Form', ext: 'MOV', icon: 'solar:play-bold', color: 'text-primary' },
-                    ],
-                },
+            // Dynamically build sessions from Mux assets
+            // passthrough "ARTIST NAME" = MASTER, "ARTIST NAME // TYPE" = sub-asset
+            const assetTypes = [
+                { type: 'MASTER', label: '4K Long Form', ext: 'MOV/MP4', icon: 'solar:play-bold', color: 'text-primary' },
+                { type: 'AUDIO', label: 'HQ Audio', ext: 'WAV/MP3', icon: 'solar:music-note-bold', color: 'text-primary' },
+                { type: 'SOCIAL', label: 'Social Pack Verticals', ext: 'MP4', icon: 'solar:iphone-bold', color: 'text-primary' },
+                { type: 'THUMB', label: 'Marketing Thumbnails', ext: 'JPG/PNG', icon: 'solar:gallery-bold', color: 'text-primary' },
             ];
+
+            const sessionMap = {};
+            for (const a of muxAssets) {
+                if (!a.passthrough) continue;
+                const pt = a.passthrough.toUpperCase().trim();
+                const artistName = pt.split(' // ')[0];
+                if (!sessionMap[artistName]) {
+                    sessionMap[artistName] = { created_at: a.created_at };
+                }
+            }
+
+            if (Object.keys(sessionMap).length === 0) {
+                container.innerHTML = '<div class="p-8 text-center"><p class="text-[10px] font-mono text-zinc-600 uppercase tracking-widest">NO SESSIONS — UPLOAD FROM ASSETS TO BEGIN</p></div>';
+                return;
+            }
+
+            const sessions = Object.entries(sessionMap).map(([name, info], idx) => {
+                const date = new Date(info.created_at * 1000);
+                const dateStr = date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase();
+                return {
+                    id: 'session_' + String(idx + 1).padStart(2, '0'),
+                    name: name,
+                    date: dateStr,
+                    venue: 'KOKO LONDON',
+                    assets: [...assetTypes],
+                };
+            });
 
             container.innerHTML = sessions.map(session => {
                 // Check if this session has a matching Mux MASTER asset (by artist name)
