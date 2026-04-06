@@ -1,8 +1,8 @@
 import Mux from '@mux/mux-node';
 
 const mux = new Mux({ 
-  tokenId: process.env.assets_MUX_TOKEN_ID, 
-  tokenSecret: process.env.assets_MUX_TOKEN_SECRET 
+  tokenId: (process.env.PROD_MUX_TOKEN_ID || process.env.assets_MUX_TOKEN_ID || '').trim(), 
+  tokenSecret: (process.env.PROD_MUX_TOKEN_SECRET || process.env.assets_MUX_TOKEN_SECRET || '').trim()
 });
 
 export default async function handler(req, res) {
@@ -13,6 +13,20 @@ export default async function handler(req, res) {
     if (type === 'video.asset.ready') {
         const assetId = data.id || data.asset_id;
         console.log(`Video Ready! Trigerring AI prep for: ${assetId}`);
+
+        // Set video_title in Mux dashboard from passthrough + date
+        try {
+            const pt = data.passthrough || '';
+            if (pt) {
+                const d = new Date((data.created_at || Date.now() / 1000) * 1000);
+                const dateStr = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+                const title = pt + ' \u2014 ' + dateStr;
+                await mux.video.assets.update(assetId, { meta: { video_title: title } });
+                console.log('Set video_title:', title);
+            }
+        } catch (e) {
+            console.log('Failed to set video_title:', e.message);
+        }
 
         try {
             console.log("Asking Mux to prepare Auto-Captions/Highlights...");
@@ -70,9 +84,9 @@ export default async function handler(req, res) {
                       passthrough: `Short_Clip_AI_${index + 1}`
                   });
               }
-              console.log(`Created ${clips.length} AI highlights successfully!`L);
+              console.log(`Created ${clips.length} AI highlights successfully!`);
             } else {
-              console.log("No ighlights returned from Mux for this asset.");
+              console.log("No highlights returned from Mux for this asset.");
             }
         } catch (e) {
             console.error("AI Clipping Error:", e.message);
