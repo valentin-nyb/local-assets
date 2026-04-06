@@ -133,11 +133,11 @@
                         <span class="text-[10px] text-primary font-mono bg-primary/10 px-2 py-0.5 rounded border border-primary/20 leading-none">+24%</span>
                     </div>
                 </div>
-                <div class="bg-card border border-border p-5 rounded-xl relative overflow-hidden">
+                <div id="next-event-card" class="bg-card border border-border p-5 rounded-xl relative overflow-hidden">
                     <div class="absolute right-0 top-0 bottom-0 w-1 bg-red-500 animate-pulse"></div>
                     <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3 block">Next Event</span>
-                    <span class="block text-sm font-bold text-white uppercase tracking-tight">Koko: Room 1</span>
-                    <span class="text-[10px] text-muted-foreground font-mono uppercase">Tonight, 22:00 PM</span>
+                    <span id="next-event-title" class="block text-sm font-bold text-white uppercase tracking-tight">Loading...</span>
+                    <span id="next-event-time" class="text-[10px] text-muted-foreground font-mono uppercase"></span>
                 </div>
             </div>
 
@@ -371,6 +371,43 @@
 
         fetchLiveMetrics();
         fetchRecentUploads();
+        fetchNextEvent();
+
+        async function fetchNextEvent() {
+            const titleEl = document.getElementById('next-event-title');
+            const timeEl = document.getElementById('next-event-time');
+            try {
+                const res = await fetch('/api/next-event');
+                const data = await res.json();
+                if (data.error || !data.events?.length) {
+                    titleEl.textContent = 'NO UPCOMING EVENTS';
+                    timeEl.textContent = '';
+                    return;
+                }
+                const ev = data.events[0];
+                const start = new Date(ev.start);
+                const now = new Date();
+                const diffMs = start - now;
+                const isToday = start.toDateString() === now.toDateString();
+                const isTomorrow = start.toDateString() === new Date(now.getTime() + 86400000).toDateString();
+                const time = start.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+                titleEl.textContent = ev.title;
+                if (ev.location) titleEl.textContent += ' — ' + ev.location;
+
+                if (isToday) {
+                    timeEl.textContent = 'Today, ' + time;
+                } else if (isTomorrow) {
+                    timeEl.textContent = 'Tomorrow, ' + time;
+                } else {
+                    const date = start.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+                    timeEl.textContent = date + ', ' + time;
+                }
+            } catch (e) {
+                titleEl.textContent = 'CALENDAR OFFLINE';
+                timeEl.textContent = '';
+            }
+        }
 
         // Track uploaded asset info for download
         const uploadedAssets = {};
