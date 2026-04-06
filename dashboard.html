@@ -331,7 +331,7 @@
                                         <p class="text-[10px] font-bold text-zinc-300 uppercase" id="label-${uid}">${asset.label}</p>
                                         <p class="text-[8px] font-mono text-zinc-600 uppercase" id="status-${uid}">${asset.ext} FORMAT — TAP TO UPLOAD</p>
                                     </div>
-                                    <input type="file" accept="${accept}" class="hidden" id="file-${uid}" onchange="handleAssetUpload('${uid}', this, '${session.name}')">
+                                    <input type="file" accept="${accept}" class="hidden" id="file-${uid}" ${asset.type === 'SOCIAL' ? 'multiple' : ''} onchange="handleAssetUpload('${uid}', this, '${session.name}')">
                                 </label>
                                 <div class="flex items-center gap-2 shrink-0">
                                     <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors opacity-10" id="dl-${uid}" disabled title="No file yet">
@@ -413,74 +413,79 @@
         const uploadedAssets = {};
 
         async function handleAssetUpload(uid, input, sessionName) {
-            const file = input.files[0];
-            if (!file) return;
+            const files = Array.from(input.files);
+            if (!files.length) return;
 
             const statusEl = document.getElementById('status-' + uid);
             const dlBtn = document.getElementById('dl-' + uid);
             const row = document.getElementById('row-' + uid);
 
-            // Derive asset type from uid (e.g. session_01_AUDIO → AUDIO)
             const assetType = uid.split('_').pop();
-            // MASTER uses just the session name (matches assets.html uploads), others use NAME // TYPE
             const passthrough = assetType === 'MASTER' ? sessionName : sessionName + ' // ' + assetType;
 
-            // Show connecting state
             statusEl.textContent = 'CONNECTING TO LOCAL/CLOUD...';
             statusEl.classList.remove('text-zinc-600');
             statusEl.classList.add('text-yellow-500');
 
-            try {
-                // Get Mux direct upload URL (same flow as assets.html)
-                const response = await fetch('/api/get-upload-url', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ artistName: passthrough })
-                });
-                const data = await response.json();
+            const total = files.length;
+            let completed = 0;
 
-                // Upload file directly to Mux via XHR for progress tracking
-                const xhr = new XMLHttpRequest();
-                xhr.open('PUT', data.url);
+            function uploadFile(file, idx) {
+                return new Promise(async (resolve, reject) => {
+                    try {
+                        const tag = total > 1 ? `${passthrough} // ${String(idx + 1).padStart(2, '0')}` : passthrough;
+                        const response = await fetch('/api/get-upload-url', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ artistName: tag })
+                        });
+                        const data = await response.json();
 
-                xhr.upload.onprogress = (e) => {
-                    if (e.lengthComputable) {
-                        const pct = Math.round((e.loaded / e.total) * 100);
-                        statusEl.textContent = `UPLOADING: ${pct}%`;
+                        const xhr = new XMLHttpRequest();
+                        xhr.open('PUT', data.url);
+
+                        xhr.upload.onprogress = (e) => {
+                            if (e.lengthComputable) {
+                                const pct = Math.round((e.loaded / e.total) * 100);
+                                statusEl.textContent = total > 1
+                                    ? `UPLOADING ${completed + 1}/${total}: ${pct}%`
+                                    : `UPLOADING: ${pct}%`;
+                            }
+                        };
+
+                        xhr.onload = () => {
+                            completed++;
+                            uploadedAssets[uid + '_' + idx] = { id: data.id, name: file.name, size: file.size };
+                            resolve();
+                        };
+                        xhr.onerror = () => reject(new Error('Upload failed: ' + file.name));
+                        xhr.send(file);
+                    } catch (err) {
+                        reject(err);
                     }
-                };
+                });
+            }
 
-                xhr.onload = () => {
-                    // Store asset info
-                    uploadedAssets[uid] = { id: data.id, name: file.name, size: file.size };
+            try {
+                for (let i = 0; i < files.length; i++) {
+                    await uploadFile(files[i], i);
+                }
 
-                    // Update status
-                    const size = file.size < 1024 * 1024 ? (file.size / 1024).toFixed(0) + ' KB' : (file.size / (1024 * 1024)).toFixed(1) + ' MB';
-                    statusEl.textContent = `SENT TO VAULT — ${file.name} (${size})`;
-                    statusEl.classList.remove('text-yellow-500');
-                    statusEl.classList.add('text-primary');
+                statusEl.textContent = total > 1
+                    ? `SENT TO VAULT — ${total} FILES UPLOADED`
+                    : `SENT TO VAULT — ${files[0].name}`;
+                statusEl.classList.remove('text-yellow-500');
+                statusEl.classList.add('text-primary');
 
-                    // Enable download button (links to Mux asset)
+                if (dlBtn) {
                     dlBtn.disabled = false;
                     dlBtn.classList.remove('opacity-30');
-                    dlBtn.title = 'Download ' + file.name;
-                    dlBtn.querySelector('iconify-icon').classList.remove('text-zinc-700');
-                    dlBtn.querySelector('iconify-icon').classList.add('text-primary');
-
-                    // Green left border
-                    row.style.borderLeft = '2px solid #39FF14';
-                };
-
-                xhr.onerror = () => {
-                    statusEl.textContent = 'UPLOAD FAILED — TAP TO RETRY';
-                    statusEl.classList.remove('text-yellow-500');
-                    statusEl.classList.add('text-red-500');
-                    input.value = '';
-                };
-
-                xhr.send(file);
+                    dlBtn.querySelector('iconify-icon')?.classList.remove('text-zinc-700');
+                    dlBtn.querySelector('iconify-icon')?.classList.add('text-primary');
+                }
+                row.style.borderLeft = '2px solid #39FF14';
             } catch (err) {
-                statusEl.textContent = 'ERROR — ' + err.message;
+                statusEl.textContent = `ERROR — ${err.message}`;
                 statusEl.classList.remove('text-yellow-500');
                 statusEl.classList.add('text-red-500');
                 input.value = '';
