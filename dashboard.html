@@ -83,7 +83,7 @@
 
         <div class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
             <div class="flex justify-between items-center mb-6">
-                <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">INFRASTRUCTURE / TIER - KOKO LONDON</span>
+                <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">local / assets™ - Admin</span>
                 <div class="w-2 h-2 bg-primary rounded-full animate-pulse shadow-[0_0_8px_#39FF14]"></div>
             </div>
             <div class="cursor-pointer hover:border-primary/50 transition-all duration-500 w-full bg-card border border-border rounded-2xl p-8 relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-6 shadow-2xl">
@@ -191,7 +191,7 @@
         }
 
         async function fetchLiveMetrics() {
-            // Storage + asset count are updated by fetchRecentUploads()
+            // Storage + asset count updated by fetchRecentUploads()
         }
 
         function formatDateReadable(dateStr) {
@@ -234,20 +234,14 @@
             for (const a of muxAssets) {
                 const srf = a.static_renditions?.files || [];
                 for (const f of srf) {
-                    totalBytes += f.filesize || 0;
+                    const size = Number(f.filesize) || 0;
+                    if (size > 0 && size < 1e15) totalBytes += size;
                 }
             }
             const storageEl = document.getElementById('live-storage-usage');
-            if (storageEl) {
-                if (totalBytes >= 1024 ** 4) {
-                    storageEl.textContent = (totalBytes / (1024 ** 4)).toFixed(2) + ' TB';
-                } else if (totalBytes >= 1024 ** 3) {
-                    storageEl.textContent = (totalBytes / (1024 ** 3)).toFixed(1) + ' GB';
-                } else {
-                    storageEl.textContent = (totalBytes / (1024 ** 2)).toFixed(1) + ' MB';
-                }
-            }
-            const storagePercent = (totalBytes / (50 * 1024 ** 4)) * 100;
+            const totalStorageGB = (totalBytes / (1024 * 1024 * 1024)).toFixed(2);
+            if (storageEl) storageEl.textContent = totalStorageGB + ' GB';
+            const storagePercent = (totalBytes / (50 * 1024 * 1024 * 1024 * 1024)) * 100;
             const bar = document.getElementById('storage-bar');
             if (bar) bar.style.width = Math.max(storagePercent, 0.5) + '%';
 
