@@ -283,7 +283,7 @@
 
                             <div class="bg-[#111] border border-[#222] p-4 rounded-xl shrink-0">
                                 <div class="relative aspect-video rounded overflow-hidden mb-4 bg-zinc-900 border border-white/5">
-                                    <video id="venue-live-video" src="https://stream.mux.com/VZtzUzIL5lyYWglrq9QO7gQ028YrZLQz1I0073tJz4R8/high.mp4" class="w-full h-full object-cover" autoplay loop muted playsinline preload="auto"></video>
+                                    <img src="https://image.mux.com/skiXvIFodBRdAbRtC7hJZsAaOZSeadnjQ52AyNue6Ds/animated.gif?width=320" class="w-full h-full object-cover" alt="Live Feed">
                                 </div>
                                 <div class="space-y-2.5 font-mono text-[9px] uppercase tracking-widest">
                                     <p class="text-primary leading-relaxed">Live Feed Room 1 // Main Floor</p>
@@ -332,15 +332,6 @@
             if (el) el.textContent = pad(h) + ':' + pad(m) + ':' + pad(s);
         }
         setInterval(update, 1000);
-            var phoneVideo = document.getElementById('venue-live-video');
-            if (phoneVideo) {
-                phoneVideo.muted = true;
-                var ensurePlay = function() { phoneVideo.play().catch(function(){}); };
-                phoneVideo.addEventListener('pause', ensurePlay);
-                phoneVideo.addEventListener('ended', function(){ phoneVideo.currentTime = 0; ensurePlay(); });
-                document.addEventListener('visibilitychange', function(){ if (!document.hidden) ensurePlay(); });
-                ensurePlay();
-            }
     });
     </script>
     <div class="text-center mb-10 reveal active">
