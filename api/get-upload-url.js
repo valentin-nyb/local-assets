@@ -18,12 +18,15 @@ export default async function handler(req, res) {
   }
   const artistName = req.query.artistName || (body && body.artistName) || (body && body.passthrough) || 'SESSION_ARCHIVE';
 
+  const isAudio = String(artistName).toUpperCase().includes('// AUDIO');
+  const srResolution = isAudio ? 'audio-only' : 'highest';
+
   try {
     const upload = await mux.video.uploads.create({
       new_asset_settings: { 
         playback_policy: ['public'],
         passthrough: String(artistName).toUpperCase(),
-        static_renditions: [{ resolution: 'highest' }]
+        static_renditions: [{ resolution: srResolution }]
       },
       cors_origin: '*',
     });

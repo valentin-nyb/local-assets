@@ -316,8 +316,9 @@
                             const srFiles = linkedMuxAsset?.static_renditions?.files || [];
                             const srReady = srFiles.find(f => f.status === 'ready');
                             const srPreparing = srFiles.find(f => f.status === 'preparing');
+                            const srSkipped = srFiles.find(f => f.status === 'skipped');
                             const dlFile = srReady ? srReady.name : null;
-                            const linkedLabel = isLinked && !pid ? 'IN VAULT — PROCESSING' : srReady ? 'IN VAULT — UPLOADED' : srPreparing ? 'IN VAULT — MP4 PREPARING' : 'IN VAULT — UPLOADED';
+                            const linkedLabel = isLinked && !pid ? 'IN VAULT — PROCESSING' : srReady ? 'IN VAULT — UPLOADED' : srPreparing ? 'IN VAULT — MP4 PREPARING' : srSkipped ? 'IN VAULT — FIXING DOWNLOAD' : 'IN VAULT — UPLOADED';
                             return `
                             <div class="p-4 pl-12 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-${uid}" ${isLinked ? 'style="border-left: 2px solid #39FF14;"' : ''}>
                                 ${isLinked ? `
