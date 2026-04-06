@@ -301,7 +301,7 @@
                             </div>
                         </div>
                         <div class="flex items-center gap-2">
-                            ${hasAnyLinked ? '<button onclick="event.stopPropagation(); bulkDownload(\'' + session.name.replace(/'/g, "\\'") + '\', \'' + session.date + '\')" id="zip-btn-' + session.id + '" class="flex items-center gap-1.5 px-3 py-1 rounded-full border border-primary/30 hover:bg-primary/10 transition-colors" title="Download All"><iconify-icon icon="solar:cloud-download-bold" class="text-primary text-sm"></iconify-icon><span class="text-[8px] font-mono text-primary uppercase tracking-widest">DOWNLOAD</span></button>' : ''}
+                            ${hasAnyLinked ? '<button onclick="event.stopPropagation(); bulkDownload(\'' + session.name.replace(/'/g, "\\'") + '\', \'' + session.date + '\')" id="zip-btn-' + session.id + '" class="flex items-center gap-1.5 px-3 py-1 rounded-full border border-primary/30 hover:bg-primary/10 transition-colors" title="Download All"><span class="text-[8px] font-mono text-primary uppercase tracking-widest">DOWNLOAD</span></button>' : ''}
                             <iconify-icon id="arrow-${session.id}" icon="solar:alt-arrow-down-linear" class="text-zinc-700 transition-transform duration-300"></iconify-icon>
                         </div>
                     </div>
@@ -315,7 +315,12 @@
                             const linkedMuxAsset = findLinked(lookupKey);
                             const isLinked = !!linkedMuxAsset;
                             const pid = linkedMuxAsset?.playback_ids?.[0]?.id;
-                            const linkedLabel = isLinked && !pid ? 'IN VAULT — PROCESSING' : 'IN VAULT — UPLOADED';
+                            const srFiles = linkedMuxAsset?.static_renditions?.files || [];
+                            const srReady = srFiles.find(f => f.status === 'ready');
+                            const dlFile = srReady ? srReady.name : null;
+                            const dlExt = srReady ? srReady.ext : 'mp4';
+                            const linkedLabel = isLinked && !pid ? 'IN VAULT — PROCESSING' : srReady ? 'IN VAULT — UPLOADED' : srFiles.some(f => f.status === 'preparing') ? 'IN VAULT — PREPARING' : 'IN VAULT — UPLOADED';
+                            const isThumb = asset.type === 'THUMB';
                             return `
                             <div class="p-4 pl-12 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-${uid}" ${isLinked ? 'style="border-left: 2px solid #39FF14;"' : ''}>
                                 ${isLinked ? `
@@ -329,9 +334,17 @@
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2 shrink-0">
-                                    ${pid ? `<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download MP4" onclick="window.open('https://stream.mux.com/${pid}/high.mp4', '_blank')">
-                                        <iconify-icon icon="solar:cloud-download-bold" class="text-primary"></iconify-icon>
+                                    ${pid && dlFile ? `<button id="dl-btn-${uid}" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download" onclick="singleZipDownload('${pid}', '${dlFile}', '${dlExt}', '${asset.label.replace(/'/g, "\\\\'")}', '${session.name.replace(/'/g, "\\\\'")}', '${session.date}', this)">
+                                        <iconify-icon icon="solar:download-bold" class="text-primary"></iconify-icon>
                                     </button>
+                                    <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Stream" onclick="window.open('https://stream.mux.com/${pid}', '_blank')">
+                                        <iconify-icon icon="solar:play-bold" class="text-primary"></iconify-icon>
+                                    </button>` : pid && isThumb ? `<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download" onclick="window.open('https://image.mux.com/${pid}/thumbnail.png?width=1920', '_blank')">
+                                        <iconify-icon icon="solar:download-bold" class="text-primary"></iconify-icon>
+                                    </button>
+                                    <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Preview" onclick="window.open('https://image.mux.com/${pid}/thumbnail.png?width=1920', '_blank')">
+                                        <iconify-icon icon="solar:eye-bold" class="text-primary"></iconify-icon>
+                                    </button>` : pid ? `<span class="text-[8px] font-mono text-yellow-500 uppercase">PREPARING</span>
                                     <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Stream" onclick="window.open('https://stream.mux.com/${pid}', '_blank')">
                                         <iconify-icon icon="solar:play-bold" class="text-primary"></iconify-icon>
                                     </button>` : `<span class="text-[8px] font-mono text-yellow-500 uppercase">PROCESSING</span>`}
@@ -349,7 +362,7 @@
                                 </label>
                                 <div class="flex items-center gap-2 shrink-0">
                                     <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors opacity-10" id="dl-${uid}" disabled title="No file yet">
-                                        <iconify-icon icon="solar:cloud-download-bold" class="text-zinc-700"></iconify-icon>
+                                        <iconify-icon icon="solar:download-bold" class="text-zinc-700"></iconify-icon>
                                     </button>
                                 </div>
                                 `}
@@ -455,6 +468,35 @@
             }
         }
 
+        async function singleZipDownload(pid, dlFile, ext, assetLabel, sessionName, sessionDate, btnEl) {
+            const origHtml = btnEl.innerHTML;
+            btnEl.innerHTML = '<iconify-icon icon="solar:refresh-bold" class="text-yellow-500 animate-spin"></iconify-icon>';
+            btnEl.disabled = true;
+
+            const name = sessionName.toUpperCase().trim();
+            const label = assetLabel.replace(/\s+/g, '_');
+            const zipName = name + '_' + label + '_' + sessionDate.replace(/\s+/g, '_');
+            const filename = label + '.' + ext;
+
+            try {
+                const resp = await fetch('https://stream.mux.com/' + pid + '/' + dlFile);
+                const blob = await resp.blob();
+                const zip = new JSZip();
+                zip.file(filename, blob);
+                const zipBlob = await zip.generateAsync({ type: 'blob' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(zipBlob);
+                a.download = zipName + '.zip';
+                a.click();
+                URL.revokeObjectURL(a.href);
+            } catch (e) {
+                alert('Download failed: ' + e.message);
+            } finally {
+                btnEl.innerHTML = origHtml;
+                btnEl.disabled = false;
+            }
+        }
+
         fetchLiveMetrics();
         fetchRecentUploads();
         fetchNextEvent();
@@ -512,6 +554,49 @@
             statusEl.textContent = 'CONNECTING TO LOCAL/CLOUD...';
             statusEl.classList.remove('text-zinc-600');
             statusEl.classList.add('text-yellow-500');
+
+            // Thumbnails use a different upload path (image as Mux overlay/watermark)
+            if (assetType === 'THUMB') {
+                try {
+                    const file = files[0];
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('PUT', '/api/upload-thumbnail?passthrough=' + encodeURIComponent(passthrough));
+                    xhr.setRequestHeader('Content-Type', file.type || 'image/png');
+                    xhr.setRequestHeader('X-Passthrough', passthrough);
+
+                    xhr.upload.onprogress = (e) => {
+                        if (e.lengthComputable) {
+                            const pct = Math.round((e.loaded / e.total) * 100);
+                            statusEl.textContent = `UPLOADING: ${pct}%`;
+                        }
+                    };
+
+                    xhr.onload = () => {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            statusEl.textContent = `SENT TO VAULT — ${file.name}`;
+                            statusEl.classList.remove('text-yellow-500');
+                            statusEl.classList.add('text-primary');
+                            row.style.borderLeft = '2px solid #39FF14';
+                        } else {
+                            statusEl.textContent = 'ERROR — UPLOAD FAILED';
+                            statusEl.classList.remove('text-yellow-500');
+                            statusEl.classList.add('text-red-500');
+                        }
+                    };
+                    xhr.onerror = () => {
+                        statusEl.textContent = 'ERROR — UPLOAD FAILED';
+                        statusEl.classList.remove('text-yellow-500');
+                        statusEl.classList.add('text-red-500');
+                    };
+                    xhr.send(file);
+                } catch (err) {
+                    statusEl.textContent = `ERROR — ${err.message}`;
+                    statusEl.classList.remove('text-yellow-500');
+                    statusEl.classList.add('text-red-500');
+                    input.value = '';
+                }
+                return;
+            }
 
             const total = files.length;
             let completed = 0;
