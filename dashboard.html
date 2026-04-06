@@ -216,6 +216,24 @@
             const container = document.getElementById('recent-sets-list');
             if (!container) return;
 
+            // Fetch existing Mux assets to match against sessions
+            let muxAssets = [];
+            try {
+                const res = await fetch('/api/list-assets');
+                const data = await res.json();
+                muxAssets = Array.isArray(data) ? data : (data.data || []);
+            } catch (e) { /* continue without linked assets */ }
+
+            // Build a lookup: passthrough (uppercase) → asset with playback ID
+            const muxLookup = {};
+            for (const a of muxAssets) {
+                if (a.passthrough && a.playback_ids?.[0]?.id) {
+                    const key = a.passthrough.toUpperCase().trim();
+                    // Keep the most recent (first in list) per name
+                    if (!muxLookup[key]) muxLookup[key] = a;
+                }
+            }
+
             const sessions = [
                 {
                     id: 'session_01',
@@ -240,7 +258,15 @@
                 },
             ];
 
-            container.innerHTML = sessions.map(session => `
+            container.innerHTML = sessions.map(session => {
+                // Check if this session has a matching Mux MASTER asset (by artist name)
+                const masterAsset = muxLookup[session.name.toUpperCase().trim()];
+                const hasAnyLinked = session.assets.some(a => {
+                    if (a.type === 'MASTER') return !!masterAsset;
+                    return !!muxLookup[session.name.toUpperCase().trim() + ' // ' + a.type];
+                });
+
+                return `
                 <div class="session-group">
                     <div onclick="toggleAssetPreview('${session.id}')" class="p-5 flex items-center justify-between hover:bg-white/[0.02] transition-colors cursor-pointer group">
                         <div class="flex items-center gap-4">
@@ -252,15 +278,40 @@
                                 <p class="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">${session.venue} // ${session.date}</p>
                             </div>
                         </div>
-                        <iconify-icon id="arrow-${session.id}" icon="solar:alt-arrow-down-linear" class="text-zinc-700 transition-transform duration-300"></iconify-icon>
+                        <div class="flex items-center gap-2">
+                            ${hasAnyLinked ? '<span class="text-[8px] font-mono text-primary uppercase tracking-widest">LINKED</span>' : ''}
+                            <iconify-icon id="arrow-${session.id}" icon="solar:alt-arrow-down-linear" class="text-zinc-700 transition-transform duration-300"></iconify-icon>
+                        </div>
                     </div>
 
                     <div id="preview-${session.id}" class="hidden bg-black/40 border-t border-border/50 divide-y divide-border/30">
                         ${session.assets.map((asset, ai) => {
                             const uid = session.id + '_' + asset.type;
                             const accept = asset.type === 'MASTER' ? 'video/*' : asset.type === 'AUDIO' ? 'audio/*' : asset.type === 'SOCIAL' ? 'video/*' : 'image/*';
+                            // Check Mux for this specific asset: MASTER by name, others by NAME // TYPE
+                            const lookupKey = asset.type === 'MASTER' ? session.name.toUpperCase().trim() : session.name.toUpperCase().trim() + ' // ' + asset.type;
+                            const linkedMuxAsset = muxLookup[lookupKey];
+                            const pid = linkedMuxAsset?.playback_ids?.[0]?.id;
+                            const isLinked = !!pid;
+                            const linkedLabel = asset.type === 'MASTER' ? 'IN VAULT — LINKED FROM ASSETS' : 'IN VAULT — UPLOADED';
                             return `
-                            <div class="p-4 pl-12 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-${uid}">
+                            <div class="p-4 pl-12 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-${uid}" ${isLinked ? 'style="border-left: 2px solid #39FF14;"' : ''}>
+                                ${isLinked ? `
+                                <div class="flex items-center gap-4 flex-1 min-w-0">
+                                    <div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-primary/50 shrink-0">
+                                        <iconify-icon icon="${asset.icon}" class="text-primary text-sm"></iconify-icon>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="text-[10px] font-bold text-zinc-300 uppercase" id="label-${uid}">${asset.label}</p>
+                                        <p class="text-[8px] font-mono text-primary uppercase" id="status-${uid}">${linkedLabel}</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2 shrink-0">
+                                    <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Stream" onclick="window.open('https://stream.mux.com/${pid}', '_blank')">
+                                        <iconify-icon icon="solar:play-bold" class="text-primary"></iconify-icon>
+                                    </button>
+                                </div>
+                                ` : `
                                 <label class="flex items-center gap-4 cursor-pointer flex-1 min-w-0">
                                     <div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-border/50 shrink-0">
                                         <iconify-icon icon="${asset.icon}" class="${asset.color} text-sm"></iconify-icon>
@@ -269,18 +320,19 @@
                                         <p class="text-[10px] font-bold text-zinc-300 uppercase" id="label-${uid}">${asset.label}</p>
                                         <p class="text-[8px] font-mono text-zinc-600 uppercase" id="status-${uid}">${asset.ext} FORMAT — TAP TO UPLOAD</p>
                                     </div>
-                                    <input type="file" accept="${accept}" class="hidden" id="file-${uid}" onchange="handleAssetUpload('${uid}', this)">
+                                    <input type="file" accept="${accept}" class="hidden" id="file-${uid}" onchange="handleAssetUpload('${uid}', this, '${session.name}')">
                                 </label>
                                 <div class="flex items-center gap-2 shrink-0">
-                                    <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors opacity-30" id="dl-${uid}" disabled title="No file yet">
+                                    <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors opacity-10" id="dl-${uid}" disabled title="No file yet">
                                         <iconify-icon icon="solar:cloud-download-bold" class="text-zinc-700"></iconify-icon>
                                     </button>
                                 </div>
+                                `}
                             </div>`;
                         }).join('')}
                     </div>
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
         }
 
         function toggleAssetPreview(id) {
@@ -312,13 +364,18 @@
         // Track uploaded asset info for download
         const uploadedAssets = {};
 
-        async function handleAssetUpload(uid, input) {
+        async function handleAssetUpload(uid, input, sessionName) {
             const file = input.files[0];
             if (!file) return;
 
             const statusEl = document.getElementById('status-' + uid);
             const dlBtn = document.getElementById('dl-' + uid);
             const row = document.getElementById('row-' + uid);
+
+            // Derive asset type from uid (e.g. session_01_AUDIO → AUDIO)
+            const assetType = uid.split('_').pop();
+            // MASTER uses just the session name (matches assets.html uploads), others use NAME // TYPE
+            const passthrough = assetType === 'MASTER' ? sessionName : sessionName + ' // ' + assetType;
 
             // Show connecting state
             statusEl.textContent = 'CONNECTING TO LOCAL/CLOUD...';
@@ -330,7 +387,7 @@
                 const response = await fetch('/api/get-upload-url', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ artistName: uid })
+                    body: JSON.stringify({ artistName: passthrough })
                 });
                 const data = await response.json();
 
