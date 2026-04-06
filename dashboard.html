@@ -224,13 +224,22 @@
                 muxAssets = Array.isArray(data) ? data : (data.data || []);
             } catch (e) { /* continue without linked assets */ }
 
-            // Build a lookup: passthrough (uppercase) → asset with playback ID
+            // Build a lookup: passthrough (uppercase) → asset (with or without playback ID)
             const muxLookup = {};
+            const allMuxKeys = [];
             for (const a of muxAssets) {
-                if (a.passthrough && a.playback_ids?.[0]?.id) {
+                if (a.passthrough) {
                     const key = a.passthrough.toUpperCase().trim();
+                    allMuxKeys.push(key);
                     if (!muxLookup[key]) muxLookup[key] = a;
                 }
+            }
+            // Find asset by exact key OR any key starting with it (for multi-file uploads)
+            function findLinked(key) {
+                if (muxLookup[key]) return muxLookup[key];
+                const prefix = key + ' // ';
+                const match = allMuxKeys.find(k => k.startsWith(prefix));
+                return match ? muxLookup[match] : null;
             }
 
             // Dynamically build sessions from Mux assets
@@ -271,10 +280,10 @@
 
             container.innerHTML = sessions.map(session => {
                 // Check if this session has a matching Mux MASTER asset (by artist name)
-                const masterAsset = muxLookup[session.name.toUpperCase().trim()];
+                const masterAsset = findLinked(session.name.toUpperCase().trim());
                 const hasAnyLinked = session.assets.some(a => {
                     if (a.type === 'MASTER') return !!masterAsset;
-                    return !!muxLookup[session.name.toUpperCase().trim() + ' // ' + a.type];
+                    return !!findLinked(session.name.toUpperCase().trim() + ' // ' + a.type);
                 });
 
                 return `
@@ -301,10 +310,10 @@
                             const accept = asset.type === 'MASTER' ? 'video/*' : asset.type === 'AUDIO' ? 'audio/*' : asset.type === 'SOCIAL' ? 'video/*' : 'image/*';
                             // Check Mux for this specific asset: MASTER by name, others by NAME // TYPE
                             const lookupKey = asset.type === 'MASTER' ? session.name.toUpperCase().trim() : session.name.toUpperCase().trim() + ' // ' + asset.type;
-                            const linkedMuxAsset = muxLookup[lookupKey];
+                            const linkedMuxAsset = findLinked(lookupKey);
+                            const isLinked = !!linkedMuxAsset;
                             const pid = linkedMuxAsset?.playback_ids?.[0]?.id;
-                            const isLinked = !!pid;
-                            const linkedLabel = 'IN VAULT — UPLOADED';
+                            const linkedLabel = isLinked && !pid ? 'IN VAULT — PROCESSING' : 'IN VAULT — UPLOADED';
                             return `
                             <div class="p-4 pl-12 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-${uid}" ${isLinked ? 'style="border-left: 2px solid #39FF14;"' : ''}>
                                 ${isLinked ? `
@@ -318,9 +327,9 @@
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2 shrink-0">
-                                    <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Stream" onclick="window.open('https://stream.mux.com/${pid}', '_blank')">
+                                    ${pid ? `<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Stream" onclick="window.open('https://stream.mux.com/${pid}', '_blank')">
                                         <iconify-icon icon="solar:play-bold" class="text-primary"></iconify-icon>
-                                    </button>
+                                    </button>` : `<span class="text-[8px] font-mono text-yellow-500 uppercase">PROCESSING</span>`}
                                 </div>
                                 ` : `
                                 <label class="flex items-center gap-4 cursor-pointer flex-1 min-w-0">
