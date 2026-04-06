@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en" class="dark scroll-smooth">
 <head>
@@ -16,6 +17,7 @@
     <link rel="stylesheet" href="styles/tailwind.css">
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="nav-component.js"></script>
     <style>
         /* Standardized sidebar styles used by the JS component */
@@ -299,7 +301,7 @@
                             </div>
                         </div>
                         <div class="flex items-center gap-2">
-                            ${hasAnyLinked ? '<span class="text-[8px] font-mono text-primary uppercase tracking-widest">READY</span>' : ''}
+                            ${hasAnyLinked ? '<button onclick="event.stopPropagation(); bulkDownload(\'' + session.name.replace(/'/g, "\\'") + '\')" id="zip-btn-' + session.id + '" class="flex items-center gap-1.5 px-3 py-1 rounded-full border border-primary/30 hover:bg-primary/10 transition-colors" title="Download All"><iconify-icon icon="solar:cloud-download-bold" class="text-primary text-sm"></iconify-icon><span class="text-[8px] font-mono text-primary uppercase tracking-widest">ZIP ALL</span></button>' : ''}
                             <iconify-icon id="arrow-${session.id}" icon="solar:alt-arrow-down-linear" class="text-zinc-700 transition-transform duration-300"></iconify-icon>
                         </div>
                     </div>
@@ -313,12 +315,7 @@
                             const linkedMuxAsset = findLinked(lookupKey);
                             const isLinked = !!linkedMuxAsset;
                             const pid = linkedMuxAsset?.playback_ids?.[0]?.id;
-                            const srFiles = linkedMuxAsset?.static_renditions?.files || [];
-                            const srReady = srFiles.find(f => f.status === 'ready');
-                            const srPreparing = srFiles.find(f => f.status === 'preparing');
-                            const srSkipped = srFiles.find(f => f.status === 'skipped');
-                            const dlFile = srReady ? srReady.name : null;
-                            const linkedLabel = isLinked && !pid ? 'IN VAULT — PROCESSING' : srReady ? 'IN VAULT — UPLOADED' : srPreparing ? 'IN VAULT — MP4 PREPARING' : srSkipped ? 'IN VAULT — FIXING DOWNLOAD' : 'IN VAULT — UPLOADED';
+                            const linkedLabel = isLinked && !pid ? 'IN VAULT — PROCESSING' : 'IN VAULT — UPLOADED';
                             return `
                             <div class="p-4 pl-12 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-${uid}" ${isLinked ? 'style="border-left: 2px solid #39FF14;"' : ''}>
                                 ${isLinked ? `
@@ -332,12 +329,9 @@
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2 shrink-0">
-                                    ${pid && dlFile ? `<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download" onclick="window.open('https://stream.mux.com/${pid}/${dlFile}', '_blank')">
+                                    ${pid ? `<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download MP4" onclick="window.open('https://stream.mux.com/${pid}/high.mp4', '_blank')">
                                         <iconify-icon icon="solar:cloud-download-bold" class="text-primary"></iconify-icon>
                                     </button>
-                                    <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Stream" onclick="window.open('https://stream.mux.com/${pid}', '_blank')">
-                                        <iconify-icon icon="solar:play-bold" class="text-primary"></iconify-icon>
-                                    </button>` : pid && srPreparing ? `<span class="text-[8px] font-mono text-yellow-500 uppercase">MP4 PREPARING</span>
                                     <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Stream" onclick="window.open('https://stream.mux.com/${pid}', '_blank')">
                                         <iconify-icon icon="solar:play-bold" class="text-primary"></iconify-icon>
                                     </button>` : `<span class="text-[8px] font-mono text-yellow-500 uppercase">PROCESSING</span>`}
@@ -386,6 +380,78 @@
             } else {
                 preview.classList.add('hidden');
                 arrow.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        async function bulkDownload(sessionName) {
+            const btn = document.querySelector('[id^="zip-btn-"]');
+            const origHtml = btn ? btn.innerHTML : '';
+
+            let muxAssets = [];
+            try {
+                const res = await fetch('/api/list-assets');
+                const data = await res.json();
+                muxAssets = Array.isArray(data) ? data : (data.data || []);
+            } catch (e) { alert('Failed to fetch assets'); return; }
+
+            const lookup = {};
+            for (const a of muxAssets) {
+                if (a.passthrough) lookup[a.passthrough.toUpperCase().trim()] = a;
+            }
+
+            const types = [
+                { type: 'MASTER', label: '4K_Long_Form' },
+                { type: 'AUDIO', label: 'HQ_Audio' },
+                { type: 'SOCIAL', label: 'Social_Pack' },
+                { type: 'THUMB', label: 'Thumbnails' },
+            ];
+
+            const files = [];
+            const name = sessionName.toUpperCase().trim();
+            for (const t of types) {
+                if (t.type === 'SOCIAL') {
+                    for (let i = 1; i <= 50; i++) {
+                        const key = name + ' // SOCIAL // ' + String(i).padStart(2, '0');
+                        const asset = lookup[key];
+                        if (!asset) break;
+                        const pid = asset.playback_ids?.[0]?.id;
+                        const sr = (asset.static_renditions?.files || []).find(f => f.status === 'ready');
+                        if (pid && sr) files.push({ url: 'https://stream.mux.com/' + pid + '/' + sr.name, filename: t.label + '_' + String(i).padStart(2, '0') + '.' + sr.ext });
+                    }
+                } else {
+                    const key = t.type === 'MASTER' ? name : name + ' // ' + t.type;
+                    const asset = lookup[key];
+                    if (!asset) continue;
+                    const pid = asset.playback_ids?.[0]?.id;
+                    const sr = (asset.static_renditions?.files || []).find(f => f.status === 'ready');
+                    if (pid && sr) files.push({ url: 'https://stream.mux.com/' + pid + '/' + sr.name, filename: t.label + '.' + sr.ext });
+                }
+            }
+
+            if (!files.length) { alert('No downloadable files ready yet.'); return; }
+
+            if (btn) { btn.innerHTML = '<span class="text-[8px] font-mono text-yellow-500 uppercase tracking-widest">ZIPPING 0/' + files.length + '</span>'; btn.disabled = true; }
+
+            try {
+                const zip = new JSZip();
+                const folder = zip.folder(name);
+                for (let i = 0; i < files.length; i++) {
+                    if (btn) btn.innerHTML = '<span class="text-[8px] font-mono text-yellow-500 uppercase tracking-widest">ZIPPING ' + (i + 1) + '/' + files.length + '</span>';
+                    const resp = await fetch(files[i].url);
+                    const blob = await resp.blob();
+                    folder.file(files[i].filename, blob);
+                }
+                if (btn) btn.innerHTML = '<span class="text-[8px] font-mono text-yellow-500 uppercase tracking-widest">COMPRESSING...</span>';
+                const zipBlob = await zip.generateAsync({ type: 'blob' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(zipBlob);
+                a.download = name + '_ASSETS.zip';
+                a.click();
+                URL.revokeObjectURL(a.href);
+            } catch (e) {
+                alert('Zip failed: ' + e.message);
+            } finally {
+                if (btn) { btn.innerHTML = origHtml; btn.disabled = false; }
             }
         }
 
