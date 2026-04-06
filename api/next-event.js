@@ -1,5 +1,12 @@
 import ical from 'node-ical';
 
+function toDate(d) {
+  if (d instanceof Date) return d;
+  if (typeof d === 'string') return new Date(d);
+  if (d && d.toISOString) return new Date(d.toISOString());
+  return new Date(d);
+}
+
 export default async function handler(req, res) {
   const calUrl = process.env.ICAL_URL;
   if (!calUrl) {
@@ -10,15 +17,22 @@ export default async function handler(req, res) {
     const data = await ical.async.fromURL(calUrl);
     const now = new Date();
 
-    const upcoming = Object.values(data)
-      .filter(ev => ev.type === 'VEVENT' && new Date(ev.start) >= now)
-      .sort((a, b) => new Date(a.start) - new Date(b.start))
-      .slice(0, 3)
+    const events = Object.values(data).filter(ev => ev.type === 'VEVENT');
+
+    const upcoming = events
       .map(ev => ({
         title: ev.summary || 'Untitled',
         location: ev.location || null,
-        start: new Date(ev.start).toISOString(),
-        end: ev.end ? new Date(ev.end).toISOString() : null,
+        start: toDate(ev.start),
+        end: ev.end ? toDate(ev.end) : null,
+      }))
+      .filter(ev => ev.start >= now)
+      .sort((a, b) => a.start - b.start)
+      .slice(0, 3)
+      .map(ev => ({
+        ...ev,
+        start: ev.start.toISOString(),
+        end: ev.end ? ev.end.toISOString() : null,
       }));
 
     return res.status(200).json({ events: upcoming });
