@@ -116,8 +116,8 @@
                 <div class="bg-card border border-border p-5 rounded-xl">
                     <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3 block">Total Assets Captured</span>
                     <div class="flex flex-col items-start gap-1">
-                        <span id="live-asset-total" class="text-2xl font-bold leading-tight">1,248</span>
-                        <span class="text-[10px] text-primary font-mono bg-primary/10 px-2 py-0.5 rounded border border-primary/20 leading-none">+12%</span>
+                        <span id="live-asset-total" class="text-2xl font-bold leading-tight">—</span>
+                        <span id="growth-pct" class="text-[10px] text-primary font-mono bg-primary/10 px-2 py-0.5 rounded border border-primary/20 leading-none">—</span>
                     </div>
                 </div>
                 <div class="bg-card border border-border p-5 rounded-xl">
@@ -225,6 +225,17 @@
                 const data = await res.json();
                 muxAssets = Array.isArray(data) ? data : (data.data || []);
             } catch (e) { /* continue without linked assets */ }
+
+            // Update real asset count and 30-day growth %
+            const totalEl = document.getElementById('live-asset-total');
+            if (totalEl) totalEl.textContent = muxAssets.length.toLocaleString();
+            const nowTs = Date.now() / 1000;
+            const thirtyDaysAgo = nowTs - (30 * 86400);
+            const recentCount = muxAssets.filter(a => a.created_at > thirtyDaysAgo).length;
+            const olderCount = muxAssets.length - recentCount;
+            const growthPct = olderCount > 0 ? Math.round((recentCount / olderCount) * 100) : (recentCount > 0 ? 100 : 0);
+            const pctEl = document.getElementById('growth-pct');
+            if (pctEl) pctEl.textContent = '+' + growthPct + '%';
 
             // Build a lookup: passthrough (uppercase) → asset (with or without playback ID)
             const muxLookup = {};
