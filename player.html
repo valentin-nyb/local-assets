@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="local / assets">
+    <title>local / assets™ — Player</title>
+    <link rel="icon" type="image/x-icon" href="favicon/favicon.ico">
+    <link rel="icon" type="image/svg+xml" href="favicon/favicon.svg">
+    <link rel="apple-touch-icon" href="favicon/apple-touch-icon.png">
+    <link rel="manifest" href="favicon/site.webmanifest">
+    <link rel="stylesheet" href="styles/tailwind.css">
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
+    <style>
+        body { background: #050505; margin: 0; min-height: 100vh; display: flex; flex-direction: column; }
+        mux-player { --media-object-fit: contain; width: 100%; flex: 1; }
+        mux-player::part(gesture-layer) { background: transparent; }
+    </style>
+</head>
+<body class="font-sans antialiased text-white">
+
+    <header class="h-14 flex items-center px-6 border-b border-[#27272a] bg-[#050505] shrink-0 justify-between z-40">
+        <div class="flex items-center gap-3">
+            <a href="/dashboard.html" class="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                <iconify-icon icon="solar:alt-arrow-left-linear" class="text-zinc-500"></iconify-icon>
+                <span class="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.3em]">BACK</span>
+            </a>
+            <span class="text-zinc-700 hidden md:inline">|</span>
+            <span class="text-[10px] font-mono text-[#39FF14] uppercase tracking-[0.3em] font-bold hidden md:inline">local / assets™</span>
+        </div>
+        <div class="flex items-center gap-4">
+            <span id="asset-title" class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest"></span>
+            <a id="download-link" href="#" download class="hidden items-center gap-1.5 px-3 py-1 rounded-full border border-[#39FF14]/30 hover:bg-[#39FF14]/10 transition-colors">
+                <iconify-icon icon="solar:download-bold" class="text-[#39FF14] text-sm"></iconify-icon>
+                <span class="text-[8px] font-mono text-[#39FF14] uppercase tracking-widest">DOWNLOAD</span>
+            </a>
+        </div>
+    </header>
+
+    <main id="player-container" class="flex-1 flex items-center justify-center p-4 md:p-8">
+    </main>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const pid = params.get('v');
+        const file = params.get('f');
+        const type = params.get('type');
+        const title = params.get('title');
+        const container = document.getElementById('player-container');
+        const titleEl = document.getElementById('asset-title');
+        const dlLink = document.getElementById('download-link');
+
+        if (title) titleEl.textContent = decodeURIComponent(title);
+
+        if (!pid) {
+            container.innerHTML = '<p class="text-zinc-600 font-mono text-xs uppercase tracking-widest">NO ASSET SPECIFIED</p>';
+        } else if (type === 'thumb') {
+            const imgUrl = 'https://image.mux.com/' + pid + '/thumbnail.png?width=1920';
+            container.innerHTML = '<img src="' + imgUrl + '" class="max-w-full max-h-[80vh] rounded-xl shadow-2xl border border-[#27272a]" alt="Thumbnail">';
+            dlLink.href = imgUrl;
+            dlLink.classList.remove('hidden');
+            dlLink.classList.add('flex');
+        } else if (file) {
+            const streamUrl = 'https://stream.mux.com/' + pid + '/' + file;
+            const ext = file.split('.').pop().toLowerCase();
+
+            if (ext === 'm4a' || ext === 'wav' || ext === 'mp3') {
+                container.innerHTML = `
+                    <div class="w-full max-w-lg text-center space-y-6">
+                        <div class="w-24 h-24 mx-auto bg-[#0a0a0a] border border-[#27272a] rounded-2xl flex items-center justify-center">
+                            <iconify-icon icon="solar:music-note-bold" class="text-[#39FF14] text-3xl"></iconify-icon>
+                        </div>
+                        <audio controls autoplay class="w-full" style="filter: hue-rotate(90deg) brightness(1.2);">
+                            <source src="${streamUrl}" type="audio/${ext === 'm4a' ? 'mp4' : ext}">
+                        </audio>
+                    </div>`;
+            } else {
+                container.innerHTML = '<mux-player playback-id="' + pid + '" stream-type="on-demand" accent-color="#39FF14" autoplay></mux-player>';
+            }
+
+            dlLink.href = streamUrl;
+            dlLink.classList.remove('hidden');
+            dlLink.classList.add('flex');
+        } else {
+            container.innerHTML = '<mux-player playback-id="' + pid + '" stream-type="on-demand" accent-color="#39FF14" autoplay></mux-player>';
+        }
+    </script>
+</body>
+</html>
