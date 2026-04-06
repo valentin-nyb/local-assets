@@ -256,22 +256,28 @@
                     </div>
 
                     <div id="preview-${session.id}" class="hidden bg-black/40 border-t border-border/50 divide-y divide-border/30">
-                        ${session.assets.map(asset => `
-                            <div class="p-4 pl-12 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset">
-                                <div class="flex items-center gap-4">
-                                    <div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-border/50">
+                        ${session.assets.map((asset, ai) => {
+                            const uid = session.id + '_' + asset.type;
+                            const accept = asset.type === 'MASTER' ? 'video/*' : asset.type === 'AUDIO' ? 'audio/*' : asset.type === 'SOCIAL' ? 'video/*' : 'image/*';
+                            return `
+                            <div class="p-4 pl-12 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-${uid}">
+                                <label class="flex items-center gap-4 cursor-pointer flex-1 min-w-0">
+                                    <div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-border/50 shrink-0">
                                         <iconify-icon icon="${asset.icon}" class="${asset.color} text-sm"></iconify-icon>
                                     </div>
-                                    <div>
-                                        <p class="text-[10px] font-bold text-zinc-300 uppercase">${asset.label}</p>
-                                        <p class="text-[8px] font-mono text-zinc-600 uppercase">${asset.ext} FORMAT</p>
+                                    <div class="min-w-0">
+                                        <p class="text-[10px] font-bold text-zinc-300 uppercase" id="label-${uid}">${asset.label}</p>
+                                        <p class="text-[8px] font-mono text-zinc-600 uppercase" id="status-${uid}">${asset.ext} FORMAT — TAP TO UPLOAD</p>
                                     </div>
+                                    <input type="file" accept="${accept}" class="hidden" id="file-${uid}" onchange="handleAssetUpload('${uid}', this)">
+                                </label>
+                                <div class="flex items-center gap-2 shrink-0">
+                                    <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors opacity-30" id="dl-${uid}" disabled title="No file yet">
+                                        <iconify-icon icon="solar:cloud-download-bold" class="text-zinc-700"></iconify-icon>
+                                    </button>
                                 </div>
-                                <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors">
-                                    <iconify-icon icon="solar:cloud-download-bold" class="text-zinc-700 group-hover/asset:text-primary"></iconify-icon>
-                                </button>
-                            </div>
-                        `).join('')}
+                            </div>`;
+                        }).join('')}
                     </div>
                 </div>
             `).join('');
@@ -302,6 +308,55 @@
 
         fetchLiveMetrics();
         fetchRecentUploads();
+
+        // Track uploaded files for download
+        const uploadedFiles = {};
+
+        function handleAssetUpload(uid, input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const statusEl = document.getElementById('status-' + uid);
+            const dlBtn = document.getElementById('dl-' + uid);
+            const row = document.getElementById('row-' + uid);
+
+            // Show uploading state
+            statusEl.textContent = 'UPLOADING...';
+            statusEl.classList.remove('text-zinc-600');
+            statusEl.classList.add('text-yellow-500');
+
+            // Simulate upload (replace with real upload logic if needed)
+            setTimeout(() => {
+                // Store file reference for download
+                uploadedFiles[uid] = file;
+
+                // Update status
+                const size = file.size < 1024 * 1024 ? (file.size / 1024).toFixed(0) + ' KB' : (file.size / (1024 * 1024)).toFixed(1) + ' MB';
+                statusEl.textContent = `UPLOADED — ${file.name} (${size})`;
+                statusEl.classList.remove('text-yellow-500');
+                statusEl.classList.add('text-primary');
+
+                // Enable download button
+                dlBtn.disabled = false;
+                dlBtn.classList.remove('opacity-30');
+                dlBtn.title = 'Download ' + file.name;
+                dlBtn.onclick = () => downloadAsset(uid);
+
+                // Green left border
+                row.style.borderLeft = '2px solid #39FF14';
+            }, 1500);
+        }
+
+        function downloadAsset(uid) {
+            const file = uploadedFiles[uid];
+            if (!file) return;
+            const url = URL.createObjectURL(file);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = file.name;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
 
         // Live elapsed timer
         (function() {
