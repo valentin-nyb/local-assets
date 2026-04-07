@@ -597,13 +597,15 @@
                             statusEl.classList.add('text-primary');
                             row.style.borderLeft = '2px solid #39FF14';
                         } else {
-                            statusEl.textContent = 'ERROR — UPLOAD FAILED';
+                            let msg = 'UPLOAD FAILED (' + xhr.status + ')';
+                            try { const j = JSON.parse(xhr.responseText); msg = typeof j.error === 'string' ? j.error : JSON.stringify(j.error); } catch(e) {}
+                            statusEl.textContent = `ERROR — ${msg}`;
                             statusEl.classList.remove('text-yellow-500');
                             statusEl.classList.add('text-red-500');
                         }
                     };
                     xhr.onerror = () => {
-                        statusEl.textContent = 'ERROR — UPLOAD FAILED';
+                        statusEl.textContent = 'ERROR — NETWORK FAILED';
                         statusEl.classList.remove('text-yellow-500');
                         statusEl.classList.add('text-red-500');
                     };

@@ -20,12 +20,17 @@ export default async function handler(req, res) {
   const filename = `thumb_${Date.now()}.${ext}`;
 
   try {
-    // Collect raw body
-    const chunks = [];
-    for await (const chunk of req) {
-      chunks.push(chunk);
+    // Collect raw body via event-based reading (more reliable on Vercel)
+    const body = await new Promise((resolve, reject) => {
+      const chunks = [];
+      req.on('data', chunk => chunks.push(chunk));
+      req.on('end', () => resolve(Buffer.concat(chunks)));
+      req.on('error', reject);
+    });
+
+    if (!body.length) {
+      return res.status(400).json({ error: 'Empty body — no image data received' });
     }
-    const body = Buffer.concat(chunks);
 
     // 1. Upload image to Vercel Blob (Mux needs a public URL to fetch)
     const blob = await put(`thumbnails/${filename}`, body, {
