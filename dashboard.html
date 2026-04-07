@@ -356,17 +356,24 @@
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2 shrink-0">
-                                    ${pid && dlFile ? `<button id="dl-btn-${uid}" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download" onclick="singleZipDownload('${pid}', '${dlFile}', '${dlExt}', '${asset.label.replace(/'/g, "\\\\'")}', '${session.name.replace(/'/g, "\\\\'")}', '${session.date}', this)">
+                                    ${pid && dlFile ? `<button id="dl-btn-${uid}" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download" onclick="singleZipDownload('${pid}', '${dlFile}', '${dlExt}', '${asset.label.replace(/'/g, "\\'")}', '${session.name.replace(/'/g, "\\'")}', '${session.date}', this)">
                                         <iconify-icon icon="solar:download-bold" class="text-primary"></iconify-icon>
                                     </button>
-                                    <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Play" onclick="window.open('/player.html?v=${pid}&f=${dlFile}&title=${encodeURIComponent(asset.label)}', '_blank')">
+                                    <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Play" onclick="window.open('/player.html?v=${pid}&f=${dlFile}&title='+encodeURIComponent(asset.label), '_blank')">
                                         <iconify-icon icon="solar:play-bold" class="text-primary"></iconify-icon>
                                     </button>` : pid && isThumb ? `<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download" onclick="window.open('https://image.mux.com/${pid}/thumbnail.png?width=1920', '_blank')">
                                         <iconify-icon icon="solar:download-bold" class="text-primary"></iconify-icon>
                                     </button>
-                                    <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Preview" onclick="window.open('/player.html?v=${pid}&type=thumb&title=${encodeURIComponent(asset.label)}', '_blank')">
+                                    <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Preview" onclick="window.open('/player.html?v=${pid}&type=thumb&title='+encodeURIComponent(asset.label), '_blank')">
                                         <iconify-icon icon="solar:eye-bold" class="text-primary"></iconify-icon>
                                     </button>` : pid ? `<span class="text-[8px] font-mono text-yellow-500 uppercase">PREPARING</span>` : `<span class="text-[8px] font-mono text-yellow-500 uppercase">PROCESSING</span>`}
+                                    <!-- Add thumbnail preview for MASTER asset using Mux Image API -->
+                                    ${pid && asset.type === 'MASTER' ? `
+                                      <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Preview Thumbnail"
+                                        onclick="window.open('https://image.mux.com/${pid}/thumbnail.png?width=1920&time=10', '_blank')">
+                                        <iconify-icon icon="solar:gallery-bold" class="text-primary"></iconify-icon>
+                                      </button>
+                                    ` : ''}
                                 </div>
                                 ` : `
                                 <label class="flex items-center gap-4 cursor-pointer flex-1 min-w-0">
