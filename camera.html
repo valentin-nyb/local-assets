@@ -23,31 +23,33 @@
 <body>
 
     <div id="container">
-        <h1>Venue Camera Controller</h1>
-        <p>This page will automatically record and upload video based on a calendar schedule. Please leave this tab open.</p>
-        
-        <div id="initialSetup">
-            <button id="setupButton">Setup Camera & Microphone</button>
-        </div>
-
-        <div id="deviceSelector" class="device-selector">
-            <div>
-                <label for="videoSource">Camera Source</label>
-                <select id="videoSource"></select>
-            </div>
-            <div>
-                <label for="audioSource">Microphone Source</label>
-                <select id="audioSource"></select>
-            </div>
-        </div>
-
-        <video id="videoPreview" autoplay muted></video>
-
-        <div id="status" class="status-box status-idle">
-            <strong>Status:</strong> <span id="statusText">Waiting for setup...</span>
-        </div>
-        <div class="status-log" id="log"></div>
+    <h1>Venue Camera Controller</h1>
+    <p>This page will automatically record and upload video based on a calendar schedule. Please leave this tab open.</p>
+    
+    <!-- ADD THIS: A button to start the setup process -->
+    <div id="initialSetup">
+        <button id="setupButton">Setup Camera & Microphone</button>
     </div>
+
+    <!-- ADD THIS: A container for the device dropdowns, initially hidden -->
+    <div id="deviceSelector" class="device-selector">
+        <div>
+            <label for="videoSource">Camera Source</label>
+            <select id="videoSource"></select>
+        </div>
+        <div>
+            <label for="audioSource">Microphone Source</label>
+            <select id="audioSource"></select>
+        </div>
+    </div>
+
+    <!-- This part remains the same -->
+    <video id="videoPreview" autoplay muted></video>
+    <div id="status" class="status-box status-idle">
+        <strong>Status:</strong> <span id="statusText">Waiting for setup...</span>
+    </div>
+    <div class="status-log" id="log"></div>
+</div>
 
     <script>
         // --- Configuration ---
@@ -59,10 +61,9 @@
         };
 
         // --- UI Elements ---
-        const videoElement = document.getElementById('videoPreview');
-        const statusTextElement = document.getElementById('statusText');
-        const statusBoxElement = document.getElementById('status');
-        const logElement = document.getElementById('log');
+        // --- UI Elements ---
+        const videoElement = document.getElementById('videoPreview'); 
+        // ... other elements
         const setupButton = document.getElementById('setupButton');
         const deviceSelectorDiv = document.getElementById('deviceSelector');
         const videoSourceSelect = document.getElementById('videoSource');
@@ -73,139 +74,103 @@
         let localStream;
         let activeEvent = null;
 
-        // --- Main Function ---
+        // The main entry point is now the button click
         setupButton.onclick = async () => {
-            await setupDevices();
+              await setupDevices();
+
+
+// Add event listeners for when the user changes a device
+videoSourceSelect.onchange = updateStream;
+audioSourceSelect.onchange = updateStream;
         };
 
         videoSourceSelect.onchange = updateStream;
         audioSourceSelect.onchange = updateStream;
 
         /**
-         * 1. Requests initial permission and populates device selectors.
-         */
-        async function setupDevices() {
-            log('Requesting camera access...');
-            try {
-                // Request generic permission to get the device list
-                const initialStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                log('Camera access granted.');
-                setupButton.parentElement.style.display = 'none'; // Hide button
+ * 1. Requests initial permission and populates device selectors.
+ */
+async function setupDevices() {
+    log('Requesting camera access...');
+    try {
+        // Request generic permission to get the device list
+        const initialStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        log('Camera access granted.');
+        setupButton.parentElement.style.display = 'none'; // Hide button
 
-                // Important: Stop the initial generic stream tracks immediately
-                initialStream.getTracks().forEach(track => track.stop());
+        // Important: Stop the initial generic stream tracks immediately
+        initialStream.getTracks().forEach(track => track.stop());
 
-                await populateDeviceSelectors();
-                deviceSelectorDiv.style.display = 'grid'; // Show selectors
+        await populateDeviceSelectors();
+        deviceSelectorDiv.style.display = 'grid'; // Show selectors
 
-                // Start the stream with the (potentially saved) selected devices
-                await updateStream();
+        // Start the stream with the (potentially saved) selected devices
+        await updateStream();
 
-                // Start the main scheduler loop
-                setInterval(checkForEvents, CONFIG.POLLING_INTERVAL_MS);
-                checkForEvents(); // Check immediately on start
-            } catch (error) {
-                log(`FATAL: Could not get camera access: ${error.message}`, 'error');
-                updateStatus('Error: Camera access denied.', 'recording');
-            }
+        // Start the main scheduler loop
+        setInterval(checkForEvents, CONFIG.POLLING_INTERVAL_MS);
+        checkForEvents(); // Check immediately on start
+    } catch (error) {
+        log(`FATAL: Could not get camera access: ${error.message}`, 'error');
+        updateStatus('Error: Camera access denied.', 'recording');
+    }
+}
+
+/**
+ * 2. Populates the video and audio select dropdowns.
+ */
+async function populateDeviceSelectors() {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    videoSourceSelect.innerHTML = '';
+    audioSourceSelect.innerHTML = '';
+
+    devices.forEach(device => {
+        const option = document.createElement('option');
+        option.value = device.deviceId;
+        if (device.kind === 'videoinput') {
+            option.text = device.label || `Camera ${videoSourceSelect.length + 1}`;
+            videoSourceSelect.appendChild(option);
+        } else if (device.kind === 'audioinput') {
+            option.text = device.label || `Microphone ${audioSourceSelect.length + 1}`;
+            audioSourceSelect.appendChild(option);
         }
+    });
 
-        /**
-         * 2. Populates the video and audio select dropdowns.
-         */
-        async function populateDeviceSelectors() {
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            videoSourceSelect.innerHTML = '';
-            audioSourceSelect.innerHTML = '';
+    // Load saved preferences from localStorage
+    videoSourceSelect.value = localStorage.getItem('selectedVideoDevice') || '';
+    audioSourceSelect.value = localStorage.getItem('selectedAudioDevice') || '';
+}
 
-            devices.forEach(device => {
-                const option = document.createElement('option');
-                option.value = device.deviceId;
-                if (device.kind === 'videoinput') {
-                    option.text = device.label || `Camera ${videoSourceSelect.length + 1}`;
-                    videoSourceSelect.appendChild(option);
-                } else if (device.kind === 'audioinput') {
-                    option.text = device.label || `Microphone ${audioSourceSelect.length + 1}`;
-                    audioSourceSelect.appendChild(option);
-                }
-            });
+/**
+ * 3. Stops the current stream and starts a new one with the selected devices.
+ */
+async function updateStream() {
+    if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+    }
 
-            // Load saved preferences
-            videoSourceSelect.value = localStorage.getItem('selectedVideoDevice') || '';
-            audioSourceSelect.value = localStorage.getItem('selectedAudioDevice') || '';
-        }
+    const videoDeviceId = videoSourceSelect.value;
+    const audioDeviceId = audioSourceSelect.value;
 
-        /**
-         * 3. Stops the current stream and starts a new one with the selected devices.
-         */
-        async function updateStream() {
-            if (localStream) {
-                localStream.getTracks().forEach(track => track.stop());
-            }
+    // Save preferences for next time
+    localStorage.setItem('selectedVideoDevice', videoDeviceId);
+    localStorage.setItem('selectedAudioDevice', audioDeviceId);
 
-            const videoDeviceId = videoSourceSelect.value;
-            const audioDeviceId = audioSourceSelect.value;
+    log(`Attempting to start stream with selected devices.`);
 
-            // Save preferences
-            localStorage.setItem('selectedVideoDevice', videoDeviceId);
-            localStorage.setItem('selectedAudioDevice', audioDeviceId);
+    const constraints = {
+        video: { deviceId: videoDeviceId ? { exact: videoDeviceId } : undefined },
+        audio: { deviceId: audioDeviceId ? { exact: audioDeviceId } : undefined },
+    };
 
-            log(`Attempting to start stream with Video: ${videoDeviceId} and Audio: ${audioDeviceId}`);
-
-            const constraints = {
-                video: { deviceId: videoDeviceId ? { exact: videoDeviceId } : undefined },
-                audio: { deviceId: audioDeviceId ? { exact: audioDeviceId } : undefined },
-            };
-
-            try {
-                localStream = await navigator.mediaDevices.getUserMedia(constraints);
-                videoElement.srcObject = localStream;
-                log('Stream updated successfully.');
-            } catch (error) {
-                log(`Error updating stream: ${error.message}`, 'error');
-            }
-        }
-
-        // --- Recording & Uploading Logic (largely unchanged) ---
-
-        async function checkForEvents() {
-            // ... (This function remains the same as before)
-        }
-
-        function startRecording() {
-            // ... (This function remains the same as before)
-        }
-
-        async function uploadSegment(videoBlob) {
-            // ... (This function remains the same as before)
-        }
-
-        // --- Utility Functions (unchanged) ---
-        function log(message, level = 'info') { /* ... */ }
-        function updateStatus(text, state = 'idle') { /* ... */ }
-
-        // --- Paste the original log and updateStatus functions here ---
-        function log(message, level = 'info') {
-            const now = new Date().toLocaleTimeString();
-            const p = document.createElement('p');
-            p.innerHTML = `<strong>[${now}]</strong> ${message}`;
-            if (level === 'error') p.style.color = '#d93025';
-            logElement.appendChild(p);
-            logElement.scrollTop = logElement.scrollHeight;
-            console.log(message);
-        }
-
-        function updateStatus(text, state = 'idle') {
-            statusTextElement.textContent = text;
-            statusBoxElement.className = 'status-box';
-            if (state === 'recording') {
-                statusBoxElement.classList.add('status-recording');
-            } else if (state === 'uploading') {
-                statusBoxElement.classList.add('status-uploading');
-            } else {
-                statusBoxElement.classList.add('status-idle');
-            }
-        }
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia(constraints);
+        videoElement.srcObject = localStream;
+        log('Stream updated successfully.');
+    } catch (error) {
+        log(`Error updating stream: ${error.message}`, 'error');
+    }
+}
     </script>
 </body>
 </html>
