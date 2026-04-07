@@ -274,43 +274,21 @@
                 { type: 'THUMB', label: 'Marketing Thumbnails', ext: '.PNG', icon: 'solar:gallery-bold', color: 'text-primary' },
             ];
 
-            const sessionMap = {};
-            for (const a of muxAssets) {
-                if (!a.passthrough) continue;
-                const pt = a.passthrough.toUpperCase().trim();
-                const artistName = pt.split(' // ')[0];
-                if (!sessionMap[artistName]) {
-                    sessionMap[artistName] = { created_at: a.created_at };
-                }
-            }
-
-            if (Object.keys(sessionMap).length === 0) {
-                container.innerHTML = '<div class="p-8 text-center"><p class="text-[10px] font-mono text-zinc-600 uppercase tracking-widest">NO SESSIONS — UPLOAD FROM ASSETS TO BEGIN</p></div>';
-                return;
-            }
-
-            const sessions = Object.entries(sessionMap).map(([name, info], idx) => {
-                const date = new Date(info.created_at * 1000);
-                const dateStr = date.toISOString().slice(0, 10); // YYYY-MM-DD
-                return {
-                    id: 'session_' + String(idx + 1).padStart(2, '0'),
-                    name: name,
-                    date: dateStr,
-                    venue: 'KOKO LONDON',
-                    assets: [...assetTypes],
-                };
-            });
-            // Expose sessions globally for upload lookup
-            window._dashboardSessions = sessions;
-
             container.innerHTML = sessions.map(session => {
-                // Check if this session has a matching Mux MASTER asset (by artist name)
-                const masterAsset = findLinked(session.name.toUpperCase().trim());
-                const hasAnyLinked = session.assets.some(a => {
-                    if (a.type === 'MASTER') return !!masterAsset;
-                    return !!findLinked(session.name.toUpperCase().trim() + ' // ' + a.type);
-                });
+                // Build lookup for all assets for this session
+                const sessionKey = session.name.toUpperCase().trim();
+                // For thumbnails (THUMB): find all assets with passthrough starting with sessionKey + ' // THUMB'
+                const thumbAssets = allMuxKeys
+                    .filter(k => k.startsWith(sessionKey + ' // THUMB'))
+                    .map(k => muxLookup[k])
+                    .slice(0, 20);
+                // For verticals (SOCIAL): passthrough starts with sessionKey + ' // SOCIAL'
+                const socialAssets = allMuxKeys
+                    .filter(k => k.startsWith(sessionKey + ' // SOCIAL'))
+                    .map(k => muxLookup[k])
+                    .slice(0, 20);
 
+                // ...existing code for session header...
                 return `
                 <div class="session-group">
                     <div onclick="toggleAssetPreview('${session.id}')" class="p-5 flex items-center justify-between hover:bg-white/[0.02] transition-colors cursor-pointer group">
@@ -324,7 +302,6 @@
                             </div>
                         </div>
                         <div class="flex items-center gap-2">
-                            ${hasAnyLinked ? '<button onclick="event.stopPropagation(); bulkDownload(\'' + session.name.replace(/'/g, "\\'") + '\', \'' + session.date + '\')" id="zip-btn-' + session.id + '" class="flex items-center gap-1.5 px-3 py-1 rounded-full border border-primary/30 hover:bg-primary/10 transition-colors" title="Download All"><span class="text-[8px] font-mono text-primary uppercase tracking-widest">DOWNLOAD</span></button>' : ''}
                             <iconify-icon id="arrow-${session.id}" icon="solar:alt-arrow-down-linear" class="text-zinc-700 transition-transform duration-300"></iconify-icon>
                         </div>
                     </div>
@@ -333,7 +310,59 @@
                         ${session.assets.map((asset, ai) => {
                             const uid = session.id + '_' + asset.type;
                             const accept = asset.type === 'MASTER' ? 'video/*' : asset.type === 'AUDIO' ? 'audio/*' : asset.type === 'SOCIAL' ? 'video/*' : 'image/*';
-                            // Check Mux for this specific asset: MASTER by name, others by NAME // TYPE
+                            // For THUMB and SOCIAL, show multiple download icons if files exist
+                            if (asset.type === 'THUMB') {
+                                return `
+                                <div class="p-4 pl-12 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-${uid}">
+                                    <div class="flex items-center gap-4 flex-1 min-w-0">
+                                        <div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-primary/50 shrink-0">
+                                            <iconify-icon icon="${asset.icon}" class="text-primary text-sm"></iconify-icon>
+                                        </div>
+                                        <div class="min-w-0">
+                                            <p class="text-[10px] font-bold text-zinc-300 uppercase" id="label-${uid}">${asset.label}</p>
+                                            <p class="text-[8px] font-mono text-primary uppercase" id="status-${uid}">${thumbAssets.length ? 'IN VAULT — UPLOADED' : asset.ext + ' FORMAT — TAP TO UPLOAD'}</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2 shrink-0">
+                                        ${thumbAssets.map((a, i) => {
+                                            const pid = a?.playback_ids?.[0]?.id;
+                                            const srFiles = a?.static_renditions?.files || [];
+                                            const srReady = srFiles.find(f => f.status === 'ready');
+                                            if (!pid || !srReady) return '';
+                                            return `<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download Thumbnail #${i+1}" onclick="window.open('https://image.mux.com/${pid}/thumbnail.png?width=1920', '_blank')">
+                                                <iconify-icon icon="solar:download-bold" class="text-primary"></iconify-icon>
+                                            </button>`;
+                                        }).join('')}
+                                    </div>
+                                </div>`;
+                            }
+                            if (asset.type === 'SOCIAL') {
+                                return `
+                                <div class="p-4 pl-12 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-${uid}">
+                                    <div class="flex items-center gap-4 flex-1 min-w-0">
+                                        <div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-primary/50 shrink-0">
+                                            <iconify-icon icon="${asset.icon}" class="text-primary text-sm"></iconify-icon>
+                                        </div>
+                                        <div class="min-w-0">
+                                            <p class="text-[10px] font-bold text-zinc-300 uppercase" id="label-${uid}">${asset.label}</p>
+                                            <p class="text-[8px] font-mono text-primary uppercase" id="status-${uid}">${socialAssets.length ? 'IN VAULT — UPLOADED' : asset.ext + ' FORMAT — TAP TO UPLOAD'}</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2 shrink-0">
+                                        ${socialAssets.map((a, i) => {
+                                            const pid = a?.playback_ids?.[0]?.id;
+                                            const srFiles = a?.static_renditions?.files || [];
+                                            const srReady = srFiles.find(f => f.status === 'ready');
+                                            if (!pid || !srReady) return '';
+                                            return `<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download Vertical #${i+1}" onclick="window.open('https://stream.mux.com/' + pid + '/' + srReady.name, '_blank')">
+                                                <iconify-icon icon="solar:download-bold" class="text-primary"></iconify-icon>
+                                            </button>`;
+                                        }).join('')}
+                                    </div>
+                                </div>`;
+                            }
+                            // ...existing code for MASTER and AUDIO...
+                            // Fallback to original logic for MASTER/AUDIO
                             const lookupKey = asset.type === 'MASTER' ? session.name.toUpperCase().trim() : session.name.toUpperCase().trim() + ' // ' + asset.type;
                             const linkedMuxAsset = findLinked(lookupKey);
                             const isLinked = !!linkedMuxAsset;
@@ -345,7 +374,6 @@
                             const dlFile = srReady ? srReady.name : (srStatus === 'ready' ? (isAudioAsset ? 'audio.m4a' : 'highest.mp4') : null);
                             const dlExt = srReady ? srReady.ext : (isAudioAsset ? 'm4a' : 'mp4');
                             const linkedLabel = isLinked && !pid ? 'IN VAULT — PROCESSING' : (srReady || srStatus === 'ready') ? 'IN VAULT — UPLOADED' : srFiles.some(f => f.status === 'preparing') || srStatus === 'preparing' ? 'IN VAULT — PREPARING' : 'IN VAULT — UPLOADED';
-                            const isThumb = asset.type === 'THUMB';
                             return `
                             <div class="p-4 pl-12 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-${uid}" ${isLinked ? 'style="border-left: 2px solid #39FF14;"' : ''}>
                                 ${isLinked ? `
@@ -364,13 +392,32 @@
                                     </button>
                                     <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Play" onclick="window.open('/player.html?v=${pid}&f=${dlFile}&title='+encodeURIComponent(asset.label), '_blank')">
                                         <iconify-icon icon="solar:play-bold" class="text-primary"></iconify-icon>
-                                    </button>` : pid && isThumb ? `<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download" onclick="window.open('https://image.mux.com/${pid}/thumbnail.png?width=1920', '_blank')">
-                                        <iconify-icon icon="solar:download-bold" class="text-primary"></iconify-icon>
-                                    </button>
-                                    <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Preview" onclick="window.open('/player.html?v=${pid}&type=thumb&title='+encodeURIComponent(asset.label), '_blank')">
-                                        <iconify-icon icon="solar:eye-bold" class="text-primary"></iconify-icon>
+                                    </button>` : pid && asset.type === 'MASTER' ? `<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Preview Thumbnail" onclick="window.open('https://image.mux.com/${pid}/thumbnail.png?width=1920&time=10', '_blank')">
+                                        <iconify-icon icon="solar:gallery-bold" class="text-primary"></iconify-icon>
                                     </button>` : pid ? `<span class="text-[8px] font-mono text-yellow-500 uppercase">PREPARING</span>` : `<span class="text-[8px] font-mono text-yellow-500 uppercase">PROCESSING</span>`}
-                                    <!-- Add thumbnail preview for MASTER asset using Mux Image API -->
+                                </div>
+                                ` : `
+                                <label class="flex items-center gap-4 cursor-pointer flex-1 min-w-0">
+                                    <div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-border/50 shrink-0">
+                                        <iconify-icon icon="${asset.icon}" class="${asset.color} text-sm"></iconify-icon>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="text-[10px] font-bold text-zinc-300 uppercase" id="label-${uid}">${asset.label}</p>
+                                        <p class="text-[8px] font-mono text-zinc-600 uppercase" id="status-${uid}">${asset.ext} FORMAT — TAP TO UPLOAD</p>
+                                    </div>
+                                    <input type="file" accept="${accept}" class="hidden" id="file-${uid}" ${asset.type === 'SOCIAL' ? 'multiple' : ''} onchange="handleAssetUpload('${uid}', this, '${session.name}')">
+                                </label>
+                                <div class="flex items-center gap-2 shrink-0">
+                                    <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors opacity-10" id="dl-${uid}" disabled title="No file yet">
+                                        <iconify-icon icon="solar:download-bold" class="text-zinc-700"></iconify-icon>
+                                    </button>
+                                </div>
+                                `}
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>`;
+            }).join('');
                                     ${pid && asset.type === 'MASTER' ? `
                                       <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Preview Thumbnail"
                                         onclick="window.open('https://image.mux.com/${pid}/thumbnail.png?width=1920&time=10', '_blank')">
