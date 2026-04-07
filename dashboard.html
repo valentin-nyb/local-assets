@@ -343,6 +343,33 @@
                             const dlExt = srReady ? srReady.ext : (isAudioAsset ? 'm4a' : 'mp4');
                             const linkedLabel = isLinked && !pid ? 'IN VAULT — PROCESSING' : (srReady || srStatus === 'ready') ? 'IN VAULT — UPLOADED' : srFiles.some(f => f.status === 'preparing') || srStatus === 'preparing' ? 'IN VAULT — PREPARING' : 'IN VAULT — UPLOADED';
                             const isThumb = asset.type === 'THUMB';
+                            let thumbHtml = '';
+                            // If this is the THUMB asset, show the 3 most-watched thumbnails for the MASTER asset
+                            if (asset.type === 'THUMB' && isLinked) {
+                              // Find MASTER asset's playback ID
+                              const masterAsset = findLinked(session.name.toUpperCase().trim());
+                              const masterPid = masterAsset?.playback_ids?.[0]?.id;
+                              if (masterPid) {
+                                thumbHtml = `<div id="marketing-thumbnails-${session.id}" class="flex gap-2 mt-2"><span class='text-xs text-zinc-400'>Loading thumbnails...</span></div>
+                                <script>
+                                (async function() {
+                                  try {
+                                    const res = await fetch('/api/most-watched-thumbnails?playback_id=${masterPid}');
+                                    const data = await res.json();
+                                    const container = document.getElementById('marketing-thumbnails-${session.id}');
+                                    if (data.thumbnails && Array.isArray(data.thumbnails) && data.thumbnails.length) {
+                                      container.innerHTML = data.thumbnails.map(url => `<img src='${url}' class='w-24 h-16 object-cover rounded border border-primary/30 shadow' style='background:#111;' loading='lazy'/>`).join('');
+                                    } else {
+                                      container.innerHTML = '<span class="text-xs text-zinc-500">No thumbnails found</span>';
+                                    }
+                                  } catch (e) {
+                                    const container = document.getElementById('marketing-thumbnails-${session.id}');
+                                    if (container) container.innerHTML = '<span class="text-xs text-red-500">Error loading thumbnails</span>';
+                                  }
+                                })();
+                                </script>`;
+                              }
+                            }
                             return `
                             <div class="p-4 pl-12 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-${uid}" ${isLinked ? 'style="border-left: 2px solid #39FF14;"' : ''}>
                                 ${isLinked ? `
@@ -353,6 +380,7 @@
                                     <div class="min-w-0">
                                         <p class="text-[10px] font-bold text-zinc-300 uppercase" id="label-${uid}">${asset.label}</p>
                                         <p class="text-[8px] font-mono text-primary uppercase" id="status-${uid}">${linkedLabel}</p>
+                                        ${thumbHtml}
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2 shrink-0">
@@ -367,13 +395,6 @@
                                     <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Preview" onclick="window.open('/player.html?v=${pid}&type=thumb&title='+encodeURIComponent(asset.label), '_blank')">
                                         <iconify-icon icon="solar:eye-bold" class="text-primary"></iconify-icon>
                                     </button>` : pid ? `<span class="text-[8px] font-mono text-yellow-500 uppercase">PREPARING</span>` : `<span class="text-[8px] font-mono text-yellow-500 uppercase">PROCESSING</span>`}
-                                    <!-- Add thumbnail preview for MASTER asset using Mux Image API -->
-                                    ${pid && asset.type === 'MASTER' ? `
-                                      <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Preview Thumbnail"
-                                        onclick="window.open('https://image.mux.com/${pid}/thumbnail.png?width=1920&time=10', '_blank')">
-                                        <iconify-icon icon="solar:gallery-bold" class="text-primary"></iconify-icon>
-                                      </button>
-                                    ` : ''}
                                 </div>
                                 ` : `
                                 <label class="flex items-center gap-4 cursor-pointer flex-1 min-w-0">
