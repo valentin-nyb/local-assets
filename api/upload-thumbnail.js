@@ -45,9 +45,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         inputs: [
           {
-            url: 'https://storage.googleapis.com/muxdemofiles/mux-video-intro.mp4',
-            start_time: 0,
-            end_time: 1
+            url: 'https://storage.googleapis.com/muxdemofiles/mux-video-intro.mp4'
           },
           {
             url: blob.url,
