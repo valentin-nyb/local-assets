@@ -38,7 +38,7 @@ export default async function handler(req, res) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Basic ${AUTH}` },
       body: JSON.stringify({
-        input: [
+        inputs: [
           {
             url: 'https://storage.googleapis.com/muxdemofiles/mux-video-intro.mp4',
             start_time: 0,
@@ -54,7 +54,7 @@ export default async function handler(req, res) {
             }
           }
         ],
-        playback_policy: ['public'],
+        playback_policies: ['public'],
         passthrough,
         name: passthrough + ' \u2014 ' + new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase(),
         static_renditions: [{ resolution: 'highest' }]
