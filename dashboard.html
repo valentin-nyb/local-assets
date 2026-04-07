@@ -291,7 +291,7 @@
 
             const sessions = Object.entries(sessionMap).map(([name, info], idx) => {
                 const date = new Date(info.created_at * 1000);
-                const dateStr = date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase();
+                const dateStr = date.toISOString().slice(0, 10); // YYYY-MM-DD
                 return {
                     id: 'session_' + String(idx + 1).padStart(2, '0'),
                     name: name,
@@ -300,6 +300,8 @@
                     assets: [...assetTypes],
                 };
             });
+            // Expose sessions globally for upload lookup
+            window._dashboardSessions = sessions;
 
             container.innerHTML = sessions.map(session => {
                 // Check if this session has a matching Mux MASTER asset (by artist name)
@@ -630,6 +632,9 @@
             const total = files.length;
             let completed = 0;
 
+            // Find the session date for this upload (from the sessions array)
+            const sessionObj = (window._dashboardSessions || []).find(s => s.id === uid.split('_')[0]);
+            const sessionDate = sessionObj ? sessionObj.date : (new Date().toISOString().slice(0, 10));
             function uploadFile(file, idx) {
                 return new Promise(async (resolve, reject) => {
                     try {
@@ -637,7 +642,7 @@
                         const response = await fetch('/api/get-upload-url', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ artistName: tag })
+                            body: JSON.stringify({ artistName: tag, date: sessionDate })
                         });
                         const data = await response.json();
 
