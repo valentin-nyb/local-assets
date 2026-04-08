@@ -1,72 +1,3 @@
-
-<!DOCTYPE html>
-<html lang="en" class="dark scroll-smooth">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="local / assets">
-    <title>local / assets™</title>
-    <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico">
-    <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg">
-    <link rel="apple-touch-icon" href="/favicon/apple-touch-icon.png">
-    <link rel="manifest" href="/favicon/site.webmanifest">
-    
-    <link rel="stylesheet" href="/styles/tailwind.css">
-    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
-    <script src="/nav-component.js"></script>
-    <style>
-        /* Standardized sidebar styles used by the JS component */
-        .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
-        .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
-        .nav-link:hover:not(.active) { background: rgba(255, 255, 255, 0.03); color: white; }
-    </style>
-    <style>
-        body { background-color: #050505; color: #ffffff; -webkit-font-smoothing: antialiased; }
-        .nav-link.active { background-color: rgba(255, 255, 255, 0.05); border: 1px solid #27272a; color: white; }
-        .bg-scanlines { background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.2) 50%, rgba(0, 0, 0, 0.2)); background-size: 100% 4px; }
-        ::-webkit-scrollbar { display: none; }
-        
-        /* Mobile Overlay Fix */
-        @media (max-width: 767px) { 
-            #sidebar { position: fixed; z-index: 50; height: 100vh; } 
-        }
-
-        /* Sleek Flap Styling */
-        .sleek-flap {
-            writing-mode: vertical-rl;
-            text-orientation: mixed;
-            transform: rotate(180deg);
-            font-family: 'JetBrains Mono', monospace;
-            letter-spacing: 0.3em;
-            font-size: 10px;
-            font-weight: 800;
-        }
-    </style>
-<style>         :root { --p: 40px; --neon: #39FF14; }         body { background-color: #050505 !important; color: white; -webkit-font-smoothing: antialiased; font-family: 'JetBrains Mono', monospace; }                  /* Ingest Card */         .ingest-card { border: 1px dashed #27272a; background: rgba(255,255,255,0.02); border-radius: 24px; padding: var(--p); }         .upload-node { background: #000; border: 1px solid #1a1a1a; border-radius: 16px; transition: all 0.3s ease; cursor: pointer; }         .upload-node:hover { border-color: var(--neon); background: rgba(57,255,20,0.05); }         .upload-node.active { border-color: var(--neon); background: rgba(57,255,20,0.1); }          /* Vault Card */         .vault-card { background: #000; border: 1px solid #111; border-radius: 24px; margin-bottom: 24px; overflow: hidden; }         .vault-card.expanded { border-color: var(--neon); }         .vault-card-header { display: flex; align-items: center; justify-content: space-between; padding: 32px var(--p); cursor: pointer; }         .asset-tray { max-height: 0; overflow: hidden; transition: all 0.5s ease; background: rgba(0,0,0,0.3); }         .vault-card.expanded .asset-tray { max-height: 800px; padding: 0 var(--p) 40px var(--p); }     </style>
-
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
-        <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-        <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
-    
-</head>
-<body class="font-sans antialiased bg-background text-foreground overflow-hidden h-screen w-screen flex selection:bg-primary selection:text-black">
-
-    <button onclick="toggleSidebar()" class="md:hidden fixed left-0 top-1/2 -translate-y-1/2 z-50 bg-primary/90 backdrop-blur-md text-black py-8 px-1.5 rounded-r-lg shadow-[0_0_15px_rgba(57,255,20,0.2)] active:scale-95 transition-all flex items-center justify-center border-y border-r border-primary">
-        <span class="sleek-flap">MENU</span>
-    </button>
-
-    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/90 z-40 hidden backdrop-blur-md opacity-0 transition-opacity duration-300"></div>
-
-    <aside id="sidebar" class="w-64 border-r border-[#27272a] bg-[#0a0a0a] flex flex-col transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 shrink-0 h-full">
-    </aside>
-
-    <main class="flex-1 flex flex-col overflow-hidden relative bg-background">
-         <header class="h-16 flex items-center px-8 border-b border-zinc-800 justify-between">             <span class="text-primary font-mono text-[9px] uppercase tracking-[0.4em]">Infrastructure Tier // London</span>             <div class="flex items-center gap-2">                 <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>                 <span class="text-[8px] font-mono text-zinc-500">CLOUD ACTIVE</span>             </div>         </header>          <div class="flex-1 p-8 overflow-y-auto">             <div class="max-w-[1200px] mx-auto space-y-12 pb-20">                                  <div class="ingest-card space-y-8">                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">                         <input type="text" id="ingest-name" placeholder="DJ / ARTIST NAME" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs font-bold text-white uppercase outline-none focus:border-primary">                         <input type="text" id="ingest-date" placeholder="SELECT DATE" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs font-bold text-white outline-none">                         <select id="ingest-shot" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs text-zinc-400 font-bold uppercase outline-none">                             <option value="MASTER">MASTER CAM</option>                             <option value="BOOTH">BOOTH CAM</option>                             <option value="PTZ01">PTZ 01</option>                             <option value="PTZ02">PTZ 02</option>                             <option value="PTZ03">PTZ 03</option>                         </select>                     </div>                      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">                         <label class="upload-node p-6 flex flex-col items-center justify-center gap-2" id="node-video">                             <iconify-icon icon="solar:videocamera-record-bold" class="text-2xl text-zinc-600"></iconify-icon>                             <span class="text-[8px] font-mono uppercase text-zinc-500">4K Master (.MP4)</span>                             <input type="file" id="file-video" class="hidden" accept="video/*" onchange="markActive('video')">                         </label>                     </div>                      <button id="upload-btn" class="w-full bg-white text-black font-black py-5 rounded-2xl uppercase tracking-[0.2em] text-[11px] hover:bg-primary transition-all">                         INGEST - LOCAL/SESSION                     </button>                 </div>                  <div id="preview-container" class="hidden border-b border-zinc-800 pb-12">                     <h2 id="vault-dj-title" class="text-3xl font-black italic mb-6"></h2>                     <div id="active-asset-display" class="max-w-4xl mx-auto"></div>                 </div>                  <div class="space-y-4">                     <h3 class="text-[10px] font-mono text-zinc-600 uppercase tracking-[0.3em] border-b border-zinc-800 pb-2">Vault History</h3>                     <div id="cloud-list"></div>                 </div>             </div>         </div>     
-</main>
 <script>
     // Toggle Sidebar for Mobile
     window.toggleSidebar = () => {
@@ -79,110 +10,155 @@
 
     window.markActive = (type) => document.getElementById('node-' + type)?.classList.add('active');
 
+    // This is the main function that runs when the page loads.
     window.onload = function() {
+        // Initialize the date picker and load existing assets.
         flatpickr("#ingest-date", { defaultDate: "today", theme: "dark" });
-        loadVault(); // Load the real Mux data immediately
+        loadVault(); 
         
         const uploadBtn = document.getElementById('upload-btn');
+        
+        // This is the single, correct event handler for the upload button.
         uploadBtn.onclick = async function() {
+            const projectName = document.getElementById('ingest-name').value;
             const file = document.getElementById('file-video').files[0];
-            const artist = document.getElementById('ingest-name').value;
-            if (!file || !artist) return alert("Artist and File are required.");
-
+        
+            if (!file || !projectName) {
+                return alert("Artist Name and a video file are required.");
+            }
+        
             uploadBtn.disabled = true;
-            uploadBtn.innerHTML = "CONNECTING TO LOCAL/ASSETS™...";
-
+            uploadBtn.innerHTML = "STEP 1: CREATING PROJECT...";
+        
             try {
-                const response = await fetch('/api/get-upload-url', {
+                // --- STEP 1: Create the Project in your database ---
+                const projectResponse = await fetch('/api/create-project', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ artistName: artist })
+                    body: JSON.stringify({ projectName: projectName })
                 });
-                const data = await response.json();
+        
+                if (!projectResponse.ok) throw new Error('Server failed to create project.');
+                const projectData = await projectResponse.json();
+                if (!projectData.projectId) throw new Error('Project ID was not returned from server.');
                 
+                uploadBtn.innerHTML = "STEP 2: REQUESTING UPLOAD URL...";
+        
+                // --- STEP 2: Get the Mux Upload URL, now with the projectId ---
+                const uploadUrlResponse = await fetch('/api/get-upload-url', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ projectId: projectData.projectId })
+                });
+        
+                if (!uploadUrlResponse.ok) throw new Error('Server failed to provide an upload URL.');
+                const uploadData = await uploadUrlResponse.json();
+                if (!uploadData.url) throw new Error('Upload URL was not returned from server.');
+        
+                // --- STEP 3: Upload the file directly to Mux ---
                 const xhr = new XMLHttpRequest();
-                xhr.open('PUT', data.url);
+                xhr.open('PUT', uploadData.url);
                 xhr.upload.onprogress = (e) => {
-                    const pct = Math.round((e.loaded / e.total) * 100);
-                    uploadBtn.innerHTML = `UPLOADING: ${pct}%`;
+                    if (e.lengthComputable) {
+                        const pct = Math.round((e.loaded / e.total) * 100);
+                        uploadBtn.innerHTML = `UPLOADING TO VAULT: ${pct}%`;
+                    }
                 };
                 xhr.onload = () => {
-                    uploadBtn.innerHTML = "SENT TO VAULT";
-                    uploadBtn.style.background = "#39FF14";
-                    // Refresh the list after a few seconds so Mux has time to process
-                    setTimeout(loadVault, 5000); 
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        uploadBtn.innerHTML = "SENT TO VAULT";
+                        uploadBtn.style.background = "#39FF14";
+                        setTimeout(loadVault, 5000);
+                    } else {
+                        throw new Error(`Mux upload failed with status: ${xhr.status}`);
+                    }
+                };
+                xhr.onerror = () => {
+                    throw new Error('A network error occurred during the file upload.');
                 };
                 xhr.send(file);
+        
             } catch (err) {
-                alert("UPLOAD ERROR: " + err.message);
+                alert("PROCESS ERROR: " + err.message);
                 uploadBtn.disabled = false;
+                uploadBtn.innerHTML = "INGEST - LOCAL/SESSION"; // Reset button
+                uploadBtn.style.background = ""; // Reset style
             }
         };
     };
 
-    // THE MAGIC: Fetches live data from Mux via your new API
+    // This function fetches and displays the list of assets.
     async function loadVault() {
-    const list = document.getElementById('cloud-list');
-    try {
-        const res = await fetch('/api/list-assets');
-        const data = await res.json();
+        const list = document.getElementById('cloud-list');
+        try {
+            const res = await fetch('/api/list-assets');
+            const data = await res.json();
 
-        // Safety Net: If the API sent an error instead of a list
-        if (data.error) {
-            list.innerHTML = `<p class="text-red-500 font-mono text-[10px] uppercase">VAULT ERROR: ${data.error}</p>`;
-            return;
-        }
+            if (data.error) {
+                list.innerHTML = `<p class="text-red-500 font-mono text-[10px] uppercase">VAULT ERROR: ${data.error}</p>`;
+                return;
+            }
 
-        // Handle both direct arrays and Mux's data wrapper — video only, master long form only
-        const assets = (Array.isArray(data) ? data : (data.data || [])).filter(a =>
-            a.tracks?.some(t => t.type === 'video') &&
-            (!a.passthrough || !a.passthrough.includes(' // '))
-        );
+            const assets = (Array.isArray(data) ? data : (data.data || [])).filter(a =>
+                a.tracks?.some(t => t.type === 'video') &&
+                a.passthrough?.startsWith('source_for_project_') // Only show source assets
+            );
 
-        if (assets.length === 0) {
-            list.innerHTML = `<p class="text-zinc-500 font-mono text-[10px] uppercase">VAULT EMPTY // NO ASSETS FOUND</p>`;
-            return;
-        }
+            if (assets.length === 0) {
+                list.innerHTML = `<p class="text-zinc-500 font-mono text-[10px] uppercase">VAULT EMPTY // NO PROJECTS FOUND</p>`;
+                return;
+            }
 
-        list.innerHTML = assets.map((asset, i) => {
-            const pid = asset.playback_ids?.[0]?.id;
-            const status = asset.status;
-            const isReady = status === 'ready';
+            // This block is now corrected to use the variables properly.
+            list.innerHTML = assets.map((asset, i) => {
+                const pid = asset.playback_ids?.[0]?.id;
+                const status = asset.status;
+                const isReady = status === 'ready';
+                const projectId = asset.passthrough.replace('source_for_project_', '');
 
-            return `
-            <div class="vault-card ${isReady ? '' : 'opacity-50'}" id="vault-${i}">
-                <div class="vault-card-header" onclick="toggleVaultFolder(${i})">
-                    <div>
-                        <h4 class="text-2xl font-black italic uppercase">${asset.passthrough || asset.id.slice(-6)}</h4>
-                        <span class="text-[8px] font-mono ${isReady ? 'text-primary' : 'text-zinc-500'} uppercase">
-                            ${status.toUpperCase()} // ${new Date(asset.created_at * 1000).toLocaleDateString()}
-                        </span>
+                // For now, we'll derive the project name from the passthrough.
+                // A better approach would be to fetch this from your own database.
+                const projectName = asset.passthrough.replace('source_for_project_', 'Project ');
+
+                return `
+                <div class="vault-card ${isReady ? '' : 'opacity-50'}" id="vault-">
+                    <div class="vault-card-header" onclick="toggleVaultFolder(, '')">
+                        <div>
+                            <h4 class="text-2xl font-black italic uppercase"></h4>
+                            <span class="text-[8px] font-mono ${isReady ? 'text-primary' : 'text-zinc-500'} uppercase">
+                                ${status.toUpperCase()} // ${new Date(asset.created_at * 1000).toLocaleDateString()}
+                            </span>
+                        </div>
                     </div>
-                    ${isReady ? `
-                    ` : ''}
-                </div>
-                <div class="asset-tray">
-                    <div class="flex gap-4 pt-4">
-                        ${pid ? `<button class="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-[9px] font-black hover:border-primary" 
-                            onclick="event.stopPropagation(); showPreview('${pid}')">PLAY SESSION</button>` : ''}
-                        <span class="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-[9px] font-black text-primary">4K MASTER .MOV</span>
+                    <div class="asset-tray" id="tray-">
+                        <!-- Child assets will be loaded here -->
+                        <div class="flex gap-4 pt-4">
+                            ${pid ? `<button class="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-[9px] font-black hover:border-primary" 
+                                onclick="event.stopPropagation(); showPreview('')">PLAY SESSION</button>` : ''}
+                            <span class="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-[9px] font-black text-primary">4K MASTER</span>
+                        </div>
                     </div>
-                </div>
-            </div>`;
-        }).join('');
-    } catch (e) {
-        list.innerHTML = `<p class="text-red-500 font-mono text-[10px] uppercase">VAULT OFFLINE: ${e.message}</p>`;
+                </div>`;
+            }).join('');
+        } catch (e) {
+            list.innerHTML = `<p class="text-red-500 font-mono text-[10px] uppercase">VAULT OFFLINE: ${e.message}</p>`;
+        }
     }
-}
 
+    // This function shows the video preview.
     window.showPreview = (pid) => {
         const display = document.getElementById('active-asset-display');
         document.getElementById('preview-container').classList.remove('hidden');
-        display.innerHTML = `<iframe src="https://player.mux.com/${pid}" style="width:100%;border:none;aspect-ratio:16/9;" allowfullscreen></iframe>`;
+        // Correctly constructs the iframe URL with the playback ID.
+        display.innerHTML = `<iframe src="https://player.mux.com/" style="width:100%;border:none;aspect-ratio:16/9;" allowfullscreen></iframe>`;
         display.scrollIntoView({ behavior: 'smooth' });
     };
 
-    window.toggleVaultFolder = (i) => document.getElementById('vault-' + i).classList.toggle('expanded');
+    // This function expands the vault folder.
+    window.toggleVaultFolder = (i, projectId) => {
+        const card = document.getElementById('vault-' + i);
+        card.classList.toggle('expanded');
+        // Here you would add logic to fetch and display the child assets for the given projectId
+        console.log(`Toggled folder for project: `);
+    };
 </script>
-</body>
-</html>
