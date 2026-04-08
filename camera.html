@@ -225,11 +225,20 @@
     updateStatus('Uploading segment...', 'uploading');
     try {
         // 1. Get a secure upload URL from our backend
-        const response = await fetch(CONFIG.BACKEND_API_URL, { method: 'POST' }); // <-- This line will change
+        const response = await fetch(CONFIG.BACKEND_API_URL, {
+            method: 'POST',
+            // Add headers to specify we are sending JSON data
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            // Add the body with the event ID for the backend to use
+            body: JSON.stringify({ eventId: activeEvent.id })
+        });
+
         const { upload_url } = await response.json();
         if (!upload_url) throw new Error('Backend did not return an upload URL.');
 
-        // 2. Upload the Blob directly to Mux
+        // 2. Upload the Blob directly to Mux (this part is unchanged)
         await fetch(upload_url, {
             method: 'PUT',
             body: videoBlob,
