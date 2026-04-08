@@ -1,232 +1,151 @@
+
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark scroll-smooth">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Venue Camera Controller</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; color: #1c1e21; margin: 0; padding: 20px; }
-        h1 { font-size: 24px; }
-        #container { max-width: 800px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        video { width: 100%; border-radius: 8px; background-color: #000; margin-top: 15px; }
-        .status-box { margin-top: 15px; padding: 15px; border-radius: 6px; }
-        .status-idle { background-color: #e7f3ff; border: 1px solid #cce0ff; }
-        .status-recording { background-color: #ffebe6; border: 1px solid #ffc8b8; }
-        .status-uploading { background-color: #fff6d6; border: 1px solid #ffecb3; }
-        .status-log { margin-top: 15px; font-family: monospace; font-size: 12px; height: 150px; overflow-y: scroll; border: 1px solid #ddd; padding: 10px; background: #fafafa; }
-        .device-selector { display: none; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
-        .device-selector label { font-weight: bold; display: block; margin-bottom: 5px; }
-        .device-selector select { width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd; }
-        button { padding: 10px 15px; font-size: 16px; cursor: pointer; border: none; border-radius: 5px; background-color: #007bff; color: white; }
-        /* camera.html <style> block */
-        #audioMeter {
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            margin-top: 5px;
-            background-color: #f0f0f0;
-}
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="local / assets">
+    <title>local / assets™ - PTZ Command Center</title>
+    <link rel="icon" type="image/x-icon" href="favicon/favicon.ico">
+    <link rel="icon" type="image/svg+xml" href="favicon/favicon.svg">
+    <link rel="apple-touch-icon" href="favicon/apple-touch-icon.png">
+    <link rel="manifest" href="favicon/site.webmanifest">
 
+    <link rel="stylesheet" href="styles/tailwind.css">
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
+    <script src="nav-component.js"></script>
+    <style>
+        .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
+        .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
+        .nav-link:hover:not(.active) { background: rgba(255, 255, 255, 0.03); color: white; }
+        body { background-color: #050505; color: #ffffff; -webkit-font-smoothing: antialiased; }
+        .nav-link.active { background-color: rgba(255, 255, 255, 0.05); border: 1px solid #27272a; color: white; }
+        ::-webkit-scrollbar { display: none; }
+        @media (max-width: 767px) { #sidebar { position: fixed; z-index: 50; height: 100vh; } }
+        .sleek-flap { writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.3em; font-size: 10px; font-weight: 800; }
     </style>
 </head>
-<body>
+<body class="font-sans antialiased bg-background text-foreground overflow-hidden h-screen w-screen flex selection:bg-primary selection:text-black">
 
-    <div id="container">
-    <h1>Venue Camera Controller</h1>
-    <p>This page will automatically record and upload video based on a calendar schedule. Please leave this tab open.</p>
-    
-    <!-- ADD THIS: A button to start the setup process -->
-    <div id="initialSetup">
-        <button id="setupButton">Setup Camera & Microphone</button>
-    </div>
+    <button onclick="toggleSidebar()" class="md:hidden fixed left-0 top-1/2 -translate-y-1/2 z-50 bg-primary/90 backdrop-blur-md text-black py-8 px-1.5 rounded-r-lg shadow-[0_0_15px_rgba(57,255,20,0.2)] active:scale-95 transition-all flex items-center justify-center border-y border-r border-primary">
+        <span class="sleek-flap">MENU</span>
+    </button>
 
-    <!-- ADD THIS: A container for the device dropdowns, initially hidden -->
-    <div id="deviceSelector" class="device-selector">
-        <div>
-            <label for="videoSource">Camera Source</label>
-            <select id="videoSource"></select>
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/90 z-40 hidden backdrop-blur-md opacity-0 transition-opacity duration-300"></div>
+
+    <aside id="sidebar" class="w-64 border-r border-[#27272a] bg-[#0a0a0a] flex flex-col transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 shrink-0 h-full"></aside>
+
+    <main class="flex-1 flex flex-col overflow-hidden relative w-full bg-[#050505]">
+        
+        <header class="h-16 flex items-center px-4 md:px-8 border-b border-[#27272a] bg-[#050505] shrink-0 justify-between w-full z-40">
+            <div class="flex items-center gap-2 md:gap-3 min-w-0">
+                <span class="text-zinc-600 text-[10px] font-mono uppercase tracking-[0.3em] hidden md:inline">// LOCAL_ASSETS</span>
+                <iconify-icon icon="solar:alt-arrow-right-linear" class="text-zinc-700 hidden md:block"></iconify-icon>
+                <h1 class="text-[10px] md:text-[10px] font-mono uppercase tracking-[0.2em] md:tracking-[0.3em] text-[#39FF14] font-bold m-0 truncate">
+                    PTZ COMMAND CENTER
+                </h1>
+            </div>
+            <div class="flex items-center gap-4 shrink-0">
+                <div class="hidden md:flex items-center gap-2 bg-[#0a0a0a] border border-[#27272a] px-3 py-1.5 rounded-md shadow-[inset_0_0_10px_rgba(0,0,0,0.5)]">
+                    <span class="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-pulse"></span>
+                    <span class="text-[9px] font-mono text-[#39FF14] uppercase tracking-widest">System OK</span>
+                </div>
+                <div class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center font-bold text-xs cursor-pointer hover:scale-105 transition-transform">K</div>
+            </div>
+        </header>
+
+        <div class="flex-1 w-full overflow-y-auto no-scrollbar pb-32">
+            <div class="max-w-6xl mx-auto w-full p-4 md:p-10 flex flex-col space-y-4 md:space-y-8 mt-2 md:mt-0">
+                
+                <div class="w-full aspect-video bg-black rounded-xl md:rounded-3xl overflow-hidden border border-white/5 relative shadow-2xl shrink-0">
+                    <div class="absolute top-3 left-3 md:top-6 md:left-6 z-20 flex items-center gap-2 bg-black/40 backdrop-blur-md px-2 py-1 md:px-3 md:py-1.5 rounded border border-[#39FF14]/20">
+                        <span class="w-1.5 h-1.5 md:w-2 md:h-2 bg-[#39FF14] rounded-full animate-pulse"></span>
+                        <span class="text-[7px] md:text-[10px] font-mono text-[#39FF14] uppercase tracking-widest">[ CAM 01 // MAIN ]</span>
+                    </div>
+                    
+                    <div class="absolute top-3 right-3 md:top-6 md:right-6 z-20 text-[7px] md:text-[10px] font-mono text-zinc-400 flex items-center gap-2 md:gap-4">
+                        <span class="bg-black/40 backdrop-blur px-1.5 py-1 md:px-2 md:py-1 rounded border border-white/10">[ 4K // 60FPS ]</span>
+                        <iconify-icon icon="solar:transmission-linear" class="text-[#39FF14] text-sm md:text-lg hidden md:block"></iconify-icon>
+                    </div>
+
+                    <div id="timecode" class="absolute bottom-3 right-3 md:bottom-6 md:right-6 z-20 font-mono text-[#39FF14] text-xs md:text-xl font-bold tracking-tighter bg-black/60 backdrop-blur px-2 md:px-4 py-1 rounded md:rounded-lg border border-[#39FF14]/30 shadow-[0_0_15px_rgba(57,255,20,0.2)]">
+                        00:00:00:00
+                    </div>
+
+                    <div class="absolute top-2 left-2 w-6 h-6 md:top-4 md:left-4 md:w-12 md:h-12 border-t border-l border-[#39FF14]/40 rounded-tl-lg md:rounded-tl-xl pointer-events-none"></div>
+                    <div class="absolute top-2 right-2 w-6 h-6 md:top-4 md:right-4 md:w-12 md:h-12 border-t border-r border-[#39FF14]/40 rounded-tr-lg md:rounded-tr-xl pointer-events-none"></div>
+                    <div class="absolute bottom-2 left-2 w-6 h-6 md:bottom-4 md:left-4 md:w-12 md:h-12 border-b border-l border-[#39FF14]/40 rounded-bl-lg md:rounded-bl-xl pointer-events-none"></div>
+                    <div class="absolute bottom-2 right-2 w-6 h-6 md:bottom-4 md:right-4 md:w-12 md:h-12 border-b border-r border-[#39FF14]/40 rounded-br-lg md:rounded-br-xl pointer-events-none"></div>
+
+                    <img id="main-feed" src="https://image.mux.com/LujDrL3Wt13h98TRkMPgmiEBb1fsoLnhtvM28025RxKU/animated.gif?width=320" class="w-full h-full object-cover" alt="CAM 01 MAIN">
+                </div>
+
+                <div class="grid grid-cols-3 gap-2 md:gap-4 w-full shrink-0">
+                    <button class="aspect-video rounded-lg md:rounded-2xl overflow-hidden border-2 border-[#39FF14] shadow-[0_0_15px_rgba(57,255,20,0.3)] transition-all">
+                        <img src="https://image.mux.com/o9Uel8ZfcKN01xyzS022A6lNHTxCUAfU3BIIEdnukXNHY/animated.gif?width=320" class="w-full h-full object-cover" alt="Camera 1">
+                    </button>
+                    <button class="aspect-video rounded-lg md:rounded-2xl overflow-hidden border border-white/10 opacity-40 grayscale hover:opacity-100 hover:grayscale-0 transition-all">
+                        <img src="https://image.mux.com/apYlYJhFBP26XaP7FiUSEImdRZmyrTn00O7afEJVNNjU/animated.gif?width=320" class="w-full h-full object-cover" alt="Camera 2">
+                    </button>
+                    <button class="aspect-video rounded-lg md:rounded-2xl overflow-hidden border border-white/10 opacity-40 grayscale hover:opacity-100 hover:grayscale-0 transition-all">
+                        <img src="https://image.mux.com/N7Hn1XGHYkXzNPUC8a6hXmIJ02C02YNAhIV01LtVNxq1lM/animated.gif?width=320" class="w-full h-full object-cover" alt="Camera 3">
+                    </button>
+                </div>
+
+                <div class="w-full p-4 md:p-6 border border-[#27272a] bg-[#0a0a0a]/50 rounded-xl md:rounded-3xl grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 shrink-0">
+                    <button class="w-full py-3 md:py-4 rounded-lg md:rounded-full border border-[#27272a] bg-black md:bg-transparent text-[10px] font-mono text-zinc-400 uppercase tracking-widest hover:border-[#39FF14] hover:text-white transition-all">Stage View</button>
+                    <button class="w-full py-3 md:py-4 rounded-lg md:rounded-full border border-[#27272a] bg-black md:bg-transparent text-[10px] font-mono text-zinc-400 uppercase tracking-widest hover:border-[#39FF14] hover:text-white transition-all">Booth Cam</button>
+                    <button class="w-full py-3 md:py-4 rounded-lg md:rounded-full border border-[#27272a] bg-black md:bg-transparent text-[10px] font-mono text-zinc-400 uppercase tracking-widest hover:border-[#39FF14] hover:text-white transition-all">Crowd Wide</button>
+                </div>
+            </div>
         </div>
-        <div>
-            <label for="audioSource">Microphone Source</label>
-            <select id="audioSource"></select>
-            <canvas id="audioMeter" width="300" height="20"></canvas>
-    </div>
-</div>
 
-    <video id="videoPreview" autoplay muted></video>
-    <div id="status" class="status-box status-idle">
-        <strong>Status:</strong> <span id="statusText">Waiting for setup...</span>
-    </div>
-    <div class="status-log" id="log"></div>
-</div>
+        <div class="fixed bottom-0 left-0 w-full h-10 bg-black border-t border-[#27272a] flex items-center justify-between px-4 md:px-6 z-50">
+            <div class="flex items-center gap-2 md:gap-4 text-[7px] md:text-[9px] font-mono text-zinc-600 uppercase tracking-widest">
+                <span>LOCAL / ASSETS V2.4.0</span>
+                <span class="text-zinc-800 hidden md:inline">//</span>
+                <span class="text-[#39FF14]/70 hidden md:inline">CONNECTED</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-pulse shadow-[0_0_8px_#39FF14]"></span>
+                <span class="text-[7px] md:text-[9px] font-mono text-zinc-400 uppercase tracking-widest">System Operational</span>
+            </div>
+        </div>
+    </main>
 
-<script>
-    // --- Configuration ---
-    const CONFIG = {
-        BACKEND_API_URL: 'https://api.your-service.com/v1/uploads',
-        CALENDAR_PROXY_URL: 'https://api.your-service.com/v1/calendar-events', 
-        SEGMENT_DURATION_MS: 600000, // 10 minutes
-        POLLING_INTERVAL_MS: 60000, // 60 seconds
-    };
-
-    // --- UI Elements ---
-    const videoElement = document.getElementById('videoPreview');
-    const statusTextElement = document.getElementById('statusText');
-    const statusBoxElement = document.getElementById('status');
-    const logElement = document.getElementById('log');
-    const setupButton = document.getElementById('setupButton');
-    const deviceSelectorDiv = document.getElementById('deviceSelector');
-    const videoSourceSelect = document.getElementById('videoSource');
-    const audioSourceSelect = document.getElementById('audioSource');
-    // ADD THIS: Get the new canvas element
-    const audioMeterCanvas = document.getElementById('audioMeter');
-
-    // --- Application State ---
-    let mediaRecorder;
-    let localStream;
-    let activeEvent = null;
-    // ADD THESE: State for the audio visualizer
-    let audioContext;
-    let analyser;
-    let animationFrameId;
-
-    // --- 1. Initialization ---
-    setupButton.onclick = async () => {
-        await setupDevices();
-    };
-    videoSourceSelect.onchange = updateStream;
-    audioSourceSelect.onchange = updateStream;
-
-    // --- 2. Device Management Functions ---
-    async function setupDevices() {
-        log('Requesting camera access...');
-        try {
-            const initialStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            log('Camera access granted.');
-            setupButton.parentElement.style.display = 'none';
-            initialStream.getTracks().forEach(track => track.stop());
-            await populateDeviceSelectors();
-            deviceSelectorDiv.style.display = 'grid';
-            await updateStream();
-            setInterval(checkForEvents, CONFIG.POLLING_INTERVAL_MS);
-            checkForEvents();
-        } catch (error) {
-            log(`FATAL: Could not get camera access: ${error.message}`, 'error');
-            updateStatus('Error: Camera access denied.', 'recording');
-        }
-    }
-
-    async function populateDeviceSelectors() {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        videoSourceSelect.innerHTML = '';
-        audioSourceSelect.innerHTML = '';
-        devices.forEach(device => {
-            const option = document.createElement('option');
-            option.value = device.deviceId;
-            if (device.kind === 'videoinput') {
-                option.text = device.label || `Camera ${videoSourceSelect.length + 1}`;
-                videoSourceSelect.appendChild(option);
-            } else if (device.kind === 'audioinput') {
-                option.text = device.label || `Microphone ${audioSourceSelect.length + 1}`;
-                audioSourceSelect.appendChild(option);
+    <script>
+        let tc = 0;
+        function pad(n, l = 2) { return n.toString().padStart(l, '0'); }
+        function updateTimecode() {
+            tc++;
+            const frames = tc % 60;
+            const seconds = Math.floor(tc / 60) % 60;
+            const minutes = Math.floor(tc / 3600) % 60;
+            const hours = Math.floor(tc / 216000) % 24;
+            const display = document.getElementById('timecode');
+            if (display) {
+                display.textContent = `${pad(hours)}:${pad(minutes)}:${pad(seconds)}:${pad(frames)}`;
             }
-        });
-        videoSourceSelect.value = localStorage.getItem('selectedVideoDevice') || '';
-        audioSourceSelect.value = localStorage.getItem('selectedAudioDevice') || '';
-    }
-
-    /**
-     * THIS FUNCTION IS REPLACED with the enhanced version below.
-     * It now cleans up and sets up the audio visualizer on each run.
-     */
-    async function updateStream() {
-        // Clean up the old visualizer animation
-        if (animationFrameId) {
-            cancelAnimationFrame(animationFrameId);
         }
-        if (audioContext && audioContext.state !== 'closed') {
-            audioContext.close();
+        setInterval(updateTimecode, 1000 / 60);
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            if (sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+                setTimeout(() => overlay.classList.add('opacity-100'), 10);
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('opacity-0');
+                setTimeout(() => overlay.classList.add('hidden'), 300);
+            }
         }
-
-        // Stop the old stream
-        if (localStream) {
-            localStream.getTracks().forEach(track => track.stop());
-        }
-        const videoDeviceId = videoSourceSelect.value;
-        const audioDeviceId = audioSourceSelect.value;
-        localStorage.setItem('selectedVideoDevice', videoDeviceId);
-        localStorage.setItem('selectedAudioDevice', audioDeviceId);
-        log(`Attempting to start stream with selected devices.`);
-        const constraints = {
-            video: { deviceId: videoDeviceId ? { exact: videoDeviceId } : undefined },
-            audio: { deviceId: audioDeviceId ? { exact: audioDeviceId } : undefined },
-        };
-        try {
-            localStream = await navigator.mediaDevices.getUserMedia(constraints);
-            videoElement.srcObject = localStream;
-            log('Stream updated successfully.');
-            // Set up the new visualizer with the new stream
-            setupAudioVisualizer(localStream);
-        } catch (error) {
-            log(`Error updating stream: ${error.message}`, 'error');
-        }
-    }
-
-    // --- 3. Audio Visualization Functions (THESE WERE MISSING) ---
-    /**
-     * Initializes the Web Audio API to analyze the audio stream.
-     */
-    function setupAudioVisualizer(stream) {
-        if (!stream.getAudioTracks().length) {
-            console.warn("No audio tracks found to visualize.");
-            return;
-        }
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        analyser = audioContext.createAnalyser();
-        const source = audioContext.createMediaStreamSource(stream);
-        source.connect(analyser);
-        drawAudioMeter();
-    }
-
-    /**
-     * Draws the audio volume level on the canvas repeatedly.
-     */
-    function drawAudioMeter() {
-        animationFrameId = requestAnimationFrame(drawAudioMeter);
-        analyser.fftSize = 256;
-        const bufferLength = analyser.frequencyBinCount;
-        const dataArray = new Uint8Array(bufferLength);
-        analyser.getByteFrequencyData(dataArray);
-        
-        let sum = 0;
-        for (let i = 0; i < bufferLength; i++) {
-            sum += dataArray[i];
-        }
-        const average = sum / bufferLength;
-        
-        const canvasCtx = audioMeterCanvas.getContext('2d');
-        const { width, height } = audioMeterCanvas;
-        
-        canvasCtx.clearRect(0, 0, width, height);
-        const meterWidth = (average / 128.0) * width;
-        canvasCtx.fillStyle = '#4caf50'; // Green color for the meter
-        canvasCtx.fillRect(0, 0, meterWidth, height);
-    }
-
-     // --- 4. Core Recording and Uploading Logic (Unchanged) ---
-    async function checkForEvents() { /* ... */ }
-    function startRecording() { /* ... */ }
-    async function uploadSegment(videoBlob) { /* ... */ }
-
-     // --- 5. Utility Functions (Unchanged) ---
-    function log(message, level = 'info') { /* ... */ }
-    function updateStatus(text, state = 'idle') { /* ... */ }
-
-     // --- Paste the original, unchanged functions here ---
-    async function checkForEvents() {if (mediaRecorder && mediaRecorder.state === 'recording') return;updateStatus('Polling calendar for events...');try {const response = await fetch(CONFIG.CALENDAR_PROXY_URL);const events = await response.json();const now = new Date();const currentEvent = events.find(event => {const startTime = new Date(event.start.dateTime);const endTime = new Date(event.end.dateTime);return startTime <= now && now < endTime;});if (currentEvent) {if (!activeEvent || activeEvent.id !== currentEvent.id) {activeEvent = currentEvent;startRecording();}} else {if (activeEvent) {log('Scheduled event has ended.');activeEvent = null;}updateStatus('Idle. Waiting for a scheduled event.');}} catch (error) {log(`Error polling calendar: ${error.message}`, 'error');}}
-    function startRecording() {if (!localStream) {log('Cannot start recording, no local stream available.', 'error');return;}log(`Starting recording for event: ${activeEvent.summary}`);updateStatus(`Recording: ${activeEvent.summary}`, 'recording');mediaRecorder = new MediaRecorder(localStream, { mimeType: 'video/webm' });mediaRecorder.ondataavailable = (event) => {if (event.data.size > 0) {log(`Segment created (${(event.data.size / 1024 / 1024).toFixed(2)} MB). Queuing for upload.`);uploadSegment(event.data);}};mediaRecorder.onstop = () => {log('Recording stopped.');updateStatus('Idle. Waiting for a scheduled event.');checkForEvents();};mediaRecorder.start(CONFIG.SEGMENT_DURATION_MS);const endTime = new Date(activeEvent.end.dateTime);const duration = endTime.getTime() - Date.now();setTimeout(() => {if (mediaRecorder && mediaRecorder.state === 'recording') {mediaRecorder.stop();}}, duration);}
-    async function uploadSegment(videoBlob) {const tempStatus = statusTextElement.textContent;updateStatus('Uploading segment...', 'uploading');try {const response = await fetch(CONFIG.BACKEND_API_URL, {method: 'POST',headers: {'Content-Type': 'application/json',},body: JSON.stringify({ eventId: activeEvent.id })});const { upload_url } = await response.json();if (!upload_url) throw new Error('Backend did not return an upload URL.');await fetch(upload_url, {method: 'PUT',body: videoBlob,headers: { 'Content-Type': 'video/webm' },});log('Upload successful.');} catch (error) {log(`Upload failed: ${error.message}`, 'error');} finally {updateStatus(tempStatus, tempStatus.includes('Recording') ? 'recording' : 'idle');}}
-    function log(message, level = 'info') {const now = new Date().toLocaleTimeString();const p = document.createElement('p');p.innerHTML = `<strong>[${now}]</strong> ${message}`;if (level === 'error') p.style.color = '#d93025';logElement.appendChild(p);logElement.scrollTop = logElement.scrollHeight;console.log(message);}
-    function updateStatus(text, state = 'idle') {statusTextElement.textContent = text;statusBoxElement.className = 'status-box';if (state === 'recording') {statusBoxElement.classList.add('status-recording');} else if (state === 'uploading') {statusBoxElement.classList.add('status-uploading');} else {statusBoxElement.classList.add('status-idle');}}
-</script>
+    </script>
 </body>
 </html>
