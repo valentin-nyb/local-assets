@@ -2,19 +2,26 @@ const Mux = require('@mux/mux-node');
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
 const { DynamoDBDocumentClient, PutCommand } = require("@aws-sdk/lib-dynamodb");
 
+// 1. Import all necessary functions from your processing file at the top.
 const { 
-    MUX_TOKEN_ID, 
-    MUX_TOKEN_SECRET, 
+    createVerticalShorts, 
+    addWatermarkAndThumbnail, 
+    createAudioMaster,
+    uploadToSoundCloud 
+} = require('./processing.js');
+
+// 2. Initialize all required environment variables and clients.
+const { 
     MUX_WEBHOOK_SECRET, 
     DYNAMODB_TABLE_NAME 
 } = process.env;
 
-const { Video } = new Mux(MUX_TOKEN_ID, MUX_TOKEN_SECRET);
 const dbClient = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(dbClient);
 
+// 3. Define a single, clean handler function.
 exports.handler = async (event) => {
-    // 1. Security: Verify the webhook signature
+    // Security: Verify the webhook signature first.
     try {
         Mux.Webhooks.verifyHeader(event.body, event.headers['mux-signature'], MUX_WEBHOOK_SECRET);
     } catch (error) {
@@ -24,26 +31,33 @@ exports.handler = async (event) => {
 
     const { type, data: asset } = JSON.parse(event.body);
 
+    // We only care about the 'video.asset.ready' event.
     if (type === 'video.asset.ready') {
         const passthroughId = asset.passthrough;
-        console.log(`Asset ready: ${asset.id}, Passthrough: ${passthroughId}`);
+        console.log(`Asset ready: ${asset.id}, Passthrough: `);
 
-        // 2. Check if this is a MASTER asset or a SEGMENT asset
+        // 4. Use a clear if/else if/else block to route the asset.
         if (passthroughId && passthroughId.startsWith('master_')) {
-            // --- THIS IS A MASTER VIDEO, START THE MARKETING WORKFLOW ---
-            console.log(`Master asset ${asset.id} is ready. Triggering marketing asset creation.`);
-            
-            // This is where you will add the logic from your original request.
-            // For now, we will just log it.
-            
-            // Example of next steps you would call from here:
-            // await createVerticalShorts(asset.id);
-            // await extractAndUploadAudio(asset.id);
-            // await generateThumbnails(asset.id);
-            // await addWatermark(asset.id);
+            // --- Stage 1: Master Video is Ready ---
+            console.log(`Master asset ${asset.id} is ready. Triggering parallel processing.`);
+            // Trigger video clipping and audio extraction at the same time.
+            await Promise.all([
+                createVerticalShorts(asset.id),
+                createAudioMaster(asset.id)
+            ]);
+
+        } else if (passthroughId && passthroughId.startsWith('short_for_')) {
+            // --- Stage 2: Short Clip is Ready ---
+            console.log(`Short clip ${asset.id} is ready. Adding watermark and thumbnail.`);
+            await addWatermarkAndThumbnail(asset.id, asset.duration);
+
+        } else if (passthroughId && passthroughId.startsWith('audio_master_for_')) {
+            // --- Stage 3: Audio Master is Ready ---
+            console.log(`Audio master ${asset.id} is ready. Uploading to SoundCloud.`);
+            await uploadToSoundCloud(asset.id);
 
         } else {
-            // --- THIS IS A SEGMENT, SAVE IT FOR STITCHING ---
+            // --- Default Case: This is a Segment for Stitching ---
             console.log(`Segment asset ${asset.id} is ready. Saving to DynamoDB.`);
             try {
                 const command = new PutCommand({
@@ -65,5 +79,6 @@ exports.handler = async (event) => {
         }
     }
 
+    // Acknowledge receipt of the webhook.
     return { statusCode: 200, body: 'Webhook received successfully.' };
 };

@@ -141,3 +141,40 @@ module.exports = {
     createVerticalShorts,
     addWatermarkAndThumbnail,
 };
+// In processing.js
+
+// ... (keep all existing code and clients)
+
+/**
+ * Creates a new, audio-only asset from a master video.
+ * @param {string} masterAssetId The ID of the video asset to extract audio from.
+ */
+async function createAudioMaster(masterAssetId) {
+    if (!masterAssetId) {
+        console.error('masterAssetId is required to create an audio master.');
+        return;
+    }
+    console.log(`Creating audio master for asset: ${masterAssetId}`);
+
+    try {
+        const audioAsset = await Video.Assets.create({
+            source: [{ asset_id: masterAssetId }],
+            // 'audio' is a special encoding tier that creates an audio-only MP4 file.
+            encoding_tier: 'audio',
+            playback_policy: ['public'],
+            // Use a passthrough to identify this asset when it's ready.
+            passthrough: `audio_master_for_`,
+        });
+        console.log(`Successfully started creation of audio master asset: ${audioAsset.id}`);
+    } catch (error) {
+        console.error(`Error creating audio master for asset :`, error);
+    }
+}
+
+// --- UPDATE module.exports ---
+// Add the new function to the exports.
+module.exports = {
+    createVerticalShorts,
+    addWatermarkAndThumbnail,
+    createAudioMaster, // Add this line
+};
