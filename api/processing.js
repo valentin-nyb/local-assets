@@ -1,40 +1,89 @@
 const Mux = require('@mux/mux-node');
+const { VideoIntelligenceServiceClient } = require('@google-cloud/video-intelligence');
+const path = require('path');
 
-// This would be initialized once in your application
-const { MUX_TOKEN_ID, MUX_TOKEN_SECRET } = process.env;
+// --- Mux and Google Cloud Client Initialization ---
+const { MUX_TOKEN_ID, MUX_TOKEN_SECRET, MUX_SIGNING_KEY_ID, MUX_SIGNING_KEY_PRIVATE_KEY } = process.env;
 const { Video } = new Mux(MUX_TOKEN_ID, MUX_TOKEN_SECRET);
 
+// Initialize Google client, assuming the key file is bundled with the Lambda
+const googleClient = new VideoIntelligenceServiceClient({
+    keyFilename: path.join(__dirname, 'your-google-service-account-key.json') 
+});
+
 /**
- * A placeholder function representing a call to an AI video analysis service.
- * In a real application, this would make an API call to a service like
- * Google Video Intelligence or AWS Rekognition to find interesting scenes.
- *
- * @param {string} masterAssetId The ID of the Mux asset to analyze.
- * @returns {Promise<Array<{startTime: number, endTime: number, description: string}>>} A promise that resolves to an array of moments.
+ * Creates a temporary, signed playback URL for a Mux asset.
+ * Google's servers will use this URL to access and analyze the video.
+ * @param {string} playbackId The playback ID of the Mux asset.
+ * @returns {string} A signed URL that is valid for a limited time.
  */
-async function findBestMoments(masterAssetId) {
-    console.log(`[AI Service] Analyzing asset ${masterAssetId} for best moments...`);
-    
-    // --- Placeholder Logic ---
-    // In a real-world scenario, you would:
-    // 1. Get a temporary playback URL for the masterAssetId.
-    // 2. Submit this URL to a video intelligence service.
-    // 3. Await the results, which would be a list of timestamps.
-    
-    // For this example, we'll return dummy data representing two interesting moments.
-    await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate network delay
-    
-    console.log('[AI Service] Analysis complete. Found 2 moments.');
-    return [
-        { startTime: 15.5, endTime: 45.0, description: 'High action sequence' },
-        { startTime: 123.0, endTime: 150.2, description: 'Key dialogue moment' },
-    ];
+function getSignedMuxPlaybackUrl(playbackId) {
+    if (!MUX_SIGNING_KEY_ID || !MUX_SIGNING_KEY_PRIVATE_KEY) {
+        throw new Error('Mux signing key credentials are not configured.');
+    }
+    // Create a signed URL that is valid for 1 hour (3600 seconds)
+    const token = Mux.JWT.signPlaybackId(playbackId, {
+        key_id: MUX_SIGNING_KEY_ID,
+        key_secret: MUX_SIGNING_KEY_PRIVATE_KEY,
+        expiration: '1h',
+    });
+    return `https://stream.mux.com/${playbackId}.m3u8?token=${token}`;
 }
 
 /**
- * Creates short, time-based clips from a master video asset based on moments
- * identified by an analysis service.
- *
+ * Finds distinct scenes in a video using the Google Cloud Video Intelligence API.
+ * @param {string} masterAssetId The ID of the Mux asset to analyze.
+ * @returns {Promise<Array<{startTime: number, endTime: number, description: string}>>}
+ */
+async function findBestMoments(masterAssetId) {
+    console.log(`[Google AI] Analyzing asset ${masterAssetId} for scene changes...`);
+
+    try {
+        // 1. Get the Mux asset to find its playback ID.
+        const asset = await Video.Assets.get(masterAssetId);
+        const playbackId = asset.playback_ids[0].id;
+
+        // 2. Create a signed URL for Google to access.
+        const signedUrl = getSignedMuxPlaybackUrl(playbackId);
+
+        // 3. Call the Google Video Intelligence API
+        const [operation] = await googleClient.annotateVideo({
+            inputUri: signedUrl,
+            features: ['SHOT_CHANGE_DETECTION'],
+        });
+
+        console.log('[Google AI] Analysis job started. Waiting for results...');
+        const [result] = await operation.promise();
+
+        // 4. Parse the results to get scene timestamps.
+        const shotAnnotations = result.annotationResults[0].shotAnnotations;
+        if (!shotAnnotations || shotAnnotations.length === 0) {
+            console.log('[Google AI] No shots detected in the video.');
+            return [];
+        }
+
+        console.log(`[Google AI] Detected ${shotAnnotations.length} distinct shots.`);
+
+        // 5. Convert the Google results into our "moments" format.
+        const moments = shotAnnotations.map((shot, index) => ({
+            startTime: parseFloat(shot.startTimeOffset.seconds || 0) + (shot.startTimeOffset.nanos || 0) / 1e9,
+            endTime: parseFloat(shot.endTimeOffset.seconds || 0) + (shot.endTimeOffset.nanos || 0) / 1e9,
+            description: `Scene ${index + 1}`,
+        }));
+
+        // Optional: Filter for longer scenes if too many are found
+        const filteredMoments = moments.filter(m => (m.endTime - m.startTime) > 5); // Only keep scenes longer than 5 seconds
+        
+        return filteredMoments;
+
+    } catch (error) {
+        console.error(`[Google AI] Error analyzing video ${masterAssetId}:`, error);
+        return [];
+    }
+}
+
+/**
+ * Creates short clips from a master video asset based on Google AI analysis.
  * @param {string} masterAssetId The ID of the long-form Mux asset to clip.
  */
 async function createVerticalShorts(masterAssetId) {
@@ -43,10 +92,10 @@ async function createVerticalShorts(masterAssetId) {
         return;
     }
 
-    console.log(`Starting vertical shorts creation for master asset: ${masterAssetId}`);
+    console.log(`Starting AI-driven shorts creation for master asset: ${masterAssetId}`);
 
     try {
-        // 1. Find the most interesting moments using our analysis function.
+        // This now calls our new Google AI-powered function.
         const moments = await findBestMoments(masterAssetId);
 
         if (!moments || moments.length === 0) {
@@ -54,41 +103,32 @@ async function createVerticalShorts(masterAssetId) {
             return;
         }
 
-        console.log(`Found ${moments.length} moments. Creating clips in parallel...`);
+        // For this example, let's just clip the first 5 interesting scenes found.
+        const momentsToClip = moments.slice(0, 5);
+        console.log(`Found ${moments.length} scenes. Clipping the first ${momentsToClip.length}...`);
 
-        // 2. Create a Mux API call for each moment.
-        const clipPromises = moments.map(moment => {
-            console.log(`Creating clip from ${moment.startTime}s to ${moment.endTime}s.`);
+        const clipPromises = momentsToClip.map(moment => {
+            console.log(`Creating clip from ${moment.startTime.toFixed(2)}s to ${moment.endTime.toFixed(2)}s.`);
             
             return Video.Assets.create({
-                // The 'source' defines the input asset and the time range to clip.
                 source: [{
                     asset_id: masterAssetId,
                     start_time: moment.startTime,
                     end_time: moment.endTime,
                 }],
                 playback_policy: ['public'],
-                // Use the passthrough field to identify this asset as a short
-                // and link it back to its parent.
-                passthrough: `short_for_${masterAssetId}_${moment.startTime}`,
+                passthrough: `short_for_${masterAssetId}_${moment.startTime.toFixed(2)}`,
             });
         });
 
-        // 3. Execute all clip creation calls in parallel for efficiency.
         const createdClips = await Promise.all(clipPromises);
-
-        console.log('Successfully created all clips:');
-        createdClips.forEach(clip => {
-            console.log(`  - Clip ID: ${clip.id}, Passthrough: ${clip.passthrough}`);
-        });
+        console.log('Successfully created all AI-driven clips.');
 
     } catch (error) {
         console.error(`Failed to create vertical shorts for asset ${masterAssetId}:`, error);
     }
 }
 
-// Example of how you would call this from your webhook handler:
-//
-// if (passthroughId && passthroughId.startsWith('master_')) {
-//     await createVerticalShorts(asset.id);
-// }
+module.exports = {
+    createVerticalShorts,
+};
