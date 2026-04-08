@@ -18,6 +18,14 @@
         .device-selector label { font-weight: bold; display: block; margin-bottom: 5px; }
         .device-selector select { width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd; }
         button { padding: 10px 15px; font-size: 16px; cursor: pointer; border: none; border-radius: 5px; background-color: #007bff; color: white; }
+        /* camera.html <style> block */
+        #audioMeter {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-top: 5px;
+            background-color: #f0f0f0;
+}
+
     </style>
 </head>
 <body>
@@ -51,7 +59,7 @@
     <div class="status-log" id="log"></div>
 </div>
 
-    <script>
+<script>
     // --- Configuration ---
     const CONFIG = {
         BACKEND_API_URL: 'https://api.your-service.com/v1/uploads',
@@ -69,57 +77,48 @@
     const deviceSelectorDiv = document.getElementById('deviceSelector');
     const videoSourceSelect = document.getElementById('videoSource');
     const audioSourceSelect = document.getElementById('audioSource');
+    // ADD THIS: Get the new canvas element
+    const audioMeterCanvas = document.getElementById('audioMeter');
 
     // --- Application State ---
     let mediaRecorder;
     let localStream;
     let activeEvent = null;
+    // ADD THESE: State for the audio visualizer
+    let audioContext;
+    let analyser;
+    let animationFrameId;
 
     // --- 1. Initialization ---
-    // The main entry point is now the button click
     setupButton.onclick = async () => {
         await setupDevices();
     };
-
-    // Add event listeners for when the user changes a device
     videoSourceSelect.onchange = updateStream;
     audioSourceSelect.onchange = updateStream;
 
     // --- 2. Device Management Functions ---
-    /**
-     * Requests initial permission and populates device selectors.
-     */
     async function setupDevices() {
         log('Requesting camera access...');
         try {
             const initialStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
             log('Camera access granted.');
-            setupButton.parentElement.style.display = 'none'; // Hide button
-
+            setupButton.parentElement.style.display = 'none';
             initialStream.getTracks().forEach(track => track.stop());
-
             await populateDeviceSelectors();
-            deviceSelectorDiv.style.display = 'grid'; // Show selectors
-
+            deviceSelectorDiv.style.display = 'grid';
             await updateStream();
-
-            // Start the main scheduler loop
             setInterval(checkForEvents, CONFIG.POLLING_INTERVAL_MS);
-            checkForEvents(); // Check immediately on start
+            checkForEvents();
         } catch (error) {
             log(`FATAL: Could not get camera access: ${error.message}`, 'error');
             updateStatus('Error: Camera access denied.', 'recording');
         }
     }
 
-    /**
-     * Populates the video and audio select dropdowns.
-     */
     async function populateDeviceSelectors() {
         const devices = await navigator.mediaDevices.enumerateDevices();
         videoSourceSelect.innerHTML = '';
         audioSourceSelect.innerHTML = '';
-
         devices.forEach(device => {
             const option = document.createElement('option');
             option.value = device.deviceId;
@@ -131,15 +130,24 @@
                 audioSourceSelect.appendChild(option);
             }
         });
-
         videoSourceSelect.value = localStorage.getItem('selectedVideoDevice') || '';
         audioSourceSelect.value = localStorage.getItem('selectedAudioDevice') || '';
     }
 
     /**
-     * Stops the current stream and starts a new one with the selected devices.
+     * THIS FUNCTION IS REPLACED with the enhanced version below.
+     * It now cleans up and sets up the audio visualizer on each run.
      */
     async function updateStream() {
+        // Clean up the old visualizer animation
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
+        }
+        if (audioContext && audioContext.state !== 'closed') {
+            audioContext.close();
+        }
+
+        // Stop the old stream
         if (localStream) {
             localStream.getTracks().forEach(track => track.stop());
         }
@@ -156,125 +164,69 @@
             localStream = await navigator.mediaDevices.getUserMedia(constraints);
             videoElement.srcObject = localStream;
             log('Stream updated successfully.');
+            // Set up the new visualizer with the new stream
+            setupAudioVisualizer(localStream);
         } catch (error) {
             log(`Error updating stream: ${error.message}`, 'error');
         }
     }
 
-    // --- 3. Core Recording and Uploading Logic (THESE WERE MISSING) ---
-    async function checkForEvents() {
-        if (mediaRecorder && mediaRecorder.state === 'recording') return;
-        updateStatus('Polling calendar for events...');
-        try {
-            const response = await fetch(CONFIG.CALENDAR_PROXY_URL);
-            const events = await response.json();
-            const now = new Date();
-            const currentEvent = events.find(event => {
-                const startTime = new Date(event.start.dateTime);
-                const endTime = new Date(event.end.dateTime);
-                return startTime <= now && now < endTime;
-            });
-            if (currentEvent) {
-                if (!activeEvent || activeEvent.id !== currentEvent.id) {
-                    activeEvent = currentEvent;
-                    startRecording();
-                }
-            } else {
-                if (activeEvent) {
-                    log('Scheduled event has ended.');
-                    activeEvent = null;
-                }
-                updateStatus('Idle. Waiting for a scheduled event.');
-            }
-        } catch (error) {
-            log(`Error polling calendar: ${error.message}`, 'error');
-        }
-    }
-
-    function startRecording() {
-        if (!localStream) {
-            log('Cannot start recording, no local stream available.', 'error');
+    // --- 3. Audio Visualization Functions (THESE WERE MISSING) ---
+    /**
+     * Initializes the Web Audio API to analyze the audio stream.
+     */
+    function setupAudioVisualizer(stream) {
+        if (!stream.getAudioTracks().length) {
+            console.warn("No audio tracks found to visualize.");
             return;
         }
-        log(`Starting recording for event: ${activeEvent.summary}`);
-        updateStatus(`Recording: ${activeEvent.summary}`, 'recording');
-        mediaRecorder = new MediaRecorder(localStream, { mimeType: 'video/webm' });
-        mediaRecorder.ondataavailable = (event) => {
-            if (event.data.size > 0) {
-                log(`Segment created (${(event.data.size / 1024 / 1024).toFixed(2)} MB). Queuing for upload.`);
-                uploadSegment(event.data);
-            }
-        };
-        mediaRecorder.onstop = () => {
-            log('Recording stopped.');
-            updateStatus('Idle. Waiting for a scheduled event.');
-            checkForEvents();
-        };
-        mediaRecorder.start(CONFIG.SEGMENT_DURATION_MS);
-        const endTime = new Date(activeEvent.end.dateTime);
-        const duration = endTime.getTime() - Date.now();
-        setTimeout(() => {
-            if (mediaRecorder && mediaRecorder.state === 'recording') {
-                mediaRecorder.stop();
-            }
-        }, duration);
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioContext.createAnalyser();
+        const source = audioContext.createMediaStreamSource(stream);
+        source.connect(analyser);
+        drawAudioMeter();
     }
 
-    async function uploadSegment(videoBlob) {
-    const tempStatus = statusTextElement.textContent;
-    updateStatus('Uploading segment...', 'uploading');
-    try {
-        // 1. Get a secure upload URL from our backend
-        const response = await fetch(CONFIG.BACKEND_API_URL, {
-            method: 'POST',
-            // Add headers to specify we are sending JSON data
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            // Add the body with the event ID for the backend to use
-            body: JSON.stringify({ eventId: activeEvent.id })
-        });
-
-        const { upload_url } = await response.json();
-        if (!upload_url) throw new Error('Backend did not return an upload URL.');
-
-        // 2. Upload the Blob directly to Mux (this part is unchanged)
-        await fetch(upload_url, {
-            method: 'PUT',
-            body: videoBlob,
-            headers: { 'Content-Type': 'video/webm' },
-        });
-        log('Upload successful.');
-    } catch (error) {
-        log(`Upload failed: ${error.message}`, 'error');
-    } finally {
-        updateStatus(tempStatus, tempStatus.includes('Recording') ? 'recording' : 'idle');
-    }
-}
-
-
-    // --- 4. Utility Functions (THESE WERE MISSING) ---
-    function log(message, level = 'info') {
-        const now = new Date().toLocaleTimeString();
-        const p = document.createElement('p');
-        p.innerHTML = `<strong>[${now}]</strong> ${message}`;
-        if (level === 'error') p.style.color = '#d93025';
-        logElement.appendChild(p);
-        logElement.scrollTop = logElement.scrollHeight;
-        console.log(message);
-    }
-
-    function updateStatus(text, state = 'idle') {
-        statusTextElement.textContent = text;
-        statusBoxElement.className = 'status-box';
-        if (state === 'recording') {
-            statusBoxElement.classList.add('status-recording');
-        } else if (state === 'uploading') {
-            statusBoxElement.classList.add('status-uploading');
-        } else {
-            statusBoxElement.classList.add('status-idle');
+    /**
+     * Draws the audio volume level on the canvas repeatedly.
+     */
+    function drawAudioMeter() {
+        animationFrameId = requestAnimationFrame(drawAudioMeter);
+        analyser.fftSize = 256;
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        analyser.getByteFrequencyData(dataArray);
+        
+        let sum = 0;
+        for (let i = 0; i < bufferLength; i++) {
+            sum += dataArray[i];
         }
+        const average = sum / bufferLength;
+        
+        const canvasCtx = audioMeterCanvas.getContext('2d');
+        const { width, height } = audioMeterCanvas;
+        
+        canvasCtx.clearRect(0, 0, width, height);
+        const meterWidth = (average / 128.0) * width;
+        canvasCtx.fillStyle = '#4caf50'; // Green color for the meter
+        canvasCtx.fillRect(0, 0, meterWidth, height);
     }
+
+    // --- 4. Core Recording and Uploading Logic (Unchanged) ---
+    async function checkForEvents() { /* ... */ }
+    function startRecording() { /* ... */ }
+    async function uploadSegment(videoBlob) { /* ... */ }
+
+    // --- 5. Utility Functions (Unchanged) ---
+    function log(message, level = 'info') { /* ... */ }
+    function updateStatus(text, state = 'idle') { /* ... */ }
+
+    // --- Paste the original, unchanged functions here ---
+    async function checkForEvents() {if (mediaRecorder && mediaRecorder.state === 'recording') return;updateStatus('Polling calendar for events...');try {const response = await fetch(CONFIG.CALENDAR_PROXY_URL);const events = await response.json();const now = new Date();const currentEvent = events.find(event => {const startTime = new Date(event.start.dateTime);const endTime = new Date(event.end.dateTime);return startTime <= now && now < endTime;});if (currentEvent) {if (!activeEvent || activeEvent.id !== currentEvent.id) {activeEvent = currentEvent;startRecording();}} else {if (activeEvent) {log('Scheduled event has ended.');activeEvent = null;}updateStatus('Idle. Waiting for a scheduled event.');}} catch (error) {log(`Error polling calendar: ${error.message}`, 'error');}}
+    function startRecording() {if (!localStream) {log('Cannot start recording, no local stream available.', 'error');return;}log(`Starting recording for event: ${activeEvent.summary}`);updateStatus(`Recording: ${activeEvent.summary}`, 'recording');mediaRecorder = new MediaRecorder(localStream, { mimeType: 'video/webm' });mediaRecorder.ondataavailable = (event) => {if (event.data.size > 0) {log(`Segment created (${(event.data.size / 1024 / 1024).toFixed(2)} MB). Queuing for upload.`);uploadSegment(event.data);}};mediaRecorder.onstop = () => {log('Recording stopped.');updateStatus('Idle. Waiting for a scheduled event.');checkForEvents();};mediaRecorder.start(CONFIG.SEGMENT_DURATION_MS);const endTime = new Date(activeEvent.end.dateTime);const duration = endTime.getTime() - Date.now();setTimeout(() => {if (mediaRecorder && mediaRecorder.state === 'recording') {mediaRecorder.stop();}}, duration);}
+    async function uploadSegment(videoBlob) {const tempStatus = statusTextElement.textContent;updateStatus('Uploading segment...', 'uploading');try {const response = await fetch(CONFIG.BACKEND_API_URL, {method: 'POST',headers: {'Content-Type': 'application/json',},body: JSON.stringify({ eventId: activeEvent.id })});const { upload_url } = await response.json();if (!upload_url) throw new Error('Backend did not return an upload URL.');await fetch(upload_url, {method: 'PUT',body: videoBlob,headers: { 'Content-Type': 'video/webm' },});log('Upload successful.');} catch (error) {log(`Upload failed: ${error.message}`, 'error');} finally {updateStatus(tempStatus, tempStatus.includes('Recording') ? 'recording' : 'idle');}}
+    function log(message, level = 'info') {const now = new Date().toLocaleTimeString();const p = document.createElement('p');p.innerHTML = `<strong>[${now}]</strong> ${message}`;if (level === 'error') p.style.color = '#d93025';logElement.appendChild(p);logElement.scrollTop = logElement.scrollHeight;console.log(message);}
+    function updateStatus(text, state = 'idle') {statusTextElement.textContent = text;statusBoxElement.className = 'status-box';if (state === 'recording') {statusBoxElement.classList.add('status-recording');} else if (state === 'uploading') {statusBoxElement.classList.add('status-uploading');} else {statusBoxElement.classList.add('status-idle');}}
 </script>
 </body>
 </html>
