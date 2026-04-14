@@ -381,66 +381,66 @@
                                         const tSrFiles = t.asset.static_renditions?.files || [];
                                         const tSrReady = tSrFiles.find(f => f.status === 'ready');
                                         const tLabel = !tPid ? 'IN VAULT — PROCESSING' : (tSrReady || tSrStatus === 'ready') ? 'IN VAULT — UPLOADED' : tSrFiles.some(f => f.status === 'preparing') || tSrStatus === 'preparing' ? 'IN VAULT — PREPARING' : 'IN VAULT — UPLOADED';
-                                        return \`
+                                        return `
                                         <div class="p-4 pl-12 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" style="border-left: 2px solid #39FF14;">
                                             <div class="flex items-center gap-4 flex-1 min-w-0">
                                                 <div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-primary/50 shrink-0">
                                                     <iconify-icon icon="solar:gallery-bold" class="text-primary text-sm"></iconify-icon>
                                                 </div>
                                                 <div class="min-w-0">
-                                                    <p class="text-[10px] font-bold text-zinc-300 uppercase">\${t.label}</p>
-                                                    <p class="text-[8px] font-mono text-primary uppercase">\${tLabel}</p>
+                                                    <p class="text-[10px] font-bold text-zinc-300 uppercase">${t.label}</p>
+                                                    <p class="text-[8px] font-mono text-primary uppercase">${tLabel}</p>
                                                 </div>
                                             </div>
                                             <div class="flex items-center gap-2 shrink-0">
-                                                \${tPid ? \`<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download" onclick="window.open('https://image.mux.com/\${tPid}/thumbnail.png?width=1920', '_blank')">
+                                                ${tPid ? `<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download" onclick="window.open('https://image.mux.com/${tPid}/thumbnail.png?width=1920', '_blank')">
                                                     <iconify-icon icon="solar:download-bold" class="text-primary"></iconify-icon>
                                                 </button>
-                                                <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Preview" onclick="window.open('/player.html?v=\${tPid}&type=thumb&title='+encodeURIComponent('\${t.label.replace(/'/g, "\\\\'")}'), '_blank')">
+                                                <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Preview" onclick="window.open('/player.html?v=${tPid}&type=thumb&title='+encodeURIComponent('${t.label.replace(/'/g, "\\'")}'), '_blank')">
                                                     <iconify-icon icon="solar:eye-bold" class="text-primary"></iconify-icon>
-                                                </button>\` : \`<span class="text-[8px] font-mono text-yellow-500 uppercase">PROCESSING</span>\`}
+                                                </button>` : `<span class="text-[8px] font-mono text-yellow-500 uppercase">PROCESSING</span>`}
                                             </div>
-                                        </div>\`;
+                                        </div>`;
                                     }).join('');
                                     if (thumbAssets.length < 20) {
-                                        thumbRows += \`
-                                        <div class="p-4 pl-12 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-\${uid}">
+                                        thumbRows += `
+                                        <div class="p-4 pl-12 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-${uid}">
                                             <label class="flex items-center gap-4 cursor-pointer flex-1 min-w-0">
                                                 <div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-border/50 shrink-0">
                                                     <iconify-icon icon="solar:gallery-bold" class="text-primary text-sm"></iconify-icon>
                                                 </div>
                                                 <div class="min-w-0">
-                                                    <p class="text-[10px] font-bold text-zinc-300 uppercase" id="label-\${uid}">Add More Thumbnails</p>
-                                                    <p class="text-[8px] font-mono text-zinc-600 uppercase" id="status-\${uid}">\${thumbAssets.length}/20 UPLOADED — TAP TO ADD</p>
+                                                    <p class="text-[10px] font-bold text-zinc-300 uppercase" id="label-${uid}">Add More Thumbnails</p>
+                                                    <p class="text-[8px] font-mono text-zinc-600 uppercase" id="status-${uid}">${thumbAssets.length}/20 UPLOADED — TAP TO ADD</p>
                                                 </div>
-                                                <input type="file" accept="image/*" class="hidden" id="file-\${uid}" multiple onchange="handleAssetUpload('\${uid}', this, '\${session.name}')">
+                                                <input type="file" accept="image/*" class="hidden" id="file-${uid}" multiple onchange="handleAssetUpload('${uid}', this, '${session.name}')">
                                             </label>
-                                        </div>\`;
+                                        </div>`;
                                     }
                                 } else {
-                                    thumbRows = \`
-                                    <div class="p-4 pl-12 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-\${uid}">
+                                    thumbRows = `
+                                    <div class="p-4 pl-12 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-${uid}">
                                         <label class="flex items-center gap-4 cursor-pointer flex-1 min-w-0">
                                             <div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-border/50 shrink-0">
-                                                <iconify-icon icon="\${asset.icon}" class="\${asset.color} text-sm"></iconify-icon>
+                                                <iconify-icon icon="${asset.icon}" class="${asset.color} text-sm"></iconify-icon>
                                             </div>
                                             <div class="min-w-0">
-                                                <p class="text-[10px] font-bold text-zinc-300 uppercase" id="label-\${uid}">\${asset.label}</p>
-                                                <p class="text-[8px] font-mono text-zinc-600 uppercase" id="status-\${uid}">.PNG FORMAT — TAP TO UPLOAD (MAX 20)</p>
+                                                <p class="text-[10px] font-bold text-zinc-300 uppercase" id="label-${uid}">${asset.label}</p>
+                                                <p class="text-[8px] font-mono text-zinc-600 uppercase" id="status-${uid}">.PNG FORMAT — TAP TO UPLOAD (MAX 20)</p>
                                             </div>
-                                            <input type="file" accept="image/*" class="hidden" id="file-\${uid}" multiple onchange="handleAssetUpload('\${uid}', this, '\${session.name}')">
+                                            <input type="file" accept="image/*" class="hidden" id="file-${uid}" multiple onchange="handleAssetUpload('${uid}', this, '${session.name}')">
                                         </label>
                                         <div class="flex items-center gap-2 shrink-0">
-                                            \${masterAsset?.playback_ids?.[0]?.id ? \`
+                                            ${masterAsset?.playback_ids?.[0]?.id ? `
                                             <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Auto Thumbnail from Master"
-                                                onclick="window.open('https://image.mux.com/\${masterAsset.playback_ids[0].id}/thumbnail.png?width=1920&time=10', '_blank')">
+                                                onclick="window.open('https://image.mux.com/${masterAsset.playback_ids[0].id}/thumbnail.png?width=1920&time=10', '_blank')">
                                                 <iconify-icon icon="solar:gallery-bold" class="text-primary"></iconify-icon>
-                                            </button>\` : ''}
-                                            <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors opacity-10" id="dl-\${uid}" disabled title="No file yet">
+                                            </button>` : ''}
+                                            <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors opacity-10" id="dl-${uid}" disabled title="No file yet">
                                                 <iconify-icon icon="solar:download-bold" class="text-zinc-700"></iconify-icon>
                                             </button>
                                         </div>
-                                    </div>\`;
+                                    </div>`;
                                 }
                                 return thumbRows;
                             }
