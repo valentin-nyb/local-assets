@@ -279,51 +279,262 @@
                 { type: 'THUMB', label: 'Marketing Thumbnails', ext: '.PNG', icon: 'solar:gallery-bold', color: 'text-primary' },
             ];
 
-            const sessionMap = {};
-            for (const a of muxAssets) {
+            var artistMap = {};
+            for (var i = 0; i < muxAssets.length; i++) {
+                var a = muxAssets[i];
                 if (!a.passthrough) continue;
-                const pt = a.passthrough.toUpperCase().trim();
-                const artistName = pt.split(' // ')[0];
-                const dateStr = new Date(a.created_at * 1000).toISOString().slice(0, 10);
-                const sessionKey = artistName + '||' + dateStr;
-                if (!sessionMap[sessionKey]) {
-                    sessionMap[sessionKey] = { created_at: a.created_at, name: artistName, date: dateStr };
-                }
+                var pt = a.passthrough.toUpperCase().trim();
+                var artistName = pt.split(' // ')[0];
+                var dateStr = new Date(a.created_at * 1000).toISOString().slice(0, 10);
+                if (!artistMap[artistName]) artistMap[artistName] = {};
+                if (!artistMap[artistName][dateStr]) artistMap[artistName][dateStr] = true;
             }
 
-            if (Object.keys(sessionMap).length === 0) {
+            if (Object.keys(artistMap).length === 0) {
                 container.innerHTML = '<div class="p-8 text-center"><p class="text-[10px] font-mono text-zinc-600 uppercase tracking-widest">NO SESSIONS — UPLOAD FROM ASSETS TO BEGIN</p></div>';
                 return;
             }
 
-            const sessions = Object.entries(sessionMap).map(([key, info], idx) => {
-                return {
-                    id: 'session_' + String(idx + 1).padStart(2, '0'),
-                    name: info.name,
-                    date: info.date,
-                    venue: 'KOKO LONDON',
-                    assets: [...assetTypes],
-                };
-            });
-            // Expose sessions globally for upload lookup
-            window._dashboardSessions = sessions;
+            var allSessions = [];
+            var artistNames = Object.keys(artistMap).sort();
+            var artists = [];
+            for (var ai = 0; ai < artistNames.length; ai++) {
+                var aName = artistNames[ai];
+                var dates = Object.keys(artistMap[aName]).sort();
+                artists.push({ name: aName, dates: dates });
+                for (var di = 0; di < dates.length; di++) {
+                    allSessions.push({
+                        id: 'artist_' + String(ai + 1).padStart(2, '0') + '_d_' + String(di + 1).padStart(2, '0'),
+                        name: aName,
+                        date: dates[di],
+                        venue: 'KOKO LONDON',
+                        assets: assetTypes.slice()
+                    });
+                }
+            }
+            window._dashboardSessions = allSessions;
 
-            container.innerHTML = sessions.map(session => {
-                // Check if this session has a matching Mux MASTER asset (by artist name)
-                const masterAsset = findLinked(session.name.toUpperCase().trim(), session.date);
-                const hasAnyLinked = session.assets.some(a => {
-                    if (a.type === 'MASTER') return !!masterAsset;
-                    if (a.type === 'THUMB') {
-                        if (findLinked(session.name.toUpperCase().trim() + ' // THUMB', session.date)) return true;
-                        for (let ti = 1; ti <= 20; ti++) {
-                            const tk = session.name.toUpperCase().trim() + ' // THUMB // ' + String(ti).padStart(2, '0');
-                            if ((muxByKey[tk] || []).some(x => new Date(x.created_at * 1000).toISOString().slice(0, 10) === session.date)) return true;
-                        }
-                        return false;
+            function buildAssetRow(asset, uid, sessionName, sessionDate) {
+                var accept = asset.type === 'MASTER' ? 'video/*' : asset.type === 'AUDIO' ? 'audio/*' : asset.type === 'SOCIAL' ? 'video/*' : 'image/*';
+                var lookupKey = asset.type === 'MASTER' ? sessionName.toUpperCase().trim() : sessionName.toUpperCase().trim() + ' // ' + asset.type;
+                var linkedMuxAsset = findLinked(lookupKey, sessionDate);
+                var isLinked = !!linkedMuxAsset;
+                var pid = linkedMuxAsset && linkedMuxAsset.playback_ids && linkedMuxAsset.playback_ids[0] ? linkedMuxAsset.playback_ids[0].id : null;
+                var srFiles = linkedMuxAsset && linkedMuxAsset.static_renditions && linkedMuxAsset.static_renditions.files ? linkedMuxAsset.static_renditions.files : [];
+                var srStatus = linkedMuxAsset && linkedMuxAsset.static_renditions ? linkedMuxAsset.static_renditions.status : null;
+                var srReady = null;
+                for (var si = 0; si < srFiles.length; si++) { if (srFiles[si].status === 'ready') { srReady = srFiles[si]; break; } }
+                var isAudioAsset = asset.type === 'AUDIO';
+                var dlFile = srReady ? srReady.name : (srStatus === 'ready' ? (isAudioAsset ? 'audio.m4a' : 'highest.mp4') : null);
+                var dlExt = srReady ? srReady.ext : (isAudioAsset ? 'm4a' : 'mp4');
+                var linkedLabel = isLinked && !pid ? 'IN VAULT — PROCESSING' : (srReady || srStatus === 'ready') ? 'IN VAULT — UPLOADED' : (srFiles.some(function(f){ return f.status === 'preparing'; }) || srStatus === 'preparing') ? 'IN VAULT — PREPARING' : 'IN VAULT — UPLOADED';
+                var html = '';
+                if (isLinked) {
+                    var safeLabel = asset.label.replace(/'/g, "\\'");
+                    var safeName = sessionName.replace(/'/g, "\\'");
+                    html += '<div class="p-4 pl-16 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-' + uid + '" style="border-left: 2px solid #39FF14;">';
+                    html += '<div class="flex items-center gap-4 flex-1 min-w-0">';
+                    html += '<div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-primary/50 shrink-0">';
+                    html += '<iconify-icon icon="' + asset.icon + '" class="text-primary text-sm"></iconify-icon>';
+                    html += '</div>';
+                    html += '<div class="min-w-0">';
+                    html += '<p class="text-[10px] font-bold text-zinc-300 uppercase" id="label-' + uid + '">' + asset.label + '</p>';
+                    html += '<p class="text-[8px] font-mono text-primary uppercase" id="status-' + uid + '">' + linkedLabel + '</p>';
+                    html += '</div>';
+                    html += '</div>';
+                    html += '<div class="flex items-center gap-2 shrink-0">';
+                    if (pid && dlFile) {
+                        html += '<button id="dl-btn-' + uid + '" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download" onclick="singleZipDownload(\'' + pid + '\', \'' + dlFile + '\', \'' + dlExt + '\', \'' + safeLabel + '\', \'' + safeName + '\', \'' + sessionDate + '\', this)">';
+                        html += '<iconify-icon icon="solar:download-bold" class="text-primary"></iconify-icon>';
+                        html += '</button>';
+                        html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Play" onclick="window.open(\'/player.html?v=' + pid + '&f=' + dlFile + '&title=\' + encodeURIComponent(\'' + safeLabel + '\'), \'_blank\')">';
+                        html += '<iconify-icon icon="solar:play-bold" class="text-primary"></iconify-icon>';
+                        html += '</button>';
+                    } else if (pid) {
+                        html += '<span class="text-[8px] font-mono text-yellow-500 uppercase">PREPARING</span>';
+                    } else {
+                        html += '<span class="text-[8px] font-mono text-yellow-500 uppercase">PROCESSING</span>';
                     }
-                    return !!findLinked(session.name.toUpperCase().trim() + ' // ' + a.type, session.date);
-                });
+                    html += '</div>';
+                    html += '</div>';
+                } else {
+                    html += '<div class="p-4 pl-16 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-' + uid + '">';
+                    html += '<label class="flex items-center gap-4 cursor-pointer flex-1 min-w-0">';
+                    html += '<div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-border/50 shrink-0">';
+                    html += '<iconify-icon icon="' + asset.icon + '" class="' + asset.color + ' text-sm"></iconify-icon>';
+                    html += '</div>';
+                    html += '<div class="min-w-0">';
+                    html += '<p class="text-[10px] font-bold text-zinc-300 uppercase" id="label-' + uid + '">' + asset.label + '</p>';
+                    html += '<p class="text-[8px] font-mono text-zinc-600 uppercase" id="status-' + uid + '">' + asset.ext + ' FORMAT — TAP TO UPLOAD</p>';
+                    html += '</div>';
+                    html += '<input type="file" accept="' + accept + '" class="hidden" id="file-' + uid + '"' + (asset.type === 'SOCIAL' ? ' multiple' : '') + ' onchange="handleAssetUpload(\'' + uid + '\', this, \'' + sessionName + '\')">';
+                    html += '</label>';
+                    html += '<div class="flex items-center gap-2 shrink-0">';
+                    html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors opacity-10" id="dl-' + uid + '" disabled title="No file yet">';
+                    html += '<iconify-icon icon="solar:download-bold" class="text-zinc-700"></iconify-icon>';
+                    html += '</button>';
+                    html += '</div>';
+                    html += '</div>';
+                }
+                return html;
+            }
 
+            function buildThumbHtml(thumbAssets, uid, asset, sessionName, sessionDate, masterAsset) {
+                var html = '';
+                if (thumbAssets.length > 0) {
+                    for (var ti = 0; ti < thumbAssets.length; ti++) {
+                        var t = thumbAssets[ti];
+                        var tPid = t.asset.playback_ids && t.asset.playback_ids[0] ? t.asset.playback_ids[0].id : null;
+                        var tSrStatus = t.asset.static_renditions ? t.asset.static_renditions.status : null;
+                        var tSrFiles = t.asset.static_renditions && t.asset.static_renditions.files ? t.asset.static_renditions.files : [];
+                        var tSrReady = null;
+                        for (var si = 0; si < tSrFiles.length; si++) { if (tSrFiles[si].status === 'ready') { tSrReady = tSrFiles[si]; break; } }
+                        var tLabel = !tPid ? 'IN VAULT — PROCESSING' : (tSrReady || tSrStatus === 'ready') ? 'IN VAULT — UPLOADED' : (tSrFiles.some(function(f){ return f.status === 'preparing'; }) || tSrStatus === 'preparing') ? 'IN VAULT — PREPARING' : 'IN VAULT — UPLOADED';
+                        html += '<div class="p-4 pl-16 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" style="border-left: 2px solid #39FF14;">';
+                        html += '<div class="flex items-center gap-4 flex-1 min-w-0">';
+                        html += '<div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-primary/50 shrink-0">';
+                        html += '<iconify-icon icon="solar:gallery-bold" class="text-primary text-sm"></iconify-icon>';
+                        html += '</div>';
+                        html += '<div class="min-w-0">';
+                        html += '<p class="text-[10px] font-bold text-zinc-300 uppercase">' + t.label + '</p>';
+                        html += '<p class="text-[8px] font-mono text-primary uppercase">' + tLabel + '</p>';
+                        html += '</div>';
+                        html += '</div>';
+                        html += '<div class="flex items-center gap-2 shrink-0">';
+                        if (tPid) {
+                            var safeTLabel = t.label.replace(/'/g, "\\'");
+                            html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download" onclick="window.open(\'https://image.mux.com/' + tPid + '/thumbnail.png?width=1920\', \'_blank\')">';
+                            html += '<iconify-icon icon="solar:download-bold" class="text-primary"></iconify-icon>';
+                            html += '</button>';
+                            html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Preview" onclick="window.open(\'/player.html?v=' + tPid + '&type=thumb&title=\' + encodeURIComponent(\'' + safeTLabel + '\'), \'_blank\')">';
+                            html += '<iconify-icon icon="solar:eye-bold" class="text-primary"></iconify-icon>';
+                            html += '</button>';
+                        } else {
+                            html += '<span class="text-[8px] font-mono text-yellow-500 uppercase">PROCESSING</span>';
+                        }
+                        html += '</div>';
+                        html += '</div>';
+                    }
+                    if (thumbAssets.length < 20) {
+                        html += '<div class="p-4 pl-16 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-' + uid + '">';
+                        html += '<label class="flex items-center gap-4 cursor-pointer flex-1 min-w-0">';
+                        html += '<div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-border/50 shrink-0">';
+                        html += '<iconify-icon icon="solar:gallery-bold" class="text-primary text-sm"></iconify-icon>';
+                        html += '</div>';
+                        html += '<div class="min-w-0">';
+                        html += '<p class="text-[10px] font-bold text-zinc-300 uppercase" id="label-' + uid + '">Add More Thumbnails</p>';
+                        html += '<p class="text-[8px] font-mono text-zinc-600 uppercase" id="status-' + uid + '">' + thumbAssets.length + '/20 UPLOADED — TAP TO ADD</p>';
+                        html += '</div>';
+                        html += '<input type="file" accept="image/*" class="hidden" id="file-' + uid + '" multiple onchange="handleAssetUpload(\'' + uid + '\', this, \'' + sessionName + '\')">';
+                        html += '</label>';
+                        html += '</div>';
+                    }
+                } else {
+                    var masterPid = masterAsset && masterAsset.playback_ids && masterAsset.playback_ids[0] ? masterAsset.playback_ids[0].id : null;
+                    html += '<div class="p-4 pl-16 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-' + uid + '">';
+                    html += '<label class="flex items-center gap-4 cursor-pointer flex-1 min-w-0">';
+                    html += '<div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-border/50 shrink-0">';
+                    html += '<iconify-icon icon="' + asset.icon + '" class="' + asset.color + ' text-sm"></iconify-icon>';
+                    html += '</div>';
+                    html += '<div class="min-w-0">';
+                    html += '<p class="text-[10px] font-bold text-zinc-300 uppercase" id="label-' + uid + '">' + asset.label + '</p>';
+                    html += '<p class="text-[8px] font-mono text-zinc-600 uppercase" id="status-' + uid + '">.PNG FORMAT — TAP TO UPLOAD (MAX 20)</p>';
+                    html += '</div>';
+                    html += '<input type="file" accept="image/*" class="hidden" id="file-' + uid + '" multiple onchange="handleAssetUpload(\'' + uid + '\', this, \'' + sessionName + '\')">';
+                    html += '</label>';
+                    html += '<div class="flex items-center gap-2 shrink-0">';
+                    if (masterPid) {
+                        html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Auto Thumbnail from Master"';
+                        html += ' onclick="window.open(\'https://image.mux.com/' + masterPid + '/thumbnail.png?width=1920&time=10\', \'_blank\')">';
+                        html += '<iconify-icon icon="solar:gallery-bold" class="text-primary"></iconify-icon>';
+                        html += '</button>';
+                    }
+                    html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors opacity-10" id="dl-' + uid + '" disabled title="No file yet">';
+                    html += '<iconify-icon icon="solar:download-bold" class="text-zinc-700"></iconify-icon>';
+                    html += '</button>';
+                    html += '</div>';
+                    html += '</div>';
+                }
+                return html;
+            }
+
+<<<<<<< HEAD
+            var html = '';
+            for (var ai = 0; ai < artists.length; ai++) {
+                var artist = artists[ai];
+                var artistId = 'artist_' + String(ai + 1).padStart(2, '0');
+                var dateCount = artist.dates.length;
+                html += '<div class="session-group">';
+                html += '<div onclick="toggleArtistFolder(\'' + artistId + '\')" class="p-5 flex items-center justify-between hover:bg-white/[0.02] transition-colors cursor-pointer group">';
+                html += '<div class="flex items-center gap-4">';
+                html += '<div class="w-10 h-10 bg-[#050505] border border-border flex items-center justify-center rounded-xl group-hover:border-primary/50 transition-colors">';
+                html += '<iconify-icon icon="solar:folder-2-bold" class="text-zinc-600 group-hover:text-primary"></iconify-icon>';
+                html += '</div>';
+                html += '<div>';
+                html += '<p class="text-sm font-black text-white uppercase tracking-tight">' + artist.name + '</p>';
+                html += '<p class="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">' + dateCount + ' SESSION' + (dateCount !== 1 ? 'S' : '') + '</p>';
+                html += '</div>';
+                html += '</div>';
+                html += '<div class="flex items-center gap-2">';
+                html += '<iconify-icon id="arrow-' + artistId + '" icon="solar:alt-arrow-down-linear" class="text-zinc-700 transition-transform duration-300"></iconify-icon>';
+                html += '</div>';
+                html += '</div>';
+                html += '<div id="preview-' + artistId + '" class="hidden bg-black/20 border-t border-border/50">';
+                for (var di = 0; di < artist.dates.length; di++) {
+                    var dateStr = artist.dates[di];
+                    var dateId = artistId + '_d_' + String(di + 1).padStart(2, '0');
+                    var masterAsset = findLinked(artist.name.toUpperCase().trim(), dateStr);
+                    var hasAnyLinked = assetTypes.some(function(at) {
+                        if (at.type === 'MASTER') return !!masterAsset;
+                        if (at.type === 'THUMB') {
+                            var tp = artist.name.toUpperCase().trim() + ' // THUMB';
+                            if (findLinked(tp, dateStr)) return true;
+                            for (var tti = 1; tti <= 20; tti++) {
+                                var tk = tp + ' // ' + String(tti).padStart(2, '0');
+                                if ((muxByKey[tk] || []).some(function(x) { return new Date(x.created_at * 1000).toISOString().slice(0, 10) === dateStr; })) return true;
+                            }
+                            return false;
+                        }
+                        return !!findLinked(artist.name.toUpperCase().trim() + ' // ' + at.type, dateStr);
+                    });
+                    html += '<div class="border-b border-border/30">';
+                    html += '<div onclick="toggleDateSection(\'' + dateId + '\')" class="p-4 pl-10 flex items-center justify-between hover:bg-white/[0.02] transition-colors cursor-pointer group">';
+                    html += '<div class="flex items-center gap-3">';
+                    html += '<div class="w-8 h-8 bg-[#050505] border border-border/50 flex items-center justify-center rounded-lg">';
+                    html += '<iconify-icon icon="solar:calendar-bold" class="text-zinc-600 text-sm"></iconify-icon>';
+                    html += '</div>';
+                    html += '<div>';
+                    html += '<p class="text-xs font-bold text-zinc-300 uppercase tracking-tight">' + dateStr + '</p>';
+                    html += '<p class="text-[8px] font-mono text-zinc-600 uppercase tracking-widest">KOKO LONDON</p>';
+                    html += '</div>';
+                    html += '</div>';
+                    html += '<div class="flex items-center gap-2">';
+                    if (hasAnyLinked) {
+                        var safeName = artist.name.replace(/'/g, "\\'");
+                        html += '<button onclick="event.stopPropagation(); bulkDownload(\'' + safeName + '\', \'' + dateStr + '\')" id="zip-btn-' + dateId + '" class="flex items-center gap-1.5 px-3 py-1 rounded-full border border-primary/30 hover:bg-primary/10 transition-colors" title="Download All">';
+                        html += '<span class="text-[8px] font-mono text-primary uppercase tracking-widest">DOWNLOAD</span>';
+                        html += '</button>';
+                    }
+                    html += '<iconify-icon id="arrow-' + dateId + '" icon="solar:alt-arrow-down-linear" class="text-zinc-700 transition-transform duration-300 text-sm"></iconify-icon>';
+                    html += '</div>';
+                    html += '</div>';
+                    html += '<div id="preview-' + dateId + '" class="hidden bg-black/40 divide-y divide-border/30">';
+                    for (var ati = 0; ati < assetTypes.length; ati++) {
+                        var asset = assetTypes[ati];
+                        var uid = dateId + '_' + asset.type;
+                        if (asset.type === 'THUMB') {
+                            var thumbPrefix = artist.name.toUpperCase().trim() + ' // THUMB';
+                            var thumbAssets = [];
+                            var singleThumb = findLinked(thumbPrefix, dateStr);
+                            if (singleThumb) thumbAssets.push({ asset: singleThumb, label: 'Thumbnail' });
+                            for (var tti = 1; tti <= 20; tti++) {
+                                var thumbKey = thumbPrefix + ' // ' + String(tti).padStart(2, '0');
+                                var candidates = muxByKey[thumbKey] || [];
+                                var thumbMatch = null;
+                                for (var ci = 0; ci < candidates.length; ci++) {
+                                    if (new Date(candidates[ci].created_at * 1000).toISOString().slice(0, 10) === dateStr) {
+                                        thumbMatch = candidates[ci]; break;
+=======
                 return `
                 <div class="session-group">
                     <div onclick="toggleAssetPreview('${session.id}')" class="p-5 flex items-center justify-between hover:bg-white/[0.02] transition-colors cursor-pointer group">
@@ -416,7 +627,10 @@
                                                 <input type="file" accept="image/*" class="hidden" id="file-${uid}" multiple onchange="handleAssetUpload('${uid}', this, '${session.name}')">
                                             </label>
                                         </div>`;
+>>>>>>> db29fb111392f7a8cddd07fbfddf3c7c964482e7
                                     }
+<<<<<<< HEAD
+=======
                                 } else {
                                     thumbRows = `
                                     <div class="p-4 pl-12 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-${uid}">
@@ -441,68 +655,43 @@
                                             </button>
                                         </div>
                                     </div>`;
+>>>>>>> db29fb111392f7a8cddd07fbfddf3c7c964482e7
                                 }
-                                return thumbRows;
+                                if (thumbMatch) thumbAssets.push({ asset: thumbMatch, label: 'Thumbnail ' + String(tti).padStart(2, '0') });
                             }
-
-                            return `
-                            <div class="p-4 pl-12 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-${uid}" ${isLinked ? 'style="border-left: 2px solid #39FF14;"' : ''}>
-                                ${isLinked ? `
-                                <div class="flex items-center gap-4 flex-1 min-w-0">
-                                    <div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-primary/50 shrink-0">
-                                        <iconify-icon icon="${asset.icon}" class="text-primary text-sm"></iconify-icon>
-                                    </div>
-                                    <div class="min-w-0">
-                                        <p class="text-[10px] font-bold text-zinc-300 uppercase" id="label-${uid}">${asset.label}</p>
-                                        <p class="text-[8px] font-mono text-primary uppercase" id="status-${uid}">${linkedLabel}</p>
-                                    </div>
-                                </div>
-                                <div class="flex items-center gap-2 shrink-0">
-                                    ${pid && dlFile ? `<button id="dl-btn-${uid}" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download" onclick="singleZipDownload('${pid}', '${dlFile}', '${dlExt}', '${asset.label.replace(/'/g, "\\'")}', '${session.name.replace(/'/g, "\\'")}', '${session.date}', this)">
-                                        <iconify-icon icon="solar:download-bold" class="text-primary"></iconify-icon>
-                                    </button>
-                                    <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Play" onclick="window.open('/player.html?v=${pid}&f=${dlFile}&title='+encodeURIComponent(asset.label), '_blank')">
-                                        <iconify-icon icon="solar:play-bold" class="text-primary"></iconify-icon>
-                                    </button>` : pid ? `<span class="text-[8px] font-mono text-yellow-500 uppercase">PREPARING</span>` : `<span class="text-[8px] font-mono text-yellow-500 uppercase">PROCESSING</span>`}
-                                </div>
-                                ` : `
-                                <label class="flex items-center gap-4 cursor-pointer flex-1 min-w-0">
-                                    <div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-border/50 shrink-0">
-                                        <iconify-icon icon="${asset.icon}" class="${asset.color} text-sm"></iconify-icon>
-                                    </div>
-                                    <div class="min-w-0">
-                                        <p class="text-[10px] font-bold text-zinc-300 uppercase" id="label-${uid}">${asset.label}</p>
-                                        <p class="text-[8px] font-mono text-zinc-600 uppercase" id="status-${uid}">${asset.ext} FORMAT — TAP TO UPLOAD</p>
-                                    </div>
-                                    <input type="file" accept="${accept}" class="hidden" id="file-${uid}" ${asset.type === 'SOCIAL' ? 'multiple' : ''} onchange="handleAssetUpload('${uid}', this, '${session.name}')">
-                                </label>
-                                <div class="flex items-center gap-2 shrink-0">
-                                    <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors opacity-10" id="dl-${uid}" disabled title="No file yet">
-                                        <iconify-icon icon="solar:download-bold" class="text-zinc-700"></iconify-icon>
-                                    </button>
-                                </div>
-                                `}
-                            </div>`;
-                        }).join('')}
-                    </div>
-                </div>`;
-            }).join('');
+                            html += buildThumbHtml(thumbAssets, uid, asset, artist.name, dateStr, masterAsset);
+                        } else {
+                            html += buildAssetRow(asset, uid, artist.name, dateStr);
+                        }
+                    }
+                    html += '</div>';
+                    html += '</div>';
+                }
+                html += '</div>';
+                html += '</div>';
+            }
+            container.innerHTML = html;
         }
 
-        function toggleAssetPreview(id) {
-            const preview = document.getElementById(`preview-${id}`);
-            const arrow = document.getElementById(`arrow-${id}`);
+        function toggleArtistFolder(id) {
+            var preview = document.getElementById('preview-' + id);
+            var arrow = document.getElementById('arrow-' + id);
             if (!preview || !arrow) return;
+            var isHidden = preview.classList.contains('hidden');
+            if (isHidden) {
+                preview.classList.remove('hidden');
+                arrow.style.transform = 'rotate(180deg)';
+            } else {
+                preview.classList.add('hidden');
+                arrow.style.transform = 'rotate(0deg)';
+            }
+        }
 
-            document.querySelectorAll('[id^="preview-"]').forEach(el => {
-                if (el.id !== `preview-${id}`) el.classList.add('hidden');
-            });
-
-            document.querySelectorAll('[id^="arrow-"]').forEach(el => {
-                if (el.id !== `arrow-${id}`) el.style.transform = 'rotate(0deg)';
-            });
-
-            const isHidden = preview.classList.contains('hidden');
+        function toggleDateSection(id) {
+            var preview = document.getElementById('preview-' + id);
+            var arrow = document.getElementById('arrow-' + id);
+            if (!preview || !arrow) return;
+            var isHidden = preview.classList.contains('hidden');
             if (isHidden) {
                 preview.classList.remove('hidden');
                 arrow.style.transform = 'rotate(180deg)';
