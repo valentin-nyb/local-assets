@@ -246,22 +246,28 @@
             const bar = document.getElementById('storage-bar');
             if (bar) bar.style.width = Math.max(storagePercent, 0.5) + '%';
 
-            // Build a lookup: passthrough (uppercase) → asset (with or without playback ID)
-            const muxLookup = {};
-            const allMuxKeys = [];
+            // Build a lookup: passthrough (uppercase) → array of assets
+            const muxByKey = {};
             for (const a of muxAssets) {
                 if (a.passthrough) {
                     const key = a.passthrough.toUpperCase().trim();
-                    allMuxKeys.push(key);
-                    if (!muxLookup[key]) muxLookup[key] = a;
+                    if (!muxByKey[key]) muxByKey[key] = [];
+                    muxByKey[key].push(a);
                 }
             }
-            // Find asset by exact key OR any key starting with it (for multi-file uploads)
-            function findLinked(key) {
-                if (muxLookup[key]) return muxLookup[key];
-                const prefix = key + ' // ';
-                const match = allMuxKeys.find(k => k.startsWith(prefix));
-                return match ? muxLookup[match] : null;
+            // Find asset by exact key matching session date, or prefix match for multi-file uploads
+            function findLinked(key, sessionDate) {
+                const candidates = muxByKey[key] || [];
+                const match = candidates.find(a => new Date(a.created_at * 1000).toISOString().slice(0, 10) === sessionDate);
+                if (match) return match;
+                // Check prefix keys (e.g. "NAME // SOCIAL // 01")
+                for (const [k, arr] of Object.entries(muxByKey)) {
+                    if (k.startsWith(key + ' // ')) {
+                        const m = arr.find(a => new Date(a.created_at * 1000).toISOString().slice(0, 10) === sessionDate);
+                        if (m) return m;
+                    }
+                }
+                return null;
             }
 
             // Dynamically build sessions from Mux assets
@@ -278,8 +284,10 @@
                 if (!a.passthrough) continue;
                 const pt = a.passthrough.toUpperCase().trim();
                 const artistName = pt.split(' // ')[0];
-                if (!sessionMap[artistName]) {
-                    sessionMap[artistName] = { created_at: a.created_at };
+                const dateStr = new Date(a.created_at * 1000).toISOString().slice(0, 10);
+                const sessionKey = artistName + '||' + dateStr;
+                if (!sessionMap[sessionKey]) {
+                    sessionMap[sessionKey] = { created_at: a.created_at, name: artistName, date: dateStr };
                 }
             }
 
@@ -288,13 +296,11 @@
                 return;
             }
 
-            const sessions = Object.entries(sessionMap).map(([name, info], idx) => {
-                const date = new Date(info.created_at * 1000);
-                const dateStr = date.toISOString().slice(0, 10); // YYYY-MM-DD
+            const sessions = Object.entries(sessionMap).map(([key, info], idx) => {
                 return {
                     id: 'session_' + String(idx + 1).padStart(2, '0'),
-                    name: name,
-                    date: dateStr,
+                    name: info.name,
+                    date: info.date,
                     venue: 'KOKO LONDON',
                     assets: [...assetTypes],
                 };
@@ -304,10 +310,10 @@
 
             container.innerHTML = sessions.map(session => {
                 // Check if this session has a matching Mux MASTER asset (by artist name)
-                const masterAsset = findLinked(session.name.toUpperCase().trim());
+                const masterAsset = findLinked(session.name.toUpperCase().trim(), session.date);
                 const hasAnyLinked = session.assets.some(a => {
                     if (a.type === 'MASTER') return !!masterAsset;
-                    return !!findLinked(session.name.toUpperCase().trim() + ' // ' + a.type);
+                    return !!findLinked(session.name.toUpperCase().trim() + ' // ' + a.type, session.date);
                 });
 
                 return `
@@ -334,7 +340,7 @@
                             const accept = asset.type === 'MASTER' ? 'video/*' : asset.type === 'AUDIO' ? 'audio/*' : asset.type === 'SOCIAL' ? 'video/*' : 'image/*';
                             // Check Mux for this specific asset: MASTER by name, others by NAME // TYPE
                             const lookupKey = asset.type === 'MASTER' ? session.name.toUpperCase().trim() : session.name.toUpperCase().trim() + ' // ' + asset.type;
-                            const linkedMuxAsset = findLinked(lookupKey);
+                            const linkedMuxAsset = findLinked(lookupKey, session.date);
                             const isLinked = !!linkedMuxAsset;
                             const pid = linkedMuxAsset?.playback_ids?.[0]?.id;
                             const srFiles = linkedMuxAsset?.static_renditions?.files || [];
@@ -369,10 +375,10 @@
                                     <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Preview" onclick="window.open('/player.html?v=${pid}&type=thumb&title='+encodeURIComponent(asset.label), '_blank')">
                                         <iconify-icon icon="solar:eye-bold" class="text-primary"></iconify-icon>
                                     </button>` : pid ? `<span class="text-[8px] font-mono text-yellow-500 uppercase">PREPARING</span>` : `<span class="text-[8px] font-mono text-yellow-500 uppercase">PROCESSING</span>`}
-                                    <!-- Add thumbnail preview for MASTER asset using Mux Image API -->
-                                    ${pid && asset.type === 'MASTER' ? `
-                                      <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Preview Thumbnail"
-                                        onclick="window.open('https://image.mux.com/${pid}/thumbnail.png?width=1920&time=10', '_blank')">
+                                    <!-- Auto thumbnail from master video on THUMB row -->
+                                    ${asset.type === 'THUMB' && masterAsset?.playback_ids?.[0]?.id ? `
+                                      <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Auto Thumbnail from Master"
+                                        onclick="window.open('https://image.mux.com/${masterAsset.playback_ids[0].id}/thumbnail.png?width=1920&time=10', '_blank')">
                                         <iconify-icon icon="solar:gallery-bold" class="text-primary"></iconify-icon>
                                       </button>
                                     ` : ''}
