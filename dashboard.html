@@ -161,12 +161,12 @@
                         <h3 class="text-xs font-bold uppercase tracking-widest mb-6">System Health</h3>
                         <div class="space-y-6">
                             <div>
-                                <div class="flex justify-between text-[10px] font-mono mb-2 uppercase"><span class="text-muted-foreground">Upload Bandwidth</span><span class="text-white">840 Mbps</span></div>
-                                <div class="w-full bg-white/5 h-1 rounded-full overflow-hidden"><div class="bg-primary h-full w-[85%] shadow-[0_0_10px_#39FF14]"></div></div>
+                                <div class="flex justify-between text-[10px] font-mono mb-2 uppercase"><span class="text-muted-foreground">Upload Bandwidth</span><span id="bandwidth-value" class="text-white">—</span></div>
+                                <div class="w-full bg-white/5 h-1 rounded-full overflow-hidden"><div id="bandwidth-bar" class="bg-primary h-full w-[0%] shadow-[0_0_10px_#39FF14] transition-all duration-700"></div></div>
                             </div>
                             <div>
-                                <div class="flex justify-between text-[10px] font-mono mb-2 uppercase"><span class="text-muted-foreground">Local Storage (NAS)</span><span class="text-white">1.03%</span></div>
-                                <div class="w-full bg-white/5 h-1 rounded-full overflow-hidden"><div class="bg-yellow-500 h-full" style="width: 1.03%;"></div></div>
+                                <div class="flex justify-between text-[10px] font-mono mb-2 uppercase"><span class="text-muted-foreground">Local Storage (NAS)</span><span id="nas-value" class="text-white">—</span></div>
+                                <div class="w-full bg-white/5 h-1 rounded-full overflow-hidden"><div id="nas-bar" class="bg-yellow-500 h-full transition-all duration-700" style="width: 0%;"></div></div>
                             </div>
                         </div>
                     </div>
@@ -245,6 +245,7 @@
             const storagePercent = (totalBytes / (50 * 1024 * 1024 * 1024 * 1024)) * 100;
             const bar = document.getElementById('storage-bar');
             if (bar) bar.style.width = Math.max(storagePercent, 0.5) + '%';
+            updateNasStorage(totalBytes);
 
             // Build a lookup: passthrough (uppercase) → array of assets
             const muxByKey = {};
@@ -677,6 +678,55 @@
             } finally {
                 btnEl.innerHTML = origHtml;
                 btnEl.disabled = false;
+            }
+        }
+
+        // --- System Health: real bandwidth via Network Information API ---
+        const NAS_CAPACITY_TB = 50;
+
+        function updateBandwidth() {
+            const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            const valEl = document.getElementById('bandwidth-value');
+            const barEl = document.getElementById('bandwidth-bar');
+            if (!valEl || !barEl) return;
+            if (conn && conn.downlink) {
+                const mbps = conn.downlink;
+                valEl.textContent = mbps >= 1000 ? (mbps / 1000).toFixed(1) + ' Gbps' : Math.round(mbps) + ' Mbps';
+                const pct = Math.min((mbps / 1000) * 100, 100);
+                barEl.style.width = pct + '%';
+                barEl.className = barEl.className.replace(/bg-\S+/, '');
+                if (mbps >= 100) {
+                    barEl.classList.add('bg-primary');
+                    barEl.style.boxShadow = '0 0 10px #39FF14';
+                } else if (mbps >= 10) {
+                    barEl.classList.add('bg-yellow-500');
+                    barEl.style.boxShadow = '0 0 10px #eab308';
+                } else {
+                    barEl.classList.add('bg-red-500');
+                    barEl.style.boxShadow = '0 0 10px #ef4444';
+                }
+            } else {
+                valEl.textContent = 'N/A';
+                barEl.style.width = '0%';
+            }
+        }
+        updateBandwidth();
+        if (navigator.connection) navigator.connection.addEventListener('change', updateBandwidth);
+        setInterval(updateBandwidth, 5000);
+
+        function updateNasStorage(totalBytes) {
+            const valEl = document.getElementById('nas-value');
+            const barEl = document.getElementById('nas-bar');
+            if (!valEl || !barEl) return;
+            const nasCapacityBytes = NAS_CAPACITY_TB * 1024 * 1024 * 1024 * 1024;
+            const pct = (totalBytes / nasCapacityBytes) * 100;
+            valEl.textContent = pct.toFixed(2) + '%';
+            barEl.style.width = Math.max(pct, 0.3) + '%';
+            barEl.className = barEl.className.replace(/bg-\S+/, '');
+            if (pct >= 80) {
+                barEl.classList.add('bg-red-500');
+            } else {
+                barEl.classList.add('bg-yellow-500');
             }
         }
 
