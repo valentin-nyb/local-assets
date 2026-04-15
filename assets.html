@@ -98,23 +98,41 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ artistName: artist })
                 });
+                if (!response.ok) {
+                    const errBody = await response.text();
+                    throw new Error('Server ' + response.status + ': ' + errBody);
+                }
                 const data = await response.json();
-                
+                if (!data.url) throw new Error('No upload URL returned: ' + JSON.stringify(data));
+
                 const xhr = new XMLHttpRequest();
                 xhr.open('PUT', data.url);
                 xhr.upload.onprogress = (e) => {
-                    const pct = Math.round((e.loaded / e.total) * 100);
-                    uploadBtn.innerHTML = `UPLOADING: ${pct}%`;
+                    if (e.lengthComputable) {
+                        const pct = Math.round((e.loaded / e.total) * 100);
+                        uploadBtn.innerHTML = 'UPLOADING: ' + pct + '%';
+                    }
                 };
                 xhr.onload = () => {
-                    uploadBtn.innerHTML = "SENT TO VAULT";
-                    uploadBtn.style.background = "#39FF14";
-                    // Refresh the list after a few seconds so Mux has time to process
-                    setTimeout(loadVault, 5000); 
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        uploadBtn.innerHTML = "SENT TO VAULT";
+                        uploadBtn.style.background = "#39FF14";
+                        setTimeout(loadVault, 5000);
+                    } else {
+                        alert('Upload failed: HTTP ' + xhr.status);
+                        uploadBtn.innerHTML = "INGEST";
+                        uploadBtn.disabled = false;
+                    }
+                };
+                xhr.onerror = () => {
+                    alert('Network error during upload — check CORS or connectivity.');
+                    uploadBtn.innerHTML = "INGEST";
+                    uploadBtn.disabled = false;
                 };
                 xhr.send(file);
             } catch (err) {
                 alert("UPLOAD ERROR: " + err.message);
+                uploadBtn.innerHTML = "INGEST";
                 uploadBtn.disabled = false;
             }
         };

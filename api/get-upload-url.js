@@ -1,9 +1,6 @@
-import Mux from '@mux/mux-node';
-
-const mux = new Mux({
-  tokenId: (process.env.PROD_MUX_TOKEN_ID || process.env.MUX_TOKEN_ID || '').trim(),
-  tokenSecret: (process.env.PROD_MUX_TOKEN_SECRET || process.env.MUX_TOKEN_SECRET || '').trim()
-});
+const TOKEN_ID = (process.env.PROD_MUX_TOKEN_ID || process.env.MUX_TOKEN_ID || '').trim();
+const TOKEN_SECRET = (process.env.PROD_MUX_TOKEN_SECRET || process.env.MUX_TOKEN_SECRET || '').trim();
+const AUTH = Buffer.from(`${TOKEN_ID}:${TOKEN_SECRET}`).toString('base64');
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -11,7 +8,6 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  // Try to find the name in query params OR the request body
   let body = req.body;
   if (typeof body === 'string') {
     try { body = JSON.parse(body); } catch(e) {}
@@ -21,27 +17,36 @@ export default async function handler(req, res) {
   const isAudio = String(artistName).toUpperCase().includes('// AUDIO');
   const srResolution = isAudio ? 'audio-only' : 'highest';
   const dateStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
-  const videoTitle = String(artistName).toUpperCase() + ' — ' + dateStr;
-
-  // Use today's date in YYYY-MM-DD format
-  const today = new Date();
-  const yyyy = today.getFullYear();
-  const mm = String(today.getMonth() + 1).padStart(2, '0');
-  const dd = String(today.getDate()).padStart(2, '0');
-  const dateIso = `${yyyy}-${mm}-${dd}`;
+  const videoTitle = String(artistName).toUpperCase() + ' \u2014 ' + dateStr;
 
   try {
-    const upload = await mux.video.uploads.create({
-      new_asset_settings: { 
-        playback_policy: ['public'],
-        passthrough: String(artistName).toUpperCase().trim(),
-        name: videoTitle,
-        static_renditions: [{ resolution: srResolution }]
+    const muxRes = await fetch('https://api.mux.com/video/v1/uploads', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${AUTH}`
       },
-      cors_origin: '*',
+      body: JSON.stringify({
+        new_asset_settings: {
+          playback_policies: ['public'],
+          passthrough: String(artistName).toUpperCase().trim(),
+          name: videoTitle,
+          static_renditions: [{ resolution: srResolution }]
+        },
+        cors_origin: '*'
+      })
     });
+
+    const result = await muxRes.json();
+    if (!muxRes.ok) {
+      console.error('Mux upload creation failed:', JSON.stringify(result));
+      return res.status(muxRes.status).json({ error: result.error || result });
+    }
+
+    const upload = result.data;
     return res.status(200).json({ url: upload.url, id: upload.id });
   } catch (error) {
+    console.error('get-upload-url error:', error);
     return res.status(500).json({ error: error.message });
   }
 }
