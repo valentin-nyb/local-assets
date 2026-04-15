@@ -360,7 +360,7 @@
                     <li>✓ Content Distribution</li>
                     <li>✓ 250 GB Cloud Storage</li>
                 </ul>
-                <button class="mt-auto w-full py-4 font-mono text-sm border border-border text-foreground hover:border-primary hover:text-primary uppercase">Select Tier</button>
+                <button onclick="selectTier('starter-distribution')" class="mt-auto w-full py-4 font-mono text-sm border border-border text-foreground hover:border-primary hover:text-primary uppercase">Select Tier</button>
             </div>
 
             <div class="relative flex flex-col p-6 md:p-8 border border-border bg-card">
@@ -379,7 +379,7 @@
                     <li>✓ YouTube & SoundCloud SEO</li>
                     <li>✓ 500 GB Cloud Storage</li>
                 </ul>
-                <button class="mt-auto w-full py-4 font-mono text-sm border border-border text-foreground hover:border-primary hover:text-primary uppercase">Select Tier</button>
+                <button onclick="selectTier('liveset-distribution')" class="mt-auto w-full py-4 font-mono text-sm border border-border text-foreground hover:border-primary hover:text-primary uppercase">Select Tier</button>
             </div>
 
             <div class="relative flex flex-col p-6 md:p-8 border border-border bg-card">
@@ -414,7 +414,7 @@
                     <li>✓ 4 vertical social clips</li>
                     <li>✓ 4 social media marketing assets</li>
                 </ul>
-                <button class="mt-auto w-full py-4 font-mono text-sm border border-border text-foreground hover:border-primary hover:text-primary uppercase">Select Tier</button>
+                <button onclick="selectTier('starter-creative')" class="mt-auto w-full py-4 font-mono text-sm border border-border text-foreground hover:border-primary hover:text-primary uppercase">Select Tier</button>
             </div>
 
             <div class="relative flex flex-col p-6 md:p-8 border border-primary bg-card shadow-[0_0_20px_rgba(57,255,20,0.05)] transform scale-105 z-10">
@@ -434,7 +434,7 @@
                     <li>✓ Priority 48-hour Turnaround</li>
                     <li>✓ Youtube and SoundCloud SEO</li>
                 </ul>
-                <button class="mt-auto w-full py-4 font-mono text-sm bg-primary text-black font-semibold hover:bg-white uppercase">Select Tier</button>
+                <button onclick="selectTier('liveset-creative')" class="mt-auto w-full py-4 font-mono text-sm bg-primary text-black font-semibold hover:bg-white uppercase">Select Tier</button>
             </div>
 
             <div class="relative flex flex-col p-6 md:p-8 border border-border bg-card">
@@ -594,6 +594,48 @@
 
         initCanvases();
         draw();
+    </script>
+
+    <script>
+        async function selectTier(tierId) {
+            var btn = event.target;
+            var originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'CONNECTING...';
+            try {
+                var res = await fetch('/api/create-checkout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tier: tierId, origin: window.location.origin })
+                });
+                if (!res.ok) {
+                    var errData = await res.json();
+                    throw new Error(errData.error || 'Server ' + res.status);
+                }
+                var data = await res.json();
+                if (data.url) {
+                    window.location.href = data.url;
+                } else {
+                    throw new Error('No checkout URL returned');
+                }
+            } catch (err) {
+                alert('PAYMENT ERROR: ' + err.message);
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        }
+
+        (function() {
+            var params = new URLSearchParams(window.location.search);
+            var payment = params.get('payment');
+            if (payment === 'success') {
+                var banner = document.createElement('div');
+                banner.className = 'fixed top-0 left-0 right-0 z-[100] bg-primary text-black text-center py-3 font-mono text-xs uppercase tracking-widest font-bold';
+                banner.textContent = 'PAYMENT CONFIRMED // WELCOME TO LOCAL/ASSETS';
+                document.body.appendChild(banner);
+                setTimeout(function() { banner.remove(); }, 8000);
+            }
+        })();
     </script>
 </body>
 </html>
