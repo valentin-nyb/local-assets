@@ -32,10 +32,10 @@ export default async function handler(req, res) {
     if (!apiKey) return res.status(500).json({ error: 'Email service not configured' });
 
     const resend = new Resend(apiKey);
-    const link = `https://localassets.tv/api/verify-magic-link?token=${token}`;
+    const link = `https://local-assets.com/api/verify-magic-link?token=${token}`;
 
     await resend.emails.send({
-      from: 'local/assets™ <noreply@localassets.tv>',
+      from: 'local/assets™ <noreply@local-assets.com>',
       to: email,
       subject: 'Your local/assets™ Login Link',
       html: `

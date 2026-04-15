@@ -108,10 +108,10 @@ async function sendMagicLink(email) {
   if (!apiKey) throw new Error('RESEND_API_KEY not set');
 
   const resend = new Resend(apiKey);
-  const link = `https://localassets.tv/api/verify-magic-link?token=${token}`;
+  const link = `https://local-assets.com/api/verify-magic-link?token=${token}`;
 
   await resend.emails.send({
-    from: 'local/assets™ <noreply@localassets.tv>',
+    from: 'local/assets™ <noreply@local-assets.com>',
     to: email,
     subject: 'Your local/assets™ Portal Access',
     html: `

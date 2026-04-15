@@ -27,7 +27,7 @@ export default async function handler(req, res) {
     const stripe = new Stripe(sk);
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: profile.stripeCustomerId,
-      return_url: (req.headers.origin || 'https://localassets.tv') + '/client.html',
+      return_url: (req.headers.origin || 'https://local-assets.com') + '/client.html',
     });
     return res.status(200).json({ url: portalSession.url });
   }

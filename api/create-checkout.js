@@ -24,7 +24,7 @@ export default async function handler(req, res) {
   const tier = TIER_PRICES[tierKey];
   if (!tier) return res.status(400).json({ error: 'Invalid tier: ' + tierKey });
 
-  const origin = body?.origin || 'https://localassets.tv';
+  const origin = body?.origin || 'https://local-assets.com';
 
   try {
     const stripe = new Stripe(sk);
