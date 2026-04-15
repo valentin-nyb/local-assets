@@ -2,12 +2,11 @@ import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-// Replace these with your real Stripe Price IDs from the Dashboard
 const TIER_PRICES = {
-  'starter-distribution': { priceId: 'price_REPLACE_STARTER_DISTRO', name: 'Starter (Distribution)' },
-  'liveset-distribution':  { priceId: 'price_REPLACE_LIVESET_DISTRO', name: 'Live Set (Distribution)' },
-  'starter-creative':      { priceId: 'price_REPLACE_STARTER_CREATIVE', name: 'Starter (Creative)' },
-  'liveset-creative':      { priceId: 'price_REPLACE_LIVESET_CREATIVE', name: 'Live-Set (Creative)' },
+  'starter-distribution': { priceId: 'price_1TMVapCdILOYNEEKdlDo9Ih7', name: 'Starter (Distribution)' },
+  'liveset-distribution':  { priceId: 'price_1TMVbwCdILOYNEEKv4WRCzLu', name: 'Live Set (Distribution)' },
+  'starter-creative':      { priceId: 'price_1TMVcqCdILOYNEEKHI0AhmBI', name: 'Starter (Creative)' },
+  'liveset-creative':      { priceId: 'price_1TMVdjCdILOYNEEKWxUqmgQe', name: 'Live-Set (Creative)' },
 };
 
 export default async function handler(req, res) {
