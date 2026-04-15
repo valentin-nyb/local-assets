@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="local / assets">
+    <title>Client Portal — local / assets™</title>
+    <link rel="icon" type="image/x-icon" href="favicon/favicon.ico">
+    <link rel="icon" type="image/svg+xml" href="favicon/favicon.svg">
+    <link rel="apple-touch-icon" href="favicon/apple-touch-icon.png">
+    <link rel="manifest" href="favicon/site.webmanifest">
+    <link rel="stylesheet" href="styles/tailwind.css">
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { background-color: #050505; color: #ffffff; -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #050505; }
+        ::-webkit-scrollbar-thumb { background: #39FF14; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #32e612; }
+        .asset-card { transition: all 0.2s ease; }
+        .asset-card:hover { border-color: rgba(57, 255, 20, 0.5); transform: translateY(-2px); }
+        .type-badge { font-size: 9px; letter-spacing: 0.15em; padding: 2px 8px; border-radius: 2px; text-transform: uppercase; font-family: 'JetBrains Mono', monospace; }
+        .type-master { background: rgba(57, 255, 20, 0.15); color: #39FF14; }
+        .type-social-clip { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+        .type-audio { background: rgba(168, 85, 247, 0.15); color: #a855f7; }
+        .type-thumbnail { background: rgba(234, 179, 8, 0.15); color: #eab308; }
+        .pulse-dot { animation: pulse-glow 2s ease-in-out infinite; }
+        @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 4px #39FF14; } 50% { box-shadow: 0 0 12px #39FF14; } }
+        .upload-zone { border: 2px dashed #333; transition: all 0.3s; }
+        .upload-zone.dragover { border-color: #39FF14; background: rgba(57, 255, 20, 0.05); }
+    </style>
+</head>
+<body class="font-sans antialiased overflow-x-hidden">
+
+    <!-- LOGIN SCREEN (shown when not authenticated) -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center px-4" style="display:none;">
+        <div class="w-full max-w-sm">
+            <div class="text-center mb-10">
+                <img src="logos/White@2x.png" alt="logo" class="h-6 mx-auto mb-8">
+                <p class="font-mono text-xs tracking-[0.3em] text-[#39FF14] uppercase mb-2">[ CLIENT PORTAL ]</p>
+                <h1 class="text-2xl font-semibold tracking-tight">Sign in to your account</h1>
+            </div>
+            <div class="border border-[#222] bg-[#0a0a0a] p-6">
+                <label class="font-mono text-[10px] tracking-[0.2em] text-[#888] uppercase block mb-2">Email Address</label>
+                <input id="login-email" type="email" placeholder="you@example.com" class="w-full bg-[#111] border border-[#333] text-white font-mono text-sm px-4 py-3 mb-4 outline-none focus:border-[#39FF14] transition-colors">
+                <button id="login-btn" onclick="requestMagicLink()" class="w-full bg-[#39FF14] text-black font-mono text-xs font-bold uppercase tracking-widest py-3 hover:bg-white transition-colors">
+                    SEND LOGIN LINK
+                </button>
+                <div id="login-msg" class="hidden mt-4 p-3 border border-[#39FF14]/30 bg-[#39FF14]/5">
+                    <p class="font-mono text-xs text-[#39FF14]">✓ Check your inbox — login link sent.</p>
+                </div>
+                <div id="login-err" class="hidden mt-4 p-3 border border-red-500/30 bg-red-500/5">
+                    <p class="font-mono text-xs text-red-400" id="login-err-text"></p>
+                </div>
+            </div>
+            <p class="text-center mt-6 font-mono text-[10px] text-[#555]">Don't have an account? <a href="index.html" class="text-[#39FF14] hover:underline">Select a tier →</a></p>
+        </div>
+    </div>
+
+    <!-- PORTAL (shown when authenticated) -->
+    <div id="portal" class="min-h-screen" style="display:none;">
+
+        <!-- TOP BAR -->
+        <header class="border-b border-[#1a1a1a] bg-[#050505]/90 backdrop-blur-md sticky top-0 z-40">
+            <div class="max-w-7xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <a href="index.html"><img src="logos/White@2x.png" alt="logo" class="h-5"></a>
+                    <span class="text-[#333] font-mono text-xs">//</span>
+                    <span class="font-mono text-xs tracking-[0.2em] text-[#888] uppercase">Client Portal</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span id="header-email" class="font-mono text-[10px] text-[#666] hidden md:block"></span>
+                    <span id="header-tier" class="type-badge type-master hidden md:block"></span>
+                    <button onclick="openBilling()" class="font-mono text-[10px] text-[#888] hover:text-white uppercase tracking-wider transition-colors">Billing</button>
+                    <button onclick="logout()" class="font-mono text-[10px] text-[#888] hover:text-red-400 uppercase tracking-wider transition-colors">Logout</button>
+                </div>
+            </div>
+        </header>
+
+        <div class="max-w-7xl mx-auto px-4 md:px-8 py-8">
+
+            <!-- WELCOME BANNER -->
+            <div id="welcome-banner" class="hidden mb-8 p-6 border border-[#39FF14]/30 bg-[#39FF14]/5">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-2 h-2 bg-[#39FF14] rounded-full pulse-dot"></div>
+                    <span class="font-mono text-xs tracking-[0.2em] text-[#39FF14] uppercase">Welcome to local / assets™</span>
+                </div>
+                <p class="font-mono text-sm text-[#ccc]">Your client profile has been created. Upload your first master to get started.</p>
+            </div>
+
+            <!-- STATS ROW -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
+                    <span class="font-mono text-[9px] tracking-[0.2em] text-[#666] uppercase block mb-1">Total Assets</span>
+                    <span id="stat-total" class="text-2xl font-semibold text-white">—</span>
+                </div>
+                <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
+                    <span class="font-mono text-[9px] tracking-[0.2em] text-[#666] uppercase block mb-1">Masters</span>
+                    <span id="stat-masters" class="text-2xl font-semibold text-[#39FF14]">—</span>
+                </div>
+                <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
+                    <span class="font-mono text-[9px] tracking-[0.2em] text-[#666] uppercase block mb-1">Social Clips</span>
+                    <span id="stat-clips" class="text-2xl font-semibold text-[#3b82f6]">—</span>
+                </div>
+                <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
+                    <span class="font-mono text-[9px] tracking-[0.2em] text-[#666] uppercase block mb-1">Subscription</span>
+                    <span id="stat-status" class="text-2xl font-semibold text-[#39FF14]">—</span>
+                </div>
+            </div>
+
+            <!-- TABS -->
+            <div class="flex items-center gap-1 mb-6 border-b border-[#1a1a1a]">
+                <button onclick="switchTab('assets')" id="tab-assets" class="tab-btn px-5 py-3 font-mono text-xs uppercase tracking-wider border-b-2 border-[#39FF14] text-white">Assets</button>
+                <button onclick="switchTab('upload')" id="tab-upload" class="tab-btn px-5 py-3 font-mono text-xs uppercase tracking-wider border-b-2 border-transparent text-[#666] hover:text-white transition-colors">Upload</button>
+                <button onclick="switchTab('distribution')" id="tab-distribution" class="tab-btn px-5 py-3 font-mono text-xs uppercase tracking-wider border-b-2 border-transparent text-[#666] hover:text-white transition-colors">Distribution</button>
+            </div>
+
+            <!-- ASSETS TAB -->
+            <div id="panel-assets">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex gap-2">
+                        <button onclick="filterAssets('all')" class="filter-btn font-mono text-[10px] uppercase tracking-wider px-3 py-1.5 bg-[#39FF14] text-black" data-filter="all">All</button>
+                        <button onclick="filterAssets('master')" class="filter-btn font-mono text-[10px] uppercase tracking-wider px-3 py-1.5 border border-[#333] text-[#888] hover:text-white" data-filter="master">Masters</button>
+                        <button onclick="filterAssets('social-clip')" class="filter-btn font-mono text-[10px] uppercase tracking-wider px-3 py-1.5 border border-[#333] text-[#888] hover:text-white" data-filter="social-clip">Clips</button>
+                        <button onclick="filterAssets('audio')" class="filter-btn font-mono text-[10px] uppercase tracking-wider px-3 py-1.5 border border-[#333] text-[#888] hover:text-white" data-filter="audio">Audio</button>
+                        <button onclick="filterAssets('thumbnail')" class="filter-btn font-mono text-[10px] uppercase tracking-wider px-3 py-1.5 border border-[#333] text-[#888] hover:text-white" data-filter="thumbnail">Thumbs</button>
+                    </div>
+                    <span id="asset-count" class="font-mono text-[10px] text-[#666]"></span>
+                </div>
+                <div id="assets-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Populated by JS -->
+                </div>
+                <div id="assets-empty" class="hidden py-20 text-center">
+                    <iconify-icon icon="solar:folder-open-linear" class="text-5xl text-[#333] mb-4 block mx-auto"></iconify-icon>
+                    <p class="font-mono text-sm text-[#666]">No assets yet — upload your first master.</p>
+                </div>
+                <div id="assets-loading" class="py-20 text-center">
+                    <div class="w-6 h-6 border-2 border-[#39FF14]/20 border-t-[#39FF14] rounded-full animate-spin mx-auto mb-4"></div>
+                    <p class="font-mono text-xs text-[#666]">Loading assets...</p>
+                </div>
+            </div>
+
+            <!-- UPLOAD TAB -->
+            <div id="panel-upload" class="hidden">
+                <div class="max-w-xl">
+                    <div class="mb-6">
+                        <label class="font-mono text-[10px] tracking-[0.2em] text-[#888] uppercase block mb-2">Artist / Session Name</label>
+                        <input id="upload-artist" type="text" placeholder="e.g. AMONGST FEW" class="w-full bg-[#111] border border-[#333] text-white font-mono text-sm px-4 py-3 outline-none focus:border-[#39FF14] transition-colors uppercase">
+                    </div>
+                    <div id="upload-zone" class="upload-zone p-12 text-center cursor-pointer" onclick="document.getElementById('upload-file').click()">
+                        <input id="upload-file" type="file" accept="video/*,audio/*" class="hidden" onchange="handleFileSelected(this)">
+                        <iconify-icon icon="solar:upload-linear" class="text-4xl text-[#555] mb-4 block mx-auto"></iconify-icon>
+                        <p class="font-mono text-sm text-[#888] mb-2">Drop your file here or click to browse</p>
+                        <p class="font-mono text-[10px] text-[#555]">4K Video / Audio • No size limit</p>
+                    </div>
+                    <div id="upload-progress" class="hidden mt-6">
+                        <div class="flex items-center justify-between mb-2">
+                            <span id="upload-filename" class="font-mono text-xs text-[#ccc] truncate"></span>
+                            <span id="upload-pct" class="font-mono text-xs text-[#39FF14]">0%</span>
+                        </div>
+                        <div class="w-full bg-[#1a1a1a] h-2 border border-[#333]">
+                            <div id="upload-bar" class="h-full bg-[#39FF14] transition-all duration-300" style="width:0%"></div>
+                        </div>
+                        <p id="upload-status" class="font-mono text-[10px] text-[#666] mt-2">Preparing upload...</p>
+                    </div>
+                    <div id="upload-success" class="hidden mt-6 p-4 border border-[#39FF14]/30 bg-[#39FF14]/5">
+                        <p class="font-mono text-xs text-[#39FF14]">✓ Upload complete — asset is now processing. Audio, clips, and thumbnails will be auto-generated.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DISTRIBUTION TAB -->
+            <div id="panel-distribution" class="hidden">
+                <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-8 text-center">
+                    <iconify-icon icon="solar:earth-linear" class="text-5xl text-[#39FF14] mb-4 block mx-auto"></iconify-icon>
+                    <h3 class="font-mono text-sm uppercase tracking-wider text-white mb-2">Distribution Status</h3>
+                    <p class="font-mono text-xs text-[#666] mb-6 max-w-md mx-auto">Your assets are automatically distributed to our partner network once processing completes.</p>
+                    <div id="distribution-list" class="space-y-3 max-w-md mx-auto text-left">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- STATUS BAR -->
+        <div class="fixed bottom-0 left-0 right-0 h-10 border-t border-white/10 bg-black/80 backdrop-blur-md flex items-center justify-between px-8 z-50 pointer-events-none">
+            <div class="font-mono text-[9px] text-zinc-500 uppercase tracking-widest">
+                LOCAL / ASSETS™ CLIENT PORTAL <span class="text-[#39FF14]/50 mx-2">//</span> <span id="footer-tier"></span>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="w-1.5 h-1.5 bg-[#39FF14] rounded-full animate-pulse pulse-dot"></div>
+                <span class="font-mono text-[9px] text-zinc-500 uppercase tracking-widest">Connected</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // ── STATE ─────────────────────────────────────────────────────────
+    let clientProfile = null;
+    let clientAssets = [];
+    let currentFilter = 'all';
+
+    // ── INIT ──────────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            const res = await fetch('/api/client-profile', { credentials: 'include' });
+            if (!res.ok) throw new Error('not authenticated');
+            clientProfile = await res.json();
+            showPortal();
+        } catch (e) {
+            showLogin();
+        }
+    });
+
+    function showLogin() {
+        document.getElementById('login-screen').style.display = 'flex';
+        document.getElementById('portal').style.display = 'none';
+    }
+
+    function showPortal() {
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('portal').style.display = 'block';
+
+        // Populate header
+        document.getElementById('header-email').textContent = clientProfile.email || '';
+        document.getElementById('header-tier').textContent = clientProfile.tierName || clientProfile.tier || '';
+        document.getElementById('footer-tier').textContent = clientProfile.tierName || '';
+        document.getElementById('stat-status').textContent = (clientProfile.status || 'active').toUpperCase();
+
+        // Welcome banner for new clients
+        if (new URLSearchParams(window.location.search).get('welcome') === 'true') {
+            document.getElementById('welcome-banner').classList.remove('hidden');
+            history.replaceState({}, '', '/client.html');
+        }
+
+        loadAssets();
+    }
+
+    // ── MAGIC LINK LOGIN ──────────────────────────────────────────────
+    async function requestMagicLink() {
+        var email = document.getElementById('login-email').value.trim();
+        if (!email) return;
+        var btn = document.getElementById('login-btn');
+        btn.disabled = true;
+        btn.textContent = 'SENDING...';
+        document.getElementById('login-msg').classList.add('hidden');
+        document.getElementById('login-err').classList.add('hidden');
+
+        try {
+            var res = await fetch('/api/send-magic-link', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email })
+            });
+            var data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed');
+            document.getElementById('login-msg').classList.remove('hidden');
+        } catch (err) {
+            document.getElementById('login-err').classList.remove('hidden');
+            document.getElementById('login-err-text').textContent = err.message;
+        }
+        btn.disabled = false;
+        btn.textContent = 'SEND LOGIN LINK';
+    }
+
+    // ── LOAD ASSETS ───────────────────────────────────────────────────
+    async function loadAssets() {
+        document.getElementById('assets-loading').classList.remove('hidden');
+        document.getElementById('assets-grid').innerHTML = '';
+        document.getElementById('assets-empty').classList.add('hidden');
+
+        try {
+            var res = await fetch('/api/client-assets', { credentials: 'include' });
+            if (!res.ok) throw new Error('Failed to load assets');
+            var data = await res.json();
+            clientAssets = data.assets || [];
+        } catch (e) {
+            clientAssets = [];
+        }
+
+        document.getElementById('assets-loading').classList.add('hidden');
+
+        // Update stats
+        var masters = clientAssets.filter(a => a.type === 'master').length;
+        var clips = clientAssets.filter(a => a.type === 'social-clip').length;
+        document.getElementById('stat-total').textContent = clientAssets.length;
+        document.getElementById('stat-masters').textContent = masters;
+        document.getElementById('stat-clips').textContent = clips;
+
+        renderAssets();
+        renderDistribution();
+    }
+
+    function renderAssets() {
+        var grid = document.getElementById('assets-grid');
+        var filtered = currentFilter === 'all' ? clientAssets : clientAssets.filter(a => a.type === currentFilter);
+
+        document.getElementById('asset-count').textContent = filtered.length + ' asset' + (filtered.length !== 1 ? 's' : '');
+
+        if (filtered.length === 0) {
+            grid.innerHTML = '';
+            document.getElementById('assets-empty').classList.remove('hidden');
+            return;
+        }
+
+        document.getElementById('assets-empty').classList.add('hidden');
+        grid.innerHTML = filtered.map(asset => buildAssetCard(asset)).join('');
+    }
+
+    function buildAssetCard(asset) {
+        var thumb = asset.thumbnail
+            ? '<img src="' + asset.thumbnail + '" class="w-full h-40 object-cover" alt="" loading="lazy">'
+            : '<div class="w-full h-40 bg-[#111] flex items-center justify-center"><iconify-icon icon="solar:' +
+              (asset.type === 'audio' ? 'music-note-bold' : 'videocamera-linear') +
+              '" class="text-3xl text-[#333]"></iconify-icon></div>';
+
+        var duration = asset.duration ? formatDuration(asset.duration) : '';
+        var status = asset.status === 'ready'
+            ? '<span class="text-[#39FF14]">● Ready</span>'
+            : '<span class="text-yellow-500">◌ ' + (asset.status || 'processing') + '</span>';
+
+        var downloadBtn = asset.downloadReady
+            ? '<a href="https://stream.mux.com/' + asset.playbackId + '/high.mp4?download=1" class="font-mono text-[9px] text-[#39FF14] hover:text-white uppercase tracking-wider">Download</a>'
+            : '';
+
+        return '<div class="asset-card border border-[#1a1a1a] bg-[#0a0a0a] overflow-hidden">' +
+            thumb +
+            '<div class="p-4">' +
+                '<div class="flex items-center justify-between mb-2">' +
+                    '<span class="type-badge type-' + asset.type + '">' + asset.type.replace('-', ' ') + '</span>' +
+                    '<span class="font-mono text-[10px] text-[#666]">' + status + '</span>' +
+                '</div>' +
+                '<h4 class="font-mono text-xs text-white truncate mb-1">' + escapeHtml(asset.name) + '</h4>' +
+                '<div class="flex items-center justify-between">' +
+                    '<span class="font-mono text-[10px] text-[#555]">' + duration + '</span>' +
+                    downloadBtn +
+                '</div>' +
+            '</div>' +
+        '</div>';
+    }
+
+    // ── FILTERS ───────────────────────────────────────────────────────
+    function filterAssets(type) {
+        currentFilter = type;
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            if (btn.dataset.filter === type) {
+                btn.className = 'filter-btn font-mono text-[10px] uppercase tracking-wider px-3 py-1.5 bg-[#39FF14] text-black';
+            } else {
+                btn.className = 'filter-btn font-mono text-[10px] uppercase tracking-wider px-3 py-1.5 border border-[#333] text-[#888] hover:text-white';
+            }
+        });
+        renderAssets();
+    }
+
+    // ── TABS ──────────────────────────────────────────────────────────
+    function switchTab(tab) {
+        ['assets', 'upload', 'distribution'].forEach(t => {
+            document.getElementById('panel-' + t).classList.toggle('hidden', t !== tab);
+            var btn = document.getElementById('tab-' + t);
+            if (t === tab) {
+                btn.classList.add('border-[#39FF14]', 'text-white');
+                btn.classList.remove('border-transparent', 'text-[#666]');
+            } else {
+                btn.classList.remove('border-[#39FF14]', 'text-white');
+                btn.classList.add('border-transparent', 'text-[#666]');
+            }
+        });
+    }
+
+    // ── UPLOAD ────────────────────────────────────────────────────────
+    var uploadZone = document.getElementById('upload-zone');
+    if (uploadZone) {
+        uploadZone.addEventListener('dragover', function(e) { e.preventDefault(); uploadZone.classList.add('dragover'); });
+        uploadZone.addEventListener('dragleave', function() { uploadZone.classList.remove('dragover'); });
+        uploadZone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) {
+                document.getElementById('upload-file').files = e.dataTransfer.files;
+                handleFileSelected(document.getElementById('upload-file'));
+            }
+        });
+    }
+
+    async function handleFileSelected(input) {
+        var file = input.files[0];
+        if (!file) return;
+
+        var artist = document.getElementById('upload-artist').value.trim().toUpperCase();
+        if (!artist) {
+            alert('Enter an artist / session name first');
+            input.value = '';
+            return;
+        }
+
+        document.getElementById('upload-progress').classList.remove('hidden');
+        document.getElementById('upload-success').classList.add('hidden');
+        document.getElementById('upload-filename').textContent = file.name;
+        document.getElementById('upload-status').textContent = 'Requesting upload URL...';
+
+        try {
+            var res = await fetch('/api/client-upload', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ artistName: artist })
+            });
+            if (!res.ok) {
+                var errData = await res.json().catch(function() { return {}; });
+                throw new Error(errData.error || 'Server ' + res.status);
+            }
+            var data = await res.json();
+            if (!data.url) throw new Error('No upload URL returned');
+
+            document.getElementById('upload-status').textContent = 'Uploading ' + formatBytes(file.size) + '...';
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('PUT', data.url);
+            xhr.upload.onprogress = function(e) {
+                if (e.lengthComputable) {
+                    var pct = Math.round(e.loaded / e.total * 100);
+                    document.getElementById('upload-pct').textContent = pct + '%';
+                    document.getElementById('upload-bar').style.width = pct + '%';
+                }
+            };
+            xhr.onload = function() {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    document.getElementById('upload-success').classList.remove('hidden');
+                    document.getElementById('upload-status').textContent = 'Processing...';
+                    document.getElementById('upload-pct').textContent = '100%';
+                    document.getElementById('upload-bar').style.width = '100%';
+                    setTimeout(loadAssets, 3000);
+                } else {
+                    document.getElementById('upload-status').textContent = 'UPLOAD ERROR: ' + xhr.status;
+                    document.getElementById('upload-status').style.color = '#ef4444';
+                }
+            };
+            xhr.onerror = function() {
+                document.getElementById('upload-status').textContent = 'UPLOAD FAILED — network error';
+                document.getElementById('upload-status').style.color = '#ef4444';
+            };
+            xhr.send(file);
+        } catch (err) {
+            document.getElementById('upload-status').textContent = 'ERROR: ' + err.message;
+            document.getElementById('upload-status').style.color = '#ef4444';
+        }
+    }
+
+    // ── DISTRIBUTION ──────────────────────────────────────────────────
+    function renderDistribution() {
+        var list = document.getElementById('distribution-list');
+        var masters = clientAssets.filter(a => a.type === 'master');
+        if (masters.length === 0) {
+            list.innerHTML = '<p class="font-mono text-xs text-[#666] text-center">No masters uploaded yet.</p>';
+            return;
+        }
+        list.innerHTML = masters.map(function(asset) {
+            var statusColor = asset.status === 'ready' ? '#39FF14' : '#eab308';
+            var statusText = asset.status === 'ready' ? 'DISTRIBUTED' : 'PROCESSING';
+            var clips = clientAssets.filter(a => a.type === 'social-clip' && a.passthrough && asset.passthrough &&
+                a.passthrough.toUpperCase().startsWith(asset.passthrough.toUpperCase().split('//')[0].trim())).length;
+            return '<div class="flex items-center justify-between p-3 border border-[#1a1a1a] bg-[#111]">' +
+                '<div>' +
+                    '<p class="font-mono text-xs text-white">' + escapeHtml(asset.name) + '</p>' +
+                    '<p class="font-mono text-[10px] text-[#666]">' + clips + ' clips generated</p>' +
+                '</div>' +
+                '<span class="font-mono text-[9px] uppercase tracking-wider" style="color:' + statusColor + '">' + statusText + '</span>' +
+            '</div>';
+        }).join('');
+    }
+
+    // ── BILLING ───────────────────────────────────────────────────────
+    async function openBilling() {
+        try {
+            var res = await fetch('/api/client-profile?action=billing-portal', { credentials: 'include' });
+            if (!res.ok) throw new Error('Failed');
+            var data = await res.json();
+            if (data.url) window.location.href = data.url;
+        } catch (e) {
+            alert('Could not open billing portal: ' + e.message);
+        }
+    }
+
+    // ── LOGOUT ────────────────────────────────────────────────────────
+    function logout() {
+        document.cookie = 'la_session=; Path=/; Max-Age=0';
+        showLogin();
+    }
+
+    // ── HELPERS ───────────────────────────────────────────────────────
+    function formatDuration(s) {
+        if (!s || s <= 0) return '';
+        var h = Math.floor(s / 3600);
+        var m = Math.floor((s % 3600) / 60);
+        var sec = Math.floor(s % 60);
+        if (h > 0) return h + ':' + String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+        return m + ':' + String(sec).padStart(2, '0');
+    }
+
+    function formatBytes(b) {
+        if (b < 1024) return b + ' B';
+        if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+        if (b < 1073741824) return (b / 1048576).toFixed(1) + ' MB';
+        return (b / 1073741824).toFixed(2) + ' GB';
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+    </script>
+</body>
+</html>

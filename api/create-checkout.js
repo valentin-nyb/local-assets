@@ -1,7 +1,5 @@
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
 const TIER_PRICES = {
   'starter-distribution': { priceId: 'price_1TMVapCdILOYNEEKdlDo9Ih7', name: 'Starter (Distribution)' },
   'liveset-distribution':  { priceId: 'price_1TMVbwCdILOYNEEKv4WRCzLu', name: 'Live Set (Distribution)' },
@@ -16,6 +14,9 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
 
+  const sk = process.env.STRIPE_SECRET_KEY;
+  if (!sk) return res.status(500).json({ error: 'STRIPE_SECRET_KEY not configured — add it in Vercel Environment Variables' });
+
   let body = req.body;
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch(e) {} }
 
@@ -26,11 +27,13 @@ export default async function handler(req, res) {
   const origin = body?.origin || 'https://localassets.tv';
 
   try {
+    const stripe = new Stripe(sk);
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       line_items: [{ price: tier.priceId, quantity: 1 }],
-      success_url: origin + '/index.html?payment=success&tier=' + tierKey,
+      success_url: origin + '/client.html?welcome=true',
       cancel_url: origin + '/index.html?payment=cancelled',
+      allow_promotion_codes: true,
       metadata: { tier: tierKey, tierName: tier.name },
     });
 

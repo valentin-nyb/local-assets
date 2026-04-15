@@ -630,11 +630,14 @@
             var params = new URLSearchParams(window.location.search);
             var payment = params.get('payment');
             if (payment === 'success') {
+                window.location.href = '/client.html?welcome=true';
+            }
+            if (payment === 'cancelled') {
                 var banner = document.createElement('div');
-                banner.className = 'fixed top-0 left-0 right-0 z-[100] bg-primary text-black text-center py-3 font-mono text-xs uppercase tracking-widest font-bold';
-                banner.textContent = 'PAYMENT CONFIRMED // WELCOME TO LOCAL/ASSETS';
+                banner.className = 'fixed top-0 left-0 right-0 z-[100] bg-red-500 text-white text-center py-3 font-mono text-xs uppercase tracking-widest font-bold';
+                banner.textContent = 'PAYMENT CANCELLED // SELECT A TIER TO TRY AGAIN';
                 document.body.appendChild(banner);
-                setTimeout(function() { banner.remove(); }, 8000);
+                setTimeout(function() { banner.remove(); }, 6000);
             }
         })();
     </script>
