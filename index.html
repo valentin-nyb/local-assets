@@ -609,8 +609,9 @@
                     body: JSON.stringify({ tier: tierId, origin: window.location.origin })
                 });
                 if (!res.ok) {
-                    var errData = await res.json();
-                    throw new Error(errData.error || 'Server ' + res.status);
+                    var errText = await res.text();
+                    try { var errObj = JSON.parse(errText); throw new Error(errObj.error || 'Server ' + res.status); }
+                    catch(pe) { if (pe.message && !pe.message.includes('JSON')) throw pe; throw new Error('Server ' + res.status + ' \u2014 check Vercel logs'); }
                 }
                 var data = await res.json();
                 if (data.url) {
