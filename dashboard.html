@@ -383,39 +383,43 @@
             function buildThumbHtml(thumbAssets, uid, asset, sessionName, sessionDate, masterAsset) {
                 var html = '';
                 if (thumbAssets.length > 0) {
+                    // Collect all playback IDs for gallery preview
+                    var allPids = [];
+                    var readyCount = 0;
+                    var processingCount = 0;
                     for (var ti = 0; ti < thumbAssets.length; ti++) {
                         var t = thumbAssets[ti];
                         var tPid = t.asset.playback_ids && t.asset.playback_ids[0] ? t.asset.playback_ids[0].id : null;
-                        var tSrStatus = t.asset.static_renditions ? t.asset.static_renditions.status : null;
-                        var tSrFiles = t.asset.static_renditions && t.asset.static_renditions.files ? t.asset.static_renditions.files : [];
-                        var tSrReady = null;
-                        for (var si = 0; si < tSrFiles.length; si++) { if (tSrFiles[si].status === 'ready') { tSrReady = tSrFiles[si]; break; } }
-                        var tLabel = !tPid ? 'IN VAULT — PROCESSING' : (tSrReady || tSrStatus === 'ready') ? 'IN VAULT — UPLOADED' : (tSrFiles.some(function(f){ return f.status === 'preparing'; }) || tSrStatus === 'preparing') ? 'IN VAULT — PREPARING' : 'IN VAULT — UPLOADED';
-                        html += '<div class="p-4 pl-16 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" style="border-left: 2px solid #39FF14;">';
-                        html += '<div class="flex items-center gap-4 flex-1 min-w-0">';
-                        html += '<div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-primary/50 shrink-0">';
-                        html += '<iconify-icon icon="solar:gallery-bold" class="text-primary text-sm"></iconify-icon>';
-                        html += '</div>';
-                        html += '<div class="min-w-0">';
-                        html += '<p class="text-[10px] font-bold text-zinc-300 uppercase">' + t.label + '</p>';
-                        html += '<p class="text-[8px] font-mono text-primary uppercase">' + tLabel + '</p>';
-                        html += '</div>';
-                        html += '</div>';
-                        html += '<div class="flex items-center gap-2 shrink-0">';
-                        if (tPid) {
-                            var safeTLabel = t.label.replace(/'/g, "\\'");
-                            html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download" onclick="window.open(\'https://image.mux.com/' + tPid + '/thumbnail.png?width=1920\', \'_blank\')">';
-                            html += '<iconify-icon icon="solar:download-bold" class="text-primary"></iconify-icon>';
-                            html += '</button>';
-                            html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Preview" onclick="window.open(\'/player.html?v=' + tPid + '&type=thumb&title=\' + encodeURIComponent(\'' + safeTLabel + '\'), \'_blank\')">';
-                            html += '<iconify-icon icon="solar:eye-bold" class="text-primary"></iconify-icon>';
-                            html += '</button>';
-                        } else {
-                            html += '<span class="text-[8px] font-mono text-yellow-500 uppercase">PROCESSING</span>';
-                        }
-                        html += '</div>';
-                        html += '</div>';
+                        if (tPid) { allPids.push(tPid); readyCount++; }
+                        else { processingCount++; }
                     }
+                    var statusText = readyCount + ' UPLOADED';
+                    if (processingCount > 0) statusText += ' / ' + processingCount + ' PROCESSING';
+                    statusText = 'IN VAULT — ' + statusText;
+
+                    // Single consolidated row
+                    html += '<div class="p-4 pl-16 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" style="border-left: 2px solid #39FF14;">';
+                    html += '<div class="flex items-center gap-4 flex-1 min-w-0">';
+                    html += '<div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-primary/50 shrink-0">';
+                    html += '<iconify-icon icon="solar:gallery-bold" class="text-primary text-sm"></iconify-icon>';
+                    html += '</div>';
+                    html += '<div class="min-w-0">';
+                    html += '<p class="text-[10px] font-bold text-zinc-300 uppercase">Marketing Thumbnails (' + thumbAssets.length + ')</p>';
+                    html += '<p class="text-[8px] font-mono text-primary uppercase">' + statusText + '</p>';
+                    html += '</div>';
+                    html += '</div>';
+                    html += '<div class="flex items-center gap-2 shrink-0">';
+                    if (allPids.length > 0) {
+                        var pidsParam = allPids.join(',');
+                        var safeTitle = sessionName.replace(/'/g, "\\'");
+                        html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Preview All" onclick="window.open(\'/player.html?thumbs=' + pidsParam + '&title=\' + encodeURIComponent(\'' + safeTitle + ' — Thumbnails\'), \'_blank\')">';
+                        html += '<iconify-icon icon="solar:eye-bold" class="text-primary"></iconify-icon>';
+                        html += '</button>';
+                    }
+                    html += '</div>';
+                    html += '</div>';
+
+                    // Upload more row
                     if (thumbAssets.length < 20) {
                         html += '<div class="p-4 pl-16 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-' + uid + '">';
                         html += '<label class="flex items-center gap-4 cursor-pointer flex-1 min-w-0">';

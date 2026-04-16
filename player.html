@@ -56,7 +56,29 @@
 
         if (title) titleEl.textContent = decodeURIComponent(title);
 
-        if (!pid) {
+        const thumbsPids = params.get('thumbs');
+
+        if (thumbsPids) {
+            // Thumbnail gallery mode — show all thumbnails in a grid
+            const pids = thumbsPids.split(',').filter(Boolean);
+            let gridHtml = '<div class="w-full max-w-6xl px-4">';
+            gridHtml += '<p class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-4">' + pids.length + ' THUMBNAIL' + (pids.length !== 1 ? 'S' : '') + '</p>';
+            gridHtml += '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">';
+            for (let i = 0; i < pids.length; i++) {
+                const imgUrl = 'https://image.mux.com/' + pids[i] + '/thumbnail.png?width=1920';
+                gridHtml += '<a href="' + imgUrl + '" target="_blank" download class="group relative rounded-xl overflow-hidden border border-[#27272a] hover:border-[#39FF14]/50 transition-all">';
+                gridHtml += '<img src="' + imgUrl + '" class="w-full aspect-video object-cover" alt="Thumbnail ' + (i + 1) + '" loading="lazy">';
+                gridHtml += '<div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">';
+                gridHtml += '<span class="text-[9px] font-mono text-[#39FF14] uppercase tracking-widest">DOWNLOAD</span>';
+                gridHtml += '</div>';
+                gridHtml += '<span class="absolute bottom-2 left-2 text-[8px] font-mono text-white/50 uppercase">' + String(i + 1).padStart(2, '0') + '</span>';
+                gridHtml += '</a>';
+            }
+            gridHtml += '</div></div>';
+            container.innerHTML = gridHtml;
+            container.style.alignItems = 'flex-start';
+            container.style.paddingTop = '2rem';
+        } else if (!pid) {
             container.innerHTML = '<p class="text-zinc-600 font-mono text-xs uppercase tracking-widest">NO ASSET SPECIFIED</p>';
         } else if (type === 'thumb') {
             const imgUrl = 'https://image.mux.com/' + pid + '/thumbnail.png?width=1920';
