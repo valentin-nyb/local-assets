@@ -596,32 +596,47 @@
                 if (a.passthrough) lookup[a.passthrough.toUpperCase().trim()] = a;
             }
 
-            const types = [
-                { type: 'AUDIO', label: 'HQ_Audio' },
-                { type: 'SOCIAL', label: 'Social_Pack' },
-                { type: 'THUMB', label: 'Thumbnails' },
-            ];
-
             const files = [];
             const name = sessionName.toUpperCase().trim();
-            for (const t of types) {
-                if (t.type === 'SOCIAL') {
-                    for (let i = 1; i <= 50; i++) {
-                        const key = name + ' // SOCIAL // ' + String(i).padStart(2, '0');
-                        const asset = lookup[key];
-                        if (!asset) break;
-                        const pid = asset.playback_ids?.[0]?.id;
-                        const sr = (asset.static_renditions?.files || []).find(f => f.status === 'ready');
-                        if (pid && sr) files.push({ url: 'https://stream.mux.com/' + pid + '/' + sr.name, filename: t.label + '_' + String(i).padStart(2, '0') + '.' + sr.ext });
-                    }
-                } else {
-                    const key = name + ' // ' + t.type;
-                    const asset = lookup[key];
-                    if (!asset) continue;
-                    const pid = asset.playback_ids?.[0]?.id;
-                    const sr = (asset.static_renditions?.files || []).find(f => f.status === 'ready');
-                    if (pid && sr) files.push({ url: 'https://stream.mux.com/' + pid + '/' + sr.name, filename: t.label + '.' + sr.ext });
-                }
+
+            // 1) MASTER (4K Long Form) — key is just the artist name
+            const masterAsset = lookup[name];
+            if (masterAsset) {
+                const pid = masterAsset.playback_ids?.[0]?.id;
+                const sr = (masterAsset.static_renditions?.files || []).find(f => f.status === 'ready');
+                if (pid && sr) files.push({ url: 'https://stream.mux.com/' + pid + '/' + sr.name, filename: '4K_Long_Form.' + sr.ext });
+            }
+
+            // 2) AUDIO (Master Audio)
+            const audioAsset = lookup[name + ' // AUDIO'];
+            if (audioAsset) {
+                const pid = audioAsset.playback_ids?.[0]?.id;
+                const sr = (audioAsset.static_renditions?.files || []).find(f => f.status === 'ready');
+                if (pid && sr) files.push({ url: 'https://stream.mux.com/' + pid + '/' + sr.name, filename: 'Master_Audio.' + sr.ext });
+            }
+
+            // 3) SOCIAL (Vertical Clips) — numbered keys
+            for (let i = 1; i <= 50; i++) {
+                const key = name + ' // SOCIAL // ' + String(i).padStart(2, '0');
+                const asset = lookup[key];
+                if (!asset) break;
+                const pid = asset.playback_ids?.[0]?.id;
+                const sr = (asset.static_renditions?.files || []).find(f => f.status === 'ready');
+                if (pid && sr) files.push({ url: 'https://stream.mux.com/' + pid + '/' + sr.name, filename: 'Vertical_' + String(i).padStart(2, '0') + '.' + sr.ext });
+            }
+
+            // 4) THUMBNAILS — single key + numbered keys, use image.mux.com
+            const singleThumb = lookup[name + ' // THUMB'];
+            if (singleThumb) {
+                const pid = singleThumb.playback_ids?.[0]?.id;
+                if (pid) files.push({ url: 'https://image.mux.com/' + pid + '/thumbnail.png?width=1920', filename: 'Thumbnail_00.png' });
+            }
+            for (let i = 1; i <= 20; i++) {
+                const key = name + ' // THUMB // ' + String(i).padStart(2, '0');
+                const asset = lookup[key];
+                if (!asset) continue;
+                const pid = asset.playback_ids?.[0]?.id;
+                if (pid) files.push({ url: 'https://image.mux.com/' + pid + '/thumbnail.png?width=1920', filename: 'Thumbnail_' + String(i).padStart(2, '0') + '.png' });
             }
 
             if (!files.length) { alert('No downloadable files ready yet.'); return; }
