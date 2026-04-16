@@ -529,18 +529,26 @@
                         if (asset.type === 'THUMB') {
                             var thumbPrefix = artist.name.toUpperCase().trim() + ' // THUMB';
                             var thumbAssets = [];
-                            var singleThumb = findLinked(thumbPrefix, dateStr);
-                            if (singleThumb) thumbAssets.push({ asset: singleThumb, label: 'Thumbnail' });
+                            var seenIds = {};
+                            // Collect ALL thumbnails with exact base key (uploaded one-at-a-time)
+                            var baseCandidates = muxByKey[thumbPrefix] || [];
+                            for (var bci = 0; bci < baseCandidates.length; bci++) {
+                                if (new Date(baseCandidates[bci].created_at * 1000).toISOString().slice(0, 10) === dateStr && !seenIds[baseCandidates[bci].id]) {
+                                    thumbAssets.push({ asset: baseCandidates[bci], label: 'Thumbnail' });
+                                    seenIds[baseCandidates[bci].id] = true;
+                                }
+                            }
+                            // Collect numbered thumbnails (batch uploads)
                             for (var tti = 1; tti <= 20; tti++) {
                                 var thumbKey = thumbPrefix + ' // ' + String(tti).padStart(2, '0');
                                 var candidates = muxByKey[thumbKey] || [];
                                 var thumbMatch = null;
                                 for (var ci = 0; ci < candidates.length; ci++) {
-                                    if (new Date(candidates[ci].created_at * 1000).toISOString().slice(0, 10) === dateStr) {
+                                    if (new Date(candidates[ci].created_at * 1000).toISOString().slice(0, 10) === dateStr && !seenIds[candidates[ci].id]) {
                                         thumbMatch = candidates[ci]; break;
                                     }
                                 }
-                                if (thumbMatch) thumbAssets.push({ asset: thumbMatch, label: 'Thumbnail ' + String(tti).padStart(2, '0') });
+                                if (thumbMatch) { thumbAssets.push({ asset: thumbMatch, label: 'Thumbnail ' + String(tti).padStart(2, '0') }); seenIds[thumbMatch.id] = true; }
                             }
                             html += buildThumbHtml(thumbAssets, uid, asset, artist.name, dateStr, masterAsset);
                         } else {
