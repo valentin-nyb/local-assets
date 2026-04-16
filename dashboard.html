@@ -597,6 +597,8 @@
             }
 
             const files = [];
+            const verticalFiles = [];
+            const thumbFiles = [];
             const name = sessionName.toUpperCase().trim();
 
             // 1) MASTER (4K Long Form) — key is just the artist name
@@ -622,22 +624,33 @@
                 if (!asset) break;
                 const pid = asset.playback_ids?.[0]?.id;
                 const sr = (asset.static_renditions?.files || []).find(f => f.status === 'ready');
-                if (pid && sr) files.push({ url: 'https://stream.mux.com/' + pid + '/' + sr.name, filename: 'Vertical_' + String(i).padStart(2, '0') + '.' + sr.ext });
+                if (pid && sr) verticalFiles.push({ url: 'https://stream.mux.com/' + pid + '/' + sr.name, filename: 'Vertical_' + String(i).padStart(2, '0') + '.' + sr.ext });
             }
 
             // 4) THUMBNAILS — single key + numbered keys, use image.mux.com
             const singleThumb = lookup[name + ' // THUMB'];
             if (singleThumb) {
                 const pid = singleThumb.playback_ids?.[0]?.id;
-                if (pid) files.push({ url: 'https://image.mux.com/' + pid + '/thumbnail.png?width=1920', filename: 'Thumbnail_00.png' });
+                if (pid) thumbFiles.push({ url: 'https://image.mux.com/' + pid + '/thumbnail.png?width=1920', filename: 'Thumbnail_00.png' });
             }
             for (let i = 1; i <= 20; i++) {
                 const key = name + ' // THUMB // ' + String(i).padStart(2, '0');
                 const asset = lookup[key];
                 if (!asset) continue;
                 const pid = asset.playback_ids?.[0]?.id;
-                if (pid) files.push({ url: 'https://image.mux.com/' + pid + '/thumbnail.png?width=1920', filename: 'Thumbnail_' + String(i).padStart(2, '0') + '.png' });
+                if (pid) thumbFiles.push({ url: 'https://image.mux.com/' + pid + '/thumbnail.png?width=1920', filename: 'Thumbnail_' + String(i).padStart(2, '0') + '.png' });
             }
+
+            // Put verticals/thumbnails in subfolders when more than one
+            if (verticalFiles.length > 1) {
+                for (const f of verticalFiles) f.filename = 'Verticals/' + f.filename;
+            }
+            files.push(...verticalFiles);
+
+            if (thumbFiles.length > 1) {
+                for (const f of thumbFiles) f.filename = 'Thumbnails/' + f.filename;
+            }
+            files.push(...thumbFiles);
 
             if (!files.length) { alert('No downloadable files ready yet.'); return; }
 
