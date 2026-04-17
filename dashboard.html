@@ -412,10 +412,11 @@
                     if (allPids.length > 0) {
                         var pidsParam = allPids.join(',');
                         var safeTitle = sessionName.replace(/'/g, "\\'");
-                        html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download All Thumbnails" onclick="downloadAllThumbs(\'' + pidsParam + '\', \'' + safeTitle + '\')">';
+                        var thumbUrl = '/player.html?thumbs=' + encodeURIComponent(pidsParam) + '&title=' + encodeURIComponent(sessionName);
+                        html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download" onclick="downloadAllThumbs(\'' + pidsParam + '\', \'' + safeTitle + '\')">';
                         html += '<iconify-icon icon="solar:download-bold" class="text-primary"></iconify-icon>';
                         html += '</button>';
-                        html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Preview All" onclick="window.open(\'/player.html?thumbs=' + pidsParam + '&title=\' + encodeURIComponent(\'' + safeTitle + '\'), \'_blank\')">';
+                        html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Preview" onclick="window.open(\'' + thumbUrl + '\', \'_blank\')">';
                         html += '<iconify-icon icon="solar:play-bold" class="text-primary"></iconify-icon>';
                         html += '</button>';
                     } else {
