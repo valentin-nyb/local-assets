@@ -411,11 +411,15 @@
                     html += '<div class="flex items-center gap-2 shrink-0">';
                     if (allPids.length > 0) {
                         var pidsParam = allPids.join(',');
-                        var safeTitle = sessionName.replace(/'/g, "\\'");                        html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download All Thumbnails" onclick="downloadAllThumbs(\'' + pidsParam + '\', \'' + safeTitle + '\')">';
+                        var safeTitle = sessionName.replace(/'/g, "\\'");
+                        html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download All Thumbnails" onclick="downloadAllThumbs(\'' + pidsParam + '\', \'' + safeTitle + '\')">';
                         html += '<iconify-icon icon="solar:download-bold" class="text-primary"></iconify-icon>';
-                        html += '</button>';                        html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Preview All" onclick="window.open(\'/player.html?thumbs=' + pidsParam + '&title=\' + encodeURIComponent(\'' + safeTitle + ' — Thumbnails\'), \'_blank\')">';
+                        html += '</button>';
+                        html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Preview All" onclick="window.open(\'/player.html?thumbs=' + pidsParam + '&title=\' + encodeURIComponent(\'' + safeTitle + '\'), \'_blank\')">';
                         html += '<iconify-icon icon="solar:play-bold" class="text-primary"></iconify-icon>';
                         html += '</button>';
+                    } else {
+                        html += '<span class="text-[8px] font-mono text-yellow-500 uppercase">PROCESSING</span>';
                     }
                     html += '</div>';
                     html += '</div>';
