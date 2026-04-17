@@ -411,8 +411,9 @@
                     html += '<div class="flex items-center gap-2 shrink-0">';
                     if (allPids.length > 0) {
                         var pidsParam = allPids.join(',');
-                        var safeTitle = sessionName.replace(/'/g, "\\'");
-                        html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Preview All" onclick="window.open(\'/player.html?thumbs=' + pidsParam + '&title=\' + encodeURIComponent(\'' + safeTitle + ' — Thumbnails\'), \'_blank\')">';
+                        var safeTitle = sessionName.replace(/'/g, "\\'");                        html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download All Thumbnails" onclick="downloadAllThumbs(\'' + pidsParam + '\', \'' + safeTitle + '\')">';
+                        html += '<iconify-icon icon="solar:download-bold" class="text-primary"></iconify-icon>';
+                        html += '</button>';                        html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Preview All" onclick="window.open(\'/player.html?thumbs=' + pidsParam + '&title=\' + encodeURIComponent(\'' + safeTitle + ' — Thumbnails\'), \'_blank\')">';
                         html += '<iconify-icon icon="solar:eye-bold" class="text-primary"></iconify-icon>';
                         html += '</button>';
                     }
@@ -604,8 +605,14 @@
             } catch (e) { alert('Failed to fetch assets'); return; }
 
             const lookup = {};
+            const lookupAll = {};
             for (const a of muxAssets) {
-                if (a.passthrough) lookup[a.passthrough.toUpperCase().trim()] = a;
+                if (a.passthrough) {
+                    const k = a.passthrough.toUpperCase().trim();
+                    lookup[k] = a;
+                    if (!lookupAll[k]) lookupAll[k] = [];
+                    lookupAll[k].push(a);
+                }
             }
 
             const files = [];
@@ -639,18 +646,26 @@
                 if (pid && sr) verticalFiles.push({ url: 'https://stream.mux.com/' + pid + '/' + sr.name, filename: 'Vertical_' + String(i).padStart(2, '0') + '.' + sr.ext });
             }
 
-            // 4) THUMBNAILS — single key + numbered keys, use image.mux.com
-            const singleThumb = lookup[name + ' // THUMB'];
-            if (singleThumb) {
-                const pid = singleThumb.playback_ids?.[0]?.id;
-                if (pid) thumbFiles.push({ url: 'https://image.mux.com/' + pid + '/thumbnail.png?width=1920', filename: 'Thumbnail_00.png' });
+            // 4) THUMBNAILS — collect ALL with base key + numbered keys, use image.mux.com
+            const baseThumbKey = name + ' // THUMB';
+            const baseThumbs = lookupAll[baseThumbKey] || [];
+            const seenThumbIds = {};
+            let thumbIdx = 0;
+            for (const t of baseThumbs) {
+                if (seenThumbIds[t.id]) continue;
+                const pid = t.playback_ids?.[0]?.id;
+                if (pid) { thumbFiles.push({ url: 'https://image.mux.com/' + pid + '/thumbnail.png?width=1920', filename: 'Thumbnail_' + String(thumbIdx).padStart(2, '0') + '.png' }); thumbIdx++; }
+                seenThumbIds[t.id] = true;
             }
             for (let i = 1; i <= 20; i++) {
                 const key = name + ' // THUMB // ' + String(i).padStart(2, '0');
-                const asset = lookup[key];
-                if (!asset) continue;
-                const pid = asset.playback_ids?.[0]?.id;
-                if (pid) thumbFiles.push({ url: 'https://image.mux.com/' + pid + '/thumbnail.png?width=1920', filename: 'Thumbnail_' + String(i).padStart(2, '0') + '.png' });
+                const numberedThumbs = lookupAll[key] || [];
+                for (const t of numberedThumbs) {
+                    if (seenThumbIds[t.id]) continue;
+                    const pid = t.playback_ids?.[0]?.id;
+                    if (pid) { thumbFiles.push({ url: 'https://image.mux.com/' + pid + '/thumbnail.png?width=1920', filename: 'Thumbnail_' + String(thumbIdx).padStart(2, '0') + '.png' }); thumbIdx++; }
+                    seenThumbIds[t.id] = true;
+                }
             }
 
             // Put verticals/thumbnails in subfolders when more than one
