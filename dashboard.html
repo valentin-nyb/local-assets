@@ -828,6 +828,40 @@
         // Track uploaded asset info for download
         const uploadedAssets = {};
 
+        async function downloadAllThumbs(pidsStr, title) {
+            const pids = pidsStr.split(',').filter(Boolean);
+            if (!pids.length) return;
+            if (pids.length === 1) {
+                // Single thumbnail — direct blob download
+                const url = 'https://image.mux.com/' + pids[0] + '/thumbnail.png?width=1920';
+                try {
+                    const resp = await fetch(url);
+                    const blob = await resp.blob();
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = 'Thumbnail_01.png';
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                } catch (e) { window.open(url, '_blank'); }
+                return;
+            }
+            // Multiple — zip them
+            const zip = new JSZip();
+            const folder = zip.folder(title.replace(/[^a-zA-Z0-9_\- ]/g, '') + '_Thumbnails');
+            for (let i = 0; i < pids.length; i++) {
+                const url = 'https://image.mux.com/' + pids[i] + '/thumbnail.png?width=1920';
+                const resp = await fetch(url);
+                const blob = await resp.blob();
+                folder.file('Thumbnail_' + String(i + 1).padStart(2, '0') + '.png', blob);
+            }
+            const zipBlob = await zip.generateAsync({ type: 'blob' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(zipBlob);
+            a.download = title.replace(/[^a-zA-Z0-9_\- ]/g, '') + '_Thumbnails.zip';
+            a.click();
+            URL.revokeObjectURL(a.href);
+        }
+
         async function handleAssetUpload(uid, input, sessionName) {
             const files = Array.from(input.files);
             if (!files.length) return;

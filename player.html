@@ -110,6 +110,16 @@
         } else {
             container.innerHTML = '<mux-player playback-id="' + pid + '" stream-type="on-demand" accent-color="#39FF14" autoplay></mux-player>';
         }
+        function downloadThumbBlob(pid, idx) {
+            const url = 'https://image.mux.com/' + pid + '/thumbnail.png?width=1920';
+            fetch(url).then(r => r.blob()).then(blob => {
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'Thumbnail_' + String(idx + 1).padStart(2, '0') + '.png';
+                a.click();
+                URL.revokeObjectURL(a.href);
+            }).catch(() => window.open(url, '_blank'));
+        }
     </script>
 </body>
 </html>
