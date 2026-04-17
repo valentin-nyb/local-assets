@@ -32,6 +32,7 @@
         .nav-link.active { background-color: rgba(255, 255, 255, 0.05); border: 1px solid #27272a; color: white; }
         .bg-scanlines { background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.2) 50%, rgba(0, 0, 0, 0.2)); background-size: 100% 4px; }
         ::-webkit-scrollbar { display: none; }
+        .session-group + .session-group { border-top: 1px solid rgba(39, 39, 42, 0.15); }
         
         /* Mobile Overlay Fix */
         @media (max-width: 767px) { 
@@ -295,7 +296,8 @@
                 if (!a.passthrough) continue;
                 var pt = a.passthrough.toUpperCase().trim();
                 var artistName = pt.split(' // ')[0];
-                var dateStr = new Date(a.created_at * 1000).toISOString().slice(0, 10);
+                var dateMatch = pt.match(/D:(\d{4}-\d{2}-\d{2})/);
+                var dateStr = dateMatch ? dateMatch[1] : new Date(a.created_at * 1000).toISOString().slice(0, 10);
                 if (!artistMap[artistName]) artistMap[artistName] = {};
                 if (!artistMap[artistName][dateStr]) artistMap[artistName][dateStr] = true;
             }
@@ -377,7 +379,7 @@
                     html += '<p class="text-[10px] font-bold text-zinc-300 uppercase" id="label-' + uid + '">' + asset.label + '</p>';
                     html += '<p class="text-[8px] font-mono text-zinc-600 uppercase" id="status-' + uid + '">' + asset.ext + ' FORMAT — TAP TO UPLOAD</p>';
                     html += '</div>';
-                    html += '<input type="file" accept="' + accept + '" class="hidden" id="file-' + uid + '"' + (asset.type === 'SOCIAL' ? ' multiple' : '') + ' onchange="handleAssetUpload(\'' + uid + '\', this, \'' + sessionName + '\')">';
+                    html += '<input type="file" accept="' + accept + '" class="hidden" id="file-' + uid + '"' + (asset.type === 'SOCIAL' ? ' multiple' : '') + ' onchange="handleAssetUpload(\'' + uid + '\', this, \'' + sessionName + '\', \'' + sessionDate + '\')">';
                     html += '</label>';
                     html += '<div class="flex items-center gap-2 shrink-0">';
                     html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors opacity-10" id="dl-' + uid + '" disabled title="No file yet">';
@@ -391,91 +393,74 @@
 
             function buildThumbHtml(thumbAssets, uid, asset, sessionName, sessionDate, masterAsset) {
                 var html = '';
-                if (thumbAssets.length > 0) {
-                    // Collect all playback IDs for gallery preview
-                    var allPids = [];
-                    var readyCount = 0;
-                    var processingCount = 0;
-                    for (var ti = 0; ti < thumbAssets.length; ti++) {
-                        var t = thumbAssets[ti];
-                        var tPid = t.asset.playback_ids && t.asset.playback_ids[0] ? t.asset.playback_ids[0].id : null;
-                        if (tPid) { allPids.push(tPid); readyCount++; }
-                        else { processingCount++; }
-                    }
-                    var statusText = readyCount + ' UPLOADED';
+                var allPids = [];
+                var readyCount = 0;
+                var processingCount = 0;
+                for (var ti = 0; ti < thumbAssets.length; ti++) {
+                    var t = thumbAssets[ti];
+                    var tPid = t.asset.playback_ids && t.asset.playback_ids[0] ? t.asset.playback_ids[0].id : null;
+                    if (tPid) { allPids.push(tPid); readyCount++; }
+                    else { processingCount++; }
+                }
+                var hasAny = thumbAssets.length > 0;
+                var canUploadMore = thumbAssets.length < 20;
+                var statusText;
+                if (hasAny) {
+                    statusText = readyCount + ' UPLOADED';
                     if (processingCount > 0) statusText += ' / ' + processingCount + ' PROCESSING';
                     statusText = 'IN VAULT — ' + statusText;
-
-                    // Single consolidated row
-                    html += '<div class="p-4 pl-16 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" style="border-left: 2px solid #39FF14;">';
-                    html += '<div class="flex items-center gap-4 flex-1 min-w-0">';
-                    html += '<div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-primary/50 shrink-0">';
-                    html += '<iconify-icon icon="solar:gallery-minimalistic-bold" class="text-primary text-sm"></iconify-icon>';
-                    html += '</div>';
-                    html += '<div class="min-w-0">';
-                    html += '<p class="text-[10px] font-bold text-zinc-300 uppercase">Marketing Thumbnails (' + thumbAssets.length + ')</p>';
-                    html += '<p class="text-[8px] font-mono text-primary uppercase">' + statusText + '</p>';
-                    html += '</div>';
-                    html += '</div>';
-                    html += '<div class="flex items-center gap-2 shrink-0">';
-                    if (allPids.length > 0) {
-                        var pidsParam = allPids.join(',');
-                        var htmlTitle = sessionName.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
-                        html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download" data-pids="' + pidsParam + '" data-title="' + htmlTitle + '" onclick="dlThumbs(this)">';
-                        html += '<iconify-icon icon="solar:download-bold" class="text-primary"></iconify-icon>';
-                        html += '</button>';
-                        html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Preview" data-pids="' + pidsParam + '" data-title="' + htmlTitle + '" onclick="pvThumbs(this)">';
-                        html += '<iconify-icon icon="solar:play-bold" class="text-primary"></iconify-icon>';
-                        html += '</button>';
-                    } else {
-                        html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors opacity-30" disabled title="Processing">';
-                        html += '<iconify-icon icon="solar:download-bold" class="text-zinc-500"></iconify-icon>';
-                        html += '</button>';
-                        html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors opacity-30" disabled title="Processing">';
-                        html += '<iconify-icon icon="solar:play-bold" class="text-zinc-500"></iconify-icon>';
-                        html += '</button>';
-                    }
-                    html += '</div>';
-                    html += '</div>';
-
-                    // Upload more row
-                    if (thumbAssets.length < 20) {
-                        html += '<div class="p-4 pl-16 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-' + uid + '">';
-                        html += '<label class="flex items-center gap-4 cursor-pointer flex-1 min-w-0">';
-                        html += '<div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-border/50 shrink-0">';
-                        html += '<iconify-icon icon="solar:gallery-minimalistic-bold" class="text-primary text-sm"></iconify-icon>';
-                        html += '</div>';
-                        html += '<div class="min-w-0">';
-                        html += '<p class="text-[10px] font-bold text-zinc-300 uppercase" id="label-' + uid + '">Add More Thumbnails</p>';
-                        html += '<p class="text-[8px] font-mono text-zinc-600 uppercase" id="status-' + uid + '">' + thumbAssets.length + '/20 UPLOADED — TAP TO ADD</p>';
-                        html += '</div>';
-                        html += '<input type="file" accept="image/*" class="hidden" id="file-' + uid + '" multiple onchange="handleAssetUpload(\'' + uid + '\', this, \'' + sessionName + '\')">';
-                        html += '</label>';
-                        html += '</div>';
-                    }
+                    if (canUploadMore) statusText += ' — TAP TO ADD';
                 } else {
-                    var masterPid = masterAsset && masterAsset.playback_ids && masterAsset.playback_ids[0] ? masterAsset.playback_ids[0].id : null;
-                    html += '<div class="p-4 pl-16 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-' + uid + '">';
+                    statusText = '.PNG FORMAT — TAP TO UPLOAD (MAX 20)';
+                }
+                var label = hasAny ? 'Marketing Thumbnails (' + thumbAssets.length + ')' : asset.label;
+                var safeName = sessionName.replace(/'/g, "\\'");
+                html += '<div class="p-4 pl-16 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-' + uid + '"' + (hasAny ? ' style="border-left: 2px solid #39FF14;"' : '') + '>';
+                if (canUploadMore) {
                     html += '<label class="flex items-center gap-4 cursor-pointer flex-1 min-w-0">';
-                    html += '<div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-border/50 shrink-0">';
-                    html += '<iconify-icon icon="' + asset.icon + '" class="' + asset.color + ' text-sm"></iconify-icon>';
-                    html += '</div>';
-                    html += '<div class="min-w-0">';
-                    html += '<p class="text-[10px] font-bold text-zinc-300 uppercase" id="label-' + uid + '">' + asset.label + '</p>';
-                    html += '<p class="text-[8px] font-mono text-zinc-600 uppercase" id="status-' + uid + '">.PNG FORMAT — TAP TO UPLOAD (MAX 20)</p>';
-                    html += '</div>';
-                    html += '<input type="file" accept="image/*" class="hidden" id="file-' + uid + '" multiple onchange="handleAssetUpload(\'' + uid + '\', this, \'' + sessionName + '\')">';
+                } else {
+                    html += '<div class="flex items-center gap-4 flex-1 min-w-0">';
+                }
+                html += '<div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border ' + (hasAny ? 'border-primary/50' : 'border-border/50') + ' shrink-0">';
+                html += '<iconify-icon icon="solar:gallery-minimalistic-bold" class="text-primary text-sm"></iconify-icon>';
+                html += '</div>';
+                html += '<div class="min-w-0">';
+                html += '<p class="text-[10px] font-bold text-zinc-300 uppercase" id="label-' + uid + '">' + label + '</p>';
+                html += '<p class="text-[8px] font-mono ' + (hasAny ? 'text-primary' : 'text-zinc-600') + ' uppercase" id="status-' + uid + '">' + statusText + '</p>';
+                html += '</div>';
+                if (canUploadMore) {
+                    html += '<input type="file" accept="image/*" class="hidden" id="file-' + uid + '" multiple onchange="handleAssetUpload(\'' + uid + '\', this, \'' + safeName + '\', \'' + sessionDate + '\')">';
                     html += '</label>';
-                    html += '<div class="flex items-center gap-2 shrink-0">';
+                } else {
+                    html += '</div>';
+                }
+                html += '<div class="flex items-center gap-2 shrink-0">';
+                if (allPids.length > 0) {
+                    var pidsParam = allPids.join(',');
+                    var htmlTitle = sessionName.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+                    html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download" data-pids="' + pidsParam + '" data-title="' + htmlTitle + '" onclick="dlThumbs(this)">';
+                    html += '<iconify-icon icon="solar:download-bold" class="text-primary"></iconify-icon>';
+                    html += '</button>';
+                    html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Preview" data-pids="' + pidsParam + '" data-title="' + htmlTitle + '" onclick="pvThumbs(this)">';
+                    html += '<iconify-icon icon="solar:play-bold" class="text-primary"></iconify-icon>';
+                    html += '</button>';
+                } else if (hasAny) {
+                    html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors opacity-30" disabled title="Processing">';
+                    html += '<iconify-icon icon="solar:download-bold" class="text-zinc-500"></iconify-icon>';
+                    html += '</button>';
+                    html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors opacity-30" disabled title="Processing">';
+                    html += '<iconify-icon icon="solar:play-bold" class="text-zinc-500"></iconify-icon>';
+                    html += '</button>';
+                } else {
                     html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors opacity-10" id="dl-' + uid + '" disabled title="No file yet">';
                     html += '<iconify-icon icon="solar:download-bold" class="text-zinc-700"></iconify-icon>';
                     html += '</button>';
                     html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors opacity-10" disabled title="No file yet">';
                     html += '<iconify-icon icon="solar:play-bold" class="text-zinc-700"></iconify-icon>';
                     html += '</button>';
-                    html += '</div>';
-                    html += '</div>';
                 }
+                html += '</div>';
+                html += '</div>';
                 return html;
             }
 
@@ -499,7 +484,7 @@
                 html += '<iconify-icon id="arrow-' + artistId + '" icon="solar:alt-arrow-down-linear" class="text-zinc-700 transition-transform duration-300"></iconify-icon>';
                 html += '</div>';
                 html += '</div>';
-                html += '<div id="preview-' + artistId + '" class="hidden bg-black/20 border-t border-border/50">';
+                html += '<div id="preview-' + artistId + '" class="hidden">';
                 for (var di = 0; di < artist.dates.length; di++) {
                     var dateStr = artist.dates[di];
                     var dateId = artistId + '_d_' + String(di + 1).padStart(2, '0');
@@ -509,15 +494,18 @@
                         if (at.type === 'THUMB') {
                             var tp = artist.name.toUpperCase().trim() + ' // THUMB';
                             if (findLinked(tp, dateStr)) return true;
+                            if ((muxByKey[tp + ' // D:' + dateStr] || []).length > 0) return true;
                             for (var tti = 1; tti <= 20; tti++) {
                                 var tk = tp + ' // ' + String(tti).padStart(2, '0');
                                 if ((muxByKey[tk] || []).some(function(x) { return new Date(x.created_at * 1000).toISOString().slice(0, 10) === dateStr; })) return true;
+                                var tkd = tp + ' // D:' + dateStr + ' // ' + String(tti).padStart(2, '0');
+                                if ((muxByKey[tkd] || []).length > 0) return true;
                             }
                             return false;
                         }
                         return !!findLinked(artist.name.toUpperCase().trim() + ' // ' + at.type, dateStr);
                     });
-                    html += '<div class="' + (di > 0 ? 'border-t border-border/30' : '') + '">';
+                    html += '<div>';
                     html += '<div onclick="toggleDateSection(\'' + dateId + '\')" class="p-4 pl-10 flex items-center justify-between hover:bg-white/[0.02] transition-colors cursor-pointer group">';
                     html += '<div class="flex items-center gap-3">';
                     html += '<div class="w-8 h-8 bg-[#050505] border border-border/50 flex items-center justify-center rounded-lg">';
@@ -538,7 +526,7 @@
                     html += '<iconify-icon id="arrow-' + dateId + '" icon="solar:alt-arrow-down-linear" class="text-zinc-700 transition-transform duration-300 text-sm"></iconify-icon>';
                     html += '</div>';
                     html += '</div>';
-                    html += '<div id="preview-' + dateId + '" class="hidden bg-black/40 divide-y divide-border/30">';
+                    html += '<div id="preview-' + dateId + '" class="hidden bg-black/40">';
                     for (var ati = 0; ati < assetTypes.length; ati++) {
                         var asset = assetTypes[ati];
                         var uid = dateId + '_' + asset.type;
@@ -546,7 +534,7 @@
                             var thumbPrefix = artist.name.toUpperCase().trim() + ' // THUMB';
                             var thumbAssets = [];
                             var seenIds = {};
-                            // Collect ALL thumbnails with exact base key (uploaded one-at-a-time)
+                            // Legacy: base key without date
                             var baseCandidates = muxByKey[thumbPrefix] || [];
                             for (var bci = 0; bci < baseCandidates.length; bci++) {
                                 if (new Date(baseCandidates[bci].created_at * 1000).toISOString().slice(0, 10) === dateStr && !seenIds[baseCandidates[bci].id]) {
@@ -554,7 +542,15 @@
                                     seenIds[baseCandidates[bci].id] = true;
                                 }
                             }
-                            // Collect numbered thumbnails (batch uploads)
+                            // New format: with date in key
+                            var dateCandidates = muxByKey[thumbPrefix + ' // D:' + dateStr] || [];
+                            for (var dci = 0; dci < dateCandidates.length; dci++) {
+                                if (!seenIds[dateCandidates[dci].id]) {
+                                    thumbAssets.push({ asset: dateCandidates[dci], label: 'Thumbnail' });
+                                    seenIds[dateCandidates[dci].id] = true;
+                                }
+                            }
+                            // Legacy numbered
                             for (var tti = 1; tti <= 20; tti++) {
                                 var thumbKey = thumbPrefix + ' // ' + String(tti).padStart(2, '0');
                                 var candidates = muxByKey[thumbKey] || [];
@@ -565,6 +561,18 @@
                                     }
                                 }
                                 if (thumbMatch) { thumbAssets.push({ asset: thumbMatch, label: 'Thumbnail ' + String(tti).padStart(2, '0') }); seenIds[thumbMatch.id] = true; }
+                            }
+                            // New format numbered: with date in key
+                            for (var tti2 = 1; tti2 <= 20; tti2++) {
+                                var thumbKeyD = thumbPrefix + ' // D:' + dateStr + ' // ' + String(tti2).padStart(2, '0');
+                                var candidatesD = muxByKey[thumbKeyD] || [];
+                                for (var ci2 = 0; ci2 < candidatesD.length; ci2++) {
+                                    if (!seenIds[candidatesD[ci2].id]) {
+                                        thumbAssets.push({ asset: candidatesD[ci2], label: 'Thumbnail ' + String(tti2).padStart(2, '0') });
+                                        seenIds[candidatesD[ci2].id] = true;
+                                        break;
+                                    }
+                                }
                             }
                             html += buildThumbHtml(thumbAssets, uid, asset, artist.name, dateStr, masterAsset);
                         } else {
@@ -667,7 +675,7 @@
                 if (pid && sr) verticalFiles.push({ url: 'https://stream.mux.com/' + pid + '/' + sr.name, filename: 'Vertical_' + String(i).padStart(2, '0') + '.' + sr.ext });
             }
 
-            // 4) THUMBNAILS — collect ALL with base key + numbered keys, use image.mux.com
+            // 4) THUMBNAILS — collect ALL with base key + numbered keys + D: dated keys, use image.mux.com
             const baseThumbKey = name + ' // THUMB';
             const baseThumbs = lookupAll[baseThumbKey] || [];
             const seenThumbIds = {};
@@ -678,10 +686,27 @@
                 if (pid) { thumbFiles.push({ url: 'https://image.mux.com/' + pid + '/thumbnail.png?width=1920', filename: 'Thumbnail_' + String(thumbIdx).padStart(2, '0') + '.png' }); thumbIdx++; }
                 seenThumbIds[t.id] = true;
             }
+            // D: dated base key
+            const datedThumbs = lookupAll[baseThumbKey + ' // D:' + sessionDate] || [];
+            for (const t of datedThumbs) {
+                if (seenThumbIds[t.id]) continue;
+                const pid = t.playback_ids?.[0]?.id;
+                if (pid) { thumbFiles.push({ url: 'https://image.mux.com/' + pid + '/thumbnail.png?width=1920', filename: 'Thumbnail_' + String(thumbIdx).padStart(2, '0') + '.png' }); thumbIdx++; }
+                seenThumbIds[t.id] = true;
+            }
             for (let i = 1; i <= 20; i++) {
                 const key = name + ' // THUMB // ' + String(i).padStart(2, '0');
                 const numberedThumbs = lookupAll[key] || [];
                 for (const t of numberedThumbs) {
+                    if (seenThumbIds[t.id]) continue;
+                    const pid = t.playback_ids?.[0]?.id;
+                    if (pid) { thumbFiles.push({ url: 'https://image.mux.com/' + pid + '/thumbnail.png?width=1920', filename: 'Thumbnail_' + String(thumbIdx).padStart(2, '0') + '.png' }); thumbIdx++; }
+                    seenThumbIds[t.id] = true;
+                }
+                // D: dated numbered key
+                const datedKey = name + ' // THUMB // D:' + sessionDate + ' // ' + String(i).padStart(2, '0');
+                const datedNumbered = lookupAll[datedKey] || [];
+                for (const t of datedNumbered) {
                     if (seenThumbIds[t.id]) continue;
                     const pid = t.playback_ids?.[0]?.id;
                     if (pid) { thumbFiles.push({ url: 'https://image.mux.com/' + pid + '/thumbnail.png?width=1920', filename: 'Thumbnail_' + String(thumbIdx).padStart(2, '0') + '.png' }); thumbIdx++; }
@@ -906,7 +931,7 @@
             URL.revokeObjectURL(a.href);
         }
 
-        async function handleAssetUpload(uid, input, sessionName) {
+        async function handleAssetUpload(uid, input, sessionName, sessionDate) {
             const files = Array.from(input.files);
             if (!files.length) return;
 
@@ -915,7 +940,7 @@
             const row = document.getElementById('row-' + uid);
 
             const assetType = uid.split('_').pop();
-            const passthrough = assetType === 'MASTER' ? sessionName : sessionName + ' // ' + assetType;
+            const passthrough = assetType === 'MASTER' ? sessionName : assetType === 'THUMB' && sessionDate ? sessionName + ' // THUMB // D:' + sessionDate : sessionName + ' // ' + assetType;
 
             statusEl.textContent = 'CONNECTING TO LOCAL/CLOUD...';
             statusEl.classList.remove('text-zinc-600');
