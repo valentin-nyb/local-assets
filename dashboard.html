@@ -428,7 +428,12 @@
                         html += '<iconify-icon icon="solar:play-bold" class="text-primary"></iconify-icon>';
                         html += '</button>';
                     } else {
-                        html += '<span class="text-[8px] font-mono text-yellow-500 uppercase">PROCESSING</span>';
+                        html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors opacity-30" disabled title="Processing">';
+                        html += '<iconify-icon icon="solar:download-bold" class="text-zinc-500"></iconify-icon>';
+                        html += '</button>';
+                        html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors opacity-30" disabled title="Processing">';
+                        html += '<iconify-icon icon="solar:play-bold" class="text-zinc-500"></iconify-icon>';
+                        html += '</button>';
                     }
                     html += '</div>';
                     html += '</div>';
@@ -462,14 +467,11 @@
                     html += '<input type="file" accept="image/*" class="hidden" id="file-' + uid + '" multiple onchange="handleAssetUpload(\'' + uid + '\', this, \'' + sessionName + '\')">';
                     html += '</label>';
                     html += '<div class="flex items-center gap-2 shrink-0">';
-                    if (masterPid) {
-                        html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Auto Thumbnail from Master"';
-                        html += ' onclick="window.open(\'https://image.mux.com/' + masterPid + '/thumbnail.png?width=1920&time=10\', \'_blank\')">';
-                        html += '<iconify-icon icon="solar:gallery-minimalistic-bold" class="text-primary"></iconify-icon>';
-                        html += '</button>';
-                    }
                     html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors opacity-10" id="dl-' + uid + '" disabled title="No file yet">';
                     html += '<iconify-icon icon="solar:download-bold" class="text-zinc-700"></iconify-icon>';
+                    html += '</button>';
+                    html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors opacity-10" disabled title="No file yet">';
+                    html += '<iconify-icon icon="solar:play-bold" class="text-zinc-700"></iconify-icon>';
                     html += '</button>';
                     html += '</div>';
                     html += '</div>';
@@ -515,7 +517,7 @@
                         }
                         return !!findLinked(artist.name.toUpperCase().trim() + ' // ' + at.type, dateStr);
                     });
-                    html += '<div class="border-b border-border/30 last:border-b-0">';
+                    html += '<div class="' + (di > 0 ? 'border-t border-border/30' : '') + '">';
                     html += '<div onclick="toggleDateSection(\'' + dateId + '\')" class="p-4 pl-10 flex items-center justify-between hover:bg-white/[0.02] transition-colors cursor-pointer group">';
                     html += '<div class="flex items-center gap-3">';
                     html += '<div class="w-8 h-8 bg-[#050505] border border-border/50 flex items-center justify-center rounded-lg">';
