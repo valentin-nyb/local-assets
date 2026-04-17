@@ -201,6 +201,15 @@
             return d.toLocaleDateString('en-GB', { month: 'short', day: 'numeric', year: 'numeric' });
         }
 
+        function dlThumbs(el) {
+            downloadAllThumbs(el.dataset.pids, el.dataset.title);
+        }
+        function pvThumbs(el) {
+            var p = encodeURIComponent(el.dataset.pids);
+            var t = encodeURIComponent(el.dataset.title);
+            window.open('/player.html?thumbs=' + p + '&title=' + t, '_blank');
+        }
+
         function formatSizeReadable(bytes) {
             const num = Number(bytes) || 0;
             if (num < 1024 * 1024 * 10) return (num / (1024 * 1024)).toFixed(1) + ' MB';
@@ -411,12 +420,11 @@
                     html += '<div class="flex items-center gap-2 shrink-0">';
                     if (allPids.length > 0) {
                         var pidsParam = allPids.join(',');
-                        var safeTitle = sessionName.replace(/'/g, "\\'");
-                        var thumbUrl = '/player.html?thumbs=' + encodeURIComponent(pidsParam) + '&title=' + encodeURIComponent(sessionName);
-                        html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download" onclick="downloadAllThumbs(\'' + pidsParam + '\', \'' + safeTitle + '\')">';
+                        var htmlTitle = sessionName.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+                        html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download" data-pids="' + pidsParam + '" data-title="' + htmlTitle + '" onclick="dlThumbs(this)">';
                         html += '<iconify-icon icon="solar:download-bold" class="text-primary"></iconify-icon>';
                         html += '</button>';
-                        html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Preview" onclick="window.open(\'' + thumbUrl + '\', \'_blank\')">';
+                        html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Preview" data-pids="' + pidsParam + '" data-title="' + htmlTitle + '" onclick="pvThumbs(this)">';
                         html += '<iconify-icon icon="solar:play-bold" class="text-primary"></iconify-icon>';
                         html += '</button>';
                     } else {
