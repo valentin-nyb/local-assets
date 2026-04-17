@@ -597,33 +597,15 @@
     </script>
 
     <script>
-        async function selectTier(tierId) {
+        function selectTier(tierId) {
             var btn = event.target;
             var originalText = btn.textContent;
+            btn.textContent = 'COMING SOON';
             btn.disabled = true;
-            btn.textContent = 'CONNECTING...';
-            try {
-                var res = await fetch('/api/create-checkout', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ tier: tierId, origin: window.location.origin })
-                });
-                if (!res.ok) {
-                    var errText = await res.text();
-                    try { var errObj = JSON.parse(errText); throw new Error(errObj.error || 'Server ' + res.status); }
-                    catch(pe) { if (pe.message && !pe.message.includes('JSON')) throw pe; throw new Error('Server ' + res.status + ' \u2014 check Vercel logs'); }
-                }
-                var data = await res.json();
-                if (data.url) {
-                    window.location.href = data.url;
-                } else {
-                    throw new Error('No checkout URL returned');
-                }
-            } catch (err) {
-                alert('PAYMENT ERROR: ' + err.message);
-                btn.disabled = false;
+            setTimeout(function() {
                 btn.textContent = originalText;
-            }
+                btn.disabled = false;
+            }, 2000);
         }
 
         (function() {
@@ -631,13 +613,6 @@
             var payment = params.get('payment');
             if (payment === 'success') {
                 window.location.href = '/client.html?welcome=true';
-            }
-            if (payment === 'cancelled') {
-                var banner = document.createElement('div');
-                banner.className = 'fixed top-0 left-0 right-0 z-[100] bg-red-500 text-white text-center py-3 font-mono text-xs uppercase tracking-widest font-bold';
-                banner.textContent = 'PAYMENT CANCELLED // SELECT A TIER TO TRY AGAIN';
-                document.body.appendChild(banner);
-                setTimeout(function() { banner.remove(); }, 6000);
             }
         })();
     </script>
