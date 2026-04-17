@@ -519,7 +519,7 @@
                     html += '<div class="flex items-center gap-2">';
                     if (hasAnyLinked) {
                         var safeName = artist.name.replace(/'/g, "\\'");
-                        html += '<button onclick="event.stopPropagation(); bulkDownload(\'' + safeName + '\', \'' + dateStr + '\')" id="zip-btn-' + dateId + '" class="flex items-center gap-1.5 px-3 py-1 rounded-full border border-primary/30 hover:bg-primary/10 transition-colors" title="Download All">';
+                        html += '<button onclick="event.stopPropagation(); bulkDownload(\'' + safeName + '\', \'' + dateStr + '\', this)" id="zip-btn-' + dateId + '" class="flex items-center gap-1.5 px-3 py-1 rounded-full border border-primary/30 hover:bg-primary/10 transition-colors" title="Download All">';
                         html += '<span class="text-[8px] font-mono text-primary uppercase tracking-widest">DOWNLOAD</span>';
                         html += '</button>';
                     }
@@ -616,8 +616,7 @@
             }
         }
 
-        async function bulkDownload(sessionName, sessionDate) {
-            const btn = document.querySelector('[id^="zip-btn-"]');
+        async function bulkDownload(sessionName, sessionDate, btn) {
             const origHtml = btn ? btn.innerHTML : '';
 
             let muxAssets = [];
