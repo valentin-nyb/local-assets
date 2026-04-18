@@ -2,8 +2,8 @@ import Mux from '@mux/mux-node';
 import { put } from '@vercel/blob';
 
 const mux = new Mux({ 
-  tokenId: (process.env.PROD_MUX_TOKEN_ID || process.env.assets_MUX_TOKEN_ID || '').trim(), 
-  tokenSecret: (process.env.PROD_MUX_TOKEN_SECRET || process.env.assets_MUX_TOKEN_SECRET || '').trim()
+  tokenId: (process.env.PROD_MUX_TOKEN_ID || process.env.MUX_TOKEN_ID || '').trim(), 
+  tokenSecret: (process.env.PROD_MUX_TOKEN_SECRET || process.env.MUX_TOKEN_SECRET || '').trim()
 });
 
 const TOKEN_ID = (process.env.PROD_MUX_TOKEN_ID || process.env.MUX_TOKEN_ID || '').trim();

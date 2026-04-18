@@ -3,7 +3,7 @@ const TOKEN_SECRET = (process.env.PROD_MUX_TOKEN_SECRET || process.env.MUX_TOKEN
 const AUTH = Buffer.from(`${TOKEN_ID}:${TOKEN_SECRET}`).toString('base64');
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Origin', 'https://local-assets.com');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -33,7 +33,7 @@ export default async function handler(req, res) {
           name: videoTitle,
           static_renditions: [{ resolution: srResolution }]
         },
-        cors_origin: '*'
+        cors_origin: 'https://local-assets.com'
       })
     });
 

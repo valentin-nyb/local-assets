@@ -60,13 +60,13 @@
 
         if (thumbsPids) {
             // Thumbnail gallery mode — show all thumbnails in a grid
-            const pids = thumbsPids.split(',').filter(Boolean);
+            const pids = thumbsPids.split(',').filter(p => /^[a-zA-Z0-9_-]+$/.test(p));
             let gridHtml = '<div class="w-full max-w-6xl px-4">';
             gridHtml += '<p class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-4">' + pids.length + ' THUMBNAIL' + (pids.length !== 1 ? 'S' : '') + '</p>';
             gridHtml += '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">';
             for (let i = 0; i < pids.length; i++) {
-                const imgUrl = 'https://image.mux.com/' + pids[i] + '/thumbnail.png?width=1920';
-                gridHtml += '<div class="group relative rounded-xl overflow-hidden border border-[#27272a] hover:border-[#39FF14]/50 transition-all cursor-pointer" onclick="downloadThumbBlob(\'' + pids[i] + '\', ' + i + ')">';
+                const imgUrl = 'https://image.mux.com/' + encodeURIComponent(pids[i]) + '/thumbnail.png?width=1920';
+                gridHtml += '<div class="group relative rounded-xl overflow-hidden border border-[#27272a] hover:border-[#39FF14]/50 transition-all cursor-pointer" data-pid="' + pids[i].replace(/"/g, '') + '" data-idx="' + i + '">';
                 gridHtml += '<img src="' + imgUrl + '" class="w-full aspect-video object-cover" alt="Thumbnail ' + (i + 1) + '" loading="lazy">';
                 gridHtml += '<div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">';
                 gridHtml += '<span class="text-[9px] font-mono text-[#39FF14] uppercase tracking-widest">DOWNLOAD</span>';
@@ -78,6 +78,11 @@
             container.innerHTML = gridHtml;
             container.style.alignItems = 'flex-start';
             container.style.paddingTop = '2rem';
+            // Attach click handlers via event delegation
+            container.addEventListener('click', function(e) {
+                const card = e.target.closest('[data-pid]');
+                if (card) downloadThumbBlob(card.dataset.pid, parseInt(card.dataset.idx));
+            });
         } else if (!pid) {
             container.innerHTML = '<p class="text-zinc-600 font-mono text-xs uppercase tracking-widest">NO ASSET SPECIFIED</p>';
         } else if (type === 'thumb') {

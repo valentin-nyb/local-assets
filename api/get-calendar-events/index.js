@@ -18,7 +18,7 @@ const calendar = google.calendar({ version: 'v3', auth });
 
 exports.handler = async (event) => {
   const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin": "https://local-assets.com",
     "Access-Control-Allow-Methods": "GET",
   };
 

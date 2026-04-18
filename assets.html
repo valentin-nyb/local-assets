@@ -162,18 +162,21 @@
             return;
         }
 
+        function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
         list.innerHTML = assets.map((asset, i) => {
             const pid = asset.playback_ids?.[0]?.id;
             const status = asset.status;
             const isReady = status === 'ready';
+            const label = esc(asset.passthrough || asset.id.slice(-6));
 
             return `
             <div class="vault-card ${isReady ? '' : 'opacity-50'}" id="vault-${i}">
                 <div class="vault-card-header" onclick="toggleVaultFolder(${i})">
                     <div>
-                        <h4 class="text-2xl font-black italic uppercase">${asset.passthrough || asset.id.slice(-6)}</h4>
+                        <h4 class="text-2xl font-black italic uppercase">${label}</h4>
                         <span class="text-[8px] font-mono ${isReady ? 'text-primary' : 'text-zinc-500'} uppercase">
-                            ${status.toUpperCase()} // ${new Date(asset.created_at * 1000).toLocaleDateString()}
+                            ${esc(status.toUpperCase())} // ${new Date(asset.created_at * 1000).toLocaleDateString()}
                         </span>
                     </div>
                     ${isReady ? `
