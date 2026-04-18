@@ -65,7 +65,7 @@
     <main class="flex-1 flex flex-col overflow-hidden relative">
         <header class="h-16 flex items-center px-8 border-b border-[#27272a] bg-[#050505] shrink-0 justify-between w-full z-40">
             <div class="flex items-center gap-3">
-                <span class="text-zinc-600 text-[10px] font-mono uppercase tracking-[0.3em] hidden md:inline">
+                <span id="venue-breadcrumb" class="text-zinc-600 text-[10px] font-mono uppercase tracking-[0.3em] hidden md:inline">
                     KOKO / London
                 </span>
                 <iconify-icon icon="solar:alt-arrow-right-linear" class="text-zinc-700 hidden md:block"></iconify-icon>
@@ -78,15 +78,23 @@
                     <span class="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-pulse"></span>
                     <span class="text-[9px] font-mono text-[#39FF14] uppercase tracking-widest">System OK</span>
                 </div>
-                <div class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center font-bold text-xs shrink-0 cursor-pointer hover:scale-105 transition-transform shadow-[0_0_10px_rgba(255,255,255,0.1)]">
+                <button id="venue-avatar" onclick="openVenueEditor()" class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center font-bold text-xs shrink-0 cursor-pointer hover:scale-105 transition-transform shadow-[0_0_10px_rgba(255,255,255,0.1)] relative" title="Change venue name">
                     K
+                </button>
+                <div id="venue-popover" class="hidden absolute right-8 top-14 z-50 bg-[#0a0a0a] border border-[#27272a] rounded-xl p-4 shadow-[0_0_30px_rgba(0,0,0,0.8)] w-72">
+                    <label class="text-[9px] font-mono text-muted-foreground uppercase tracking-widest block mb-2">Venue Name</label>
+                    <input id="venue-input" type="text" maxlength="40" class="w-full bg-[#111] border border-[#27272a] text-white text-sm font-mono px-3 py-2 rounded-md focus:outline-none focus:border-primary transition-colors" placeholder="e.g. KOKO LONDON" spellcheck="false">
+                    <div class="flex gap-2 mt-3">
+                        <button onclick="saveVenueName()" class="flex-1 py-2 text-[10px] font-mono font-bold uppercase tracking-widest bg-primary text-black rounded-md hover:bg-white transition-colors">Save</button>
+                        <button onclick="closeVenueEditor()" class="flex-1 py-2 text-[10px] font-mono font-bold uppercase tracking-widest border border-[#27272a] text-zinc-400 rounded-md hover:text-zinc-200 hover:border-zinc-500 transition-colors">Cancel</button>
+                    </div>
                 </div>
             </div>
         </header>
 
         <div class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
             <div class="flex justify-between items-center mb-6">
-                <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Infrastructure Tier - KOKO / London</span>
+                <span id="venue-tier" class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Infrastructure Tier - KOKO / London</span>
             </div>
             <div class="cursor-pointer hover:border-primary/50 transition-all duration-500 w-full bg-card border border-border rounded-2xl p-8 relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-6 shadow-2xl">
                 <img id="live-feed-video" src="https://image.mux.com/q6FUhQVYgBr02BcUGR02VxR2FFP00anZQ2jZrJuQ6B01EPk/animated.gif?width=320" class="absolute inset-0 w-full h-full object-cover opacity-40 grayscale hover:grayscale-0 transition-all duration-700" alt="Live Feed">
@@ -319,7 +327,7 @@
                         id: 'artist_' + String(ai + 1).padStart(2, '0') + '_d_' + String(di + 1).padStart(2, '0'),
                         name: aName,
                         date: dates[di],
-                        venue: 'KOKO LONDON',
+                        venue: getVenueName(),
                         assets: assetTypes.slice()
                     });
                 }
@@ -513,7 +521,7 @@
                     html += '</div>';
                     html += '<div>';
                     html += '<p class="text-xs font-bold text-zinc-300 uppercase tracking-tight">' + dateStr + '</p>';
-                    html += '<p class="text-[8px] font-mono text-zinc-600 uppercase tracking-widest">KOKO LONDON</p>';
+                    html += '<p class="text-[8px] font-mono text-zinc-600 uppercase tracking-widest" data-venue-label>' + getVenueName() + '</p>';
                     html += '</div>';
                     html += '</div>';
                     html += '<div class="flex items-center gap-2">';
@@ -1080,6 +1088,74 @@
                 el.textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
             }, 1000);
         })();
+
+        // --- Venue Name Editor ---
+        var DEFAULT_VENUE = 'KOKO LONDON';
+
+        function getVenueName() {
+            return localStorage.getItem('la_venue_name') || DEFAULT_VENUE;
+        }
+
+        function formatVenueBreadcrumb(name) {
+            var parts = name.trim().split(/\s+/);
+            if (parts.length >= 2) return parts[0] + ' / ' + parts.slice(1).join(' ');
+            return name;
+        }
+
+        function applyVenueName() {
+            var name = getVenueName().toUpperCase();
+            var avatar = document.getElementById('venue-avatar');
+            var breadcrumb = document.getElementById('venue-breadcrumb');
+            var tier = document.getElementById('venue-tier');
+            if (avatar) avatar.textContent = name.charAt(0);
+            if (breadcrumb) breadcrumb.textContent = formatVenueBreadcrumb(name);
+            if (tier) tier.textContent = 'Infrastructure Tier - ' + formatVenueBreadcrumb(name);
+            document.querySelectorAll('[data-venue-label]').forEach(function(el) {
+                el.textContent = name;
+            });
+        }
+
+        function openVenueEditor() {
+            var popover = document.getElementById('venue-popover');
+            var input = document.getElementById('venue-input');
+            popover.classList.toggle('hidden');
+            if (!popover.classList.contains('hidden')) {
+                input.value = getVenueName();
+                input.focus();
+                input.select();
+            }
+        }
+
+        function closeVenueEditor() {
+            document.getElementById('venue-popover').classList.add('hidden');
+        }
+
+        function saveVenueName() {
+            var input = document.getElementById('venue-input');
+            var name = input.value.trim();
+            if (!name) return;
+            localStorage.setItem('la_venue_name', name.toUpperCase());
+            closeVenueEditor();
+            applyVenueName();
+            fetchRecentUploads();
+        }
+
+        document.addEventListener('click', function(e) {
+            var popover = document.getElementById('venue-popover');
+            var avatar = document.getElementById('venue-avatar');
+            if (popover && !popover.contains(e.target) && e.target !== avatar) {
+                popover.classList.add('hidden');
+            }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !document.getElementById('venue-popover').classList.contains('hidden')) {
+                saveVenueName();
+            }
+            if (e.key === 'Escape') closeVenueEditor();
+        });
+
+        applyVenueName();
     </script>
 </body>
 </html>
