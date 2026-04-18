@@ -28,7 +28,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <iconify-icon icon="solar:videocamera-record-linear" class="text-lg"></iconify-icon>Camera Control
             </a>
             <a href="assets.html" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('assets.html')}">
-                <iconify-icon icon="solar:clapperboard-play-linear" class="text-lg"></iconify-icon>Media Assets
+                <iconify-icon icon="solar:cloud-upload-linear" class="text-lg"></iconify-icon>Upload Asset
             </a>
         </nav>
     `;
