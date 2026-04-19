@@ -233,18 +233,98 @@ html:not(.dark) .bg-\[\#0a0a0a\]\/50 {
     background-color: rgba(255, 255, 255, 0.5) !important;
 }
 
-/* Keep primary green the same in both modes */
-/* No overrides needed for .text-primary, .bg-primary, .border-primary */
+/* ── Primary accent: green → orange in light mode ── */
+
+/* Text */
+html:not(.dark) .text-primary { color: #F97316 !important; }
+html:not(.dark) .text-primary\/50 { color: rgba(249, 115, 22, 0.5) !important; }
+html:not(.dark) .text-primary\/70 { color: rgba(249, 115, 22, 0.7) !important; }
+html:not(.dark) .text-primary\/80 { color: rgba(249, 115, 22, 0.8) !important; }
+html:not(.dark) .text-\[\#39FF14\] { color: #F97316 !important; }
+
+/* Background */
+html:not(.dark) .bg-primary { background-color: #F97316 !important; }
+html:not(.dark) .bg-primary\/5 { background-color: rgba(249, 115, 22, 0.05) !important; }
+html:not(.dark) .bg-primary\/10 { background-color: rgba(249, 115, 22, 0.1) !important; }
+html:not(.dark) .bg-primary\/20 { background-color: rgba(249, 115, 22, 0.2) !important; }
+html:not(.dark) .bg-primary\/90 { background-color: rgba(249, 115, 22, 0.9) !important; }
+
+/* Border */
+html:not(.dark) .border-primary { border-color: #F97316 !important; }
+html:not(.dark) .border-primary\/20 { border-color: rgba(249, 115, 22, 0.2) !important; }
+html:not(.dark) .border-primary\/30 { border-color: rgba(249, 115, 22, 0.3) !important; }
+html:not(.dark) .border-primary\/50 { border-color: rgba(249, 115, 22, 0.5) !important; }
+
+/* Hover states */
+html:not(.dark) .hover\:text-primary:hover { color: #F97316 !important; }
+html:not(.dark) .hover\:border-primary:hover { border-color: #F97316 !important; }
+html:not(.dark) .hover\:border-primary\/50:hover { border-color: rgba(249, 115, 22, 0.5) !important; }
+html:not(.dark) .hover\:bg-primary:hover { background-color: #F97316 !important; }
+html:not(.dark) .hover\:bg-primary\/5:hover { background-color: rgba(249, 115, 22, 0.05) !important; }
+
+/* Group hover */
+html:not(.dark) .group:hover .group-hover\:text-primary,
+html:not(.dark) .group\/asset:hover .group-hover\/asset\:text-primary,
+html:not(.dark) .group\/cat:hover .group-hover\/cat\:text-primary {
+    color: #F97316 !important;
+}
+html:not(.dark) .group:hover .group-hover\:border-primary\/50 { border-color: rgba(249, 115, 22, 0.5) !important; }
+html:not(.dark) .group:hover .group-hover\:bg-primary\/10 { background-color: rgba(249, 115, 22, 0.1) !important; }
+
+/* Selection */
+html:not(.dark) ::selection {
+    background-color: #F97316 !important;
+    color: #fff !important;
+}
+
+/* Shadows that reference green → orange */
+html:not(.dark) .shadow-\[0_0_15px_rgba\(57\2c 255\2c 20\2c 0\.2\)\] {
+    box-shadow: 0 0 15px rgba(249, 115, 22, 0.2) !important;
+}
+html:not(.dark) .shadow-\[0_0_20px_rgba\(57\2c 255\2c 20\2c 0\.05\)\] {
+    box-shadow: 0 0 20px rgba(249, 115, 22, 0.05) !important;
+}
+html:not(.dark) .shadow-\[0_0_10px_rgba\(57\2c 255\2c 20\2c 0\.5\)\] {
+    box-shadow: 0 0 10px rgba(249, 115, 22, 0.5) !important;
+}
+html:not(.dark) .shadow-\[0_0_10px_rgba\(57\2c 255\2c 20\2c 0\.8\)\] {
+    box-shadow: 0 0 10px rgba(249, 115, 22, 0.8) !important;
+}
+html:not(.dark) .hover\:shadow-\[0_0_30px_rgba\(57\2c 255\2c 20\2c 0\.3\)\]:hover {
+    box-shadow: 0 0 30px rgba(249, 115, 22, 0.3) !important;
+}
+html:not(.dark) [class*="shadow-"][class*="39FF14"] {
+    --tw-shadow-color: #F97316 !important;
+}
+
+/* Nav link active (overrides inline <style> blocks) */
+html:not(.dark) .nav-link.active {
+    color: #F97316 !important;
+    border-left-color: #F97316 !important;
+    background: rgba(249, 115, 22, 0.05) !important;
+}
+
+/* Scrollbar */
+html:not(.dark) ::-webkit-scrollbar-thumb {
+    background: #F97316 !important;
+}
+html:not(.dark) ::-webkit-scrollbar-thumb:hover {
+    background: #ea580c !important;
+}
 
 /* Gradient overrides */
 html:not(.dark) .bg-gradient-to-t.from-black {
     --tw-gradient-from: #fafafa !important;
 }
 
-/* Selection stays green */
-html:not(.dark) ::selection {
-    background-color: #39FF14 !important;
-    color: #000 !important;
+/* Pulse dot color */
+html:not(.dark) .animate-pulse[class*="bg-primary"] {
+    background-color: #F97316 !important;
+}
+
+/* Spinner border */
+html:not(.dark) .border-t-primary {
+    border-top-color: #F97316 !important;
 }
 
 /* Menu flap */
@@ -264,13 +344,22 @@ html:not(.dark) .upload-node {
 }
 
 html:not(.dark) .upload-node:hover {
-    border-color: #39FF14 !important;
-    background: rgba(57, 255, 20, 0.05) !important;
+    border-color: #F97316 !important;
+    background: rgba(249, 115, 22, 0.05) !important;
+}
+
+html:not(.dark) .upload-node.active {
+    border-color: #F97316 !important;
+    background: rgba(249, 115, 22, 0.1) !important;
 }
 
 html:not(.dark) .vault-card {
     background: #ffffff !important;
     border-color: #e4e4e7 !important;
+}
+
+html:not(.dark) .vault-card.expanded {
+    border-color: #F97316 !important;
 }
 
 html:not(.dark) .vault-card-header {

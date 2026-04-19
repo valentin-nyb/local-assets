@@ -1132,14 +1132,16 @@
             if (!popover.classList.contains('hidden')) {
                 input.value = getVenueName();
                 input.focus();
-                input.style.borderColor = '#39FF14';
+                var isDark = document.documentElement.classList.contains('dark');
+                input.style.borderColor = isDark ? '#39FF14' : '#F97316';
                 input.setSelectionRange(input.value.length, input.value.length);
             }
         }
 
         function closeVenueEditor() {
             var input = document.getElementById('venue-input');
-            if (input) input.style.borderColor = '#27272a';
+            var isDark = document.documentElement.classList.contains('dark');
+            if (input) input.style.borderColor = isDark ? '#27272a' : '#e4e4e7';
             document.getElementById('venue-popover').classList.add('hidden');
         }
 
