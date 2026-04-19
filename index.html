@@ -14,7 +14,7 @@
     <link rel="manifest" href="favicon/site.webmanifest">
     <script>/* Theme: apply saved preference before paint */
     (function(){
-      var s = localStorage.getItem('la-theme');
+      var s = localStorage.getItem('la_theme');
       var theme = s || 'dark';
       if (s === 'auto' || !s) {
         theme = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
@@ -26,6 +26,7 @@
     })();
     </script>
     <link rel="stylesheet" href="styles/tailwind.css">
+    <link rel="stylesheet" href="styles/theme.css">
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
@@ -707,7 +708,7 @@
     /* ── Theme toggle behavior ── */
     (function() {
         var btns = document.querySelectorAll('.la-theme-toggle button');
-        var saved = localStorage.getItem('la-theme') || 'dark';
+        var saved = localStorage.getItem('la_theme') || 'dark';
 
         function applyTheme(mode) {
             var resolved = mode;
@@ -720,7 +721,7 @@
             } else {
                 document.documentElement.classList.remove('dark');
             }
-            localStorage.setItem('la-theme', mode);
+            localStorage.setItem('la_theme', mode);
             btns.forEach(function(b) {
                 b.setAttribute('aria-checked', b.getAttribute('data-theme-value') === mode ? 'true' : 'false');
             });
@@ -735,7 +736,7 @@
         });
 
         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
-            if (localStorage.getItem('la-theme') === 'auto') {
+            if (localStorage.getItem('la_theme') === 'auto') {
                 applyTheme('auto');
             }
         });
