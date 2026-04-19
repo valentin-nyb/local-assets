@@ -12,21 +12,8 @@
     <link rel="icon" type="image/svg+xml" href="favicon/favicon.svg">
     <link rel="apple-touch-icon" href="favicon/apple-touch-icon.png">
     <link rel="manifest" href="favicon/site.webmanifest">
-    <script>/* Theme: apply saved preference before paint */
-    (function(){
-      var s = localStorage.getItem('la_theme');
-      var theme = s || 'dark';
-      if (s === 'auto' || !s) {
-        theme = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-        if (s === 'auto') document.documentElement.setAttribute('data-theme-mode', 'auto');
-      }
-      document.documentElement.setAttribute('data-theme', theme);
-      if (theme === 'dark') document.documentElement.classList.add('dark');
-      else document.documentElement.classList.remove('dark');
-    })();
-    </script>
+    <script>/* Landing page always dark */document.documentElement.classList.add('dark');</script>
     <link rel="stylesheet" href="styles/tailwind.css">
-    <link rel="stylesheet" href="styles/theme.css">
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
@@ -55,39 +42,6 @@
         /* Seamless marquee ticker */
         .animate-marquee { display: flex; width: max-content; animation: marquee 24s linear infinite; }
         @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-
-        /* ── Theme Toggle (segmented control) ── */
-        .la-theme-toggle {
-          display: inline-flex;
-          border: 1px solid rgba(255, 255, 255, 0.15);
-          border-radius: 6px;
-          overflow: hidden;
-          background: transparent;
-          backdrop-filter: blur(12px);
-        }
-        .la-theme-toggle button {
-          all: unset;
-          font-family: 'JetBrains Mono', 'SF Mono', monospace;
-          font-size: 10px;
-          font-weight: 500;
-          letter-spacing: 0.1em;
-          text-transform: uppercase;
-          padding: 5px 10px;
-          color: rgba(255, 255, 255, 0.4);
-          cursor: pointer;
-          transition: background 150ms ease, color 150ms ease;
-          line-height: 1;
-          white-space: nowrap;
-          -webkit-user-select: none;
-          user-select: none;
-        }
-        .la-theme-toggle button:hover {
-          color: rgba(255, 255, 255, 0.7);
-        }
-        .la-theme-toggle button[aria-checked="true"] {
-          background: rgba(255, 255, 255, 0.95);
-          color: #000;
-        }
 
         /* ── Venue Dashboard Button ── */
         .la-dashboard-btn {
@@ -129,14 +83,7 @@
                 <a href="index.html" class="flex items-center shrink-0">
                     <img src="logos/White@2x.png" alt="logo" class="h-5 md:h-6 w-auto object-contain object-left">
                 </a>
-                <div class="flex items-center gap-3">
-                    <div class="la-theme-toggle" role="radiogroup" aria-label="Theme preference">
-                        <button type="button" role="radio" aria-checked="false" data-theme-value="light">LIGHT</button>
-                        <button type="button" role="radio" aria-checked="true" data-theme-value="dark">DARK</button>
-                        <button type="button" role="radio" aria-checked="false" data-theme-value="auto">AUTO</button>
-                    </div>
-                    <a href="dashboard.html" class="la-dashboard-btn">VENUE DASHBOARD</a>
-                </div>
+                <a href="dashboard.html" class="la-dashboard-btn">VENUE DASHBOARD</a>
             </nav>
 
             <canvas id="dotCanvas" class="dot-grid-canvas absolute inset-0 w-full h-full pointer-events-none" aria-hidden="true"></canvas>
@@ -704,43 +651,5 @@
         })();
     </script>
 
-    <script>
-    /* ── Theme toggle behavior ── */
-    (function() {
-        var btns = document.querySelectorAll('.la-theme-toggle button');
-        var saved = localStorage.getItem('la_theme') || 'dark';
-
-        function applyTheme(mode) {
-            var resolved = mode;
-            if (mode === 'auto') {
-                resolved = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-            }
-            document.documentElement.setAttribute('data-theme', resolved);
-            if (resolved === 'dark') {
-                document.documentElement.classList.add('dark');
-            } else {
-                document.documentElement.classList.remove('dark');
-            }
-            localStorage.setItem('la_theme', mode);
-            btns.forEach(function(b) {
-                b.setAttribute('aria-checked', b.getAttribute('data-theme-value') === mode ? 'true' : 'false');
-            });
-        }
-
-        applyTheme(saved);
-
-        btns.forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                applyTheme(btn.getAttribute('data-theme-value'));
-            });
-        });
-
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
-            if (localStorage.getItem('la_theme') === 'auto') {
-                applyTheme('auto');
-            }
-        });
-    })();
-    </script>
 </body>
 </html>
