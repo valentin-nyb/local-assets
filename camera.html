@@ -83,13 +83,9 @@
                     <div class="absolute bottom-2 left-2 w-6 h-6 md:bottom-4 md:left-4 md:w-12 md:h-12 border-b border-l border-[#39FF14]/40 rounded-bl-lg md:rounded-bl-xl pointer-events-none"></div>
                     <div class="absolute bottom-2 right-2 w-6 h-6 md:bottom-4 md:right-4 md:w-12 md:h-12 border-b border-r border-[#39FF14]/40 rounded-br-lg md:rounded-br-xl pointer-events-none"></div>
 
-<<<<<<< HEAD
-                    <img class="main-feed-img w-full h-full object-cover" src="https://image.mux.com/o9Uel8ZfcKN01xyzS022A6lNHTxCUAfU3BIIEdnukXNHY/animated.webp?width=1280" alt="CAM 01 MAIN">
-                    <img class="main-feed-img w-full h-full object-cover absolute inset-0 hidden" src="https://image.mux.com/apYlYJhFBP26XaP7FiUSEImdRZmyrTn00O7afEJVNNjU/animated.webp?width=1280" alt="CAM 02 BOOTH">
-                    <img class="main-feed-img w-full h-full object-cover absolute inset-0 hidden" src="https://image.mux.com/N7Hn1XGHYkXzNPUC8a6hXmIJ02C02YNAhIV01LtVNxq1lM/animated.webp?width=1280" alt="CAM 03 CROWD">
-=======
-                    <img id="main-feed" src="https://image.mux.com/LujDrL3Wt13h98TRkMPgmiEBb1fsoLnhtvM28025RxKU/animated.gif?width=640" class="w-full h-full object-cover" alt="CAM 01 MAIN">
->>>>>>> 61f8d0f178fd955d28510ba75f103d19f9dee9cd
+                    <img class="main-feed-img w-full h-full object-cover" src="https://image.mux.com/o9Uel8ZfcKN01xyzS022A6lNHTxCUAfU3BIIEdnukXNHY/animated.gif?width=640" alt="CAM 01 MAIN">
+                    <img class="main-feed-img w-full h-full object-cover absolute inset-0 hidden" src="https://image.mux.com/apYlYJhFBP26XaP7FiUSEImdRZmyrTn00O7afEJVNNjU/animated.gif?width=640" alt="CAM 02 BOOTH">
+                    <img class="main-feed-img w-full h-full object-cover absolute inset-0 hidden" src="https://image.mux.com/N7Hn1XGHYkXzNPUC8a6hXmIJ02C02YNAhIV01LtVNxq1lM/animated.gif?width=640" alt="CAM 03 CROWD">
                 </div>
 
                 <div class="grid grid-cols-3 gap-2 md:gap-4 w-full shrink-0">
@@ -162,19 +158,10 @@
             var camLabels = ['[ CAM 01 // MAIN ]', '[ CAM 02 // BOOTH ]', '[ CAM 03 // CROWD ]'];
             var presetBtns = document.querySelectorAll('.grid.grid-cols-1.md\\:grid-cols-3 button');
 
-<<<<<<< HEAD
             function switchCam(index) {
                 mainFeeds.forEach(function(img, i) {
                     if (i === index) { img.classList.remove('hidden'); } else { img.classList.add('hidden'); }
                 });
-=======
-            camButtons.forEach(function(btn, index) {
-                btn.addEventListener('click', function() {
-                    var thumb = btn.querySelector('img');
-                    if (thumb && mainFeed) {
-                        mainFeed.src = thumb.src.replace('width=320', 'width=640');
-                    }
->>>>>>> 61f8d0f178fd955d28510ba75f103d19f9dee9cd
 
                 var isDark = document.documentElement.classList.contains('dark');
                 var accent = isDark ? '#39FF14' : '#F97316';
