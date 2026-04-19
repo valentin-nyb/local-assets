@@ -362,7 +362,7 @@
                 if (isLinked) {
                     var safeLabel = asset.label.replace(/'/g, "\\'");
                     var safeName = sessionName.replace(/'/g, "\\'");
-                    html += '<div class="p-4 pl-16 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-' + uid + '" style="border-left: 2px solid #39FF14;">';
+                    html += '<div class="p-4 pl-16 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-' + uid + '" style="border-left: 2px solid ' + (document.documentElement.classList.contains('dark') ? '#39FF14' : '#F97316') + ';">';
                     html += '<div class="flex items-center gap-4 flex-1 min-w-0">';
                     html += '<div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-primary/50 shrink-0">';
                     html += '<iconify-icon icon="' + asset.icon + '" class="text-primary text-sm"></iconify-icon>';
@@ -433,7 +433,7 @@
                 }
                 var label = hasAny ? 'Marketing Thumbnails (' + thumbAssets.length + ')' : asset.label;
                 var safeName = sessionName.replace(/'/g, "\\'");
-                html += '<div class="p-4 pl-16 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-' + uid + '"' + (hasAny ? ' style="border-left: 2px solid #39FF14;"' : '') + '>';
+                html += '<div class="p-4 pl-16 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-' + uid + '"' + (hasAny ? ' style="border-left: 2px solid ' + (document.documentElement.classList.contains('dark') ? '#39FF14' : '#F97316') + ';"' : '') + '>';
                 if (canUploadMore) {
                     html += '<label class="flex items-center gap-4 cursor-pointer flex-1 min-w-0">';
                 } else {
