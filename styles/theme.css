@@ -1,0 +1,282 @@
+/* ============================================
+   LIGHT / DARK THEME OVERRIDES
+   When <html> has class="dark" → dark mode (default)
+   When <html> does NOT have "dark" → light mode
+   ============================================ */
+
+/* --- Light mode overrides --- */
+html:not(.dark) {
+    color-scheme: light;
+}
+
+/* Background colors */
+html:not(.dark) body,
+html:not(.dark) .bg-background,
+html:not(.dark) .bg-\[\#050505\] {
+    background-color: #f5f5f5 !important;
+    color: #18181b !important;
+}
+
+html:not(.dark) .bg-\[\#0a0a0a\],
+html:not(.dark) .bg-card,
+html:not(.dark) .bg-card\/50,
+html:not(.dark) .bg-card\/30 {
+    background-color: #ffffff !important;
+}
+
+html:not(.dark) .bg-\[\#111\],
+html:not(.dark) .bg-\[\#1a1a1a\] {
+    background-color: #f0f0f0 !important;
+}
+
+html:not(.dark) .bg-\[\#222\] {
+    background-color: #e4e4e7 !important;
+}
+
+html:not(.dark) .bg-\[\#333\] {
+    background-color: #d4d4d8 !important;
+}
+
+html:not(.dark) .bg-black {
+    background-color: #fafafa !important;
+}
+
+html:not(.dark) .bg-black\/40 {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+html:not(.dark) .bg-black\/60 {
+    background-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+html:not(.dark) .bg-black\/80 {
+    background-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+html:not(.dark) .bg-black\/90 {
+    background-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+html:not(.dark) .bg-background\/80 {
+    background-color: rgba(245, 245, 245, 0.8) !important;
+}
+
+html:not(.dark) .bg-white\/5,
+html:not(.dark) .bg-white\/\[0\.02\],
+html:not(.dark) .bg-white\/\[0\.03\] {
+    background-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+html:not(.dark) .bg-zinc-900,
+html:not(.dark) .bg-zinc-900\/50 {
+    background-color: #e4e4e7 !important;
+}
+
+/* Text colors */
+html:not(.dark) .text-foreground,
+html:not(.dark) .text-white {
+    color: #18181b !important;
+}
+
+html:not(.dark) .text-foreground\/80 {
+    color: rgba(24, 24, 27, 0.8) !important;
+}
+
+html:not(.dark) .text-white\/50 {
+    color: rgba(24, 24, 27, 0.5) !important;
+}
+
+html:not(.dark) .text-muted-foreground {
+    color: #71717a !important;
+}
+
+html:not(.dark) .text-zinc-300 {
+    color: #52525b !important;
+}
+
+html:not(.dark) .text-zinc-400 {
+    color: #71717a !important;
+}
+
+html:not(.dark) .text-zinc-500 {
+    color: #a1a1aa !important;
+}
+
+html:not(.dark) .text-zinc-600 {
+    color: #71717a !important;
+}
+
+html:not(.dark) .text-zinc-700 {
+    color: #a1a1aa !important;
+}
+
+html:not(.dark) .text-zinc-800 {
+    color: #d4d4d8 !important;
+}
+
+/* Border colors */
+html:not(.dark) .border-\[\#27272a\],
+html:not(.dark) .border-border,
+html:not(.dark) .border-zinc-800 {
+    border-color: #e4e4e7 !important;
+}
+
+html:not(.dark) .border-\[\#1a1a1a\] {
+    border-color: #e4e4e7 !important;
+}
+
+html:not(.dark) .border-\[\#222\] {
+    border-color: #d4d4d8 !important;
+}
+
+html:not(.dark) .border-\[\#333\] {
+    border-color: #d4d4d8 !important;
+}
+
+html:not(.dark) .border-border\/50 {
+    border-color: rgba(228, 228, 231, 0.5) !important;
+}
+
+html:not(.dark) .border-white\/10,
+html:not(.dark) .border-white\/5 {
+    border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+html:not(.dark) .divide-border > :not([hidden]) ~ :not([hidden]) {
+    border-color: #e4e4e7 !important;
+}
+
+html:not(.dark) .divide-border\/30 > :not([hidden]) ~ :not([hidden]) {
+    border-color: rgba(228, 228, 231, 0.3) !important;
+}
+
+html:not(.dark) .divide-white\/5 > :not([hidden]) ~ :not([hidden]) {
+    border-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Sidebar */
+html:not(.dark) #sidebar {
+    background-color: #ffffff !important;
+    border-color: #e4e4e7 !important;
+}
+
+html:not(.dark) .nav-link:hover:not(.active) {
+    background: rgba(0, 0, 0, 0.04) !important;
+    color: #18181b !important;
+}
+
+html:not(.dark) .nav-link.active {
+    color: #18181b !important;
+    background-color: rgba(0, 0, 0, 0.04) !important;
+    border-color: #e4e4e7 !important;
+}
+
+/* Logo invert for light mode */
+html:not(.dark) #sidebar img[alt="logo"] {
+    filter: brightness(0) !important;
+}
+
+/* Header */
+html:not(.dark) header {
+    background-color: #ffffff !important;
+    border-color: #e4e4e7 !important;
+}
+
+/* Scrollbar */
+html:not(.dark) ::-webkit-scrollbar-track {
+    background: #f5f5f5 !important;
+}
+
+/* Shadows - soften for light mode */
+html:not(.dark) .shadow-2xl {
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.08) !important;
+}
+
+html:not(.dark) .shadow-\[inset_0_0_10px_rgba\(0\2c 0\2c 0\2c 0\.5\)\] {
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05) !important;
+}
+
+html:not(.dark) .shadow-\[0_0_10px_rgba\(255\2c 255\2c 255\2c 0\.1\)\] {
+    box-shadow: none !important;
+}
+
+/* Backdrop filters */
+html:not(.dark) .backdrop-blur-md {
+    backdrop-filter: blur(12px) !important;
+}
+
+/* Session group borders */
+html:not(.dark) .session-group + .session-group {
+    border-top-color: #e4e4e7 !important;
+}
+
+/* Avatar */
+html:not(.dark) #venue-avatar {
+    background-color: #18181b !important;
+    color: #ffffff !important;
+}
+
+/* Venue editor modal */
+html:not(.dark) #venue-popover .max-w-sm {
+    background-color: #ffffff !important;
+    border-color: #e4e4e7 !important;
+}
+
+html:not(.dark) #venue-popover input {
+    background-color: #f5f5f5 !important;
+    border-color: #e4e4e7 !important;
+    color: #18181b !important;
+}
+
+/* Status bar */
+html:not(.dark) .bg-\[\#0a0a0a\]\/50 {
+    background-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Keep primary green the same in both modes */
+/* No overrides needed for .text-primary, .bg-primary, .border-primary */
+
+/* Gradient overrides */
+html:not(.dark) .bg-gradient-to-t.from-black {
+    --tw-gradient-from: #fafafa !important;
+}
+
+/* Selection stays green */
+html:not(.dark) ::selection {
+    background-color: #39FF14 !important;
+    color: #000 !important;
+}
+
+/* Menu flap */
+html:not(.dark) .sleek-flap {
+    color: #000 !important;
+}
+
+/* Upload/ingest cards (assets.html) */
+html:not(.dark) .ingest-card {
+    border-color: #e4e4e7 !important;
+    background: rgba(0, 0, 0, 0.02) !important;
+}
+
+html:not(.dark) .upload-node {
+    background: #ffffff !important;
+    border-color: #e4e4e7 !important;
+}
+
+html:not(.dark) .upload-node:hover {
+    border-color: #39FF14 !important;
+    background: rgba(57, 255, 20, 0.05) !important;
+}
+
+html:not(.dark) .vault-card {
+    background: #ffffff !important;
+    border-color: #e4e4e7 !important;
+}
+
+html:not(.dark) .vault-card-header {
+    color: #18181b !important;
+}
+
+html:not(.dark) .asset-tray {
+    background: rgba(0, 0, 0, 0.02) !important;
+}
