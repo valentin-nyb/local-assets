@@ -273,11 +273,16 @@
                             </div>
 
                             <div class="bg-[#111] border border-[#222] p-4 rounded-xl shrink-0">
-                                <div class="relative aspect-video rounded overflow-hidden mb-4 bg-zinc-900 border border-white/5">
-                                    <img src="https://image.mux.com/skiXvIFodBRdAbRtC7hJZsAaOZSeadnjQ52AyNue6Ds/animated.gif?width=320" class="w-full h-full object-cover" alt="Live Feed">
+                                <div class="relative aspect-video rounded overflow-hidden mb-3 bg-zinc-900 border border-white/5">
+                                    <img id="mockup-feed" src="https://image.mux.com/o9Uel8ZfcKN01xyzS022A6lNHTxCUAfU3BIIEdnukXNHY/animated.webp?width=480" class="w-full h-full object-cover" alt="Live Feed">
+                                </div>
+                                <div class="flex gap-1.5 mb-3">
+                                    <button onclick="switchMockupCam(0)" class="mockup-cam-btn flex-1 px-1 py-1.5 text-[7px] font-mono uppercase tracking-wider border border-primary bg-primary/10 text-primary rounded">Stage Wide</button>
+                                    <button onclick="switchMockupCam(1)" class="mockup-cam-btn flex-1 px-1 py-1.5 text-[7px] font-mono uppercase tracking-wider border border-[#222] text-zinc-500 rounded hover:text-white hover:border-[#444]">Booth Cam</button>
+                                    <button onclick="switchMockupCam(2)" class="mockup-cam-btn flex-1 px-1 py-1.5 text-[7px] font-mono uppercase tracking-wider border border-[#222] text-zinc-500 rounded hover:text-white hover:border-[#444]">Crowd Wide</button>
                                 </div>
                                 <div class="space-y-2.5 font-mono text-[9px] uppercase tracking-widest">
-                                    <p class="text-primary leading-relaxed">Live Feed Room 1 // Main Floor</p>
+                                    <p class="text-primary leading-relaxed" id="mockup-cam-label">Live Feed Room 1 // Stage Wide</p>
                                     <p class="text-white">Artist: BELTRAN</p>
                                     <p class="text-red-500">Elapsed <span id="venue-elapsed">01:42:15</span></p>
                                     <p class="text-primary">Cameras 3/3 Active</p>
@@ -324,6 +329,31 @@
         }
         setInterval(update, 1000);
     });
+
+    function switchMockupCam(index) {
+        var feeds = [
+            'o9Uel8ZfcKN01xyzS022A6lNHTxCUAfU3BIIEdnukXNHY',
+            'apYlYJhFBP26XaP7FiUSEImdRZmyrTn00O7afEJVNNjU',
+            'N7Hn1XGHYkXzNPUC8a6hXmIJ02C02YNAhIV01LtVNxq1lM'
+        ];
+        var labels = [
+            'Live Feed Room 1 // Stage Wide',
+            'Live Feed Room 1 // Booth Cam',
+            'Live Feed Room 1 // Crowd Wide'
+        ];
+        var img = document.getElementById('mockup-feed');
+        var label = document.getElementById('mockup-cam-label');
+        if (img) img.src = 'https://image.mux.com/' + feeds[index] + '/animated.webp?width=480';
+        if (label) label.textContent = labels[index];
+
+        document.querySelectorAll('.mockup-cam-btn').forEach(function(btn, i) {
+            if (i === index) {
+                btn.className = 'mockup-cam-btn flex-1 px-1 py-1.5 text-[7px] font-mono uppercase tracking-wider border border-primary bg-primary/10 text-primary rounded';
+            } else {
+                btn.className = 'mockup-cam-btn flex-1 px-1 py-1.5 text-[7px] font-mono uppercase tracking-wider border border-[#222] text-zinc-500 rounded hover:text-white hover:border-[#444]';
+            }
+        });
+    }
     </script>
     <div class="text-center mb-10 reveal active">
         <p class="font-mono text-xs tracking-[0.3em] text-primary mb-4">[ SELECT YOUR TIER ]</p>
