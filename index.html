@@ -12,8 +12,9 @@
     <link rel="icon" type="image/svg+xml" href="favicon/favicon.svg">
     <link rel="apple-touch-icon" href="favicon/apple-touch-icon.png">
     <link rel="manifest" href="favicon/site.webmanifest">
-    <script>/* Landing page always dark */document.documentElement.classList.add('dark');</script>
+    <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <link rel="stylesheet" href="styles/tailwind.css">
+    <link rel="stylesheet" href="styles/theme.css">
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
@@ -72,6 +73,86 @@
         .la-dashboard-btn:active {
           transform: scale(0.97);
         }
+
+        /* ── Theme Switcher + ASK AI ── */
+        .la-theme-bar {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .la-ask-ai-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #fff;
+            background: #111;
+            border: 1px solid #27272a;
+            border-radius: 9999px;
+            padding: 6px 14px;
+            cursor: pointer;
+            transition: all 0.3s ease-in-out;
+            white-space: nowrap;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        .la-ask-ai-btn:hover {
+            border-color: rgba(255,255,255,0.4);
+            color: #fff;
+        }
+        .la-ask-ai-btn iconify-icon { font-size: 13px; }
+        .la-theme-switcher {
+            display: inline-flex;
+            background: #111;
+            border: 1px solid #27272a;
+            border-radius: 9999px;
+            padding: 3px;
+            gap: 2px;
+        }
+        .la-theme-switcher button {
+            all: unset;
+            display: inline-flex;
+            align-items: center;
+            gap: 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            font-weight: 500;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            padding: 5px 10px;
+            border-radius: 9999px;
+            cursor: pointer;
+            color: rgba(255, 255, 255, 0.2);
+            transition: color 0.3s ease-in-out, background-color 0.3s ease-in-out;
+            white-space: nowrap;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        .la-theme-switcher button:hover {
+            color: rgba(255, 255, 255, 0.45);
+        }
+        .la-theme-switcher button[aria-checked="true"] {
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+        }
+        .la-theme-switcher button .la-theme-icon {
+            font-size: 12px;
+            display: inline-flex;
+            max-width: 0;
+            opacity: 0;
+            overflow: hidden;
+            transition: max-width 0.3s ease-in-out, opacity 0.3s ease-in-out, margin 0.3s ease-in-out;
+            margin-right: 0;
+        }
+        .la-theme-switcher button[aria-checked="true"] .la-theme-icon {
+            max-width: 18px;
+            opacity: 1;
+            margin-right: 5px;
+        }
     </style>
 </head>
 
@@ -83,7 +164,25 @@
                 <a href="index.html" class="flex items-center shrink-0">
                     <img src="logos/White@2x.png" alt="logo" class="h-5 md:h-6 w-auto object-contain object-left">
                 </a>
-                <a href="dashboard.html" class="la-dashboard-btn">VENUE DASHBOARD</a>
+                <div class="flex items-center gap-3">
+                    <div class="la-theme-bar hidden md:inline-flex">
+                        <button class="la-ask-ai-btn">
+                            <iconify-icon icon="solar:magic-stick-3-linear"></iconify-icon>ASK AI
+                        </button>
+                        <div class="la-theme-switcher" role="radiogroup" aria-label="Theme">
+                            <button type="button" role="radio" aria-checked="false" data-theme="light">
+                                <iconify-icon icon="solar:sun-linear" class="la-theme-icon"></iconify-icon><span>Light</span>
+                            </button>
+                            <button type="button" role="radio" aria-checked="true" data-theme="dark">
+                                <iconify-icon icon="solar:moon-linear" class="la-theme-icon"></iconify-icon><span>Dark</span>
+                            </button>
+                            <button type="button" role="radio" aria-checked="false" data-theme="auto">
+                                <iconify-icon icon="solar:monitor-linear" class="la-theme-icon"></iconify-icon><span>Auto</span>
+                            </button>
+                        </div>
+                    </div>
+                    <a href="dashboard.html" class="la-dashboard-btn">VENUE DASHBOARD</a>
+                </div>
             </nav>
 
             <canvas id="dotCanvas" class="dot-grid-canvas absolute inset-0 w-full h-full pointer-events-none" aria-hidden="true"></canvas>
@@ -649,6 +748,41 @@
                 window.location.href = '/client.html?welcome=true';
             }
         })();
+    </script>
+
+    <script>
+    (function initThemeSwitcher() {
+        var saved = localStorage.getItem('la_theme');
+        if (!saved || !['light','dark','auto'].includes(saved)) saved = 'dark';
+
+        function resolve(mode) {
+            if (mode === 'auto') return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+            return mode;
+        }
+
+        function apply(mode) {
+            var resolved = resolve(mode);
+            if (resolved === 'dark') document.documentElement.classList.add('dark');
+            else document.documentElement.classList.remove('dark');
+            localStorage.setItem('la_theme', mode);
+            document.querySelectorAll('.la-theme-switcher button[data-theme]').forEach(function(btn) {
+                btn.setAttribute('aria-checked', btn.getAttribute('data-theme') === mode ? 'true' : 'false');
+            });
+        }
+
+        document.addEventListener('click', function(e) {
+            var btn = e.target.closest('.la-theme-switcher button[data-theme]');
+            if (btn) apply(btn.getAttribute('data-theme'));
+        });
+
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
+            if (localStorage.getItem('la_theme') === 'auto') apply('auto');
+        });
+
+        apply(saved);
+        window._laApplyTheme = apply;
+        window._laThemeInit = true;
+    })();
     </script>
 
 </body>

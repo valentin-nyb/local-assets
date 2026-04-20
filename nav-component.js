@@ -1,17 +1,29 @@
 document.addEventListener("DOMContentLoaded", () => {
+    // Inject theme switcher CSS if not already present
+    if (!document.getElementById('la-theme-switcher-css')) {
+        var style = document.createElement('style');
+        style.id = 'la-theme-switcher-css';
+        style.textContent = `
+            .la-theme-switcher{display:inline-flex;background:#111;border:1px solid #27272a;border-radius:9999px;padding:3px;gap:2px}
+            .la-theme-switcher button{all:unset;display:inline-flex;align-items:center;gap:0;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.05em;text-transform:uppercase;padding:5px 10px;border-radius:9999px;cursor:pointer;color:rgba(255,255,255,.2);transition:color .3s ease-in-out,background-color .3s ease-in-out;white-space:nowrap;-webkit-user-select:none;user-select:none}
+            .la-theme-switcher button:hover{color:rgba(255,255,255,.45)}
+            .la-theme-switcher button[aria-checked="true"]{background:rgba(255,255,255,.08);color:#fff}
+            .la-theme-switcher button .la-theme-icon{font-size:12px;display:inline-flex;max-width:0;opacity:0;overflow:hidden;transition:max-width .3s ease-in-out,opacity .3s ease-in-out,margin .3s ease-in-out;margin-right:0}
+            .la-theme-switcher button[aria-checked="true"] .la-theme-icon{max-width:18px;opacity:1;margin-right:5px}
+        `;
+        document.head.appendChild(style);
+    }
+
     const sidebar = document.getElementById("sidebar");
     if (!sidebar) return;
 
-    // Handles both /dashboard.html and extensionless /dashboard (Vercel/Netlify)
     const currentPath = window.location.pathname.split("/").pop() || "dashboard.html";
-
-    // Strip .html before comparing so both URL styles match
     const isActive = (path) => {
         const baseName = path.replace('.html', '');
         return currentPath.includes(baseName) ? "active" : "text-zinc-400";
     };
 
-    const isDark = document.documentElement.classList.contains('dark');
+    const saved = localStorage.getItem('la_theme') || 'dark';
 
     sidebar.innerHTML = `
         <div class="h-16 flex items-center px-6 border-b border-[#27272a] justify-between shrink-0">
@@ -33,32 +45,53 @@ document.addEventListener("DOMContentLoaded", () => {
                 <iconify-icon icon="solar:cloud-upload-linear" class="text-lg"></iconify-icon>Upload Asset
             </a>
         </nav>
-        <div class="px-4 pb-4 pt-2 border-t border-[#27272a]">
-            <button id="theme-toggle" onclick="toggleTheme()" class="w-full flex items-center gap-3 px-3 py-2 rounded-md text-zinc-400 hover:text-white transition-colors" style="font-family:'JetBrains Mono',monospace;font-size:12px;">
-                <iconify-icon icon="${isDark ? 'solar:sun-linear' : 'solar:moon-linear'}" class="text-lg" id="theme-icon"></iconify-icon>${isDark ? 'Light Mode' : 'Dark Mode'}
-            </button>
+        <div class="px-4 pb-4 pt-2 border-t border-[#27272a] flex justify-center">
+            <div class="la-theme-switcher" role="radiogroup" aria-label="Theme">
+                <button type="button" role="radio" aria-checked="${saved === 'light' ? 'true' : 'false'}" data-theme="light">
+                    <iconify-icon icon="solar:sun-linear" class="la-theme-icon"></iconify-icon>
+                    <span>Light</span>
+                </button>
+                <button type="button" role="radio" aria-checked="${saved === 'dark' || !['light','dark','auto'].includes(saved) ? 'true' : 'false'}" data-theme="dark">
+                    <iconify-icon icon="solar:moon-linear" class="la-theme-icon"></iconify-icon>
+                    <span>Dark</span>
+                </button>
+                <button type="button" role="radio" aria-checked="${saved === 'auto' ? 'true' : 'false'}" data-theme="auto">
+                    <iconify-icon icon="solar:monitor-linear" class="la-theme-icon"></iconify-icon>
+                    <span>Auto</span>
+                </button>
+            </div>
         </div>
     `;
+
+    // Initialize theme engine (event delegation — works for sidebar + any other switcher)
+    if (!window._laThemeInit) {
+        window._laThemeInit = true;
+
+        function resolve(mode) {
+            return mode === 'auto'
+                ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+                : mode;
+        }
+
+        function apply(mode) {
+            var resolved = resolve(mode);
+            if (resolved === 'dark') document.documentElement.classList.add('dark');
+            else document.documentElement.classList.remove('dark');
+            localStorage.setItem('la_theme', mode);
+            document.querySelectorAll('.la-theme-switcher button[data-theme]').forEach(function(b) {
+                b.setAttribute('aria-checked', b.getAttribute('data-theme') === mode ? 'true' : 'false');
+            });
+        }
+
+        document.addEventListener('click', function(e) {
+            var btn = e.target.closest('.la-theme-switcher button[data-theme]');
+            if (btn) apply(btn.getAttribute('data-theme'));
+        });
+
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
+            if (localStorage.getItem('la_theme') === 'auto') apply('auto');
+        });
+
+        window._laApplyTheme = apply;
+    }
 });
-
-function toggleTheme() {
-    const html = document.documentElement;
-    const isDark = html.classList.contains('dark');
-
-    if (isDark) {
-        html.classList.remove('dark');
-        localStorage.setItem('la_theme', 'light');
-    } else {
-        html.classList.add('dark');
-        localStorage.setItem('la_theme', 'dark');
-    }
-
-    // Update toggle button
-    const icon = document.getElementById('theme-icon');
-    const btn = document.getElementById('theme-toggle');
-    if (icon && btn) {
-        const nowDark = html.classList.contains('dark');
-        icon.setAttribute('icon', nowDark ? 'solar:sun-linear' : 'solar:moon-linear');
-        btn.lastChild.textContent = nowDark ? 'Light Mode' : 'Dark Mode';
-    }
-}
