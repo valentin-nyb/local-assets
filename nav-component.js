@@ -10,6 +10,10 @@ document.addEventListener("DOMContentLoaded", () => {
             .la-theme-switcher button[aria-checked="true"]{background:rgba(255,255,255,.08);color:#fff}
             .la-theme-switcher button .la-theme-icon{font-size:12px;display:inline-flex;max-width:0;opacity:0;overflow:hidden;transition:max-width .3s ease-in-out,opacity .3s ease-in-out,margin .3s ease-in-out;margin-right:0}
             .la-theme-switcher button[aria-checked="true"] .la-theme-icon{max-width:18px;opacity:1;margin-right:5px}
+            html:not(.dark) .la-theme-switcher{background:#e4e4e7;border-color:#d4d4d8}
+            html:not(.dark) .la-theme-switcher button{color:rgba(0,0,0,.3)}
+            html:not(.dark) .la-theme-switcher button:hover{color:rgba(0,0,0,.55)}
+            html:not(.dark) .la-theme-switcher button[aria-checked="true"]{background:rgba(0,0,0,.07);color:#18181b}
         `;
         document.head.appendChild(style);
     }
