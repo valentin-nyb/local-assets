@@ -85,6 +85,7 @@ document.addEventListener("DOMContentLoaded", () => {
             document.querySelectorAll('.la-theme-switcher button[data-theme]').forEach(function(b) {
                 b.setAttribute('aria-checked', b.getAttribute('data-theme') === mode ? 'true' : 'false');
             });
+            document.dispatchEvent(new CustomEvent('themechange'));
         }
 
         document.addEventListener('click', function(e) {

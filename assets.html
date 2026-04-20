@@ -129,7 +129,7 @@
                 xhr.onload = () => {
                     if (xhr.status >= 200 && xhr.status < 300) {
                         uploadBtn.innerHTML = "SENT TO VAULT";
-                        uploadBtn.style.background = "#39FF14";
+                        uploadBtn.style.background = document.documentElement.classList.contains('dark') ? '#39FF14' : '#F97316';
                         setTimeout(loadVault, 5000);
                     } else {
                         alert('Upload failed: HTTP ' + xhr.status);

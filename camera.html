@@ -197,6 +197,11 @@
             presetBtns.forEach(function(btn, index) {
                 btn.addEventListener('click', function() { switchCam(index); });
             });
+
+            document.addEventListener('themechange', function() {
+                var activeIndex = Array.from(camButtons).findIndex(function(b) { return b.classList.contains('border-2'); });
+                if (activeIndex >= 0) switchCam(activeIndex);
+            });
         })();
     </script>
 </body>
