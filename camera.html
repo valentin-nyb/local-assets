@@ -88,7 +88,7 @@
                 </div>
 
                 <div class="grid grid-cols-3 gap-2 md:gap-4 w-full shrink-0">
-                    <button class="aspect-video rounded-lg md:rounded-2xl overflow-hidden border-2 border-[#39FF14] shadow-[0_0_15px_rgba(57,255,20,0.3)] transition-all">
+                    <button class="aspect-video rounded-lg md:rounded-2xl overflow-hidden border border-white/10 opacity-40 grayscale hover:opacity-100 hover:grayscale-0 transition-all">
                         <img src="https://image.mux.com/o9Uel8ZfcKN01xyzS022A6lNHTxCUAfU3BIIEdnukXNHY/animated.gif?width=320" class="w-full h-full object-cover" alt="Camera 1">
                     </button>
                     <button class="aspect-video rounded-lg md:rounded-2xl overflow-hidden border border-white/10 opacity-40 grayscale hover:opacity-100 hover:grayscale-0 transition-all">
@@ -202,6 +202,9 @@
                 var activeIndex = Array.from(camButtons).findIndex(function(b) { return b.classList.contains('border-2'); });
                 if (activeIndex >= 0) switchCam(activeIndex);
             });
+
+            // Init: apply theme-aware styling to first cam on load
+            switchCam(0);
         })();
     </script>
 </body>
