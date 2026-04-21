@@ -179,11 +179,11 @@
 
                 presetBtns.forEach(function(b) {
                     b.style.borderColor = '';
-                    b.style.color = '';
+                    b.style.removeProperty('color');
                 });
                 if (presetBtns[index]) {
                     presetBtns[index].style.borderColor = accent;
-                    presetBtns[index].style.color = isDark ? 'white' : accent;
+                    presetBtns[index].style.setProperty('color', isDark ? 'white' : accent, 'important');
                 }
 
                 var labelEl = document.querySelector('.bg-black\\/40 .font-mono');
