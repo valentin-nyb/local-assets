@@ -30,8 +30,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const saved = localStorage.getItem('la_theme') || 'dark';
 
     sidebar.innerHTML = `
-        <div class="h-16 flex items-center px-6 border-b border-[#27272a] justify-between shrink-0">
-            <a href="index.html" class="h-6 w-32 flex">
+        <div class="h-20 flex items-center px-8 border-b border-[#27272a] justify-between shrink-0">
+            <a href="index.html" class="h-7 w-36 flex">
                 <img src="logos/White@2x.png" class="h-full w-full object-left object-contain" alt="logo">
             </a>
             <button onclick="toggleSidebar()" class="md:hidden text-zinc-400 hover:text-white transition-colors">
