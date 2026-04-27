@@ -72,6 +72,9 @@
         .la-dashboard-btn:active {
           transform: scale(0.97);
         }
+
+        /* JS-driven glitch hover — covers the full h1 bounding box, not just individual words */
+        #hero-title.is-hovered span { color: #39FF14; }
     </style>
 </head>
 
@@ -106,10 +109,10 @@
                         </span>
                     </div>
                     
-                    <h1 class="text-6xl min-[375px]:text-[13vw] sm:text-7xl md:text-8xl lg:text-[110px] font-semibold uppercase tracking-tighter leading-[0.85] text-foreground">
-                        <span class="block"><span class="cursor-text transition-colors duration-300 hover:text-primary hover:translate-x-2 inline-block transition-transform">TRANSFORM</span></span>
-                        <span class="block"><span class="cursor-text transition-colors duration-300 hover:text-primary hover:translate-x-2 inline-block transition-transform">YOUR LIVE-SET</span></span>
-                        <span class="block"><span class="cursor-text transition-colors duration-300 hover:text-primary">INTO</span> <span class="cursor-text transition-colors duration-300 hover:text-primary">AN</span> <span class="cursor-text transition-colors duration-300 hover:text-primary">ASSET.</span></span>
+                    <h1 id="hero-title" class="text-6xl min-[375px]:text-[13vw] sm:text-7xl md:text-8xl lg:text-[110px] font-semibold uppercase tracking-tighter leading-[0.85] text-foreground">
+                        <span class="block"><span class="cursor-text transition-colors duration-300 hover:translate-x-2 inline-block transition-transform">TRANSFORM</span></span>
+                        <span class="block"><span class="cursor-text transition-colors duration-300 hover:translate-x-2 inline-block transition-transform">YOUR LIVE-SET</span></span>
+                        <span class="block"><span class="cursor-text transition-colors duration-300">INTO</span> <span class="cursor-text transition-colors duration-300">AN</span> <span class="cursor-text transition-colors duration-300">ASSET.</span></span>
                     </h1>
                 </div>
             </div>
@@ -630,6 +633,23 @@
 
         initCanvases();
         draw();
+    </script>
+
+    <script>
+        /* Hero title glitch — tracks mouse against the h1 bounding box so the effect
+           fires across the entire title, including line gaps and horizontal dead zones
+           that CSS :hover on individual word spans would miss. */
+        (function () {
+            var title = document.getElementById('hero-title');
+            if (!title) return;
+            window.addEventListener('mousemove', function (e) {
+                var r = title.getBoundingClientRect();
+                title.classList.toggle('is-hovered',
+                    e.clientX >= r.left && e.clientX <= r.right &&
+                    e.clientY >= r.top  && e.clientY <= r.bottom
+                );
+            });
+        })();
     </script>
 
     <script>
