@@ -9,7 +9,8 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="local / assets">
+    <meta name="apple-mobile-web-app-title" content="a™">
+    <meta name="theme-color" content="#000000">
     <title>local / assets™</title>
     <link rel="icon" type="image/x-icon" href="favicon/favicon.ico">
     <link rel="icon" type="image/svg+xml" href="favicon/favicon.svg">
@@ -1098,6 +1099,14 @@
             }, 1000);
         })();
 
+    </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .catch(err => console.warn('SW:', err));
+            });
+        }
     </script>
 </body>
 </html>
