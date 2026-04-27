@@ -588,8 +588,13 @@
 
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                const localMouseX = mouse.x - rect.left;
-                const localMouseY = mouse.y - rect.top;
+                // Scale from CSS pixel space into canvas pixel space — fixes the
+                // "only half works" bug where initCanvases ran before layout settled
+                // and canvas.width/height differ from the rendered CSS dimensions.
+                const scaleX = rect.width  > 0 ? canvas.width  / rect.width  : 1;
+                const scaleY = rect.height > 0 ? canvas.height / rect.height : 1;
+                const localMouseX = (mouse.x - rect.left) * scaleX;
+                const localMouseY = (mouse.y - rect.top)  * scaleY;
 
                 dots.forEach(dot => {
                     const dx = localMouseX - dot.x;
@@ -630,22 +635,29 @@
         });
 
         window.addEventListener('resize', initCanvases);
+        // Re-init after fonts/images load so getBoundingClientRect reflects final layout
+        window.addEventListener('load', initCanvases);
 
         initCanvases();
         draw();
     </script>
 
     <script>
-        /* Per-word glitch hover — uses document.elementFromPoint so each word span
-           is its own independent hover zone. Only the span under the cursor lights up. */
+        /* Per-word glitch hover — uses getBoundingClientRect on each span so the
+           check is coordinate-based and immune to z-index overlaps (e.g. the marquee
+           bar covering ASSET.). elementFromPoint was skipping ASSET. because the
+           marquee bar sits on top of it in stacking order. */
         (function () {
             var title = document.getElementById('hero-title');
             if (!title) return;
             var words = Array.from(title.querySelectorAll('span > span'));
             window.addEventListener('mousemove', function (e) {
-                var el = document.elementFromPoint(e.clientX, e.clientY);
                 words.forEach(function (span) {
-                    span.classList.toggle('word-hovered', span === el);
+                    var r = span.getBoundingClientRect();
+                    span.classList.toggle('word-hovered',
+                        e.clientX >= r.left && e.clientX <= r.right &&
+                        e.clientY >= r.top  && e.clientY <= r.bottom
+                    );
                 });
             });
             document.addEventListener('mouseleave', function () {
