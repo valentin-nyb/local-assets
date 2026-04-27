@@ -73,8 +73,8 @@
           transform: scale(0.97);
         }
 
-        /* JS-driven glitch hover — covers the full h1 bounding box, not just individual words */
-        #hero-title.is-hovered span { color: #39FF14; }
+        /* Per-word glitch hover — only the span under the cursor turns green */
+        #hero-title span.word-hovered { color: #39FF14; }
     </style>
 </head>
 
@@ -636,18 +636,20 @@
     </script>
 
     <script>
-        /* Hero title glitch — tracks mouse against the h1 bounding box so the effect
-           fires across the entire title, including line gaps and horizontal dead zones
-           that CSS :hover on individual word spans would miss. */
+        /* Per-word glitch hover — uses document.elementFromPoint so each word span
+           is its own independent hover zone. Only the span under the cursor lights up. */
         (function () {
             var title = document.getElementById('hero-title');
             if (!title) return;
+            var words = Array.from(title.querySelectorAll('span > span'));
             window.addEventListener('mousemove', function (e) {
-                var r = title.getBoundingClientRect();
-                title.classList.toggle('is-hovered',
-                    e.clientX >= r.left && e.clientX <= r.right &&
-                    e.clientY >= r.top  && e.clientY <= r.bottom
-                );
+                var el = document.elementFromPoint(e.clientX, e.clientY);
+                words.forEach(function (span) {
+                    span.classList.toggle('word-hovered', span === el);
+                });
+            });
+            document.addEventListener('mouseleave', function () {
+                words.forEach(function (span) { span.classList.remove('word-hovered'); });
             });
         })();
     </script>
