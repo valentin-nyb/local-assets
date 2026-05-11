@@ -32,7 +32,12 @@ export default async function handler(req, res) {
     if (!apiKey) return res.status(500).json({ error: 'Email service not configured' });
 
     const resend = new Resend(apiKey);
-    const link = `https://local-assets.com/api/verify-magic-link?token=${token}`;
+    const isApp = body?.source === 'app';
+    // App clients get a deep link that opens directly in the desktop app.
+    // Web clients get the standard HTTPS verify link.
+    const link = isApp
+      ? `localassets://verify?token=${token}`
+      : `https://local-assets.com/api/verify-magic-link?token=${token}`;
 
     await resend.emails.send({
       from: 'local/assets™ <noreply@local-assets.com>',
