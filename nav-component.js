@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     sidebar.innerHTML = `
         <div class="h-20 flex items-center px-8 border-b border-[#27272a] justify-between shrink-0">
-            <a href="/dashboard" class="h-7 w-36 flex">
+            <a href="/dashboard" class="h-5 w-24 flex">
                 <img src="/logos/White@2x.png" class="h-full w-full object-left object-contain" alt="logo">
             </a>
             <button onclick="toggleSidebar()" class="md:hidden text-zinc-400 hover:text-white transition-colors">
