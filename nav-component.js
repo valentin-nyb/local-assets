@@ -48,7 +48,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <iconify-icon icon="solar:cloud-upload-linear" class="text-lg"></iconify-icon>Upload Asset
             </a>
         </nav>
-        <div class="px-4 pb-16 pt-6 mt-4 flex justify-center">
+        <div class="px-4 pt-6 mt-4 flex justify-center" style="padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1.5rem)">
             <div class="la-theme-switcher" role="radiogroup" aria-label="Theme">
                 <button type="button" role="radio" aria-checked="${saved === 'light' ? 'true' : 'false'}" data-theme="light">
                     <iconify-icon icon="solar:sun-linear" class="la-theme-icon"></iconify-icon>
