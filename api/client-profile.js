@@ -1,5 +1,11 @@
-import { kv } from '@vercel/kv';
+import { createClient } from 'redis';
 import Stripe from 'stripe';
+
+async function getRedis() {
+  const client = createClient({ url: process.env.REDIS_URL });
+  await client.connect();
+  return client;
+}
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', 'https://local-assets.com');
@@ -12,11 +18,13 @@ export default async function handler(req, res) {
   const sessionToken = cookie.la_session;
   if (!sessionToken) return res.status(401).json({ error: 'Not authenticated' });
 
-  const clientId = await kv.get(`session:${sessionToken}`);
+  const redis = await getRedis();
+  try {
+  const clientId = await redis.get(`session:${sessionToken}`);
   if (!clientId) return res.status(401).json({ error: 'Session expired — please log in again' });
 
-  const profile = await kv.hgetall(`client:${clientId}`);
-  if (!profile) return res.status(404).json({ error: 'Profile not found' });
+  const profile = await redis.hGetAll(`client:${clientId}`);
+  if (!profile || Object.keys(profile).length === 0) return res.status(404).json({ error: 'Profile not found' });
 
   // If requesting billing portal
   if (req.query.action === 'billing-portal') {
@@ -35,6 +43,9 @@ export default async function handler(req, res) {
   // Return profile (strip sensitive fields)
   const { stripeCustomerId, ...safeProfile } = profile;
   return res.status(200).json(safeProfile);
+  } finally {
+    await redis.quit();
+  }
 }
 
 function parseCookie(str) {

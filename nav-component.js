@@ -100,11 +100,22 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // --- Venue Name System (shared across all pages) ---
-    var DEFAULT_VENUE = 'KOKO LONDON';
+    var DEFAULT_VENUE = 'LOCAL / ASSETS';
 
     window.getVenueName = function() {
         return localStorage.getItem('la_venue_name') || DEFAULT_VENUE;
     };
+
+    // Fetch client profile and use name as venue label
+    fetch('/api/client-profile', { credentials: 'include' })
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(profile) {
+            if (profile && profile.name) {
+                localStorage.setItem('la_venue_name', profile.name.toUpperCase());
+                window.applyVenueName();
+            }
+        })
+        .catch(function() {});
 
     window.applyVenueName = function() {
         var name = window.getVenueName().toUpperCase();
