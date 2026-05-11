@@ -21,31 +21,30 @@ document.addEventListener("DOMContentLoaded", () => {
     const sidebar = document.getElementById("sidebar");
     if (!sidebar) return;
 
-    const currentPath = window.location.pathname.split("/").pop() || "dashboard.html";
+    const currentPath = window.location.pathname;
     const isActive = (path) => {
-        const baseName = path.replace('.html', '');
-        return currentPath.includes(baseName) ? "active" : "text-zinc-400";
+        return currentPath === path || currentPath.startsWith(path + '/') ? "active" : "text-zinc-400";
     };
 
     const saved = localStorage.getItem('la_theme') || 'dark';
 
     sidebar.innerHTML = `
         <div class="h-20 flex items-center px-8 border-b border-[#27272a] justify-between shrink-0">
-            <a href="index.html" class="h-7 w-36 flex">
-                <img src="logos/White@2x.png" class="h-full w-full object-left object-contain" alt="logo">
+            <a href="/dashboard" class="h-7 w-36 flex">
+                <img src="/logos/White@2x.png" class="h-full w-full object-left object-contain" alt="logo">
             </a>
             <button onclick="toggleSidebar()" class="md:hidden text-zinc-400 hover:text-white transition-colors">
                 <iconify-icon icon="solar:close-circle-linear" class="text-2xl"></iconify-icon>
             </button>
         </div>
         <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
-            <a href="dashboard.html" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('dashboard.html')}">
+            <a href="/dashboard" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('/dashboard')}">
                 <iconify-icon icon="solar:widget-5-linear" class="text-lg"></iconify-icon>Overview
             </a>
-            <a href="camera.html" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('camera.html')}">
+            <a href="/camera" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('/camera')}">
                 <iconify-icon icon="solar:videocamera-record-linear" class="text-lg"></iconify-icon>Camera Control
             </a>
-            <a href="assets.html" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('assets.html')}">
+            <a href="/assets" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('/assets')}">
                 <iconify-icon icon="solar:cloud-upload-linear" class="text-lg"></iconify-icon>Upload Asset
             </a>
         </nav>
