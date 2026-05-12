@@ -7,11 +7,13 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>local / assets™ — Sign In</title>
     <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <script>
         if (new URLSearchParams(location.search).get('clear') === '1') {
             localStorage.removeItem('la_admin');
         }
-        // Already signed in — skip to destination (but not if we're completing an OAuth return)
         (function() {
             if (new URLSearchParams(location.search).get('_s')) return;
             try {
@@ -25,135 +27,280 @@
     </script>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --green:   #39FF14;
+            --bg:      #050505;
+            --border:  #27272a;
+            --mono:    'JetBrains Mono', ui-monospace, 'Courier New', monospace;
+            --display: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            --safe-top:    env(safe-area-inset-top,    0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
         html, body {
-            background: #000;
-            min-height: 100vh;
-            min-height: 100dvh;
+            height: 100%;
+            background: var(--bg);
+            color: #fff;
+            -webkit-font-smoothing: antialiased;
+            font-family: var(--mono);
+        }
+
+        /* ── Background layers ── */
+        body {
+            position: relative;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            font-family: 'JetBrains Mono', ui-monospace, 'Courier New', monospace;
-            color: #fff;
-            -webkit-font-smoothing: antialiased;
+            min-height: 100dvh;
+            overflow: hidden;
         }
+
+        /* Dot grid */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: radial-gradient(circle, rgba(255,255,255,0.055) 1px, transparent 1px);
+            background-size: 28px 28px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Scanlines */
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: repeating-linear-gradient(
+                to bottom,
+                transparent,
+                transparent 3px,
+                rgba(0,0,0,0.18) 3px,
+                rgba(0,0,0,0.18) 4px
+            );
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Radial glow behind content */
+        .bg-glow {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 700px;
+            height: 700px;
+            background: radial-gradient(circle, rgba(57,255,20,0.04) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ── Content ── */
         .wrap {
+            position: relative;
+            z-index: 10;
             width: 100%;
-            max-width: 380px;
-            padding: 0 24px;
+            max-width: 520px;
+            padding: max(var(--safe-top), 40px) 32px max(var(--safe-bottom), 40px);
+            display: flex;
+            flex-direction: column;
+            gap: 0;
         }
-        .logo-mark {
-            font-size: 10px;
-            letter-spacing: 0.4em;
-            color: #39FF14;
+
+        /* ── Brand label row ── */
+        .brand-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 28px;
+        }
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--green);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--green);
+            flex-shrink: 0;
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--green); }
+            50%       { opacity: 0.6; box-shadow: 0 0 4px var(--green); }
+        }
+        .brand-label {
+            font-family: var(--mono);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.32em;
             text-transform: uppercase;
-            font-weight: 700;
-            margin-bottom: 8px;
+            color: var(--green);
         }
-        .title {
-            font-size: 22px;
-            letter-spacing: -0.01em;
+
+        /* ── Hero title ── */
+        h1 {
+            font-family: var(--display);
+            font-size: clamp(44px, 9vw, 76px);
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: -0.03em;
+            line-height: 0.88;
             color: #fff;
-            font-weight: 700;
-            margin-bottom: 32px;
-            line-height: 1.2;
+            margin-bottom: 44px;
         }
-        label {
+
+        /* ── Form ── */
+        .field-label {
             display: block;
+            font-family: var(--mono);
             font-size: 9px;
-            letter-spacing: 0.25em;
+            font-weight: 500;
+            letter-spacing: 0.28em;
             text-transform: uppercase;
             color: #52525b;
             margin-bottom: 8px;
         }
+
         input[type="text"] {
             display: block;
             width: 100%;
             background: #0a0a0a;
-            border: 1px solid #27272a;
+            border: 1px solid var(--border);
             color: #fff;
-            font-family: inherit;
-            font-size: 13px;
-            letter-spacing: 0.08em;
+            font-family: var(--mono);
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 0.1em;
             text-transform: uppercase;
-            padding: 14px 16px;
+            padding: 15px 16px;
             outline: none;
-            margin-bottom: 24px;
+            margin-bottom: 20px;
             transition: border-color .15s;
             -webkit-appearance: none;
+            border-radius: 0;
         }
-        input[type="text"]::placeholder { color: #3f3f46; text-transform: none; letter-spacing: 0; }
-        input[type="text"]:focus { border-color: #39FF14; }
-        .g-btn-row {
-            display: flex;
-            justify-content: center;
-            min-height: 44px;
-            margin-bottom: 16px;
+        input[type="text"]::placeholder {
+            color: #3f3f46;
+            text-transform: none;
+            letter-spacing: 0;
+            font-weight: 400;
         }
+        input[type="text"]:focus { border-color: var(--green); }
+
+        /* ── Google button — dark app style ── */
         #google-btn {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
-            background: #fff;
-            color: #1f1f1f;
-            border: none;
-            border-radius: 22px;
-            padding: 0 24px;
-            font-family: 'Google Sans', 'Roboto', ui-sans-serif, sans-serif;
-            font-size: 14px;
-            font-weight: 500;
+            gap: 12px;
+            width: 100%;
+            padding: 15px 20px;
+            background: #0a0a0a;
+            border: 1px solid rgba(255,255,255,0.14);
+            color: #fff;
+            font-family: var(--mono);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
             cursor: pointer;
-            width: 280px;
-            height: 44px;
-            letter-spacing: 0.01em;
-            transition: background .15s, box-shadow .15s;
-            flex-shrink: 0;
+            transition: border-color .15s, background .15s;
+            margin-bottom: 16px;
+            border-radius: 0;
+            -webkit-appearance: none;
         }
-        #google-btn:hover { background: #f2f2f2; box-shadow: 0 1px 6px rgba(255,255,255,.15); }
-        #google-btn:active { background: #e8e8e8; }
+        #google-btn:hover:not(.loading) {
+            border-color: rgba(57,255,20,0.5);
+            background: rgba(57,255,20,0.03);
+        }
+        #google-btn:active:not(.loading) { transform: scale(0.99); }
+        #google-btn.loading { opacity: 0.5; pointer-events: none; }
         #google-btn svg { flex-shrink: 0; }
-        #google-btn.loading { opacity: .6; pointer-events: none; }
+
+        /* ── Status ── */
         #status {
+            font-family: var(--mono);
             font-size: 9px;
-            letter-spacing: 0.1em;
+            letter-spacing: 0.15em;
             text-transform: uppercase;
             text-align: center;
-            min-height: 16px;
+            min-height: 14px;
             color: #52525b;
         }
         #status.err { color: #ef4444; }
+        #status.ok  { color: var(--green); }
+
+        /* ── Footer ── */
         .footer-note {
-            margin-top: 40px;
+            position: fixed;
+            bottom: max(var(--safe-bottom), 20px);
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-family: var(--mono);
             font-size: 8px;
-            letter-spacing: 0.2em;
+            letter-spacing: 0.3em;
             text-transform: uppercase;
             color: #1c1c1c;
-            text-align: center;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        /* Divider line before button */
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+        .divider span {
+            font-family: var(--mono);
+            font-size: 8px;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: #3f3f46;
+            white-space: nowrap;
         }
     </style>
 </head>
 <body>
-    <div class="wrap">
-        <p class="logo-mark">local / assets™</p>
-        <h1 class="title">Sign in to<br>your workspace</h1>
 
-        <label for="venue-input">Venue / Organization</label>
+    <div class="bg-glow" aria-hidden="true"></div>
+
+    <div class="wrap">
+        <div class="brand-row">
+            <div class="pulse-dot"></div>
+            <span class="brand-label">LOCAL / ASSETS™</span>
+        </div>
+
+        <h1>SIGN IN TO<br>YOUR WORKSPACE</h1>
+
+        <label class="field-label" for="venue-input">Venue / Organization</label>
         <input type="text" id="venue-input" placeholder="e.g. FABRIC LONDON" autocomplete="organization" spellcheck="false">
 
-        <div class="g-btn-row">
-            <button id="google-btn" type="button">
-                <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
-                    <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
-                    <path d="M3.964 10.707A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/>
-                    <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z" fill="#EA4335"/>
-                </svg>
-                Continue with Google
-            </button>
-        </div>
+        <div class="divider"><span>continue with</span></div>
+
+        <button id="google-btn" type="button">
+            <svg width="16" height="16" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+                <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
+                <path d="M3.964 10.707A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/>
+                <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z" fill="#EA4335"/>
+            </svg>
+            GOOGLE
+        </button>
+
         <div id="status"></div>
     </div>
+
     <p class="footer-note">Unauthorized access is prohibited</p>
 
     <script>
@@ -171,10 +318,10 @@
 
             if (err) {
                 var msgs = {
-                    not_allowed:  'Access denied — account not authorized',
-                    cancelled:    'Sign-in cancelled',
-                    auth_failed:  'Authentication failed — try again',
-                    no_email:     'Could not read email from Google',
+                    not_allowed: 'Access denied — account not authorized',
+                    cancelled:   'Sign-in cancelled',
+                    auth_failed: 'Authentication failed — try again',
+                    no_email:    'Could not read email from Google',
                 };
                 setStatus(msgs[err] || 'Authentication failed — try again', 'err');
                 history.replaceState({}, '', '/login.html');
@@ -183,7 +330,7 @@
 
             if (!token) return;
 
-            setStatus('Completing sign in…', '');
+            setStatus('Verifying…', '');
             document.getElementById('google-btn').classList.add('loading');
 
             var venue = sessionStorage.getItem('la_pending_venue') || '';
@@ -191,13 +338,12 @@
             sessionStorage.removeItem('la_pending_venue');
             sessionStorage.removeItem('la_pending_next');
 
-            // Restore venue input so it's visible while the fetch runs
             if (venue) document.getElementById('venue-input').value = venue;
 
             fetch('/api/admin-finalize', {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body:    JSON.stringify({ token }),
+                body:    JSON.stringify({ token: token }),
             })
             .then(function(r) { return r.json(); })
             .then(function(data) {
@@ -215,6 +361,7 @@
                     ts:      Date.now(),
                 }));
                 if (venue) localStorage.setItem('la_venue_name', venue);
+                setStatus('Signed in — redirecting…', 'ok');
                 window.location.replace(next.startsWith('/') ? next : '/dashboard.html');
             })
             .catch(function() {
@@ -224,7 +371,6 @@
             });
         })();
 
-        // Google button — saves state, then redirects to OAuth
         document.getElementById('google-btn').addEventListener('click', function() {
             var venue = (document.getElementById('venue-input').value || '').trim().toUpperCase();
             var next  = new URLSearchParams(location.search).get('next') || '/dashboard.html';
