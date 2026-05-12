@@ -1,17 +1,17 @@
+import { getWebSessionAuth } from './_venues.js';
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', 'https://local-assets.com');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Cache-Control', 'no-store');
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).end();
 
-  const tokenId     = process.env.PROD_MUX_TOKEN_ID     || process.env.MUX_TOKEN_ID;
-  const tokenSecret = process.env.PROD_MUX_TOKEN_SECRET || process.env.MUX_TOKEN_SECRET;
-  if (!tokenId || !tokenSecret) {
-    return res.status(500).json({ error: 'Mux credentials not configured' });
+  const session = getWebSessionAuth(req);
+  if (!session?.muxAuth) {
+    return res.status(401).json({ error: 'Not authenticated' });
   }
-  const auth = 'Basic ' + Buffer.from(`${tokenId}:${tokenSecret}`).toString('base64');
 
   let body = req.body;
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch(e) {} }
@@ -26,7 +26,7 @@ export default async function handler(req, res) {
   try {
     const muxRes = await fetch('https://api.mux.com/video/v1/uploads', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: auth },
+      headers: { 'Content-Type': 'application/json', Authorization: session.muxAuth },
       body: JSON.stringify({
         new_asset_settings: {
           playback_policy: ['public'],

@@ -1,23 +1,23 @@
+import { getWebSessionAuth } from './_venues.js';
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Cache-Control', 'no-store, no-cache');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const tokenId     = process.env.PROD_MUX_TOKEN_ID     || process.env.MUX_TOKEN_ID;
-  const tokenSecret = process.env.PROD_MUX_TOKEN_SECRET || process.env.MUX_TOKEN_SECRET;
-  if (!tokenId || !tokenSecret) {
-    return res.status(500).json({ error: 'Mux credentials not configured' });
+  const session = getWebSessionAuth(req);
+  if (!session?.muxAuth) {
+    return res.status(401).json({ error: 'Not authenticated' });
   }
-
-  const auth = 'Basic ' + Buffer.from(`${tokenId}:${tokenSecret}`).toString('base64');
 
   try {
     const assets = [];
     let page = 1;
     while (true) {
       const r = await fetch(`https://api.mux.com/video/v1/assets?limit=100&page=${page}`, {
-        headers: { Authorization: auth },
+        headers: { Authorization: session.muxAuth },
         signal: AbortSignal.timeout(20000),
       });
       if (!r.ok) {

@@ -28,6 +28,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const saved = localStorage.getItem('la_theme') || 'dark';
 
+    const _navRole = (() => {
+        try { return JSON.parse(localStorage.getItem('la_admin') || 'null')?.role || 'admin'; }
+        catch(_) { return 'admin'; }
+    })();
+    const _isClient = _navRole === 'client';
+
     sidebar.innerHTML = `
         <div class="h-20 flex items-center px-8 border-b border-[#27272a] justify-between shrink-0">
             <a href="/dashboard" class="h-5 w-24 flex">
@@ -41,12 +47,13 @@ document.addEventListener("DOMContentLoaded", () => {
             <a href="/dashboard" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('/dashboard')}">
                 <iconify-icon icon="solar:widget-5-linear" class="text-lg"></iconify-icon>Overview
             </a>
+            ${_isClient ? '' : `
             <a href="/camera" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('/camera')}">
                 <iconify-icon icon="solar:videocamera-record-linear" class="text-lg"></iconify-icon>Camera Control
             </a>
             <a href="/assets" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('/assets')}">
                 <iconify-icon icon="solar:cloud-upload-linear" class="text-lg"></iconify-icon>Upload Asset
-            </a>
+            </a>`}
         </nav>
         <div class="px-4 pt-6 mt-4 flex justify-center" style="padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1.5rem)">
             <div class="la-theme-switcher" role="radiogroup" aria-label="Theme">

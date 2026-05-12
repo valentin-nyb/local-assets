@@ -353,14 +353,18 @@
                     document.getElementById('google-btn').classList.remove('loading');
                     return;
                 }
+                // Server-assigned venue (client role) takes priority over manually entered
+                var finalVenue = data.venue || venue;
                 localStorage.setItem('la_admin', JSON.stringify({
-                    email:   data.email,
-                    name:    data.name,
-                    picture: data.picture,
-                    venue:   venue,
-                    ts:      Date.now(),
+                    email:    data.email,
+                    name:     data.name,
+                    picture:  data.picture,
+                    venue:    finalVenue,
+                    role:     data.role || 'admin',
+                    webToken: data.webToken || '',
+                    ts:       Date.now(),
                 }));
-                if (venue) localStorage.setItem('la_venue_name', venue);
+                if (finalVenue) localStorage.setItem('la_venue_name', finalVenue);
                 setStatus('Signed in — redirecting…', 'ok');
                 window.location.replace(next.startsWith('/') ? next : '/dashboard.html');
             })

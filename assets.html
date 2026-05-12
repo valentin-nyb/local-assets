@@ -102,6 +102,15 @@
         </div>
 </main>
 <script>
+    function laFetch(url, opts = {}) {
+        const token = (() => { try { return JSON.parse(localStorage.getItem('la_admin') || '{}').webToken || ''; } catch(_) { return ''; } })();
+        if (token) {
+            opts = Object.assign({}, opts);
+            opts.headers = Object.assign({}, opts.headers, { 'Authorization': 'Bearer ' + token });
+        }
+        return fetch(url, opts);
+    }
+
     // Toggle Sidebar for Mobile
     window.toggleSidebar = () => {
         const sb = document.getElementById('sidebar');
@@ -127,7 +136,7 @@
             uploadBtn.innerHTML = "CONNECTING TO LOCAL/ASSETS™...";
 
             try {
-                const response = await fetch('/api/get-upload-url', {
+                const response = await laFetch('/api/get-upload-url', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
@@ -205,7 +214,7 @@
     async function loadVault() {
     const list = document.getElementById('cloud-list');
     try {
-        const res = await fetch('/api/list-assets?t=' + Date.now(), { credentials: 'include' });
+        const res = await laFetch('/api/list-assets?t=' + Date.now(), { credentials: 'include' });
         const data = await res.json();
 
         // Safety Net: If the API sent an error instead of a list

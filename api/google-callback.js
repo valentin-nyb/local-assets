@@ -1,5 +1,6 @@
 import { createClient } from 'redis';
 import crypto from 'crypto';
+import { findVenueByEmail } from './_venues.js';
 
 const REDIRECT_URI = 'https://local-assets.com/api/google-callback';
 
@@ -84,10 +85,15 @@ export default async function handler(req, res) {
         return res.end();
       }
 
+      // Look up VENUES_CONFIG to assign role + venue automatically
+      const venueEntry = findVenueByEmail(email);
+      const role = venueEntry?.role || 'admin';
+      const assignedVenue = (venueEntry?.name || '').toUpperCase();
+
       const pendingToken = crypto.randomBytes(24).toString('hex');
       await redis.set(
         `web:pending:${pendingToken}`,
-        JSON.stringify({ email, name, picture }),
+        JSON.stringify({ email, name, picture, role, venue: assignedVenue }),
         { EX: 120 }
       );
 

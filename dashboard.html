@@ -213,6 +213,16 @@
     </main>
 
     <script>
+        // Wraps fetch() to include venue Authorization header from la_admin.webToken
+        function laFetch(url, opts = {}) {
+            const token = (() => { try { return JSON.parse(localStorage.getItem('la_admin') || '{}').webToken || ''; } catch(_) { return ''; } })();
+            if (token) {
+                opts = Object.assign({}, opts);
+                opts.headers = Object.assign({}, opts.headers, { 'Authorization': 'Bearer ' + token });
+            }
+            return fetch(url, opts);
+        }
+
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebar-overlay');
@@ -261,7 +271,7 @@
             let muxAssets = [];
             let fetchError = null;
             try {
-                const res = await fetch('/api/assets?t=' + Date.now());
+                const res = await laFetch('/api/assets?t=' + Date.now());
                 const data = await res.json();
                 if (res.ok) {
                     muxAssets = Array.isArray(data) ? data : (data.data || []);
@@ -378,6 +388,11 @@
             }
             window._dashboardSessions = allSessions;
 
+            const _isClientUser = (() => {
+                try { return JSON.parse(localStorage.getItem('la_admin') || 'null')?.role === 'client'; }
+                catch(_) { return false; }
+            })();
+
             function buildAssetRow(asset, uid, sessionName, sessionDate) {
                 var accept = asset.type === 'MASTER' ? 'video/*' : asset.type === 'AUDIO' ? 'audio/*' : asset.type === 'SOCIAL' ? 'video/*' : 'image/*';
                 var lookupKey = asset.type === 'MASTER' ? sessionName.toUpperCase().trim() : sessionName.toUpperCase().trim() + ' // ' + asset.type;
@@ -422,6 +437,7 @@
                     html += '</div>';
                     html += '</div>';
                 } else {
+                    if (_isClientUser) return '';
                     html += '<div class="p-4 pl-16 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-' + uid + '">';
                     html += '<label class="flex items-center gap-4 cursor-pointer flex-1 min-w-0">';
                     html += '<div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-border/50 shrink-0">';
@@ -772,7 +788,7 @@
 
             let muxAssets = [];
             try {
-                const res = await fetch('/api/assets?t=' + Date.now());
+                const res = await laFetch('/api/assets?t=' + Date.now());
                 const data = await res.json();
                 muxAssets = Array.isArray(data) ? data : (data.data || []);
             } catch (e) { alert('Failed to fetch assets'); return; }
@@ -1166,6 +1182,8 @@
                         xhr.open('PUT', '/api/upload-thumbnail?passthrough=' + encodeURIComponent(tag));
                         xhr.setRequestHeader('Content-Type', file.type || 'image/png');
                         xhr.setRequestHeader('X-Passthrough', tag);
+                        const _laToken = (() => { try { return JSON.parse(localStorage.getItem('la_admin') || '{}').webToken || ''; } catch(_) { return ''; } })();
+                        if (_laToken) xhr.setRequestHeader('Authorization', 'Bearer ' + _laToken);
 
                         xhr.upload.onprogress = (e) => {
                             if (e.lengthComputable) {
@@ -1217,7 +1235,7 @@
                 return new Promise(async (resolve, reject) => {
                     try {
                         const tag = total > 1 ? `${passthrough} // ${String(idx + 1).padStart(2, '0')}` : passthrough;
-                        const response = await fetch('/api/get-upload-url', {
+                        const response = await laFetch('/api/get-upload-url', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ artistName: tag })
