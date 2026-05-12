@@ -46,7 +46,6 @@
             font-family: var(--mono);
         }
 
-        /* ── Background layers ── */
         body {
             position: relative;
             display: flex;
@@ -84,7 +83,6 @@
             z-index: 0;
         }
 
-        /* Radial glow behind content */
         .bg-glow {
             position: fixed;
             top: 50%;
@@ -97,16 +95,15 @@
             z-index: 0;
         }
 
-        /* ── Content ── */
         .wrap {
             position: relative;
             z-index: 10;
             width: 100%;
-            max-width: 520px;
+            max-width: 480px;
             padding: max(var(--safe-top), 40px) 32px max(var(--safe-bottom), 40px);
             display: flex;
             flex-direction: column;
-            gap: 0;
+            align-items: stretch;
         }
 
         /* ── Brand label row ── */
@@ -114,7 +111,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            margin-bottom: 28px;
+            margin-bottom: 32px;
         }
         .pulse-dot {
             width: 8px;
@@ -147,55 +144,17 @@
             letter-spacing: -0.03em;
             line-height: 0.88;
             color: #fff;
-            margin-bottom: 44px;
+            margin-bottom: 48px;
         }
 
-        /* ── Form ── */
-        .field-label {
-            display: block;
-            font-family: var(--mono);
-            font-size: 9px;
-            font-weight: 500;
-            letter-spacing: 0.28em;
-            text-transform: uppercase;
-            color: #52525b;
-            margin-bottom: 8px;
-        }
-
-        input[type="text"] {
-            display: block;
-            width: 100%;
-            background: #0a0a0a;
-            border: 1px solid var(--border);
-            color: #fff;
-            font-family: var(--mono);
-            font-size: 12px;
-            font-weight: 500;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-            padding: 15px 16px;
-            outline: none;
-            margin-bottom: 20px;
-            transition: border-color .15s;
-            -webkit-appearance: none;
-            border-radius: 0;
-        }
-        input[type="text"]::placeholder {
-            color: #3f3f46;
-            text-transform: none;
-            letter-spacing: 0;
-            font-weight: 400;
-        }
-        input[type="text"]:focus { border-color: var(--green); }
-
-        /* ── Google button — dark app style ── */
+        /* ── Google button ── */
         #google-btn {
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 12px;
             width: 100%;
-            padding: 15px 20px;
+            padding: 16px 20px;
             background: #0a0a0a;
             border: 1px solid rgba(255,255,255,0.14);
             color: #fff;
@@ -234,40 +193,17 @@
         /* ── Footer ── */
         .footer-note {
             position: fixed;
-            bottom: max(var(--safe-bottom), 20px);
+            bottom: max(var(--safe-bottom), 24px);
             left: 0;
             right: 0;
             text-align: center;
             font-family: var(--mono);
-            font-size: 8px;
-            letter-spacing: 0.3em;
-            text-transform: uppercase;
-            color: #1c1c1c;
-            z-index: 10;
-            pointer-events: none;
-        }
-
-        /* Divider line before button */
-        .divider {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-        .divider::before,
-        .divider::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-            background: var(--border);
-        }
-        .divider span {
-            font-family: var(--mono);
-            font-size: 8px;
+            font-size: 10px;
             letter-spacing: 0.25em;
             text-transform: uppercase;
-            color: #3f3f46;
-            white-space: nowrap;
+            color: #888888;
+            z-index: 10;
+            pointer-events: none;
         }
     </style>
 </head>
@@ -283,11 +219,6 @@
 
         <h1>SIGN IN TO<br>YOUR WORKSPACE</h1>
 
-        <label class="field-label" for="venue-input">Venue / Organization</label>
-        <input type="text" id="venue-input" placeholder="e.g. FABRIC LONDON" autocomplete="organization" spellcheck="false">
-
-        <div class="divider"><span>continue with</span></div>
-
         <button id="google-btn" type="button">
             <svg width="16" height="16" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
@@ -295,7 +226,7 @@
                 <path d="M3.964 10.707A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/>
                 <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z" fill="#EA4335"/>
             </svg>
-            GOOGLE
+            CONTINUE WITH GOOGLE
         </button>
 
         <div id="status"></div>
@@ -333,12 +264,8 @@
             setStatus('Verifying…', '');
             document.getElementById('google-btn').classList.add('loading');
 
-            var venue = sessionStorage.getItem('la_pending_venue') || '';
-            var next  = sessionStorage.getItem('la_pending_next')  || '/dashboard.html';
-            sessionStorage.removeItem('la_pending_venue');
+            var next = sessionStorage.getItem('la_pending_next') || '/dashboard.html';
             sessionStorage.removeItem('la_pending_next');
-
-            if (venue) document.getElementById('venue-input').value = venue;
 
             fetch('/api/admin-finalize', {
                 method:  'POST',
@@ -353,18 +280,16 @@
                     document.getElementById('google-btn').classList.remove('loading');
                     return;
                 }
-                // Server-assigned venue (client role) takes priority over manually entered
-                var finalVenue = data.venue || venue;
                 localStorage.setItem('la_admin', JSON.stringify({
                     email:    data.email,
                     name:     data.name,
                     picture:  data.picture,
-                    venue:    finalVenue,
+                    venue:    (data.venue || '').toUpperCase(),
                     role:     data.role || 'admin',
                     webToken: data.webToken || '',
                     ts:       Date.now(),
                 }));
-                if (finalVenue) localStorage.setItem('la_venue_name', finalVenue);
+                if (data.venue) localStorage.setItem('la_venue_name', data.venue.toUpperCase());
                 setStatus('Signed in — redirecting…', 'ok');
                 window.location.replace(next.startsWith('/') ? next : '/dashboard.html');
             })
@@ -376,10 +301,8 @@
         })();
 
         document.getElementById('google-btn').addEventListener('click', function() {
-            var venue = (document.getElementById('venue-input').value || '').trim().toUpperCase();
-            var next  = new URLSearchParams(location.search).get('next') || '/dashboard.html';
-            sessionStorage.setItem('la_pending_venue', venue);
-            sessionStorage.setItem('la_pending_next',  next);
+            var next = new URLSearchParams(location.search).get('next') || '/dashboard.html';
+            sessionStorage.setItem('la_pending_next', next);
             this.classList.add('loading');
             window.location.href = '/api/google-auth?mode=web';
         });
