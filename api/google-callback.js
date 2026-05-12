@@ -23,14 +23,17 @@ export default async function handler(req, res) {
 
   const redis = await getRedis();
   try {
-    // Verify CSRF state
-    const valid = await redis.get(`oauth:state:${state}`);
-    if (!valid) {
+    // Verify CSRF state and extract mode
+    const stateRaw = await redis.get(`oauth:state:${state}`);
+    if (!stateRaw) {
       return res.status(400).send('Invalid or expired state — please try signing in again');
     }
     await redis.del(`oauth:state:${state}`);
 
-    // Exchange authorization code for tokens
+    let mode = 'app';
+    try { mode = JSON.parse(stateRaw).mode || 'app'; } catch (e) {}
+
+    // Exchange code for tokens
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -46,26 +49,73 @@ export default async function handler(req, res) {
     const tokens = await tokenRes.json();
     if (!tokenRes.ok) {
       console.error('Token exchange error:', tokens);
+      if (mode === 'web') {
+        res.writeHead(302, { Location: '/login.html?err=auth_failed' });
+        return res.end();
+      }
       return res.status(500).send('Authentication failed — please try again');
     }
 
-    // Get the user's email from Google
+    // Get user profile from Google
     const userRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
     });
     const user = await userRes.json();
 
-    const email = user.email?.toLowerCase()?.trim();
-    if (!email) return res.status(400).send('Could not retrieve email from Google');
+    const email   = user.email?.toLowerCase()?.trim();
+    const name    = user.name || user.email || '';
+    const picture = user.picture || '';
 
-    // Check if this email is a registered client
-    const clientId = await redis.get(`client:email:${email}`);
-    if (!clientId) {
-      res.writeHead(302, { Location: 'localassets://auth-error?reason=not-a-client' });
+    if (!email) {
+      if (mode === 'web') {
+        res.writeHead(302, { Location: '/login.html?err=no_email' });
+        return res.end();
+      }
+      return res.status(400).send('Could not retrieve email from Google');
+    }
+
+    // ── Web (website admin) flow ──────────────────────────────────────────────
+    if (mode === 'web') {
+      const allowed = (process.env.ADMIN_EMAILS || '')
+        .split(',').map(e => e.toLowerCase().trim()).filter(Boolean);
+
+      if (allowed.length > 0 && !allowed.includes(email)) {
+        res.writeHead(302, { Location: '/login.html?err=not_allowed' });
+        return res.end();
+      }
+
+      const pendingToken = crypto.randomBytes(24).toString('hex');
+      await redis.set(
+        `web:pending:${pendingToken}`,
+        JSON.stringify({ email, name, picture }),
+        { EX: 120 }
+      );
+
+      res.writeHead(302, { Location: `/login.html?_s=${pendingToken}` });
       return res.end();
     }
 
-    // Create a 7-day session
+    // ── App flow ─────────────────────────────────────────────────────────────
+    let clientId = await redis.get(`client:email:${email}`);
+
+    if (!clientId) {
+      const adminEmails = (process.env.ADMIN_EMAILS || '')
+        .split(',').map(e => e.toLowerCase().trim()).filter(Boolean);
+
+      const isAdmin = adminEmails.length === 0 || adminEmails.includes(email);
+      if (!isAdmin) {
+        res.writeHead(302, { Location: 'localassets://auth-error?reason=not-a-client' });
+        return res.end();
+      }
+
+      // Auto-create admin client record
+      clientId = `admin:${crypto.randomBytes(8).toString('hex')}`;
+      await redis.set(`client:email:${email}`, clientId);
+      await redis.hSet(`client:${clientId}`, {
+        email, name, picture, role: 'admin', createdAt: Date.now().toString(),
+      });
+    }
+
     const sessionToken = crypto.randomBytes(32).toString('hex');
     await redis.set(`session:${sessionToken}`, clientId, { EX: 7 * 24 * 3600 });
 

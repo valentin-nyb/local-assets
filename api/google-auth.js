@@ -16,13 +16,14 @@ export default async function handler(req, res) {
   const redis = await getRedis();
   try {
     const state = crypto.randomBytes(16).toString('hex');
-    await redis.set(`oauth:state:${state}`, '1', { EX: 600 });
+    const mode  = req.query.mode || 'app'; // 'web' = website admin, 'app' = native app
+    await redis.set(`oauth:state:${state}`, JSON.stringify({ mode }), { EX: 600 });
 
     const params = new URLSearchParams({
       client_id:     clientId,
       redirect_uri:  REDIRECT_URI,
       response_type: 'code',
-      scope:         'openid email',
+      scope:         'openid email profile',
       state,
       access_type:   'online',
       prompt:        'select_account',

@@ -8,12 +8,12 @@
     <title>local / assets™ — Sign In</title>
     <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico">
     <script>
-        // ?clear=1 — force sign out
         if (new URLSearchParams(location.search).get('clear') === '1') {
             localStorage.removeItem('la_admin');
         }
-        // Already signed in — skip to destination
+        // Already signed in — skip to destination (but not if we're completing an OAuth return)
         (function() {
+            if (new URLSearchParams(location.search).get('_s')) return;
             try {
                 var d = JSON.parse(localStorage.getItem('la_admin') || 'null');
                 if (d && d.ts && Date.now() - d.ts < 600000) {
@@ -90,6 +90,30 @@
             min-height: 44px;
             margin-bottom: 16px;
         }
+        #google-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            background: #fff;
+            color: #1f1f1f;
+            border: none;
+            border-radius: 22px;
+            padding: 0 24px;
+            font-family: 'Google Sans', 'Roboto', ui-sans-serif, sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            width: 280px;
+            height: 44px;
+            letter-spacing: 0.01em;
+            transition: background .15s, box-shadow .15s;
+            flex-shrink: 0;
+        }
+        #google-btn:hover { background: #f2f2f2; box-shadow: 0 1px 6px rgba(255,255,255,.15); }
+        #google-btn:active { background: #e8e8e8; }
+        #google-btn svg { flex-shrink: 0; }
+        #google-btn.loading { opacity: .6; pointer-events: none; }
         #status {
             font-size: 9px;
             letter-spacing: 0.1em;
@@ -118,28 +142,20 @@
         <input type="text" id="venue-input" placeholder="e.g. FABRIC LONDON" autocomplete="organization" spellcheck="false">
 
         <div class="g-btn-row">
-            <!-- Google Identity Services button — data-text="continue_with" shows "Continue with Google" -->
-            <div id="g_id_onload"
-                 data-client_id="892380654488-ro2ptu81b44vru1ahhfm9naku0ckvb9v.apps.googleusercontent.com"
-                 data-callback="handleCredentialResponse"
-                 data-auto_prompt="false"
-                 data-ux_mode="popup">
-            </div>
-            <div class="g_id_signin"
-                 data-type="standard"
-                 data-size="large"
-                 data-theme="filled_black"
-                 data-text="continue_with"
-                 data-shape="pill"
-                 data-logo_alignment="left"
-                 data-width="280">
-            </div>
+            <button id="google-btn" type="button">
+                <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+                    <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
+                    <path d="M3.964 10.707A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/>
+                    <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z" fill="#EA4335"/>
+                </svg>
+                Continue with Google
+            </button>
         </div>
         <div id="status"></div>
     </div>
     <p class="footer-note">Unauthorized access is prohibited</p>
 
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script>
         function setStatus(msg, cls) {
             var el = document.getElementById('status');
@@ -147,45 +163,76 @@
             el.className = cls || '';
         }
 
-        async function handleCredentialResponse(response) {
-            // Venue is optional — default to empty string (can be set later)
-            var venue = (document.getElementById('venue-input').value || '').trim().toUpperCase();
+        // Handle OAuth return: /login.html?_s=TOKEN or /login.html?err=...
+        (function() {
+            var params = new URLSearchParams(location.search);
+            var token  = params.get('_s');
+            var err    = params.get('err');
 
-            setStatus('Verifying...', '');
-
-            try {
-                var res = await fetch('/api/admin-verify', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ credential: response.credential }),
-                });
-                var data = await res.json();
-
-                if (data.ok) {
-                    localStorage.setItem('la_admin', JSON.stringify({
-                        email:   data.email,
-                        name:    data.name,
-                        picture: data.picture,
-                        venue:   venue,
-                        ts:      Date.now(),
-                    }));
-                    // Also persist venue name for breadcrumb
-                    if (venue) localStorage.setItem('la_venue_name', venue);
-
-                    var next = new URLSearchParams(location.search).get('next') || '/dashboard.html';
-                    window.location.replace(next.startsWith('/') ? next : '/dashboard.html');
-                } else {
-                    setStatus(
-                        res.status === 403
-                            ? 'Access denied — account not authorized'
-                            : 'Authentication failed — try again',
-                        'err'
-                    );
-                }
-            } catch(e) {
-                setStatus('Network error — try again', 'err');
+            if (err) {
+                var msgs = {
+                    not_allowed:  'Access denied — account not authorized',
+                    cancelled:    'Sign-in cancelled',
+                    auth_failed:  'Authentication failed — try again',
+                    no_email:     'Could not read email from Google',
+                };
+                setStatus(msgs[err] || 'Authentication failed — try again', 'err');
+                history.replaceState({}, '', '/login.html');
+                return;
             }
-        }
+
+            if (!token) return;
+
+            setStatus('Completing sign in…', '');
+            document.getElementById('google-btn').classList.add('loading');
+
+            var venue = sessionStorage.getItem('la_pending_venue') || '';
+            var next  = sessionStorage.getItem('la_pending_next')  || '/dashboard.html';
+            sessionStorage.removeItem('la_pending_venue');
+            sessionStorage.removeItem('la_pending_next');
+
+            // Restore venue input so it's visible while the fetch runs
+            if (venue) document.getElementById('venue-input').value = venue;
+
+            fetch('/api/admin-finalize', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ token }),
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!data.ok) {
+                    setStatus('Session expired — please sign in again', 'err');
+                    history.replaceState({}, '', '/login.html');
+                    document.getElementById('google-btn').classList.remove('loading');
+                    return;
+                }
+                localStorage.setItem('la_admin', JSON.stringify({
+                    email:   data.email,
+                    name:    data.name,
+                    picture: data.picture,
+                    venue:   venue,
+                    ts:      Date.now(),
+                }));
+                if (venue) localStorage.setItem('la_venue_name', venue);
+                window.location.replace(next.startsWith('/') ? next : '/dashboard.html');
+            })
+            .catch(function() {
+                setStatus('Network error — try again', 'err');
+                history.replaceState({}, '', '/login.html');
+                document.getElementById('google-btn').classList.remove('loading');
+            });
+        })();
+
+        // Google button — saves state, then redirects to OAuth
+        document.getElementById('google-btn').addEventListener('click', function() {
+            var venue = (document.getElementById('venue-input').value || '').trim().toUpperCase();
+            var next  = new URLSearchParams(location.search).get('next') || '/dashboard.html';
+            sessionStorage.setItem('la_pending_venue', venue);
+            sessionStorage.setItem('la_pending_next',  next);
+            this.classList.add('loading');
+            window.location.href = '/api/google-auth?mode=web';
+        });
     </script>
 </body>
 </html>
