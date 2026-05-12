@@ -269,23 +269,14 @@
 
             // Fetch existing Mux assets to match against sessions
             let muxAssets = [];
-            let fetchError = null;
             try {
                 const res = await laFetch('/api/assets?t=' + Date.now());
                 const data = await res.json();
                 if (res.ok) {
                     muxAssets = Array.isArray(data) ? data : (data.data || []);
-                } else {
-                    fetchError = data?.error || ('HTTP ' + res.status);
                 }
-            } catch (e) {
-                fetchError = e.message;
-            }
-
-            if (fetchError) {
-                container.innerHTML = `<div class="p-8 text-center"><p class="text-[10px] font-mono text-red-500 uppercase tracking-widest">API ERROR — ${fetchError}</p></div>`;
-                return;
-            }
+                // Non-ok (e.g. missing credentials for new venue) → treat as empty
+            } catch (e) { /* network error → treat as empty */ }
 
             // Update real asset count and 30-day growth %
             const totalEl = document.getElementById('live-asset-total');
@@ -365,7 +356,7 @@
             }
 
             if (Object.keys(artistMap).length === 0) {
-                container.innerHTML = '<div class="p-8 text-center"><p class="text-[10px] font-mono text-zinc-600 uppercase tracking-widest">NO SESSIONS — UPLOAD FROM ASSETS TO BEGIN</p></div>';
+                container.innerHTML = '<div class="p-8 text-center"><p class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">NO ASSETS YET</p></div>';
                 return;
             }
 
