@@ -4,6 +4,22 @@
 <!DOCTYPE html>
 <html lang="en" class="dark scroll-smooth">
 <head>
+    <script>
+      (function(){
+        var s = localStorage.getItem('la_admin');
+        if (!s) { window.location.replace('/login.html'); return; }
+        try {
+          var d = JSON.parse(s);
+          if (!d.ts || Date.now() - d.ts > 10 * 60 * 1000) {
+            localStorage.removeItem('la_admin');
+            window.location.replace('/login.html');
+          }
+        } catch(e) {
+          localStorage.removeItem('la_admin');
+          window.location.replace('/login.html');
+        }
+      })();
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
@@ -160,6 +176,8 @@
                             <span class="text-[9px] font-mono text-[#39FF14] uppercase tracking-widest">Live</span>
                         </div>
                     </div>
+                    <!-- Pipeline progress banner (hidden until a job is active) -->
+                    <div id="pipeline-banner" class="hidden border-b border-border px-5 py-4 space-y-3 bg-black/30"></div>
                     <div id="recent-sets-list" class=""></div>
                 </div>
 
@@ -172,7 +190,7 @@
                                 <div class="w-full bg-white/5 h-1 rounded-full overflow-hidden"><div id="bandwidth-bar" class="bg-primary h-full w-[0%] shadow-[0_0_10px_#39FF14] transition-all duration-700"></div></div>
                             </div>
                             <div>
-                                <div class="flex justify-between text-[10px] font-mono mb-2 uppercase"><span class="text-muted-foreground">Local Storage (NAS)</span><span id="nas-value" class="text-white">—</span></div>
+                                <div class="flex justify-between text-[10px] font-mono mb-2 uppercase"><span class="text-muted-foreground">MUX Storage</span><span id="nas-value" class="text-white">—</span></div>
                                 <div class="w-full bg-white/5 h-1 rounded-full overflow-hidden"><div id="nas-bar" class="bg-yellow-500 h-full transition-all duration-700" style="width: 0%;"></div></div>
                             </div>
                         </div>
@@ -242,9 +260,13 @@
             // Fetch existing Mux assets to match against sessions
             let muxAssets = [];
             try {
-                const res = await fetch('/api/list-assets');
-                const data = await res.json();
-                muxAssets = Array.isArray(data) ? data : (data.data || []);
+                const res = await fetch('/api/assets?t=' + Date.now());
+                if (res.ok) {
+                    const data = await res.json();
+                    muxAssets = Array.isArray(data) ? data : (data.data || []);
+                } else {
+                    console.warn('[list-assets] HTTP', res.status, await res.text().catch(() => ''));
+                }
             } catch (e) { /* continue without linked assets */ }
 
             // Update real asset count and 30-day growth %
@@ -406,6 +428,103 @@
                     html += '</div>';
                     html += '</div>';
                 }
+                return html;
+            }
+
+            function buildSocialStrip(sessionName, sessionDate) {
+                var name = sessionName.toUpperCase().trim();
+
+                // Collect all social clips (numbered: // SOCIAL // 01 … 99)
+                var clips = [];
+                for (var n = 1; n <= 99; n++) {
+                    var key = name + ' // SOCIAL // ' + String(n).padStart(2, '0');
+                    var bucket = muxByKey[key] || [];
+                    // Prefer exact date match, fall back to any asset in that bucket
+                    var match = null;
+                    for (var ci = 0; ci < bucket.length; ci++) {
+                        var d = new Date(bucket[ci].created_at * 1000).toISOString().slice(0, 10);
+                        if (d === sessionDate) { match = bucket[ci]; break; }
+                    }
+                    if (!match && bucket.length) match = bucket[0];
+                    if (match) clips.push(match);
+                }
+                // Also include un-numbered // SOCIAL assets for this date
+                var baseKey = name + ' // SOCIAL';
+                var baseBucket = muxByKey[baseKey] || [];
+                for (var bi = 0; bi < baseBucket.length; bi++) {
+                    var bd = new Date(baseBucket[bi].created_at * 1000).toISOString().slice(0, 10);
+                    if (bd === sessionDate) clips.push(baseBucket[bi]);
+                }
+
+                // No clips yet — show the standard upload row
+                if (clips.length === 0) {
+                    var uid0 = name.replace(/[^A-Z0-9]/g, '_') + '_' + sessionDate + '_SOCIAL';
+                    return buildAssetRow(
+                        { type: 'SOCIAL', label: 'Social Pack Verticals', ext: '.MP4', icon: 'solar:iphone-bold', color: 'text-primary' },
+                        uid0, sessionName, sessionDate
+                    );
+                }
+
+                var isDark = document.documentElement.classList.contains('dark');
+                var accent = isDark ? '#39FF14' : '#F97316';
+
+                // Build comma-separated PID list for gallery URL
+                var allPids = [];
+                for (var pi = 0; pi < clips.length; pi++) {
+                    var cpid = clips[pi].playback_ids && clips[pi].playback_ids[0] ? clips[pi].playback_ids[0].id : null;
+                    if (cpid) allPids.push(cpid);
+                }
+                var galleryBase = '/player.html?socials=' + allPids.join(',') + '&title=' + encodeURIComponent(name + ' SOCIAL PACK');
+
+                var html = '';
+                html += '<div style="border-left:2px solid ' + accent + '" class="pl-16 pr-4 py-4">';
+                // Header row
+                html += '<div class="flex items-center justify-between mb-3">';
+                html += '<div class="flex items-center gap-3">';
+                html += '<div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border flex-shrink-0" style="border-color:' + accent + '80">';
+                html += '<iconify-icon icon="solar:iphone-bold" class="text-sm" style="color:' + accent + '"></iconify-icon>';
+                html += '</div>';
+                html += '<div>';
+                html += '<p class="text-[10px] font-bold text-zinc-300 uppercase">Social Pack Verticals</p>';
+                html += '<p class="text-[8px] font-mono uppercase tracking-widest" style="color:' + accent + '">' + clips.length + ' CLIPS — IN VAULT</p>';
+                html += '</div>';
+                html += '</div>';
+                html += '</div>';
+
+                // Horizontal scrollable strip — each thumbnail opens the full gallery at that index
+                html += '<div class="flex gap-2 overflow-x-auto" style="scrollbar-width:thin;scrollbar-color:#27272a transparent;padding-bottom:6px;">';
+
+                for (var i = 0; i < clips.length; i++) {
+                    var clip = clips[i];
+                    var pid = clip.playback_ids && clip.playback_ids[0] ? clip.playback_ids[0].id : null;
+                    var num = String(i + 1).padStart(2, '0');
+                    var thumbSrc = pid ? 'https://image.mux.com/' + pid + '/thumbnail.png?width=180&height=320&fit_mode=smartcrop&time=5' : '';
+                    var galleryUrl = galleryBase + '&active=' + i;
+
+                    html += '<div class="flex-shrink-0 flex flex-col items-center gap-1" style="width:72px">';
+                    html += '<div class="relative overflow-hidden rounded-md group/clip cursor-pointer w-full" style="aspect-ratio:9/16;background:#0a0a0a;border:1px solid #27272a;"' + (pid ? ' onclick="window.open(\'' + galleryUrl + '\',\'_blank\')"' : '') + '>';
+
+                    if (thumbSrc) {
+                        html += '<img src="' + thumbSrc + '" class="w-full h-full object-cover" loading="lazy" style="opacity:.85;">';
+                    } else {
+                        html += '<div class="w-full h-full flex items-center justify-center"><iconify-icon icon="solar:iphone-bold" class="text-zinc-700 text-lg"></iconify-icon></div>';
+                    }
+
+                    if (pid) {
+                        html += '<div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover/clip:opacity-100 transition-opacity" style="background:rgba(0,0,0,.55)">';
+                        html += '<div class="w-7 h-7 rounded-full flex items-center justify-center" style="background:' + accent + '">';
+                        html += '<iconify-icon icon="solar:play-bold" class="text-black" style="font-size:11px"></iconify-icon>';
+                        html += '</div>';
+                        html += '</div>';
+                    }
+
+                    html += '</div>';
+                    html += '<span class="text-[7px] font-mono text-zinc-600 uppercase">' + num + '</span>';
+                    html += '</div>';
+                }
+
+                html += '</div>';
+                html += '</div>';
                 return html;
             }
 
@@ -593,6 +712,8 @@
                                 }
                             }
                             html += buildThumbHtml(thumbAssets, uid, asset, artist.name, dateStr, masterAsset);
+                        } else if (asset.type === 'SOCIAL') {
+                            html += buildSocialStrip(artist.name, dateStr);
                         } else {
                             html += buildAssetRow(asset, uid, artist.name, dateStr);
                         }
@@ -639,7 +760,7 @@
 
             let muxAssets = [];
             try {
-                const res = await fetch('/api/list-assets');
+                const res = await fetch('/api/assets?t=' + Date.now());
                 const data = await res.json();
                 muxAssets = Array.isArray(data) ? data : (data.data || []);
             } catch (e) { alert('Failed to fetch assets'); return; }
@@ -841,12 +962,14 @@
                     bwBar.style.boxShadow = mbps >= 100 ? '0 0 10px #39FF14' : mbps >= 10 ? '0 0 10px #eab308' : '0 0 10px #ef4444';
                 }
 
-                // Local Storage
+                // MUX Storage
                 const nasVal = document.getElementById('nas-value');
                 const nasBar = document.getElementById('nas-bar');
-                if (nasVal && nasBar && data.diskPct != null) {
-                    const pct = data.diskPct;
-                    nasVal.textContent = pct.toFixed(2) + '%';
+                if (nasVal && nasBar && data.storageGB != null) {
+                    const gb = data.storageGB;
+                    const limitGB = data.storageLimitGB || 5000;
+                    nasVal.textContent = gb.toFixed(2) + ' GB';
+                    const pct = Math.min((gb / limitGB) * 100, 100);
                     nasBar.style.width = Math.max(pct, 0.3) + '%';
                     nasBar.style.background = pct >= 80 ? '#ef4444' : '#eab308';
                 }
@@ -859,6 +982,77 @@
         fetchLiveMetrics();
         fetchRecentUploads();
         fetchNextEvent();
+
+        // ── Pipeline progress polling ────────────────────────────────
+        var _pipelineTimer = null;
+
+        async function fetchPipelineStatus() {
+            var banner = document.getElementById('pipeline-banner');
+            if (!banner) return;
+            try {
+                var r = await fetch('/api/pipeline-status?t=' + Date.now(), { credentials: 'include' });
+                if (!r.ok) { console.warn('[Pipeline] status API returned', r.status); return; }
+                var jobs = await r.json();
+
+                // Only show jobs that are not yet done/error, or completed within last 30s
+                var active = jobs.filter(function(j) {
+                    if (j.status === 'done') return (Date.now() - (j.updatedAt || 0)) < 30000;
+                    if (j.status === 'error') return (Date.now() - (j.updatedAt || 0)) < 60000;
+                    return true;
+                });
+
+                if (active.length === 0) {
+                    banner.classList.add('hidden');
+                    banner.innerHTML = '';
+                    return;
+                }
+
+                banner.classList.remove('hidden');
+                var html = '';
+                active.forEach(function(job) {
+                    var pct = job.total > 0 ? Math.round((job.done / job.total) * 100) : 0;
+                    var barColor = job.status === 'done' ? '#39FF14' : job.status === 'error' ? '#ef4444' : '#39FF14';
+                    var statusLabel = {
+                        queued: 'QUEUED',
+                        waiting: 'WAITING FOR MUX',
+                        processing: 'GENERATING — ' + job.done + '/' + job.total + ' CLIPS',
+                        done: 'COMPLETE ✓',
+                        error: 'ERROR: ' + (job.error || 'see server logs')
+                    }[job.status] || job.status.toUpperCase();
+
+                    html += '<div class="space-y-2">';
+                    html += '<div class="flex items-center justify-between">';
+                    html += '<div class="flex items-center gap-2">';
+                    if (job.status === 'processing') {
+                        html += '<span class="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-pulse"></span>';
+                    }
+                    html += '<span class="text-[9px] font-mono font-bold uppercase tracking-[0.25em] text-white">' + job.artistName + '</span>';
+                    html += '</div>';
+                    html += '<span class="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">' + statusLabel + '</span>';
+                    html += '</div>';
+                    html += '<div class="w-full bg-white/5 h-[2px] rounded-full overflow-hidden">';
+                    html += '<div class="h-full transition-all duration-500 rounded-full" style="width:' + Math.max(pct, job.status === 'queued' ? 2 : 1) + '%;background:' + barColor + ';' + (job.status === 'processing' ? 'box-shadow:0 0 8px ' + barColor : '') + '"></div>';
+                    html += '</div>';
+                    html += '</div>';
+                });
+
+                // Header label
+                var processingCount = active.filter(function(j) { return j.status === 'processing' || j.status === 'waiting' || j.status === 'queued'; }).length;
+                if (processingCount > 0) {
+                    html = '<div class="text-[8px] font-mono text-zinc-600 uppercase tracking-[0.35em] mb-3">Social Clip Generation</div>' + html;
+                }
+
+                banner.innerHTML = html;
+            } catch (e) {}
+        }
+
+        function startPipelinePolling() {
+            fetchPipelineStatus();
+            if (_pipelineTimer) clearInterval(_pipelineTimer);
+            _pipelineTimer = setInterval(fetchPipelineStatus, 3000);
+        }
+
+        startPipelinePolling();
 
         async function fetchNextEvent() {
             const titleEl = document.getElementById('next-event-title');

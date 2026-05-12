@@ -1,9 +1,9 @@
-const CACHE = 'la-v1';
+const CACHE = 'la-v3';
+
+// Never cache auth-protected HTML pages
+const HTML_PAGES = ['/dashboard', '/dashboard.html', '/assets', '/assets.html', '/camera', '/camera.html', '/login', '/login.html'];
 
 const STATIC = [
-    '/dashboard.html',
-    '/camera.html',
-    '/assets.html',
     '/nav-component.js',
     '/styles/tailwind.css',
     '/styles/theme.css',
@@ -39,19 +39,9 @@ self.addEventListener('fetch', e => {
     // Never intercept API calls — always hit the network
     if (url.pathname.startsWith('/api/')) return;
 
-    // HTML navigation: network-first so updates land immediately; fall back to cache
-    if (request.mode === 'navigate') {
-        e.respondWith(
-            fetch(request)
-                .then(res => {
-                    const clone = res.clone();
-                    caches.open(CACHE).then(c => c.put(request, clone));
-                    return res;
-                })
-                .catch(() => caches.match(request).then(cached => cached || caches.match('/dashboard.html')))
-        );
-        return;
-    }
+    // HTML navigation: always go to network, never serve from cache
+    // This ensures the auth guard script is always the current version
+    if (request.mode === 'navigate') return;
 
     // Static assets: cache-first, update in background
     e.respondWith(

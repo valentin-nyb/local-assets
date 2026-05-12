@@ -119,15 +119,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     window.applyVenueName = function() {
         var name = window.getVenueName().toUpperCase();
-        var avatar = document.getElementById('venue-avatar');
         var breadcrumb = document.getElementById('venue-breadcrumb');
         var tier = document.getElementById('venue-tier');
-        if (avatar) avatar.textContent = name.charAt(0);
         if (breadcrumb) breadcrumb.textContent = name;
         if (tier) tier.textContent = 'Infrastructure Tier — ' + name;
         document.querySelectorAll('[data-venue-label]').forEach(function(el) {
             el.textContent = name;
         });
+        window._updateAuthAvatar();
     };
 
     window.openVenueEditor = function() {
@@ -199,5 +198,129 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    // ── Auth avatar (venue-avatar button, shared by all pages) ──────────
+    var _SESSION_MS = 10 * 60 * 1000;
+
+    window.LA_ADMIN_LOGOUT = function() {
+        localStorage.removeItem('la_admin');
+        var d = document.getElementById('la-auth-drop');
+        if (d) d.remove();
+        window.location.replace('/login.html');
+    };
+
+    function _getAdminSession() {
+        try {
+            var raw = localStorage.getItem('la_admin');
+            if (!raw) return null;
+            var d = JSON.parse(raw);
+            if (!d || !d.ts || Date.now() - d.ts > _SESSION_MS) return null;
+            return d;
+        } catch(e) { return null; }
+    }
+
+    function _sessionTimeStr(ts) {
+        var rem = Math.max(0, _SESSION_MS - (Date.now() - ts));
+        var s = Math.ceil(rem / 1000);
+        var m = Math.floor(s / 60);
+        var ss = s % 60;
+        return m + ':' + (ss < 10 ? '0' : '') + ss;
+    }
+
+    function _toggleAuthDrop(session, btn) {
+        var existing = document.getElementById('la-auth-drop');
+        if (existing) {
+            existing.remove();
+            if (window._authDropInterval) clearInterval(window._authDropInterval);
+            return;
+        }
+
+        var rect = btn.getBoundingClientRect();
+        var drop = document.createElement('div');
+        drop.id = 'la-auth-drop';
+        drop.style.cssText = [
+            'position:fixed',
+            'top:' + (rect.bottom + 8) + 'px',
+            'right:' + (window.innerWidth - rect.right) + 'px',
+            'background:#0a0a0a',
+            'border:1px solid #27272a',
+            'min-width:230px',
+            'z-index:99999',
+            'box-shadow:0 8px 40px rgba(0,0,0,0.95)',
+            'font-family:ui-monospace,monospace',
+        ].join(';');
+
+        var venue = (session.venue || localStorage.getItem('la_venue_name') || 'LOCAL / ASSETS').toUpperCase();
+
+        drop.innerHTML =
+            '<div style="padding:14px 16px;border-bottom:1px solid #27272a;">' +
+                '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#fff;margin-bottom:4px;">' + venue + '</div>' +
+                '<div style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#52525b;">' + (session.email || '') + '</div>' +
+            '</div>' +
+            '<div style="padding:10px 16px;border-bottom:1px solid #27272a;display:flex;align-items:center;justify-content:space-between;gap:12px;">' +
+                '<span style="font-size:8px;text-transform:uppercase;letter-spacing:.12em;color:#52525b;">Session expires</span>' +
+                '<span id="la-drop-timer" style="font-size:9px;color:#39FF14;letter-spacing:.08em;font-weight:700;">' + _sessionTimeStr(session.ts) + '</span>' +
+            '</div>' +
+            '<div style="padding:10px 16px;">' +
+                '<button onclick="window.LA_ADMIN_LOGOUT()" style="display:block;width:100%;padding:9px 0;background:#ef4444;color:#fff;font-family:inherit;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.15em;border:none;cursor:pointer;">SIGN OUT</button>' +
+            '</div>';
+
+        document.body.appendChild(drop);
+
+        window._authDropInterval = setInterval(function() {
+            var el = document.getElementById('la-drop-timer');
+            if (!el) { clearInterval(window._authDropInterval); return; }
+            var s2 = _getAdminSession();
+            if (!s2) { window.LA_ADMIN_LOGOUT(); return; }
+            el.textContent = _sessionTimeStr(s2.ts);
+        }, 1000);
+
+        setTimeout(function() {
+            document.addEventListener('click', function _closeHandler(e) {
+                var d = document.getElementById('la-auth-drop');
+                if (d && !d.contains(e.target) && e.target !== btn) {
+                    d.remove();
+                    clearInterval(window._authDropInterval);
+                    document.removeEventListener('click', _closeHandler);
+                }
+            });
+        }, 50);
+    }
+
+    window._updateAuthAvatar = function() {
+        var btn = document.getElementById('venue-avatar');
+        if (!btn) return;
+
+        var session = _getAdminSession();
+
+        if (!session) {
+            // Not logged in → "SIGN IN" pill
+            btn.style.cssText = 'width:auto;min-width:60px;height:28px;padding:0 10px;background:#18181b;border:1px solid #27272a;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;';
+            btn.innerHTML = '<span style="font-family:ui-monospace,monospace;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.15em;color:#71717a;">SIGN IN</span>';
+            btn.title = 'Sign in';
+            btn.onclick = function(e) { e.stopPropagation(); window.location.href = '/login.html'; };
+        } else {
+            // Logged in → profile photo (or initial fallback)
+            btn.style.cssText = 'width:32px;height:32px;border-radius:50%;overflow:visible;cursor:pointer;flex-shrink:0;position:relative;display:inline-flex;align-items:center;justify-content:center;';
+            btn.title = session.name || session.email || 'Account';
+
+            if (session.picture) {
+                btn.innerHTML = '<img src="' + session.picture + '" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid transparent;transition:border-color .2s;" alt="" ' +
+                    'onmouseover="this.style.borderColor=\'#39FF14\'" onmouseout="this.style.borderColor=\'transparent\'" ' +
+                    'onerror="this.parentElement.innerHTML=\'<span style=&quot;width:32px;height:32px;border-radius:50%;background:#27272a;display:inline-flex;align-items:center;justify-content:center;font-family:monospace;font-size:12px;font-weight:700;color:#fff;&quot;>' + (session.name || 'A').charAt(0).toUpperCase() + '</span>\'">';
+            } else {
+                btn.innerHTML = '<span style="width:32px;height:32px;border-radius:50%;background:#27272a;display:inline-flex;align-items:center;justify-content:center;font-family:monospace;font-size:12px;font-weight:700;color:#fff;">' + (session.name || 'A').charAt(0).toUpperCase() + '</span>';
+            }
+
+            btn.onclick = function(e) { e.stopPropagation(); _toggleAuthDrop(session, btn); };
+        }
+    };
+
     window.applyVenueName();
+
+    // Kick off an expiry watcher so the page redirects when session dies
+    setInterval(function() {
+        if (!_getAdminSession() && document.getElementById('venue-avatar')) {
+            window._updateAuthAvatar();
+        }
+    }, 15000);
 });

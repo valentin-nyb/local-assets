@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>local / assets™ — Sign In</title>
+    <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico">
+    <script>
+        // ?clear=1 — force sign out
+        if (new URLSearchParams(location.search).get('clear') === '1') {
+            localStorage.removeItem('la_admin');
+        }
+        // Already signed in — skip to destination
+        (function() {
+            try {
+                var d = JSON.parse(localStorage.getItem('la_admin') || 'null');
+                if (d && d.ts && Date.now() - d.ts < 600000) {
+                    var nx = new URLSearchParams(location.search).get('next') || '/dashboard.html';
+                    if (nx.startsWith('/')) window.location.replace(nx);
+                }
+            } catch(e) {}
+        })();
+    </script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body {
+            background: #000;
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'JetBrains Mono', ui-monospace, 'Courier New', monospace;
+            color: #fff;
+            -webkit-font-smoothing: antialiased;
+        }
+        .wrap {
+            width: 100%;
+            max-width: 380px;
+            padding: 0 24px;
+        }
+        .logo-mark {
+            font-size: 10px;
+            letter-spacing: 0.4em;
+            color: #39FF14;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .title {
+            font-size: 22px;
+            letter-spacing: -0.01em;
+            color: #fff;
+            font-weight: 700;
+            margin-bottom: 32px;
+            line-height: 1.2;
+        }
+        label {
+            display: block;
+            font-size: 9px;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: #52525b;
+            margin-bottom: 8px;
+        }
+        input[type="text"] {
+            display: block;
+            width: 100%;
+            background: #0a0a0a;
+            border: 1px solid #27272a;
+            color: #fff;
+            font-family: inherit;
+            font-size: 13px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            padding: 14px 16px;
+            outline: none;
+            margin-bottom: 24px;
+            transition: border-color .15s;
+            -webkit-appearance: none;
+        }
+        input[type="text"]::placeholder { color: #3f3f46; text-transform: none; letter-spacing: 0; }
+        input[type="text"]:focus { border-color: #39FF14; }
+        .g-btn-row {
+            display: flex;
+            justify-content: center;
+            min-height: 44px;
+            margin-bottom: 16px;
+        }
+        #status {
+            font-size: 9px;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            text-align: center;
+            min-height: 16px;
+            color: #52525b;
+        }
+        #status.err { color: #ef4444; }
+        .footer-note {
+            margin-top: 40px;
+            font-size: 8px;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: #1c1c1c;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <p class="logo-mark">local / assets™</p>
+        <h1 class="title">Sign in to<br>your workspace</h1>
+
+        <label for="venue-input">Venue / Organization</label>
+        <input type="text" id="venue-input" placeholder="e.g. FABRIC LONDON" autocomplete="organization" spellcheck="false">
+
+        <div class="g-btn-row">
+            <!-- Google Identity Services button — data-text="continue_with" shows "Continue with Google" -->
+            <div id="g_id_onload"
+                 data-client_id="892380654488-ro2ptu81b44vru1ahhfm9naku0ckvb9v.apps.googleusercontent.com"
+                 data-callback="handleCredentialResponse"
+                 data-auto_prompt="false"
+                 data-ux_mode="popup">
+            </div>
+            <div class="g_id_signin"
+                 data-type="standard"
+                 data-size="large"
+                 data-theme="filled_black"
+                 data-text="continue_with"
+                 data-shape="pill"
+                 data-logo_alignment="left"
+                 data-width="280">
+            </div>
+        </div>
+        <div id="status"></div>
+    </div>
+    <p class="footer-note">Unauthorized access is prohibited</p>
+
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script>
+        function setStatus(msg, cls) {
+            var el = document.getElementById('status');
+            el.textContent = msg;
+            el.className = cls || '';
+        }
+
+        async function handleCredentialResponse(response) {
+            // Venue is optional — default to empty string (can be set later)
+            var venue = (document.getElementById('venue-input').value || '').trim().toUpperCase();
+
+            setStatus('Verifying...', '');
+
+            try {
+                var res = await fetch('/api/admin-verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ credential: response.credential }),
+                });
+                var data = await res.json();
+
+                if (data.ok) {
+                    localStorage.setItem('la_admin', JSON.stringify({
+                        email:   data.email,
+                        name:    data.name,
+                        picture: data.picture,
+                        venue:   venue,
+                        ts:      Date.now(),
+                    }));
+                    // Also persist venue name for breadcrumb
+                    if (venue) localStorage.setItem('la_venue_name', venue);
+
+                    var next = new URLSearchParams(location.search).get('next') || '/dashboard.html';
+                    window.location.replace(next.startsWith('/') ? next : '/dashboard.html');
+                } else {
+                    setStatus(
+                        res.status === 403
+                            ? 'Access denied — account not authorized'
+                            : 'Authentication failed — try again',
+                        'err'
+                    );
+                }
+            } catch(e) {
+                setStatus('Network error — try again', 'err');
+            }
+        }
+    </script>
+</body>
+</html>

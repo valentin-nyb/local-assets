@@ -2,7 +2,7 @@
 <html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -18,51 +18,184 @@
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
     <style>
-        body { background: #050505; margin: 0; min-height: 100vh; display: flex; flex-direction: column; }
-        mux-player { --media-object-fit: contain; width: 100%; flex: 1; }
-        mux-player::part(gesture-layer) { background: transparent; }
+        :root {
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+        }
+        * { box-sizing: border-box; }
+        body {
+            background: #050505;
+            margin: 0;
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            color: white;
+            font-family: 'JetBrains Mono', ui-monospace, monospace;
+        }
+        header {
+            padding-top: max(env(safe-area-inset-top, 0px), 16px);
+            min-height: calc(env(safe-area-inset-top, 0px) + 60px);
+            flex-shrink: 0;
+        }
+        mux-player {
+            --media-object-fit: contain;
+            width: 100%;
+            height: 100%;
+        }
+        /* Social gallery filmstrip */
+        .filmstrip { scrollbar-width: thin; scrollbar-color: #27272a transparent; }
+        .filmstrip::-webkit-scrollbar { height: 4px; }
+        .filmstrip::-webkit-scrollbar-track { background: transparent; }
+        .filmstrip::-webkit-scrollbar-thumb { background: #27272a; border-radius: 2px; }
+        .clip-thumb { cursor: pointer; flex-shrink: 0; transition: transform .15s; }
+        .clip-thumb:hover { transform: scale(1.04); }
+        .clip-thumb.active { outline: 2px solid #39FF14; outline-offset: 2px; }
+        /* Download button shimmer on hover */
+        #download-link:hover { background: rgba(57,255,20,.08); }
     </style>
 </head>
-<body class="font-sans antialiased text-white">
+<body>
 
-    <header class="h-14 flex items-center px-6 border-b border-[#27272a] bg-[#050505] shrink-0 justify-between z-40">
-        <div class="flex items-center gap-3">
-            <a href="/dashboard.html" class="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                <iconify-icon icon="solar:alt-arrow-left-linear" class="text-zinc-500"></iconify-icon>
+    <header class="flex items-center px-5 md:px-8 border-b border-[#27272a] bg-[#050505] justify-between z-40" style="padding-left: max(env(safe-area-inset-left, 0px), 20px); padding-right: max(env(safe-area-inset-right, 0px), 20px);">
+        <div class="flex items-center gap-3 min-w-0">
+            <a href="javascript:history.back()" class="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0">
+                <iconify-icon icon="solar:alt-arrow-left-linear" class="text-zinc-500 text-lg"></iconify-icon>
                 <span class="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.3em]">BACK</span>
             </a>
             <span class="text-zinc-700 hidden md:inline">|</span>
             <span class="text-[10px] font-mono text-[#39FF14] uppercase tracking-[0.3em] font-bold hidden md:inline">local / assets™</span>
+            <span class="text-zinc-700 hidden md:inline">|</span>
+            <span id="asset-title" class="text-[10px] font-mono text-zinc-400 uppercase tracking-widest truncate hidden md:block"></span>
         </div>
-        <div class="flex items-center gap-4">
-            <span id="asset-title" class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest"></span>
-            <a id="download-link" href="#" download class="hidden items-center gap-1.5 px-3 py-1 rounded-full border border-[#39FF14]/30 hover:bg-[#39FF14]/10 transition-colors">
+        <div class="flex items-center gap-3 shrink-0">
+            <span id="asset-title-mobile" class="text-[10px] font-mono text-zinc-400 uppercase tracking-widest truncate max-w-[140px] md:hidden"></span>
+            <a id="download-link" href="#" download class="hidden items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#39FF14]/30 transition-colors">
                 <iconify-icon icon="solar:download-bold" class="text-[#39FF14] text-sm"></iconify-icon>
                 <span class="text-[8px] font-mono text-[#39FF14] uppercase tracking-widest">DOWNLOAD</span>
             </a>
         </div>
     </header>
 
-    <main id="player-container" class="flex-1 flex items-center justify-center p-4 md:p-8">
+    <main id="player-container" class="flex-1 flex flex-col items-center justify-center overflow-hidden" style="padding-bottom: env(safe-area-inset-bottom, 0px);">
     </main>
 
     <script>
-        const params = new URLSearchParams(window.location.search);
-        const pid = params.get('v');
-        const file = params.get('f');
-        const type = params.get('type');
-        const title = params.get('title');
+        const params  = new URLSearchParams(window.location.search);
+        const pid     = params.get('v');
+        const file    = params.get('f');
+        const type    = params.get('type');
+        const title   = params.get('title') ? decodeURIComponent(params.get('title')) : '';
+        const socialsParam = params.get('socials');
+        const activeIdx    = parseInt(params.get('active') || '0', 10);
+
         const container = document.getElementById('player-container');
-        const titleEl = document.getElementById('asset-title');
-        const dlLink = document.getElementById('download-link');
+        const titleEl   = document.getElementById('asset-title');
+        const titleMob  = document.getElementById('asset-title-mobile');
+        const dlLink    = document.getElementById('download-link');
 
-        if (title) titleEl.textContent = decodeURIComponent(title);
+        function setTitle(t) {
+            if (titleEl) titleEl.textContent = t;
+            if (titleMob) titleMob.textContent = t;
+        }
+        if (title) setTitle(title);
 
-        const thumbsPids = params.get('thumbs');
+        // ── SOCIAL GALLERY MODE ──────────────────────────────────────
+        if (socialsParam) {
+            const pids = socialsParam.split(',').filter(p => /^[a-zA-Z0-9_-]+$/.test(p));
+            if (!pids.length) {
+                container.innerHTML = '<p class="text-zinc-600 font-mono text-xs uppercase tracking-widest">NO CLIPS</p>';
+            } else {
+                setTitle((title || 'Social Pack') + ' — ' + pids.length + ' Clips');
+                let current = Math.min(activeIdx, pids.length - 1);
 
-        if (thumbsPids) {
-            // Thumbnail gallery mode — show all thumbnails in a grid
-            const pids = thumbsPids.split(',').filter(p => /^[a-zA-Z0-9_-]+$/.test(p));
+                container.style.justifyContent = 'flex-start';
+                container.style.padding = '0';
+
+                container.innerHTML = `
+                    <div id="social-wrap" class="w-full flex flex-col" style="height:100%;">
+                        <!-- Main player -->
+                        <div id="main-wrap" class="flex-1 flex items-center justify-center bg-black overflow-hidden" style="min-height:0;">
+                            <div id="main-player-slot" style="max-height:100%;aspect-ratio:9/16;position:relative;">
+                                <mux-player id="main-mux" stream-type="on-demand" accent-color="#39FF14" autoplay style="width:100%;height:100%;display:block;"></mux-player>
+                            </div>
+                        </div>
+                        <!-- Filmstrip -->
+                        <div class="bg-[#050505] border-t border-[#27272a] px-4 py-3" style="flex-shrink:0;">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-[8px] font-mono text-zinc-600 uppercase tracking-[0.3em]">
+                                    <span id="clip-label">Clip 01 / ${String(pids.length).padStart(2,'0')}</span>
+                                </span>
+                                <div class="flex items-center gap-2">
+                                    <button id="prev-btn" class="w-7 h-7 flex items-center justify-center rounded-full border border-[#27272a] hover:border-[#39FF14]/50 transition-colors disabled:opacity-30">
+                                        <iconify-icon icon="solar:alt-arrow-left-linear" class="text-zinc-400 text-sm"></iconify-icon>
+                                    </button>
+                                    <button id="next-btn" class="w-7 h-7 flex items-center justify-center rounded-full border border-[#27272a] hover:border-[#39FF14]/50 transition-colors disabled:opacity-30">
+                                        <iconify-icon icon="solar:alt-arrow-right-linear" class="text-zinc-400 text-sm"></iconify-icon>
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="filmstrip" class="filmstrip flex gap-2 overflow-x-auto pb-1">
+                                ${pids.map((p, i) => `
+                                    <div class="clip-thumb ${i === current ? 'active' : ''}" data-idx="${i}" style="width:52px;">
+                                        <div class="overflow-hidden rounded" style="aspect-ratio:9/16;background:#0a0a0a;">
+                                            <img src="https://image.mux.com/${p}/thumbnail.png?width=120&height=213&fit_mode=smartcrop&time=5"
+                                                 class="w-full h-full object-cover" loading="lazy" style="opacity:.8;">
+                                        </div>
+                                        <p class="text-[7px] font-mono text-center mt-1" style="color:${i === current ? '#39FF14' : '#52525b'}">${String(i+1).padStart(2,'0')}</p>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>`;
+
+                const muxEl = document.getElementById('main-mux');
+                const filmstrip = document.getElementById('filmstrip');
+                const clipLabel = document.getElementById('clip-label');
+                const prevBtn = document.getElementById('prev-btn');
+                const nextBtn = document.getElementById('next-btn');
+
+                function loadClip(idx) {
+                    current = Math.max(0, Math.min(pids.length - 1, idx));
+                    muxEl.setAttribute('playback-id', pids[current]);
+                    clipLabel.textContent = 'Clip ' + String(current + 1).padStart(2, '0') + ' / ' + String(pids.length).padStart(2, '0');
+                    prevBtn.disabled = current === 0;
+                    nextBtn.disabled = current === pids.length - 1;
+
+                    // Update filmstrip highlights
+                    filmstrip.querySelectorAll('.clip-thumb').forEach(function(el) {
+                        const i = parseInt(el.dataset.idx);
+                        el.classList.toggle('active', i === current);
+                        el.querySelector('p').style.color = i === current ? '#39FF14' : '#52525b';
+                    });
+
+                    // Scroll filmstrip to keep active clip visible
+                    const activeThumb = filmstrip.querySelector('.clip-thumb.active');
+                    if (activeThumb) activeThumb.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                }
+
+                filmstrip.addEventListener('click', function(e) {
+                    const thumb = e.target.closest('.clip-thumb');
+                    if (thumb) loadClip(parseInt(thumb.dataset.idx));
+                });
+                prevBtn.addEventListener('click', function() { loadClip(current - 1); });
+                nextBtn.addEventListener('click', function() { loadClip(current + 1); });
+
+                // Keyboard nav
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') loadClip(current + 1);
+                    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   loadClip(current - 1);
+                });
+
+                loadClip(current);
+            }
+
+        // ── THUMBNAIL GALLERY MODE ───────────────────────────────────
+        } else if (params.get('thumbs')) {
+            const pids = params.get('thumbs').split(',').filter(p => /^[a-zA-Z0-9_-]+$/.test(p));
+            setTitle((title || 'Thumbnails') + ' — ' + pids.length + ' images');
+            container.style.alignItems = 'flex-start';
+            container.style.paddingTop = '2rem';
             let gridHtml = '<div class="w-full max-w-6xl px-4">';
             gridHtml += '<p class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-4">' + pids.length + ' THUMBNAIL' + (pids.length !== 1 ? 'S' : '') + '</p>';
             gridHtml += '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">';
@@ -78,13 +211,12 @@
             }
             gridHtml += '</div></div>';
             container.innerHTML = gridHtml;
-            container.style.alignItems = 'flex-start';
-            container.style.paddingTop = '2rem';
-            // Attach click handlers via event delegation
             container.addEventListener('click', function(e) {
                 const card = e.target.closest('[data-pid]');
                 if (card) downloadThumbBlob(card.dataset.pid, parseInt(card.dataset.idx));
             });
+
+        // ── SINGLE THUMB MODE ────────────────────────────────────────
         } else if (!pid) {
             container.innerHTML = '<p class="text-zinc-600 font-mono text-xs uppercase tracking-widest">NO ASSET SPECIFIED</p>';
         } else if (type === 'thumb') {
@@ -93,30 +225,33 @@
             dlLink.href = imgUrl;
             dlLink.classList.remove('hidden');
             dlLink.classList.add('flex');
+
+        // ── FILE / AUDIO / VIDEO MODE ────────────────────────────────
         } else if (file) {
             const streamUrl = 'https://stream.mux.com/' + pid + '/' + file;
             const ext = file.split('.').pop().toLowerCase();
-
             if (ext === 'm4a' || ext === 'wav' || ext === 'mp3') {
                 container.innerHTML = `
-                    <div class="w-full max-w-lg text-center space-y-6">
+                    <div class="w-full max-w-lg text-center space-y-6 px-6">
                         <div class="w-24 h-24 mx-auto bg-[#0a0a0a] border border-[#27272a] rounded-2xl flex items-center justify-center">
                             <iconify-icon icon="solar:music-note-bold" class="text-[#39FF14] text-3xl"></iconify-icon>
                         </div>
-                        <audio controls autoplay class="w-full" style="filter: hue-rotate(90deg) brightness(1.2);">
+                        <audio controls autoplay class="w-full" style="filter:hue-rotate(90deg) brightness(1.2);">
                             <source src="${streamUrl}" type="audio/${ext === 'm4a' ? 'mp4' : ext}">
                         </audio>
                     </div>`;
             } else {
-                container.innerHTML = '<mux-player playback-id="' + pid + '" stream-type="on-demand" accent-color="#39FF14" autoplay></mux-player>';
+                container.innerHTML = '<mux-player playback-id="' + pid + '" stream-type="on-demand" accent-color="#39FF14" autoplay style="width:100%;height:100%;"></mux-player>';
             }
-
             dlLink.href = streamUrl;
             dlLink.classList.remove('hidden');
             dlLink.classList.add('flex');
+
+        // ── PLAIN PLAYBACK ID ────────────────────────────────────────
         } else {
-            container.innerHTML = '<mux-player playback-id="' + pid + '" stream-type="on-demand" accent-color="#39FF14" autoplay></mux-player>';
+            container.innerHTML = '<mux-player playback-id="' + pid + '" stream-type="on-demand" accent-color="#39FF14" autoplay style="width:100%;height:100%;"></mux-player>';
         }
+
         function downloadThumbBlob(pid, idx) {
             const url = 'https://image.mux.com/' + pid + '/thumbnail.png?width=1920';
             fetch(url).then(r => r.blob()).then(blob => {
