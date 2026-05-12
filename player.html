@@ -19,73 +19,235 @@
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
     <style>
         :root {
-            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-top:    env(safe-area-inset-top,    0px);
             --safe-bottom: env(safe-area-inset-bottom, 0px);
+            --safe-left:   env(safe-area-inset-left,   0px);
+            --safe-right:  env(safe-area-inset-right,  0px);
         }
         * { box-sizing: border-box; }
+        html, body {
+            height: 100%; height: 100dvh;
+            overflow: hidden;
+        }
         body {
             background: #050505;
             margin: 0;
-            min-height: 100vh;
-            min-height: 100dvh;
             display: flex;
             flex-direction: column;
             color: white;
             font-family: 'JetBrains Mono', ui-monospace, monospace;
         }
-        header {
-            padding-top: max(env(safe-area-inset-top, 0px), 16px);
-            min-height: calc(env(safe-area-inset-top, 0px) + 60px);
+
+        /* ── Header ── */
+        #site-header {
             flex-shrink: 0;
+            padding-top:   max(var(--safe-top),   14px);
+            padding-left:  max(var(--safe-left),  20px);
+            padding-right: max(var(--safe-right),  20px);
+            padding-bottom: 14px;
+            border-bottom: 1px solid #27272a;
+            background: #050505;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 40;
+            min-height: calc(var(--safe-top) + 52px);
         }
+
+        /* ── Mux player base ── */
         mux-player {
             --media-object-fit: contain;
-            width: 100%;
+            width:  100%;
             height: 100%;
+            display: block;
         }
-        /* Social gallery filmstrip */
-        .filmstrip { scrollbar-width: thin; scrollbar-color: #27272a transparent; }
-        .filmstrip::-webkit-scrollbar { height: 4px; }
-        .filmstrip::-webkit-scrollbar-track { background: transparent; }
-        .filmstrip::-webkit-scrollbar-thumb { background: #27272a; border-radius: 2px; }
-        .clip-thumb { cursor: pointer; flex-shrink: 0; transition: transform .15s; }
-        .clip-thumb:hover { transform: scale(1.04); }
-        .clip-thumb.active { outline: 2px solid #39FF14; outline-offset: 2px; }
-        /* Download button shimmer on hover */
+
+        /* ── Social gallery layout ── */
+        #social-wrap {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Video area */
+        #main-area {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+            overflow: hidden;
+            padding: 12px 8px 8px;
+        }
+
+        /*
+         * 9:16 slot:
+         *   Desktop — max 400px wide (phone-screen feel), never stretched
+         *   Mobile  — fills available height (full screen), video centered
+         */
+        #main-player-slot {
+            width: 100%;
+            max-width: 400px;
+            aspect-ratio: 9 / 16;
+            max-height: 100%;
+            position: relative;
+            background: #000;
+        }
+
+        /* Below-video info bar */
+        #clip-info-bar {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 16px;
+            background: #050505;
+            gap: 12px;
+        }
+        #clip-name-label {
+            font-size: 9px;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: #a1a1aa;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+        }
+        #clip-dl-btn {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border: 1px solid rgba(57,255,20,.35);
+            border-radius: 20px;
+            background: transparent;
+            color: #39FF14;
+            font-family: inherit;
+            font-size: 8px;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background .15s;
+            text-decoration: none;
+        }
+        #clip-dl-btn:hover { background: rgba(57,255,20,.07); }
+
+        /* Navigation + filmstrip strip */
+        #nav-strip {
+            flex-shrink: 0;
+            background: #050505;
+            border-top: 1px solid #27272a;
+            padding: 10px 16px;
+            padding-bottom: max(10px, var(--safe-bottom));
+        }
+        #nav-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .nav-arrow {
+            width: 34px; height: 34px;
+            border: 1px solid #27272a;
+            border-radius: 50%;
+            background: transparent;
+            color: #a1a1aa;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: border-color .15s, color .15s;
+            flex-shrink: 0;
+        }
+        .nav-arrow:hover:not(:disabled) { border-color: rgba(57,255,20,.5); color: #39FF14; }
+        .nav-arrow:disabled { opacity: 0.25; cursor: default; }
+        #clip-counter {
+            font-size: 10px;
+            letter-spacing: 0.28em;
+            text-transform: uppercase;
+            color: #a1a1aa;
+            text-align: center;
+        }
+
+        /* Filmstrip */
+        #filmstrip {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            padding-bottom: 2px;
+            scrollbar-width: thin;
+            scrollbar-color: #27272a transparent;
+        }
+        #filmstrip::-webkit-scrollbar { height: 3px; }
+        #filmstrip::-webkit-scrollbar-track { background: transparent; }
+        #filmstrip::-webkit-scrollbar-thumb { background: #27272a; border-radius: 2px; }
+        .clip-thumb {
+            flex-shrink: 0;
+            width: 44px;
+            cursor: pointer;
+            transition: transform .12s;
+        }
+        .clip-thumb:hover { transform: scale(1.06); }
+        .clip-thumb-img {
+            aspect-ratio: 9/16;
+            background: #0a0a0a;
+            overflow: hidden;
+            border-radius: 4px;
+            border: 1.5px solid transparent;
+            transition: border-color .12s;
+        }
+        .clip-thumb.active .clip-thumb-img { border-color: #39FF14; }
+        .clip-thumb img { width: 100%; height: 100%; object-fit: cover; opacity: .75; display: block; }
+        .clip-thumb-num {
+            font-size: 7px;
+            font-family: 'JetBrains Mono', ui-monospace, monospace;
+            text-align: center;
+            margin-top: 3px;
+            color: #52525b;
+            transition: color .12s;
+        }
+        .clip-thumb.active .clip-thumb-num { color: #39FF14; }
+
+        /* Download button shimmer on hover (single-video mode) */
         #download-link:hover { background: rgba(57,255,20,.08); }
     </style>
 </head>
 <body>
 
-    <header class="flex items-center px-5 md:px-8 border-b border-[#27272a] bg-[#050505] justify-between z-40" style="padding-left: max(env(safe-area-inset-left, 0px), 20px); padding-right: max(env(safe-area-inset-right, 0px), 20px);">
+    <header id="site-header">
         <div class="flex items-center gap-3 min-w-0">
             <a href="javascript:history.back()" class="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0">
-                <iconify-icon icon="solar:alt-arrow-left-linear" class="text-zinc-500 text-lg"></iconify-icon>
-                <span class="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.3em]">BACK</span>
+                <iconify-icon icon="solar:alt-arrow-left-linear" style="color:#71717a;font-size:18px;"></iconify-icon>
+                <span style="font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:#71717a;">BACK</span>
             </a>
-            <span class="text-zinc-700 hidden md:inline">|</span>
-            <span class="text-[10px] font-mono text-[#39FF14] uppercase tracking-[0.3em] font-bold hidden md:inline">local / assets™</span>
-            <span class="text-zinc-700 hidden md:inline">|</span>
-            <span id="asset-title" class="text-[10px] font-mono text-zinc-400 uppercase tracking-widest truncate hidden md:block"></span>
+            <span style="color:#3f3f46;" class="hidden md:inline">|</span>
+            <span style="font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:#39FF14;font-weight:700;" class="hidden md:inline">local / assets™</span>
+            <span style="color:#3f3f46;" class="hidden md:inline">|</span>
+            <span id="asset-title" style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#71717a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" class="hidden md:block"></span>
         </div>
         <div class="flex items-center gap-3 shrink-0">
-            <span id="asset-title-mobile" class="text-[10px] font-mono text-zinc-400 uppercase tracking-widest truncate max-w-[140px] md:hidden"></span>
+            <span id="asset-title-mobile" style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#71717a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px;" class="md:hidden"></span>
             <a id="download-link" href="#" download class="hidden items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#39FF14]/30 transition-colors">
-                <iconify-icon icon="solar:download-bold" class="text-[#39FF14] text-sm"></iconify-icon>
-                <span class="text-[8px] font-mono text-[#39FF14] uppercase tracking-widest">DOWNLOAD</span>
+                <iconify-icon icon="solar:download-bold" style="color:#39FF14;font-size:14px;"></iconify-icon>
+                <span style="font-size:8px;letter-spacing:.18em;text-transform:uppercase;color:#39FF14;">DOWNLOAD</span>
             </a>
         </div>
     </header>
 
-    <main id="player-container" class="flex-1 flex flex-col items-center justify-center overflow-hidden" style="padding-bottom: env(safe-area-inset-bottom, 0px);">
+    <main id="player-container" class="flex-1 flex flex-col items-center justify-center overflow-hidden" style="padding-bottom:var(--safe-bottom);">
     </main>
 
     <script>
-        const params  = new URLSearchParams(window.location.search);
-        const pid     = params.get('v');
-        const file    = params.get('f');
-        const type    = params.get('type');
-        const title   = params.get('title') ? decodeURIComponent(params.get('title')) : '';
+        const params       = new URLSearchParams(window.location.search);
+        const pid          = params.get('v');
+        const file         = params.get('f');
+        const type         = params.get('type');
+        const title        = params.get('title') ? decodeURIComponent(params.get('title')) : '';
         const socialsParam = params.get('socials');
         const activeIdx    = parseInt(params.get('active') || '0', 10);
 
@@ -95,81 +257,107 @@
         const dlLink    = document.getElementById('download-link');
 
         function setTitle(t) {
-            if (titleEl) titleEl.textContent = t;
+            if (titleEl)  titleEl.textContent  = t;
             if (titleMob) titleMob.textContent = t;
+            document.title = 'local / assets™ — ' + t;
         }
         if (title) setTitle(title);
 
-        // ── SOCIAL GALLERY MODE ──────────────────────────────────────
+        // ── SOCIAL GALLERY MODE ──────────────────────────────────────────
         if (socialsParam) {
             const pids = socialsParam.split(',').filter(p => /^[a-zA-Z0-9_-]+$/.test(p));
+
             if (!pids.length) {
-                container.innerHTML = '<p class="text-zinc-600 font-mono text-xs uppercase tracking-widest">NO CLIPS</p>';
+                container.innerHTML = '<p style="font-size:11px;font-family:monospace;text-transform:uppercase;letter-spacing:.2em;color:#52525b;">NO CLIPS</p>';
             } else {
-                setTitle((title || 'Social Pack') + ' — ' + pids.length + ' Clips');
+                const totalStr = String(pids.length);
+                setTitle((title || 'Social Pack') + ' — ' + totalStr + ' CLIPS');
+
                 let current = Math.min(activeIdx, pids.length - 1);
 
-                container.style.justifyContent = 'flex-start';
-                container.style.padding = '0';
+                // Remove default flex centering — social layout manages itself
+                container.style.display    = 'block';
+                container.style.padding    = '0';
+                container.style.overflow   = 'hidden';
+                container.style.flex       = '1';
+                container.style.minHeight  = '0';
 
                 container.innerHTML = `
-                    <div id="social-wrap" class="w-full flex flex-col" style="height:100%;">
-                        <!-- Main player -->
-                        <div id="main-wrap" class="flex-1 flex items-center justify-center bg-black overflow-hidden" style="min-height:0;">
-                            <div id="main-player-slot" style="max-height:100%;aspect-ratio:9/16;position:relative;">
-                                <mux-player id="main-mux" stream-type="on-demand" accent-color="#39FF14" autoplay style="width:100%;height:100%;display:block;"></mux-player>
-                            </div>
-                        </div>
-                        <!-- Filmstrip -->
-                        <div class="bg-[#050505] border-t border-[#27272a] px-4 py-3" style="flex-shrink:0;">
-                            <div class="flex items-center justify-between mb-2">
-                                <span class="text-[8px] font-mono text-zinc-600 uppercase tracking-[0.3em]">
-                                    <span id="clip-label">Clip 01 / ${String(pids.length).padStart(2,'0')}</span>
-                                </span>
-                                <div class="flex items-center gap-2">
-                                    <button id="prev-btn" class="w-7 h-7 flex items-center justify-center rounded-full border border-[#27272a] hover:border-[#39FF14]/50 transition-colors disabled:opacity-30">
-                                        <iconify-icon icon="solar:alt-arrow-left-linear" class="text-zinc-400 text-sm"></iconify-icon>
-                                    </button>
-                                    <button id="next-btn" class="w-7 h-7 flex items-center justify-center rounded-full border border-[#27272a] hover:border-[#39FF14]/50 transition-colors disabled:opacity-30">
-                                        <iconify-icon icon="solar:alt-arrow-right-linear" class="text-zinc-400 text-sm"></iconify-icon>
-                                    </button>
-                                </div>
-                            </div>
-                            <div id="filmstrip" class="filmstrip flex gap-2 overflow-x-auto pb-1">
-                                ${pids.map((p, i) => `
-                                    <div class="clip-thumb ${i === current ? 'active' : ''}" data-idx="${i}" style="width:52px;">
-                                        <div class="overflow-hidden rounded" style="aspect-ratio:9/16;background:#0a0a0a;">
-                                            <img src="https://image.mux.com/${p}/thumbnail.png?width=120&height=213&fit_mode=smartcrop&time=5"
-                                                 class="w-full h-full object-cover" loading="lazy" style="opacity:.8;">
-                                        </div>
-                                        <p class="text-[7px] font-mono text-center mt-1" style="color:${i === current ? '#39FF14' : '#52525b'}">${String(i+1).padStart(2,'0')}</p>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    </div>`;
+                <div id="social-wrap">
 
-                const muxEl = document.getElementById('main-mux');
-                const filmstrip = document.getElementById('filmstrip');
-                const clipLabel = document.getElementById('clip-label');
-                const prevBtn = document.getElementById('prev-btn');
-                const nextBtn = document.getElementById('next-btn');
+                    <!-- 9:16 video area -->
+                    <div id="main-area">
+                        <div id="main-player-slot">
+                            <mux-player id="main-mux"
+                                stream-type="on-demand"
+                                accent-color="#39FF14"
+                                autoplay>
+                            </mux-player>
+                        </div>
+                    </div>
+
+                    <!-- Clip name + download -->
+                    <div id="clip-info-bar">
+                        <span id="clip-name-label"></span>
+                        <button id="clip-dl-btn">
+                            <iconify-icon icon="solar:download-bold" style="font-size:13px;"></iconify-icon>
+                            DOWNLOAD
+                        </button>
+                    </div>
+
+                    <!-- Navigation + filmstrip -->
+                    <div id="nav-strip">
+                        <div id="nav-row">
+                            <button id="prev-btn" class="nav-arrow">
+                                <iconify-icon icon="solar:alt-arrow-left-linear" style="font-size:16px;"></iconify-icon>
+                            </button>
+                            <span id="clip-counter">CLIP 1 / ${totalStr}</span>
+                            <button id="next-btn" class="nav-arrow">
+                                <iconify-icon icon="solar:alt-arrow-right-linear" style="font-size:16px;"></iconify-icon>
+                            </button>
+                        </div>
+                        <div id="filmstrip">
+                            ${pids.map((p, i) => `
+                                <div class="clip-thumb${i === current ? ' active' : ''}" data-idx="${i}">
+                                    <div class="clip-thumb-img">
+                                        <img src="https://image.mux.com/${p}/thumbnail.png?width=120&height=213&fit_mode=smartcrop&time=5" loading="lazy" alt="Clip ${i+1}">
+                                    </div>
+                                    <div class="clip-thumb-num">${String(i+1).padStart(2,'0')}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>`;
+
+                const muxEl       = document.getElementById('main-mux');
+                const filmstrip   = document.getElementById('filmstrip');
+                const clipCounter = document.getElementById('clip-counter');
+                const clipName    = document.getElementById('clip-name-label');
+                const prevBtn     = document.getElementById('prev-btn');
+                const nextBtn     = document.getElementById('next-btn');
+                const dlBtn       = document.getElementById('clip-dl-btn');
+                const baseTitle   = (title || 'CLIP').toUpperCase();
 
                 function loadClip(idx) {
                     current = Math.max(0, Math.min(pids.length - 1, idx));
+
                     muxEl.setAttribute('playback-id', pids[current]);
-                    clipLabel.textContent = 'Clip ' + String(current + 1).padStart(2, '0') + ' / ' + String(pids.length).padStart(2, '0');
+                    clipCounter.textContent = 'CLIP ' + (current + 1) + ' / ' + pids.length;
+                    clipName.textContent    = baseTitle + ' — CLIP ' + String(current + 1).padStart(2, '0');
                     prevBtn.disabled = current === 0;
                     nextBtn.disabled = current === pids.length - 1;
 
-                    // Update filmstrip highlights
+                    // Download URL for this clip
+                    const dlUrl = 'https://stream.mux.com/' + pids[current] + '/highest.mp4';
+                    dlBtn.onclick = function() { downloadClip(dlUrl, current); };
+
+                    // Update filmstrip
                     filmstrip.querySelectorAll('.clip-thumb').forEach(function(el) {
-                        const i = parseInt(el.dataset.idx);
-                        el.classList.toggle('active', i === current);
-                        el.querySelector('p').style.color = i === current ? '#39FF14' : '#52525b';
+                        const active = parseInt(el.dataset.idx) === current;
+                        el.classList.toggle('active', active);
                     });
 
-                    // Scroll filmstrip to keep active clip visible
+                    // Scroll active thumb into view
                     const activeThumb = filmstrip.querySelector('.clip-thumb.active');
                     if (activeThumb) activeThumb.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
                 }
@@ -183,19 +371,19 @@
 
                 // Keyboard nav
                 document.addEventListener('keydown', function(e) {
-                    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') loadClip(current + 1);
-                    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   loadClip(current - 1);
+                    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); loadClip(current + 1); }
+                    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   { e.preventDefault(); loadClip(current - 1); }
                 });
 
                 loadClip(current);
             }
 
-        // ── THUMBNAIL GALLERY MODE ───────────────────────────────────
+        // ── THUMBNAIL GALLERY MODE ───────────────────────────────────────
         } else if (params.get('thumbs')) {
             const pids = params.get('thumbs').split(',').filter(p => /^[a-zA-Z0-9_-]+$/.test(p));
             setTitle((title || 'Thumbnails') + ' — ' + pids.length + ' images');
-            container.style.alignItems = 'flex-start';
-            container.style.paddingTop = '2rem';
+            container.style.alignItems  = 'flex-start';
+            container.style.paddingTop  = '2rem';
             let gridHtml = '<div class="w-full max-w-6xl px-4">';
             gridHtml += '<p class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-4">' + pids.length + ' THUMBNAIL' + (pids.length !== 1 ? 'S' : '') + '</p>';
             gridHtml += '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">';
@@ -216,7 +404,7 @@
                 if (card) downloadThumbBlob(card.dataset.pid, parseInt(card.dataset.idx));
             });
 
-        // ── SINGLE THUMB MODE ────────────────────────────────────────
+        // ── SINGLE THUMB MODE ────────────────────────────────────────────
         } else if (!pid) {
             container.innerHTML = '<p class="text-zinc-600 font-mono text-xs uppercase tracking-widest">NO ASSET SPECIFIED</p>';
         } else if (type === 'thumb') {
@@ -226,7 +414,7 @@
             dlLink.classList.remove('hidden');
             dlLink.classList.add('flex');
 
-        // ── FILE / AUDIO / VIDEO MODE ────────────────────────────────
+        // ── FILE / AUDIO / VIDEO MODE ────────────────────────────────────
         } else if (file) {
             const streamUrl = 'https://stream.mux.com/' + pid + '/' + file;
             const ext = file.split('.').pop().toLowerCase();
@@ -247,9 +435,23 @@
             dlLink.classList.remove('hidden');
             dlLink.classList.add('flex');
 
-        // ── PLAIN PLAYBACK ID ────────────────────────────────────────
+        // ── PLAIN PLAYBACK ID ─────────────────────────────────────────────
         } else {
             container.innerHTML = '<mux-player playback-id="' + pid + '" stream-type="on-demand" accent-color="#39FF14" autoplay style="width:100%;height:100%;"></mux-player>';
+        }
+
+        function downloadClip(url, idx) {
+            // Try fetch → blob for forced download; fall back to opening in new tab
+            fetch(url)
+                .then(function(r) { return r.blob(); })
+                .then(function(blob) {
+                    var a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = (title || 'Clip').replace(/[^a-z0-9 _-]/gi, '') + '_' + String(idx + 1).padStart(2, '0') + '.mp4';
+                    a.click();
+                    setTimeout(function() { URL.revokeObjectURL(a.href); }, 10000);
+                })
+                .catch(function() { window.open(url, '_blank'); });
         }
 
         function downloadThumbBlob(pid, idx) {
