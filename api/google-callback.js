@@ -1,6 +1,6 @@
 import { createClient } from 'redis';
 import crypto from 'crypto';
-import { findVenueByEmail, getVenuesConfig } from './_venues.js';
+import { findVenueByEmail } from './_venues.js';
 
 const REDIRECT_URI = 'https://local-assets.com/api/google-callback';
 
@@ -77,25 +77,17 @@ export default async function handler(req, res) {
 
     // ── Web (website admin) flow ──────────────────────────────────────────────
     if (mode === 'web') {
-      // If VENUES_CONFIG is populated, use it as the sole allowlist.
-      // Otherwise fall back to ADMIN_EMAILS (legacy / open-access).
-      const venueEntry = findVenueByEmail(email);
-      const venuesConfigured = Object.keys(getVenuesConfig()).length > 0;
-
-      if (venuesConfigured && !venueEntry) {
+      // ADMIN_EMAILS is the sole access gate (empty = allow everyone).
+      // VENUES_CONFIG is used only for role + venue assignment, never for blocking.
+      const allowed = (process.env.ADMIN_EMAILS || '')
+        .split(',').map(e => e.toLowerCase().trim()).filter(Boolean);
+      if (allowed.length > 0 && !allowed.includes(email)) {
         res.writeHead(302, { Location: '/login.html?err=not_allowed' });
         return res.end();
       }
 
-      if (!venuesConfigured) {
-        const allowed = (process.env.ADMIN_EMAILS || '')
-          .split(',').map(e => e.toLowerCase().trim()).filter(Boolean);
-        if (allowed.length > 0 && !allowed.includes(email)) {
-          res.writeHead(302, { Location: '/login.html?err=not_allowed' });
-          return res.end();
-        }
-      }
-
+      // Look up role and venue from VENUES_CONFIG (best-effort, no blocking)
+      const venueEntry = findVenueByEmail(email);
       const role = venueEntry?.role || 'admin';
       const assignedVenue = (venueEntry?.name || '').toUpperCase();
 
