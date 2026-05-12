@@ -303,7 +303,10 @@
             const storagePercent = (totalBytes / (50 * 1024 * 1024 * 1024 * 1024)) * 100;
             const bar = document.getElementById('storage-bar');
             if (bar) bar.style.width = Math.max(storagePercent, 0.5) + '%';
-            updateNasStorage(totalBytes);
+            const nasVal = document.getElementById('nas-value');
+            const nasBar = document.getElementById('nas-bar');
+            if (nasVal) nasVal.textContent = totalStorageGB + ' GB';
+            if (nasBar) nasBar.style.width = Math.max(storagePercent, 0.5) + '%';
 
             // Build a lookup: passthrough (uppercase) → array of assets
             const muxByKey = {};
