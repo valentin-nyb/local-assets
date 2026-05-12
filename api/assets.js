@@ -27,16 +27,7 @@ export default async function handler(req, res) {
       }
       const { data } = await r.json();
       if (!data || data.length === 0) break;
-      for (const a of data) {
-        assets.push({
-          id:          a.id,
-          status:      a.status,
-          duration:    a.duration || 0,
-          passthrough: a.passthrough || '',
-          playbackId:  a.playback_ids?.[0]?.id || '',
-          createdAt:   a.created_at,
-        });
-      }
+      assets.push(...data);
       if (data.length < 100) break;
       page++;
     }

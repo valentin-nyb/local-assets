@@ -216,7 +216,7 @@
 
         // Handle both direct arrays and Mux's data wrapper — video only, master long form only
         const assets = (Array.isArray(data) ? data : (data.data || [])).filter(a =>
-            a.tracks?.some(t => t.type === 'video') &&
+            (!a.tracks || a.tracks.some(t => t.type === 'video')) &&
             (!a.passthrough || !a.passthrough.includes(' // '))
         );
 
