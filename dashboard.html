@@ -259,15 +259,23 @@
 
             // Fetch existing Mux assets to match against sessions
             let muxAssets = [];
+            let fetchError = null;
             try {
                 const res = await fetch('/api/assets?t=' + Date.now());
+                const data = await res.json();
                 if (res.ok) {
-                    const data = await res.json();
                     muxAssets = Array.isArray(data) ? data : (data.data || []);
                 } else {
-                    console.warn('[list-assets] HTTP', res.status, await res.text().catch(() => ''));
+                    fetchError = data?.error || ('HTTP ' + res.status);
                 }
-            } catch (e) { /* continue without linked assets */ }
+            } catch (e) {
+                fetchError = e.message;
+            }
+
+            if (fetchError) {
+                container.innerHTML = `<div class="p-8 text-center"><p class="text-[10px] font-mono text-red-500 uppercase tracking-widest">API ERROR — ${fetchError}</p></div>`;
+                return;
+            }
 
             // Update real asset count and 30-day growth %
             const totalEl = document.getElementById('live-asset-total');
@@ -337,7 +345,8 @@
                 var pt = a.passthrough.toUpperCase().trim();
                 var artistName = pt.split(' // ')[0];
                 var dateMatch = pt.match(/D:(\d{4}-\d{2}-\d{2})/);
-                var dateStr = dateMatch ? dateMatch[1] : new Date(a.created_at * 1000).toISOString().slice(0, 10);
+                var tsMs = Number(a.created_at) * 1000;
+                var dateStr = dateMatch ? dateMatch[1] : (isNaN(tsMs) ? '1970-01-01' : new Date(tsMs).toISOString().slice(0, 10));
                 if (!artistMap[artistName]) artistMap[artistName] = {};
                 if (!artistMap[artistName][dateStr]) artistMap[artistName][dateStr] = true;
             }
