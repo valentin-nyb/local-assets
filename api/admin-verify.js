@@ -1,3 +1,5 @@
+import { findVenueByEmail } from './_venues.js';
+
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return res.status(405).end();
@@ -31,13 +33,23 @@ export default async function handler(req, res) {
   const email = (payload.email || '').toLowerCase().trim();
   if (!email) return res.status(401).json({ error: 'No email in token' });
 
-  // Check against allowed email list
+  const venueEntry = findVenueByEmail(email);
   const allowed = (process.env.ADMIN_EMAILS || '')
-    .split(',')
-    .map(e => e.toLowerCase().trim())
-    .filter(Boolean);
+    .split(',').map(e => e.toLowerCase().trim()).filter(Boolean);
 
-  if (allowed.length > 0 && !allowed.includes(email)) {
+  // Allowed if: ADMIN_EMAILS is empty, OR email is in ADMIN_EMAILS,
+  // OR email is in VENUES_CONFIG.
+  const isAllowed = allowed.length === 0 || allowed.includes(email) || venueEntry !== null;
+
+  console.error('[admin-verify] login attempt', {
+    email,
+    adminEmailsRaw: process.env.ADMIN_EMAILS || '(empty)',
+    allowedList: allowed,
+    foundInVenuesConfig: !!venueEntry,
+    isAllowed,
+  });
+
+  if (!isAllowed) {
     return res.status(403).json({ error: 'not_allowed' });
   }
 

@@ -77,17 +77,28 @@ export default async function handler(req, res) {
 
     // ── Web (website admin) flow ──────────────────────────────────────────────
     if (mode === 'web') {
-      // ADMIN_EMAILS is the sole access gate (empty = allow everyone).
-      // VENUES_CONFIG is used only for role + venue assignment, never for blocking.
+      const venueEntry = findVenueByEmail(email);
       const allowed = (process.env.ADMIN_EMAILS || '')
         .split(',').map(e => e.toLowerCase().trim()).filter(Boolean);
-      if (allowed.length > 0 && !allowed.includes(email)) {
+
+      // Allowed if: ADMIN_EMAILS is empty (open), OR email is in ADMIN_EMAILS,
+      // OR email is in VENUES_CONFIG (venue users are always allowed).
+      const isAllowed = allowed.length === 0 || allowed.includes(email) || venueEntry !== null;
+
+      console.error('[google-callback] web login attempt', {
+        email,
+        adminEmailsRaw: process.env.ADMIN_EMAILS || '(empty)',
+        allowedList: allowed,
+        foundInVenuesConfig: !!venueEntry,
+        venueSlug: venueEntry?.slug || null,
+        isAllowed,
+      });
+
+      if (!isAllowed) {
         res.writeHead(302, { Location: '/login.html?err=not_allowed' });
         return res.end();
       }
 
-      // Look up role and venue from VENUES_CONFIG (best-effort, no blocking)
-      const venueEntry = findVenueByEmail(email);
       const role = venueEntry?.role || 'admin';
       const assignedVenue = (venueEntry?.name || '').toUpperCase();
 
