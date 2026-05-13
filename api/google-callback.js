@@ -77,27 +77,18 @@ export default async function handler(req, res) {
 
     // ── Web (website admin) flow ──────────────────────────────────────────────
     if (mode === 'web') {
+      // No email gate — anyone who completes Google OAuth can sign in.
+      // VENUES_CONFIG assigns role + Mux credentials; ADMIN_EMAILS is ignored here.
       const venueEntry = findVenueByEmail(email);
-      const allowed = (process.env.ADMIN_EMAILS || '')
-        .split(',').map(e => e.toLowerCase().trim()).filter(Boolean);
 
-      // Allowed if: ADMIN_EMAILS is empty (open), OR email is in ADMIN_EMAILS,
-      // OR email is in VENUES_CONFIG (venue users are always allowed).
-      const isAllowed = allowed.length === 0 || allowed.includes(email) || venueEntry !== null;
-
-      console.error('[google-callback] web login attempt', {
+      console.error('[google-callback] web login', JSON.stringify({
         email,
-        adminEmailsRaw: process.env.ADMIN_EMAILS || '(empty)',
-        allowedList: allowed,
-        foundInVenuesConfig: !!venueEntry,
-        venueSlug: venueEntry?.slug || null,
-        isAllowed,
-      });
-
-      if (!isAllowed) {
-        res.writeHead(302, { Location: '/login.html?err=not_allowed' });
-        return res.end();
-      }
+        ADMIN_EMAILS_raw:   process.env.ADMIN_EMAILS   ?? '(not set)',
+        VENUES_CONFIG_raw:  process.env.VENUES_CONFIG  ?? '(not set)',
+        foundInVenues:      !!venueEntry,
+        venueSlug:          venueEntry?.slug ?? null,
+        role:               venueEntry?.role ?? 'admin (default)',
+      }));
 
       const role = venueEntry?.role || 'admin';
       const assignedVenue = (venueEntry?.name || '').toUpperCase();
