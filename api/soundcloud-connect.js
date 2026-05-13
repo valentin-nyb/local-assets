@@ -37,5 +37,5 @@ export default async function handler(req, res) {
     state,
   });
 
-  res.redirect(`https://soundcloud.com/connect?${params}`);
+  res.redirect(`https://secure.soundcloud.com/authorize?${params}`);
 }
