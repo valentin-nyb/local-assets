@@ -113,16 +113,22 @@ document.addEventListener("DOMContentLoaded", () => {
         return localStorage.getItem('la_venue_name') || DEFAULT_VENUE;
     };
 
-    // Fetch client profile and use name as venue label
-    fetch('/api/client-profile', { credentials: 'include' })
-        .then(function(r) { return r.ok ? r.json() : null; })
-        .then(function(profile) {
-            if (profile && profile.name) {
-                localStorage.setItem('la_venue_name', profile.name.toUpperCase());
-                window.applyVenueName();
-            }
-        })
-        .catch(function() {});
+    // Fetch client profile for cookie-session users only.
+    // Admin users authenticate via webToken (localStorage) — skip this call for them.
+    var _adminToken = (function() {
+        try { var a = JSON.parse(localStorage.getItem('la_admin') || '{}'); return a.webToken || ''; } catch(e) { return ''; }
+    })();
+    if (!_adminToken) {
+        fetch('/api/client-profile', { credentials: 'include' })
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(profile) {
+                if (profile && profile.name) {
+                    localStorage.setItem('la_venue_name', profile.name.toUpperCase());
+                    window.applyVenueName();
+                }
+            })
+            .catch(function() {});
+    }
 
     window.applyVenueName = function() {
         var name = window.getVenueName().toUpperCase();
