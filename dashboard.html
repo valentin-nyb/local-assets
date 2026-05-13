@@ -156,29 +156,28 @@
                     <div class="w-full bg-white/5 h-1 mt-4 rounded-full overflow-hidden"><div id="storage-bar" class="bg-primary h-full w-[0%]"></div></div>
                 </div>
                 <div class="bg-card border border-border p-5 rounded-xl">
-                    <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3 block">Revenue Generated</span>
-                    <div class="flex flex-col items-start gap-1 mb-3">
-                        <span id="revenue-total" class="text-2xl font-bold leading-tight">—</span>
-                    </div>
-                    <div class="flex flex-col gap-1.5">
-                        <!-- YouTube row -->
-                        <button id="yt-connect-btn" onclick="connectYouTube(this)" class="rev-btn">
-                            <iconify-icon icon="mdi:youtube" style="color:#FF0000;font-size:11px;flex-shrink:0"></iconify-icon>
-                            <span>Connect YouTube</span>
+                    <div class="flex items-start justify-between mb-3">
+                        <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Revenue Generated</span>
+                        <button onclick="openRevenueSettings()" title="Connect platforms" class="text-zinc-600 hover:text-white transition-colors -mt-0.5">
+                            <iconify-icon icon="solar:settings-linear" style="font-size:13px"></iconify-icon>
                         </button>
-                        <span id="yt-connected-pill" class="rev-pill hidden">
-                            <iconify-icon icon="mdi:youtube" style="color:#39FF14;font-size:11px;flex-shrink:0"></iconify-icon>
+                    </div>
+                    <span id="revenue-total" class="text-2xl font-bold leading-tight block mb-3">—</span>
+                    <!-- Platform row: shown when ≥1 connected -->
+                    <div id="revenue-indicators" class="hidden items-center gap-2.5">
+                        <span id="yt-indicator" class="hidden items-center gap-1 text-[9px] font-mono text-zinc-400 uppercase tracking-wider">
+                            <iconify-icon icon="mdi:youtube" style="color:#FF0000;font-size:10px;flex-shrink:0"></iconify-icon>
                             <span id="yt-revenue-label">£0.00</span>
                         </span>
-                        <!-- SoundCloud row -->
-                        <button id="sc-connect-btn" onclick="connectSoundCloud(this)" class="rev-btn">
-                            <iconify-icon icon="mdi:soundcloud" style="color:#FF5500;font-size:12px;flex-shrink:0"></iconify-icon>
-                            <span>Connect SoundCloud</span>
-                        </button>
-                        <span id="sc-connected-pill" class="rev-pill hidden">
-                            <iconify-icon icon="mdi:soundcloud" style="color:#39FF14;font-size:12px;flex-shrink:0"></iconify-icon>
+                        <span id="rev-divider" class="hidden text-zinc-700 text-[8px] font-mono">|</span>
+                        <span id="sc-indicator" class="hidden items-center gap-1 text-[9px] font-mono text-zinc-400 uppercase tracking-wider">
+                            <iconify-icon icon="mdi:soundcloud" style="color:#FF5500;font-size:11px;flex-shrink:0"></iconify-icon>
                             <span id="sc-revenue-label">0 plays</span>
                         </span>
+                    </div>
+                    <!-- Connect prompt: shown when nothing connected -->
+                    <div id="revenue-connect-prompt">
+                        <button onclick="openRevenueSettings()" class="text-[9px] font-mono text-zinc-600 hover:text-zinc-300 transition-colors uppercase tracking-wider">— connect platforms</button>
                     </div>
                 </div>
                 <div id="next-event-card" class="bg-card border border-border p-5 rounded-xl relative overflow-hidden">
@@ -288,20 +287,27 @@
         // Parses Mux passthrough — handles JSON {artist,date,camera}, legacy "ARTIST // TYPE" strings,
         // and falls back to the Mux asset name field for uploads with no passthrough.
         function parsePassthrough(pt, assetName, assetId) {
-            if (pt) {
+            // Guard: passthrough may arrive as an already-parsed object
+            if (pt && typeof pt === 'object') {
+                if (pt.artist) return pt;
+                pt = null; // object but no artist field — treat as missing
+            }
+            if (pt && typeof pt === 'string' && pt.trim()) {
                 try { var o = JSON.parse(pt); if (o && o.artist) return o; } catch(e) {}
                 var upper = pt.toUpperCase().trim();
-                return { artist: upper.split(' // ')[0], date: null, camera: null };
+                // Ignore sentinel values written by old upload code
+                if (upper !== 'SESSION_ARCHIVE' && upper !== 'UNKNOWN') {
+                    return { artist: upper.split(' // ')[0].split(' — ')[0].trim(), date: null, camera: null };
+                }
             }
-            // No passthrough — try Mux name field (format: "ARTIST — DATE")
-            if (assetName) {
-                var nameUpper = assetName.toUpperCase().trim();
-                var artistPart = nameUpper.split(' — ')[0].trim();
-                if (artistPart) return { artist: artistPart, date: null, camera: null };
+            // Try Mux name field — set as "ARTIST — DATE" or "ARTIST — DATE"
+            if (assetName && typeof assetName === 'string') {
+                var n = assetName.toUpperCase().trim();
+                var ap = (n.split(' — ')[0] || n.split(' - ')[0] || n).trim();
+                if (ap && ap !== 'SESSION_ARCHIVE') return { artist: ap, date: null, camera: null };
             }
-            // Final fallback: use last 8 chars of asset ID so asset is always shown
-            if (assetId) return { artist: assetId.slice(-8).toUpperCase(), date: null, camera: null };
-            return null;
+            // Last resort: show "UNTITLED" rather than a hex ID
+            return { artist: 'UNTITLED', date: null, camera: null };
         }
 
         async function fetchRecentUploads() {
@@ -1068,54 +1074,73 @@
         }
 
         function renderRevenue(data) {
-            var totalEl      = document.getElementById('revenue-total');
-            var ytBtn        = document.getElementById('yt-connect-btn');
-            var scBtn        = document.getElementById('sc-connect-btn');
-            var ytPill       = document.getElementById('yt-connected-pill');
-            var scPill       = document.getElementById('sc-connected-pill');
-            var ytLabel      = document.getElementById('yt-revenue-label');
-            var scLabel      = document.getElementById('sc-revenue-label');
-            var ytConnected  = data.yt?.connected;
-            var scConnected  = data.sc?.connected;
-            var ytRevenue    = Number(data.yt?.revenue) || 0;
-            var scRevenue    = Number(data.sc?.estimatedRevenue) || 0;
-            var total        = ytRevenue + scRevenue;
+            var totalEl       = document.getElementById('revenue-total');
+            var indicators    = document.getElementById('revenue-indicators');
+            var connectPrompt = document.getElementById('revenue-connect-prompt');
+            var ytIndicator   = document.getElementById('yt-indicator');
+            var scIndicator   = document.getElementById('sc-indicator');
+            var revDivider    = document.getElementById('rev-divider');
+            var ytLabel       = document.getElementById('yt-revenue-label');
+            var scLabel       = document.getElementById('sc-revenue-label');
+            var ytModalBtn    = document.getElementById('yt-modal-btn');
+            var scModalBtn    = document.getElementById('sc-modal-btn');
+            var ytModalConn   = document.getElementById('yt-modal-connected');
+            var scModalConn   = document.getElementById('sc-modal-connected');
 
-            if (totalEl) totalEl.textContent = (ytConnected || scConnected) ? '£' + total.toFixed(2) : '—';
+            var ytConnected = data.yt?.connected;
+            var scConnected = data.sc?.connected;
+            var ytRevenue   = Number(data.yt?.revenue) || 0;
+            var scRevenue   = Number(data.sc?.estimatedRevenue) || 0;
+            var total       = ytRevenue + scRevenue;
+            var anyConnected = ytConnected || scConnected;
 
-            // YouTube
-            if (ytBtn)  ytBtn.classList.toggle('hidden', !!ytConnected);
-            if (ytPill) ytPill.classList.toggle('hidden', !ytConnected);
-            if (ytLabel && ytConnected) {
-                var views = data.yt?.views ? ' · ' + Number(data.yt.views).toLocaleString() + ' views' : '';
-                ytLabel.textContent = '£' + ytRevenue.toFixed(2) + views;
-            }
+            if (totalEl)       totalEl.textContent = anyConnected ? '£' + total.toFixed(2) : '—';
+            if (indicators)    { indicators.classList.toggle('hidden', !anyConnected); if (anyConnected) indicators.classList.add('flex'); }
+            if (connectPrompt) connectPrompt.classList.toggle('hidden', !!anyConnected);
 
-            // SoundCloud
-            if (scBtn)  scBtn.classList.toggle('hidden', !!scConnected);
-            if (scPill) scPill.classList.toggle('hidden', !scConnected);
-            if (scLabel && scConnected) {
-                var plays = Number(data.sc?.plays || 0).toLocaleString();
-                scLabel.textContent = plays + ' plays · est. £' + scRevenue.toFixed(2);
-            }
+            // YouTube indicator
+            if (ytIndicator) { ytIndicator.classList.toggle('hidden', !ytConnected); if (ytConnected) ytIndicator.classList.add('flex'); }
+            if (ytLabel && ytConnected)
+                ytLabel.textContent = '£' + ytRevenue.toFixed(2) + (data.yt?.views ? ' · ' + Number(data.yt.views).toLocaleString() + ' views' : '');
+
+            // SoundCloud indicator
+            if (scIndicator) { scIndicator.classList.toggle('hidden', !scConnected); if (scConnected) scIndicator.classList.add('flex'); }
+            if (scLabel && scConnected)
+                scLabel.textContent = Number(data.sc?.plays || 0).toLocaleString() + ' plays';
+
+            // Divider only when both connected
+            if (revDivider) revDivider.classList.toggle('hidden', !(ytConnected && scConnected));
+
+            // Modal state
+            if (ytModalBtn)  ytModalBtn.classList.toggle('hidden', !!ytConnected);
+            if (ytModalConn) ytModalConn.classList.toggle('hidden', !ytConnected);
+            if (scModalBtn)  scModalBtn.classList.toggle('hidden', !!scConnected);
+            if (scModalConn) scModalConn.classList.toggle('hidden', !scConnected);
+        }
+
+        function openRevenueSettings() {
+            var m = document.getElementById('revenue-modal');
+            if (m) { m.classList.remove('hidden'); m.classList.add('flex'); }
+        }
+        function closeRevenueSettings() {
+            var m = document.getElementById('revenue-modal');
+            if (m) { m.classList.add('hidden'); m.classList.remove('flex'); }
         }
 
         async function connectYouTube(btn) {
-            var span = btn && btn.querySelector('span');
-            if (span) span.textContent = 'Connecting...';
+            if (btn) { btn.disabled = true; btn.textContent = 'Connecting…'; }
             try {
                 const { authUrl } = await laFetch('/api/youtube-auth').then(r => r.json());
                 if (authUrl) window.location.href = authUrl;
-            } catch(e) { if (span) span.textContent = 'Connect YouTube'; }
+            } catch(e) { if (btn) { btn.disabled = false; btn.textContent = 'Connect'; } }
         }
 
         async function connectSoundCloud(btn) {
-            var span = btn && btn.querySelector('span');
-            if (span) span.textContent = 'Connecting...';
+            if (btn) { btn.disabled = true; btn.textContent = 'Connecting…'; }
             try {
                 const { authUrl } = await laFetch('/api/soundcloud-auth').then(r => r.json());
                 if (authUrl) window.location.href = authUrl;
-            } catch(e) { if (span) span.textContent = 'Connect SoundCloud'; }
+            } catch(e) { if (btn) { btn.disabled = false; btn.textContent = 'Connect'; } }
         }
 
         // Bust revenue cache if returning from an OAuth connect flow
@@ -1443,5 +1468,36 @@
             });
         }
     </script>
+
+    <!-- Revenue connect modal -->
+    <div id="revenue-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeRevenueSettings()"></div>
+        <div class="relative bg-[#0a0a0a] border border-[#27272a] rounded-2xl p-6 w-72 max-w-[90vw] shadow-2xl">
+            <div class="flex items-center justify-between mb-5">
+                <span class="text-[9px] font-mono text-zinc-500 uppercase tracking-[0.2em]">Connect Platforms</span>
+                <button onclick="closeRevenueSettings()" class="text-zinc-600 hover:text-white transition-colors">
+                    <iconify-icon icon="solar:close-circle-linear" style="font-size:15px"></iconify-icon>
+                </button>
+            </div>
+            <div class="flex flex-col gap-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                        <iconify-icon icon="mdi:youtube" style="color:#FF0000;font-size:20px;flex-shrink:0"></iconify-icon>
+                        <span class="text-[11px] font-mono text-white uppercase tracking-wider">YouTube</span>
+                    </div>
+                    <button id="yt-modal-btn" onclick="connectYouTube(this)" class="rev-btn">Connect</button>
+                    <span id="yt-modal-connected" class="hidden text-[9px] font-mono text-primary uppercase tracking-wider">✓ Connected</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                        <iconify-icon icon="mdi:soundcloud" style="color:#FF5500;font-size:20px;flex-shrink:0"></iconify-icon>
+                        <span class="text-[11px] font-mono text-white uppercase tracking-wider">SoundCloud</span>
+                    </div>
+                    <button id="sc-modal-btn" onclick="connectSoundCloud(this)" class="rev-btn">Connect</button>
+                    <span id="sc-modal-connected" class="hidden text-[9px] font-mono text-primary uppercase tracking-wider">✓ Connected</span>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

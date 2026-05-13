@@ -237,15 +237,23 @@
 
         function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
         function parsePT(pt, assetName) {
-            if (pt) {
+            if (pt && typeof pt === 'object') {
+                if (pt.artist) return pt;
+                pt = null;
+            }
+            if (pt && typeof pt === 'string' && pt.trim()) {
                 try { const o = JSON.parse(pt); if (o && o.artist) return o; } catch(e) {}
-                return { artist: pt.toUpperCase().trim().split(' // ')[0], date: null, camera: null };
+                const upper = pt.toUpperCase().trim();
+                if (upper !== 'SESSION_ARCHIVE' && upper !== 'UNKNOWN') {
+                    return { artist: upper.split(' // ')[0].split(' — ')[0].trim(), date: null, camera: null };
+                }
             }
-            if (assetName) {
-                const a = assetName.toUpperCase().trim().split(' — ')[0].trim();
-                if (a) return { artist: a, date: null, camera: null };
+            if (assetName && typeof assetName === 'string') {
+                const n = assetName.toUpperCase().trim();
+                const ap = (n.split(' — ')[0] || n.split(' - ')[0] || n).trim();
+                if (ap && ap !== 'SESSION_ARCHIVE') return { artist: ap, date: null, camera: null };
             }
-            return null;
+            return null; // assets.html uses asset.id.slice(-6) as fallback inline
         }
 
         list.innerHTML = assets.map((asset, i) => {
