@@ -4,15 +4,17 @@ import crypto from 'crypto';
 
 export function getVenuesConfig() {
   const raw = process.env.VENUES_CONFIG || '{}';
-  try {
-    return JSON.parse(raw);
-  } catch (e1) {
-    // Vercel may URL-encode the value when special chars (+ /) are present — try decoding first
-    try {
-      return JSON.parse(decodeURIComponent(raw));
-    } catch (e2) {
-      console.error('[_venues] VENUES_CONFIG parse failed (raw):', e1.message, '| decoded:', e2.message, '| raw (first 300):', raw.slice(0, 300));
-      return {};
+  console.log('[_venues] VENUES_CONFIG raw (first 500):', raw.slice(0, 500));
+
+  // 1. Direct parse
+  try { return JSON.parse(raw); } catch (e1) {
+    // 2. Escape bare + before parsing (Vercel may leave + unencoded, breaking JSON strings)
+    try { return JSON.parse(raw.replace(/\+/g, '%2B')); } catch (e2) {
+      // 3. Full URL-decode then parse
+      try { return JSON.parse(decodeURIComponent(raw)); } catch (e3) {
+        console.error('[_venues] VENUES_CONFIG parse failed — raw:', e1.message, '| +escape:', e2.message, '| decoded:', e3.message);
+        return {};
+      }
     }
   }
 }
