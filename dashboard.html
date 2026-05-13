@@ -52,6 +52,9 @@
         .bg-scanlines { background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.2) 50%, rgba(0, 0, 0, 0.2)); background-size: 100% 4px; }
         ::-webkit-scrollbar { display: none; }
         .session-group + .session-group { border-top: 1px solid rgba(39, 39, 42, 0.15); }
+        .rev-btn { display:inline-flex;align-items:center;gap:5px;padding:3px 10px 3px 7px;border-radius:9999px;border:1px solid #27272a;background:transparent;color:#666;font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;transition:border-color .15s,color .15s,background .15s; }
+        .rev-btn:hover { border-color:#39FF14;color:#fff; }
+        .rev-pill { display:inline-flex;align-items:center;gap:5px;padding:3px 9px 3px 6px;border-radius:9999px;border:1px solid rgba(57,255,20,.25);background:rgba(57,255,20,.04);color:#39FF14;font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em; }
         
         /* Mobile Overlay Fix */
         @media (max-width: 767px) { 
@@ -154,13 +157,28 @@
                 </div>
                 <div class="bg-card border border-border p-5 rounded-xl">
                     <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3 block">Revenue Generated</span>
-                    <div class="flex flex-col items-start gap-1">
+                    <div class="flex flex-col items-start gap-1 mb-3">
                         <span id="revenue-total" class="text-2xl font-bold leading-tight">—</span>
-                        <span id="revenue-breakdown" class="text-[9px] font-mono text-zinc-500 uppercase tracking-wider hidden"></span>
                     </div>
-                    <div id="revenue-connect" class="hidden mt-3 flex flex-col gap-1.5">
-                        <button id="yt-connect-btn" onclick="connectYouTube(this)" class="text-[9px] font-mono uppercase tracking-wider px-2 py-1 rounded border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors text-left">+ Connect YouTube</button>
-                        <button id="sc-connect-btn" onclick="connectSoundCloud(this)" class="text-[9px] font-mono uppercase tracking-wider px-2 py-1 rounded border border-orange-500/30 text-orange-400 hover:bg-orange-500/10 transition-colors text-left">+ Connect SoundCloud</button>
+                    <div class="flex flex-col gap-1.5">
+                        <!-- YouTube row -->
+                        <button id="yt-connect-btn" onclick="connectYouTube(this)" class="rev-btn">
+                            <iconify-icon icon="mdi:youtube" style="color:#FF0000;font-size:11px;flex-shrink:0"></iconify-icon>
+                            <span>Connect YouTube</span>
+                        </button>
+                        <span id="yt-connected-pill" class="rev-pill hidden">
+                            <iconify-icon icon="mdi:youtube" style="color:#39FF14;font-size:11px;flex-shrink:0"></iconify-icon>
+                            <span id="yt-revenue-label">£0.00</span>
+                        </span>
+                        <!-- SoundCloud row -->
+                        <button id="sc-connect-btn" onclick="connectSoundCloud(this)" class="rev-btn">
+                            <iconify-icon icon="mdi:soundcloud" style="color:#FF5500;font-size:12px;flex-shrink:0"></iconify-icon>
+                            <span>Connect SoundCloud</span>
+                        </button>
+                        <span id="sc-connected-pill" class="rev-pill hidden">
+                            <iconify-icon icon="mdi:soundcloud" style="color:#39FF14;font-size:12px;flex-shrink:0"></iconify-icon>
+                            <span id="sc-revenue-label">0 plays</span>
+                        </span>
                     </div>
                 </div>
                 <div id="next-event-card" class="bg-card border border-border p-5 rounded-xl relative overflow-hidden">
@@ -1050,43 +1068,54 @@
         }
 
         function renderRevenue(data) {
-            var totalEl    = document.getElementById('revenue-total');
-            var breakdownEl = document.getElementById('revenue-breakdown');
-            var connectEl  = document.getElementById('revenue-connect');
-            var ytBtn      = document.getElementById('yt-connect-btn');
-            var scBtn      = document.getElementById('sc-connect-btn');
-            var ytConnected = data.yt?.connected;
-            var scConnected = data.sc?.connected;
-            var ytRevenue   = Number(data.yt?.revenue) || 0;
-            var scRevenue   = Number(data.sc?.estimatedRevenue) || 0;
-            var total       = ytRevenue + scRevenue;
+            var totalEl      = document.getElementById('revenue-total');
+            var ytBtn        = document.getElementById('yt-connect-btn');
+            var scBtn        = document.getElementById('sc-connect-btn');
+            var ytPill       = document.getElementById('yt-connected-pill');
+            var scPill       = document.getElementById('sc-connected-pill');
+            var ytLabel      = document.getElementById('yt-revenue-label');
+            var scLabel      = document.getElementById('sc-revenue-label');
+            var ytConnected  = data.yt?.connected;
+            var scConnected  = data.sc?.connected;
+            var ytRevenue    = Number(data.yt?.revenue) || 0;
+            var scRevenue    = Number(data.sc?.estimatedRevenue) || 0;
+            var total        = ytRevenue + scRevenue;
 
             if (totalEl) totalEl.textContent = (ytConnected || scConnected) ? '£' + total.toFixed(2) : '—';
 
-            var parts = [];
-            if (ytConnected) parts.push('YT: £' + ytRevenue.toFixed(2) + (data.yt.views ? ' · ' + Number(data.yt.views).toLocaleString() + ' views' : ''));
-            if (scConnected) parts.push('SC: ' + Number(data.sc.plays || 0).toLocaleString() + ' plays · est. £' + scRevenue.toFixed(2));
-            if (breakdownEl && parts.length) { breakdownEl.textContent = parts.join(' | '); breakdownEl.classList.remove('hidden'); }
+            // YouTube
+            if (ytBtn)  ytBtn.classList.toggle('hidden', !!ytConnected);
+            if (ytPill) ytPill.classList.toggle('hidden', !ytConnected);
+            if (ytLabel && ytConnected) {
+                var views = data.yt?.views ? ' · ' + Number(data.yt.views).toLocaleString() + ' views' : '';
+                ytLabel.textContent = '£' + ytRevenue.toFixed(2) + views;
+            }
 
-            if (ytBtn) ytBtn.classList.toggle('hidden', !!ytConnected);
-            if (scBtn) scBtn.classList.toggle('hidden', !!scConnected);
-            if (connectEl) connectEl.classList.toggle('hidden', !!(ytConnected && scConnected));
+            // SoundCloud
+            if (scBtn)  scBtn.classList.toggle('hidden', !!scConnected);
+            if (scPill) scPill.classList.toggle('hidden', !scConnected);
+            if (scLabel && scConnected) {
+                var plays = Number(data.sc?.plays || 0).toLocaleString();
+                scLabel.textContent = plays + ' plays · est. £' + scRevenue.toFixed(2);
+            }
         }
 
         async function connectYouTube(btn) {
-            if (btn) btn.textContent = 'CONNECTING...';
+            var span = btn && btn.querySelector('span');
+            if (span) span.textContent = 'Connecting...';
             try {
                 const { authUrl } = await laFetch('/api/youtube-auth').then(r => r.json());
                 if (authUrl) window.location.href = authUrl;
-            } catch(e) { if (btn) btn.textContent = '+ Connect YouTube'; }
+            } catch(e) { if (span) span.textContent = 'Connect YouTube'; }
         }
 
         async function connectSoundCloud(btn) {
-            if (btn) btn.textContent = 'CONNECTING...';
+            var span = btn && btn.querySelector('span');
+            if (span) span.textContent = 'Connecting...';
             try {
                 const { authUrl } = await laFetch('/api/soundcloud-auth').then(r => r.json());
                 if (authUrl) window.location.href = authUrl;
-            } catch(e) { if (btn) btn.textContent = '+ Connect SoundCloud'; }
+            } catch(e) { if (span) span.textContent = 'Connect SoundCloud'; }
         }
 
         // Bust revenue cache if returning from an OAuth connect flow
