@@ -155,8 +155,12 @@
                 <div class="bg-card border border-border p-5 rounded-xl">
                     <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3 block">Revenue Generated</span>
                     <div class="flex flex-col items-start gap-1">
-                        <span class="text-2xl font-bold leading-tight">£4,250.00</span>
-                        <span class="text-[10px] text-primary font-mono bg-primary/10 px-2 py-0.5 rounded border border-primary/20 leading-none">+24%</span>
+                        <span id="revenue-total" class="text-2xl font-bold leading-tight">—</span>
+                        <span id="revenue-breakdown" class="text-[9px] font-mono text-zinc-500 uppercase tracking-wider hidden"></span>
+                    </div>
+                    <div id="revenue-connect" class="hidden mt-3 flex flex-col gap-1.5">
+                        <button id="yt-connect-btn" onclick="connectYouTube(this)" class="text-[9px] font-mono uppercase tracking-wider px-2 py-1 rounded border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors text-left">+ Connect YouTube</button>
+                        <button id="sc-connect-btn" onclick="connectSoundCloud(this)" class="text-[9px] font-mono uppercase tracking-wider px-2 py-1 rounded border border-orange-500/30 text-orange-400 hover:bg-orange-500/10 transition-colors text-left">+ Connect SoundCloud</button>
                     </div>
                 </div>
                 <div id="next-event-card" class="bg-card border border-border p-5 rounded-xl relative overflow-hidden">
@@ -1025,6 +1029,76 @@
                 }
             } catch (e) {}
         }
+
+        // ── Revenue (YouTube Analytics + SoundCloud plays) ──────────────
+        async function fetchRevenue() {
+            const CACHE_KEY = 'la_revenue_cache';
+            const CACHE_TTL = 24 * 60 * 60 * 1000;
+            try {
+                const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+                if (cached && Date.now() - cached.ts < CACHE_TTL) { renderRevenue(cached.data); return; }
+            } catch(e) {}
+            try {
+                const [yt, sc] = await Promise.all([
+                    laFetch('/api/youtube-revenue').then(r => r.json()).catch(() => ({ connected: false, revenue: 0, views: 0 })),
+                    laFetch('/api/soundcloud-revenue').then(r => r.json()).catch(() => ({ connected: false, plays: 0, estimatedRevenue: 0 })),
+                ]);
+                const data = { yt, sc };
+                localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data }));
+                renderRevenue(data);
+            } catch(e) {}
+        }
+
+        function renderRevenue(data) {
+            var totalEl    = document.getElementById('revenue-total');
+            var breakdownEl = document.getElementById('revenue-breakdown');
+            var connectEl  = document.getElementById('revenue-connect');
+            var ytBtn      = document.getElementById('yt-connect-btn');
+            var scBtn      = document.getElementById('sc-connect-btn');
+            var ytConnected = data.yt?.connected;
+            var scConnected = data.sc?.connected;
+            var ytRevenue   = Number(data.yt?.revenue) || 0;
+            var scRevenue   = Number(data.sc?.estimatedRevenue) || 0;
+            var total       = ytRevenue + scRevenue;
+
+            if (totalEl) totalEl.textContent = (ytConnected || scConnected) ? '£' + total.toFixed(2) : '—';
+
+            var parts = [];
+            if (ytConnected) parts.push('YT: £' + ytRevenue.toFixed(2) + (data.yt.views ? ' · ' + Number(data.yt.views).toLocaleString() + ' views' : ''));
+            if (scConnected) parts.push('SC: ' + Number(data.sc.plays || 0).toLocaleString() + ' plays · est. £' + scRevenue.toFixed(2));
+            if (breakdownEl && parts.length) { breakdownEl.textContent = parts.join(' | '); breakdownEl.classList.remove('hidden'); }
+
+            if (ytBtn) ytBtn.classList.toggle('hidden', !!ytConnected);
+            if (scBtn) scBtn.classList.toggle('hidden', !!scConnected);
+            if (connectEl) connectEl.classList.toggle('hidden', !!(ytConnected && scConnected));
+        }
+
+        async function connectYouTube(btn) {
+            if (btn) btn.textContent = 'CONNECTING...';
+            try {
+                const { authUrl } = await laFetch('/api/youtube-auth').then(r => r.json());
+                if (authUrl) window.location.href = authUrl;
+            } catch(e) { if (btn) btn.textContent = '+ Connect YouTube'; }
+        }
+
+        async function connectSoundCloud(btn) {
+            if (btn) btn.textContent = 'CONNECTING...';
+            try {
+                const { authUrl } = await laFetch('/api/soundcloud-auth').then(r => r.json());
+                if (authUrl) window.location.href = authUrl;
+            } catch(e) { if (btn) btn.textContent = '+ Connect SoundCloud'; }
+        }
+
+        // Bust revenue cache if returning from an OAuth connect flow
+        (function() {
+            var p = new URLSearchParams(window.location.search);
+            if (p.get('youtube') || p.get('soundcloud')) {
+                localStorage.removeItem('la_revenue_cache');
+                history.replaceState({}, '', '/dashboard');
+            }
+        })();
+
+        fetchRevenue();
 
         fetchSystemHealth();
         setInterval(fetchSystemHealth, 30000);
