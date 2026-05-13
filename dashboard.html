@@ -1139,7 +1139,8 @@
         async function connectYouTube(btn) {
             if (btn) { btn.disabled = true; btn.textContent = 'Connecting…'; }
             try {
-                const res  = await laFetch('/api/youtube-auth');
+                const email = (() => { try { return JSON.parse(localStorage.getItem('la_admin') || '{}').email || ''; } catch(_) { return ''; } })();
+                const res  = await fetch('/api/youtube-auth?email=' + encodeURIComponent(email));
                 const data = await res.json();
                 if (!res.ok) { _showRevenueModalError(data.error || 'YouTube connection failed'); if (btn) { btn.disabled = false; btn.textContent = 'Connect'; } return; }
                 if (data.authUrl) window.location.href = data.authUrl;
