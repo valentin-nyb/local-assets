@@ -10,9 +10,13 @@ export default async function handler(req, res) {
 
   if (!code || !state) return res.status(400).send('Missing parameters');
 
-  const clientId = await kv.get(`soundcloud:state:${state}`);
-  if (!clientId) return res.status(400).send('Invalid or expired state. Please try connecting again.');
+  // Get venue info from state parameter
+  const stateData = await kv.get(`soundcloud:state:${state}`);
+  if (!stateData) return res.status(400).send('Invalid or expired state. Please try connecting again.');
   await kv.del(`soundcloud:state:${state}`);
+
+  const { email, venueSlug } = typeof stateData === 'string' ? JSON.parse(stateData) : stateData;
+  if (!email || !venueSlug) return res.status(400).send('Invalid state data.');
 
   const tokenRes = await fetch('https://api.soundcloud.com/oauth2/token', {
     method: 'POST',
@@ -37,14 +41,16 @@ export default async function handler(req, res) {
   });
   const me = meRes.ok ? await meRes.json() : {};
 
-  await kv.hset(`client:${clientId}`, {
+  // Store per venue using venue slug as key
+  await kv.hset(`venue:${venueSlug}:soundcloud`, {
+    email,
     soundcloudToken: tokenData.access_token,
     soundcloudRefreshToken: tokenData.refresh_token || '',
     soundcloudUserId: String(me.id || ''),
     soundcloudUsername: me.username || me.permalink || '',
   });
 
-  console.log(`[SoundCloud] Connected @${me.username || me.id} for client ${clientId}`);
+  console.log(`[SoundCloud] Connected @${me.username || me.id} for venue ${venueSlug} (${email})`);
 
   res.writeHead(302, { Location: '/client.html?soundcloud=connected' });
   res.end();
