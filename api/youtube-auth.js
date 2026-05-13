@@ -1,6 +1,6 @@
 import { createClient } from 'redis';
 import crypto from 'crypto';
-import { getWebSessionAuth } from './_venues.js';
+import { getWebSessionAuth, findVenueByEmail } from './_venues.js';
 
 const REDIRECT_URI = 'https://local-assets.com/api/youtube-callback';
 
@@ -11,12 +11,23 @@ export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const session = getWebSessionAuth(req);
+  // Auth: Bearer token or X-User-Email header (primary), ?email= query param (fallback)
+  let session = getWebSessionAuth(req);
+  if (!session?.email) {
+    const qEmail = (req.query?.email || '').toLowerCase().trim();
+    if (qEmail) {
+      const venue = findVenueByEmail(qEmail);
+      session = { email: qEmail, venueSlug: venue?.slug || '', venue };
+    }
+  }
+
   if (!session?.email) return res.status(401).json({ error: 'Not authenticated' });
   if (!session.venueSlug) return res.status(400).json({ error: 'No venue associated with this account' });
 
   const clientId = process.env.GOOGLE_CLIENT_ID;
-  if (!clientId) return res.status(500).json({ error: 'Google OAuth not configured' });
+  if (!clientId) {
+    return res.status(503).json({ error: 'Google OAuth not configured — set GOOGLE_CLIENT_ID in Vercel env vars' });
+  }
 
   const redis = createClient({ url: process.env.REDIS_URL });
   await redis.connect();
@@ -28,7 +39,7 @@ export default async function handler(req, res) {
       client_id:     clientId,
       redirect_uri:  REDIRECT_URI,
       response_type: 'code',
-      scope:         'https://www.googleapis.com/auth/yt-analytics.readonly',
+      scope:         'https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/yt-analytics.readonly',
       state,
       access_type:   'offline',
       prompt:        'consent',
