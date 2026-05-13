@@ -244,10 +244,11 @@
 
         // SoundCloud connection status
         const scHeader = document.getElementById('sc-header');
+        const userEmail = clientProfile.email || '';
         if (clientProfile.soundcloudUsername) {
             scHeader.innerHTML = '<a href="https://soundcloud.com/' + escapeHtml(clientProfile.soundcloudUsername) + '" target="_blank" class="font-mono text-[10px] text-[#ff5500] hover:text-white uppercase tracking-wider transition-colors" title="Connected SoundCloud account">SC: @' + escapeHtml(clientProfile.soundcloudUsername) + '</a>';
         } else {
-            scHeader.innerHTML = '<a href="/api/soundcloud-connect" class="font-mono text-[10px] text-[#888] hover:text-[#ff5500] uppercase tracking-wider transition-colors">Connect SoundCloud</a>';
+            scHeader.innerHTML = '<a href="/api/soundcloud-connect?email=' + encodeURIComponent(userEmail) + '" class="font-mono text-[10px] text-[#888] hover:text-[#ff5500] uppercase tracking-wider transition-colors">Connect SoundCloud</a>';
         }
 
         const scParam = new URLSearchParams(window.location.search).get('soundcloud');
@@ -354,7 +355,7 @@
             if (clientProfile && clientProfile.soundcloudUsername) {
                 scBtn = '<button id="sc-' + asset.id + '" onclick="pushToSoundCloud(\'' + asset.playbackId + '\', \'' + safeName + '\', \'' + asset.id + '\')" class="font-mono text-[9px] text-[#ff5500] hover:text-white uppercase tracking-wider transition-colors">&#x2191; SoundCloud</button>';
             } else {
-                scBtn = '<a href="/api/soundcloud-connect" class="font-mono text-[9px] text-[#555] hover:text-[#ff5500] uppercase tracking-wider transition-colors">Connect SC</a>';
+                scBtn = '<a href="/api/soundcloud-connect?email=' + encodeURIComponent(clientProfile.email || '') + '" class="font-mono text-[9px] text-[#555] hover:text-[#ff5500] uppercase tracking-wider transition-colors">Connect SC</a>';
             }
         }
 
