@@ -103,11 +103,11 @@
 </main>
 <script>
     function laFetch(url, opts = {}) {
-        const token = (() => { try { return JSON.parse(localStorage.getItem('la_admin') || '{}').webToken || ''; } catch(_) { return ''; } })();
-        if (token) {
-            opts = Object.assign({}, opts);
-            opts.headers = Object.assign({}, opts.headers, { 'Authorization': 'Bearer ' + token });
-        }
+        const session = (() => { try { return JSON.parse(localStorage.getItem('la_admin') || '{}'); } catch(_) { return {}; } })();
+        opts = Object.assign({}, opts);
+        opts.headers = Object.assign({}, opts.headers);
+        if (session.webToken) opts.headers['Authorization'] = 'Bearer ' + session.webToken;
+        if (session.email)    opts.headers['X-User-Email']  = session.email;
         return fetch(url, opts);
     }
 

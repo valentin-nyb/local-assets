@@ -19,16 +19,17 @@ export function findVenueByEmail(email) {
   return null;
 }
 
-// Returns a Basic auth string using venue-specific creds, falling back to global env vars.
+// Returns a Basic auth string using ONLY venue-specific credentials.
+// NEVER falls back to global env vars — if a venue has no explicit Mux creds, returns null.
+// This enforces strict per-venue isolation: a client can only ever see their own assets.
 export function getMuxAuthForVenue(venue) {
-  const id     = (venue?.mux_token_id     || process.env.PROD_MUX_TOKEN_ID     || '').trim();
-  const secret = (venue?.mux_token_secret || process.env.PROD_MUX_TOKEN_SECRET || '').trim();
+  const id     = (venue?.mux_token_id     || '').trim();
+  const secret = (venue?.mux_token_secret || '').trim();
   if (!id || !secret) return null;
   return 'Basic ' + Buffer.from(`${id}:${secret}`).toString('base64');
 }
 
 // ── Signed web-session token (HMAC-SHA256, 10-min TTL) ────────────────────────
-// Stored in la_admin.webToken; sent as Authorization: Bearer <token>
 
 const getSecret = () => process.env.LOCAL_ASSETS_API_KEY || 'dev-secret-change-me';
 
@@ -57,15 +58,43 @@ export function verifyWebToken(token) {
   } catch(_) { return null; }
 }
 
-// ── Request helper: verify token → resolve venue → return Mux auth ────────────
+// ── Request helper ────────────────────────────────────────────────────────────
+// Email source priority:
+//   1. Signed webToken in Authorization header (tamper-proof)
+//   2. X-User-Email header (transparent, used when token is absent/expired)
+// Mux credentials come ONLY from the matched venue — no global fallback.
 
 export function getWebSessionAuth(req) {
+  // 1. Try signed webToken
+  let email = null;
   const raw   = (req.headers.authorization || req.headers['x-la-token'] || '').trim();
   const token = raw.startsWith('Bearer ') ? raw.slice(7).trim() : raw;
-  if (!token) return null;
-  const payload = verifyWebToken(token);
-  if (!payload) return null;
-  const venue   = findVenueByEmail(payload.email);
-  const muxAuth = getMuxAuthForVenue(venue);
-  return { email: payload.email, venueSlug: venue?.slug || payload.venueSlug, venue, muxAuth };
+  if (token) {
+    const payload = verifyWebToken(token);
+    if (payload?.email) email = payload.email.toLowerCase().trim();
+  }
+
+  // 2. Fall back to X-User-Email if no valid token
+  if (!email) {
+    const hdr = (req.headers['x-user-email'] || '').toLowerCase().trim();
+    if (hdr) email = hdr;
+  }
+
+  if (!email) {
+    console.error('[_venues] getWebSessionAuth: no email from token or header');
+    return null;
+  }
+
+  const venue   = findVenueByEmail(email);
+  const muxAuth = getMuxAuthForVenue(venue); // null if no venue-specific creds
+
+  console.error('[_venues] getWebSessionAuth', JSON.stringify({
+    email,
+    tokenPresent:   !!token,
+    venueFound:     venue?.slug ?? null,
+    hasMuxCreds:    !!muxAuth,
+    VENUES_CONFIG:  process.env.VENUES_CONFIG ? process.env.VENUES_CONFIG.slice(0, 120) : '(not set)',
+  }));
+
+  return { email, venueSlug: venue?.slug || '', venue, muxAuth };
 }

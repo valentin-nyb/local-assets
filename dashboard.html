@@ -213,13 +213,13 @@
     </main>
 
     <script>
-        // Wraps fetch() to include venue Authorization header from la_admin.webToken
+        // Wraps fetch() — injects Authorization (webToken) + X-User-Email for venue isolation
         function laFetch(url, opts = {}) {
-            const token = (() => { try { return JSON.parse(localStorage.getItem('la_admin') || '{}').webToken || ''; } catch(_) { return ''; } })();
-            if (token) {
-                opts = Object.assign({}, opts);
-                opts.headers = Object.assign({}, opts.headers, { 'Authorization': 'Bearer ' + token });
-            }
+            const session = (() => { try { return JSON.parse(localStorage.getItem('la_admin') || '{}'); } catch(_) { return {}; } })();
+            opts = Object.assign({}, opts);
+            opts.headers = Object.assign({}, opts.headers);
+            if (session.webToken) opts.headers['Authorization'] = 'Bearer ' + session.webToken;
+            if (session.email)    opts.headers['X-User-Email']  = session.email;
             return fetch(url, opts);
         }
 
@@ -1173,8 +1173,9 @@
                         xhr.open('PUT', '/api/upload-thumbnail?passthrough=' + encodeURIComponent(tag));
                         xhr.setRequestHeader('Content-Type', file.type || 'image/png');
                         xhr.setRequestHeader('X-Passthrough', tag);
-                        const _laToken = (() => { try { return JSON.parse(localStorage.getItem('la_admin') || '{}').webToken || ''; } catch(_) { return ''; } })();
-                        if (_laToken) xhr.setRequestHeader('Authorization', 'Bearer ' + _laToken);
+                        const _laSess = (() => { try { return JSON.parse(localStorage.getItem('la_admin') || '{}'); } catch(_) { return {}; } })();
+                        if (_laSess.webToken) xhr.setRequestHeader('Authorization', 'Bearer ' + _laSess.webToken);
+                        if (_laSess.email)    xhr.setRequestHeader('X-User-Email',  _laSess.email);
 
                         xhr.upload.onprogress = (e) => {
                             if (e.lengthComputable) {
