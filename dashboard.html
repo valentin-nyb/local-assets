@@ -265,7 +265,7 @@
 
         // Parses Mux passthrough — handles JSON {artist,date,camera}, legacy "ARTIST // TYPE" strings,
         // and falls back to the Mux asset name field for uploads with no passthrough.
-        function parsePassthrough(pt, assetName) {
+        function parsePassthrough(pt, assetName, assetId) {
             if (pt) {
                 try { var o = JSON.parse(pt); if (o && o.artist) return o; } catch(e) {}
                 var upper = pt.toUpperCase().trim();
@@ -277,6 +277,8 @@
                 var artistPart = nameUpper.split(' — ')[0].trim();
                 if (artistPart) return { artist: artistPart, date: null, camera: null };
             }
+            // Final fallback: use last 8 chars of asset ID so asset is always shown
+            if (assetId) return { artist: assetId.slice(-8).toUpperCase(), date: null, camera: null };
             return null;
         }
 
@@ -330,7 +332,7 @@
             // JSON passthrough and no-passthrough assets are also indexed by artist name.
             const muxByKey = {};
             for (const a of muxAssets) {
-                const meta = parsePassthrough(a.passthrough, a.name);
+                const meta = parsePassthrough(a.passthrough, a.name, a.id);
                 if (a.passthrough) {
                     const key = a.passthrough.toUpperCase().trim();
                     if (!muxByKey[key]) muxByKey[key] = [];
@@ -375,7 +377,7 @@
             var artistMap = {};
             for (var i = 0; i < muxAssets.length; i++) {
                 var a = muxAssets[i];
-                var meta = parsePassthrough(a.passthrough, a.name);
+                var meta = parsePassthrough(a.passthrough, a.name, a.id);
                 if (!meta || !meta.artist) continue;
                 var artistName = meta.artist.toUpperCase().trim();
                 var tsMs = Number(a.created_at) * 1000;
