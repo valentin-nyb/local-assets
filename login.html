@@ -241,18 +241,19 @@
             el.className = cls || '';
         }
 
-        // Handle OAuth return: /login.html?_s=TOKEN or /login.html?err=...
+        // Handle OAuth return: /login.html?_s=TOKEN or /login.html?err=... or ?error=...
         (function() {
             var params = new URLSearchParams(location.search);
             var token  = params.get('_s');
-            var err    = params.get('err');
+            var err    = params.get('err') || params.get('error');
 
             if (err) {
                 var msgs = {
-                    not_allowed: 'Access denied — account not authorized',
-                    cancelled:   'Sign-in cancelled',
-                    auth_failed: 'Authentication failed — try again',
-                    no_email:    'Could not read email from Google',
+                    not_allowed:  'Access denied — account not authorized',
+                    unauthorized: 'Access denied — account not authorized',
+                    cancelled:    'Sign-in cancelled',
+                    auth_failed:  'Authentication failed — try again',
+                    no_email:     'Could not read email from Google',
                 };
                 setStatus(msgs[err] || 'Authentication failed — try again', 'err');
                 history.replaceState({}, '', '/login.html');

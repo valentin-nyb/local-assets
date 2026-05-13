@@ -128,8 +128,10 @@
         
         const uploadBtn = document.getElementById('upload-btn');
         uploadBtn.onclick = async function() {
-            const file = document.getElementById('file-video').files[0];
-            const artist = document.getElementById('ingest-name').value;
+            const file    = document.getElementById('file-video').files[0];
+            const artist  = document.getElementById('ingest-name').value.trim();
+            const dateVal = document.getElementById('ingest-date').value || new Date().toISOString().slice(0, 10);
+            const camera  = document.getElementById('ingest-shot').value || 'MASTER';
             if (!file || !artist) return alert("Artist and File are required.");
 
             uploadBtn.disabled = true;
@@ -140,7 +142,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
-                    body: JSON.stringify({ artistName: artist })
+                    body: JSON.stringify({ artist, date: dateVal, camera })
                 });
                 if (!response.ok) {
                     const errBody = await response.text();
@@ -189,10 +191,9 @@
         var pipelineStatus = document.getElementById('pipeline-status');
         if (pipelineStatus) { pipelineStatus.textContent = 'GENERATING 30 CLIPS...'; pipelineStatus.classList.remove('hidden'); }
         try {
-            const r = await fetch('/api/pipeline-trigger', {
+            const r = await laFetch('/api/pipeline-trigger', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
                 body: JSON.stringify({ uploadId, artistName })
             });
             const j = await r.json();
@@ -235,20 +236,36 @@
         }
 
         function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+        function parsePT(pt, assetName) {
+            if (pt) {
+                try { const o = JSON.parse(pt); if (o && o.artist) return o; } catch(e) {}
+                return { artist: pt.toUpperCase().trim().split(' // ')[0], date: null, camera: null };
+            }
+            if (assetName) {
+                const a = assetName.toUpperCase().trim().split(' — ')[0].trim();
+                if (a) return { artist: a, date: null, camera: null };
+            }
+            return null;
+        }
 
         list.innerHTML = assets.map((asset, i) => {
-            const pid = asset.playback_ids?.[0]?.id;
-            const status = asset.status;
+            const pid     = asset.playback_ids?.[0]?.id;
+            const status  = asset.status;
             const isReady = status === 'ready';
-            const label = esc(asset.passthrough || asset.id.slice(-6));
+            const meta    = parsePT(asset.passthrough, asset.name);
+            const title   = meta ? esc(meta.artist) : esc(asset.id.slice(-6).toUpperCase());
+            const sub     = meta && (meta.date || meta.camera)
+                ? esc([meta.date, meta.camera].filter(Boolean).join(' // '))
+                : esc(new Date(asset.created_at * 1000).toLocaleDateString());
 
             return `
             <div class="vault-card ${isReady ? '' : 'opacity-50'}" id="vault-${i}">
                 <div class="vault-card-header" onclick="toggleVaultFolder(${i})">
                     <div>
-                        <h4 class="text-2xl font-black italic uppercase">${label}</h4>
+                        <h4 class="text-2xl font-black italic uppercase">${title}</h4>
+                        <p class="text-[8px] font-mono text-zinc-500 uppercase mt-0.5">${sub}</p>
                         <span class="text-[8px] font-mono ${isReady ? 'text-primary' : 'text-zinc-500'} uppercase">
-                            ${esc(status.toUpperCase())} // ${new Date(asset.created_at * 1000).toLocaleDateString()}
+                            ${esc(status.toUpperCase())}
                         </span>
                     </div>
                     ${isReady ? `

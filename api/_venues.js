@@ -3,19 +3,52 @@ import crypto from 'crypto';
 // ── VENUES_CONFIG helpers ─────────────────────────────────────────────────────
 
 export function getVenuesConfig() {
-  try { return JSON.parse(process.env.VENUES_CONFIG || '{}'); } catch(_) { return {}; }
+  const raw = process.env.VENUES_CONFIG || '{}';
+  try {
+    return JSON.parse(raw);
+  } catch (e1) {
+    // Vercel may URL-encode the value when special chars (+ /) are present — try decoding first
+    try {
+      return JSON.parse(decodeURIComponent(raw));
+    } catch (e2) {
+      console.error('[_venues] VENUES_CONFIG parse failed (raw):', e1.message, '| decoded:', e2.message, '| raw (first 300):', raw.slice(0, 300));
+      return {};
+    }
+  }
 }
 
-// Returns the first venue whose `emails` array contains the given email, or null.
+// Returns the first venue whose `emails` array contains the given email.
+// Fallback: if the email is in the ADMIN_EMAILS env var, returns the first
+// venue that has Mux credentials (enables admin accounts not listed in VENUES_CONFIG).
 export function findVenueByEmail(email) {
   if (!email) return null;
   const lower = email.toLowerCase();
   const venues = getVenuesConfig();
+
+  // Priority 1: explicit listing in a venue's emails array
   for (const [slug, cfg] of Object.entries(venues)) {
     if (Array.isArray(cfg.emails) && cfg.emails.some(e => e.toLowerCase() === lower)) {
+      console.error('[_venues] findVenueByEmail: matched via emails[]', lower, '→', slug);
       return { slug, ...cfg };
     }
   }
+
+  // Priority 2: email is in ADMIN_EMAILS → use first venue that has Mux creds
+  const adminList = (process.env.ADMIN_EMAILS || '')
+    .split(',').map(e => e.toLowerCase().trim()).filter(Boolean);
+  if (adminList.includes(lower)) {
+    for (const [slug, cfg] of Object.entries(venues)) {
+      if ((cfg.mux_token_id || '').trim() && (cfg.mux_token_secret || '').trim()) {
+        console.error('[_venues] findVenueByEmail: ADMIN_EMAILS fallback', lower, '→', slug);
+        return { slug, ...cfg };
+      }
+    }
+  }
+
+  console.error('[_venues] findVenueByEmail: no match for', lower,
+    '| venue slugs:', Object.keys(venues),
+    '| ADMIN_EMAILS set:', !!process.env.ADMIN_EMAILS,
+    '| adminList:', adminList);
   return null;
 }
 

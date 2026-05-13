@@ -1,0 +1,57 @@
+{
+  "name": "a-tm",
+  "productName": "a™",
+  "version": "1.0.0",
+  "description": "local / assets dashboard",
+  "main": "main.js",
+  "author": {
+    "name": "local / assets"
+  },
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --mac dmg"
+  },
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.localassets.dashboard",
+    "productName": "a™",
+    "copyright": "Copyright © 2026 local / assets",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "login.html",
+      "build/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "build/icons/icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["universal"]
+        }
+      ]
+    },
+    "dmg": {
+      "title": "a™",
+      "icon": "build/icons/dmg-icon.icns",
+      "background": null,
+      "backgroundColor": "#000000",
+      "window": {
+        "width": 540,
+        "height": 380
+      },
+      "contents": [
+        { "x": 150, "y": 185, "type": "file" },
+        { "x": 390, "y": 185, "type": "link", "path": "/Applications" }
+      ]
+    }
+  }
+}

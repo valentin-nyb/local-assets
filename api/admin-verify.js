@@ -1,5 +1,12 @@
 import { findVenueByEmail } from './_venues.js';
 
+// Hardcoded fallback while VENUES_CONFIG is being stabilised
+const ALLOWED = [
+  'valentin@notyourbrew.com',
+  'smack.valentin@gmail.com',
+  'info@local-assets.com',
+];
+
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return res.status(405).end();
@@ -33,24 +40,21 @@ export default async function handler(req, res) {
   const email = (payload.email || '').toLowerCase().trim();
   if (!email) return res.status(401).json({ error: 'No email in token' });
 
-  const venueEntry = findVenueByEmail(email);
-  const allowed = (process.env.ADMIN_EMAILS || '')
-    .split(',').map(e => e.toLowerCase().trim()).filter(Boolean);
+  const venueEntry    = findVenueByEmail(email);
+  const inHardcoded   = ALLOWED.includes(email);
+  const inVenueConfig = venueEntry !== null;
+  const isAllowed     = inHardcoded || inVenueConfig;
 
-  // Allowed if: ADMIN_EMAILS is empty, OR email is in ADMIN_EMAILS,
-  // OR email is in VENUES_CONFIG.
-  const isAllowed = allowed.length === 0 || allowed.includes(email) || venueEntry !== null;
-
-  console.error('[admin-verify] login attempt', {
+  console.error('[admin-verify] login attempt', JSON.stringify({
     email,
-    adminEmailsRaw: process.env.ADMIN_EMAILS || '(empty)',
-    allowedList: allowed,
-    foundInVenuesConfig: !!venueEntry,
+    inHardcodedList:     inHardcoded,
+    foundInVenuesConfig: inVenueConfig,
+    venueSlug:           venueEntry?.slug ?? null,
     isAllowed,
-  });
+  }));
 
   if (!isAllowed) {
-    return res.status(403).json({ error: 'not_allowed' });
+    return res.status(403).json({ error: 'unauthorized' });
   }
 
   return res.status(200).json({

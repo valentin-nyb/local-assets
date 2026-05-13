@@ -263,6 +263,23 @@
             return (num / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
         }
 
+        // Parses Mux passthrough — handles JSON {artist,date,camera}, legacy "ARTIST // TYPE" strings,
+        // and falls back to the Mux asset name field for uploads with no passthrough.
+        function parsePassthrough(pt, assetName) {
+            if (pt) {
+                try { var o = JSON.parse(pt); if (o && o.artist) return o; } catch(e) {}
+                var upper = pt.toUpperCase().trim();
+                return { artist: upper.split(' // ')[0], date: null, camera: null };
+            }
+            // No passthrough — try Mux name field (format: "ARTIST — DATE")
+            if (assetName) {
+                var nameUpper = assetName.toUpperCase().trim();
+                var artistPart = nameUpper.split(' — ')[0].trim();
+                if (artistPart) return { artist: artistPart, date: null, camera: null };
+            }
+            return null;
+        }
+
         async function fetchRecentUploads() {
             const container = document.getElementById('recent-sets-list');
             if (!container) return;
@@ -270,7 +287,7 @@
             // Fetch existing Mux assets to match against sessions
             let muxAssets = [];
             try {
-                const res = await laFetch('/api/assets?t=' + Date.now());
+                const res = await laFetch('/api/list-assets?t=' + Date.now());
                 const data = await res.json();
                 if (res.ok) {
                     muxAssets = Array.isArray(data) ? data : (data.data || []);
@@ -310,23 +327,36 @@
             if (nasBar) nasBar.style.width = Math.max(storagePercent, 0.5) + '%';
 
             // Build a lookup: passthrough (uppercase) → array of assets
+            // JSON passthrough and no-passthrough assets are also indexed by artist name.
             const muxByKey = {};
             for (const a of muxAssets) {
+                const meta = parsePassthrough(a.passthrough, a.name);
                 if (a.passthrough) {
                     const key = a.passthrough.toUpperCase().trim();
                     if (!muxByKey[key]) muxByKey[key] = [];
                     muxByKey[key].push(a);
                 }
+                // Index by artist name so MASTER lookups find JSON-passthrough and name-only assets
+                if (meta && meta.artist) {
+                    const ak = meta.artist.toUpperCase().trim();
+                    if (!muxByKey[ak]) muxByKey[ak] = [];
+                    if (!muxByKey[ak].some(x => x.id === a.id)) muxByKey[ak].push(a);
+                }
             }
             // Find asset by exact key matching session date, or prefix match for multi-file uploads
+            function dateMatches(a, sessionDate) {
+                if (new Date(a.created_at * 1000).toISOString().slice(0, 10) === sessionDate) return true;
+                try { const m = JSON.parse(a.passthrough); if (m && m.date === sessionDate) return true; } catch(e) {}
+                return false;
+            }
             function findLinked(key, sessionDate) {
                 const candidates = muxByKey[key] || [];
-                const match = candidates.find(a => new Date(a.created_at * 1000).toISOString().slice(0, 10) === sessionDate);
+                const match = candidates.find(a => dateMatches(a, sessionDate));
                 if (match) return match;
                 // Check prefix keys (e.g. "NAME // SOCIAL // 01")
                 for (const [k, arr] of Object.entries(muxByKey)) {
                     if (k.startsWith(key + ' // ')) {
-                        const m = arr.find(a => new Date(a.created_at * 1000).toISOString().slice(0, 10) === sessionDate);
+                        const m = arr.find(a => dateMatches(a, sessionDate));
                         if (m) return m;
                     }
                 }
@@ -345,12 +375,11 @@
             var artistMap = {};
             for (var i = 0; i < muxAssets.length; i++) {
                 var a = muxAssets[i];
-                if (!a.passthrough) continue;
-                var pt = a.passthrough.toUpperCase().trim();
-                var artistName = pt.split(' // ')[0];
-                var dateMatch = pt.match(/D:(\d{4}-\d{2}-\d{2})/);
+                var meta = parsePassthrough(a.passthrough, a.name);
+                if (!meta || !meta.artist) continue;
+                var artistName = meta.artist.toUpperCase().trim();
                 var tsMs = Number(a.created_at) * 1000;
-                var dateStr = dateMatch ? dateMatch[1] : (isNaN(tsMs) ? '1970-01-01' : new Date(tsMs).toISOString().slice(0, 10));
+                var dateStr = meta.date || (isNaN(tsMs) ? '1970-01-01' : new Date(tsMs).toISOString().slice(0, 10));
                 if (!artistMap[artistName]) artistMap[artistName] = {};
                 if (!artistMap[artistName][dateStr]) artistMap[artistName][dateStr] = true;
             }
@@ -779,7 +808,7 @@
 
             let muxAssets = [];
             try {
-                const res = await laFetch('/api/assets?t=' + Date.now());
+                const res = await laFetch('/api/list-assets?t=' + Date.now());
                 const data = await res.json();
                 muxAssets = Array.isArray(data) ? data : (data.data || []);
             } catch (e) { alert('Failed to fetch assets'); return; }
@@ -965,7 +994,7 @@
         // --- System Health: real metrics from /api/system-health ---
         async function fetchSystemHealth() {
             try {
-                const res = await fetch('/api/system-health', { credentials: 'include' });
+                const res = await laFetch('/api/system-health');
                 if (!res.ok) return;
                 const data = await res.json();
 
@@ -1009,7 +1038,7 @@
             var banner = document.getElementById('pipeline-banner');
             if (!banner) return;
             try {
-                var r = await fetch('/api/pipeline-status?t=' + Date.now(), { credentials: 'include' });
+                var r = await laFetch('/api/pipeline-status?t=' + Date.now());
                 if (!r.ok) { console.warn('[Pipeline] status API returned', r.status); return; }
                 var jobs = await r.json();
 

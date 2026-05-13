@@ -1,12 +1,7 @@
-import { promisify } from 'util';
-import { exec } from 'child_process';
-import { getClientSession, getMuxAuth } from './_client-auth.js';
+import { getWebSessionAuth } from './_venues.js';
 
-const execAsync = promisify(exec);
-
-// Time a POST of a fixed payload to measure upload throughput
 async function measureUploadMbps() {
-  const SIZE = 512 * 1024; // 512 KB
+  const SIZE = 512 * 1024;
   const payload = 'x'.repeat(SIZE);
   const start = Date.now();
   try {
@@ -17,62 +12,43 @@ async function measureUploadMbps() {
       signal: AbortSignal.timeout(12000),
     });
     const secs = (Date.now() - start) / 1000;
-    const mbps = (SIZE * 8) / (secs * 1_000_000);
-    return Math.round(mbps * 10) / 10;
+    return Math.round(((SIZE * 8) / (secs * 1_000_000)) * 10) / 10;
   } catch {
     return null;
   }
 }
 
-// Paginate MUX assets and sum static_renditions filesize bytes
-async function getMuxStorageGB(auth) {
+async function getMuxStorageGB(muxAuth) {
   let totalBytes = 0;
   let page = 1;
-  const base = 'https://api.mux.com';
-  const headers = {
-    'Authorization': 'Basic ' + Buffer.from(`${auth.tokenId}:${auth.tokenSecret}`).toString('base64'),
-  };
-
   while (true) {
-    const url = `${base}/video/v1/assets?limit=100&page=${page}`;
-    const res = await fetch(url, { headers, signal: AbortSignal.timeout(15000) });
+    const url = `https://api.mux.com/video/v1/assets?limit=100&page=${page}`;
+    const res = await fetch(url, { headers: { Authorization: muxAuth }, signal: AbortSignal.timeout(15000) });
     if (!res.ok) break;
     const { data } = await res.json();
     if (!data || data.length === 0) break;
-
     for (const asset of data) {
-      const files = asset.static_renditions?.files ?? [];
-      for (const f of files) {
+      for (const f of (asset.static_renditions?.files ?? [])) {
         totalBytes += parseInt(f.filesize || 0, 10);
       }
     }
-
     if (data.length < 100) break;
     page++;
   }
-
   return Math.round((totalBytes / 1e9) * 100) / 100;
 }
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', 'https://local-assets.com');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-User-Email');
+  res.setHeader('Cache-Control', 'no-store');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  // Resolve MUX credentials for this client (falls back to global env)
-  let muxAuth = null;
-  try {
-    const { profile } = await getClientSession(req);
-    muxAuth = getMuxAuth(profile);
-  } catch {
-    // Fall back to env-level credentials
-    const tokenId = process.env.MUX_TOKEN_ID;
-    const tokenSecret = process.env.MUX_TOKEN_SECRET;
-    if (tokenId && tokenSecret) {
-      muxAuth = { tokenId, tokenSecret };
-    }
-  }
+  const session = getWebSessionAuth(req);
+  const muxAuth = session?.muxAuth || null;
+
+  console.error('[system-health] email:', session?.email ?? null, '| hasMuxAuth:', !!muxAuth);
 
   const [uploadMbps, storageGB] = await Promise.all([
     measureUploadMbps(),
@@ -82,7 +58,7 @@ export default async function handler(req, res) {
   return res.status(200).json({
     uploadMbps,
     storageGB,
-    storageLimitGB: 5000, // 5 TB default display limit
+    storageLimitGB: 5000,
     timestamp: Date.now(),
   });
 }

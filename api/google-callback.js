@@ -2,6 +2,13 @@ import { createClient } from 'redis';
 import crypto from 'crypto';
 import { findVenueByEmail } from './_venues.js';
 
+// Hardcoded fallback while VENUES_CONFIG is being stabilised
+const ALLOWED = [
+  'valentin@notyourbrew.com',
+  'smack.valentin@gmail.com',
+  'info@local-assets.com',
+];
+
 const REDIRECT_URI = 'https://local-assets.com/api/google-callback';
 
 async function getRedis() {
@@ -77,18 +84,24 @@ export default async function handler(req, res) {
 
     // ── Web (website admin) flow ──────────────────────────────────────────────
     if (mode === 'web') {
-      // No email gate — anyone who completes Google OAuth can sign in.
-      // VENUES_CONFIG assigns role + Mux credentials; ADMIN_EMAILS is ignored here.
-      const venueEntry = findVenueByEmail(email);
+      const venueEntry    = findVenueByEmail(email);
+      const inHardcoded   = ALLOWED.includes(email);
+      const inVenueConfig = venueEntry !== null;
+      const isAllowed     = inHardcoded || inVenueConfig;
 
       console.error('[google-callback] web login', JSON.stringify({
         email,
-        ADMIN_EMAILS_raw:   process.env.ADMIN_EMAILS   ?? '(not set)',
-        VENUES_CONFIG_raw:  process.env.VENUES_CONFIG  ?? '(not set)',
-        foundInVenues:      !!venueEntry,
-        venueSlug:          venueEntry?.slug ?? null,
-        role:               venueEntry?.role ?? 'admin (default)',
+        inHardcodedList:     inHardcoded,
+        foundInVenues:       inVenueConfig,
+        venueSlug:           venueEntry?.slug ?? null,
+        role:                venueEntry?.role ?? null,
+        isAllowed,
       }));
+
+      if (!isAllowed) {
+        res.writeHead(302, { Location: '/login.html?error=unauthorized' });
+        return res.end();
+      }
 
       const role = venueEntry?.role || 'admin';
       const assignedVenue = (venueEntry?.name || '').toUpperCase();
