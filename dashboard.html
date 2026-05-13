@@ -177,7 +177,10 @@
                     </div>
                     <!-- Connect prompt: shown when nothing connected -->
                     <div id="revenue-connect-prompt">
-                        <button onclick="openRevenueSettings()" class="text-[9px] font-mono text-zinc-600 hover:text-zinc-300 transition-colors uppercase tracking-wider">— connect platforms</button>
+                        <button onclick="openRevenueSettings()" class="rev-btn" style="padding:4px 12px 4px 9px;gap:6px;">
+                            <iconify-icon icon="solar:link-bold" style="font-size:11px;flex-shrink:0;opacity:.7"></iconify-icon>
+                            <span>Connect Platforms</span>
+                        </button>
                     </div>
                 </div>
                 <div id="next-event-card" class="bg-card border border-border p-5 rounded-xl relative overflow-hidden">
@@ -1127,19 +1130,31 @@
             if (m) { m.classList.add('hidden'); m.classList.remove('flex'); }
         }
 
+        function _showRevenueModalError(msg) {
+            var el = document.getElementById('revenue-modal-error');
+            if (!el) return;
+            el.textContent = msg;
+            el.classList.remove('hidden');
+            setTimeout(() => el.classList.add('hidden'), 6000);
+        }
+
         async function connectYouTube(btn) {
             if (btn) { btn.disabled = true; btn.textContent = 'Connecting…'; }
             try {
-                const { authUrl } = await laFetch('/api/youtube-auth').then(r => r.json());
-                if (authUrl) window.location.href = authUrl;
+                const res  = await laFetch('/api/youtube-auth');
+                const data = await res.json();
+                if (!res.ok) { _showRevenueModalError(data.error || 'YouTube connection failed'); if (btn) { btn.disabled = false; btn.textContent = 'Connect'; } return; }
+                if (data.authUrl) window.location.href = data.authUrl;
             } catch(e) { if (btn) { btn.disabled = false; btn.textContent = 'Connect'; } }
         }
 
         async function connectSoundCloud(btn) {
             if (btn) { btn.disabled = true; btn.textContent = 'Connecting…'; }
             try {
-                const { authUrl } = await laFetch('/api/soundcloud-auth').then(r => r.json());
-                if (authUrl) window.location.href = authUrl;
+                const res  = await laFetch('/api/soundcloud-auth');
+                const data = await res.json();
+                if (!res.ok) { _showRevenueModalError(data.error || 'SoundCloud connection failed'); if (btn) { btn.disabled = false; btn.textContent = 'Connect'; } return; }
+                if (data.authUrl) window.location.href = data.authUrl;
             } catch(e) { if (btn) { btn.disabled = false; btn.textContent = 'Connect'; } }
         }
 
@@ -1471,32 +1486,50 @@
 
     <!-- Revenue connect modal -->
     <div id="revenue-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
-        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeRevenueSettings()"></div>
-        <div class="relative bg-[#0a0a0a] border border-[#27272a] rounded-2xl p-6 w-72 max-w-[90vw] shadow-2xl">
-            <div class="flex items-center justify-between mb-5">
-                <span class="text-[9px] font-mono text-zinc-500 uppercase tracking-[0.2em]">Connect Platforms</span>
-                <button onclick="closeRevenueSettings()" class="text-zinc-600 hover:text-white transition-colors">
-                    <iconify-icon icon="solar:close-circle-linear" style="font-size:15px"></iconify-icon>
+        <div class="absolute inset-0 bg-black/75 backdrop-blur-sm" onclick="closeRevenueSettings()"></div>
+        <div class="relative bg-[#0d0d0d] border border-[#2a2a2a] rounded-2xl shadow-2xl" style="width:360px;max-width:92vw;padding:28px;">
+            <!-- Header -->
+            <div class="flex items-start justify-between mb-2">
+                <span class="text-[11px] font-mono font-bold text-white uppercase tracking-[0.2em]">Connect Platforms</span>
+                <button onclick="closeRevenueSettings()" class="text-zinc-500 hover:text-white transition-colors ml-4 mt-0.5" style="flex-shrink:0;padding:4px;">
+                    <iconify-icon icon="solar:close-square-linear" style="font-size:18px;display:block"></iconify-icon>
                 </button>
             </div>
-            <div class="flex flex-col gap-4">
+            <p class="text-[9px] font-mono text-zinc-500 uppercase tracking-wider mb-6">Connect to track revenue from your distributed content</p>
+
+            <!-- Platform rows -->
+            <div class="flex flex-col" style="gap:16px;">
+                <!-- YouTube -->
                 <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2.5">
-                        <iconify-icon icon="mdi:youtube" style="color:#FF0000;font-size:20px;flex-shrink:0"></iconify-icon>
-                        <span class="text-[11px] font-mono text-white uppercase tracking-wider">YouTube</span>
+                    <div class="flex items-center" style="gap:12px;">
+                        <iconify-icon icon="mdi:youtube" style="color:#FF0000;font-size:24px;flex-shrink:0"></iconify-icon>
+                        <div>
+                            <div class="text-[11px] font-mono text-white uppercase tracking-wider">YouTube</div>
+                            <div class="text-[9px] font-mono text-zinc-600 uppercase tracking-wider">Analytics API</div>
+                        </div>
                     </div>
-                    <button id="yt-modal-btn" onclick="connectYouTube(this)" class="rev-btn">Connect</button>
-                    <span id="yt-modal-connected" class="hidden text-[9px] font-mono text-primary uppercase tracking-wider">✓ Connected</span>
+                    <button id="yt-modal-btn" onclick="connectYouTube(this)" style="padding:6px 16px;border-radius:9999px;border:1px solid #39FF14;background:transparent;color:#39FF14;font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s;" onmouseover="this.style.background='#39FF14';this.style.color='#000'" onmouseout="this.style.background='transparent';this.style.color='#39FF14'">Connect</button>
+                    <span id="yt-modal-connected" class="hidden text-[9px] font-mono text-primary uppercase tracking-wider" style="white-space:nowrap;">✓ Connected</span>
                 </div>
+
+                <!-- Divider -->
+                <div style="border-top:1px solid #1c1c1c;"></div>
+
+                <!-- SoundCloud -->
                 <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2.5">
-                        <iconify-icon icon="mdi:soundcloud" style="color:#FF5500;font-size:20px;flex-shrink:0"></iconify-icon>
-                        <span class="text-[11px] font-mono text-white uppercase tracking-wider">SoundCloud</span>
+                    <div class="flex items-center" style="gap:12px;">
+                        <iconify-icon icon="mdi:soundcloud" style="color:#FF5500;font-size:24px;flex-shrink:0"></iconify-icon>
+                        <div>
+                            <div class="text-[11px] font-mono text-white uppercase tracking-wider">SoundCloud</div>
+                            <div class="text-[9px] font-mono text-zinc-600 uppercase tracking-wider">Plays & Streams</div>
+                        </div>
                     </div>
-                    <button id="sc-modal-btn" onclick="connectSoundCloud(this)" class="rev-btn">Connect</button>
-                    <span id="sc-modal-connected" class="hidden text-[9px] font-mono text-primary uppercase tracking-wider">✓ Connected</span>
+                    <button id="sc-modal-btn" onclick="connectSoundCloud(this)" style="padding:6px 16px;border-radius:9999px;border:1px solid #39FF14;background:transparent;color:#39FF14;font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s;" onmouseover="this.style.background='#39FF14';this.style.color='#000'" onmouseout="this.style.background='transparent';this.style.color='#39FF14'">Connect</button>
+                    <span id="sc-modal-connected" class="hidden text-[9px] font-mono text-primary uppercase tracking-wider" style="white-space:nowrap;">✓ Connected</span>
                 </div>
             </div>
+
+            <p id="revenue-modal-error" class="hidden text-[9px] font-mono text-red-400 uppercase tracking-wider leading-relaxed" style="margin-top:20px;"></p>
         </div>
     </div>
 </body>

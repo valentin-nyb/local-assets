@@ -16,7 +16,7 @@ export default async function handler(req, res) {
   if (!session.venueSlug) return res.status(400).json({ error: 'No venue associated with this account' });
 
   if (!process.env.SOUNDCLOUD_CLIENT_ID) {
-    return res.status(500).json({ error: 'SOUNDCLOUD_CLIENT_ID not configured' });
+    return res.status(503).json({ error: 'SoundCloud integration not yet enabled — set SOUNDCLOUD_CLIENT_ID in Vercel env vars' });
   }
 
   const redis = createClient({ url: process.env.REDIS_URL });
