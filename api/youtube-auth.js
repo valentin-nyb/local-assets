@@ -35,7 +35,7 @@ export default async function handler(req, res) {
       client_id:     clientId,
       redirect_uri:  REDIRECT_URI,
       response_type: 'code',
-      scope:         'https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/yt-analytics.readonly',
+      scope:         'https://www.googleapis.com/auth/youtube.readonly',
       state,
       access_type:   'offline',
       prompt:        'consent',

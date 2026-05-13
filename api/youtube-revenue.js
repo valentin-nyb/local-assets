@@ -48,42 +48,24 @@ export default async function handler(req, res) {
     const authHeader = { Authorization: `Bearer ${stored.access_token}` };
     const timeout    = { signal: AbortSignal.timeout(15000) };
 
-    const endDate   = new Date().toISOString().slice(0, 10);
-    const startDate = new Date(Date.now() - 30 * 86400 * 1000).toISOString().slice(0, 10);
-
-    // Run both requests in parallel
-    const [analyticsRes, channelRes] = await Promise.all([
-      fetch(
-        `https://youtubeanalytics.googleapis.com/v2/reports?` +
-        new URLSearchParams({ ids: 'channel==MINE', startDate, endDate, metrics: 'estimatedRevenue,views', currency: 'GBP' }),
-        { headers: authHeader, ...timeout }
-      ),
-      fetch(
-        `https://www.googleapis.com/youtube/v3/channels?part=statistics&mine=true`,
-        { headers: authHeader, ...timeout }
-      ),
-    ]);
-
-    // Total all-time views from channel statistics
+    // Total all-time views via Data API (youtube.readonly scope — no restricted scope needed)
     let totalViews = 0;
+    const channelRes = await fetch(
+      `https://www.googleapis.com/youtube/v3/channels?part=statistics&mine=true`,
+      { headers: authHeader, ...timeout }
+    );
     if (channelRes.ok) {
       const channelData = await channelRes.json();
       const stats = channelData.items?.[0]?.statistics;
       if (stats) totalViews = Number(stats.viewCount) || 0;
+      console.log('[youtube-revenue] channel stats:', stats);
+    } else {
+      const err = await channelRes.json().catch(() => ({}));
+      console.error('[youtube-revenue] channels API error:', err.error?.message);
     }
 
-    // Estimated revenue (last 30 days) — only available for monetised channels
-    let revenue = 0;
-    if (analyticsRes.ok) {
-      const analyticsData = await analyticsRes.json();
-      for (const row of (analyticsData.rows || [])) {
-        revenue += Number(row[0]) || 0;
-      }
-    } else {
-      const err = await analyticsRes.json().catch(() => ({}));
-      console.error('[youtube-revenue] Analytics API error:', err.error?.message);
-      // Not monetised — still report as connected with views
-    }
+    // Revenue requires yt-analytics.readonly (restricted scope + YPP) — skip for now
+    const revenue = 0;
 
     return res.status(200).json({
       connected: true,
