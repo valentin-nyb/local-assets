@@ -41,7 +41,9 @@ export default async function handler(req, res) {
       prompt:        'consent',
     });
 
-    return res.status(200).json({ authUrl: `https://accounts.google.com/o/oauth2/v2/auth?${params}` });
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
+    console.log('[youtube-auth] client_id:', clientId.slice(0, 20) + '...', 'redirect_uri:', REDIRECT_URI, 'authUrl:', authUrl);
+    return res.status(200).json({ authUrl });
   } finally {
     await redis.quit();
   }
