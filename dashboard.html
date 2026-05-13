@@ -52,9 +52,11 @@
         .bg-scanlines { background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.2) 50%, rgba(0, 0, 0, 0.2)); background-size: 100% 4px; }
         ::-webkit-scrollbar { display: none; }
         .session-group + .session-group { border-top: 1px solid rgba(39, 39, 42, 0.15); }
-        .rev-btn { display:inline-flex;align-items:center;gap:5px;padding:3px 10px 3px 7px;border-radius:9999px;border:1px solid #27272a;background:transparent;color:#666;font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;transition:border-color .15s,color .15s,background .15s; }
-        .rev-btn:hover { border-color:#39FF14;color:#fff; }
+        .rev-btn { display:inline-flex;align-items:center;gap:5px;padding:3px 10px 3px 7px;border-radius:9999px;border:1px solid #333333;background:#111111;color:#888888;font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;transition:border-color .15s,color .15s,background .15s; }
+        .rev-btn:hover { border-color:#39FF14;color:#ffffff;background:#111111; }
+        .rev-btn:disabled { opacity:.5;cursor:default; }
         .rev-pill { display:inline-flex;align-items:center;gap:5px;padding:3px 9px 3px 6px;border-radius:9999px;border:1px solid rgba(57,255,20,.25);background:rgba(57,255,20,.04);color:#39FF14;font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em; }
+        #revenue-modal * { box-sizing:border-box; }
         
         /* Mobile Overlay Fix */
         @media (max-width: 767px) { 
@@ -1486,50 +1488,50 @@
 
     <!-- Revenue connect modal -->
     <div id="revenue-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
-        <div class="absolute inset-0 bg-black/75 backdrop-blur-sm" onclick="closeRevenueSettings()"></div>
-        <div class="relative bg-[#0d0d0d] border border-[#2a2a2a] rounded-2xl shadow-2xl" style="width:360px;max-width:92vw;padding:28px;">
+        <div class="absolute inset-0" style="background:rgba(0,0,0,.75);backdrop-filter:blur(4px);" onclick="closeRevenueSettings()"></div>
+        <div class="relative rounded-2xl shadow-2xl" style="width:360px;max-width:92vw;padding:28px;background:#0d0d0d;border:1px solid #2a2a2a;color-scheme:dark;">
             <!-- Header -->
-            <div class="flex items-start justify-between mb-2">
-                <span class="text-[11px] font-mono font-bold text-white uppercase tracking-[0.2em]">Connect Platforms</span>
-                <button onclick="closeRevenueSettings()" class="text-zinc-500 hover:text-white transition-colors ml-4 mt-0.5" style="flex-shrink:0;padding:4px;">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;">
+                <span style="font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:700;color:#ffffff;text-transform:uppercase;letter-spacing:.2em;">Connect Platforms</span>
+                <button onclick="closeRevenueSettings()" style="flex-shrink:0;padding:4px;margin-left:16px;background:none;border:none;cursor:pointer;color:#71717a;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#71717a'">
                     <iconify-icon icon="solar:close-square-linear" style="font-size:18px;display:block"></iconify-icon>
                 </button>
             </div>
-            <p class="text-[9px] font-mono text-zinc-500 uppercase tracking-wider mb-6">Connect to track revenue from your distributed content</p>
+            <p style="font-size:9px;font-family:'JetBrains Mono',monospace;color:#71717a;text-transform:uppercase;letter-spacing:.1em;margin-bottom:24px;">Connect to track revenue from your distributed content</p>
 
             <!-- Platform rows -->
-            <div class="flex flex-col" style="gap:16px;">
+            <div style="display:flex;flex-direction:column;gap:16px;">
                 <!-- YouTube -->
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center" style="gap:12px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <div style="display:flex;align-items:center;gap:12px;">
                         <iconify-icon icon="mdi:youtube" style="color:#FF0000;font-size:24px;flex-shrink:0"></iconify-icon>
                         <div>
-                            <div class="text-[11px] font-mono text-white uppercase tracking-wider">YouTube</div>
-                            <div class="text-[9px] font-mono text-zinc-600 uppercase tracking-wider">Analytics API</div>
+                            <div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:#ffffff;text-transform:uppercase;letter-spacing:.1em;">YouTube</div>
+                            <div style="font-size:9px;font-family:'JetBrains Mono',monospace;color:#52525b;text-transform:uppercase;letter-spacing:.1em;">Analytics API</div>
                         </div>
                     </div>
-                    <button id="yt-modal-btn" onclick="connectYouTube(this)" style="padding:6px 16px;border-radius:9999px;border:1px solid #39FF14;background:transparent;color:#39FF14;font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s;" onmouseover="this.style.background='#39FF14';this.style.color='#000'" onmouseout="this.style.background='transparent';this.style.color='#39FF14'">Connect</button>
-                    <span id="yt-modal-connected" class="hidden text-[9px] font-mono text-primary uppercase tracking-wider" style="white-space:nowrap;">✓ Connected</span>
+                    <button id="yt-modal-btn" onclick="connectYouTube(this)" style="padding:6px 16px;border-radius:9999px;border:1px solid #39FF14;background:#0a0a0a;color:#39FF14;font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s;" onmouseover="this.style.background='#39FF14';this.style.color='#000000'" onmouseout="this.style.background='#0a0a0a';this.style.color='#39FF14'">Connect</button>
+                    <span id="yt-modal-connected" class="hidden" style="font-size:9px;font-family:'JetBrains Mono',monospace;color:#39FF14;text-transform:uppercase;letter-spacing:.1em;white-space:nowrap;">✓ Connected</span>
                 </div>
 
                 <!-- Divider -->
                 <div style="border-top:1px solid #1c1c1c;"></div>
 
                 <!-- SoundCloud -->
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center" style="gap:12px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <div style="display:flex;align-items:center;gap:12px;">
                         <iconify-icon icon="mdi:soundcloud" style="color:#FF5500;font-size:24px;flex-shrink:0"></iconify-icon>
                         <div>
-                            <div class="text-[11px] font-mono text-white uppercase tracking-wider">SoundCloud</div>
-                            <div class="text-[9px] font-mono text-zinc-600 uppercase tracking-wider">Plays & Streams</div>
+                            <div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:#ffffff;text-transform:uppercase;letter-spacing:.1em;">SoundCloud</div>
+                            <div style="font-size:9px;font-family:'JetBrains Mono',monospace;color:#52525b;text-transform:uppercase;letter-spacing:.1em;">Plays & Streams</div>
                         </div>
                     </div>
-                    <button id="sc-modal-btn" onclick="connectSoundCloud(this)" style="padding:6px 16px;border-radius:9999px;border:1px solid #39FF14;background:transparent;color:#39FF14;font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s;" onmouseover="this.style.background='#39FF14';this.style.color='#000'" onmouseout="this.style.background='transparent';this.style.color='#39FF14'">Connect</button>
-                    <span id="sc-modal-connected" class="hidden text-[9px] font-mono text-primary uppercase tracking-wider" style="white-space:nowrap;">✓ Connected</span>
+                    <button id="sc-modal-btn" onclick="connectSoundCloud(this)" style="padding:6px 16px;border-radius:9999px;border:1px solid #39FF14;background:#0a0a0a;color:#39FF14;font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s;" onmouseover="this.style.background='#39FF14';this.style.color='#000000'" onmouseout="this.style.background='#0a0a0a';this.style.color='#39FF14'">Connect</button>
+                    <span id="sc-modal-connected" class="hidden" style="font-size:9px;font-family:'JetBrains Mono',monospace;color:#39FF14;text-transform:uppercase;letter-spacing:.1em;white-space:nowrap;">✓ Connected</span>
                 </div>
             </div>
 
-            <p id="revenue-modal-error" class="hidden text-[9px] font-mono text-red-400 uppercase tracking-wider leading-relaxed" style="margin-top:20px;"></p>
+            <p id="revenue-modal-error" class="hidden" style="font-size:9px;font-family:'JetBrains Mono',monospace;color:#f87171;text-transform:uppercase;letter-spacing:.1em;line-height:1.6;margin-top:20px;"></p>
         </div>
     </div>
 </body>
