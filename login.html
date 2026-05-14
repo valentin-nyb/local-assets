@@ -291,6 +291,7 @@
                     ts:       Date.now(),
                 }));
                 if (data.venue) localStorage.setItem('la_venue_name', data.venue.toUpperCase());
+                localStorage.removeItem('la_revenue_cache');
                 setStatus('Signed in — redirecting…', 'ok');
                 window.location.replace(next.startsWith('/') ? next : '/dashboard.html');
             })
