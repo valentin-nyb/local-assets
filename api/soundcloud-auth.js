@@ -19,21 +19,30 @@ export default async function handler(req, res) {
     return res.status(503).json({ error: 'SoundCloud integration not yet enabled — set SOUNDCLOUD_CLIENT_ID in Vercel env vars' });
   }
 
+  // PKCE
+  const codeVerifier  = crypto.randomBytes(32).toString('base64url');
+  const codeChallenge = crypto.createHash('sha256').update(codeVerifier).digest('base64url');
+  const state         = crypto.randomBytes(16).toString('hex');
+
   const redis = createClient({ url: process.env.REDIS_URL });
   await redis.connect();
   try {
-    const state = crypto.randomBytes(16).toString('hex');
-    await redis.set(`sc_oauth_state:${state}`, session.venueSlug, { EX: 300 });
+    await redis.set(`sc_oauth_state:${state}`, JSON.stringify({
+      venueSlug:    session.venueSlug,
+      codeVerifier,
+    }), { EX: 600 });
 
     const params = new URLSearchParams({
-      client_id:     process.env.SOUNDCLOUD_CLIENT_ID,
-      redirect_uri:  CALLBACK_URI,
-      response_type: 'code',
-      scope:         'non-expiring',
+      client_id:             process.env.SOUNDCLOUD_CLIENT_ID,
+      redirect_uri:          CALLBACK_URI,
+      response_type:         'code',
+      code_challenge_method: 'S256',
+      code_challenge:        codeChallenge,
       state,
     });
 
-    return res.status(200).json({ authUrl: `https://soundcloud.com/connect?${params}` });
+    console.log('[soundcloud-auth] venue:', session.venueSlug, 'callback:', CALLBACK_URI);
+    return res.status(200).json({ authUrl: `https://secure.soundcloud.com/authorize?${params}` });
   } finally {
     await redis.quit();
   }

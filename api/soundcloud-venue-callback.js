@@ -14,28 +14,37 @@ export default async function handler(req, res) {
   const redis = createClient({ url: process.env.REDIS_URL });
   await redis.connect();
   try {
-    const venueSlug = await redis.get(`sc_oauth_state:${state}`);
-    if (!venueSlug) {
+    const raw = await redis.get(`sc_oauth_state:${state}`);
+    if (!raw) {
       res.writeHead(302, { Location: '/dashboard?soundcloud=expired' });
       return res.end();
     }
     await redis.del(`sc_oauth_state:${state}`);
 
-    const tokenRes = await fetch('https://api.soundcloud.com/oauth2/token', {
+    const { venueSlug, codeVerifier } = JSON.parse(raw);
+    if (!venueSlug || !codeVerifier) {
+      res.writeHead(302, { Location: '/dashboard?soundcloud=error' });
+      return res.end();
+    }
+
+    // PKCE token exchange — secure.soundcloud.com endpoint
+    const tokenRes = await fetch('https://secure.soundcloud.com/oauth/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
       body: new URLSearchParams({
+        grant_type:    'authorization_code',
         client_id:     process.env.SOUNDCLOUD_CLIENT_ID,
         client_secret: process.env.SOUNDCLOUD_CLIENT_SECRET,
-        grant_type:    'authorization_code',
-        code,
         redirect_uri:  CALLBACK_URI,
+        code,
+        code_verifier: codeVerifier,
       }),
     });
 
     const tokenData = await tokenRes.json();
+    console.log('[soundcloud-venue-callback] token exchange status:', tokenRes.status, 'ok:', tokenRes.ok);
     if (!tokenRes.ok || !tokenData.access_token) {
-      console.error('[soundcloud-venue-callback] Token exchange failed:', tokenData);
+      console.error('[soundcloud-venue-callback] Token exchange failed:', JSON.stringify(tokenData));
       res.writeHead(302, { Location: '/dashboard?soundcloud=error' });
       return res.end();
     }
