@@ -530,6 +530,7 @@
                         html += '</label>';
                     } else {
                         // All asset types: inline file picker for direct upload on dashboard
+                        var allowMultiple = (asset.type === 'SOCIAL' || asset.type === 'THUMB');
                         html += '<label class="flex items-center gap-4 cursor-pointer flex-1 min-w-0">';
                         html += '<div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-border/50 shrink-0">';
                         html += '<iconify-icon icon="' + asset.icon + '" class="' + asset.color + ' text-sm"></iconify-icon>';
@@ -538,7 +539,7 @@
                         html += '<p class="text-[10px] font-bold text-zinc-300 uppercase" id="label-' + uid + '">' + asset.label + '</p>';
                         html += '<p class="text-[8px] font-mono text-zinc-600 uppercase" id="status-' + uid + '">' + asset.ext + ' FORMAT — TAP TO UPLOAD</p>';
                         html += '</div>';
-                        html += '<input type="file" accept="' + accept + '" class="hidden" id="file-' + uid + '" onchange="handleAssetUpload(\'' + uid + '\', this, \'' + sessionName + '\', \'' + sessionDate + '\')">';
+                        html += '<input type="file" accept="' + accept + '"' + (allowMultiple ? ' multiple' : '') + ' class="hidden" id="file-' + uid + '" onchange="handleAssetUpload(\'' + uid + '\', this, \'' + sessionName + '\', \'' + sessionDate + '\')">';
                         html += '</label>';
                     }
                     html += '<div class="flex items-center gap-2 shrink-0">';
