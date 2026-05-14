@@ -159,7 +159,10 @@
                 </div>
                 <!-- Revenue Generated Card -->
                 <div class="bg-card border border-border p-5 rounded-xl">
-                    <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3 block">Revenue Generated</span>
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Revenue Generated</span>
+                        <button id="revenue-manage-btn" onclick="openRevenueSettings()" class="hidden px-2 py-1 rounded text-[8px] font-mono uppercase tracking-wider text-zinc-500 hover:text-primary hover:bg-primary/10 transition-colors">Manage</button>
+                    </div>
                     <span id="revenue-total" class="text-2xl font-bold leading-tight block mb-3">—</span>
                     <!-- Platform row: shown when ≥1 connected -->
                     <div id="revenue-indicators" class="hidden items-center gap-2.5">
@@ -1165,6 +1168,10 @@
             // Store connection state globally for updateSoundCloudButtons()
             window._scConnected = scConnected;
 
+            // Show manage button when platforms are connected
+            var manageBtn = document.getElementById('revenue-manage-btn');
+            if (manageBtn) manageBtn.classList.toggle('hidden', !anyConnected);
+
             if (totalEl)       totalEl.textContent = anyConnected ? '£' + total.toFixed(2) : '—';
             if (indicators)    { indicators.classList.toggle('hidden', !anyConnected); if (anyConnected) indicators.classList.add('flex'); }
             if (connectPrompt) connectPrompt.classList.toggle('hidden', !!anyConnected);
@@ -1635,38 +1642,4 @@
                 <!-- YouTube -->
                 <div style="display:flex;align-items:center;justify-content:space-between;">
                     <div style="display:flex;align-items:center;gap:12px;">
-                        <iconify-icon icon="mdi:youtube" style="color:#FF0000;font-size:24px;flex-shrink:0"></iconify-icon>
-                        <div>
-                            <div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:#ffffff;text-transform:uppercase;letter-spacing:.1em;">YouTube</div>
-                            <div style="font-size:9px;font-family:'JetBrains Mono',monospace;color:#52525b;text-transform:uppercase;letter-spacing:.1em;">Analytics API</div>
-                        </div>
-                    </div>
-                    <button id="yt-modal-btn" onclick="connectYouTube(this)" style="padding:6px 16px;border-radius:9999px;border:1px solid #39FF14;background:#0a0a0a;color:#39FF14;font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s;" onmouseover="this.style.background='#39FF14';this.style.color='#000000'" onmouseout="this.style.background='#0a0a0a';this.style.color='#39FF14'">Connect</button>
-                    <span id="yt-modal-connected" class="hidden" style="font-size:9px;font-family:'JetBrains Mono',monospace;color:#39FF14;text-transform:uppercase;letter-spacing:.1em;white-space:nowrap;">✓ Connected</span>
-                </div>
-
-                <!-- Divider -->
-                <div style="border-top:1px solid #1c1c1c;"></div>
-
-                <!-- SoundCloud -->
-                <div style="display:flex;align-items:center;justify-content:space-between;">
-                    <div style="display:flex;align-items:center;gap:12px;">
-                        <iconify-icon icon="mdi:soundcloud" style="color:#FF5500;font-size:24px;flex-shrink:0"></iconify-icon>
-                        <div>
-                            <div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:#ffffff;text-transform:uppercase;letter-spacing:.1em;">SoundCloud</div>
-                            <div style="font-size:9px;font-family:'JetBrains Mono',monospace;color:#52525b;text-transform:uppercase;letter-spacing:.1em;">Plays & Streams</div>
-                        </div>
-                    </div>
-                    <button id="sc-modal-btn" onclick="connectSoundCloud(this)" style="padding:6px 16px;border-radius:9999px;border:1px solid #39FF14;background:#0a0a0a;color:#39FF14;font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s;" onmouseover="this.style.background='#39FF14';this.style.color='#000000'" onmouseout="this.style.background='#0a0a0a';this.style.color='#39FF14'">Connect</button>
-                    <div id="sc-modal-connected" class="hidden" style="display:flex;align-items:center;gap:8px;">
-                        <span style="font-size:9px;font-family:'JetBrains Mono',monospace;color:#39FF14;text-transform:uppercase;letter-spacing:.1em;white-space:nowrap;">✓ Connected</span>
-                        <button onclick="disconnectSoundCloud(this)" style="padding:4px 12px;border-radius:9999px;border:1px solid #ef4444;background:transparent;color:#ef4444;font-family:'JetBrains Mono',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s;" onmouseover="this.style.background='#ef4444';this.style.color='#ffffff'" onmouseout="this.style.background='transparent';this.style.color='#ef4444'">Disconnect</button>
-                    </div>
-                </div>
-            </div>
-
-            <p id="revenue-modal-error" class="hidden" style="font-size:9px;font-family:'JetBrains Mono',monospace;color:#f87171;text-transform:uppercase;letter-spacing:.1em;line-height:1.6;margin-top:20px;"></p>
-        </div>
-    </div>
-</body>
-</html>
+                        <iconify-icon icon="mdi:youtube" style="color:#FF00
