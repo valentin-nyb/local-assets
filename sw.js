@@ -1,4 +1,4 @@
-const CACHE_NAME = 'la-v3';
+const CACHE_NAME = 'la-v4';
 
 self.addEventListener('install', event => {
   self.skipWaiting();
@@ -10,9 +10,4 @@ self.addEventListener('activate', event => {
       Promise.all(keys.map(k => caches.delete(k)))
     ).then(() => self.clients.claim())
   );
-});
-
-self.addEventListener('fetch', event => {
-  // Never intercept anything - pass all requests through
-  return;
 });
