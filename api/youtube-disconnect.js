@@ -16,7 +16,7 @@ export default async function handler(req, res) {
   const redis = createClient({ url: process.env.REDIS_URL });
   await redis.connect();
   try {
-    await redis.del(`yt_tokens:${session.venueSlug}`);
+    await redis.del(`youtube_token:${session.venueSlug}`);
     console.log(`[youtube-disconnect] cleared tokens for venue: ${session.venueSlug}`);
     return res.status(200).json({ success: true });
   } finally {
