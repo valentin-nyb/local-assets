@@ -382,9 +382,17 @@
             }
             // Find asset by exact key matching session date, or prefix match for multi-file uploads
             function dateMatches(a, sessionDate) {
-                if (new Date(a.created_at * 1000).toISOString().slice(0, 10) === sessionDate) return true;
-                try { const m = JSON.parse(a.passthrough); if (m && m.date === sessionDate) return true; } catch(e) {}
-                return false;
+                // JSON passthrough with explicit date: match strictly
+                try {
+                    const m = JSON.parse(a.passthrough);
+                    if (m && m.date) return m.date === sessionDate;
+                } catch(e) {
+                    // Legacy string passthrough with a type suffix (e.g. "ARTIST // AUDIO")
+                    // carries no date — allow it to match any session for the same artist
+                    if (a.passthrough && a.passthrough.includes(' // ')) return true;
+                }
+                // JSON without date, or plain artist-name passthrough: match by upload timestamp
+                return new Date(a.created_at * 1000).toISOString().slice(0, 10) === sessionDate;
             }
             function findLinked(key, sessionDate) {
                 const candidates = muxByKey[key] || [];
@@ -412,6 +420,14 @@
             var artistMap = {};
             for (var i = 0; i < muxAssets.length; i++) {
                 var a = muxAssets[i];
+                // Skip legacy sub-asset strings (e.g. "ARTIST // AUDIO") — they carry no
+                // date and would create a phantom session row when uploaded on a different
+                // day from the master. findLinked resolves them into the correct session.
+                if (a.passthrough && typeof a.passthrough === 'string') {
+                    var _isLegacy = true;
+                    try { JSON.parse(a.passthrough); _isLegacy = false; } catch(e) {}
+                    if (_isLegacy && a.passthrough.toUpperCase().includes(' // ')) continue;
+                }
                 var meta = parsePassthrough(a.passthrough, a.name, a.id);
                 if (!meta || !meta.artist) continue;
                 var artistName = meta.artist.toUpperCase().trim();
