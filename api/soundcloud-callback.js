@@ -1,4 +1,6 @@
-import { kv } from '@vercel/kv';
+import { createClient } from 'redis';
+
+const REDIRECT_URI = 'https://local-assets.com/api/soundcloud-callback';
 
 export default async function handler(req, res) {
   const { code, state, error } = req.query;
@@ -10,48 +12,52 @@ export default async function handler(req, res) {
 
   if (!code || !state) return res.status(400).send('Missing parameters');
 
-  // Get venue info from state parameter
-  const stateData = await kv.get(`soundcloud:state:${state}`);
-  if (!stateData) return res.status(400).send('Invalid or expired state. Please try connecting again.');
-  await kv.del(`soundcloud:state:${state}`);
+  const redis = createClient({ url: process.env.REDIS_URL });
+  await redis.connect();
+  try {
+    const raw = await redis.get(`sc_state:${state}`);
+    if (!raw) return res.status(400).send('Invalid or expired state. Please try connecting again.');
+    await redis.del(`sc_state:${state}`);
 
-  const { email, venueSlug } = typeof stateData === 'string' ? JSON.parse(stateData) : stateData;
-  if (!email || !venueSlug) return res.status(400).send('Invalid state data.');
+    const { venueSlug, codeVerifier } = JSON.parse(raw);
+    if (!venueSlug || !codeVerifier) return res.status(400).send('Invalid state data.');
 
-  const tokenRes = await fetch('https://api.soundcloud.com/oauth2/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
-    body: new URLSearchParams({
-      client_id: process.env.SOUNDCLOUD_CLIENT_ID,
-      client_secret: process.env.SOUNDCLOUD_CLIENT_SECRET,
-      grant_type: 'authorization_code',
-      code,
-      redirect_uri: 'https://local-assets.com/api/soundcloud-callback',
-    }),
-  });
+    // PKCE token exchange — no client_secret
+    const tokenRes = await fetch('https://secure.soundcloud.com/oauth/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+      body: new URLSearchParams({
+        grant_type:    'authorization_code',
+        client_id:     process.env.SOUNDCLOUD_CLIENT_ID,
+        client_secret: process.env.SOUNDCLOUD_CLIENT_SECRET,
+        redirect_uri:  REDIRECT_URI,
+        code,
+        code_verifier: codeVerifier,
+      }),
+    });
 
-  const tokenData = await tokenRes.json();
-  if (!tokenRes.ok || !tokenData.access_token) {
-    console.error('[SoundCloud] Token exchange failed:', tokenData);
-    return res.status(500).send('Could not connect SoundCloud. Please try again.');
+    const tokenData = await tokenRes.json();
+    if (!tokenRes.ok || !tokenData.access_token) {
+      console.error('[soundcloud-callback] Token exchange failed:', tokenData);
+      return res.status(500).send('Could not connect SoundCloud. Please try again.');
+    }
+
+    const meRes = await fetch('https://api.soundcloud.com/me', {
+      headers: { Authorization: `OAuth ${tokenData.access_token}`, Accept: 'application/json' },
+    });
+    const me = meRes.ok ? await meRes.json() : {};
+
+    await redis.set(`sc_tokens:${venueSlug}`, JSON.stringify({
+      access_token:      tokenData.access_token,
+      refresh_token:     tokenData.refresh_token || '',
+      soundcloudUserId:  String(me.id || ''),
+      soundcloudUsername: me.username || me.permalink || '',
+    }), { EX: 60 * 60 * 24 * 365 });
+
+    console.log(`[soundcloud-callback] Connected @${me.username || me.id} for venue ${venueSlug}`);
+    res.writeHead(302, { Location: '/client.html?soundcloud=connected' });
+    res.end();
+  } finally {
+    await redis.quit();
   }
-
-  const meRes = await fetch('https://api.soundcloud.com/me', {
-    headers: { Authorization: `OAuth ${tokenData.access_token}`, Accept: 'application/json' }
-  });
-  const me = meRes.ok ? await meRes.json() : {};
-
-  // Store per venue using venue slug as key
-  await kv.hset(`venue:${venueSlug}:soundcloud`, {
-    email,
-    soundcloudToken: tokenData.access_token,
-    soundcloudRefreshToken: tokenData.refresh_token || '',
-    soundcloudUserId: String(me.id || ''),
-    soundcloudUsername: me.username || me.permalink || '',
-  });
-
-  console.log(`[SoundCloud] Connected @${me.username || me.id} for venue ${venueSlug} (${email})`);
-
-  res.writeHead(302, { Location: '/client.html?soundcloud=connected' });
-  res.end();
 }

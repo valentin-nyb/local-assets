@@ -35,7 +35,7 @@ export default async function handler(req, res) {
     passthrough = legacyName || 'SESSION_ARCHIVE';
   }
 
-  const isAudio    = passthrough.includes('// AUDIO') || passthrough.includes('/AUDIO');
+  const isAudio    = camera === 'AUDIO' || passthrough.includes('// AUDIO') || passthrough.includes('/AUDIO');
   const videoTitle = (artist || legacyName || 'SESSION') + ' — ' + date;
 
   try {

@@ -39,7 +39,7 @@
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-    <script src="nav-component.js"></script>
+    <script src="nav-component.js?v=2"></script>
     <style>
         /* Standardized sidebar styles used by the JS component */
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
@@ -114,7 +114,7 @@
             <div class="flex justify-between items-center mb-6">
                 <span id="venue-tier" class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Infrastructure Tier - KOKO / London</span>
             </div>
-            <a href="/camera.html" class="block cursor-pointer hover:border-primary/50 transition-all duration-500 w-full bg-[#050505] border border-[#27272a] rounded-2xl p-8 relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-6 shadow-2xl no-underline" style="background:#050505!important">
+            <a id="live-feed-hero" href="/camera.html" class="block cursor-pointer hover:border-primary/50 transition-all duration-500 w-full bg-[#050505] border border-[#27272a] rounded-2xl p-8 relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-6 shadow-2xl no-underline" style="background:#050505!important">
                 <img id="live-feed-video" src="https://image.mux.com/q6FUhQVYgBr02BcUGR02VxR2FFP00anZQ2jZrJuQ6B01EPk/animated.gif?width=640" class="absolute inset-0 w-full h-full object-cover opacity-60 grayscale transition-all duration-700 pointer-events-none" alt="Live Feed">
                 <div class="absolute inset-0 pointer-events-none" style="background:rgba(0,0,0,0.35)"></div>
                 <div class="absolute inset-0 bg-scanlines opacity-10 pointer-events-none"></div>
@@ -372,13 +372,27 @@
                     const ak = meta.artist.toUpperCase().trim();
                     if (!muxByKey[ak]) muxByKey[ak] = [];
                     if (!muxByKey[ak].some(x => x.id === a.id)) muxByKey[ak].push(a);
+                    // Also index JSON-passthrough assets by "ARTIST // CAMERA" so findLinked works
+                    if (meta.camera) {
+                        const ck = ak + ' // ' + meta.camera.toUpperCase().trim();
+                        if (!muxByKey[ck]) muxByKey[ck] = [];
+                        if (!muxByKey[ck].some(x => x.id === a.id)) muxByKey[ck].push(a);
+                    }
                 }
             }
             // Find asset by exact key matching session date, or prefix match for multi-file uploads
             function dateMatches(a, sessionDate) {
-                if (new Date(a.created_at * 1000).toISOString().slice(0, 10) === sessionDate) return true;
-                try { const m = JSON.parse(a.passthrough); if (m && m.date === sessionDate) return true; } catch(e) {}
-                return false;
+                // JSON passthrough with explicit date: match strictly
+                try {
+                    const m = JSON.parse(a.passthrough);
+                    if (m && m.date) return m.date === sessionDate;
+                } catch(e) {
+                    // Legacy string passthrough with a type suffix (e.g. "ARTIST // AUDIO")
+                    // carries no date — allow it to match any session for the same artist
+                    if (a.passthrough && a.passthrough.includes(' // ')) return true;
+                }
+                // JSON without date, or plain artist-name passthrough: match by upload timestamp
+                return new Date(a.created_at * 1000).toISOString().slice(0, 10) === sessionDate;
             }
             function findLinked(key, sessionDate) {
                 const candidates = muxByKey[key] || [];
@@ -406,6 +420,14 @@
             var artistMap = {};
             for (var i = 0; i < muxAssets.length; i++) {
                 var a = muxAssets[i];
+                // Skip legacy sub-asset strings (e.g. "ARTIST // AUDIO") — they carry no
+                // date and would create a phantom session row when uploaded on a different
+                // day from the master. findLinked resolves them into the correct session.
+                if (a.passthrough && typeof a.passthrough === 'string') {
+                    var _isLegacy = true;
+                    try { JSON.parse(a.passthrough); _isLegacy = false; } catch(e) {}
+                    if (_isLegacy && a.passthrough.toUpperCase().includes(' // ')) continue;
+                }
                 var meta = parsePassthrough(a.passthrough, a.name, a.id);
                 if (!meta || !meta.artist) continue;
                 var artistName = meta.artist.toUpperCase().trim();
@@ -480,6 +502,11 @@
                         html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Play" onclick="window.open(\'/player.html?v=' + pid + '&f=' + dlFile + '&title=\' + encodeURIComponent(\'' + safeLabel + '\'), \'_blank\')">';
                         html += '<iconify-icon icon="solar:play-bold" class="text-primary"></iconify-icon>';
                         html += '</button>';
+                        if (isAudioAsset) {
+                            html += '<button id="sc-dist-' + uid + '" class="sc-dist-btn hidden" style="display:none;align-items:center;gap:4px;padding:3px 8px;border-radius:9999px;border:1px solid #FF5500;background:transparent;color:#FF5500;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;white-space:nowrap;" onclick="distributeSoundCloud(\'' + pid + '\', \'' + dlFile + '\', \'' + safeName + '\', \'' + uid + '\')" onmouseover="this.style.background=\'#FF5500\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'#FF5500\'">';
+                            html += '<iconify-icon icon="mdi:soundcloud" style="font-size:11px;flex-shrink:0"></iconify-icon> &#x2191; SOUNDCLOUD';
+                            html += '</button>';
+                        }
                     } else if (pid) {
                         html += '<span class="text-[8px] font-mono text-yellow-500 uppercase">PREPARING</span>';
                     } else {
@@ -490,16 +517,31 @@
                 } else {
                     if (_isClientUser) return '';
                     html += '<div class="p-4 pl-16 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-' + uid + '">';
-                    html += '<label class="flex items-center gap-4 cursor-pointer flex-1 min-w-0">';
-                    html += '<div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-border/50 shrink-0">';
-                    html += '<iconify-icon icon="' + asset.icon + '" class="' + asset.color + ' text-sm"></iconify-icon>';
-                    html += '</div>';
-                    html += '<div class="min-w-0">';
-                    html += '<p class="text-[10px] font-bold text-zinc-300 uppercase" id="label-' + uid + '">' + asset.label + '</p>';
-                    html += '<p class="text-[8px] font-mono text-zinc-600 uppercase" id="status-' + uid + '">' + asset.ext + ' FORMAT — TAP TO UPLOAD</p>';
-                    html += '</div>';
-                    html += '<input type="file" accept="' + accept + '" class="hidden" id="file-' + uid + '"' + (asset.type === 'SOCIAL' ? ' multiple' : '') + ' onchange="handleAssetUpload(\'' + uid + '\', this, \'' + sessionName + '\', \'' + sessionDate + '\')">';
-                    html += '</label>';
+                    if (asset.type === 'MASTER') {
+                        // MASTER: keep inline file picker
+                        html += '<label class="flex items-center gap-4 cursor-pointer flex-1 min-w-0">';
+                        html += '<div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-border/50 shrink-0">';
+                        html += '<iconify-icon icon="' + asset.icon + '" class="' + asset.color + ' text-sm"></iconify-icon>';
+                        html += '</div>';
+                        html += '<div class="min-w-0">';
+                        html += '<p class="text-[10px] font-bold text-zinc-300 uppercase" id="label-' + uid + '">' + asset.label + '</p>';
+                        html += '<p class="text-[8px] font-mono text-zinc-600 uppercase" id="status-' + uid + '">' + asset.ext + ' FORMAT — TAP TO UPLOAD</p>';
+                        html += '</div>';
+                        html += '<input type="file" accept="' + accept + '" class="hidden" id="file-' + uid + '" onchange="handleAssetUpload(\'' + uid + '\', this, \'' + sessionName + '\', \'' + sessionDate + '\')">';
+                        html += '</label>';
+                    } else {
+                        // Sub-assets: navigate to assets.html pre-filled for this session
+                        var _upUrl = '/assets.html?artist=' + encodeURIComponent(sessionName) + '&date=' + encodeURIComponent(sessionDate) + '&camera=' + encodeURIComponent(asset.type);
+                        html += '<a href="' + _upUrl + '" style="text-decoration:none;display:flex;align-items:center;gap:16px;flex:1;min-width:0;">';
+                        html += '<div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-border/50 shrink-0">';
+                        html += '<iconify-icon icon="' + asset.icon + '" class="' + asset.color + ' text-sm"></iconify-icon>';
+                        html += '</div>';
+                        html += '<div class="min-w-0">';
+                        html += '<p class="text-[10px] font-bold text-zinc-300 uppercase" id="label-' + uid + '">' + asset.label + '</p>';
+                        html += '<p class="text-[8px] font-mono text-zinc-600 uppercase" id="status-' + uid + '">' + asset.ext + ' FORMAT — TAP TO UPLOAD</p>';
+                        html += '</div>';
+                        html += '</a>';
+                    }
                     html += '<div class="flex items-center gap-2 shrink-0">';
                     html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors opacity-10" id="dl-' + uid + '" disabled title="No file yet">';
                     html += '<iconify-icon icon="solar:download-bold" class="text-zinc-700"></iconify-icon>';
@@ -1112,6 +1154,12 @@
             // Divider only when both connected
             if (revDivider) revDivider.classList.toggle('hidden', !(ytConnected && scConnected));
 
+            // Show/hide SoundCloud distribute buttons in distribution history
+            document.querySelectorAll('.sc-dist-btn').forEach(function(btn) {
+                if (scConnected) { btn.style.display = 'inline-flex'; btn.classList.remove('hidden'); }
+                else             { btn.style.display = 'none';        btn.classList.add('hidden');    }
+            });
+
             // Modal state
             if (ytModalBtn)  ytModalBtn.classList.toggle('hidden', !!ytConnected);
             if (ytModalConn) ytModalConn.classList.toggle('hidden', !ytConnected);
@@ -1136,10 +1184,34 @@
             setTimeout(() => el.classList.add('hidden'), 6000);
         }
 
+        async function distributeSoundCloud(playbackId, dlFile, title, uid) {
+            var btn = document.getElementById('sc-dist-' + uid);
+            if (btn) { btn.disabled = true; btn.innerHTML = '<iconify-icon icon="mdi:soundcloud" style="font-size:11px"></iconify-icon> UPLOADING…'; }
+            try {
+                var res = await laFetch('/api/soundcloud-upload', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ playbackId, dlFile, title }),
+                });
+                var data = await res.json();
+                if (!res.ok) {
+                    if (btn) { btn.disabled = false; btn.innerHTML = '<iconify-icon icon="mdi:soundcloud" style="font-size:11px"></iconify-icon> &#x2191; SOUNDCLOUD'; }
+                    alert('SoundCloud upload failed: ' + (data.error || 'Unknown error'));
+                    return;
+                }
+                // Replace button with success state
+                var row = document.getElementById('sc-dist-' + uid);
+                if (row) row.outerHTML = '<a id="sc-dist-' + uid + '" href="' + (data.url || '#') + '" target="_blank" style="display:inline-flex;align-items:center;gap:4px;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#39FF14;text-decoration:none;">&#x2713; ON SOUNDCLOUD</a>';
+            } catch(e) {
+                if (btn) { btn.disabled = false; btn.innerHTML = '<iconify-icon icon="mdi:soundcloud" style="font-size:11px"></iconify-icon> &#x2191; SOUNDCLOUD'; }
+            }
+        }
+
         async function connectYouTube(btn) {
             if (btn) { btn.disabled = true; btn.textContent = 'Connecting…'; }
             try {
-                const res  = await laFetch('/api/youtube-auth');
+                const email = (() => { try { return JSON.parse(localStorage.getItem('la_admin') || '{}').email || ''; } catch(_) { return ''; } })();
+                const res  = await fetch('/api/youtube-auth?email=' + encodeURIComponent(email));
                 const data = await res.json();
                 if (!res.ok) { _showRevenueModalError(data.error || 'YouTube connection failed'); if (btn) { btn.disabled = false; btn.textContent = 'Connect'; } return; }
                 if (data.authUrl) window.location.href = data.authUrl;
@@ -1166,6 +1238,19 @@
         })();
 
         fetchRevenue();
+
+        // Disable live feed hero link for client role users
+        (function() {
+            var role = (function() { try { return JSON.parse(localStorage.getItem('la_admin') || '{}').role || 'admin'; } catch(_) { return 'admin'; } })();
+            if (role === 'client') {
+                var hero = document.getElementById('live-feed-hero');
+                if (hero) {
+                    hero.removeAttribute('href');
+                    hero.style.cursor = 'default';
+                    hero.classList.remove('cursor-pointer', 'hover:border-primary/50');
+                }
+            }
+        })();
 
         fetchSystemHealth();
         setInterval(fetchSystemHealth, 30000);
@@ -1402,7 +1487,7 @@
                         const response = await laFetch('/api/get-upload-url', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ artistName: tag })
+                            body: JSON.stringify({ artist: sessionName, date: sessionDate, camera: assetType })
                         });
                         const data = await response.json();
 
