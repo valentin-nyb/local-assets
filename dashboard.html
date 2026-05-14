@@ -480,6 +480,7 @@
                 var srReady = null;
                 for (var si = 0; si < srFiles.length; si++) { if (srFiles[si].status === 'ready') { srReady = srFiles[si]; break; } }
                 var isAudioAsset = asset.type === 'AUDIO';
+                var isMasterAsset = asset.type === 'MASTER';
                 // If we have a playback ID, assume downloadable even if static_renditions not confirmed ready
                 var dlFile = srReady ? srReady.name : (pid && (srStatus === 'ready' || !srStatus)) ? (isAudioAsset ? 'audio.m4a' : 'highest.mp4') : null;
                 var dlExt = srReady ? srReady.ext : (isAudioAsset ? 'm4a' : 'mp4');
@@ -506,9 +507,14 @@
                         html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Play" onclick="window.open(\'/player.html?v=' + pid + '&f=' + dlFile + '&title=\' + encodeURIComponent(\'' + safeLabel + '\'), \'_blank\')">';
                         html += '<iconify-icon icon="solar:play-bold" class="text-primary"></iconify-icon>';
                         html += '</button>';
+                        if (isMasterAsset) {
+                            html += '<button id="yt-dist-' + uid + '" class="yt-dist-btn hidden" style="display:none;align-items:center;gap:4px;padding:3px 8px;border-radius:9999px;border:1px solid #FF0000;background:transparent;color:#FF0000;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;white-space:nowrap;" onclick="distributeYouTube(\'' + pid + '\', \'' + dlFile + '\', \'' + safeName + '\', \'' + uid + '\')" onmouseover="this.style.background=\'#FF0000\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'#FF0000\'">';
+                            html += '<iconify-icon icon="mdi:youtube" style="font-size:11px;flex-shrink:0"></iconify-icon> YOUTUBE';
+                            html += '</button>';
+                        }
                         if (isAudioAsset) {
                             html += '<button id="sc-dist-' + uid + '" class="sc-dist-btn hidden" style="display:none;align-items:center;gap:4px;padding:3px 8px;border-radius:9999px;border:1px solid #FF5500;background:transparent;color:#FF5500;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;white-space:nowrap;" onclick="distributeSoundCloud(\'' + pid + '\', \'' + dlFile + '\', \'' + safeName + '\', \'' + uid + '\')" onmouseover="this.style.background=\'#FF5500\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'#FF5500\'">';
-                            html += '<iconify-icon icon="mdi:soundcloud" style="font-size:11px;flex-shrink:0"></iconify-icon> &#x2191; SOUNDCLOUD';
+                            html += '<iconify-icon icon="mdi:soundcloud" style="font-size:11px;flex-shrink:0"></iconify-icon> SOUNDCLOUD';
                             html += '</button>';
                         }
                     } else if (pid) {
@@ -858,15 +864,27 @@
             }
             container.innerHTML = html;
 
-            // Update SoundCloud button visibility based on current revenue state
-            updateSoundCloudButtons();
+            // Update distribution button visibility based on current revenue state
+            updateDistributionButtons();
         }
 
-        function updateSoundCloudButtons() {
+        function updateDistributionButtons() {
             // Use globally stored connection state from renderRevenue()
             const scConnected = window._scConnected || false;
+            const ytConnected = window._ytConnected || false;
+            
             document.querySelectorAll('.sc-dist-btn').forEach(function(btn) {
                 if (scConnected) { 
+                    btn.style.display = 'inline-flex'; 
+                    btn.classList.remove('hidden'); 
+                } else { 
+                    btn.style.display = 'none'; 
+                    btn.classList.add('hidden'); 
+                }
+            });
+            
+            document.querySelectorAll('.yt-dist-btn').forEach(function(btn) {
+                if (ytConnected) { 
                     btn.style.display = 'inline-flex'; 
                     btn.classList.remove('hidden'); 
                 } else { 
@@ -1167,6 +1185,7 @@
 
             // Store connection state globally for updateSoundCloudButtons()
             window._scConnected = scConnected;
+            window._ytConnected = ytConnected;
 
             // Show manage button when platforms are connected
             var manageBtn = document.getElementById('revenue-manage-btn');
@@ -1192,6 +1211,12 @@
             // Show/hide SoundCloud distribute buttons in distribution history
             document.querySelectorAll('.sc-dist-btn').forEach(function(btn) {
                 if (scConnected) { btn.style.display = 'inline-flex'; btn.classList.remove('hidden'); }
+                else             { btn.style.display = 'none';        btn.classList.add('hidden');    }
+            });
+
+            // Show/hide YouTube distribute buttons in distribution history
+            document.querySelectorAll('.yt-dist-btn').forEach(function(btn) {
+                if (ytConnected) { btn.style.display = 'inline-flex'; btn.classList.remove('hidden'); }
                 else             { btn.style.display = 'none';        btn.classList.add('hidden');    }
             });
 
@@ -1230,7 +1255,7 @@
                 });
                 var data = await res.json();
                 if (!res.ok) {
-                    if (btn) { btn.disabled = false; btn.innerHTML = '<iconify-icon icon="mdi:soundcloud" style="font-size:11px"></iconify-icon> &#x2191; SOUNDCLOUD'; }
+                    if (btn) { btn.disabled = false; btn.innerHTML = '<iconify-icon icon="mdi:soundcloud" style="font-size:11px"></iconify-icon> SOUNDCLOUD'; }
                     alert('SoundCloud upload failed: ' + (data.error || 'Unknown error'));
                     return;
                 }
@@ -1238,8 +1263,13 @@
                 var row = document.getElementById('sc-dist-' + uid);
                 if (row) row.outerHTML = '<a id="sc-dist-' + uid + '" href="' + (data.url || '#') + '" target="_blank" style="display:inline-flex;align-items:center;gap:4px;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#39FF14;text-decoration:none;">&#x2713; ON SOUNDCLOUD</a>';
             } catch(e) {
-                if (btn) { btn.disabled = false; btn.innerHTML = '<iconify-icon icon="mdi:soundcloud" style="font-size:11px"></iconify-icon> &#x2191; SOUNDCLOUD'; }
+                if (btn) { btn.disabled = false; btn.innerHTML = '<iconify-icon icon="mdi:soundcloud" style="font-size:11px"></iconify-icon> SOUNDCLOUD'; }
             }
+        }
+
+        async function distributeYouTube(playbackId, dlFile, title, uid) {
+            alert('YouTube distribution coming soon! This will upload 4K video directly to your YouTube channel.');
+            // TODO: Implement YouTube upload API integration
         }
 
         async function connectYouTube(btn) {
@@ -1642,4 +1672,38 @@
                 <!-- YouTube -->
                 <div style="display:flex;align-items:center;justify-content:space-between;">
                     <div style="display:flex;align-items:center;gap:12px;">
-                        <iconify-icon icon="mdi:youtube" style="color:#FF00
+                        <iconify-icon icon="mdi:youtube" style="color:#FF0000;font-size:24px;flex-shrink:0"></iconify-icon>
+                        <div>
+                            <div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:#ffffff;text-transform:uppercase;letter-spacing:.1em;">YouTube</div>
+                            <div style="font-size:9px;font-family:'JetBrains Mono',monospace;color:#52525b;text-transform:uppercase;letter-spacing:.1em;">Analytics API</div>
+                        </div>
+                    </div>
+                    <button id="yt-modal-btn" onclick="connectYouTube(this)" style="padding:6px 16px;border-radius:9999px;border:1px solid #39FF14;background:#0a0a0a;color:#39FF14;font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s;" onmouseover="this.style.background='#39FF14';this.style.color='#000000'" onmouseout="this.style.background='#0a0a0a';this.style.color='#39FF14'">Connect</button>
+                    <span id="yt-modal-connected" class="hidden" style="font-size:9px;font-family:'JetBrains Mono',monospace;color:#39FF14;text-transform:uppercase;letter-spacing:.1em;white-space:nowrap;">✓ Connected</span>
+                </div>
+
+                <!-- Divider -->
+                <div style="border-top:1px solid #1c1c1c;"></div>
+
+                <!-- SoundCloud -->
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <iconify-icon icon="mdi:soundcloud" style="color:#FF5500;font-size:24px;flex-shrink:0"></iconify-icon>
+                        <div>
+                            <div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:#ffffff;text-transform:uppercase;letter-spacing:.1em;">SoundCloud</div>
+                            <div style="font-size:9px;font-family:'JetBrains Mono',monospace;color:#52525b;text-transform:uppercase;letter-spacing:.1em;">Plays & Streams</div>
+                        </div>
+                    </div>
+                    <button id="sc-modal-btn" onclick="connectSoundCloud(this)" style="padding:6px 16px;border-radius:9999px;border:1px solid #39FF14;background:#0a0a0a;color:#39FF14;font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s;" onmouseover="this.style.background='#39FF14';this.style.color='#000000'" onmouseout="this.style.background='#0a0a0a';this.style.color='#39FF14'">Connect</button>
+                    <div id="sc-modal-connected" class="hidden" style="display:flex;align-items:center;gap:8px;">
+                        <span style="font-size:9px;font-family:'JetBrains Mono',monospace;color:#39FF14;text-transform:uppercase;letter-spacing:.1em;white-space:nowrap;">✓ Connected</span>
+                        <button onclick="disconnectSoundCloud(this)" style="padding:4px 12px;border-radius:9999px;border:1px solid #ef4444;background:transparent;color:#ef4444;font-family:'JetBrains Mono',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s;" onmouseover="this.style.background='#ef4444';this.style.color='#ffffff'" onmouseout="this.style.background='transparent';this.style.color='#ef4444'">Disconnect</button>
+                    </div>
+                </div>
+            </div>
+
+            <p id="revenue-modal-error" class="hidden" style="font-size:9px;font-family:'JetBrains Mono',monospace;color:#f87171;text-transform:uppercase;letter-spacing:.1em;line-height:1.6;margin-top:20px;"></p>
+        </div>
+    </div>
+</body>
+</html>
