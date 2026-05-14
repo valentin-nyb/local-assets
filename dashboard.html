@@ -530,9 +530,8 @@
                         html += '<input type="file" accept="' + accept + '" class="hidden" id="file-' + uid + '" onchange="handleAssetUpload(\'' + uid + '\', this, \'' + sessionName + '\', \'' + sessionDate + '\')">';
                         html += '</label>';
                     } else {
-                        // Sub-assets: navigate to assets.html pre-filled for this session
-                        var _upUrl = '/assets.html?artist=' + encodeURIComponent(sessionName) + '&date=' + encodeURIComponent(sessionDate) + '&camera=' + encodeURIComponent(asset.type);
-                        html += '<a href="' + _upUrl + '" style="text-decoration:none;display:flex;align-items:center;gap:16px;flex:1;min-width:0;">';
+                        // All asset types: inline file picker for direct upload on dashboard
+                        html += '<label class="flex items-center gap-4 cursor-pointer flex-1 min-w-0">';
                         html += '<div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-border/50 shrink-0">';
                         html += '<iconify-icon icon="' + asset.icon + '" class="' + asset.color + ' text-sm"></iconify-icon>';
                         html += '</div>';
@@ -540,7 +539,8 @@
                         html += '<p class="text-[10px] font-bold text-zinc-300 uppercase" id="label-' + uid + '">' + asset.label + '</p>';
                         html += '<p class="text-[8px] font-mono text-zinc-600 uppercase" id="status-' + uid + '">' + asset.ext + ' FORMAT — TAP TO UPLOAD</p>';
                         html += '</div>';
-                        html += '</a>';
+                        html += '<input type="file" accept="' + accept + '" class="hidden" id="file-' + uid + '" onchange="handleAssetUpload(\'' + uid + '\', this, \'' + sessionName + '\', \'' + sessionDate + '\')">';
+                        html += '</label>';
                     }
                     html += '<div class="flex items-center gap-2 shrink-0">';
                     html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors opacity-10" id="dl-' + uid + '" disabled title="No file yet">';
