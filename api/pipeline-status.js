@@ -8,8 +8,8 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const redis = createClient({ url: process.env.REDIS_URL });
-  await redis.connect();
   try {
+    await redis.connect();
     const { jobId } = req.query;
 
     if (jobId) {
@@ -30,7 +30,10 @@ export default async function handler(req, res) {
     }
     jobs.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
     return res.status(200).json(jobs);
+  } catch (e) {
+    console.error('[pipeline-status] Redis error:', e.message);
+    return res.status(500).json({ error: 'Failed to fetch pipeline status' });
   } finally {
-    await redis.quit();
+    await redis.quit().catch(() => {});
   }
 }

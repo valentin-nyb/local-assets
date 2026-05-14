@@ -21,30 +21,42 @@ try {
 const REDIS_URL = process.env.REDIS_URL;
 if (!REDIS_URL) { console.error('REDIS_URL is not set'); process.exit(1); }
 
-let tokenId = process.env.PROD_MUX_TOKEN_ID || process.env.MUX_TOKEN_ID;
-let tokenSecret = process.env.PROD_MUX_TOKEN_SECRET || process.env.MUX_TOKEN_SECRET;
-
-// Fallback: read from VENUES_CONFIG (first venue with Mux creds)
-if (!tokenId || !tokenSecret) {
-  try {
-    const raw = process.env.VENUES_CONFIG || '{}';
-    let venues;
-    try { venues = JSON.parse(raw); } catch { venues = JSON.parse(decodeURIComponent(raw)); }
-    for (const cfg of Object.values(venues)) {
-      if ((cfg.mux_token_id || '').trim() && (cfg.mux_token_secret || '').trim()) {
-        tokenId = cfg.mux_token_id.trim();
-        tokenSecret = cfg.mux_token_secret.trim();
-        console.log('[Server] Mux credentials loaded from VENUES_CONFIG');
-        break;
-      }
+// Build a per-venue Mux credential map from VENUES_CONFIG (fallback if job carries no creds)
+const venueCredMap = {};
+let defaultMuxAuth = null;
+try {
+  const raw = process.env.VENUES_CONFIG || '{}';
+  let venues;
+  try { venues = JSON.parse(raw); } catch { venues = JSON.parse(decodeURIComponent(raw)); }
+  for (const [slug, cfg] of Object.entries(venues)) {
+    const id = (cfg.mux_token_id || '').trim();
+    const secret = (cfg.mux_token_secret || '').trim();
+    if (id && secret) {
+      venueCredMap[slug] = { tokenId: id, tokenSecret: secret };
+      if (!defaultMuxAuth) defaultMuxAuth = venueCredMap[slug];
     }
-  } catch (e) {
-    console.error('[Server] Failed to parse VENUES_CONFIG for Mux creds:', e.message);
   }
+  if (defaultMuxAuth) console.log('[Server] Mux credentials loaded from VENUES_CONFIG for', Object.keys(venueCredMap).join(', '));
+} catch (e) {
+  console.error('[Server] Failed to parse VENUES_CONFIG for Mux creds:', e.message);
 }
-if (!tokenId || !tokenSecret) { console.error('MUX credentials not set'); process.exit(1); }
 
-const muxAuth = { tokenId, tokenSecret };
+// Also accept explicit env vars as a global fallback
+const envTokenId = (process.env.PROD_MUX_TOKEN_ID || process.env.MUX_TOKEN_ID || '').trim();
+const envTokenSecret = (process.env.PROD_MUX_TOKEN_SECRET || process.env.MUX_TOKEN_SECRET || '').trim();
+if (envTokenId && envTokenSecret && !defaultMuxAuth) {
+  defaultMuxAuth = { tokenId: envTokenId, tokenSecret: envTokenSecret };
+  console.log('[Server] Mux credentials loaded from env vars');
+}
+
+function getMuxAuthForJob(job) {
+  // Prefer creds embedded in the job (set by pipeline-trigger per-venue)
+  if (job.muxAuth?.tokenId && job.muxAuth?.tokenSecret) return job.muxAuth;
+  // Fall back to per-venue map
+  if (job.venueSlug && venueCredMap[job.venueSlug]) return venueCredMap[job.venueSlug];
+  // Last resort: default
+  return defaultMuxAuth;
+}
 
 // ── Validate FFmpeg ───────────────────────────────────────────────────
 try {
@@ -74,7 +86,18 @@ while (true) {
       continue;
     }
 
-    console.log(`\n[Server] ▶ Job received: ${job.jobId} — "${job.artistName}"`);
+    console.log(`\n[Server] ▶ Job received: ${job.jobId} — "${job.artistName}" venue=${job.venueSlug || 'default'}`);
+
+    const muxAuth = getMuxAuthForJob(job);
+    if (!muxAuth) {
+      console.error(`[Server] No Mux credentials for venue "${job.venueSlug}" — skipping job ${job.jobId}`);
+      await redis.set(
+        `pipeline:job:${job.jobId}`,
+        JSON.stringify({ done: 0, total: 30, status: 'error', artistName: job.artistName, error: 'No Mux credentials configured for this venue' }),
+        { EX: 7200 }
+      );
+      continue;
+    }
 
     await runPipeline({ ...job, redis, muxAuth }).catch(e => {
       console.error('[Server] Unhandled pipeline error:', e.message);
