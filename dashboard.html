@@ -589,10 +589,17 @@
                 var isDark = document.documentElement.classList.contains('dark');
                 var accent = isDark ? '#39FF14' : '#F97316';
 
+                // Check if clips are still processing (no playback IDs)
+                var readyCount = 0;
+                for (var pi = 0; pi < clips.length; pi++) {
+                    if (clips[pi].playback_ids && clips[pi].playback_ids[0]) readyCount++;
+                }
+                var statusText = readyCount === clips.length ? clips.length + ' CLIPS — IN VAULT' : clips.length + ' CLIPS — ' + readyCount + ' READY, ' + (clips.length - readyCount) + ' PROCESSING';
+
                 // Build comma-separated PID list for gallery URL
                 var allPids = [];
-                for (var pi = 0; pi < clips.length; pi++) {
-                    var cpid = clips[pi].playback_ids && clips[pi].playback_ids[0] ? clips[pi].playback_ids[0].id : null;
+                for (var pc = 0; pc < clips.length; pc++) {
+                    var cpid = clips[pc].playback_ids && clips[pc].playback_ids[0] ? clips[pc].playback_ids[0].id : null;
                     if (cpid) allPids.push(cpid);
                 }
                 var galleryBase = '/player.html?socials=' + allPids.join(',') + '&title=' + encodeURIComponent(name + ' SOCIAL PACK');
@@ -607,7 +614,7 @@
                 html += '</div>';
                 html += '<div>';
                 html += '<p class="text-[10px] font-bold text-zinc-300 uppercase">Social Pack Verticals</p>';
-                html += '<p class="text-[8px] font-mono uppercase tracking-widest" style="color:' + accent + '">' + clips.length + ' CLIPS — IN VAULT</p>';
+                html += '<p class="text-[8px] font-mono uppercase tracking-widest" style="color:' + accent + '">' + statusText + '</p>';
                 html += '</div>';
                 html += '</div>';
                 html += '</div>';
@@ -1535,8 +1542,8 @@
                 }
                 row.style.borderLeft = '2px solid #39FF14';
 
-                // Refresh asset list to show latest Mux status
-                setTimeout(() => fetchRecentUploads(), 2000);
+                // Refresh asset list to show latest Mux status (wait 5s for Mux processing)
+                setTimeout(() => fetchRecentUploads(), 5000);
             } catch (err) {
                 statusEl.textContent = `ERROR — ${err.message}`;
                 statusEl.classList.remove('text-yellow-500');
@@ -1610,9 +1617,4 @@
                             <div style="font-size:9px;font-family:'JetBrains Mono',monospace;color:#52525b;text-transform:uppercase;letter-spacing:.1em;">Plays & Streams</div>
                         </div>
                     </div>
-                    <button id="sc-modal-btn" onclick="connectSoundCloud(this)" style="padding:6px 16px;border-radius:9999px;border:1px solid #39FF14;background:#0a0a0a;color:#39FF14;font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s;" onmouseover="this.style.background='#39FF14';this.style.color='#000000'" onmouseout="this.style.background='#0a0a0a';this.style.color='#39FF14'">Connect</button>
-                    <span id="sc-modal-connected" class="hidden" style="font-size:9px;font-family:'JetBrains Mono',monospace;color:#39FF14;text-transform:uppercase;letter-spacing:.1em;white-space:nowrap;">✓ Connected</span>
-                </div>
-            </div>
-
-            <p id="revenue-modal-error" class
+                    <button id="sc-modal-btn" onclick="connectSoundCloud(this)" style="padding:6px 16px;border-radius:9999px;border:1px solid #39FF14;background:#0a0a0a;color:#39FF14;font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;white-space:nowrap;transition:background .15
