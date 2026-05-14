@@ -480,6 +480,11 @@
                         html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Play" onclick="window.open(\'/player.html?v=' + pid + '&f=' + dlFile + '&title=\' + encodeURIComponent(\'' + safeLabel + '\'), \'_blank\')">';
                         html += '<iconify-icon icon="solar:play-bold" class="text-primary"></iconify-icon>';
                         html += '</button>';
+                        if (isAudioAsset) {
+                            html += '<button id="sc-dist-' + uid + '" class="sc-dist-btn hidden" style="display:none;align-items:center;gap:4px;padding:3px 8px;border-radius:9999px;border:1px solid #FF5500;background:transparent;color:#FF5500;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;white-space:nowrap;" onclick="distributeSoundCloud(\'' + pid + '\', \'' + dlFile + '\', \'' + safeName + '\', \'' + uid + '\')" onmouseover="this.style.background=\'#FF5500\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'#FF5500\'">';
+                            html += '<iconify-icon icon="mdi:soundcloud" style="font-size:11px;flex-shrink:0"></iconify-icon> &#x2191; SOUNDCLOUD';
+                            html += '</button>';
+                        }
                     } else if (pid) {
                         html += '<span class="text-[8px] font-mono text-yellow-500 uppercase">PREPARING</span>';
                     } else {
@@ -1112,6 +1117,12 @@
             // Divider only when both connected
             if (revDivider) revDivider.classList.toggle('hidden', !(ytConnected && scConnected));
 
+            // Show/hide SoundCloud distribute buttons in distribution history
+            document.querySelectorAll('.sc-dist-btn').forEach(function(btn) {
+                if (scConnected) { btn.style.display = 'inline-flex'; btn.classList.remove('hidden'); }
+                else             { btn.style.display = 'none';        btn.classList.add('hidden');    }
+            });
+
             // Modal state
             if (ytModalBtn)  ytModalBtn.classList.toggle('hidden', !!ytConnected);
             if (ytModalConn) ytModalConn.classList.toggle('hidden', !ytConnected);
@@ -1134,6 +1145,29 @@
             el.textContent = msg;
             el.classList.remove('hidden');
             setTimeout(() => el.classList.add('hidden'), 6000);
+        }
+
+        async function distributeSoundCloud(playbackId, dlFile, title, uid) {
+            var btn = document.getElementById('sc-dist-' + uid);
+            if (btn) { btn.disabled = true; btn.innerHTML = '<iconify-icon icon="mdi:soundcloud" style="font-size:11px"></iconify-icon> UPLOADING…'; }
+            try {
+                var res = await laFetch('/api/soundcloud-upload', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ playbackId, dlFile, title }),
+                });
+                var data = await res.json();
+                if (!res.ok) {
+                    if (btn) { btn.disabled = false; btn.innerHTML = '<iconify-icon icon="mdi:soundcloud" style="font-size:11px"></iconify-icon> &#x2191; SOUNDCLOUD'; }
+                    alert('SoundCloud upload failed: ' + (data.error || 'Unknown error'));
+                    return;
+                }
+                // Replace button with success state
+                var row = document.getElementById('sc-dist-' + uid);
+                if (row) row.outerHTML = '<a id="sc-dist-' + uid + '" href="' + (data.url || '#') + '" target="_blank" style="display:inline-flex;align-items:center;gap:4px;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#39FF14;text-decoration:none;">&#x2713; ON SOUNDCLOUD</a>';
+            } catch(e) {
+                if (btn) { btn.disabled = false; btn.innerHTML = '<iconify-icon icon="mdi:soundcloud" style="font-size:11px"></iconify-icon> &#x2191; SOUNDCLOUD'; }
+            }
         }
 
         async function connectYouTube(btn) {
