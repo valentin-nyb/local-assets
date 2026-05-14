@@ -372,6 +372,12 @@
                     const ak = meta.artist.toUpperCase().trim();
                     if (!muxByKey[ak]) muxByKey[ak] = [];
                     if (!muxByKey[ak].some(x => x.id === a.id)) muxByKey[ak].push(a);
+                    // Also index JSON-passthrough assets by "ARTIST // CAMERA" so findLinked works
+                    if (meta.camera) {
+                        const ck = ak + ' // ' + meta.camera.toUpperCase().trim();
+                        if (!muxByKey[ck]) muxByKey[ck] = [];
+                        if (!muxByKey[ck].some(x => x.id === a.id)) muxByKey[ck].push(a);
+                    }
                 }
             }
             // Find asset by exact key matching session date, or prefix match for multi-file uploads
@@ -1450,7 +1456,7 @@
                         const response = await laFetch('/api/get-upload-url', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ artistName: tag })
+                            body: JSON.stringify({ artist: sessionName, date: sessionDate, camera: assetType })
                         });
                         const data = await response.json();
 
