@@ -58,6 +58,7 @@ export default async function handler(req, res) {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.send(`<!DOCTYPE html><html><body><script>
       localStorage.setItem('la_admin', ${JSON.stringify(sessionData)});
+      localStorage.removeItem('la_revenue_cache');
       window.location.href = '/dashboard';
     </script></body></html>`);
 
