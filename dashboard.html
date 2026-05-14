@@ -1534,6 +1534,9 @@
                     dlBtn.querySelector('iconify-icon')?.classList.add('text-primary');
                 }
                 row.style.borderLeft = '2px solid #39FF14';
+
+                // Refresh asset list to show latest Mux status
+                setTimeout(() => fetchRecentUploads(), 2000);
             } catch (err) {
                 statusEl.textContent = `ERROR — ${err.message}`;
                 statusEl.classList.remove('text-yellow-500');
@@ -1612,8 +1615,4 @@
                 </div>
             </div>
 
-            <p id="revenue-modal-error" class="hidden" style="font-size:9px;font-family:'JetBrains Mono',monospace;color:#f87171;text-transform:uppercase;letter-spacing:.1em;line-height:1.6;margin-top:20px;"></p>
-        </div>
-    </div>
-</body>
-</html>
+            <p id="revenue-modal-error" class
