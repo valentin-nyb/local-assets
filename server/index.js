@@ -5,7 +5,7 @@ import { runPipeline } from './jobs/pipeline.js';
 import { execSync } from 'child_process';
 
 // ── Load .env.local from project root ────────────────────────────────
-try {
+// Force rebuild: no dotenv dependency requiredtry {
   const envPath = resolve(process.cwd(), '../.env.local');
   const raw = readFileSync(envPath, 'utf8');
   for (const line of raw.split('\n')) {
