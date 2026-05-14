@@ -67,16 +67,35 @@ try {
   process.exit(1);
 }
 
-// ── Redis connection ──────────────────────────────────────────────────
+// ── Redis connection with retry ───────────────────────────────────────
 const redis = createClient({ url: REDIS_URL });
-redis.on('error', e => console.error('[Redis]', e.message));
-await redis.connect();
-console.log('[Server] Redis connected');
+redis.on('error', e => console.error('[Redis] client error:', e.message));
+
+async function connectRedis(retries = 10) {
+  for (let i = 1; i <= retries; i++) {
+    try {
+      await redis.connect();
+      console.log('[Server] Redis connected');
+      return;
+    } catch (e) {
+      console.error(`[Server] Redis connect attempt ${i}/${retries} failed:`, e.message);
+      if (i === retries) { console.error('[Server] Giving up on Redis'); process.exit(1); }
+      await new Promise(r => setTimeout(r, 3000 * i));
+    }
+  }
+}
+await connectRedis();
 console.log('[Server] Polling pipeline:queue for jobs...\n');
 
 // ── Main loop — BLPOP blocks until a job arrives ──────────────────────
 while (true) {
   try {
+    // Reconnect if Redis dropped
+    if (!redis.isOpen) {
+      console.log('[Server] Redis disconnected — reconnecting...');
+      await connectRedis();
+    }
+
     const item = await redis.blPop('pipeline:queue', 5);
     if (!item) continue;
 
@@ -108,10 +127,7 @@ while (true) {
       );
     });
   } catch (e) {
-    // Ignore BLPOP timeout errors; re-throw real ones
-    if (!e.message?.includes('blPop') && !e.message?.includes('BLPOP')) {
-      console.error('[Server] Loop error:', e.message);
-    }
-    await new Promise(r => setTimeout(r, 1000));
+    console.error('[Server] Loop error:', e.message);
+    await new Promise(r => setTimeout(r, 2000));
   }
 }
