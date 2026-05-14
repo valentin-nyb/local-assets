@@ -15,11 +15,14 @@ export default async function handler(req, res) {
   if (!venueSlug) return res.status(200).json({ connected: false });
 
   const redis = createClient({ url: process.env.REDIS_URL });
-  await redis.connect();
   try {
+    await redis.connect();
     const raw = await redis.get(`sc_tokens:${venueSlug}`);
     return res.status(200).json({ connected: !!raw });
+  } catch (e) {
+    console.error('[soundcloud-status] Redis error:', e.message);
+    return res.status(200).json({ connected: false });
   } finally {
-    await redis.quit();
+    await redis.quit().catch(() => {});
   }
 }

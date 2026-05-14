@@ -1,47 +1,12 @@
-import { createClient } from 'redis';
-import crypto from 'crypto';
 import { findVenueByEmail } from './_venues.js';
-
-// Hardcoded fallback while VENUES_CONFIG is being stabilised
-const ALLOWED = [
-  'valentin@notyourbrew.com',
-  'smack.valentin@gmail.com',
-  'info@local-assets.com',
-];
-
-const REDIRECT_URI = 'https://local-assets.com/api/google-callback';
-
-async function getRedis() {
-  const client = createClient({ url: process.env.REDIS_URL });
-  await client.connect();
-  return client;
-}
+import { signWebToken } from './_venues.js';
 
 export default async function handler(req, res) {
-  const { code, state, error } = req.query;
-
-  if (error) {
-    res.writeHead(302, { Location: 'localassets://auth-error?reason=cancelled' });
-    return res.end();
-  }
-
-  if (!code || !state) {
-    return res.status(400).send('Missing code or state');
-  }
-
-  const redis = await getRedis();
   try {
-    // Verify CSRF state and extract mode
-    const stateRaw = await redis.get(`oauth:state:${state}`);
-    if (!stateRaw) {
-      return res.status(400).send('Invalid or expired state — please try signing in again');
-    }
-    await redis.del(`oauth:state:${state}`);
+    const { code, state } = req.query;
+    if (!code) return res.redirect('/login.html?error=no_code');
 
-    let mode = 'app';
-    try { mode = JSON.parse(stateRaw).mode || 'app'; } catch (e) {}
-
-    // Exchange code for tokens
+    // Exchange code for tokens with Google
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -49,101 +14,55 @@ export default async function handler(req, res) {
         code,
         client_id:     process.env.GOOGLE_CLIENT_ID,
         client_secret: process.env.GOOGLE_CLIENT_SECRET,
-        redirect_uri:  REDIRECT_URI,
+        redirect_uri:  'https://local-assets.com/api/google-callback',
         grant_type:    'authorization_code',
       }),
     });
 
     const tokens = await tokenRes.json();
-    if (!tokenRes.ok) {
-      console.error('Token exchange error:', tokens);
-      if (mode === 'web') {
-        res.writeHead(302, { Location: '/login.html?err=auth_failed' });
-        return res.end();
-      }
-      return res.status(500).send('Authentication failed — please try again');
+    if (!tokens.id_token) {
+      console.error('[google-callback] no id_token:', tokens);
+      return res.redirect('/login.html?error=no_token');
     }
 
-    // Get user profile from Google
-    const userRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-      headers: { Authorization: `Bearer ${tokens.access_token}` },
+    // Decode the JWT payload to get email (Google already verified the signature)
+    const payload = JSON.parse(Buffer.from(tokens.id_token.split('.')[1], 'base64url').toString());
+    const email   = payload.email?.toLowerCase();
+    if (!email) return res.redirect('/login.html?error=no_email');
+
+    // Check if email is authorised
+    const venue       = findVenueByEmail(email);
+    const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.toLowerCase().trim()).filter(Boolean);
+    if (!venue && !adminEmails.includes(email)) {
+      console.error('[google-callback] unauthorized:', email);
+      return res.redirect('/login.html?error=unauthorized');
+    }
+
+    // Sign a short-lived webToken (no Redis — pure HMAC)
+    const venueSlug = venue?.slug || '';
+    const webToken  = signWebToken(email, venueSlug);
+
+    const sessionData = JSON.stringify({
+      email,
+      webToken,
+      name:     payload.name    || '',
+      picture:  payload.picture || '',
+      venue:    venue?.name     || 'Admin',
+      venueSlug,
+      role:     venue?.role     || 'admin',
+      ts:       Date.now(),
     });
-    const user = await userRes.json();
 
-    const email   = user.email?.toLowerCase()?.trim();
-    const name    = user.name || user.email || '';
-    const picture = user.picture || '';
+    console.error('[google-callback] web login OK:', email, 'venue:', venueSlug);
 
-    if (!email) {
-      if (mode === 'web') {
-        res.writeHead(302, { Location: '/login.html?err=no_email' });
-        return res.end();
-      }
-      return res.status(400).send('Could not retrieve email from Google');
-    }
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    return res.send(`<!DOCTYPE html><html><body><script>
+      localStorage.setItem('la_admin', ${JSON.stringify(sessionData)});
+      window.location.href = '/dashboard';
+    </script></body></html>`);
 
-    // ── Web (website admin) flow ──────────────────────────────────────────────
-    if (mode === 'web') {
-      const venueEntry    = findVenueByEmail(email);
-      const inHardcoded   = ALLOWED.includes(email);
-      const inVenueConfig = venueEntry !== null;
-      const isAllowed     = inHardcoded || inVenueConfig;
-
-      console.error('[google-callback] web login', JSON.stringify({
-        email,
-        inHardcodedList:     inHardcoded,
-        foundInVenues:       inVenueConfig,
-        venueSlug:           venueEntry?.slug ?? null,
-        role:                venueEntry?.role ?? null,
-        isAllowed,
-      }));
-
-      if (!isAllowed) {
-        res.writeHead(302, { Location: '/login.html?error=unauthorized' });
-        return res.end();
-      }
-
-      const role = venueEntry?.role || 'admin';
-      const assignedVenue = (venueEntry?.name || '').toUpperCase();
-
-      const pendingToken = crypto.randomBytes(24).toString('hex');
-      await redis.set(
-        `web:pending:${pendingToken}`,
-        JSON.stringify({ email, name, picture, role, venue: assignedVenue }),
-        { EX: 120 }
-      );
-
-      res.writeHead(302, { Location: `/login.html?_s=${pendingToken}` });
-      return res.end();
-    }
-
-    // ── App flow ─────────────────────────────────────────────────────────────
-    let clientId = await redis.get(`client:email:${email}`);
-
-    if (!clientId) {
-      const adminEmails = (process.env.ADMIN_EMAILS || '')
-        .split(',').map(e => e.toLowerCase().trim()).filter(Boolean);
-
-      const isAdmin = adminEmails.length === 0 || adminEmails.includes(email);
-      if (!isAdmin) {
-        res.writeHead(302, { Location: 'localassets://auth-error?reason=not-a-client' });
-        return res.end();
-      }
-
-      // Auto-create admin client record
-      clientId = `admin:${crypto.randomBytes(8).toString('hex')}`;
-      await redis.set(`client:email:${email}`, clientId);
-      await redis.hSet(`client:${clientId}`, {
-        email, name, picture, role: 'admin', createdAt: Date.now().toString(),
-      });
-    }
-
-    const sessionToken = crypto.randomBytes(32).toString('hex');
-    await redis.set(`session:${sessionToken}`, clientId, { EX: 7 * 24 * 3600 });
-
-    res.writeHead(302, { Location: `localassets://verified?session=${sessionToken}` });
-    res.end();
-  } finally {
-    await redis.quit();
+  } catch (e) {
+    console.error('[google-callback] error:', e.message);
+    return res.redirect('/login.html?error=server_error');
   }
 }
