@@ -122,6 +122,7 @@
                 <button onclick="switchTab('assets')" id="tab-assets" class="tab-btn px-5 py-3 font-mono text-xs uppercase tracking-wider border-b-2 border-[#39FF14] text-white">Assets</button>
                 <button onclick="switchTab('upload')" id="tab-upload" class="tab-btn px-5 py-3 font-mono text-xs uppercase tracking-wider border-b-2 border-transparent text-[#666] hover:text-white transition-colors">Upload</button>
                 <button onclick="switchTab('distribution')" id="tab-distribution" class="tab-btn px-5 py-3 font-mono text-xs uppercase tracking-wider border-b-2 border-transparent text-[#666] hover:text-white transition-colors">Distribution</button>
+                <button onclick="switchTab('analytics')" id="tab-analytics" class="tab-btn px-5 py-3 font-mono text-xs uppercase tracking-wider border-b-2 border-transparent text-[#666] hover:text-white transition-colors">Analytics</button>
             </div>
 
             <!-- ASSETS TAB -->
@@ -186,6 +187,124 @@
                     <p class="font-mono text-xs text-[#666] mb-6 max-w-md mx-auto">Your assets are automatically distributed to our partner network once processing completes.</p>
                     <div id="distribution-list" class="space-y-3 max-w-md mx-auto text-left">
                         <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- ANALYTICS TAB -->
+            <div id="panel-analytics" class="hidden">
+                <!-- Connection Status -->
+                <div class="mb-6 p-4 border border-[#1a1a1a] bg-[#0a0a0a] flex items-center justify-between flex-wrap gap-4">
+                    <div class="flex items-center gap-6">
+                        <div id="yt-status-client" class="flex items-center gap-2">
+                            <div class="w-2 h-2 bg-zinc-700 rounded-full"></div>
+                            <span class="font-mono text-xs text-[#666] uppercase">YouTube: <span class="text-[#888]">Checking...</span></span>
+                        </div>
+                        <div id="sc-status-client" class="flex items-center gap-2">
+                            <div class="w-2 h-2 bg-zinc-700 rounded-full"></div>
+                            <span class="font-mono text-xs text-[#666] uppercase">SoundCloud: <span class="text-[#888]">Checking...</span></span>
+                        </div>
+                    </div>
+                    <button onclick="refreshAnalytics()" class="font-mono text-[10px] tracking-wider px-4 py-2 border border-[#39FF14] text-[#39FF14] hover:bg-[#39FF14] hover:text-black transition-all uppercase">
+                        <iconify-icon icon="solar:refresh-bold" class="inline-block mr-1"></iconify-icon> Refresh
+                    </button>
+                </div>
+
+                <!-- Revenue Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-6 hover:border-[#39FF14]/30 transition-colors">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="font-mono text-xs text-[#666] uppercase">Total Revenue</span>
+                            <iconify-icon icon="solar:wallet-bold" class="text-xl text-[#39FF14]"></iconify-icon>
+                        </div>
+                        <div class="text-4xl font-bold text-white mb-1" id="total-revenue-client">£—</div>
+                        <p class="font-mono text-[9px] text-[#555]">Combined platforms</p>
+                    </div>
+                    <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-6 hover:border-red-500/30 transition-colors">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="font-mono text-xs text-[#666] uppercase">YouTube Revenue</span>
+                            <iconify-icon icon="mdi:youtube" class="text-xl text-[#FF0000]"></iconify-icon>
+                        </div>
+                        <div class="text-4xl font-bold text-white mb-1" id="yt-revenue-client">£—</div>
+                        <p class="font-mono text-[9px] text-[#555]" id="yt-views-client">— views</p>
+                    </div>
+                    <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-6 hover:border-[#FF5500]/30 transition-colors">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="font-mono text-xs text-[#666] uppercase">SoundCloud Revenue</span>
+                            <iconify-icon icon="mdi:soundcloud" class="text-xl text-[#FF5500]"></iconify-icon>
+                        </div>
+                        <div class="text-4xl font-bold text-white mb-1" id="sc-revenue-client">£—</div>
+                        <p class="font-mono text-[9px] text-[#555]" id="sc-plays-client">— plays</p>
+                    </div>
+                </div>
+
+                <!-- YouTube Metrics -->
+                <div class="mb-6">
+                    <h3 class="font-mono text-xs tracking-[0.2em] text-[#FF0000] uppercase mb-4">// YouTube Analytics</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                        <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <iconify-icon icon="solar:eye-bold" class="text-sm text-[#39FF14]"></iconify-icon>
+                                <span class="font-mono text-xs text-[#666] uppercase">Views</span>
+                            </div>
+                            <div class="text-2xl font-bold text-white" id="yt-total-views-client">—</div>
+                        </div>
+                        <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <iconify-icon icon="solar:clock-circle-bold" class="text-sm text-[#39FF14]"></iconify-icon>
+                                <span class="font-mono text-xs text-[#666] uppercase">Watch Time</span>
+                            </div>
+                            <div class="text-2xl font-bold text-white" id="yt-watch-time-client">—</div>
+                        </div>
+                        <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <iconify-icon icon="solar:users-group-rounded-bold" class="text-sm text-[#39FF14]"></iconify-icon>
+                                <span class="font-mono text-xs text-[#666] uppercase">Subscribers</span>
+                            </div>
+                            <div class="text-2xl font-bold text-white" id="yt-subscribers-client">—</div>
+                        </div>
+                        <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <iconify-icon icon="solar:chart-bold" class="text-sm text-[#39FF14]"></iconify-icon>
+                                <span class="font-mono text-xs text-[#666] uppercase">Avg CTR</span>
+                            </div>
+                            <div class="text-2xl font-bold text-white" id="yt-ctr-client">—</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SoundCloud Metrics -->
+                <div>
+                    <h3 class="font-mono text-xs tracking-[0.2em] text-[#FF5500] uppercase mb-4">// SoundCloud Analytics</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <iconify-icon icon="solar:play-circle-bold" class="text-sm text-[#39FF14]"></iconify-icon>
+                                <span class="font-mono text-xs text-[#666] uppercase">Plays</span>
+                            </div>
+                            <div class="text-2xl font-bold text-white" id="sc-total-plays-client">—</div>
+                        </div>
+                        <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <iconify-icon icon="solar:download-bold" class="text-sm text-[#39FF14]"></iconify-icon>
+                                <span class="font-mono text-xs text-[#666] uppercase">Downloads</span>
+                            </div>
+                            <div class="text-2xl font-bold text-white" id="sc-downloads-client">—</div>
+                        </div>
+                        <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <iconify-icon icon="solar:heart-bold" class="text-sm text-[#39FF14]"></iconify-icon>
+                                <span class="font-mono text-xs text-[#666] uppercase">Favorites</span>
+                            </div>
+                            <div class="text-2xl font-bold text-white" id="sc-favorites-client">—</div>
+                        </div>
+                        <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <iconify-icon icon="solar:share-bold" class="text-sm text-[#39FF14]"></iconify-icon>
+                                <span class="font-mono text-xs text-[#666] uppercase">Reposts</span>
+                            </div>
+                            <div class="text-2xl font-bold text-white" id="sc-reposts-client">—</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -390,7 +509,7 @@
 
     // ── TABS ──────────────────────────────────────────────────────────
     function switchTab(tab) {
-        ['assets', 'upload', 'distribution'].forEach(t => {
+        ['assets', 'upload', 'distribution', 'analytics'].forEach(t => {
             document.getElementById('panel-' + t).classList.toggle('hidden', t !== tab);
             var btn = document.getElementById('tab-' + t);
             if (t === tab) {
@@ -401,189 +520,13 @@
                 btn.classList.add('border-transparent', 'text-[#666]');
             }
         });
+        // Load analytics data when switching to that tab
+        if (tab === 'analytics') {
+            refreshAnalytics();
+        }
     }
 
     // ── UPLOAD ────────────────────────────────────────────────────────
     var uploadZone = document.getElementById('upload-zone');
     if (uploadZone) {
-        uploadZone.addEventListener('dragover', function(e) { e.preventDefault(); uploadZone.classList.add('dragover'); });
-        uploadZone.addEventListener('dragleave', function() { uploadZone.classList.remove('dragover'); });
-        uploadZone.addEventListener('drop', function(e) {
-            e.preventDefault();
-            uploadZone.classList.remove('dragover');
-            if (e.dataTransfer.files.length) {
-                document.getElementById('upload-file').files = e.dataTransfer.files;
-                handleFileSelected(document.getElementById('upload-file'));
-            }
-        });
-    }
-
-    async function handleFileSelected(input) {
-        var file = input.files[0];
-        if (!file) return;
-
-        var artist = document.getElementById('upload-artist').value.trim().toUpperCase();
-        if (!artist) {
-            alert('Enter an artist / session name first');
-            input.value = '';
-            return;
-        }
-
-        document.getElementById('upload-progress').classList.remove('hidden');
-        document.getElementById('upload-success').classList.add('hidden');
-        document.getElementById('upload-filename').textContent = file.name;
-        document.getElementById('upload-status').textContent = 'Requesting upload URL...';
-
-        try {
-            var res = await fetch('/api/client-upload', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ artistName: artist })
-            });
-            if (!res.ok) {
-                var errData = await res.json().catch(function() { return {}; });
-                throw new Error(errData.error || 'Server ' + res.status);
-            }
-            var data = await res.json();
-            if (!data.url) throw new Error('No upload URL returned');
-
-            document.getElementById('upload-status').textContent = 'Uploading ' + formatBytes(file.size) + '...';
-
-            var xhr = new XMLHttpRequest();
-            xhr.open('PUT', data.url);
-            xhr.upload.onprogress = function(e) {
-                if (e.lengthComputable) {
-                    var pct = Math.round(e.loaded / e.total * 100);
-                    document.getElementById('upload-pct').textContent = pct + '%';
-                    document.getElementById('upload-bar').style.width = pct + '%';
-                }
-            };
-            xhr.onload = function() {
-                if (xhr.status >= 200 && xhr.status < 300) {
-                    document.getElementById('upload-success').classList.remove('hidden');
-                    document.getElementById('upload-status').textContent = 'Processing...';
-                    document.getElementById('upload-pct').textContent = '100%';
-                    document.getElementById('upload-bar').style.width = '100%';
-                    setTimeout(loadAssets, 3000);
-                } else {
-                    document.getElementById('upload-status').textContent = 'UPLOAD ERROR: ' + xhr.status;
-                    document.getElementById('upload-status').style.color = '#ef4444';
-                }
-            };
-            xhr.onerror = function() {
-                document.getElementById('upload-status').textContent = 'UPLOAD FAILED — network error';
-                document.getElementById('upload-status').style.color = '#ef4444';
-            };
-            xhr.send(file);
-        } catch (err) {
-            document.getElementById('upload-status').textContent = 'ERROR: ' + err.message;
-            document.getElementById('upload-status').style.color = '#ef4444';
-        }
-    }
-
-    // ── DISTRIBUTION ──────────────────────────────────────────────────
-    function renderDistribution() {
-        var list = document.getElementById('distribution-list');
-        var masters = clientAssets.filter(a => a.type === 'master');
-        if (masters.length === 0) {
-            list.innerHTML = '<p class="font-mono text-xs text-[#666] text-center">No masters uploaded yet.</p>';
-            return;
-        }
-        list.innerHTML = masters.map(function(asset) {
-            var statusColor = asset.status === 'ready' ? '#39FF14' : '#eab308';
-            var statusText = asset.status === 'ready' ? 'DISTRIBUTED' : 'PROCESSING';
-            var clips = clientAssets.filter(a => a.type === 'social-clip' && a.passthrough && asset.passthrough &&
-                a.passthrough.toUpperCase().startsWith(asset.passthrough.toUpperCase().split('//')[0].trim())).length;
-            return '<div class="flex items-center justify-between p-3 border border-[#1a1a1a] bg-[#111]">' +
-                '<div>' +
-                    '<p class="font-mono text-xs text-white">' + escapeHtml(asset.name) + '</p>' +
-                    '<p class="font-mono text-[10px] text-[#666]">' + clips + ' clips generated</p>' +
-                '</div>' +
-                '<span class="font-mono text-[9px] uppercase tracking-wider" style="color:' + statusColor + '">' + statusText + '</span>' +
-            '</div>';
-        }).join('');
-    }
-
-    // ── BILLING ───────────────────────────────────────────────────────
-    async function openBilling() {
-        try {
-            var res = await fetch('/api/client-profile?action=billing-portal', { credentials: 'include' });
-            if (!res.ok) throw new Error('Failed');
-            var data = await res.json();
-            if (data.url) window.location.href = data.url;
-        } catch (e) {
-            alert('Could not open billing portal: ' + e.message);
-        }
-    }
-
-    // ── LOGOUT ────────────────────────────────────────────────────────
-    function logout() {
-        document.cookie = 'la_session=; Path=/; Max-Age=0';
-        showLogin();
-    }
-
-    // ── HELPERS ───────────────────────────────────────────────────────
-    function formatDuration(s) {
-        if (!s || s <= 0) return '';
-        var h = Math.floor(s / 3600);
-        var m = Math.floor((s % 3600) / 60);
-        var sec = Math.floor(s % 60);
-        if (h > 0) return h + ':' + String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
-        return m + ':' + String(sec).padStart(2, '0');
-    }
-
-    function formatBytes(b) {
-        if (b < 1024) return b + ' B';
-        if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
-        if (b < 1073741824) return (b / 1048576).toFixed(1) + ' MB';
-        return (b / 1073741824).toFixed(2) + ' GB';
-    }
-
-    function escapeHtml(str) {
-        if (!str) return '';
-        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    }
-
-    // ── SOUNDCLOUD UPLOAD ─────────────────────────────────────────────
-    async function pushToSoundCloud(playbackId, title, assetId) {
-        var btn = document.getElementById('sc-' + assetId);
-        if (!btn || btn.disabled) return;
-        btn.disabled = true;
-        btn.textContent = 'Uploading...';
-        btn.style.color = '#ff5500';
-
-        try {
-            var res = await fetch('/api/soundcloud-upload', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ playbackId: playbackId, title: title }),
-            });
-            var data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Upload failed');
-
-            btn.textContent = '✓ Live on SoundCloud';
-            btn.style.color = '#39FF14';
-            btn.disabled = false;
-            btn.onclick = function() { window.open(data.url, '_blank'); };
-            showToast('Track live on SoundCloud — click to open.');
-        } catch (err) {
-            btn.textContent = 'Failed';
-            btn.style.color = '#ef4444';
-            btn.title = err.message;
-            btn.disabled = false;
-        }
-    }
-
-    // ── TOAST ─────────────────────────────────────────────────────────
-    function showToast(msg) {
-        var t = document.createElement('div');
-        t.textContent = msg;
-        t.style.cssText = 'position:fixed;bottom:72px;left:50%;transform:translateX(-50%);background:#111;border:1px solid #39FF14;color:#fff;font-family:monospace;font-size:11px;padding:10px 20px;z-index:9999;pointer-events:none;white-space:nowrap;';
-        document.body.appendChild(t);
-        setTimeout(function() { t.remove(); }, 4000);
-    }
-</script>
-</body>
-</html>
+        uploadZone.addEventListener('dragover', function(e) { e.preventDefault(); uploadZone.classList.add('dra
