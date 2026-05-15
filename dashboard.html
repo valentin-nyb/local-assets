@@ -1309,6 +1309,8 @@
                 localStorage.removeItem('la_revenue_cache');
                 window.location.reload();
             } catch(e) {
+                console.error('[disconnect] SoundCloud error:', e);
+                alert('Disconnect error: ' + e.message);
                 if (btn) { btn.disabled = false; btn.textContent = 'Disconnect'; }
             }
         }
@@ -1328,6 +1330,8 @@
                 localStorage.removeItem('la_revenue_cache');
                 window.location.reload();
             } catch(e) {
+                console.error('[disconnect] YouTube error:', e);
+                alert('Disconnect error: ' + e.message);
                 if (btn) { btn.disabled = false; btn.textContent = 'Disconnect'; }
             }
         }
