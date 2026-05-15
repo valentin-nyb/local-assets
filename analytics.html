@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="local / assets">
+    <title>Analytics — local / assets™</title>
+    <link rel="icon" type="image/x-icon" href="favicon/favicon.ico">
+    <link rel="icon" type="image/svg+xml" href="favicon/favicon.svg">
+    <link rel="apple-touch-icon" href="favicon/apple-touch-icon.png">
+    <link rel="manifest" href="favicon/site.webmanifest">
+    <script>document.documentElement.classList.add('dark');</script>
+    <link rel="stylesheet" href="styles/tailwind.css">
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { background-color: #050505; color: #ffffff; -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #050505; }
+        ::-webkit-scrollbar-thumb { background: #39FF14; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #32e612; }
+        
+        .metric-card {
+            background: #0a0a0a;
+            border: 1px solid #27272a;
+            transition: all 300ms ease;
+        }
+        .metric-card:hover {
+            border-color: #39FF14;
+            box-shadow: 0 0 20px rgba(57, 255, 20, 0.1);
+        }
+        .pulse-dot {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+        .stat-number {
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.02em;
+        }
+    </style>
+</head>
+
+<body class="font-sans antialiased bg-background text-foreground overflow-x-hidden selection:bg-primary selection:text-black">
+    
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-8 py-6 bg-black/80 backdrop-blur-md border-b border-white/10">
+        <a href="index.html" class="flex items-center shrink-0">
+            <img src="logos/White@2x.png" alt="logo" class="h-5 md:h-6 w-auto object-contain object-left">
+        </a>
+        <div class="flex items-center gap-3">
+            <a href="dashboard.html" class="font-mono text-[10px] tracking-wider text-zinc-400 hover:text-primary uppercase transition-colors">Dashboard</a>
+            <a href="analytics.html" class="font-mono text-[10px] tracking-wider text-primary uppercase">Analytics</a>
+        </div>
+    </nav>
+
+    <main class="pt-24 min-h-screen">
+        
+        <!-- Header Section -->
+        <section class="px-8 py-16 border-b border-white/5">
+            <div class="max-w-7xl mx-auto">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-2 h-2 bg-primary rounded-full pulse-dot"></div>
+                    <span class="font-mono text-xs tracking-[0.3em] text-muted-foreground uppercase font-bold">
+                        [ REAL-TIME ANALYTICS ]
+                    </span>
+                </div>
+                <h1 class="text-5xl md:text-7xl font-semibold uppercase tracking-tight mb-4">Platform Performance</h1>
+                <p class="font-mono text-sm text-zinc-500">Last updated: <span id="last-update">Loading...</span></p>
+            </div>
+        </section>
+
+        <!-- Connection Status Banner -->
+        <section class="px-8 py-6 bg-[#0a0a0a] border-b border-white/5">
+            <div class="max-w-7xl mx-auto flex items-center justify-between flex-wrap gap-4">
+                <div class="flex items-center gap-6">
+                    <div id="yt-status" class="flex items-center gap-2">
+                        <div class="w-2 h-2 bg-zinc-700 rounded-full"></div>
+                        <span class="font-mono text-xs text-zinc-500 uppercase">YouTube: <span class="text-zinc-400">Checking...</span></span>
+                    </div>
+                    <div id="sc-status" class="flex items-center gap-2">
+                        <div class="w-2 h-2 bg-zinc-700 rounded-full"></div>
+                        <span class="font-mono text-xs text-zinc-500 uppercase">SoundCloud: <span class="text-zinc-400">Checking...</span></span>
+                    </div>
+                </div>
+                <button onclick="refreshAnalytics()" class="font-mono text-[10px] tracking-wider px-4 py-2 border border-primary text-primary hover:bg-primary hover:text-black transition-all uppercase rounded">
+                    <iconify-icon icon="solar:refresh-bold" class="inline-block mr-1"></iconify-icon> Refresh
+                </button>
+            </div>
+        </section>
+
+        <!-- Revenue Overview -->
+        <section class="px-8 py-12 border-b border-white/5">
+            <div class="max-w-7xl mx-auto">
+                <h2 class="font-mono text-xs tracking-[0.3em] text-primary uppercase mb-8">// Revenue</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="metric-card p-8 rounded-xl">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="font-mono text-xs text-zinc-500 uppercase">Total Revenue</span>
+                            <iconify-icon icon="solar:wallet-bold" class="text-2xl text-primary"></iconify-icon>
+                        </div>
+                        <div class="stat-number text-5xl font-bold text-white mb-2" id="total-revenue">£—</div>
+                        <p class="font-mono text-[10px] text-zinc-600">Combined platforms</p>
+                    </div>
+                    <div class="metric-card p-8 rounded-xl">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="font-mono text-xs text-zinc-500 uppercase">YouTube Revenue</span>
+                            <iconify-icon icon="mdi:youtube" class="text-2xl text-[#FF0000]"></iconify-icon>
+                        </div>
+                        <div class="stat-number text-5xl font-bold text-white mb-2" id="yt-revenue">£—</div>
+                        <p class="font-mono text-[10px] text-zinc-600" id="yt-views">— views</p>
+                    </div>
+                    <div class="metric-card p-8 rounded-xl">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="font-mono text-xs text-zinc-500 uppercase">SoundCloud Revenue</span>
+                            <iconify-icon icon="mdi:soundcloud" class="text-2xl text-[#FF5500]"></iconify-icon>
+                        </div>
+                        <div class="stat-number text-5xl font-bold text-white mb-2" id="sc-revenue">£—</div>
+                        <p class="font-mono text-[10px] text-zinc-600" id="sc-plays">— plays</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- YouTube Metrics -->
+        <section class="px-8 py-12 border-b border-white/5">
+            <div class="max-w-7xl mx-auto">
+                <div class="flex items-center justify-between mb-8">
+                    <h2 class="font-mono text-xs tracking-[0.3em] text-[#FF0000] uppercase">// YouTube Analytics</h2>
+                    <div class="flex items-center gap-2">
+                        <div class="w-2 h-2 bg-[#FF0000] rounded-full pulse-dot"></div>
+                        <span class="font-mono text-[10px] text-zinc-600 uppercase">Live Data</span>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="metric-card p-6 rounded-xl">
+                        <div class="flex items-center gap-3 mb-3">
+                            <iconify-icon icon="solar:eye-bold" class="text-xl text-primary"></iconify-icon>
+                            <span class="font-mono text-xs text-zinc-500 uppercase">Total Views</span>
+                        </div>
+                        <div class="stat-number text-3xl font-bold text-white" id="yt-total-views">—</div>
+                    </div>
+                    <div class="metric-card p-6 rounded-xl">
+                        <div class="flex items-center gap-3 mb-3">
+                            <iconify-icon icon="solar:clock-circle-bold" class="text-xl text-primary"></iconify-icon>
+                            <span class="font-mono text-xs text-zinc-500 uppercase">Watch Time</span>
+                        </div>
+                        <div class="stat-number text-3xl font-bold text-white" id="yt-watch-time">—</div>
+                    </div>
+                    <div class="metric-card p-6 rounded-xl">
+                        <div class="flex items-center gap-3 mb-3">
+                            <iconify-icon icon="solar:users-group-rounded-bold" class="text-xl text-primary"></iconify-icon>
+                            <span class="font-mono text-xs text-zinc-500 uppercase">Subscribers</span>
+                        </div>
+                        <div class="stat-number text-3xl font-bold text-white" id="yt-subscribers">—</div>
+                    </div>
+                    <div class="metric-card p-6 rounded-xl">
+                        <div class="flex items-center gap-3 mb-3">
+                            <iconify-icon icon="solar:chart-bold" class="text-xl text-primary"></iconify-icon>
+                            <span class="font-mono text-xs text-zinc-500 uppercase">Avg CTR</span>
+                        </div>
+                        <div class="stat-number text-3xl font-bold text-white" id="yt-ctr">—</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="metric-card p-6 rounded-xl">
+                        <h3 class="font-mono text-xs text-zinc-500 uppercase mb-4">Engagement</h3>
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <span class="font-mono text-xs text-zinc-400">Likes</span>
+                                <span class="font-mono text-sm text-white stat-number" id="yt-likes">—</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="font-mono text-xs text-zinc-400">Comments</span>
+                                <span class="font-mono text-sm text-white stat-number" id="yt-comments">—</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="font-mono text-xs text-zinc-400">Shares</span>
+                                <span class="font-mono text-sm text-white stat-number" id="yt-shares">—</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="font-mono text-xs text-zinc-400">Avg View Duration</span>
+                                <span class="font-mono text-sm text-white stat-number" id="yt-avg-duration">—</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="metric-card p-6 rounded-xl">
+                        <h3 class="font-mono text-xs text-zinc-500 uppercase mb-4">Performance</h3>
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <span class="font-mono text-xs text-zinc-400">Impressions</span>
+                                <span class="font-mono text-sm text-white stat-number" id="yt-impressions">—</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="font-mono text-xs text-zinc-400">Click-Through Rate</span>
+                                <span class="font-mono text-sm text-white stat-number" id="yt-ctr-detailed">—</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="font-mono text-xs text-zinc-400">CPM</span>
+                                <span class="font-mono text-sm text-white stat-number" id="yt-cpm">—</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="font-mono text-xs text-zinc-400">Playback-based CPM</span>
+                                <span class="font-mono text-sm text-white stat-number" id="yt-playback-cpm">—</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SoundCloud Metrics -->
+        <section class="px-8 py-12">
+            <div class="max-w-7xl mx-auto">
+                <div class="flex items-center justify-between mb-8">
+                    <h2 class="font-mono text-xs tracking-[0.3em] text-[#FF5500] uppercase">// SoundCloud Analytics</h2>
+                    <div class="flex items-center gap-2">
+                        <div class="w-2 h-2 bg-[#FF5500] rounded-full pulse-dot"></div>
+                        <span class="font-mono text-[10px] text-zinc-600 uppercase">Live Data</span>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="metric-card p-6 rounded-xl">
+                        <div class="flex items-center gap-3 mb-3">
+                            <iconify-icon icon="solar:play-circle-bold" class="text-xl text-primary"></iconify-icon>
+                            <span class="font-mono text-xs text-zinc-500 uppercase">Total Plays</span>
+                        </div>
+                        <div class="stat-number text-3xl font-bold text-white" id="sc-total-plays">—</div>
+                    </div>
+                    <div class="metric-card p-6 rounded-xl">
+                        <div class="flex items-center gap-3 mb-3">
+                            <iconify-icon icon="solar:download-bold" class="text-xl text-primary"></iconify-icon>
+                            <span class="font-mono text-xs text-zinc-500 uppercase">Downloads</span>
+                        </div>
+                        <div class="stat-number text-3xl font-bold text-white" id="sc-downloads">—</div>
+                    </div>
+                    <div class="metric-card p-6 rounded-xl">
+                        <div class="flex items-center gap-3 mb-3">
+                            <iconify-icon icon="solar:heart-bold" class="text-xl text-primary"></iconify-icon>
+                            <span class="font-mono text-xs text-zinc-500 uppercase">Favorites</span>
+                        </div>
+                        <div class="stat-number text-3xl font-bold text-white" id="sc-favorites">—</div>
+                    </div>
+                    <div class="metric-card p-6 rounded-xl">
+                        <div class="flex items-center gap-3 mb-3">
+                            <iconify-icon icon="solar:share-bold" class="text-xl text-primary"></iconify-icon>
+                            <span class="font-mono text-xs text-zinc-500 uppercase">Reposts</span>
+                        </div>
+                        <div class="stat-number text-3xl font-bold text-white" id="sc-reposts">—</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="metric-card p-6 rounded-xl">
+                        <h3 class="font-mono text-xs text-zinc-500 uppercase mb-4">Profile Stats</h3>
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <span class="font-mono text-xs text-zinc-400">Followers</span>
+                                <span class="font-mono text-sm text-white stat-number" id="sc-followers">—</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="font-mono text-xs text-zinc-400">Total Tracks</span>
+                                <span class="font-mono text-sm text-white stat-number" id="sc-tracks">—</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="font-mono text-xs text-zinc-400">Playlists</span>
+                                <span class="font-mono text-sm text-white stat-number" id="sc-playlists">—</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="font-mono text-xs text-zinc-400">Comments</span>
+                                <span class="font-mono text-sm text-white stat-number" id="sc-comments">—</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="metric-card p-6 rounded-xl">
+                        <h3 class="font-mono text-xs text-zinc-500 uppercase mb-4">Revenue Estimate</h3>
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <span class="font-mono text-xs text-zinc-400">Total Earnings</span>
+                                <span class="font-mono text-sm text-white stat-number" id="sc-earnings">£—</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="font-mono text-xs text-zinc-400">Rate per Play</span>
+                                <span class="font-mono text-sm text-white stat-number">£0.004</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="font-mono text-xs text-zinc-400">Est. Monthly</span>
+                                <span class="font-mono text-sm text-white stat-number" id="sc-monthly">£—</span>
+                            </div>
+                            <p class="font-mono text-[9px] text-zinc-600 mt-4">* Estimated using SoundCloud Pro partner rate</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="py-16 px-8 border-t border-white/5 bg-background">
+        <div class="max-w-6xl mx-auto flex flex-col items-center justify-center text-center">
+            <div class="mb-6">
+                <span class="font-mono text-[10px] tracking-[0.3em] text-muted-foreground uppercase">
+                    © 2026 local / assets™ — all rights reserved
+                </span>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Fetch wrapper with authentication
+        function laFetch(url, opts = {}) {
+            const session = (() => { try { return JSON.parse(localStorage.getItem('la_admin') || '{}'); } catch(_) { return {}; } })();
+            opts = Object.assign({}, opts);
+            opts.headers = Object.assign({}, opts.headers);
+            if (session.webToken) opts.headers['Authorization'] = 'Bearer ' + session.webToken;
+            if (session.email) opts.headers['X-User-Email'] = session.email;
+            return fetch(url, opts);
+        }
+
+        // Format numbers with commas
+        function formatNumber(num) {
+            return Number(num).toLocaleString('en-GB');
+        }
+
+        // Format duration (seconds to HH:MM:SS or hours)
+        function formatDuration(seconds) {
+            if (!seconds) return '—';
+            const hours = Math.floor(seconds / 3600);
+            if (hours > 1000) return formatNumber(hours) + ' hrs';
+            const mins = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            return `${hours}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+        }
+
+        // Fetch and display analytics
+        async function refreshAnalytics() {
+            console.log('[analytics] Refreshing data...');
+            document.getElementById('last-update').textContent = 'Updating...';
+
+            try {
+                // Fetch YouTube data
+                const ytRes = await laFetch('/api/youtube-revenue');
+                const ytData = await ytRes.json();
+                
+                // Fetch SoundCloud data
+                const scRes = await laFetch('/api/soundcloud-revenue');
+                const scData = await scRes.json();
+
+                // Update connection status
+                updateConnectionStatus('yt', ytData.connected);
+                updateConnectionStatus('sc', scData.connected);
+
+                // Update revenue
+                const ytRevenue = Number(ytData.revenue) || 0;
+                const scRevenue = Number(scData.estimatedRevenue) || 0;
+                const totalRevenue = ytRevenue + scRevenue;
+
+                document.getElementById('total-revenue').textContent = '£' + totalRevenue.toFixed(2);
+                document.getElementById('yt-revenue').textContent = '£' + ytRevenue.toFixed(2);
+                document.getElementById('sc-revenue').textContent = '£' + scRevenue.toFixed(2);
+
+                // YouTube metrics
+                if (ytData.connected) {
+                    document.getElementById('yt-total-views').textContent = formatNumber(ytData.views || 0);
+                    document.getElementById('yt-views').textContent = formatNumber(ytData.views || 0) + ' views';
+                    
+                    // Additional metrics (placeholder - need to fetch from extended API)
+                    document.getElementById('yt-watch-time').textContent = '—';
+                    document.getElementById('yt-subscribers').textContent = '—';
+                    document.getElementById('yt-ctr').textContent = '—';
+                    document.getElementById('yt-likes').textContent = '—';
+                    document.getElementById('yt-comments').textContent = '—';
+                    document.getElementById('yt-shares').textContent = '—';
+                    document.getElementById('yt-avg-duration').textContent = '—';
+                    document.getElementById('yt-impressions').textContent = '—';
+                    document.getElementById('yt-ctr-detailed').textContent = '—';
+                    document.getElementById('yt-cpm').textContent = '—';
+                    document.getElementById('yt-playback-cpm').textContent = '—';
+                }
+
+                // SoundCloud metrics
+                if (scData.connected) {
+                    const plays = Number(scData.plays) || 0;
+                    document.getElementById('sc-total-plays').textContent = formatNumber(plays);
+                    document.getElementById('sc-plays').textContent = formatNumber(plays) + ' plays';
+                    document.getElementById('sc-earnings').textContent = '£' + scRevenue.toFixed(2);
+                    
+                    // Estimate monthly (last 30 days - would need actual date filtering)
+                    const monthlyEst = (scRevenue * 0.3).toFixed(2); // Rough 30% estimate
+                    document.getElementById('sc-monthly').textContent = '£' + monthlyEst;
+                    
+                    // Additional metrics (placeholder - need extended API calls)
+                    document.getElementById('sc-downloads').textContent = '—';
+                    document.getElementById('sc-favorites').textContent = '—';
+                    document.getElementById('sc-reposts').textContent = '—';
+                    document.getElementById('sc-followers').textContent = '—';
+                    document.getElementById('sc-tracks').textContent = '—';
+                    document.getElementById('sc-playlists').textContent = '—';
+                    document.getElementById('sc-comments').textContent = '—';
+                }
+
+                // Update timestamp
+                const now = new Date();
+                document.getElementById('last-update').textContent = now.toLocaleTimeString('en-GB', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+
+            } catch (error) {
+                console.error('[analytics] Error fetching data:', error);
+                document.getElementById('last-update').textContent = 'Error loading data';
+            }
+        }
+
+        function updateConnectionStatus(platform, connected) {
+            const statusEl = document.getElementById(platform + '-status');
+            const dot = statusEl.querySelector('.w-2');
+            const span = statusEl.querySelector('span span');
+            
+            if (connected) {
+                dot.className = 'w-2 h-2 bg-primary rounded-full pulse-dot';
+                span.textContent = 'Connected';
+                span.className = 'text-primary';
+            } else {
+                dot.className = 'w-2 h-2 bg-red-500 rounded-full';
+                span.textContent = 'Disconnected';
+                span.className = 'text-red-500';
+            }
+        }
+
+        // Auto-refresh every 60 seconds
+        setInterval(refreshAnalytics, 60000);
+
+        // Initial load
+        document.addEventListener('DOMContentLoaded', refreshAnalytics);
+    </script>
+
+</body>
+</html>
