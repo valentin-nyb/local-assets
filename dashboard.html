@@ -1237,7 +1237,30 @@
 
         async function distributeSoundCloud(playbackId, dlFile, title, uid) {
             var btn = document.getElementById('sc-dist-' + uid);
-            if (btn) { btn.disabled = true; btn.innerHTML = '<iconify-icon icon="mdi:soundcloud" style="font-size:11px"></iconify-icon> UPLOADING…'; }
+            if (!btn) return;
+
+            btn.disabled = true;
+            btn.onmouseover = null;
+            btn.onmouseout = null;
+            btn.style.color = '#fff';
+            btn.innerHTML = '<iconify-icon icon="mdi:soundcloud" style="font-size:11px;flex-shrink:0"></iconify-icon> UPLOADING…';
+
+            // Decelerate toward 90% — fills fast at first, slows as it approaches
+            var pct = 0;
+            var timer = setInterval(function() {
+                pct += (90 - pct) * 0.012;
+                btn.style.background = 'linear-gradient(to right,#FF5500 ' + pct.toFixed(1) + '%,transparent ' + pct.toFixed(1) + '%)';
+            }, 200);
+
+            function resetBtn() {
+                btn.disabled = false;
+                btn.style.background = 'transparent';
+                btn.style.color = '#FF5500';
+                btn.onmouseover = function(){ this.style.background='#FF5500'; this.style.color='#fff'; };
+                btn.onmouseout  = function(){ this.style.background='transparent'; this.style.color='#FF5500'; };
+                btn.innerHTML = '<iconify-icon icon="mdi:soundcloud" style="font-size:11px;flex-shrink:0"></iconify-icon> SOUNDCLOUD';
+            }
+
             try {
                 var res = await laFetch('/api/soundcloud-upload', {
                     method: 'POST',
@@ -1245,15 +1268,23 @@
                     body: JSON.stringify({ playbackId, dlFile, title }),
                 });
                 var data = await res.json();
+                clearInterval(timer);
+
                 if (!res.ok) {
-                    if (btn) { btn.disabled = false; btn.innerHTML = '<iconify-icon icon="mdi:soundcloud" style="font-size:11px"></iconify-icon> SOUNDCLOUD'; }
+                    resetBtn();
                     alert('SoundCloud upload failed: ' + (data.error || 'Unknown error'));
                     return;
                 }
-                var row = document.getElementById('sc-dist-' + uid);
-                if (row) row.outerHTML = '<a id="sc-dist-' + uid + '" href="' + (data.url || '#') + '" target="_blank" style="display:inline-flex;align-items:center;gap:4px;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#39FF14;text-decoration:none;">&#x2713; ON SOUNDCLOUD</a>';
+
+                // Flash full orange then swap to success link
+                btn.style.background = '#FF5500';
+                setTimeout(function() {
+                    var row = document.getElementById('sc-dist-' + uid);
+                    if (row) row.outerHTML = '<a id="sc-dist-' + uid + '" href="' + (data.url || '#') + '" target="_blank" style="display:inline-flex;align-items:center;gap:4px;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#39FF14;text-decoration:none;">&#x2713; ON SOUNDCLOUD</a>';
+                }, 400);
             } catch(e) {
-                if (btn) { btn.disabled = false; btn.innerHTML = '<iconify-icon icon="mdi:soundcloud" style="font-size:11px"></iconify-icon> SOUNDCLOUD'; }
+                clearInterval(timer);
+                resetBtn();
                 alert('SoundCloud upload failed: ' + e.message);
             }
         }
