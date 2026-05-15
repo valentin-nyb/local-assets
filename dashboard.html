@@ -215,7 +215,7 @@
                                 <div class="w-full bg-white/5 h-1 rounded-full overflow-hidden"><div id="bandwidth-bar" class="bg-primary h-full w-[0%] shadow-[0_0_10px_#39FF14] transition-all duration-700"></div></div>
                             </div>
                             <div>
-                                <div class="flex justify-between text-[10px] font-mono mb-2 uppercase"><span class="text-muted-foreground">MUX Storage</span><span id="nas-value" class="text-white">—</span></div>
+                                <div class="flex justify-between text-[10px] font-mono mb-2 uppercase"><span class="text-muted-foreground">Local Storage</span><span id="nas-value" class="text-white">—</span></div>
                                 <div class="w-full bg-white/5 h-1 rounded-full overflow-hidden"><div id="nas-bar" class="bg-yellow-500 h-full transition-all duration-700" style="width: 0%;"></div></div>
                             </div>
                         </div>
@@ -351,15 +351,16 @@
                 }
             }
             const storageEl = document.getElementById('live-storage-usage');
-            const totalStorageGB = (totalBytes / (1024 * 1024 * 1024)).toFixed(2);
-            if (storageEl) storageEl.textContent = totalStorageGB + ' GB';
-            const storagePercent = (totalBytes / (50 * 1024 * 1024 * 1024 * 1024)) * 100;
+            const totalStorageGB = parseFloat((totalBytes / (1024 * 1024 * 1024)).toFixed(2));
+            if (storageEl) storageEl.textContent = totalStorageGB.toFixed(2) + ' GB';
+            const LOCAL_LIMIT_GB = 500;
+            const storagePercent = Math.min((totalStorageGB / LOCAL_LIMIT_GB) * 100, 100);
             const bar = document.getElementById('storage-bar');
             if (bar) bar.style.width = Math.max(storagePercent, 0.5) + '%';
             const nasVal = document.getElementById('nas-value');
             const nasBar = document.getElementById('nas-bar');
-            if (nasVal) nasVal.textContent = totalStorageGB + ' GB';
-            if (nasBar) nasBar.style.width = Math.max(storagePercent, 0.5) + '%';
+            if (nasVal) nasVal.textContent = Math.max(LOCAL_LIMIT_GB - totalStorageGB, 0).toFixed(1) + ' GB LEFT';
+            if (nasBar) { nasBar.style.width = Math.max(storagePercent, 0.5) + '%'; nasBar.style.background = storagePercent >= 85 ? '#ef4444' : storagePercent >= 65 ? '#eab308' : '#39FF14'; }
 
             // Build a lookup: passthrough (uppercase) → array of assets
             // JSON passthrough and no-passthrough assets are also indexed by artist name.
@@ -1117,16 +1118,17 @@
                     bwBar.style.boxShadow = mbps >= 100 ? '0 0 10px #39FF14' : mbps >= 10 ? '0 0 10px #eab308' : '0 0 10px #ef4444';
                 }
 
-                // MUX Storage
+                // Local Storage (Mac on site: 500 GB)
                 const nasVal = document.getElementById('nas-value');
                 const nasBar = document.getElementById('nas-bar');
                 if (nasVal && nasBar && data.storageGB != null) {
-                    const gb = data.storageGB;
-                    const limitGB = data.storageLimitGB || 5000;
-                    nasVal.textContent = gb.toFixed(2) + ' GB';
-                    const pct = Math.min((gb / limitGB) * 100, 100);
+                    const usedGB   = data.storageGB;
+                    const limitGB  = data.storageLimitGB || 500;
+                    const leftGB   = Math.max(limitGB - usedGB, 0);
+                    nasVal.textContent = leftGB.toFixed(1) + ' GB LEFT';
+                    const pct = Math.min((usedGB / limitGB) * 100, 100);
                     nasBar.style.width = Math.max(pct, 0.3) + '%';
-                    nasBar.style.background = pct >= 80 ? '#ef4444' : '#eab308';
+                    nasBar.style.background = pct >= 85 ? '#ef4444' : pct >= 65 ? '#eab308' : '#39FF14';
                 }
             } catch (e) {}
         }
