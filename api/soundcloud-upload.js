@@ -1,5 +1,5 @@
 import { createClient } from 'redis';
-import { getWebSessionAuth } from './_venues.js';
+import { getWebSessionAuth, getVenuesConfig } from './_venues.js';
 
 // Large audio files need the full 300s window
 export const config = { maxDuration: 300 };
@@ -17,6 +17,11 @@ export default async function handler(req, res) {
 
   const venueSlug = session.venueSlug;
   if (!venueSlug) return res.status(403).json({ error: 'No venue associated with this account' });
+
+  // Get venue name for filename
+  const venues = getVenuesConfig();
+  const venueConfig = venues[venueSlug] || {};
+  const venueName = venueConfig.name || venueSlug;
 
   let body = req.body;
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch(e) {} }
@@ -46,10 +51,15 @@ export default async function handler(req, res) {
   const audioBuffer = Buffer.from(await audioRes.arrayBuffer());
   console.log(`[soundcloud-upload] uploading "${title}" — ${(audioBuffer.length / 1048576).toFixed(1)} MB`);
 
+  // Format filename as "venue name - date.mp3"
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).replace(/,/g, '');
+  const filename = `${venueName} - ${dateStr}.mp3`;
+
   const formData = new FormData();
   formData.append('track[title]',      title || 'Untitled Session');
   formData.append('track[sharing]',    'public');
-  formData.append('track[asset_data]', new Blob([audioBuffer], { type: 'audio/x-m4a' }), audioPath);
+  formData.append('track[asset_data]', new Blob([audioBuffer], { type: 'audio/x-m4a' }), filename);
 
   const scRes = await fetch('https://api.soundcloud.com/tracks.json', {
     method:  'POST',
