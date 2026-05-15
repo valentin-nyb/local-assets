@@ -1,5 +1,6 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { Readable } from 'stream';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -14,22 +15,14 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
-function muxHeaders(tokenId, tokenSecret) {
-  return {
-    Authorization: 'Basic ' + Buffer.from(`${tokenId}:${tokenSecret}`).toString('base64'),
-    'Content-Type': 'application/json',
-  };
-}
-
 async function muxGet(path, auth) {
   const r = await fetch(`https://api.mux.com${path}`, { headers: { Authorization: auth } });
   return r.json();
 }
 
-// ── Step 1-2: Wait for asset ──────────────────────────────────────────
+// ── Step 1-2: Wait for asset + static renditions ──────────────────────
 
 async function waitForAsset(uploadId, assetId, authHeader) {
-  // If we already have an assetId, skip polling the upload
   if (!assetId) {
     console.log(`  Polling upload ${uploadId} for asset_id...`);
     for (let i = 0; i < 72; i++) {   // up to 6 min
@@ -47,44 +40,42 @@ async function waitForAsset(uploadId, assetId, authHeader) {
     const j = await muxGet(`/video/v1/assets/${assetId}`, authHeader);
     const a = j.data;
     if (a?.status === 'ready' && a.playback_ids?.[0]?.id) {
-      return { assetId, playbackId: a.playback_ids[0].id, duration: a.duration || 0 };
+      const playbackId = a.playback_ids[0].id;
+      const duration = a.duration || 0;
+      const srStatus = a.static_renditions?.status;
+      if (srStatus === 'ready') {
+        console.log(`  Static renditions ready — using MP4`);
+        return { assetId, playbackId, duration, mp4Ready: true };
+      }
+      // Asset ready but static renditions still preparing — keep polling
+      if (srStatus === 'preparing') continue;
+      // No static renditions configured — fall back to HLS
+      console.log(`  No static renditions (sr_status=${srStatus}) — using HLS`);
+      return { assetId, playbackId, duration, mp4Ready: false };
     }
   }
   throw new Error(`Timed out waiting for asset ${assetId} to be ready`);
 }
 
-// ── Step 3: Smart-reframe one clip ────────────────────────────────────
+// ── Step 3: Smart-reframe one clip — no intermediate raw file ─────────
 
-async function processClip(hlsUrl, start, dur, outPath) {
-  const tmpDir = path.dirname(outPath);
-  const rawPath = outPath.replace('.mp4', '_raw.mp4');
-
-  // Download raw clip segment — explicitly map video + audio so the HLS
-  // alternate audio rendition group is included in the output file.
-  await execAsync(
-    `ffmpeg -y -ss ${start} -t ${dur} -i "${hlsUrl}" -map 0:v:0 -map 0:a:0 -c copy "${rawPath}"`,
-    { timeout: 120_000 }
-  );
-
-  // Probe dimensions of the raw clip
-  const { stdout: probeOut } = await execAsync(
-    `ffprobe -v quiet -select_streams v:0 -show_entries stream=width,height -of csv=p=0 "${rawPath}"`,
-    { timeout: 15_000 }
-  );
-  const [srcW, srcH] = probeOut.trim().split(',').map(Number);
-
-  // Cropdetect: sample 1 frame/sec to find the most active horizontal region
+async function processClip(videoUrl, start, dur, outPath) {
+  // Pass 1 — cropdetect directly from source (streaming, no disk write)
   let cropFilter;
   try {
     const { stderr } = await execAsync(
-      `ffmpeg -i "${rawPath}" -vf "fps=1,cropdetect=24:2:0" -frames:v ${dur} -f null -`,
-      { timeout: 60_000, maxBuffer: 10 * 1024 * 1024 }
+      `ffmpeg -ss ${start} -t ${dur} -i "${videoUrl}" -vf "fps=1,cropdetect=24:2:0" -frames:v ${dur} -f null -`,
+      { timeout: 300_000, maxBuffer: 10 * 1024 * 1024 }
     );
 
-    // Collect all crop= detections, pick the most common
     const allMatches = [...stderr.matchAll(/crop=(\d+):(\d+):(\d+):(\d+)/g)];
     if (allMatches.length > 0) {
-      // Tally cx values weighted by cw to find the action center
+      const { stdout: probeOut } = await execAsync(
+        `ffprobe -v quiet -select_streams v:0 -show_entries stream=width,height -of csv=p=0 "${videoUrl}"`,
+        { timeout: 30_000 }
+      );
+      const [srcW, srcH] = probeOut.trim().split(',').map(Number);
+
       let sumCenterX = 0;
       let sumCenterY = 0;
       let sumCH = 0;
@@ -97,13 +88,10 @@ async function processClip(hlsUrl, start, dur, outPath) {
       const actionCenterX = sumCenterX / allMatches.length;
       const contentH = Math.round(sumCH / allMatches.length);
 
-      // Use the detected content height (handles letterboxing)
       const targetH = Math.min(contentH, srcH);
-      const targetW = Math.floor(targetH * 9 / 16 / 2) * 2;   // even number
+      const targetW = Math.floor(targetH * 9 / 16 / 2) * 2;
       let finalX = Math.round(actionCenterX - targetW / 2);
       finalX = Math.max(0, Math.min(srcW - targetW, finalX));
-
-      // Vertical: center on the content band
       const contentTopY = Math.round(sumCenterY / allMatches.length - contentH / 2);
       const finalY = Math.max(0, Math.min(srcH - targetH, contentTopY));
 
@@ -111,32 +99,28 @@ async function processClip(hlsUrl, start, dur, outPath) {
       console.log(`    Cropdetect: center=${Math.round(actionCenterX)}px → crop ${targetW}x${targetH}@${finalX},${finalY}`);
     }
   } catch (e) {
-    console.log(`    Cropdetect failed (${e.message.slice(0, 60)}), using center crop`);
+    console.log(`    Cropdetect failed (${e.message.slice(0, 80)}), using center crop`);
   }
 
   if (!cropFilter) {
-    // Fallback: simple center crop to 9:16
     cropFilter = `crop=ih*9/16:ih:(iw-ih*9/16)/2:0,scale=1080:1920:flags=lanczos`;
   }
 
-  // Encode final 9:16 portrait clip
+  // Pass 2 — encode directly to output, no intermediate file
   await execAsync(
-    `ffmpeg -y -i "${rawPath}" ` +
+    `ffmpeg -y -ss ${start} -t ${dur} -i "${videoUrl}" ` +
     `-map 0:v:0 -map 0:a:0 ` +
     `-vf "${cropFilter}" ` +
-    `-c:v libx264 -preset slow -crf 18 -b:v 8000k ` +
+    `-c:v libx264 -preset fast -crf 22 -b:v 6000k ` +
     `-c:a aac -b:a 192k ` +
     `-movflags +faststart "${outPath}"`,
     { timeout: 600_000 }
   );
-
-  fs.unlinkSync(rawPath);
 }
 
-// ── Step 4: Upload clip to Mux ────────────────────────────────────────
+// ── Step 4: Upload clip to Mux — streaming, no RAM buffer ─────────────
 
 async function uploadClipToMux(filePath, passthrough, headers) {
-  // Create Mux upload URL
   const uploadRes = await fetch('https://api.mux.com/video/v1/uploads', {
     method: 'POST',
     headers,
@@ -153,12 +137,17 @@ async function uploadClipToMux(filePath, passthrough, headers) {
   if (!uploadRes.ok) throw new Error('Mux upload create failed: ' + JSON.stringify(uploadData.error || uploadData));
 
   const putUrl = uploadData.data.url;
-  const buf = fs.readFileSync(filePath);
+  const fileSize = fs.statSync(filePath).size;
+
+  // Stream the file directly — avoids loading entire clip into RAM
+  const nodeStream = fs.createReadStream(filePath);
+  const webStream = Readable.toWeb(nodeStream);
 
   const putRes = await fetch(putUrl, {
     method: 'PUT',
-    body: buf,
-    headers: { 'Content-Type': 'video/mp4' },
+    body: webStream,
+    headers: { 'Content-Type': 'video/mp4', 'Content-Length': String(fileSize) },
+    duplex: 'half',
   });
   if (!putRes.ok) throw new Error(`PUT failed: HTTP ${putRes.status}`);
 }
@@ -179,13 +168,20 @@ export async function runPipeline({ jobId, uploadId, assetId: knownAssetId, arti
   try {
     await setProgress(0, CLIP_COUNT, 'waiting');
 
-    // ── 1+2. Get asset info ──────────────────────────────────────────
-    const { assetId, playbackId, duration } = await waitForAsset(uploadId, knownAssetId, authHeader);
-    console.log(`[Pipeline:${jobId}] Asset ready — ${Math.round(duration)}s @ ${playbackId}`);
+    // ── 1+2. Get asset info + wait for static renditions ─────────────
+    const { assetId, playbackId, duration, mp4Ready } = await waitForAsset(uploadId, knownAssetId, authHeader);
+    console.log(`[Pipeline:${jobId}] Asset ready — ${Math.round(duration)}s @ ${playbackId} (mp4=${mp4Ready})`);
 
     if (duration < MIN_CLIP_DUR * 2) throw new Error(`Video too short: ${Math.round(duration)}s`);
 
-    // ── 3. Build clip specs (evenly spread + random jitter + random duration) ──
+    // Prefer MP4 static rendition for fast HTTP-range seeking; fall back to HLS
+    const videoUrl = mp4Ready
+      ? `https://stream.mux.com/${playbackId}/highest.mp4`
+      : `https://stream.mux.com/${playbackId}.m3u8`;
+
+    console.log(`[Pipeline:${jobId}] Source: ${videoUrl}`);
+
+    // ── 3. Build clip specs ──────────────────────────────────────────
     const margin = Math.max(30, duration * 0.03);
     const safeStart = margin;
     const safeEnd = duration - margin - MAX_CLIP_DUR;
@@ -200,10 +196,9 @@ export async function runPipeline({ jobId, uploadId, assetId: knownAssetId, arti
       clipSpecs.push({ start, dur });
     }
 
-    const hlsUrl = `https://stream.mux.com/${playbackId}.m3u8`;
     await setProgress(0, CLIP_COUNT, 'processing');
 
-    // ── 4. Process clips ──────────────────────────────────────────────
+    // ── 4. Process & upload clips ────────────────────────────────────
     for (let i = 0; i < clipSpecs.length; i++) {
       const { start, dur } = clipSpecs[i];
       const clipNum = String(i + 1).padStart(2, '0');
@@ -214,12 +209,13 @@ export async function runPipeline({ jobId, uploadId, assetId: knownAssetId, arti
       await setProgress(i, CLIP_COUNT, 'processing', { currentClip: clipNum });
 
       try {
-        await processClip(hlsUrl, start, dur, outPath);
+        await processClip(videoUrl, start, dur, outPath);
         await uploadClipToMux(outPath, tag, headers);
         console.log(`    ✓ Uploaded`);
       } catch (e) {
         console.error(`    ✗ Clip ${clipNum} failed:`, e.message);
       } finally {
+        // Always clean up the output file immediately to free disk space
         try { fs.unlinkSync(outPath); } catch (_) {}
       }
 

@@ -90,7 +90,7 @@
         <header class="flex items-center py-5 px-8 border-b border-[#27272a] bg-[#050505] shrink-0 justify-between w-full z-40" style="min-height: 5.5rem; padding-top: calc(env(safe-area-inset-top) + 1.25rem);">
             <div class="flex items-center gap-3">
                 <span id="venue-breadcrumb" class="text-zinc-600 text-[10px] font-mono uppercase tracking-[0.3em] hidden md:inline">
-                    KOKO / London
+                    ADMIN
                 </span>
                 <iconify-icon icon="solar:alt-arrow-right-linear" class="text-zinc-700 hidden md:block"></iconify-icon>
                 <h1 class="text-[10px] font-mono uppercase tracking-[0.3em] text-[#39FF14] font-bold m-0">
@@ -103,7 +103,7 @@
                     <span class="text-[9px] font-mono text-[#39FF14] uppercase tracking-widest">System OK</span>
                 </div>
                 <button id="venue-avatar" onclick="openVenueEditor()" class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center font-bold text-xs shrink-0 cursor-pointer hover:scale-105 transition-transform shadow-[0_0_10px_rgba(255,255,255,0.1)] relative" title="Change venue name">
-                    K
+                    A
                 </button>
             </div>
         </header>
@@ -112,9 +112,9 @@
 
         <div class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
             <div class="flex justify-between items-center mb-6">
-                <span id="venue-tier" class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Infrastructure Tier - KOKO / London</span>
+                <span id="venue-tier" class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">INFRASTRUCTURE TIER — ADMIN</span>
             </div>
-            <a id="live-feed-hero" href="/camera.html" class="block cursor-pointer hover:border-primary/50 transition-all duration-500 w-full bg-[#050505] border border-[#27272a] rounded-2xl p-8 relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-6 shadow-2xl no-underline" style="background:#050505!important">
+            <a id="live-feed-hero" href="/camera.html" class="block cursor-pointer hover:border-primary/50 transition-all duration-500 w-full bg-[#050505] border border-[#27272a] rounded-2xl p-5 md:p-8 relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-4 md:gap-6 shadow-2xl no-underline" style="background:#050505!important">
                 <img id="live-feed-video" src="https://image.mux.com/q6FUhQVYgBr02BcUGR02VxR2FFP00anZQ2jZrJuQ6B01EPk/animated.gif?width=640" class="absolute inset-0 w-full h-full object-cover opacity-60 grayscale transition-all duration-700 pointer-events-none" alt="Live Feed">
                 <div class="absolute inset-0 pointer-events-none" style="background:rgba(0,0,0,0.35)"></div>
                 <div class="absolute inset-0 bg-scanlines opacity-10 pointer-events-none"></div>
@@ -141,15 +141,15 @@
                 </div>
             </a>
 
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div class="bg-card border border-border p-5 rounded-xl">
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+                <div class="bg-card border border-border p-4 md:p-5 rounded-xl">
                     <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3 block">Total Assets Captured</span>
                     <div class="flex flex-col items-start gap-1">
                         <span id="live-asset-total" class="text-2xl font-bold leading-tight">—</span>
                         <span id="growth-pct" class="text-[10px] text-primary font-mono bg-primary/10 px-2 py-0.5 rounded border border-primary/20 leading-none">—</span>
                     </div>
                 </div>
-                <div class="bg-card border border-border p-5 rounded-xl">
+                <div class="bg-card border border-border p-4 md:p-5 rounded-xl">
                     <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3 block">Cloud Storage</span>
                     <div class="flex items-end justify-between">
                         <span id="live-storage-usage" class="text-2xl font-bold text-primary">—</span>
@@ -158,37 +158,33 @@
                     <div class="w-full bg-white/5 h-1 mt-4 rounded-full overflow-hidden"><div id="storage-bar" class="bg-primary h-full w-[0%]"></div></div>
                 </div>
                 <!-- Revenue Generated Card -->
-                <div class="bg-card border border-border p-5 rounded-xl">
+                <div class="bg-card border border-border p-4 md:p-5 rounded-xl flex flex-col">
                     <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3 block">Revenue Generated</span>
-                    <span id="revenue-total" class="text-2xl font-bold leading-tight block mb-3">—</span>
-                    <!-- Platform row: shown when ≥1 connected -->
-                    <div id="revenue-indicators" class="hidden items-center gap-2.5">
-                        <span id="yt-indicator" class="hidden items-center gap-1 text-[9px] font-mono text-zinc-400 uppercase tracking-wider">
-                            <iconify-icon icon="mdi:youtube" style="color:#FF0000;font-size:10px;flex-shrink:0"></iconify-icon>
-                            <span id="yt-revenue-label">£0.00</span>
-                        </span>
-                        <span id="rev-divider" class="hidden text-zinc-700 text-[8px] font-mono">|</span>
-                        <span id="sc-indicator" class="hidden items-center gap-1 text-[9px] font-mono text-zinc-400 uppercase tracking-wider">
-                            <iconify-icon icon="mdi:soundcloud" style="color:#FF5500;font-size:11px;flex-shrink:0"></iconify-icon>
-                            <span id="sc-revenue-label">0 plays</span>
-                        </span>
+                    <span id="revenue-total" class="text-2xl font-bold leading-tight block mb-4">—</span>
+                    <!-- Connected state: indicators + Manage stacked — shown when ≥1 connected -->
+                    <div id="revenue-indicators" class="hidden flex-col gap-3 mt-auto">
+                        <div class="flex items-center gap-2 min-w-0 flex-wrap">
+                            <span id="yt-indicator" class="hidden items-center gap-1 text-[9px] font-mono text-zinc-400 uppercase tracking-wider">
+                                <iconify-icon icon="mdi:youtube" style="color:#FF0000;font-size:10px;flex-shrink:0"></iconify-icon>
+                                <span id="yt-revenue-label">£0.00</span>
+                            </span>
+                            <span id="rev-divider" class="hidden text-zinc-700 text-[8px] font-mono">|</span>
+                            <span id="sc-indicator" class="hidden items-center gap-1 text-[9px] font-mono text-zinc-400 uppercase tracking-wider">
+                                <iconify-icon icon="mdi:soundcloud" style="color:#FF5500;font-size:11px;flex-shrink:0"></iconify-icon>
+                                <span id="sc-revenue-label">0 plays</span>
+                            </span>
+                        </div>
+                        <button id="revenue-manage-prompt" onclick="openRevenueSettings()" class="rev-btn" style="align-self:flex-start;padding:4px 14px;border-color:#FF5500;color:#FF5500;background:transparent;" onmouseover="this.style.background='#FF5500';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='#FF5500'">Manage</button>
                     </div>
                     <!-- Connect prompt: shown when nothing connected -->
-                    <div id="revenue-connect-prompt">
-                        <button onclick="openRevenueSettings()" class="rev-btn" style="padding:4px 12px 4px 9px;gap:6px;border-color:#FF5500;color:#FF5500;" onmouseover="this.style.background='#FF5500';this.style.color='#fff'" onmouseout="this.style.background='';this.style.color='#FF5500'">
+                    <div id="revenue-connect-prompt" class="mt-auto">
+                        <button onclick="openRevenueSettings()" class="rev-btn" style="padding:4px 14px 4px 10px;gap:6px;border-color:#FF5500;color:#FF5500;background:transparent;" onmouseover="this.style.background='#FF5500';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='#FF5500'">
                             <iconify-icon icon="solar:link-bold" style="font-size:11px;flex-shrink:0"></iconify-icon>
                             <span>Connect Platforms</span>
                         </button>
                     </div>
-                    <!-- Manage button: shown when ≥1 connected -->
-                    <div id="revenue-manage-prompt" class="hidden">
-                        <button onclick="openRevenueSettings()" class="rev-btn" style="padding:4px 12px 4px 9px;gap:6px;">
-                            <iconify-icon icon="solar:settings-bold" style="font-size:11px;flex-shrink:0"></iconify-icon>
-                            <span>Manage</span>
-                        </button>
-                    </div>
                 </div>
-                <div id="next-event-card" class="bg-card border border-border p-5 rounded-xl relative overflow-hidden">
+                <div id="next-event-card" class="bg-card border border-border p-4 md:p-5 rounded-xl relative overflow-hidden">
                     <div class="absolute right-0 top-0 bottom-0 w-1 bg-red-500 animate-pulse"></div>
                     <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3 block">Next Event</span>
                     <span id="next-event-title" class="block text-sm font-bold text-white uppercase tracking-tight">Loading...</span>
@@ -520,7 +516,7 @@
                         }
                         if (asset.type === 'MASTER') {
                             html += '<button id="yt-dist-' + uid + '" class="yt-dist-btn hidden" style="display:none;align-items:center;gap:4px;padding:3px 8px;border-radius:9999px;border:1px solid #FF0000;background:transparent;color:#FF0000;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;white-space:nowrap;" onclick="distributeYouTube(\'' + pid + '\', \'' + dlFile + '\', \'' + safeName + '\', \'' + uid + '\')" onmouseover="this.style.background=\'#FF0000\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'#FF0000\'">';
-                            html += '<iconify-icon icon="mdi:youtube" style="font-size:13px;flex-shrink:0"></iconify-icon> YOUTUBE';
+                            html += '<iconify-icon icon="mdi:youtube" style="font-size:11px;flex-shrink:0"></iconify-icon> YOUTUBE';
                             html += '</button>';
                         }
                     } else if (pid) {
@@ -626,13 +622,21 @@
                 html += '</div>';
                 html += '<div>';
                 html += '<p class="text-[10px] font-bold text-zinc-300 uppercase">Social Pack Verticals</p>';
-                html += '<p class="text-[8px] font-mono uppercase tracking-widest" style="color:' + accent + '">' + clips.length + ' CLIPS — IN VAULT</p>';
+                var readyClips = allPids.length;
+                var procClips  = clips.length - readyClips;
+                var clipStatus = clips.length + ' CLIPS — ';
+                if (procClips > 0) {
+                    clipStatus += readyClips + ' READY, ' + procClips + ' PROCESSING';
+                } else {
+                    clipStatus += 'IN VAULT';
+                }
+                html += '<p class="text-[8px] font-mono uppercase tracking-widest" style="color:' + accent + '">' + clipStatus + '</p>';
                 html += '</div>';
                 html += '</div>';
                 html += '</div>';
 
                 // Horizontal scrollable strip — each thumbnail opens the full gallery at that index
-                html += '<div class="flex gap-2 overflow-x-auto" style="scrollbar-width:thin;scrollbar-color:#27272a transparent;padding-bottom:6px;">';
+                html += '<div class="flex overflow-x-auto" style="gap:2px;scrollbar-width:thin;scrollbar-color:#27272a transparent;padding-bottom:6px;">';
 
                 for (var i = 0; i < clips.length; i++) {
                     var clip = clips[i];
@@ -659,7 +663,7 @@
                     }
 
                     html += '</div>';
-                    html += '<span class="text-[7px] font-mono text-zinc-600 uppercase">' + num + '</span>';
+                    html += '<span class="font-mono uppercase" style="font-size:8px;color:' + accent + '">' + num + '</span>';
                     html += '</div>';
                 }
 
@@ -865,6 +869,7 @@
                 html += '</div>';
             }
             container.innerHTML = html;
+            updateDistributionButtons();
         }
 
         function toggleArtistFolder(id) {
@@ -1144,10 +1149,10 @@
             var revDivider    = document.getElementById('rev-divider');
             var ytLabel       = document.getElementById('yt-revenue-label');
             var scLabel       = document.getElementById('sc-revenue-label');
-            var ytModalBtn    = document.getElementById('yt-modal-btn');
-            var scModalBtn    = document.getElementById('sc-modal-btn');
-            var ytModalConn   = document.getElementById('yt-modal-connected');
-            var scModalConn   = document.getElementById('sc-modal-connected');
+            var ytModalBtn        = document.getElementById('yt-modal-btn');
+            var scModalBtn        = document.getElementById('sc-modal-btn');
+            var ytModalDisconnect = document.getElementById('yt-modal-disconnect');
+            var scModalDisconnect = document.getElementById('sc-modal-disconnect');
 
             var ytConnected = data.yt?.connected;
             var scConnected = data.sc?.connected;
@@ -1157,10 +1162,8 @@
             var anyConnected = ytConnected || scConnected;
 
             if (totalEl)       totalEl.textContent = anyConnected ? '£' + total.toFixed(2) : '—';
-            if (indicators)    { indicators.classList.toggle('hidden', !anyConnected); if (anyConnected) indicators.classList.add('flex'); }
+            if (indicators)    { if (anyConnected) { indicators.classList.remove('hidden'); indicators.classList.add('flex'); } else { indicators.classList.add('hidden'); indicators.classList.remove('flex'); } }
             if (connectPrompt) connectPrompt.classList.toggle('hidden', !!anyConnected);
-            var managePrompt = document.getElementById('revenue-manage-prompt');
-            if (managePrompt)  managePrompt.classList.toggle('hidden', !anyConnected);
 
             // YouTube indicator
             if (ytIndicator) { ytIndicator.classList.toggle('hidden', !ytConnected); if (ytConnected) ytIndicator.classList.add('flex'); }
@@ -1186,11 +1189,15 @@
                 else             { btn.style.display = 'none';        btn.classList.add('hidden');    }
             });
 
-            // Modal state
-            if (ytModalBtn)  ytModalBtn.classList.toggle('hidden', !!ytConnected);
-            if (ytModalConn) ytModalConn.classList.toggle('hidden', !ytConnected);
-            if (scModalBtn)  scModalBtn.classList.toggle('hidden', !!scConnected);
-            if (scModalConn) scModalConn.classList.toggle('hidden', !scConnected);
+            // Modal state — exactly one button per platform
+            if (ytModalBtn)        ytModalBtn.classList.toggle('hidden', !!ytConnected);
+            if (ytModalDisconnect) ytModalDisconnect.classList.toggle('hidden', !ytConnected);
+            if (scModalBtn)        scModalBtn.classList.toggle('hidden', !!scConnected);
+            if (scModalDisconnect) scModalDisconnect.classList.toggle('hidden', !scConnected);
+
+            // Cache connected state for updateDistributionButtons()
+            window._ytConnected = !!ytConnected;
+            window._scConnected = !!scConnected;
         }
 
         function openRevenueSettings() {
@@ -1235,7 +1242,7 @@
 
         async function distributeYouTube(playbackId, dlFile, title, uid) {
             var btn = document.getElementById('yt-dist-' + uid);
-            if (btn) { btn.disabled = true; btn.innerHTML = '<iconify-icon icon="mdi:youtube" style="font-size:13px"></iconify-icon> UPLOADING…'; }
+            if (btn) { btn.disabled = true; btn.innerHTML = '<iconify-icon icon="mdi:youtube" style="font-size:11px"></iconify-icon> UPLOADING…'; }
             try {
                 var res = await laFetch('/api/youtube-upload', {
                     method: 'POST',
@@ -1244,14 +1251,14 @@
                 });
                 var data = await res.json();
                 if (!res.ok) {
-                    if (btn) { btn.disabled = false; btn.innerHTML = '<iconify-icon icon="mdi:youtube" style="font-size:13px"></iconify-icon> YOUTUBE'; }
+                    if (btn) { btn.disabled = false; btn.innerHTML = '<iconify-icon icon="mdi:youtube" style="font-size:11px"></iconify-icon> YOUTUBE'; }
                     alert('YouTube upload failed: ' + (data.error || 'Unknown error'));
                     return;
                 }
                 var row = document.getElementById('yt-dist-' + uid);
                 if (row) row.outerHTML = '<a id="yt-dist-' + uid + '" href="' + (data.url || '#') + '" target="_blank" style="display:inline-flex;align-items:center;gap:4px;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#39FF14;text-decoration:none;">&#x2713; ON YOUTUBE</a>';
             } catch(e) {
-                if (btn) { btn.disabled = false; btn.innerHTML = '<iconify-icon icon="mdi:youtube" style="font-size:13px"></iconify-icon> YOUTUBE'; }
+                if (btn) { btn.disabled = false; btn.innerHTML = '<iconify-icon icon="mdi:youtube" style="font-size:11px"></iconify-icon> YOUTUBE'; }
             }
         }
 
@@ -1276,6 +1283,28 @@
             } catch(e) { if (btn) { btn.disabled = false; btn.textContent = 'Connect'; } }
         }
 
+        async function disconnectPlatform(platform, btn) {
+            if (btn) { btn.disabled = true; btn.textContent = 'Disconnecting…'; }
+            try {
+                const res  = await laFetch('/api/disconnect?platform=' + platform, { method: 'POST' });
+                const data = await res.json();
+                if (!res.ok) { _showRevenueModalError(data.error || 'Disconnect failed'); if (btn) { btn.disabled = false; btn.textContent = 'Disconnect'; } return; }
+                localStorage.removeItem('la_revenue_cache');
+                await fetchRevenue();
+            } catch(e) { if (btn) { btn.disabled = false; btn.textContent = 'Disconnect'; } }
+        }
+
+        function updateDistributionButtons() {
+            document.querySelectorAll('.sc-dist-btn').forEach(function(btn) {
+                if (window._scConnected) { btn.style.display = 'inline-flex'; btn.classList.remove('hidden'); }
+                else                     { btn.style.display = 'none';        btn.classList.add('hidden');    }
+            });
+            document.querySelectorAll('.yt-dist-btn').forEach(function(btn) {
+                if (window._ytConnected) { btn.style.display = 'inline-flex'; btn.classList.remove('hidden'); }
+                else                     { btn.style.display = 'none';        btn.classList.add('hidden');    }
+            });
+        }
+
         // Bust revenue cache if returning from an OAuth connect flow
         (function() {
             var p = new URLSearchParams(window.location.search);
@@ -1286,6 +1315,30 @@
         })();
 
         fetchRevenue();
+
+        // ── Header: breadcrumb, tier label, avatar — driven by session role ─
+        (function() {
+            var sess = (function() { try { return JSON.parse(localStorage.getItem('la_admin') || '{}'); } catch(_) { return {}; } })();
+            var role  = sess.role || 'admin';
+            var venue = (sess.venue || sess.name || '').toUpperCase().trim();
+
+            var breadcrumb = document.getElementById('venue-breadcrumb');
+            var tier       = document.getElementById('venue-tier');
+            var avatar     = document.getElementById('venue-avatar');
+
+            if (role === 'client') {
+                if (breadcrumb) breadcrumb.textContent = venue || 'CLIENT';
+                if (tier)       tier.textContent       = 'INFRASTRUCTURE TIER — ' + (venue || 'CLIENT');
+                if (avatar)     avatar.textContent     = (venue || 'C')[0];
+            } else {
+                if (breadcrumb) breadcrumb.textContent = 'ADMIN';
+                if (tier)       tier.textContent       = 'INFRASTRUCTURE TIER — ADMIN';
+                if (avatar) {
+                    var initial = (sess.email || 'A')[0].toUpperCase();
+                    avatar.textContent = initial;
+                }
+            }
+        })();
 
         // Disable live feed hero link for client role users
         (function() {
@@ -1640,7 +1693,7 @@
                         </div>
                     </div>
                     <button id="yt-modal-btn" onclick="connectYouTube(this)" style="padding:6px 16px;border-radius:9999px;border:1px solid #39FF14;background:#0a0a0a;color:#39FF14;font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s;" onmouseover="this.style.background='#39FF14';this.style.color='#000000'" onmouseout="this.style.background='#0a0a0a';this.style.color='#39FF14'">Connect</button>
-                    <span id="yt-modal-connected" class="hidden" style="font-size:9px;font-family:'JetBrains Mono',monospace;color:#39FF14;text-transform:uppercase;letter-spacing:.1em;white-space:nowrap;">✓ Connected</span>
+                    <button id="yt-modal-disconnect" onclick="disconnectPlatform('youtube',this)" class="hidden" style="padding:6px 16px;border-radius:9999px;border:1px solid #ef4444;background:#0a0a0a;color:#ef4444;font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s;" onmouseover="this.style.background='#ef4444';this.style.color='#ffffff'" onmouseout="this.style.background='#0a0a0a';this.style.color='#ef4444'">Disconnect</button>
                 </div>
 
                 <!-- Divider -->
@@ -1656,7 +1709,7 @@
                         </div>
                     </div>
                     <button id="sc-modal-btn" onclick="connectSoundCloud(this)" style="padding:6px 16px;border-radius:9999px;border:1px solid #39FF14;background:#0a0a0a;color:#39FF14;font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s;" onmouseover="this.style.background='#39FF14';this.style.color='#000000'" onmouseout="this.style.background='#0a0a0a';this.style.color='#39FF14'">Connect</button>
-                    <span id="sc-modal-connected" class="hidden" style="font-size:9px;font-family:'JetBrains Mono',monospace;color:#39FF14;text-transform:uppercase;letter-spacing:.1em;white-space:nowrap;">✓ Connected</span>
+                    <button id="sc-modal-disconnect" onclick="disconnectPlatform('soundcloud',this)" class="hidden" style="padding:6px 16px;border-radius:9999px;border:1px solid #ef4444;background:#0a0a0a;color:#ef4444;font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s;" onmouseover="this.style.background='#ef4444';this.style.color='#ffffff'" onmouseout="this.style.background='#0a0a0a';this.style.color='#ef4444'">Disconnect</button>
                 </div>
             </div>
 

@@ -14,6 +14,10 @@ document.addEventListener("DOMContentLoaded", () => {
             html:not(.dark) .la-theme-switcher button{color:rgba(0,0,0,.3)}
             html:not(.dark) .la-theme-switcher button:hover{color:rgba(0,0,0,.55)}
             html:not(.dark) .la-theme-switcher button[aria-checked="true"]{background:rgba(0,0,0,.07);color:#18181b}
+            .la-sign-in-btn{background:#18181b;border:1px solid #27272a}
+            .la-sign-in-btn span{color:#71717a}
+            html:not(.dark) .la-sign-in-btn{background:#f4f4f5;border-color:#d4d4d8}
+            html:not(.dark) .la-sign-in-btn span{color:#52525b}
         `;
         document.head.appendChild(style);
     }
@@ -306,8 +310,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (!session) {
             // Not logged in → "SIGN IN" pill
-            btn.style.cssText = 'width:auto;min-width:60px;height:28px;padding:0 10px;background:#18181b;border:1px solid #27272a;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;';
-            btn.innerHTML = '<span style="font-family:ui-monospace,monospace;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.15em;color:#71717a;">SIGN IN</span>';
+            btn.className = 'la-sign-in-btn';
+            btn.style.cssText = 'width:auto;min-width:60px;height:28px;padding:0 10px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;';
+            btn.innerHTML = '<span style="font-family:ui-monospace,monospace;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.15em;">SIGN IN</span>';
             btn.title = 'Sign in';
             btn.onclick = function(e) { e.stopPropagation(); window.location.href = '/login.html'; };
         } else {
