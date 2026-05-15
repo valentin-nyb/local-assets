@@ -1,5 +1,5 @@
 import { createClient } from 'redis';
-import { getWebSessionAuth } from './_venues.js';
+import { getWebSessionAuth, getVenuesConfig } from './_venues.js';
 
 // Large audio files need the full 300s window
 export const config = { maxDuration: 300 };
@@ -67,6 +67,11 @@ export default async function handler(req, res) {
 
   const venueSlug = session.venueSlug;
   if (!venueSlug) return res.status(403).json({ error: 'No venue associated with this account' });
+
+  // Get venue name for filename
+  const venues = getVenuesConfig();
+  const venueConfig = venues[venueSlug] || {};
+  const venueName = venueConfig.name || venueSlug;
 
   let body = req.body;
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch(e) {} }
