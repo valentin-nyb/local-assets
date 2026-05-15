@@ -1247,7 +1247,7 @@
 
         async function distributeSoundCloud(playbackId, dlFile, title, uid) {
             var btn = document.getElementById('sc-dist-' + uid);
-            if (btn) { btn.disabled = true; btn.innerHTML = '<iconify-icon icon="mdi:soundcloud" style="font-size:11px"></iconify-icon> 0%'; }
+            if (btn) { btn.disabled = true; btn.innerHTML = '0%'; }
             
             try {
                 const session = (() => { try { return JSON.parse(localStorage.getItem('la_admin') || '{}'); } catch(_) { return {}; } })();
@@ -1263,7 +1263,7 @@
                     xhr.upload.onprogress = function(e) {
                         if (e.lengthComputable && btn) {
                             const pct = Math.round((e.loaded / e.total) * 100);
-                            btn.innerHTML = '<iconify-icon icon="mdi:soundcloud" style="font-size:11px"></iconify-icon> ' + pct + '%';
+                            btn.innerHTML = pct + '%';
                         }
                     };
                     
