@@ -49,7 +49,7 @@ export default async function handler(req, res) {
   const formData = new FormData();
   formData.append('track[title]',      title || 'Untitled Session');
   formData.append('track[sharing]',    'public');
-  formData.append('track[asset_data]', new Blob([audioBuffer], { type: 'audio/mp4' }), audioPath);
+  formData.append('track[asset_data]', new Blob([audioBuffer], { type: 'audio/mpeg' }), 'track.mp3');
 
   const scRes = await fetch('https://api.soundcloud.com/tracks.json', {
     method:  'POST',

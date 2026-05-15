@@ -1247,30 +1247,72 @@
 
         async function distributeSoundCloud(playbackId, dlFile, title, uid) {
             var btn = document.getElementById('sc-dist-' + uid);
-            if (btn) { btn.disabled = true; btn.innerHTML = '<iconify-icon icon="mdi:soundcloud" style="font-size:11px"></iconify-icon> UPLOADING…'; }
+            if (btn) { btn.disabled = true; btn.innerHTML = '<iconify-icon icon="mdi:soundcloud" style="font-size:11px"></iconify-icon> 0%'; }
+            
             try {
-                var res = await laFetch('/api/soundcloud-upload', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ playbackId, dlFile, title }),
+                const session = (() => { try { return JSON.parse(localStorage.getItem('la_admin') || '{}'); } catch(_) { return {}; } })();
+                
+                // Use XMLHttpRequest for progress tracking
+                await new Promise((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('POST', '/api/soundcloud-upload');
+                    xhr.setRequestHeader('Content-Type', 'application/json');
+                    if (session.webToken) xhr.setRequestHeader('Authorization', 'Bearer ' + session.webToken);
+                    if (session.email) xhr.setRequestHeader('X-User-Email', session.email);
+                    
+                    xhr.upload.onprogress = function(e) {
+                        if (e.lengthComputable && btn) {
+                            const pct = Math.round((e.loaded / e.total) * 100);
+                            btn.innerHTML = '<iconify-icon icon="mdi:soundcloud" style="font-size:11px"></iconify-icon> ' + pct + '%';
+                        }
+                    };
+                    
+                    xhr.onload = function() {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            try {
+                                const data = JSON.parse(xhr.responseText);
+                                // Replace button with success state
+                                var row = document.getElementById('sc-dist-' + uid);
+                                if (row) row.outerHTML = '<a id="sc-dist-' + uid + '" href="' + (data.url || '#') + '" target="_blank" style="display:inline-flex;align-items:center;gap:4px;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#39FF14;text-decoration:none;">&#x2713; ON SOUNDCLOUD</a>';
+                                resolve(data);
+                            } catch(e) {
+                                reject(new Error('Invalid response'));
+                            }
+                        } else {
+                            try {
+                                const data = JSON.parse(xhr.responseText);
+                                reject(new Error(data.error || 'Upload failed'));
+                            } catch(e) {
+                                reject(new Error('Upload failed with status ' + xhr.status));
+                            }
+                        }
+                    };
+                    
+                    xhr.onerror = function() { reject(new Error('Network error')); };
+                    xhr.send(JSON.stringify({ playbackId, dlFile, title }));
                 });
-                var data = await res.json();
-                if (!res.ok) {
-                    if (btn) { btn.disabled = false; btn.innerHTML = '<iconify-icon icon="mdi:soundcloud" style="font-size:11px"></iconify-icon> SOUNDCLOUD'; }
-                    alert('SoundCloud upload failed: ' + (data.error || 'Unknown error'));
-                    return;
-                }
-                // Replace button with success state
-                var row = document.getElementById('sc-dist-' + uid);
-                if (row) row.outerHTML = '<a id="sc-dist-' + uid + '" href="' + (data.url || '#') + '" target="_blank" style="display:inline-flex;align-items:center;gap:4px;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#39FF14;text-decoration:none;">&#x2713; ON SOUNDCLOUD</a>';
             } catch(e) {
-                if (btn) { btn.disabled = false; btn.innerHTML = '<iconify-icon icon="mdi:soundcloud" style="font-size:11px"></iconify-icon> SOUNDCLOUD'; }
+                if (btn) { 
+                    btn.disabled = false; 
+                    btn.innerHTML = '<iconify-icon icon="mdi:soundcloud" style="font-size:11px"></iconify-icon> SOUNDCLOUD'; 
+                }
+                alert('SoundCloud upload failed: ' + e.message);
             }
         }
 
         async function distributeYouTube(playbackId, dlFile, title, uid) {
+            var btn = document.getElementById('yt-dist-' + uid);
+            if (btn) { 
+                btn.disabled = true; 
+                btn.innerHTML = '<iconify-icon icon="mdi:youtube" style="font-size:11px"></iconify-icon> COMING SOON'; 
+            }
             alert('YouTube distribution coming soon! This will upload 4K video directly to your YouTube channel.');
-            // TODO: Implement YouTube upload API integration
+            if (btn) { 
+                btn.disabled = false; 
+                btn.innerHTML = '<iconify-icon icon="mdi:youtube" style="font-size:11px"></iconify-icon> YOUTUBE 4K'; 
+            }
+            // TODO: Implement YouTube upload API integration with progress tracking
+            // Similar to SoundCloud: use XMLHttpRequest with upload.onprogress
         }
 
         async function connectYouTube(btn) {
