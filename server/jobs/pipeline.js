@@ -154,13 +154,13 @@ async function uploadClipToMux(filePath, passthrough, headers) {
 
 // ── Main export ──────────────────────────────────────────────────────
 
-export async function runPipeline({ jobId, uploadId, assetId: knownAssetId, artistName, redis, muxAuth }) {
+export async function runPipeline({ jobId, uploadId, assetId: knownAssetId, artistName, venueSlug, redis, muxAuth }) {
   const { tokenId, tokenSecret } = muxAuth;
   const authHeader = 'Basic ' + Buffer.from(`${tokenId}:${tokenSecret}`).toString('base64');
   const headers = { Authorization: authHeader, 'Content-Type': 'application/json' };
 
   const setProgress = (done, total, status, extra = {}) =>
-    redis.set(`pipeline:job:${jobId}`, JSON.stringify({ done, total, status, artistName, updatedAt: Date.now(), ...extra }), { EX: 7200 });
+    redis.set(`pipeline:job:${jobId}`, JSON.stringify({ done, total, status, artistName, venueSlug: venueSlug || '', updatedAt: Date.now(), ...extra }), { EX: 7200 });
 
   const tmpDir = path.join(os.tmpdir(), `pipeline-${jobId}`);
   fs.mkdirSync(tmpDir, { recursive: true });
