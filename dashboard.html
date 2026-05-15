@@ -202,7 +202,7 @@
                         </div>
                     </div>
                     <!-- Pipeline progress banner (hidden until a job is active) -->
-                    <div id="pipeline-banner" class="hidden border-b border-border px-5 py-4 space-y-3 bg-black/30"></div>
+                    <div id="pipeline-banner" class="hidden border-b border-border bg-black/30"></div>
                     <div id="recent-sets-list" class=""></div>
                 </div>
 
@@ -1474,9 +1474,16 @@
 
                 banner.classList.remove('hidden');
 
+                var isDark = document.documentElement.classList.contains('dark');
+                var nameColor   = isDark ? '#d4d4d8' : '#18181b';
+                var sectionColor= isDark ? '#52525b'  : '#71717a';
+                var barTrack    = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)';
+                var shimmerGlow = isDark ? 'rgba(57,255,20,0.5)' : 'rgba(57,255,20,0.35)';
+
                 var anyPending = active.some(function(j) { return j.status !== 'done' && j.status !== 'error'; });
-                var html = '<div style="display:flex;align-items:center;gap:7px;margin-bottom:14px;">'
-                    + '<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:0.35em;color:#52525b;">Social Clip Generation</span>'
+                var html = '<div style="padding:16px 20px 4px 20px;">';
+                html += '<div style="display:flex;align-items:center;gap:7px;margin-bottom:14px;">'
+                    + '<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:0.35em;color:' + sectionColor + ';">Social Clip Generation</span>'
                     + (anyPending ? '<span style="width:5px;height:5px;border-radius:50%;background:#39FF14;display:inline-block;flex-shrink:0;animation:plPulse 1.5s ease-in-out infinite;"></span>' : '')
                     + '</div>';
 
@@ -1497,13 +1504,13 @@
                     }[job.status] || job.status.toUpperCase();
 
                     var accentColor = isError ? '#ef4444' : '#39FF14';
-                    var labelColor  = isError ? '#ef4444' : isDone ? '#39FF14' : '#71717a';
+                    var labelColor  = isError ? '#ef4444' : isDone ? '#39FF14' : (isDark ? '#71717a' : '#52525b');
 
                     var barInner;
                     if (isQueued || isWaiting) {
                         barInner = '<div style="position:relative;width:100%;height:100%;border-radius:9999px;overflow:hidden;">'
-                            + '<div style="position:absolute;inset:0;background:rgba(57,255,20,0.07);"></div>'
-                            + '<div style="position:absolute;top:0;bottom:0;width:35%;background:linear-gradient(90deg,transparent,rgba(57,255,20,0.5),transparent);border-radius:9999px;animation:plShimmer 1.8s ease-in-out infinite;"></div>'
+                            + '<div style="position:absolute;inset:0;background:rgba(57,255,20,0.1);"></div>'
+                            + '<div style="position:absolute;top:0;bottom:0;width:35%;background:linear-gradient(90deg,transparent,' + shimmerGlow + ',transparent);border-radius:9999px;animation:plShimmer 1.8s ease-in-out infinite;"></div>'
                             + '</div>';
                     } else if (isProcessing) {
                         barInner = '<div style="height:100%;border-radius:9999px;width:' + Math.max(pct, 2) + '%;background:#39FF14;box-shadow:0 0 10px rgba(57,255,20,0.55);transition:width .5s ease;"></div>';
@@ -1513,13 +1520,14 @@
 
                     html += '<div style="margin-bottom:12px;">';
                     html += '<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:7px;">';
-                    html += '<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.2em;color:#e4e4e7;">' + (job.artistName || '') + '</span>';
+                    html += '<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.2em;color:' + nameColor + ';">' + (job.artistName || '') + '</span>';
                     html += '<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:0.1em;color:' + labelColor + ';">' + statusLabel + '</span>';
                     html += '</div>';
-                    html += '<div style="width:100%;background:rgba(255,255,255,0.06);height:3px;border-radius:9999px;overflow:hidden;">' + barInner + '</div>';
+                    html += '<div style="width:100%;background:' + barTrack + ';height:3px;border-radius:9999px;overflow:hidden;">' + barInner + '</div>';
                     html += '</div>';
                 });
 
+                html += '</div>';
                 banner.innerHTML = html;
             } catch (e) {}
         }
