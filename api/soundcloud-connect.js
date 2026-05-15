@@ -35,6 +35,7 @@ export default async function handler(req, res) {
     code_challenge_method: 'S256',
     code_challenge:        codeChallenge,
     state,
+    scope:                 'non-expiring',
   });
 
   res.redirect(`https://secure.soundcloud.com/authorize?${params}`);

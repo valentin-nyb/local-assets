@@ -122,6 +122,7 @@
                 <button onclick="switchTab('assets')" id="tab-assets" class="tab-btn px-5 py-3 font-mono text-xs uppercase tracking-wider border-b-2 border-[#39FF14] text-white">Assets</button>
                 <button onclick="switchTab('upload')" id="tab-upload" class="tab-btn px-5 py-3 font-mono text-xs uppercase tracking-wider border-b-2 border-transparent text-[#666] hover:text-white transition-colors">Upload</button>
                 <button onclick="switchTab('distribution')" id="tab-distribution" class="tab-btn px-5 py-3 font-mono text-xs uppercase tracking-wider border-b-2 border-transparent text-[#666] hover:text-white transition-colors">Distribution</button>
+                <button onclick="switchTab('analytics')" id="tab-analytics" class="tab-btn px-5 py-3 font-mono text-xs uppercase tracking-wider border-b-2 border-transparent text-[#666] hover:text-white transition-colors">Analytics</button>
             </div>
 
             <!-- ASSETS TAB -->
@@ -186,6 +187,124 @@
                     <p class="font-mono text-xs text-[#666] mb-6 max-w-md mx-auto">Your assets are automatically distributed to our partner network once processing completes.</p>
                     <div id="distribution-list" class="space-y-3 max-w-md mx-auto text-left">
                         <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- ANALYTICS TAB -->
+            <div id="panel-analytics" class="hidden">
+                <!-- Connection Status -->
+                <div class="mb-6 p-4 border border-[#1a1a1a] bg-[#0a0a0a] flex items-center justify-between flex-wrap gap-4">
+                    <div class="flex items-center gap-6">
+                        <div id="yt-status-client" class="flex items-center gap-2">
+                            <div class="w-2 h-2 bg-zinc-700 rounded-full"></div>
+                            <span class="font-mono text-xs text-[#666] uppercase">YouTube: <span class="text-[#888]">Checking...</span></span>
+                        </div>
+                        <div id="sc-status-client" class="flex items-center gap-2">
+                            <div class="w-2 h-2 bg-zinc-700 rounded-full"></div>
+                            <span class="font-mono text-xs text-[#666] uppercase">SoundCloud: <span class="text-[#888]">Checking...</span></span>
+                        </div>
+                    </div>
+                    <button onclick="refreshAnalytics()" class="font-mono text-[10px] tracking-wider px-4 py-2 border border-[#39FF14] text-[#39FF14] hover:bg-[#39FF14] hover:text-black transition-all uppercase">
+                        <iconify-icon icon="solar:refresh-bold" class="inline-block mr-1"></iconify-icon> Refresh
+                    </button>
+                </div>
+
+                <!-- Revenue Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-6 hover:border-[#39FF14]/30 transition-colors">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="font-mono text-xs text-[#666] uppercase">Total Revenue</span>
+                            <iconify-icon icon="solar:wallet-bold" class="text-xl text-[#39FF14]"></iconify-icon>
+                        </div>
+                        <div class="text-4xl font-bold text-white mb-1" id="total-revenue-client">£—</div>
+                        <p class="font-mono text-[9px] text-[#555]">Combined platforms</p>
+                    </div>
+                    <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-6 hover:border-red-500/30 transition-colors">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="font-mono text-xs text-[#666] uppercase">YouTube Revenue</span>
+                            <iconify-icon icon="mdi:youtube" class="text-xl text-[#FF0000]"></iconify-icon>
+                        </div>
+                        <div class="text-4xl font-bold text-white mb-1" id="yt-revenue-client">£—</div>
+                        <p class="font-mono text-[9px] text-[#555]" id="yt-views-client">— views</p>
+                    </div>
+                    <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-6 hover:border-[#FF5500]/30 transition-colors">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="font-mono text-xs text-[#666] uppercase">SoundCloud Revenue</span>
+                            <iconify-icon icon="mdi:soundcloud" class="text-xl text-[#FF5500]"></iconify-icon>
+                        </div>
+                        <div class="text-4xl font-bold text-white mb-1" id="sc-revenue-client">£—</div>
+                        <p class="font-mono text-[9px] text-[#555]" id="sc-plays-client">— plays</p>
+                    </div>
+                </div>
+
+                <!-- YouTube Metrics -->
+                <div class="mb-6">
+                    <h3 class="font-mono text-xs tracking-[0.2em] text-[#FF0000] uppercase mb-4">// YouTube Analytics</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                        <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <iconify-icon icon="solar:eye-bold" class="text-sm text-[#39FF14]"></iconify-icon>
+                                <span class="font-mono text-xs text-[#666] uppercase">Views</span>
+                            </div>
+                            <div class="text-2xl font-bold text-white" id="yt-total-views-client">—</div>
+                        </div>
+                        <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <iconify-icon icon="solar:clock-circle-bold" class="text-sm text-[#39FF14]"></iconify-icon>
+                                <span class="font-mono text-xs text-[#666] uppercase">Watch Time</span>
+                            </div>
+                            <div class="text-2xl font-bold text-white" id="yt-watch-time-client">—</div>
+                        </div>
+                        <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <iconify-icon icon="solar:users-group-rounded-bold" class="text-sm text-[#39FF14]"></iconify-icon>
+                                <span class="font-mono text-xs text-[#666] uppercase">Subscribers</span>
+                            </div>
+                            <div class="text-2xl font-bold text-white" id="yt-subscribers-client">—</div>
+                        </div>
+                        <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <iconify-icon icon="solar:chart-bold" class="text-sm text-[#39FF14]"></iconify-icon>
+                                <span class="font-mono text-xs text-[#666] uppercase">Avg CTR</span>
+                            </div>
+                            <div class="text-2xl font-bold text-white" id="yt-ctr-client">—</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SoundCloud Metrics -->
+                <div>
+                    <h3 class="font-mono text-xs tracking-[0.2em] text-[#FF5500] uppercase mb-4">// SoundCloud Analytics</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <iconify-icon icon="solar:play-circle-bold" class="text-sm text-[#39FF14]"></iconify-icon>
+                                <span class="font-mono text-xs text-[#666] uppercase">Plays</span>
+                            </div>
+                            <div class="text-2xl font-bold text-white" id="sc-total-plays-client">—</div>
+                        </div>
+                        <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <iconify-icon icon="solar:download-bold" class="text-sm text-[#39FF14]"></iconify-icon>
+                                <span class="font-mono text-xs text-[#666] uppercase">Downloads</span>
+                            </div>
+                            <div class="text-2xl font-bold text-white" id="sc-downloads-client">—</div>
+                        </div>
+                        <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <iconify-icon icon="solar:heart-bold" class="text-sm text-[#39FF14]"></iconify-icon>
+                                <span class="font-mono text-xs text-[#666] uppercase">Favorites</span>
+                            </div>
+                            <div class="text-2xl font-bold text-white" id="sc-favorites-client">—</div>
+                        </div>
+                        <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <iconify-icon icon="solar:share-bold" class="text-sm text-[#39FF14]"></iconify-icon>
+                                <span class="font-mono text-xs text-[#666] uppercase">Reposts</span>
+                            </div>
+                            <div class="text-2xl font-bold text-white" id="sc-reposts-client">—</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -390,7 +509,7 @@
 
     // ── TABS ──────────────────────────────────────────────────────────
     function switchTab(tab) {
-        ['assets', 'upload', 'distribution'].forEach(t => {
+        ['assets', 'upload', 'distribution', 'analytics'].forEach(t => {
             document.getElementById('panel-' + t).classList.toggle('hidden', t !== tab);
             var btn = document.getElementById('tab-' + t);
             if (t === tab) {
@@ -401,6 +520,10 @@
                 btn.classList.add('border-transparent', 'text-[#666]');
             }
         });
+        // Load analytics data when switching to that tab
+        if (tab === 'analytics') {
+            refreshAnalytics();
+        }
     }
 
     // ── UPLOAD ────────────────────────────────────────────────────────
@@ -583,6 +706,90 @@
         t.style.cssText = 'position:fixed;bottom:72px;left:50%;transform:translateX(-50%);background:#111;border:1px solid #39FF14;color:#fff;font-family:monospace;font-size:11px;padding:10px 20px;z-index:9999;pointer-events:none;white-space:nowrap;';
         document.body.appendChild(t);
         setTimeout(function() { t.remove(); }, 4000);
+    }
+
+    // ── ANALYTICS ─────────────────────────────────────────────────────
+    function formatNumber(num) {
+        return Number(num).toLocaleString('en-GB');
+    }
+
+    function updateConnectionStatus(platform, connected, suffix) {
+        var statusEl = document.getElementById(platform + '-status-' + suffix);
+        if (!statusEl) return;
+        var dot = statusEl.querySelector('.w-2');
+        var span = statusEl.querySelector('span span');
+        
+        if (connected) {
+            dot.className = 'w-2 h-2 bg-[#39FF14] rounded-full pulse-dot';
+            span.textContent = 'Connected';
+            span.className = 'text-[#39FF14]';
+        } else {
+            dot.className = 'w-2 h-2 bg-red-500 rounded-full';
+            span.textContent = 'Disconnected';
+            span.className = 'text-red-500';
+        }
+    }
+
+    async function refreshAnalytics() {
+        console.log('[client-analytics] Refreshing data...');
+
+        try {
+            // Fetch YouTube data
+            var ytRes = await fetch('/api/youtube-revenue', {
+                headers: {
+                    'Authorization': 'Bearer ' + (clientProfile?.webToken || ''),
+                    'X-User-Email': clientProfile?.email || ''
+                }
+            });
+            var ytData = await ytRes.json();
+            
+            // Fetch SoundCloud data
+            var scRes = await fetch('/api/soundcloud-revenue', {
+                headers: {
+                    'Authorization': 'Bearer ' + (clientProfile?.webToken || ''),
+                    'X-User-Email': clientProfile?.email || ''
+                }
+            });
+            var scData = await scRes.json();
+
+            // Update connection status
+            updateConnectionStatus('yt', ytData.connected, 'client');
+            updateConnectionStatus('sc', scData.connected, 'client');
+
+            // Update revenue
+            var ytRevenue = Number(ytData.revenue) || 0;
+            var scRevenue = Number(scData.estimatedRevenue) || 0;
+            var totalRevenue = ytRevenue + scRevenue;
+
+            document.getElementById('total-revenue-client').textContent = '£' + totalRevenue.toFixed(2);
+            document.getElementById('yt-revenue-client').textContent = '£' + ytRevenue.toFixed(2);
+            document.getElementById('sc-revenue-client').textContent = '£' + scRevenue.toFixed(2);
+
+            // YouTube metrics
+            if (ytData.connected) {
+                document.getElementById('yt-total-views-client').textContent = formatNumber(ytData.views || 0);
+                document.getElementById('yt-views-client').textContent = formatNumber(ytData.views || 0) + ' views';
+                // Placeholders for extended metrics
+                document.getElementById('yt-watch-time-client').textContent = '—';
+                document.getElementById('yt-subscribers-client').textContent = '—';
+                document.getElementById('yt-ctr-client').textContent = '—';
+            }
+
+            // SoundCloud metrics
+            if (scData.connected) {
+                var plays = Number(scData.plays) || 0;
+                document.getElementById('sc-total-plays-client').textContent = formatNumber(plays);
+                document.getElementById('sc-plays-client').textContent = formatNumber(plays) + ' plays';
+                // Placeholders for extended metrics
+                document.getElementById('sc-downloads-client').textContent = '—';
+                document.getElementById('sc-favorites-client').textContent = '—';
+                document.getElementById('sc-reposts-client').textContent = '—';
+            }
+
+        } catch (error) {
+            console.error('[client-analytics] Error fetching data:', error);
+            showToast('Error loading analytics data');
+        }
     }
 </script>
 </body>

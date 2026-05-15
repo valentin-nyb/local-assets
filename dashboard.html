@@ -238,6 +238,7 @@
     </main>
 
     <script>
+        // v2.0.1 - Cache bust for deployment
         // Wraps fetch() — injects Authorization (webToken) + X-User-Email for venue isolation
         function laFetch(url, opts = {}) {
             const session = (() => { try { return JSON.parse(localStorage.getItem('la_admin') || '{}'); } catch(_) { return {}; } })();
@@ -484,7 +485,9 @@
                 var srReady = null;
                 for (var si = 0; si < srFiles.length; si++) { if (srFiles[si].status === 'ready') { srReady = srFiles[si]; break; } }
                 var isAudioAsset = asset.type === 'AUDIO';
-                var dlFile = srReady ? srReady.name : (srStatus === 'ready' ? (isAudioAsset ? 'audio.m4a' : 'highest.mp4') : null);
+                var isMasterAsset = asset.type === 'MASTER';
+                // If we have a playback ID, assume downloadable even if static_renditions not confirmed ready
+                var dlFile = srReady ? srReady.name : (pid && (srStatus === 'ready' || !srStatus)) ? (isAudioAsset ? 'audio.m4a' : 'highest.mp4') : null;
                 var dlExt = srReady ? srReady.ext : (isAudioAsset ? 'm4a' : 'mp4');
                 var linkedLabel = isLinked && !pid ? 'IN VAULT — PROCESSING' : (srReady || srStatus === 'ready') ? 'IN VAULT — UPLOADED' : (srFiles.some(function(f){ return f.status === 'preparing'; }) || srStatus === 'preparing') ? 'IN VAULT — PREPARING' : 'IN VAULT — UPLOADED';
                 var html = '';
@@ -509,6 +512,11 @@
                         html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Play" onclick="window.open(\'/player.html?v=' + pid + '&f=' + dlFile + '&title=\' + encodeURIComponent(\'' + safeLabel + '\'), \'_blank\')">';
                         html += '<iconify-icon icon="solar:play-bold" class="text-primary"></iconify-icon>';
                         html += '</button>';
+                        if (isMasterAsset) {
+                            html += '<button id="yt-dist-' + uid + '" class="yt-dist-btn hidden" style="display:none;align-items:center;gap:4px;padding:3px 8px;border-radius:9999px;border:1px solid #FF0000;background:transparent;color:#FF0000;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;white-space:nowrap;" onclick="distributeYouTube(\'' + pid + '\', \'' + dlFile + '\', \'' + safeName + '\', \'' + uid + '\')" onmouseover="this.style.background=\'#FF0000\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'#FF0000\'">';
+                            html += '<iconify-icon icon="mdi:youtube" style="font-size:11px;flex-shrink:0"></iconify-icon> YOUTUBE';
+                            html += '</button>';
+                        }
                         if (isAudioAsset) {
                             html += '<button id="sc-dist-' + uid + '" class="sc-dist-btn hidden" style="display:none;align-items:center;gap:4px;padding:3px 8px;border-radius:9999px;border:1px solid #FF5500;background:transparent;color:#FF5500;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;white-space:nowrap;" onclick="distributeSoundCloud(\'' + pid + '\', \'' + dlFile + '\', \'' + safeName + '\', \'' + uid + '\')" onmouseover="this.style.background=\'#FF5500\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'#FF5500\'">';
                             html += '<iconify-icon icon="mdi:soundcloud" style="font-size:11px;flex-shrink:0"></iconify-icon> SOUNDCLOUD';
@@ -527,7 +535,6 @@
                     html += '</div>';
                     html += '</div>';
                 } else {
-                    if (_isClientUser) return '';
                     html += '<div class="p-4 pl-16 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-' + uid + '">';
                     if (asset.type === 'MASTER') {
                         // MASTER: keep inline file picker
@@ -542,9 +549,9 @@
                         html += '<input type="file" accept="' + accept + '" class="hidden" id="file-' + uid + '" onchange="handleAssetUpload(\'' + uid + '\', this, \'' + sessionName + '\', \'' + sessionDate + '\')">';
                         html += '</label>';
                     } else {
-                        // Sub-assets: navigate to assets.html pre-filled for this session
-                        var _upUrl = '/assets.html?artist=' + encodeURIComponent(sessionName) + '&date=' + encodeURIComponent(sessionDate) + '&camera=' + encodeURIComponent(asset.type);
-                        html += '<a href="' + _upUrl + '" style="text-decoration:none;display:flex;align-items:center;gap:16px;flex:1;min-width:0;">';
+                        // All asset types: inline file picker for direct upload on dashboard
+                        var allowMultiple = (asset.type === 'SOCIAL' || asset.type === 'THUMB');
+                        html += '<label class="flex items-center gap-4 cursor-pointer flex-1 min-w-0">';
                         html += '<div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-border/50 shrink-0">';
                         html += '<iconify-icon icon="' + asset.icon + '" class="' + asset.color + ' text-sm"></iconify-icon>';
                         html += '</div>';
@@ -552,7 +559,8 @@
                         html += '<p class="text-[10px] font-bold text-zinc-300 uppercase" id="label-' + uid + '">' + asset.label + '</p>';
                         html += '<p class="text-[8px] font-mono text-zinc-600 uppercase" id="status-' + uid + '">' + asset.ext + ' FORMAT — TAP TO UPLOAD</p>';
                         html += '</div>';
-                        html += '</a>';
+                        html += '<input type="file" accept="' + accept + '"' + (allowMultiple ? ' multiple' : '') + ' class="hidden" id="file-' + uid + '" onchange="handleAssetUpload(\'' + uid + '\', this, \'' + sessionName + '\', \'' + sessionDate + '\')">';
+                        html += '</label>';
                     }
                     html += '<div class="flex items-center gap-2 shrink-0">';
                     html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors opacity-10" id="dl-' + uid + '" disabled title="No file yet">';
@@ -604,10 +612,17 @@
                 var isDark = document.documentElement.classList.contains('dark');
                 var accent = isDark ? '#39FF14' : '#F97316';
 
+                // Check if clips are still processing (no playback IDs)
+                var readyCount = 0;
+                for (var pi = 0; pi < clips.length; pi++) {
+                    if (clips[pi].playback_ids && clips[pi].playback_ids[0]) readyCount++;
+                }
+                var statusText = readyCount === clips.length ? clips.length + ' CLIPS — IN VAULT' : clips.length + ' CLIPS — ' + readyCount + ' READY, ' + (clips.length - readyCount) + ' PROCESSING';
+
                 // Build comma-separated PID list for gallery URL
                 var allPids = [];
-                for (var pi = 0; pi < clips.length; pi++) {
-                    var cpid = clips[pi].playback_ids && clips[pi].playback_ids[0] ? clips[pi].playback_ids[0].id : null;
+                for (var pc = 0; pc < clips.length; pc++) {
+                    var cpid = clips[pc].playback_ids && clips[pc].playback_ids[0] ? clips[pc].playback_ids[0].id : null;
                     if (cpid) allPids.push(cpid);
                 }
                 var galleryBase = '/player.html?socials=' + allPids.join(',') + '&title=' + encodeURIComponent(name + ' SOCIAL PACK');
@@ -1161,6 +1176,14 @@
             var total       = ytRevenue + scRevenue;
             var anyConnected = ytConnected || scConnected;
 
+            // Store connection state globally for updateSoundCloudButtons()
+            window._scConnected = scConnected;
+            window._ytConnected = ytConnected;
+
+            // Show manage button when platforms are connected
+            var manageBtn = document.getElementById('revenue-manage-btn');
+            if (manageBtn) manageBtn.classList.toggle('hidden', !anyConnected);
+
             if (totalEl)       totalEl.textContent = anyConnected ? '£' + total.toFixed(2) : '—';
             if (indicators)    { if (anyConnected) { indicators.classList.remove('hidden'); indicators.classList.add('flex'); } else { indicators.classList.add('hidden'); indicators.classList.remove('flex'); } }
             if (connectPrompt) connectPrompt.classList.toggle('hidden', !!anyConnected);
@@ -1219,12 +1242,49 @@
 
         async function distributeSoundCloud(playbackId, dlFile, title, uid) {
             var btn = document.getElementById('sc-dist-' + uid);
-            if (btn) { btn.disabled = true; btn.innerHTML = '<iconify-icon icon="mdi:soundcloud" style="font-size:11px"></iconify-icon> UPLOADING…'; }
+            if (btn) { btn.disabled = true; btn.innerHTML = '<iconify-icon icon="mdi:soundcloud" style="font-size:11px"></iconify-icon> 0%'; }
+            
             try {
-                var res = await laFetch('/api/soundcloud-upload', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ playbackId, dlFile, title }),
+                const session = (() => { try { return JSON.parse(localStorage.getItem('la_admin') || '{}'); } catch(_) { return {}; } })();
+                
+                // Use XMLHttpRequest for progress tracking
+                await new Promise((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('POST', '/api/soundcloud-upload');
+                    xhr.setRequestHeader('Content-Type', 'application/json');
+                    if (session.webToken) xhr.setRequestHeader('Authorization', 'Bearer ' + session.webToken);
+                    if (session.email) xhr.setRequestHeader('X-User-Email', session.email);
+                    
+                    xhr.upload.onprogress = function(e) {
+                        if (e.lengthComputable && btn) {
+                            const pct = Math.round((e.loaded / e.total) * 100);
+                            btn.innerHTML = '<iconify-icon icon="mdi:soundcloud" style="font-size:11px"></iconify-icon> ' + pct + '%';
+                        }
+                    };
+                    
+                    xhr.onload = function() {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            try {
+                                const data = JSON.parse(xhr.responseText);
+                                // Replace button with success state
+                                var row = document.getElementById('sc-dist-' + uid);
+                                if (row) row.outerHTML = '<a id="sc-dist-' + uid + '" href="' + (data.url || '#') + '" target="_blank" style="display:inline-flex;align-items:center;gap:4px;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#39FF14;text-decoration:none;">&#x2713; ON SOUNDCLOUD</a>';
+                                resolve(data);
+                            } catch(e) {
+                                reject(new Error('Invalid response'));
+                            }
+                        } else {
+                            try {
+                                const data = JSON.parse(xhr.responseText);
+                                reject(new Error(data.error || 'Upload failed'));
+                            } catch(e) {
+                                reject(new Error('Upload failed with status ' + xhr.status));
+                            }
+                        }
+                    };
+                    
+                    xhr.onerror = function() { reject(new Error('Network error')); };
+                    xhr.send(JSON.stringify({ playbackId, dlFile, title }));
                 });
                 var data = await res.json();
                 if (!res.ok) {
@@ -1260,6 +1320,21 @@
             } catch(e) {
                 if (btn) { btn.disabled = false; btn.innerHTML = '<iconify-icon icon="mdi:youtube" style="font-size:11px"></iconify-icon> YOUTUBE'; }
             }
+        }
+
+        async function distributeYouTube(playbackId, dlFile, title, uid) {
+            var btn = document.getElementById('yt-dist-' + uid);
+            if (btn) { 
+                btn.disabled = true; 
+                btn.innerHTML = '<iconify-icon icon="mdi:youtube" style="font-size:11px"></iconify-icon> COMING SOON'; 
+            }
+            alert('YouTube distribution coming soon! This will upload 4K video directly to your YouTube channel.');
+            if (btn) { 
+                btn.disabled = false; 
+                btn.innerHTML = '<iconify-icon icon="mdi:youtube" style="font-size:11px"></iconify-icon> YOUTUBE 4K'; 
+            }
+            // TODO: Implement YouTube upload API integration with progress tracking
+            // Similar to SoundCloud: use XMLHttpRequest with upload.onprogress
         }
 
         async function connectYouTube(btn) {
@@ -1635,6 +1710,9 @@
                     dlBtn.querySelector('iconify-icon')?.classList.add('text-primary');
                 }
                 row.style.borderLeft = '2px solid #39FF14';
+
+                // Refresh asset list to show latest Mux status (wait 5s for Mux processing)
+                setTimeout(() => fetchRecentUploads(), 5000);
             } catch (err) {
                 statusEl.textContent = `ERROR — ${err.message}`;
                 statusEl.classList.remove('text-yellow-500');
