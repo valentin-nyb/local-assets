@@ -1445,14 +1445,21 @@
         async function fetchPipelineStatus() {
             var banner = document.getElementById('pipeline-banner');
             if (!banner) return;
+
+            if (!document.getElementById('pipeline-kf')) {
+                var kf = document.createElement('style');
+                kf.id = 'pipeline-kf';
+                kf.textContent = '@keyframes plShimmer{0%{transform:translateX(-100%)}100%{transform:translateX(400%)}}@keyframes plPulse{0%,100%{opacity:1}50%{opacity:.25}}';
+                document.head.appendChild(kf);
+            }
+
             try {
                 var r = await laFetch('/api/pipeline-status?t=' + Date.now());
                 if (!r.ok) { console.warn('[Pipeline] status API returned', r.status); return; }
                 var jobs = await r.json();
 
-                // Only show jobs that are not yet done/error, or completed within last 30s
                 var active = jobs.filter(function(j) {
-                    if (j.status === 'done') return (Date.now() - (j.updatedAt || 0)) < 30000;
+                    if (j.status === 'done')  return (Date.now() - (j.updatedAt || 0)) < 30000;
                     if (j.status === 'error') return (Date.now() - (j.updatedAt || 0)) < 60000;
                     return true;
                 });
@@ -1464,39 +1471,52 @@
                 }
 
                 banner.classList.remove('hidden');
-                var html = '';
+
+                var anyPending = active.some(function(j) { return j.status !== 'done' && j.status !== 'error'; });
+                var html = '<div style="display:flex;align-items:center;gap:7px;margin-bottom:14px;">'
+                    + '<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:0.35em;color:#52525b;">Social Clip Generation</span>'
+                    + (anyPending ? '<span style="width:5px;height:5px;border-radius:50%;background:#39FF14;display:inline-block;flex-shrink:0;animation:plPulse 1.5s ease-in-out infinite;"></span>' : '')
+                    + '</div>';
+
                 active.forEach(function(job) {
                     var pct = job.total > 0 ? Math.round((job.done / job.total) * 100) : 0;
-                    var barColor = job.status === 'done' ? '#39FF14' : job.status === 'error' ? '#ef4444' : '#39FF14';
+                    var isQueued  = job.status === 'queued';
+                    var isWaiting = job.status === 'waiting';
+                    var isProcessing = job.status === 'processing';
+                    var isDone  = job.status === 'done';
+                    var isError = job.status === 'error';
+
                     var statusLabel = {
-                        queued: 'QUEUED',
-                        waiting: 'WAITING FOR MUX',
-                        processing: 'GENERATING — ' + job.done + '/' + job.total + ' CLIPS',
-                        done: 'COMPLETE ✓',
-                        error: 'ERROR: ' + (job.error || 'see server logs')
+                        queued:     'QUEUED',
+                        waiting:    'WAITING FOR MUX',
+                        processing: pct + '%  ·  ' + job.done + ' / ' + job.total + ' CLIPS',
+                        done:       '✓  COMPLETE',
+                        error:      '✕  ' + (job.error ? job.error.slice(0, 45) : 'ERROR')
                     }[job.status] || job.status.toUpperCase();
 
-                    html += '<div class="space-y-2">';
-                    html += '<div class="flex items-center justify-between">';
-                    html += '<div class="flex items-center gap-2">';
-                    if (job.status === 'processing') {
-                        html += '<span class="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-pulse"></span>';
+                    var accentColor = isError ? '#ef4444' : '#39FF14';
+                    var labelColor  = isError ? '#ef4444' : isDone ? '#39FF14' : '#71717a';
+
+                    var barInner;
+                    if (isQueued || isWaiting) {
+                        barInner = '<div style="position:relative;width:100%;height:100%;border-radius:9999px;overflow:hidden;">'
+                            + '<div style="position:absolute;inset:0;background:rgba(57,255,20,0.07);"></div>'
+                            + '<div style="position:absolute;top:0;bottom:0;width:35%;background:linear-gradient(90deg,transparent,rgba(57,255,20,0.5),transparent);border-radius:9999px;animation:plShimmer 1.8s ease-in-out infinite;"></div>'
+                            + '</div>';
+                    } else if (isProcessing) {
+                        barInner = '<div style="height:100%;border-radius:9999px;width:' + Math.max(pct, 2) + '%;background:#39FF14;box-shadow:0 0 10px rgba(57,255,20,0.55);transition:width .5s ease;"></div>';
+                    } else {
+                        barInner = '<div style="height:100%;border-radius:9999px;width:100%;background:' + accentColor + ';' + (isDone ? 'box-shadow:0 0 10px rgba(57,255,20,0.45);' : '') + '"></div>';
                     }
-                    html += '<span class="text-[9px] font-mono font-bold uppercase tracking-[0.25em] text-white">' + job.artistName + '</span>';
+
+                    html += '<div style="margin-bottom:12px;">';
+                    html += '<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:7px;">';
+                    html += '<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.2em;color:#e4e4e7;">' + (job.artistName || '') + '</span>';
+                    html += '<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:0.1em;color:' + labelColor + ';">' + statusLabel + '</span>';
                     html += '</div>';
-                    html += '<span class="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">' + statusLabel + '</span>';
-                    html += '</div>';
-                    html += '<div class="w-full bg-white/5 h-[2px] rounded-full overflow-hidden">';
-                    html += '<div class="h-full transition-all duration-500 rounded-full" style="width:' + Math.max(pct, job.status === 'queued' ? 2 : 1) + '%;background:' + barColor + ';' + (job.status === 'processing' ? 'box-shadow:0 0 8px ' + barColor : '') + '"></div>';
-                    html += '</div>';
+                    html += '<div style="width:100%;background:rgba(255,255,255,0.06);height:3px;border-radius:9999px;overflow:hidden;">' + barInner + '</div>';
                     html += '</div>';
                 });
-
-                // Header label
-                var processingCount = active.filter(function(j) { return j.status === 'processing' || j.status === 'waiting' || j.status === 'queued'; }).length;
-                if (processingCount > 0) {
-                    html = '<div class="text-[8px] font-mono text-zinc-600 uppercase tracking-[0.35em] mb-3">Social Clip Generation</div>' + html;
-                }
 
                 banner.innerHTML = html;
             } catch (e) {}
