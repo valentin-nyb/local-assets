@@ -59,62 +59,56 @@ async function waitForAsset(uploadId, assetId, authHeader) {
 
 // ── Step 3: Smart-reframe one clip — no intermediate raw file ─────────
 
-async function processClip(videoUrl, start, dur, outPath) {
+async function processClip(videoUrl, start, dur, outPath, srcW, srcH) {
   // Pass 1 — cropdetect directly from source (streaming, no disk write)
   let cropFilter;
-  try {
-    const { stderr } = await execAsync(
-      `ffmpeg -ss ${start} -t ${dur} -i "${videoUrl}" -vf "fps=1,cropdetect=24:2:0" -frames:v ${dur} -f null -`,
-      { timeout: 300_000, maxBuffer: 10 * 1024 * 1024 }
-    );
-
-    const allMatches = [...stderr.matchAll(/crop=(\d+):(\d+):(\d+):(\d+)/g)];
-    if (allMatches.length > 0) {
-      const { stdout: probeOut } = await execAsync(
-        `ffprobe -v quiet -select_streams v:0 -show_entries stream=width,height -of csv=p=0 "${videoUrl}"`,
-        { timeout: 30_000 }
+  if (srcW && srcH) {
+    try {
+      const { stderr } = await execAsync(
+        `ffmpeg -ss ${start} -t ${dur} -i "${videoUrl}" -vf "fps=1,cropdetect=24:2:0" -t ${dur} -f null -`,
+        { timeout: 120_000, maxBuffer: 10 * 1024 * 1024 }
       );
-      const [srcW, srcH] = probeOut.trim().split(',').map(Number);
 
-      let sumCenterX = 0;
-      let sumCenterY = 0;
-      let sumCH = 0;
-      for (const m of allMatches) {
-        const [, cw, ch, cx, cy] = m.map(Number);
-        sumCenterX += cx + cw / 2;
-        sumCenterY += cy + ch / 2;
-        sumCH += ch;
+      const allMatches = [...stderr.matchAll(/crop=(\d+):(\d+):(\d+):(\d+)/g)];
+      if (allMatches.length > 0) {
+        let sumCenterX = 0, sumCenterY = 0, sumCH = 0;
+        for (const m of allMatches) {
+          const [, cw, ch, cx, cy] = m.map(Number);
+          sumCenterX += cx + cw / 2;
+          sumCenterY += cy + ch / 2;
+          sumCH += ch;
+        }
+        const actionCenterX = sumCenterX / allMatches.length;
+        const contentH = Math.round(sumCH / allMatches.length);
+
+        const targetH = Math.min(contentH, srcH);
+        const targetW = Math.floor(targetH * 9 / 16 / 2) * 2;
+        let finalX = Math.round(actionCenterX - targetW / 2);
+        finalX = Math.max(0, Math.min(srcW - targetW, finalX));
+        const contentTopY = Math.round(sumCenterY / allMatches.length - contentH / 2);
+        const finalY = Math.max(0, Math.min(srcH - targetH, contentTopY));
+
+        cropFilter = `crop=${targetW}:${targetH}:${finalX}:${finalY},scale=1080:1920:flags=lanczos`;
+        console.log(`    Cropdetect: center=${Math.round(actionCenterX)}px → crop ${targetW}x${targetH}@${finalX},${finalY}`);
       }
-      const actionCenterX = sumCenterX / allMatches.length;
-      const contentH = Math.round(sumCH / allMatches.length);
-
-      const targetH = Math.min(contentH, srcH);
-      const targetW = Math.floor(targetH * 9 / 16 / 2) * 2;
-      let finalX = Math.round(actionCenterX - targetW / 2);
-      finalX = Math.max(0, Math.min(srcW - targetW, finalX));
-      const contentTopY = Math.round(sumCenterY / allMatches.length - contentH / 2);
-      const finalY = Math.max(0, Math.min(srcH - targetH, contentTopY));
-
-      cropFilter = `crop=${targetW}:${targetH}:${finalX}:${finalY},scale=1080:1920:flags=lanczos`;
-      console.log(`    Cropdetect: center=${Math.round(actionCenterX)}px → crop ${targetW}x${targetH}@${finalX},${finalY}`);
+    } catch (e) {
+      console.log(`    Cropdetect failed (${e.message.slice(0, 80)}), using center crop`);
     }
-  } catch (e) {
-    console.log(`    Cropdetect failed (${e.message.slice(0, 80)}), using center crop`);
   }
 
   if (!cropFilter) {
     cropFilter = `crop=ih*9/16:ih:(iw-ih*9/16)/2:0,scale=1080:1920:flags=lanczos`;
   }
 
-  // Pass 2 — encode directly to output, no intermediate file
+  // Pass 2 — encode directly to output, ultrafast for Railway CPU limits
   await execAsync(
     `ffmpeg -y -ss ${start} -t ${dur} -i "${videoUrl}" ` +
     `-map 0:v:0 -map 0:a:0 ` +
     `-vf "${cropFilter}" ` +
-    `-c:v libx264 -preset fast -crf 22 -b:v 6000k ` +
-    `-c:a aac -b:a 192k ` +
+    `-c:v libx264 -preset ultrafast -crf 26 -b:v 3500k ` +
+    `-c:a aac -b:a 128k ` +
     `-movflags +faststart "${outPath}"`,
-    { timeout: 600_000 }
+    { timeout: 300_000 }
   );
 }
 
@@ -181,6 +175,19 @@ export async function runPipeline({ jobId, uploadId, assetId: knownAssetId, arti
 
     console.log(`[Pipeline:${jobId}] Source: ${videoUrl}`);
 
+    // ── 2b. Probe source dimensions once (avoids per-clip ffprobe) ───
+    let srcW = 0, srcH = 0;
+    try {
+      const { stdout: probeOut } = await execAsync(
+        `ffprobe -v quiet -select_streams v:0 -show_entries stream=width,height -of csv=p=0 "${videoUrl}"`,
+        { timeout: 30_000 }
+      );
+      [srcW, srcH] = probeOut.trim().split(',').map(Number);
+      console.log(`[Pipeline:${jobId}] Source dimensions: ${srcW}x${srcH}`);
+    } catch (e) {
+      console.log(`[Pipeline:${jobId}] ffprobe failed (${e.message.slice(0, 60)}), cropdetect disabled`);
+    }
+
     // ── 3. Build clip specs ──────────────────────────────────────────
     const margin = Math.max(30, duration * 0.03);
     const safeStart = margin;
@@ -209,7 +216,7 @@ export async function runPipeline({ jobId, uploadId, assetId: knownAssetId, arti
       await setProgress(i, CLIP_COUNT, 'processing', { currentClip: clipNum });
 
       try {
-        await processClip(videoUrl, start, dur, outPath);
+        await processClip(videoUrl, start, dur, outPath, srcW, srcH);
         await uploadClipToMux(outPath, tag, headers);
         console.log(`    ✓ Uploaded`);
       } catch (e) {
