@@ -1,6 +1,22 @@
 <!DOCTYPE html>
 <html lang="en" class="dark scroll-smooth">
 <head>
+    <script>
+      (function(){
+        var s = localStorage.getItem('la_admin');
+        if (!s) { window.location.replace('/login.html'); return; }
+        try {
+          var d = JSON.parse(s);
+          if (!d.ts || Date.now() - d.ts > 10 * 60 * 1000) {
+            localStorage.removeItem('la_admin');
+            window.location.replace('/login.html');
+          }
+        } catch(e) {
+          localStorage.removeItem('la_admin');
+          window.location.replace('/login.html');
+        }
+      })();
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
@@ -51,34 +67,34 @@
 <body class="font-sans antialiased bg-background text-foreground overflow-x-hidden selection:bg-primary selection:text-black">
     
     <!-- Navigation -->
-    <nav class="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-8 py-6 bg-black/80 backdrop-blur-md border-b border-white/10">
+    <nav class="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-8 py-8 bg-black/80 backdrop-blur-md border-b border-white/10">
         <a href="index.html" class="flex items-center shrink-0">
             <img src="logos/White@2x.png" alt="logo" class="h-5 md:h-6 w-auto object-contain object-left">
         </a>
-        <div class="flex items-center gap-3">
-            <a href="dashboard.html" class="font-mono text-[10px] tracking-wider text-zinc-400 hover:text-primary uppercase transition-colors">Dashboard</a>
-            <a href="analytics.html" class="font-mono text-[10px] tracking-wider text-primary uppercase">Analytics</a>
+        <div class="flex items-center gap-6">
+            <a href="dashboard.html" class="font-mono text-[11px] tracking-wider text-zinc-400 hover:text-white uppercase transition-colors">Dashboard</a>
+            <a href="analytics.html" class="font-mono text-[11px] tracking-wider text-primary uppercase">Analytics</a>
         </div>
     </nav>
 
-    <main class="pt-24 min-h-screen">
+    <main class="pt-32 min-h-screen">
         
         <!-- Header Section -->
-        <section class="px-8 py-16 border-b border-white/5">
+        <section class="px-4 md:px-8 py-24 md:py-32 border-b border-white/5">
             <div class="max-w-7xl mx-auto">
-                <div class="flex items-center gap-3 mb-6">
+                <div class="flex items-center gap-3 mb-8">
                     <div class="w-2 h-2 bg-primary rounded-full pulse-dot"></div>
                     <span class="font-mono text-xs tracking-[0.3em] text-muted-foreground uppercase font-bold">
                         [ REAL-TIME ANALYTICS ]
                     </span>
                 </div>
-                <h1 class="text-5xl md:text-7xl font-semibold uppercase tracking-tight mb-4">Platform Performance</h1>
+                <h1 class="text-5xl md:text-7xl lg:text-8xl font-semibold uppercase tracking-tight mb-6">Platform Performance</h1>
                 <p class="font-mono text-sm text-zinc-500">Last updated: <span id="last-update">Loading...</span></p>
             </div>
         </section>
 
         <!-- Connection Status Banner -->
-        <section class="px-8 py-6 bg-[#0a0a0a] border-b border-white/5">
+        <section class="px-4 md:px-8 py-8 bg-[#0a0a0a] border-b border-white/5">
             <div class="max-w-7xl mx-auto flex items-center justify-between flex-wrap gap-4">
                 <div class="flex items-center gap-6">
                     <div id="yt-status" class="flex items-center gap-2">
@@ -97,9 +113,9 @@
         </section>
 
         <!-- Revenue Overview -->
-        <section class="px-8 py-12 border-b border-white/5">
+        <section class="px-4 md:px-8 py-24 border-b border-white/5">
             <div class="max-w-7xl mx-auto">
-                <h2 class="font-mono text-xs tracking-[0.3em] text-primary uppercase mb-8">// Revenue</h2>
+                <h2 class="font-mono text-xs tracking-[0.3em] text-primary uppercase mb-12">// Revenue</h2>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div class="metric-card p-8 rounded-xl">
                         <div class="flex items-center justify-between mb-4">
@@ -130,9 +146,9 @@
         </section>
 
         <!-- YouTube Metrics -->
-        <section class="px-8 py-12 border-b border-white/5">
+        <section class="px-4 md:px-8 py-24 border-b border-white/5">
             <div class="max-w-7xl mx-auto">
-                <div class="flex items-center justify-between mb-8">
+                <div class="flex items-center justify-between mb-12">
                     <h2 class="font-mono text-xs tracking-[0.3em] text-[#FF0000] uppercase">// YouTube Analytics</h2>
                     <div class="flex items-center gap-2">
                         <div class="w-2 h-2 bg-[#FF0000] rounded-full pulse-dot"></div>
@@ -140,7 +156,7 @@
                     </div>
                 </div>
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
                     <div class="metric-card p-6 rounded-xl">
                         <div class="flex items-center gap-3 mb-3">
                             <iconify-icon icon="solar:eye-bold" class="text-xl text-primary"></iconify-icon>
@@ -172,8 +188,8 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="metric-card p-6 rounded-xl">
-                        <h3 class="font-mono text-xs text-zinc-500 uppercase mb-4">Engagement</h3>
+                    <div class="metric-card p-8 rounded-xl">
+                        <h3 class="font-mono text-xs text-zinc-500 uppercase mb-6">Engagement</h3>
                         <div class="space-y-4">
                             <div class="flex items-center justify-between">
                                 <span class="font-mono text-xs text-zinc-400">Likes</span>
@@ -193,8 +209,8 @@
                             </div>
                         </div>
                     </div>
-                    <div class="metric-card p-6 rounded-xl">
-                        <h3 class="font-mono text-xs text-zinc-500 uppercase mb-4">Performance</h3>
+                    <div class="metric-card p-8 rounded-xl">
+                        <h3 class="font-mono text-xs text-zinc-500 uppercase mb-6">Performance</h3>
                         <div class="space-y-4">
                             <div class="flex items-center justify-between">
                                 <span class="font-mono text-xs text-zinc-400">Impressions</span>
@@ -219,9 +235,9 @@
         </section>
 
         <!-- SoundCloud Metrics -->
-        <section class="px-8 py-12">
+        <section class="px-4 md:px-8 py-24">
             <div class="max-w-7xl mx-auto">
-                <div class="flex items-center justify-between mb-8">
+                <div class="flex items-center justify-between mb-12">
                     <h2 class="font-mono text-xs tracking-[0.3em] text-[#FF5500] uppercase">// SoundCloud Analytics</h2>
                     <div class="flex items-center gap-2">
                         <div class="w-2 h-2 bg-[#FF5500] rounded-full pulse-dot"></div>
@@ -229,7 +245,7 @@
                     </div>
                 </div>
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
                     <div class="metric-card p-6 rounded-xl">
                         <div class="flex items-center gap-3 mb-3">
                             <iconify-icon icon="solar:play-circle-bold" class="text-xl text-primary"></iconify-icon>
@@ -261,8 +277,8 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="metric-card p-6 rounded-xl">
-                        <h3 class="font-mono text-xs text-zinc-500 uppercase mb-4">Profile Stats</h3>
+                    <div class="metric-card p-8 rounded-xl">
+                        <h3 class="font-mono text-xs text-zinc-500 uppercase mb-6">Profile Stats</h3>
                         <div class="space-y-4">
                             <div class="flex items-center justify-between">
                                 <span class="font-mono text-xs text-zinc-400">Followers</span>
@@ -282,8 +298,8 @@
                             </div>
                         </div>
                     </div>
-                    <div class="metric-card p-6 rounded-xl">
-                        <h3 class="font-mono text-xs text-zinc-500 uppercase mb-4">Revenue Estimate</h3>
+                    <div class="metric-card p-8 rounded-xl">
+                        <h3 class="font-mono text-xs text-zinc-500 uppercase mb-6">Revenue Estimate</h3>
                         <div class="space-y-4">
                             <div class="flex items-center justify-between">
                                 <span class="font-mono text-xs text-zinc-400">Total Earnings</span>
@@ -307,7 +323,7 @@
     </main>
 
     <!-- Footer -->
-    <footer class="py-16 px-8 border-t border-white/5 bg-background">
+    <footer class="py-24 px-4 md:px-8 border-t border-white/5 bg-background">
         <div class="max-w-6xl mx-auto flex flex-col items-center justify-center text-center">
             <div class="mb-6">
                 <span class="font-mono text-[10px] tracking-[0.3em] text-muted-foreground uppercase">
