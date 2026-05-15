@@ -255,11 +255,22 @@
             return;
         }
 
-        // Handle both direct arrays and Mux's data wrapper — video only, master long form only
-        const assets = (Array.isArray(data) ? data : (data.data || [])).filter(a =>
-            (!a.tracks || a.tracks.some(t => t.type === 'video')) &&
-            (!a.passthrough || !a.passthrough.includes(' // '))
-        );
+        // Handle both direct arrays and Mux's data wrapper — MASTER 4K only
+        const NON_MASTER = new Set(['AUDIO', 'SOCIAL', 'THUMB', 'BOOTH', 'PTZ01', 'PTZ02', 'PTZ03']);
+        const assets = (Array.isArray(data) ? data : (data.data || [])).filter(a => {
+            // Exclude audio-only assets
+            if (a.tracks && !a.tracks.some(t => t.type === 'video')) return false;
+            const pt = a.passthrough;
+            if (!pt) return true;
+            // Legacy string passthrough: exclude anything with ' // ' (e.g. "NAME // SOCIAL // 01")
+            if (typeof pt === 'string' && pt.includes(' // ')) return false;
+            // JSON passthrough: exclude if camera is a non-master type
+            try {
+                const meta = JSON.parse(pt);
+                if (meta && meta.camera && NON_MASTER.has(meta.camera.toUpperCase().trim())) return false;
+            } catch(e) {}
+            return true;
+        });
 
         if (assets.length === 0) {
             list.innerHTML = `<p class="text-zinc-500 font-mono text-[10px] uppercase">VAULT EMPTY // NO ASSETS FOUND</p>`;
