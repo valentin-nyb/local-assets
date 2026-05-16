@@ -25,23 +25,34 @@
             } catch(e) {}
         })();
     </script>
+    <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.add('light');else if(t==='auto'&&window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.add('light');})()</script>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
             --green:   #39FF14;
             --bg:      #050505;
-            --border:  #27272a;
+            --fg:      #ffffff;
+            --border:  rgba(255,255,255,0.14);
+            --btn-bg:  #0a0a0a;
             --mono:    'JetBrains Mono', ui-monospace, 'Courier New', monospace;
             --display: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
             --safe-top:    env(safe-area-inset-top,    0px);
             --safe-bottom: env(safe-area-inset-bottom, 0px);
         }
 
+        html.light {
+            --green:  #F97316;
+            --bg:     #f5f5f4;
+            --fg:     #18181b;
+            --border: rgba(0,0,0,0.12);
+            --btn-bg: #ffffff;
+        }
+
         html, body {
             height: 100%;
             background: var(--bg);
-            color: #fff;
+            color: var(--fg);
             -webkit-font-smoothing: antialiased;
             font-family: var(--mono);
         }
@@ -61,14 +72,14 @@
             content: '';
             position: fixed;
             inset: 0;
-            background-image: radial-gradient(circle, rgba(255,255,255,0.055) 1px, transparent 1px);
+            background-image: radial-gradient(circle, rgba(128,128,128,0.15) 1px, transparent 1px);
             background-size: 28px 28px;
             pointer-events: none;
             z-index: 0;
         }
 
-        /* Scanlines */
-        body::after {
+        /* Scanlines — dark only */
+        html:not(.light) body::after {
             content: '';
             position: fixed;
             inset: 0;
@@ -155,9 +166,9 @@
             gap: 12px;
             width: 100%;
             padding: 16px 20px;
-            background: #0a0a0a;
-            border: 1px solid rgba(255,255,255,0.14);
-            color: #fff;
+            background: var(--btn-bg);
+            border: 1px solid var(--border);
+            color: var(--fg);
             font-family: var(--mono);
             font-size: 11px;
             font-weight: 700;
