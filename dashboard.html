@@ -315,7 +315,7 @@
             return { artist: 'UNTITLED', date: null, camera: null };
         }
 
-        async function fetchRecentUploads() {
+        async function fetchRecentUploads(autoExpandArtist) {
             const container = document.getElementById('recent-sets-list');
             if (!container) return;
 
@@ -879,8 +879,36 @@
                 html += '</div>';
                 html += '</div>';
             }
+            // Save which folders were open before rebuilding DOM
+            var _savedOpen = new Set();
+            document.querySelectorAll('[id^="preview-"]').forEach(function(el) {
+                if (!el.classList.contains('hidden')) _savedOpen.add(el.id.replace('preview-', ''));
+            });
+
             container.innerHTML = html;
             updateDistributionButtons();
+
+            // Restore previously open folders
+            _savedOpen.forEach(function(id) {
+                var el = document.getElementById('preview-' + id);
+                var arrow = document.getElementById('arrow-' + id);
+                if (el) { el.classList.remove('hidden'); if (arrow) arrow.style.transform = 'rotate(180deg)'; }
+            });
+
+            // Auto-expand the pipeline artist folder + its latest date section
+            if (autoExpandArtist) {
+                var _eName = autoExpandArtist.toUpperCase().trim();
+                for (var _eai = 0; _eai < artists.length; _eai++) {
+                    if (artists[_eai].name !== _eName) continue;
+                    var _eId = 'artist_' + String(_eai + 1).padStart(2, '0');
+                    var _eEl = document.getElementById('preview-' + _eId);
+                    if (_eEl && _eEl.classList.contains('hidden')) toggleArtistFolder(_eId);
+                    var _dId = _eId + '_d_' + String(artists[_eai].dates.length).padStart(2, '0');
+                    var _dEl = document.getElementById('preview-' + _dId);
+                    if (_dEl && _dEl.classList.contains('hidden')) toggleDateSection(_dId);
+                    break;
+                }
+            }
         }
 
         function toggleArtistFolder(id) {
@@ -1443,6 +1471,8 @@
 
         // ── Pipeline progress polling ────────────────────────────────
         var _pipelineTimer = null;
+        var _prevArtistDone = {};
+        var _lastDashRefresh = 0;
 
         async function fetchPipelineStatus() {
             var banner = document.getElementById('pipeline-banner');
@@ -1529,6 +1559,38 @@
 
                 html += '</div>';
                 banner.innerHTML = html;
+
+                // When a new clip finishes, refresh the dashboard to show it in the social strip
+                var _clipChanged = false;
+                var _clipArtist = null;
+                active.forEach(function(j) {
+                    if (j.status !== 'processing') return;
+                    var k = j.artistName || '';
+                    if (k in _prevArtistDone && _prevArtistDone[k] !== j.done) {
+                        _clipChanged = true; _clipArtist = j.artistName;
+                    }
+                    _prevArtistDone[k] = j.done;
+                });
+                if (_clipChanged && Date.now() - _lastDashRefresh > 15000) {
+                    _lastDashRefresh = Date.now();
+                    fetchRecentUploads(_clipArtist);
+                }
+
+                // Auto-expand the active artist's folder so clips are visible
+                active.forEach(function(j) {
+                    if (j.status === 'done' || j.status === 'error' || !j.artistName) return;
+                    var upperName = j.artistName.toUpperCase().trim();
+                    var groups = document.querySelectorAll('.session-group');
+                    for (var gi = 0; gi < groups.length; gi++) {
+                        var nameEl = groups[gi].querySelector('p.text-sm');
+                        if (!nameEl || nameEl.textContent.trim() !== upperName) continue;
+                        var artPrev = groups[gi].querySelector('[id^="preview-artist_"]');
+                        if (artPrev && artPrev.classList.contains('hidden')) {
+                            toggleArtistFolder(artPrev.id.replace('preview-', ''));
+                        }
+                        break;
+                    }
+                });
             } catch (e) {}
         }
 
