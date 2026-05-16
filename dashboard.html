@@ -653,22 +653,28 @@
                     var clip = clips[i];
                     var pid = clip.playback_ids && clip.playback_ids[0] ? clip.playback_ids[0].id : null;
                     var num = String(i + 1).padStart(2, '0');
-                    var thumbSrc = pid ? 'https://image.mux.com/' + pid + '/thumbnail.png?width=180&height=320&fit_mode=smartcrop&time=5' : '';
+                    var staticSrc = pid ? 'https://image.mux.com/' + pid + '/thumbnail.png?width=180&height=320&fit_mode=smartcrop&time=5' : '';
+                    var animSrc   = pid ? 'https://image.mux.com/' + pid + '/animated.gif?width=180&height=320&fit_mode=smartcrop&fps=10&start=5&duration=3' : '';
                     var galleryUrl = galleryBase + '&active=' + i;
+                    var imgId = 'sclip-' + pid;
 
                     html += '<div class="flex-shrink-0 flex flex-col items-center gap-1" style="width:72px">';
-                    html += '<div class="relative overflow-hidden rounded-md group/clip cursor-pointer w-full" style="aspect-ratio:9/16;background:#0a0a0a;border:1px solid #27272a;"' + (pid ? ' onclick="window.open(\'' + galleryUrl + '\',\'_blank\')"' : '') + '>';
+                    html += '<div class="relative overflow-hidden rounded-md group/clip cursor-pointer w-full" style="aspect-ratio:9/16;background:#0a0a0a;border:1px solid #27272a;"' +
+                        (pid ? ' onclick="window.open(\'' + galleryUrl + '\',\'_blank\')"' +
+                               ' onmouseenter="var e=document.getElementById(\'' + imgId + '\');if(e)e.src=\'' + animSrc + '\'"' +
+                               ' onmouseleave="var e=document.getElementById(\'' + imgId + '\');if(e)e.src=\'' + staticSrc + '\'"' : '') + '>';
 
-                    if (thumbSrc) {
-                        html += '<img src="' + thumbSrc + '" class="w-full h-full object-cover" loading="lazy" style="opacity:.85;">';
+                    if (staticSrc) {
+                        html += '<img id="' + imgId + '" src="' + staticSrc + '" class="w-full h-full object-cover" loading="lazy" style="opacity:.9;">';
                     } else {
                         html += '<div class="w-full h-full flex items-center justify-center"><iconify-icon icon="solar:iphone-bold" class="text-zinc-700 text-lg"></iconify-icon></div>';
                     }
 
                     if (pid) {
-                        html += '<div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover/clip:opacity-100 transition-opacity" style="background:rgba(0,0,0,.55)">';
-                        html += '<div class="w-7 h-7 rounded-full flex items-center justify-center" style="background:' + accent + '">';
-                        html += '<iconify-icon icon="solar:play-bold" class="text-black" style="font-size:11px"></iconify-icon>';
+                        html += '<div class="absolute inset-0 flex items-end justify-center pb-2 opacity-0 group-hover/clip:opacity-100 transition-opacity">';
+                        html += '<div class="flex items-center gap-1 px-2 py-0.5 rounded-full" style="background:' + accent + '">';
+                        html += '<iconify-icon icon="solar:play-bold" class="text-black" style="font-size:9px"></iconify-icon>';
+                        html += '<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;color:#000;font-weight:700">PLAY</span>';
                         html += '</div>';
                         html += '</div>';
                     }
