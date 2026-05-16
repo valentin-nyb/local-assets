@@ -117,7 +117,13 @@ async function processClip(videoUrl, start, dur, outPath, srcW, srcH) {
   }
 
   if (!cropFilter) {
-    cropFilter = `crop=ih*9/16:ih:(iw-ih*9/16)/2:0,scale=1080:1920:flags=lanczos`;
+    // For high-res sources, pre-scale to 1920p before the portrait crop.
+    // This lets FFmpeg decode at a lower resolution and is dramatically faster.
+    if (srcW > 1920 || srcH > 1080) {
+      cropFilter = `scale=1920:-2:flags=bilinear,crop=ih*9/16:ih:(iw-ih*9/16)/2:0,scale=1080:1920:flags=lanczos`;
+    } else {
+      cropFilter = `crop=ih*9/16:ih:(iw-ih*9/16)/2:0,scale=1080:1920:flags=lanczos`;
+    }
   }
 
   // Pass 2 — encode directly to output, ultrafast for Railway CPU limits
@@ -128,7 +134,7 @@ async function processClip(videoUrl, start, dur, outPath, srcW, srcH) {
     `-c:v libx264 -preset ultrafast -crf 26 -b:v 3500k ` +
     `-c:a aac -b:a 128k ` +
     `-movflags +faststart "${outPath}"`,
-    { timeout: 300_000 }
+    { timeout: 600_000 }
   );
 }
 
@@ -178,6 +184,9 @@ export async function runPipeline({ jobId, uploadId, assetId: knownAssetId, arti
 
   const tmpDir = path.join(os.tmpdir(), `pipeline-${jobId}`);
   fs.mkdirSync(tmpDir, { recursive: true });
+
+  // Pin this job so the server can re-queue it if Railway restarts mid-job
+  await redis.set('pipeline:active_job', JSON.stringify({ jobId, uploadId, assetId: knownAssetId, artistName, venueSlug, muxAuth }), { EX: 7200 });
 
   try {
     await setProgress(0, CLIP_COUNT, 'waiting');
@@ -257,5 +266,6 @@ export async function runPipeline({ jobId, uploadId, assetId: knownAssetId, arti
     await setProgress(0, CLIP_COUNT, 'error', { error: e.message });
   } finally {
     try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch (_) {}
+    await redis.del('pipeline:active_job').catch(() => {});
   }
 }

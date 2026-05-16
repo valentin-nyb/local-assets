@@ -85,6 +85,24 @@ async function connectRedis(retries = 10) {
   }
 }
 await connectRedis();
+
+// ── Recover interrupted job from last server crash ────────────────────
+try {
+  const activeRaw = await redis.get('pipeline:active_job');
+  if (activeRaw) {
+    const activeJob = JSON.parse(activeRaw);
+    const statusRaw = await redis.get(`pipeline:job:${activeJob.jobId}`);
+    const status = statusRaw ? JSON.parse(statusRaw) : null;
+    if (status && (status.status === 'waiting' || status.status === 'processing')) {
+      console.log(`[Server] Recovering interrupted job ${activeJob.jobId} — re-queuing`);
+      await redis.lPush('pipeline:queue', activeRaw);
+    }
+    await redis.del('pipeline:active_job');
+  }
+} catch (e) {
+  console.error('[Server] Job recovery check failed:', e.message);
+}
+
 console.log('[Server] Polling pipeline:queue for jobs...\n');
 
 // ── Main loop — BLPOP blocks until a job arrives ──────────────────────
