@@ -1478,7 +1478,11 @@
                 var nameColor   = isDark ? '#d4d4d8' : '#18181b';
                 var sectionColor= isDark ? '#52525b'  : '#71717a';
                 var barTrack    = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)';
-                var shimmerGlow = isDark ? 'rgba(57,255,20,0.5)' : 'rgba(57,255,20,0.35)';
+                var barColor    = isDark ? '#39FF14' : '#F97316';
+                var shimmerGlow = isDark ? 'rgba(57,255,20,0.5)' : 'rgba(249,115,22,0.4)';
+                var shimmerBase = isDark ? 'rgba(57,255,20,0.1)' : 'rgba(249,115,22,0.1)';
+                var barGlow     = isDark ? '0 0 10px rgba(57,255,20,0.55)' : '0 0 10px rgba(249,115,22,0.45)';
+                var doneGlow    = isDark ? '0 0 10px rgba(57,255,20,0.45)' : '0 0 10px rgba(249,115,22,0.35)';
 
                 var anyPending = active.some(function(j) { return j.status !== 'done' && j.status !== 'error'; });
                 var html = '<div style="padding:16px 20px 4px 20px;">';
@@ -1499,19 +1503,19 @@
                         error:      '✕  ' + (job.error ? job.error.slice(0, 45) : 'ERROR')
                     }[job.status] || job.status.toUpperCase();
 
-                    var accentColor = isError ? '#ef4444' : '#39FF14';
-                    var labelColor  = isError ? '#ef4444' : isDone ? '#39FF14' : (isDark ? '#71717a' : '#52525b');
+                    var accentColor = isError ? '#ef4444' : barColor;
+                    var labelColor  = isError ? '#ef4444' : isDone ? barColor : (isDark ? '#71717a' : '#52525b');
 
                     var barInner;
                     if (isQueued || isWaiting) {
                         barInner = '<div style="position:relative;width:100%;height:100%;border-radius:9999px;overflow:hidden;">'
-                            + '<div style="position:absolute;inset:0;background:rgba(57,255,20,0.1);"></div>'
+                            + '<div style="position:absolute;inset:0;background:' + shimmerBase + ';"></div>'
                             + '<div style="position:absolute;top:0;bottom:0;width:35%;background:linear-gradient(90deg,transparent,' + shimmerGlow + ',transparent);border-radius:9999px;animation:plShimmer 1.8s ease-in-out infinite;"></div>'
                             + '</div>';
                     } else if (isProcessing) {
-                        barInner = '<div style="height:100%;border-radius:9999px;width:' + Math.max(pct, 2) + '%;background:#39FF14;box-shadow:0 0 10px rgba(57,255,20,0.55);transition:width .5s ease;"></div>';
+                        barInner = '<div style="height:100%;border-radius:9999px;width:' + Math.max(pct, 2) + '%;background:' + barColor + ';box-shadow:' + barGlow + ';transition:width .5s ease;"></div>';
                     } else {
-                        barInner = '<div style="height:100%;border-radius:9999px;width:100%;background:' + accentColor + ';' + (isDone ? 'box-shadow:0 0 10px rgba(57,255,20,0.45);' : '') + '"></div>';
+                        barInner = '<div style="height:100%;border-radius:9999px;width:100%;background:' + accentColor + ';' + (isDone ? 'box-shadow:' + doneGlow + ';' : '') + '"></div>';
                     }
 
                     html += '<div style="margin-bottom:12px;">';
