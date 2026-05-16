@@ -1531,12 +1531,14 @@
                     var isDone  = job.status === 'done';
                     var isError = job.status === 'error';
 
+                    var procLabel = pct + '%  ·  ' + (job.uploaded != null ? job.uploaded + ' UPLOADED' : job.done + ' / ' + job.total + ' CLIPS');
+                    if (job.failed > 0) procLabel += '  ·  ' + job.failed + ' FAILED';
                     var statusLabel = {
                         queued:     'QUEUED',
                         waiting:    'WAITING FOR MUX',
-                        processing: pct + '%  ·  ' + job.done + ' / ' + job.total + ' CLIPS',
-                        done:       '✓  COMPLETE',
-                        error:      '✕  ' + (job.error ? job.error.slice(0, 45) : 'ERROR')
+                        processing: procLabel,
+                        done:       job.uploaded != null ? '✓  ' + job.uploaded + ' CLIPS UPLOADED' : '✓  COMPLETE',
+                        error:      '✕  ' + (job.error ? job.error.slice(0, 60) : 'ERROR')
                     }[job.status] || job.status.toUpperCase();
 
                     var accentColor = isError ? '#ef4444' : barColor;

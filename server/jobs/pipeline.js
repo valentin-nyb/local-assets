@@ -127,9 +127,16 @@ async function processClip(videoUrl, start, dur, outPath, srcW, srcH) {
   }
 
   // Pass 2 — encode directly to output, ultrafast for Railway CPU limits
+  // For HLS input, use post-input seeking (-ss after -i) — pre-input seeking can
+  // deadlock on some FFmpeg/HLS combinations. MP4 URLs still get fast range-seek.
+  const isHLS = videoUrl.endsWith('.m3u8');
+  const seekArgs = isHLS
+    ? `-i "${videoUrl}" -ss ${start} -t ${dur}`
+    : `-ss ${start} -t ${dur} -i "${videoUrl}"`;
+
   await execAsync(
-    `ffmpeg -y -ss ${start} -t ${dur} -i "${videoUrl}" ` +
-    `-map 0:v:0 -map 0:a:0 ` +
+    `ffmpeg -y -protocol_whitelist file,https,http,tcp,tls,crypto ${seekArgs} ` +
+    `-map 0:v:0 -map 0:a:0? ` +
     `-vf "${cropFilter}" ` +
     `-c:v libx264 -preset ultrafast -crf 26 -b:v 3500k ` +
     `-c:a aac -b:a 128k ` +
@@ -232,7 +239,8 @@ export async function runPipeline({ jobId, uploadId, assetId: knownAssetId, arti
       clipSpecs.push({ start, dur });
     }
 
-    await setProgress(0, CLIP_COUNT, 'processing');
+    let uploaded = 0, failed = 0;
+    await setProgress(0, CLIP_COUNT, 'processing', { uploaded, failed });
 
     // ── 4. Process & upload clips ────────────────────────────────────
     for (let i = 0; i < clipSpecs.length; i++) {
@@ -241,25 +249,30 @@ export async function runPipeline({ jobId, uploadId, assetId: knownAssetId, arti
       const tag = `${artistName} // SOCIAL // ${clipNum}`;
       const outPath = path.join(tmpDir, `clip_${clipNum}.mp4`);
 
-      console.log(`[Pipeline:${jobId}] Clip ${clipNum}/${CLIP_COUNT}: ${start}s-${start + dur}s  "${tag}"`);
-      await setProgress(i, CLIP_COUNT, 'processing', { currentClip: clipNum });
+      console.log(`[Pipeline:${jobId}] Clip ${clipNum}/${CLIP_COUNT}: ${start}s-${start + dur}s`);
+      await setProgress(i, CLIP_COUNT, 'processing', { currentClip: clipNum, uploaded, failed });
 
       try {
         await processClip(videoUrl, start, dur, outPath, srcW, srcH);
         await uploadClipToMux(outPath, tag, headers);
-        console.log(`    ✓ Uploaded`);
+        uploaded++;
+        console.log(`    ✓ Clip ${clipNum} uploaded (${uploaded} ok, ${failed} failed)`);
       } catch (e) {
-        console.error(`    ✗ Clip ${clipNum} failed:`, e.message);
+        failed++;
+        console.error(`    ✗ Clip ${clipNum} failed (${failed} so far):`, e.message);
+        await setProgress(i, CLIP_COUNT, 'processing', { currentClip: clipNum, uploaded, failed, lastError: e.message.slice(0, 120) });
       } finally {
-        // Always clean up the output file immediately to free disk space
         try { fs.unlinkSync(outPath); } catch (_) {}
       }
 
-      await setProgress(i + 1, CLIP_COUNT, 'processing');
+      await setProgress(i + 1, CLIP_COUNT, 'processing', { uploaded, failed });
     }
 
-    await setProgress(CLIP_COUNT, CLIP_COUNT, 'done');
-    console.log(`[Pipeline:${jobId}] ✓ Complete for "${artistName}"`);
+    const finalStatus = uploaded > 0 ? 'done' : 'error';
+    const finalExtra = { uploaded, failed };
+    if (uploaded === 0) finalExtra.error = `All ${CLIP_COUNT} clips failed — check Railway logs`;
+    await setProgress(CLIP_COUNT, CLIP_COUNT, finalStatus, finalExtra);
+    console.log(`[Pipeline:${jobId}] ✓ Complete: ${uploaded} uploaded, ${failed} failed`);
 
   } catch (e) {
     console.error(`[Pipeline:${jobId}] Fatal:`, e.message);
