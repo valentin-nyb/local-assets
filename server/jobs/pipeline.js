@@ -35,34 +35,54 @@ async function waitForAsset(uploadId, assetId, authHeader) {
   }
 
   console.log(`  Waiting for asset ${assetId} to be ready...`);
-  for (let i = 0; i < 120; i++) {   // up to 10 min
+  let playbackId, duration, srStatus;
+  for (let i = 0; i < 120; i++) {   // up to 10 min for HLS
     await sleep(5000);
     const j = await muxGet(`/video/v1/assets/${assetId}`, authHeader);
     const a = j.data;
     if (a?.status === 'ready' && a.playback_ids?.[0]?.id) {
-      const playbackId = a.playback_ids[0].id;
-      const duration = a.duration || 0;
-      const srStatus = a.static_renditions?.status;
-      if (srStatus === 'ready') {
+      playbackId = a.playback_ids[0].id;
+      duration = a.duration || 0;
+      srStatus = a.static_renditions?.status;
+      break;
+    }
+  }
+  if (!playbackId) throw new Error(`Timed out waiting for asset ${assetId} to be ready`);
+
+  // If MP4 static rendition is already ready, use it
+  if (srStatus === 'ready') {
+    console.log(`  Static renditions ready — using MP4`);
+    return { assetId, playbackId, duration, mp4Ready: true };
+  }
+
+  // Static renditions still preparing — give them max 5 min then fall back to HLS
+  // (large 4K files can take 60+ min; don't block clip generation)
+  if (srStatus === 'preparing') {
+    console.log(`  Static renditions preparing — waiting up to 5 min before falling back to HLS`);
+    for (let i = 0; i < 60; i++) {
+      await sleep(5000);
+      const j = await muxGet(`/video/v1/assets/${assetId}`, authHeader);
+      if (j.data?.static_renditions?.status === 'ready') {
         console.log(`  Static renditions ready — using MP4`);
         return { assetId, playbackId, duration, mp4Ready: true };
       }
-      // Asset ready but static renditions still preparing — keep polling
-      if (srStatus === 'preparing') continue;
-      // No static renditions configured — fall back to HLS
-      console.log(`  No static renditions (sr_status=${srStatus}) — using HLS`);
-      return { assetId, playbackId, duration, mp4Ready: false };
+      if (j.data?.static_renditions?.status !== 'preparing') break;
     }
+    console.log(`  Static renditions not ready after 5 min — falling back to HLS`);
+  } else {
+    console.log(`  No static renditions (sr_status=${srStatus}) — using HLS`);
   }
-  throw new Error(`Timed out waiting for asset ${assetId} to be ready`);
+  return { assetId, playbackId, duration, mp4Ready: false };
 }
 
 // ── Step 3: Smart-reframe one clip — no intermediate raw file ─────────
 
 async function processClip(videoUrl, start, dur, outPath, srcW, srcH) {
   // Pass 1 — cropdetect directly from source (streaming, no disk write)
+  // Skip for high-res sources (>1080p) — cropdetect on 4K is slow; center crop is fine
+  const skipCropdetect = srcW > 1920 || srcH > 1080;
   let cropFilter;
-  if (srcW && srcH) {
+  if (srcW && srcH && !skipCropdetect) {
     try {
       const { stderr } = await execAsync(
         `ffmpeg -ss ${start} -t ${dur} -i "${videoUrl}" -vf "fps=1,cropdetect=24:2:0" -t ${dur} -f null -`,
