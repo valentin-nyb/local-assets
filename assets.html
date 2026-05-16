@@ -258,8 +258,8 @@
         // Handle both direct arrays and Mux's data wrapper — MASTER 4K only
         const NON_MASTER = new Set(['AUDIO', 'SOCIAL', 'THUMB', 'BOOTH', 'PTZ01', 'PTZ02', 'PTZ03']);
         const assets = (Array.isArray(data) ? data : (data.data || [])).filter(a => {
-            // Exclude audio-only assets
-            if (a.tracks && !a.tracks.some(t => t.type === 'video')) return false;
+            // Exclude audio-only assets (skip check if tracks not yet populated — still processing)
+            if (a.tracks && a.tracks.length > 0 && !a.tracks.some(t => t.type === 'video')) return false;
             const pt = a.passthrough;
             if (!pt) return true;
             // Legacy string passthrough: exclude anything with ' // ' (e.g. "NAME // SOCIAL // 01")

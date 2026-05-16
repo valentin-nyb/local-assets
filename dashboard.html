@@ -1482,10 +1482,6 @@
 
                 var anyPending = active.some(function(j) { return j.status !== 'done' && j.status !== 'error'; });
                 var html = '<div style="padding:16px 20px 4px 20px;">';
-                html += '<div style="display:flex;align-items:center;gap:7px;margin-bottom:14px;">'
-                    + '<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:0.35em;color:' + sectionColor + ';">Social Clip Generation</span>'
-                    + (anyPending ? '<span style="width:5px;height:5px;border-radius:50%;background:#39FF14;display:inline-block;flex-shrink:0;animation:plPulse 1.5s ease-in-out infinite;"></span>' : '')
-                    + '</div>';
 
                 active.forEach(function(job) {
                     var pct = job.total > 0 ? Math.round((job.done / job.total) * 100) : 0;
