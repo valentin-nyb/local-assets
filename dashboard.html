@@ -160,28 +160,34 @@
                 <!-- Revenue Generated Card -->
                 <div class="bg-card border border-border p-4 md:p-5 rounded-xl flex flex-col">
                     <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3 block">Revenue Generated</span>
-                    <span id="revenue-total" class="text-5xl font-black leading-none block mb-4">—</span>
-                    <!-- Connected state: indicators + Manage stacked — shown when ≥1 connected -->
-                    <div id="revenue-indicators" class="hidden flex-col gap-3 mt-auto">
-                        <div class="flex items-center gap-2 min-w-0 flex-wrap">
-                            <span id="yt-indicator" class="hidden items-center gap-1 text-[11px] font-mono text-zinc-400 uppercase tracking-wider">
+                    <!-- Two-column body: left = total + action, right = platform details -->
+                    <div class="flex flex-row items-start gap-4 flex-1">
+                        <!-- Left: big total + button -->
+                        <div class="flex flex-col flex-1 min-w-0">
+                            <span id="revenue-total" class="text-5xl font-black leading-none block mb-4">—</span>
+                            <!-- Connected: Manage button -->
+                            <div id="revenue-indicators" class="hidden flex-col gap-3 mt-auto">
+                                <button id="revenue-manage-prompt" onclick="openRevenueSettings()" class="rev-btn" style="align-self:flex-start;padding:4px 14px;border-color:#FF5500;color:#FF5500;background:transparent;" onmouseover="this.style.background='#FF5500';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='#FF5500'">Manage</button>
+                            </div>
+                            <!-- Not connected: Connect button -->
+                            <div id="revenue-connect-prompt" class="mt-auto">
+                                <button onclick="openRevenueSettings()" class="rev-btn" style="padding:4px 14px 4px 10px;gap:6px;border-color:#FF5500;color:#FF5500;background:transparent;" onmouseover="this.style.background='#FF5500';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='#FF5500'">
+                                    <iconify-icon icon="solar:link-bold" style="font-size:11px;flex-shrink:0"></iconify-icon>
+                                    <span>Connect Platforms</span>
+                                </button>
+                            </div>
+                        </div>
+                        <!-- Right: platform indicators stacked (YouTube above SoundCloud) -->
+                        <div id="revenue-platform-panel" class="hidden flex-col gap-3 items-end shrink-0 pt-1">
+                            <span id="yt-indicator" class="hidden items-center gap-1.5 text-[11px] font-mono text-zinc-400 uppercase tracking-wider">
                                 <iconify-icon icon="mdi:youtube" style="color:#FF0000;font-size:12px;flex-shrink:0"></iconify-icon>
                                 <span id="yt-revenue-label">£0.00</span>
                             </span>
-                            <span id="rev-divider" class="hidden text-zinc-700 text-[10px] font-mono">|</span>
-                            <span id="sc-indicator" class="hidden items-center gap-1 text-[11px] font-mono text-zinc-400 uppercase tracking-wider">
+                            <span id="sc-indicator" class="hidden items-center gap-1.5 text-[11px] font-mono text-zinc-400 uppercase tracking-wider">
                                 <iconify-icon icon="mdi:soundcloud" style="color:#FF5500;font-size:13px;flex-shrink:0"></iconify-icon>
                                 <span id="sc-revenue-label">0 plays</span>
                             </span>
                         </div>
-                        <button id="revenue-manage-prompt" onclick="openRevenueSettings()" class="rev-btn" style="align-self:flex-start;padding:4px 14px;border-color:#FF5500;color:#FF5500;background:transparent;" onmouseover="this.style.background='#FF5500';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='#FF5500'">Manage</button>
-                    </div>
-                    <!-- Connect prompt: shown when nothing connected -->
-                    <div id="revenue-connect-prompt" class="mt-auto">
-                        <button onclick="openRevenueSettings()" class="rev-btn" style="padding:4px 14px 4px 10px;gap:6px;border-color:#FF5500;color:#FF5500;background:transparent;" onmouseover="this.style.background='#FF5500';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='#FF5500'">
-                            <iconify-icon icon="solar:link-bold" style="font-size:11px;flex-shrink:0"></iconify-icon>
-                            <span>Connect Platforms</span>
-                        </button>
                     </div>
                 </div>
                 <div id="next-event-card" class="bg-card border border-border p-4 md:p-5 rounded-xl relative overflow-hidden">
@@ -1189,10 +1195,10 @@
         function renderRevenue(data) {
             var totalEl       = document.getElementById('revenue-total');
             var indicators    = document.getElementById('revenue-indicators');
+            var platformPanel = document.getElementById('revenue-platform-panel');
             var connectPrompt = document.getElementById('revenue-connect-prompt');
             var ytIndicator   = document.getElementById('yt-indicator');
             var scIndicator   = document.getElementById('sc-indicator');
-            var revDivider    = document.getElementById('rev-divider');
             var ytLabel       = document.getElementById('yt-revenue-label');
             var scLabel       = document.getElementById('sc-revenue-label');
             var ytModalBtn        = document.getElementById('yt-modal-btn');
@@ -1217,6 +1223,7 @@
 
             if (totalEl)       totalEl.textContent = anyConnected ? '£' + total.toFixed(2) : '—';
             if (indicators)    { if (anyConnected) { indicators.classList.remove('hidden'); indicators.classList.add('flex'); } else { indicators.classList.add('hidden'); indicators.classList.remove('flex'); } }
+            if (platformPanel) { if (anyConnected) { platformPanel.classList.remove('hidden'); platformPanel.classList.add('flex'); } else { platformPanel.classList.add('hidden'); platformPanel.classList.remove('flex'); } }
             if (connectPrompt) connectPrompt.classList.toggle('hidden', !!anyConnected);
 
             // YouTube indicator
@@ -1229,8 +1236,6 @@
             if (scLabel && scConnected)
                 scLabel.textContent = Number(data.sc?.plays || 0).toLocaleString() + ' plays';
 
-            // Divider only when both connected
-            if (revDivider) revDivider.classList.toggle('hidden', !(ytConnected && scConnected));
 
             // Show/hide SoundCloud distribute buttons in distribution history
             document.querySelectorAll('.sc-dist-btn').forEach(function(btn) {
