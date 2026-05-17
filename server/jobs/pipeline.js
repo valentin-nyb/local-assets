@@ -7,25 +7,26 @@ import os from 'os';
 
 const execAsync = promisify(exec);
 
-const CLIP_COUNT = 30;
+const CLIP_COUNT  = 30;
 const MIN_CLIP_DUR = 25;
 const MAX_CLIP_DUR = 35;
+const CONCURRENCY  = 4;   // simultaneous FFmpeg workers
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-// ── Helpers ──────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────
 
-async function muxGet(path, auth) {
-  const r = await fetch(`https://api.mux.com${path}`, { headers: { Authorization: auth } });
+async function muxGet(apiPath, auth) {
+  const r = await fetch(`https://api.mux.com${apiPath}`, { headers: { Authorization: auth } });
   return r.json();
 }
 
-// ── Step 1-2: Wait for asset + static renditions ──────────────────────
+// ── Wait for asset (HLS-ready = start immediately, don't block on MP4) ─
 
 async function waitForAsset(uploadId, assetId, authHeader) {
   if (!assetId) {
     console.log(`  Polling upload ${uploadId} for asset_id...`);
-    for (let i = 0; i < 72; i++) {   // up to 6 min
+    for (let i = 0; i < 72; i++) {
       await sleep(5000);
       const j = await muxGet(`/video/v1/uploads/${uploadId}`, authHeader);
       if (j.data?.asset_id) { assetId = j.data.asset_id; break; }
@@ -36,120 +37,67 @@ async function waitForAsset(uploadId, assetId, authHeader) {
 
   console.log(`  Waiting for asset ${assetId} to be ready...`);
   let playbackId, duration, srStatus;
-  for (let i = 0; i < 120; i++) {   // up to 10 min for HLS
+  for (let i = 0; i < 120; i++) {
     await sleep(5000);
     const j = await muxGet(`/video/v1/assets/${assetId}`, authHeader);
     const a = j.data;
     if (a?.status === 'ready' && a.playback_ids?.[0]?.id) {
       playbackId = a.playback_ids[0].id;
-      duration = a.duration || 0;
-      srStatus = a.static_renditions?.status;
+      duration   = a.duration || 0;
+      srStatus   = a.static_renditions?.status;
       break;
     }
   }
-  if (!playbackId) throw new Error(`Timed out waiting for asset ${assetId} to be ready`);
+  if (!playbackId) throw new Error(`Timed out waiting for asset ${assetId}`);
 
-  // If MP4 static rendition is already ready, use it
   if (srStatus === 'ready') {
-    console.log(`  Static renditions ready — using MP4`);
+    console.log(`  Static renditions ready — using MP4 (fastest)`);
     return { assetId, playbackId, duration, mp4Ready: true };
   }
 
-  // Static renditions still preparing — give them max 5 min then fall back to HLS
-  // (large 4K files can take 60+ min; don't block clip generation)
-  if (srStatus === 'preparing') {
-    console.log(`  Static renditions preparing — waiting up to 5 min before falling back to HLS`);
-    for (let i = 0; i < 60; i++) {
-      await sleep(5000);
-      const j = await muxGet(`/video/v1/assets/${assetId}`, authHeader);
-      if (j.data?.static_renditions?.status === 'ready') {
-        console.log(`  Static renditions ready — using MP4`);
-        return { assetId, playbackId, duration, mp4Ready: true };
-      }
-      if (j.data?.static_renditions?.status !== 'preparing') break;
-    }
-    console.log(`  Static renditions not ready after 5 min — falling back to HLS`);
-  } else {
-    console.log(`  No static renditions (sr_status=${srStatus}) — using HLS`);
-  }
+  // Don't wait for MP4 static renditions (can take 60-90 min for 4K).
+  // Proceed with HLS immediately using pre-input seeking.
+  console.log(`  Static renditions ${srStatus || 'unavailable'} — using HLS with segment-seek`);
   return { assetId, playbackId, duration, mp4Ready: false };
 }
 
-// ── Step 3: Smart-reframe one clip — no intermediate raw file ─────────
+// ── Encode one clip ───────────────────────────────────────────────────
 
 async function processClip(videoUrl, start, dur, outPath, srcW, srcH) {
-  // Pass 1 — cropdetect directly from source (streaming, no disk write)
-  // Skip for high-res sources (>1080p) — cropdetect on 4K is slow; center crop is fine
-  const skipCropdetect = srcW > 1920 || srcH > 1080;
+  // Pre-input seeking is fast for both MP4 (HTTP range) and HLS (segment seek).
+  // -allowed_extensions ALL is required for FFmpeg to accept HLS playlists over HTTPS.
+  const ffBase = `ffmpeg -y -allowed_extensions ALL -protocol_whitelist file,https,http,tcp,tls,crypto`;
+
+  // Center-crop to 9:16 portrait at 1080×1920.
+  // For high-res sources pre-scale to 1920p first so FFmpeg decodes at lower res.
   let cropFilter;
-  if (srcW && srcH && !skipCropdetect) {
-    try {
-      const { stderr } = await execAsync(
-        `ffmpeg -ss ${start} -t ${dur} -i "${videoUrl}" -vf "fps=1,cropdetect=24:2:0" -t ${dur} -f null -`,
-        { timeout: 120_000, maxBuffer: 10 * 1024 * 1024 }
-      );
-
-      const allMatches = [...stderr.matchAll(/crop=(\d+):(\d+):(\d+):(\d+)/g)];
-      if (allMatches.length > 0) {
-        let sumCenterX = 0, sumCenterY = 0, sumCH = 0;
-        for (const m of allMatches) {
-          const [, cw, ch, cx, cy] = m.map(Number);
-          sumCenterX += cx + cw / 2;
-          sumCenterY += cy + ch / 2;
-          sumCH += ch;
-        }
-        const actionCenterX = sumCenterX / allMatches.length;
-        const contentH = Math.round(sumCH / allMatches.length);
-
-        const targetH = Math.min(contentH, srcH);
-        const targetW = Math.floor(targetH * 9 / 16 / 2) * 2;
-        let finalX = Math.round(actionCenterX - targetW / 2);
-        finalX = Math.max(0, Math.min(srcW - targetW, finalX));
-        const contentTopY = Math.round(sumCenterY / allMatches.length - contentH / 2);
-        const finalY = Math.max(0, Math.min(srcH - targetH, contentTopY));
-
-        cropFilter = `crop=${targetW}:${targetH}:${finalX}:${finalY},scale=1080:1920:flags=lanczos`;
-        console.log(`    Cropdetect: center=${Math.round(actionCenterX)}px → crop ${targetW}x${targetH}@${finalX},${finalY}`);
-      }
-    } catch (e) {
-      console.log(`    Cropdetect failed (${e.message.slice(0, 80)}), using center crop`);
-    }
+  if (srcW > 1920 || srcH > 1920) {
+    cropFilter = `scale=1920:-2:flags=bilinear,crop=ih*9/16:ih:(iw-ih*9/16)/2:0,scale=1080:1920:flags=lanczos`;
+  } else {
+    cropFilter = `crop=ih*9/16:ih:(iw-ih*9/16)/2:0,scale=1080:1920:flags=lanczos`;
   }
 
-  if (!cropFilter) {
-    // For high-res sources, pre-scale to 1920p before the portrait crop.
-    // This lets FFmpeg decode at a lower resolution and is dramatically faster.
-    if (srcW > 1920 || srcH > 1080) {
-      cropFilter = `scale=1920:-2:flags=bilinear,crop=ih*9/16:ih:(iw-ih*9/16)/2:0,scale=1080:1920:flags=lanczos`;
-    } else {
-      cropFilter = `crop=ih*9/16:ih:(iw-ih*9/16)/2:0,scale=1080:1920:flags=lanczos`;
-    }
-  }
-
-  // Pass 2 — encode directly to output, ultrafast for Railway CPU limits
-  // For HLS input, use post-input seeking (-ss after -i) — pre-input seeking can
-  // deadlock on some FFmpeg/HLS combinations. MP4 URLs still get fast range-seek.
-  const isHLS = videoUrl.endsWith('.m3u8');
-  const seekArgs = isHLS
-    ? `-i "${videoUrl}" -ss ${start} -t ${dur}`
-    : `-ss ${start} -t ${dur} -i "${videoUrl}"`;
-
-  await execAsync(
-    `ffmpeg -y -protocol_whitelist file,https,http,tcp,tls,crypto ${seekArgs} ` +
+  const cmd =
+    `${ffBase} -ss ${start} -t ${dur} -i "${videoUrl}" ` +
     `-map 0:v:0 -map 0:a:0? ` +
     `-vf "${cropFilter}" ` +
-    `-c:v libx264 -preset ultrafast -crf 26 -b:v 3500k ` +
-    `-c:a aac -b:a 128k ` +
-    `-movflags +faststart "${outPath}"`,
-    { timeout: 600_000 }
-  );
+    `-c:v libx264 -preset ultrafast -crf 22 -b:v 5000k -maxrate 6000k -bufsize 8000k ` +
+    `-c:a aac -b:a 192k ` +
+    `-movflags +faststart "${outPath}"`;
+
+  const { stderr } = await execAsync(cmd, { timeout: 300_000, maxBuffer: 20 * 1024 * 1024 });
+
+  // Guard: confirm output exists and is not a stub
+  if (!fs.existsSync(outPath) || fs.statSync(outPath).size < 10_000) {
+    throw new Error(`Output missing/empty. FFmpeg tail: ${stderr.slice(-400)}`);
+  }
 }
 
-// ── Step 4: Upload clip to Mux — streaming, no RAM buffer ─────────────
+// ── Upload one clip to Mux ────────────────────────────────────────────
 
 async function uploadClipToMux(filePath, passthrough, headers) {
   const uploadRes = await fetch('https://api.mux.com/video/v1/uploads', {
-    method: 'POST',
+    method:  'POST',
     headers,
     body: JSON.stringify({
       new_asset_settings: {
@@ -163,116 +111,121 @@ async function uploadClipToMux(filePath, passthrough, headers) {
   const uploadData = await uploadRes.json();
   if (!uploadRes.ok) throw new Error('Mux upload create failed: ' + JSON.stringify(uploadData.error || uploadData));
 
-  const putUrl = uploadData.data.url;
+  const putUrl   = uploadData.data.url;
   const fileSize = fs.statSync(filePath).size;
 
-  // Stream the file directly — avoids loading entire clip into RAM
-  const nodeStream = fs.createReadStream(filePath);
-  const webStream = Readable.toWeb(nodeStream);
-
+  const webStream = Readable.toWeb(fs.createReadStream(filePath));
   const putRes = await fetch(putUrl, {
-    method: 'PUT',
-    body: webStream,
+    method:  'PUT',
+    body:    webStream,
     headers: { 'Content-Type': 'video/mp4', 'Content-Length': String(fileSize) },
-    duplex: 'half',
+    duplex:  'half',
   });
-  if (!putRes.ok) throw new Error(`PUT failed: HTTP ${putRes.status}`);
+  if (!putRes.ok) {
+    const body = await putRes.text().catch(() => '');
+    throw new Error(`PUT failed HTTP ${putRes.status}: ${body.slice(0, 200)}`);
+  }
 }
 
-// ── Main export ──────────────────────────────────────────────────────
+// ── Main export ───────────────────────────────────────────────────────
 
 export async function runPipeline({ jobId, uploadId, assetId: knownAssetId, artistName, venueSlug, redis, muxAuth }) {
   const { tokenId, tokenSecret } = muxAuth;
   const authHeader = 'Basic ' + Buffer.from(`${tokenId}:${tokenSecret}`).toString('base64');
-  const headers = { Authorization: authHeader, 'Content-Type': 'application/json' };
+  const headers    = { Authorization: authHeader, 'Content-Type': 'application/json' };
 
   const setProgress = (done, total, status, extra = {}) =>
-    redis.set(`pipeline:job:${jobId}`, JSON.stringify({ done, total, status, artistName, venueSlug: venueSlug || '', updatedAt: Date.now(), ...extra }), { EX: 7200 });
+    redis.set(
+      `pipeline:job:${jobId}`,
+      JSON.stringify({ done, total, status, artistName, venueSlug: venueSlug || '', updatedAt: Date.now(), ...extra }),
+      { EX: 7200 }
+    );
 
   const tmpDir = path.join(os.tmpdir(), `pipeline-${jobId}`);
   fs.mkdirSync(tmpDir, { recursive: true });
 
-  // Pin this job so the server can re-queue it if Railway restarts mid-job
-  await redis.set('pipeline:active_job', JSON.stringify({ jobId, uploadId, assetId: knownAssetId, artistName, venueSlug, muxAuth }), { EX: 7200 });
+  await redis.set('pipeline:active_job',
+    JSON.stringify({ jobId, uploadId, assetId: knownAssetId, artistName, venueSlug, muxAuth }),
+    { EX: 7200 });
 
   try {
     await setProgress(0, CLIP_COUNT, 'waiting');
 
-    // ── 1+2. Get asset info + wait for static renditions ─────────────
     const { assetId, playbackId, duration, mp4Ready } = await waitForAsset(uploadId, knownAssetId, authHeader);
-    console.log(`[Pipeline:${jobId}] Asset ready — ${Math.round(duration)}s @ ${playbackId} (mp4=${mp4Ready})`);
+    console.log(`[Pipeline:${jobId}] Ready — ${Math.round(duration)}s, playback=${playbackId}, mp4=${mp4Ready}`);
 
     if (duration < MIN_CLIP_DUR * 2) throw new Error(`Video too short: ${Math.round(duration)}s`);
 
-    // Prefer MP4 static rendition for fast HTTP-range seeking; fall back to HLS
+    // highest.mp4 = best available quality static rendition; HLS fallback via .m3u8
     const videoUrl = mp4Ready
       ? `https://stream.mux.com/${playbackId}/highest.mp4`
       : `https://stream.mux.com/${playbackId}.m3u8`;
 
     console.log(`[Pipeline:${jobId}] Source: ${videoUrl}`);
 
-    // ── 2b. Probe source dimensions once (avoids per-clip ffprobe) ───
+    // Probe dimensions once so we can apply the high-res pre-scale optimisation
     let srcW = 0, srcH = 0;
     try {
-      const { stdout: probeOut } = await execAsync(
-        `ffprobe -v quiet -select_streams v:0 -show_entries stream=width,height -of csv=p=0 "${videoUrl}"`,
+      const { stdout } = await execAsync(
+        `ffprobe -v quiet -allowed_extensions ALL -protocol_whitelist file,https,http,tcp,tls,crypto ` +
+        `-select_streams v:0 -show_entries stream=width,height -of csv=p=0 "${videoUrl}"`,
         { timeout: 30_000 }
       );
-      [srcW, srcH] = probeOut.trim().split(',').map(Number);
-      console.log(`[Pipeline:${jobId}] Source dimensions: ${srcW}x${srcH}`);
+      [srcW, srcH] = stdout.trim().split(',').map(Number);
+      console.log(`[Pipeline:${jobId}] Dimensions: ${srcW}x${srcH}`);
     } catch (e) {
-      console.log(`[Pipeline:${jobId}] ffprobe failed (${e.message.slice(0, 60)}), cropdetect disabled`);
+      console.log(`[Pipeline:${jobId}] ffprobe skipped (${e.message.slice(0, 60)})`);
     }
 
-    // ── 3. Build clip specs ──────────────────────────────────────────
-    const margin = Math.max(30, duration * 0.03);
+    // Evenly-spaced clip specs with random jitter
+    const margin   = Math.max(30, duration * 0.03);
     const safeStart = margin;
-    const safeEnd = duration - margin - MAX_CLIP_DUR;
+    const safeEnd   = duration - margin - MAX_CLIP_DUR;
+    const step      = (safeEnd - safeStart) / CLIP_COUNT;
 
-    const clipSpecs = [];
-    const step = (safeEnd - safeStart) / CLIP_COUNT;
-    for (let i = 0; i < CLIP_COUNT; i++) {
-      const base = safeStart + i * step;
+    const clipSpecs = Array.from({ length: CLIP_COUNT }, (_, i) => {
+      const base   = safeStart + i * step;
       const jitter = (Math.random() - 0.5) * step * 0.6;
-      const start = Math.round(Math.max(safeStart, Math.min(safeEnd, base + jitter)));
-      const dur = MIN_CLIP_DUR + Math.round(Math.random() * (MAX_CLIP_DUR - MIN_CLIP_DUR));
-      clipSpecs.push({ start, dur });
-    }
+      const start  = Math.round(Math.max(safeStart, Math.min(safeEnd, base + jitter)));
+      const dur    = MIN_CLIP_DUR + Math.round(Math.random() * (MAX_CLIP_DUR - MIN_CLIP_DUR));
+      return { start, dur, num: String(i + 1).padStart(2, '0') };
+    });
 
     let uploaded = 0, failed = 0;
     await setProgress(0, CLIP_COUNT, 'processing', { uploaded, failed });
 
-    // ── 4. Process & upload clips ────────────────────────────────────
-    for (let i = 0; i < clipSpecs.length; i++) {
-      const { start, dur } = clipSpecs[i];
-      const clipNum = String(i + 1).padStart(2, '0');
-      const tag = `${artistName} // SOCIAL // ${clipNum}`;
-      const outPath = path.join(tmpDir, `clip_${clipNum}.mp4`);
+    // Worker pool — CONCURRENCY clips encoded + uploaded simultaneously
+    let idx = 0;  // safe in Node.js single-threaded async: idx++ is atomic per microtask
 
-      console.log(`[Pipeline:${jobId}] Clip ${clipNum}/${CLIP_COUNT}: ${start}s-${start + dur}s`);
-      await setProgress(i, CLIP_COUNT, 'processing', { currentClip: clipNum, uploaded, failed });
+    async function worker() {
+      while (idx < clipSpecs.length) {
+        const { start, dur, num } = clipSpecs[idx++];
+        const tag     = `${artistName} // SOCIAL // ${num}`;
+        const outPath = path.join(tmpDir, `clip_${num}.mp4`);
 
-      try {
-        await processClip(videoUrl, start, dur, outPath, srcW, srcH);
-        await uploadClipToMux(outPath, tag, headers);
-        uploaded++;
-        console.log(`    ✓ Clip ${clipNum} uploaded (${uploaded} ok, ${failed} failed)`);
-      } catch (e) {
-        failed++;
-        console.error(`    ✗ Clip ${clipNum} failed (${failed} so far):`, e.message);
-        await setProgress(i, CLIP_COUNT, 'processing', { currentClip: clipNum, uploaded, failed, lastError: e.message.slice(0, 120) });
-      } finally {
-        try { fs.unlinkSync(outPath); } catch (_) {}
+        console.log(`[Pipeline:${jobId}] ▶ Clip ${num}/${CLIP_COUNT}  ${start}s + ${dur}s`);
+        try {
+          await processClip(videoUrl, start, dur, outPath, srcW, srcH);
+          await uploadClipToMux(outPath, tag, headers);
+          uploaded++;
+          console.log(`[Pipeline:${jobId}] ✓ ${num}  (${uploaded} ok / ${failed} failed)`);
+        } catch (e) {
+          failed++;
+          console.error(`[Pipeline:${jobId}] ✗ ${num} FAILED: ${e.message}`);
+        } finally {
+          try { fs.unlinkSync(outPath); } catch (_) {}
+          await setProgress(uploaded + failed, CLIP_COUNT, 'processing', { uploaded, failed });
+        }
       }
-
-      await setProgress(i + 1, CLIP_COUNT, 'processing', { uploaded, failed });
     }
 
+    await Promise.all(Array.from({ length: CONCURRENCY }, worker));
+
     const finalStatus = uploaded > 0 ? 'done' : 'error';
-    const finalExtra = { uploaded, failed };
+    const finalExtra  = { uploaded, failed };
     if (uploaded === 0) finalExtra.error = `All ${CLIP_COUNT} clips failed — check Railway logs`;
     await setProgress(CLIP_COUNT, CLIP_COUNT, finalStatus, finalExtra);
-    console.log(`[Pipeline:${jobId}] ✓ Complete: ${uploaded} uploaded, ${failed} failed`);
+    console.log(`[Pipeline:${jobId}] Complete: ${uploaded} uploaded, ${failed} failed`);
 
   } catch (e) {
     console.error(`[Pipeline:${jobId}] Fatal:`, e.message);
