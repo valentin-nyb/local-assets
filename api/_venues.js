@@ -4,7 +4,6 @@ import crypto from 'crypto';
 
 export function getVenuesConfig() {
   const raw = process.env.VENUES_CONFIG || '{}';
-  console.log('[_venues] VENUES_CONFIG raw (first 500):', raw.slice(0, 500));
 
   // 1. Direct parse
   try { return JSON.parse(raw); } catch (e1) {
@@ -30,7 +29,7 @@ export function findVenueByEmail(email) {
   // Priority 1: explicit listing in a venue's emails array
   for (const [slug, cfg] of Object.entries(venues)) {
     if (Array.isArray(cfg.emails) && cfg.emails.some(e => e.toLowerCase() === lower)) {
-      console.error('[_venues] findVenueByEmail: matched via emails[]', lower, '→', slug);
+      console.log('[_venues] findVenueByEmail: matched via emails[]', lower, '→', slug);
       return { slug, ...cfg };
     }
   }
@@ -41,7 +40,7 @@ export function findVenueByEmail(email) {
   if (adminList.includes(lower)) {
     for (const [slug, cfg] of Object.entries(venues)) {
       if ((cfg.mux_token_id || '').trim() && (cfg.mux_token_secret || '').trim()) {
-        console.error('[_venues] findVenueByEmail: ADMIN_EMAILS fallback', lower, '→', slug);
+        console.log('[_venues] findVenueByEmail: ADMIN_EMAILS fallback', lower, '→', slug);
         return { slug, ...cfg };
       }
     }
@@ -123,12 +122,11 @@ export function getWebSessionAuth(req) {
   const venue   = findVenueByEmail(email);
   const muxAuth = getMuxAuthForVenue(venue); // null if no venue-specific creds
 
-  console.error('[_venues] getWebSessionAuth', JSON.stringify({
+  console.log('[_venues] getWebSessionAuth', JSON.stringify({
     email,
     tokenPresent:   !!token,
     venueFound:     venue?.slug ?? null,
     hasMuxCreds:    !!muxAuth,
-    VENUES_CONFIG:  process.env.VENUES_CONFIG ? process.env.VENUES_CONFIG.slice(0, 120) : '(not set)',
   }));
 
   return { email, venueSlug: venue?.slug || '', venue, muxAuth };
