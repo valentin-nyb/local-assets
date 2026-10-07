@@ -9,7 +9,7 @@ import { updatePipelineJob } from './pipeline-db.js';
 
 const execAsync = promisify(exec);
 
-const CLIP_COUNT  = 30;
+const CLIP_COUNT  = 5;
 const MIN_CLIP_DUR = 25;
 const MAX_CLIP_DUR = 35;
 const CONCURRENCY  = 4;   // simultaneous FFmpeg workers
