@@ -6,8 +6,9 @@ export default async function handler(req, res) {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   if (!clientId) return res.status(500).json({ error: 'Google OAuth not configured' });
 
-  // Stateless random state (CSRF value — callback no longer validates it against Redis)
+  const intent = req.query?.intent === 'client' ? 'client' : 'admin';
   const state = crypto.randomBytes(16).toString('hex');
+  res.setHeader('Set-Cookie', `la_google_state=${state}.${intent}; Path=/api/google-callback; HttpOnly; Secure; SameSite=Lax; Max-Age=600`);
 
   const params = new URLSearchParams({
     client_id:     clientId,

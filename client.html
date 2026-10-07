@@ -49,16 +49,11 @@
                 <h1 class="text-2xl font-semibold tracking-tight">Sign in to your account</h1>
             </div>
             <div class="border border-[#222] bg-[#0a0a0a] p-6">
-                <label class="font-mono text-[10px] tracking-[0.2em] text-[#888] uppercase block mb-2">Email Address</label>
-                <input id="login-email" type="email" placeholder="you@example.com" class="w-full bg-[#111] border border-[#333] text-white font-mono text-sm px-4 py-3 mb-4 outline-none focus:border-[#39FF14] transition-colors">
-                <button id="login-btn" onclick="requestMagicLink()" class="w-full bg-[#39FF14] text-black font-mono text-xs font-bold uppercase tracking-widest py-3 hover:bg-white transition-colors">
-                    SEND LOGIN LINK
+                <button onclick="window.location.href='/api/google-auth?intent=client'" class="w-full bg-[#39FF14] text-black font-mono text-xs font-bold uppercase tracking-widest py-3 hover:bg-white transition-colors">
+                    CONTINUE WITH GOOGLE
                 </button>
-                <div id="login-msg" class="hidden mt-4 p-3 border border-[#39FF14]/30 bg-[#39FF14]/5">
-                    <p class="font-mono text-xs text-[#39FF14]">✓ Check your inbox — login link sent.</p>
-                </div>
-                <div id="login-err" class="hidden mt-4 p-3 border border-red-500/30 bg-red-500/5">
-                    <p class="font-mono text-xs text-red-400" id="login-err-text"></p>
+                <div id="client-login-error" class="hidden mt-4 p-3 border border-red-500/30 bg-red-500/5">
+                    <p class="font-mono text-xs text-red-400" id="client-login-error-text"></p>
                 </div>
             </div>
             <p class="text-center mt-6 font-mono text-[10px] text-[#555]">Don't have an account? <a href="index.html" class="text-[#39FF14] hover:underline">Select a tier →</a></p>
@@ -343,6 +338,20 @@
     function showLogin() {
         document.getElementById('login-screen').style.display = 'flex';
         document.getElementById('portal').style.display = 'none';
+        const error = new URLSearchParams(window.location.search).get('error');
+        const messages = {
+            google_required: 'Email sign-in is disabled. Continue with Google.',
+            not_registered: 'This Google account is not enabled for the client portal.',
+            profile_missing: 'The client profile is incomplete. Please contact support.',
+            google_state: 'Google sign-in expired. Please try again.',
+            no_email: 'Google did not provide a verified email address.',
+            google_failed: 'Google sign-in failed. Please try again.',
+        };
+        if (messages[error]) {
+            document.getElementById('client-login-error-text').textContent = messages[error];
+            document.getElementById('client-login-error').classList.remove('hidden');
+            history.replaceState({}, '', '/client.html');
+        }
     }
 
     function showPortal() {
@@ -379,33 +388,6 @@
         }
 
         loadAssets();
-    }
-
-    // ── MAGIC LINK LOGIN ──────────────────────────────────────────────
-    async function requestMagicLink() {
-        var email = document.getElementById('login-email').value.trim();
-        if (!email) return;
-        var btn = document.getElementById('login-btn');
-        btn.disabled = true;
-        btn.textContent = 'SENDING...';
-        document.getElementById('login-msg').classList.add('hidden');
-        document.getElementById('login-err').classList.add('hidden');
-
-        try {
-            var res = await fetch('/api/send-magic-link', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: email })
-            });
-            var data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Failed');
-            document.getElementById('login-msg').classList.remove('hidden');
-        } catch (err) {
-            document.getElementById('login-err').classList.remove('hidden');
-            document.getElementById('login-err-text').textContent = err.message;
-        }
-        btn.disabled = false;
-        btn.textContent = 'SEND LOGIN LINK';
     }
 
     // ── LOAD ASSETS ───────────────────────────────────────────────────

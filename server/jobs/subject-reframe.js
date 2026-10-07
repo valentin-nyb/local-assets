@@ -11,21 +11,13 @@ async function getPersonDetector() {
     modelPromise = (async () => {
       const tfModule = await import('@tensorflow/tfjs-core');
       const tf = tfModule.default || tfModule;
-      let backend = 'tensorflow';
-      try {
-        await import('@tensorflow/tfjs-node');
-        if (!(await tf.setBackend(backend))) throw new Error('Native TensorFlow backend unavailable');
-      } catch (error) {
-        backend = 'cpu';
-        await import('@tensorflow/tfjs-backend-cpu');
-        await tf.setBackend(backend);
-        console.warn('[Reframe] Native TensorFlow unavailable; using CPU backend:', error.message);
-      }
+      await import('@tensorflow/tfjs-backend-cpu');
+      await tf.setBackend('cpu');
       await tf.ready();
       console.log(`[Reframe] TensorFlow backend: ${tf.getBackend()}`);
       const cocoModule = await import('@tensorflow-models/coco-ssd');
       const cocoSsd = cocoModule.default || cocoModule;
-      const model = await cocoSsd.load({ base: 'mobilenet_v2' });
+      const model = await cocoSsd.load({ base: 'mobilenet_v1' });
       const jpegModule = await import('jpeg-js');
       return { tf, model, jpeg: jpegModule.default || jpegModule };
     })();
@@ -40,7 +32,7 @@ export async function extractSubjectFrames(videoUrl, start, duration, frameDir) 
     '-allowed_extensions', 'ALL',
     '-protocol_whitelist', 'file,https,http,tcp,tls,crypto',
     '-ss', String(start), '-t', String(duration), '-i', videoUrl,
-    '-vf', 'fps=1,scale=640:-2:flags=bilinear',
+    '-vf', 'fps=0.2,scale=320:-2:flags=bilinear',
     '-q:v', '5', path.join(frameDir, 'frame_%06d.jpg'),
   ], { timeout: 180_000, maxBuffer: 8 * 1024 * 1024 });
 }

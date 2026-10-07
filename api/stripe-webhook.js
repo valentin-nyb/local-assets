@@ -76,12 +76,12 @@ export default async function handler(req, res) {
       console.log(`[Stripe Webhook] Created new client: ${clientId} for ${email}`);
     }
 
-    // Send magic link email
+    // Send client portal sign-in instructions
     try {
-      await sendMagicLink(email);
-      console.log(`[Stripe Webhook] Magic link sent to ${email}`);
+      await sendGoogleLoginNotice(email);
+      console.log(`[Stripe Webhook] Google login instructions sent to ${email}`);
     } catch (e) {
-      console.error('[Stripe Webhook] Failed to send magic link:', e.message);
+      console.error('[Stripe Webhook] Failed to send Google login instructions:', e.message);
     }
   }
 
@@ -99,28 +99,24 @@ export default async function handler(req, res) {
   return res.status(200).json({ received: true });
 }
 
-// ── MAGIC LINK HELPER ────────────────────────────────────────────────
-async function sendMagicLink(email) {
-  const token = crypto.randomBytes(32).toString('hex');
-  await kv.set(`magic:${token}`, email, { ex: 3600 }); // 1 hour expiry
-
+// ── CLIENT LOGIN INSTRUCTIONS ────────────────────────────────────────
+async function sendGoogleLoginNotice(email) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) throw new Error('RESEND_API_KEY not set');
 
   const resend = new Resend(apiKey);
-  const link = `https://local-assets.com/api/verify-magic-link?token=${token}`;
+  const link = 'https://local-assets.com/client.html';
 
   await resend.emails.send({
     from: 'local/assets™ <noreply@local-assets.com>',
     to: email,
-    subject: 'Your local/assets™ Portal Access',
+    subject: 'Your local/assets™ Client Portal',
     html: `
       <div style="font-family:monospace;background:#050505;color:#fff;padding:40px;max-width:500px;">
         <p style="color:#39FF14;font-size:10px;letter-spacing:0.3em;text-transform:uppercase;margin-bottom:24px;">[ local / assets™ ]</p>
         <h2 style="font-size:20px;margin-bottom:16px;">Welcome to your Asset Portal</h2>
-        <p style="color:#aaa;font-size:13px;line-height:1.6;margin-bottom:24px;">Click below to access your client dashboard where you can view, upload, and manage your assets.</p>
-        <a href="${link}" style="display:inline-block;background:#39FF14;color:#000;padding:12px 32px;text-decoration:none;font-weight:bold;font-size:12px;letter-spacing:0.1em;text-transform:uppercase;">ACCESS PORTAL</a>
-        <p style="color:#666;font-size:11px;margin-top:24px;">This link expires in 1 hour.</p>
+        <p style="color:#aaa;font-size:13px;line-height:1.6;margin-bottom:24px;">Sign in with Google using this email address to access your client dashboard.</p>
+        <a href="${link}" style="display:inline-block;background:#39FF14;color:#000;padding:12px 32px;text-decoration:none;font-weight:bold;font-size:12px;letter-spacing:0.1em;text-transform:uppercase;">OPEN CLIENT PORTAL</a>
       </div>
     `
   });
