@@ -429,7 +429,7 @@
                 { type: 'MASTER', label: '4K Long Form', ext: '.MKV/.MP4', icon: 'solar:play-bold', color: 'text-primary' },
                 { type: 'AUDIO', label: 'HQ Audio', ext: '.WAV/.MP3', icon: 'solar:music-note-bold', color: 'text-primary' },
                 { type: 'SOCIAL', label: 'Social Pack Verticals', ext: '.MP4', icon: 'solar:iphone-bold', color: 'text-primary' },
-                { type: 'THUMB', label: 'Marketing Thumbnails', ext: '.PNG', icon: 'solar:gallery-minimalistic-bold', color: 'text-primary' },
+                { type: 'THUMB', label: 'Marketing Thumbnails', ext: '.JPG / .PNG', icon: 'solar:gallery-minimalistic-bold', color: 'text-primary' },
             ];
 
             var artistMap = {};
@@ -715,7 +715,7 @@
                     statusText = 'IN VAULT — ' + statusText;
                     if (canUploadMore) statusText += ' — TAP TO ADD';
                 } else {
-                    statusText = '.PNG FORMAT — TAP TO UPLOAD (MAX 20)';
+                    statusText = '.JPG / .PNG — TAP TO UPLOAD (MAX 20)';
                 }
                 var label = hasAny ? 'Marketing Thumbnails (' + thumbAssets.length + ')' : asset.label;
                 var safeName = sessionName.replace(/'/g, "\\'");
@@ -733,9 +733,25 @@
                 html += '<p class="text-[8px] font-mono ' + (hasAny ? 'text-primary' : 'text-zinc-600') + ' uppercase" id="status-' + uid + '">' + statusText + '</p>';
                 html += '</div>';
                 if (canUploadMore) {
-                    html += '<input type="file" accept="image/*" class="hidden" id="file-' + uid + '" multiple onchange="handleAssetUpload(\'' + uid + '\', this, \'' + safeName + '\', \'' + sessionDate + '\')">';
+                    html += '<input type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" class="hidden" id="file-' + uid + '" multiple onchange="handleAssetUpload(\'' + uid + '\', this, \'' + safeName + '\', \'' + sessionDate + '\')">';
                     html += '</label>';
                 } else {
+                    html += '</div>';
+                }
+                if (hasAny) {
+                    html += '<div class="flex items-center gap-1.5 min-w-0 overflow-x-auto py-1" style="scrollbar-width:thin;max-width:42vw;">';
+                    for (var pi = 0; pi < thumbAssets.length; pi++) {
+                        var thumb = thumbAssets[pi].asset;
+                        var thumbPid = thumb.playback_ids && thumb.playback_ids[0] ? thumb.playback_ids[0].id : null;
+                        var previewUrl = thumb.meta && thumb.meta.thumbnail_url;
+                        if (!previewUrl && thumbPid) previewUrl = 'https://image.mux.com/' + thumbPid + '/thumbnail.png?width=180';
+                        if (!previewUrl) continue;
+                        var safePreviewUrl = String(previewUrl).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+                        var previewAlt = String(thumbAssets[pi].label || 'Uploaded thumbnail').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+                        html += '<a href="' + safePreviewUrl + '" target="_blank" rel="noopener" title="Preview ' + previewAlt + '" class="block flex-shrink-0 overflow-hidden rounded-md border border-zinc-700 hover:border-primary transition-colors" style="width:48px;height:48px;">';
+                        html += '<img src="' + safePreviewUrl + '" alt="' + previewAlt + '" loading="lazy" class="w-full h-full object-cover">';
+                        html += '</a>';
+                    }
                     html += '</div>';
                 }
                 html += '<div class="flex items-center gap-2 shrink-0">';
@@ -1705,6 +1721,18 @@
 
             // Thumbnails use a different upload path (image as Mux overlay/watermark)
             if (assetType === 'THUMB') {
+                const isSupportedImage = (file) => {
+                    const type = file.type.toLowerCase();
+                    const name = file.name.toLowerCase();
+                    return (!type || type === 'image/jpeg' || type === 'image/png') && /\.(jpe?g|png)$/.test(name);
+                };
+                if (files.some(file => !isSupportedImage(file))) {
+                    statusEl.textContent = 'ERROR — CHOOSE JPEG OR PNG IMAGES';
+                    statusEl.classList.remove('text-yellow-500');
+                    statusEl.classList.add('text-red-500');
+                    input.value = '';
+                    return;
+                }
                 const thumbTotal = Math.min(files.length, 20);
                 let thumbCompleted = 0;
 
@@ -1713,7 +1741,8 @@
                         const tag = thumbTotal > 1 ? `${passthrough} // ${String(idx + 1).padStart(2, '0')}` : passthrough;
                         const xhr = new XMLHttpRequest();
                         xhr.open('PUT', '/api/upload-thumbnail?passthrough=' + encodeURIComponent(tag));
-                        xhr.setRequestHeader('Content-Type', file.type || 'image/png');
+                        const thumbType = file.type || (/\.png$/i.test(file.name) ? 'image/png' : 'image/jpeg');
+                        xhr.setRequestHeader('Content-Type', thumbType);
                         xhr.setRequestHeader('X-Passthrough', tag);
                         const _laSess = (() => { try { return JSON.parse(localStorage.getItem('la_admin') || '{}'); } catch(_) { return {}; } })();
                         if (_laSess.webToken) xhr.setRequestHeader('Authorization', 'Bearer ' + _laSess.webToken);
@@ -1753,6 +1782,8 @@
                     statusEl.classList.remove('text-yellow-500');
                     statusEl.classList.add('text-primary');
                     row.style.borderLeft = '2px solid #39FF14';
+                    input.value = '';
+                    setTimeout(() => fetchRecentUploads(), 1500);
                 } catch (err) {
                     statusEl.textContent = `ERROR — ${err.message}`;
                     statusEl.classList.remove('text-yellow-500');
