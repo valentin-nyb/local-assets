@@ -57,8 +57,15 @@ export function findVenueByEmail(email) {
 // NEVER falls back to global env vars — if a venue has no explicit Mux creds, returns null.
 // This enforces strict per-venue isolation: a client can only ever see their own assets.
 export function getMuxAuthForVenue(venue) {
-  const id     = (venue?.mux_token_id     || '').trim();
-  const secret = (venue?.mux_token_secret || '').trim();
+  const venueEnvKey = venue?.slug?.toUpperCase().replace(/[^A-Z0-9]+/g, '_');
+  const id = (
+    (venueEnvKey && process.env[`${venueEnvKey}_MUX_TOKEN_ID`]) ||
+    venue?.mux_token_id || ''
+  ).trim();
+  const secret = (
+    (venueEnvKey && process.env[`${venueEnvKey}_MUX_TOKEN_SECRET`]) ||
+    venue?.mux_token_secret || ''
+  ).trim();
   if (!id || !secret) return null;
   return 'Basic ' + Buffer.from(`${id}:${secret}`).toString('base64');
 }

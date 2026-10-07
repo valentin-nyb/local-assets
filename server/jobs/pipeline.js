@@ -153,13 +153,19 @@ export async function runPipeline({ jobId, uploadId, assetId: knownAssetId, arti
     try {
       const { stdout } = await execAsync(
         `ffprobe -v quiet -allowed_extensions ALL -protocol_whitelist file,https,http,tcp,tls,crypto ` +
-        `-select_streams v:0 -show_entries stream=width,height -of csv=p=0 "${videoUrl}"`,
+        `-select_streams v:0 -show_entries stream=width,height -of json "${videoUrl}"`,
         { timeout: 30_000 }
       );
-      [srcW, srcH] = stdout.trim().split(',').map(Number);
+      const probe = JSON.parse(stdout);
+      const stream = (probe.streams || []).find(item =>
+        Number.isFinite(item.width) && Number.isFinite(item.height) && item.width > 0 && item.height > 0
+      );
+      if (!stream) throw new Error('ffprobe returned no valid video dimensions');
+      srcW = stream.width;
+      srcH = stream.height;
       console.log(`[Pipeline:${jobId}] Dimensions: ${srcW}x${srcH}`);
     } catch (e) {
-      console.log(`[Pipeline:${jobId}] ffprobe skipped (${e.message.slice(0, 60)})`);
+      throw new Error(`Could not determine source dimensions: ${e.message}`);
     }
 
     // Evenly-spaced clip specs with random jitter
