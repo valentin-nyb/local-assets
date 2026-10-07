@@ -1,0 +1,15 @@
+services:
+  - type: worker
+    name: local-assets-pipeline
+    runtime: docker
+    region: ohio
+    plan: 2c-4g
+    dockerfilePath: ./server/Dockerfile
+    dockerContext: ./server
+    maxShutdownDelaySeconds: 300
+    autoDeployTrigger: commit
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: VENUES_CONFIG
+        sync: false

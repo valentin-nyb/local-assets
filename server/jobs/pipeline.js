@@ -4,6 +4,8 @@ import { Readable } from 'stream';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import { extractSubjectFrames, detectSubjectTrack, buildSubjectCropFilter } from './subject-reframe.js';
+import { updatePipelineJob } from './pipeline-db.js';
 
 const execAsync = promisify(exec);
 
@@ -63,19 +65,10 @@ async function waitForAsset(uploadId, assetId, authHeader) {
 
 // ── Encode one clip ───────────────────────────────────────────────────
 
-async function processClip(videoUrl, start, dur, outPath, srcW, srcH) {
+async function processClip(videoUrl, start, dur, outPath, cropFilter) {
   // Pre-input seeking is fast for both MP4 (HTTP range) and HLS (segment seek).
   // -allowed_extensions ALL is required for FFmpeg to accept HLS playlists over HTTPS.
   const ffBase = `ffmpeg -y -allowed_extensions ALL -protocol_whitelist file,https,http,tcp,tls,crypto`;
-
-  // Center-crop to 9:16 portrait at 1080×1920.
-  // For high-res sources pre-scale to 1920p first so FFmpeg decodes at lower res.
-  let cropFilter;
-  if (srcW > 1920 || srcH > 1920) {
-    cropFilter = `scale=1920:-2:flags=bilinear,crop=ih*9/16:ih:(iw-ih*9/16)/2:0,scale=1080:1920:flags=lanczos`;
-  } else {
-    cropFilter = `crop=ih*9/16:ih:(iw-ih*9/16)/2:0,scale=1080:1920:flags=lanczos`;
-  }
 
   const cmd =
     `${ffBase} -ss ${start} -t ${dur} -i "${videoUrl}" ` +
@@ -129,24 +122,16 @@ async function uploadClipToMux(filePath, passthrough, headers) {
 
 // ── Main export ───────────────────────────────────────────────────────
 
-export async function runPipeline({ jobId, uploadId, assetId: knownAssetId, artistName, venueSlug, redis, muxAuth }) {
+export async function runPipeline({ jobId, uploadId, assetId: knownAssetId, artistName, venueSlug, db, workerId, muxAuth }) {
   const { tokenId, tokenSecret } = muxAuth;
   const authHeader = 'Basic ' + Buffer.from(`${tokenId}:${tokenSecret}`).toString('base64');
   const headers    = { Authorization: authHeader, 'Content-Type': 'application/json' };
 
   const setProgress = (done, total, status, extra = {}) =>
-    redis.set(
-      `pipeline:job:${jobId}`,
-      JSON.stringify({ done, total, status, artistName, venueSlug: venueSlug || '', updatedAt: Date.now(), ...extra }),
-      { EX: 7200 }
-    );
+    updatePipelineJob(db, jobId, workerId, { done, total, status, ...extra });
 
   const tmpDir = path.join(os.tmpdir(), `pipeline-${jobId}`);
   fs.mkdirSync(tmpDir, { recursive: true });
-
-  await redis.set('pipeline:active_job',
-    JSON.stringify({ jobId, uploadId, assetId: knownAssetId, artistName, venueSlug, muxAuth }),
-    { EX: 7200 });
 
   try {
     await setProgress(0, CLIP_COUNT, 'waiting');
@@ -205,7 +190,16 @@ export async function runPipeline({ jobId, uploadId, assetId: knownAssetId, arti
 
         console.log(`[Pipeline:${jobId}] ▶ Clip ${num}/${CLIP_COUNT}  ${start}s + ${dur}s`);
         try {
-          await processClip(videoUrl, start, dur, outPath, srcW, srcH);
+          if (!srcW || !srcH) throw new Error('Could not determine source dimensions for vertical reframing');
+          const frameDir = path.join(tmpDir, `frames_${num}`);
+          try {
+            await extractSubjectFrames(videoUrl, start, dur, frameDir);
+            const subjectTrack = await detectSubjectTrack(frameDir);
+            const cropFilter = buildSubjectCropFilter(subjectTrack, srcW, srcH, dur);
+            await processClip(videoUrl, start, dur, outPath, cropFilter);
+          } finally {
+            try { fs.rmSync(frameDir, { recursive: true, force: true }); } catch (_) {}
+          }
           await uploadClipToMux(outPath, tag, headers);
           uploaded++;
           console.log(`[Pipeline:${jobId}] ✓ ${num}  (${uploaded} ok / ${failed} failed)`);
@@ -223,7 +217,7 @@ export async function runPipeline({ jobId, uploadId, assetId: knownAssetId, arti
 
     const finalStatus = uploaded > 0 ? 'done' : 'error';
     const finalExtra  = { uploaded, failed };
-    if (uploaded === 0) finalExtra.error = `All ${CLIP_COUNT} clips failed — check Railway logs`;
+    if (uploaded === 0) finalExtra.error = `All ${CLIP_COUNT} clips failed — check worker logs`;
     await setProgress(CLIP_COUNT, CLIP_COUNT, finalStatus, finalExtra);
     console.log(`[Pipeline:${jobId}] Complete: ${uploaded} uploaded, ${failed} failed`);
 
@@ -232,6 +226,5 @@ export async function runPipeline({ jobId, uploadId, assetId: knownAssetId, arti
     await setProgress(0, CLIP_COUNT, 'error', { error: e.message });
   } finally {
     try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch (_) {}
-    await redis.del('pipeline:active_job').catch(() => {});
   }
 }

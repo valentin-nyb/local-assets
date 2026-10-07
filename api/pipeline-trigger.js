@@ -1,5 +1,5 @@
 import { getWebSessionAuth } from './_venues.js';
-import { createClient } from 'redis';
+import { getPipelineDb } from './_pipeline-db.js';
 import crypto from 'crypto';
 
 export default async function handler(req, res) {
@@ -21,27 +21,18 @@ export default async function handler(req, res) {
   const jobId  = crypto.randomBytes(8).toString('hex');
   const artist = artistName.toUpperCase().trim();
 
-  const redis = createClient({ url: process.env.REDIS_URL });
   try {
-    await redis.connect();
-    // Pass venue's Mux credentials so the worker uses the right account per-venue
     const venueSlug = session.venueSlug || '';
-    const muxAuth = session.venue
-      ? { tokenId: session.venue.mux_token_id || '', tokenSecret: session.venue.mux_token_secret || '' }
-      : null;
-    const job = { jobId, uploadId, artistName: artist, venueSlug, muxAuth };
-    await redis.lPush('pipeline:queue', JSON.stringify(job));
-    await redis.set(
-      `pipeline:job:${jobId}`,
-      JSON.stringify({ done: 0, total: 30, status: 'queued', artistName: artist, venueSlug, updatedAt: Date.now() }),
-      { EX: 7200 }
+    const db = getPipelineDb();
+    await db.query(
+      `INSERT INTO pipeline_jobs (id, upload_id, artist_name, venue_slug)
+       VALUES ($1, $2, $3, $4)`,
+      [jobId, uploadId, artist, venueSlug]
     );
     console.log(`[pipeline-trigger] Queued job ${jobId} for "${artist}" venue=${venueSlug}`);
     return res.status(200).json({ jobId });
   } catch (e) {
-    console.error('[pipeline-trigger] Redis error:', e.message);
+    console.error('[pipeline-trigger] Database error:', e.message);
     return res.status(500).json({ error: 'Failed to queue pipeline job' });
-  } finally {
-    await redis.quit().catch(() => {});
   }
 }

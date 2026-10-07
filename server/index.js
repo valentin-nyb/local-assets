@@ -1,7 +1,9 @@
-import { createClient } from 'redis';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
+import { hostname } from 'os';
+import { randomUUID } from 'crypto';
 import { runPipeline } from './jobs/pipeline.js';
+import { claimNextJob, createPipelinePool, renewPipelineJob, updatePipelineJob } from './jobs/pipeline-db.js';
 import { execSync } from 'child_process';
 
 // ── Load .env.local from project root ────────────────────────────────
@@ -17,9 +19,14 @@ try {
   console.log('[Server] No .env.local found — using existing env vars');
 }
 
-// ── Validate environment ──────────────────────────────────────────────
-const REDIS_URL = process.env.REDIS_URL;
-if (!REDIS_URL) { console.error('REDIS_URL is not set'); process.exit(1); }
+// ── Validate database ─────────────────────────────────────────────────
+let db;
+try {
+  db = createPipelinePool();
+} catch (error) {
+  console.error(error.message);
+  process.exit(1);
+}
 
 // Build a per-venue Mux credential map from VENUES_CONFIG (fallback if job carries no creds)
 const venueCredMap = {};
@@ -50,102 +57,60 @@ if (envTokenId && envTokenSecret && !defaultMuxAuth) {
 }
 
 function getMuxAuthForJob(job) {
-  // Prefer creds embedded in the job (set by pipeline-trigger per-venue)
-  if (job.muxAuth?.tokenId && job.muxAuth?.tokenSecret) return job.muxAuth;
   // Fall back to per-venue map
   if (job.venueSlug && venueCredMap[job.venueSlug]) return venueCredMap[job.venueSlug];
   // Last resort: default
   return defaultMuxAuth;
 }
 
-// ── Validate FFmpeg ───────────────────────────────────────────────────
-try {
-  execSync('ffmpeg -version', { stdio: 'pipe' });
-  console.log('[Server] ffmpeg ✓');
-} catch {
-  console.error('[Server] ffmpeg not found — install with: brew install ffmpeg');
-  process.exit(1);
-}
+db.on('error', error => console.error('[Postgres] pool error:', error.message));
+await db.query('SELECT 1');
+console.log('[Postgres] Connected');
 
-// ── Redis connection with retry ───────────────────────────────────────
-const redis = createClient({ url: REDIS_URL });
-redis.on('error', e => console.error('[Redis] client error:', e.message));
+const workerId = `${hostname()}:${process.pid}:${randomUUID()}`;
+const sleep = ms => new Promise(resolveSleep => setTimeout(resolveSleep, ms));
+console.log('[Server] Polling pipeline_jobs for work...\n');
 
-async function connectRedis(retries = 10) {
-  for (let i = 1; i <= retries; i++) {
-    try {
-      await redis.connect();
-      console.log('[Server] Redis connected');
-      return;
-    } catch (e) {
-      console.error(`[Server] Redis connect attempt ${i}/${retries} failed:`, e.message);
-      if (i === retries) { console.error('[Server] Giving up on Redis'); process.exit(1); }
-      await new Promise(r => setTimeout(r, 3000 * i));
-    }
-  }
-}
-await connectRedis();
-
-// ── Recover interrupted job from last server crash ────────────────────
-try {
-  const activeRaw = await redis.get('pipeline:active_job');
-  if (activeRaw) {
-    const activeJob = JSON.parse(activeRaw);
-    const statusRaw = await redis.get(`pipeline:job:${activeJob.jobId}`);
-    const status = statusRaw ? JSON.parse(statusRaw) : null;
-    if (status && (status.status === 'waiting' || status.status === 'processing')) {
-      console.log(`[Server] Recovering interrupted job ${activeJob.jobId} — re-queuing`);
-      await redis.lPush('pipeline:queue', activeRaw);
-    }
-    await redis.del('pipeline:active_job');
-  }
-} catch (e) {
-  console.error('[Server] Job recovery check failed:', e.message);
-}
-
-console.log('[Server] Polling pipeline:queue for jobs...\n');
-
-// ── Main loop — BLPOP blocks until a job arrives ──────────────────────
+// ── Main loop — atomically claim a queued or expired-lease job ─────────
 while (true) {
   try {
-    // Reconnect if Redis dropped
-    if (!redis.isOpen) {
-      console.log('[Server] Redis disconnected — reconnecting...');
-      await connectRedis();
-    }
-
-    const item = await redis.blPop('pipeline:queue', 5);
-    if (!item) continue;
-
-    let job;
-    try { job = JSON.parse(item.element); } catch {
-      console.error('[Server] Bad job JSON:', item.element);
+    const job = await claimNextJob(db, workerId);
+    if (!job) {
+      await sleep(2000);
       continue;
     }
 
-    console.log(`\n[Server] ▶ Job received: ${job.jobId} — "${job.artistName}" venue=${job.venueSlug || 'default'}`);
-
+    console.log(`[Server] Job received: ${job.jobId} — "${job.artistName}" venue=${job.venueSlug || 'default'}`);
     const muxAuth = getMuxAuthForJob(job);
     if (!muxAuth) {
-      console.error(`[Server] No Mux credentials for venue "${job.venueSlug}" — skipping job ${job.jobId}`);
-      await redis.set(
-        `pipeline:job:${job.jobId}`,
-        JSON.stringify({ done: 0, total: 30, status: 'error', artistName: job.artistName, error: 'No Mux credentials configured for this venue' }),
-        { EX: 7200 }
-      );
+      await updatePipelineJob(db, job.jobId, workerId, {
+        done: 0,
+        total: 30,
+        status: 'error',
+        error: 'No Mux credentials configured for this venue',
+      });
       continue;
     }
 
-    await runPipeline({ ...job, redis, muxAuth }).catch(e => {
-      console.error('[Server] Unhandled pipeline error:', e.message);
-      return redis.set(
-        `pipeline:job:${job.jobId}`,
-        JSON.stringify({ done: 0, total: 30, status: 'error', artistName: job.artistName, error: e.message }),
-        { EX: 7200 }
-      );
-    });
-  } catch (e) {
-    console.error('[Server] Loop error:', e.message);
-    await new Promise(r => setTimeout(r, 2000));
+    const heartbeat = setInterval(() => {
+      renewPipelineJob(db, job.jobId, workerId)
+        .catch(error => console.error(`[Server] Lease renewal failed for ${job.jobId}:`, error.message));
+    }, 30_000);
+    try {
+      await runPipeline({ ...job, db, workerId, muxAuth });
+    } catch (error) {
+      console.error(`[Server] Unhandled pipeline error for ${job.jobId}:`, error.message);
+      await updatePipelineJob(db, job.jobId, workerId, {
+        done: 0,
+        total: 30,
+        status: 'error',
+        error: error.message,
+      }).catch(updateError => console.error('[Server] Failed to mark job error:', updateError.message));
+    } finally {
+      clearInterval(heartbeat);
+    }
+  } catch (error) {
+    console.error('[Server] Loop error:', error.message);
+    await sleep(2000);
   }
 }

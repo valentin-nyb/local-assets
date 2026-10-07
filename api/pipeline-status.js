@@ -1,4 +1,4 @@
-import { createClient } from 'redis';
+import { getPipelineDb } from './_pipeline-db.js';
 import { getWebSessionAuth } from './_venues.js';
 
 export default async function handler(req, res) {
@@ -14,37 +14,48 @@ export default async function handler(req, res) {
   const venueSlug = session.venueSlug;
   if (!venueSlug) return res.status(200).json([]);
 
-  const redis = createClient({ url: process.env.REDIS_URL });
   try {
-    await redis.connect();
+    const db = getPipelineDb();
     const { jobId } = req.query;
 
     if (jobId) {
-      const raw = await redis.get(`pipeline:job:${jobId}`);
-      if (!raw) return res.status(404).json({ error: 'Job not found' });
-      const job = JSON.parse(raw);
-      if (job.venueSlug && job.venueSlug !== venueSlug) return res.status(403).json({ error: 'Forbidden' });
-      return res.status(200).json(job);
+      const result = await db.query(
+        `SELECT id, artist_name, venue_slug, status, done, total, uploaded, failed, error, updated_at
+         FROM pipeline_jobs
+         WHERE id = $1 AND venue_slug = $2
+           AND (status NOT IN ('done', 'error') OR updated_at > now() - interval '1 hour')`,
+        [jobId, venueSlug]
+      );
+      if (!result.rowCount) return res.status(404).json({ error: 'Job not found' });
+      return res.status(200).json(formatJob(result.rows[0]));
     }
 
-    const keys = await redis.keys('pipeline:job:*');
-    const jobs = [];
-    for (const key of keys) {
-      const raw = await redis.get(key);
-      if (!raw) continue;
-      const job = JSON.parse(raw);
-      // Only show jobs belonging to this venue
-      if (job.venueSlug && job.venueSlug !== venueSlug) continue;
-      if ((job.status === 'done' || job.status === 'error') &&
-          Date.now() - (job.updatedAt || 0) > 3_600_000) continue;
-      jobs.push(job);
-    }
-    jobs.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-    return res.status(200).json(jobs);
+    const result = await db.query(
+      `SELECT id, artist_name, venue_slug, status, done, total, uploaded, failed, error, updated_at
+       FROM pipeline_jobs
+       WHERE venue_slug = $1
+         AND (status NOT IN ('done', 'error') OR updated_at > now() - interval '1 hour')
+       ORDER BY updated_at DESC`,
+      [venueSlug]
+    );
+    return res.status(200).json(result.rows.map(formatJob));
   } catch (e) {
-    console.error('[pipeline-status] Redis error:', e.message);
+    console.error('[pipeline-status] Database error:', e.message);
     return res.status(500).json({ error: 'Failed to fetch pipeline status' });
-  } finally {
-    await redis.quit().catch(() => {});
   }
+}
+
+function formatJob(row) {
+  return {
+    jobId: row.id,
+    artistName: row.artist_name,
+    venueSlug: row.venue_slug,
+    status: row.status,
+    done: row.done,
+    total: row.total,
+    uploaded: row.uploaded,
+    failed: row.failed,
+    error: row.error,
+    updatedAt: new Date(row.updated_at).getTime(),
+  };
 }

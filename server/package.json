@@ -5,9 +5,15 @@
   "description": "Local video processing server — smart reframe + Mux upload",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "test": "node --test jobs/*.test.js"
   },
   "dependencies": {
-    "redis": "^5.12.1"
+    "@tensorflow-models/coco-ssd": "^2.2.3",
+    "@tensorflow/tfjs-backend-cpu": "^4.22.0",
+    "@tensorflow/tfjs-converter": "^4.22.0",
+    "@tensorflow/tfjs-core": "^4.22.0",
+    "jpeg-js": "^0.4.4",
+    "pg": "^8.23.1"
   }
 }
