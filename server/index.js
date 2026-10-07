@@ -65,20 +65,28 @@ function getMuxAuthForJob(job) {
 
 db.on('error', error => console.error('[Postgres] pool error:', error.message));
 await db.query('SELECT 1');
-console.log('[Postgres] Connected');
+const dbUrl = new URL(process.env.DATABASE_URL);
+console.log(`[Postgres] Connected to ${dbUrl.host}${dbUrl.pathname}`);
 
 const workerId = `${hostname()}:${process.pid}:${randomUUID()}`;
 const sleep = ms => new Promise(resolveSleep => setTimeout(resolveSleep, ms));
 console.log('[Server] Polling pipeline_jobs for work...\n');
+
+let idlePolls = 0;
 
 // ── Main loop — atomically claim a queued or expired-lease job ─────────
 while (true) {
   try {
     const job = await claimNextJob(db, workerId);
     if (!job) {
+      if (++idlePolls % 15 === 1) {
+        const { rows } = await db.query('SELECT status, count(*)::int AS n FROM pipeline_jobs GROUP BY status');
+        console.log('[Server] Idle. Jobs by status:', rows.length ? rows.map(r => `${r.status}=${r.n}`).join(' ') : 'none');
+      }
       await sleep(2000);
       continue;
     }
+    idlePolls = 0;
 
     console.log(`[Server] Job received: ${job.jobId} — "${job.artistName}" venue=${job.venueSlug || 'default'}`);
     const muxAuth = getMuxAuthForJob(job);
