@@ -11,9 +11,18 @@ async function getPersonDetector() {
     modelPromise = (async () => {
       const tfModule = await import('@tensorflow/tfjs-core');
       const tf = tfModule.default || tfModule;
-      await import('@tensorflow/tfjs-backend-cpu');
-      await tf.setBackend('cpu');
+      let backend = 'tensorflow';
+      try {
+        await import('@tensorflow/tfjs-node');
+        if (!(await tf.setBackend(backend))) throw new Error('Native TensorFlow backend unavailable');
+      } catch (error) {
+        backend = 'cpu';
+        await import('@tensorflow/tfjs-backend-cpu');
+        await tf.setBackend(backend);
+        console.warn('[Reframe] Native TensorFlow unavailable; using CPU backend:', error.message);
+      }
       await tf.ready();
+      console.log(`[Reframe] TensorFlow backend: ${tf.getBackend()}`);
       const cocoModule = await import('@tensorflow-models/coco-ssd');
       const cocoSsd = cocoModule.default || cocoModule;
       const model = await cocoSsd.load({ base: 'mobilenet_v2' });
