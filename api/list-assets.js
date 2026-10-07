@@ -1,4 +1,5 @@
 import { getWebSessionAuth } from './_venues.js';
+import { listThumbnailAssets } from './_thumbnails.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', 'https://local-assets.com');
@@ -50,6 +51,14 @@ export default async function handler(req, res) {
       allAssets.push(...data);
       if (data.length < 100) break;
       page++;
+    }
+    // Uploaded marketing thumbnails are plain images in Vercel Blob, not Mux assets
+    if (session.venueSlug) {
+      try {
+        allAssets.push(...await listThumbnailAssets(session.venueSlug));
+      } catch (e) {
+        console.error('[list-assets] thumbnail list failed:', e.message);
+      }
     }
     console.error('[list-assets] total assets returned:', allAssets.length);
     return res.status(200).json(allAssets);

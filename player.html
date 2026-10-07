@@ -380,7 +380,9 @@
 
         // ── THUMBNAIL GALLERY MODE ───────────────────────────────────────
         } else if (params.get('thumbs')) {
-            const pids = params.get('thumbs').split(',').filter(p => /^[a-zA-Z0-9_-]+$/.test(p));
+            // Each entry is a Vercel Blob image URL or a legacy Mux playback ID
+            const pids = params.get('thumbs').split(',').filter(p =>
+                /^[a-zA-Z0-9_-]+$/.test(p) || /^https:\/\/[a-z0-9]+\.public\.blob\.vercel-storage\.com\/[A-Za-z0-9._\/-]+$/.test(p));
             setTitle((title || 'Thumbnails') + ' — ' + pids.length + ' images');
             container.style.alignItems  = 'flex-start';
             container.style.paddingTop  = '2rem';
@@ -388,7 +390,7 @@
             gridHtml += '<p class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-4">' + pids.length + ' THUMBNAIL' + (pids.length !== 1 ? 'S' : '') + '</p>';
             gridHtml += '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">';
             for (let i = 0; i < pids.length; i++) {
-                const imgUrl = 'https://image.mux.com/' + encodeURIComponent(pids[i]) + '/thumbnail.png?width=1920';
+                const imgUrl = thumbImageUrl(pids[i]);
                 gridHtml += '<div class="group relative rounded-xl overflow-hidden border border-[#27272a] hover:border-[#39FF14]/50 transition-all cursor-pointer" data-pid="' + pids[i].replace(/"/g, '') + '" data-idx="' + i + '">';
                 gridHtml += '<img src="' + imgUrl + '" class="w-full aspect-video object-cover" alt="Thumbnail ' + (i + 1) + '" loading="lazy">';
                 gridHtml += '<div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">';
@@ -454,12 +456,16 @@
                 .catch(function() { window.open(url, '_blank'); });
         }
 
+        function thumbImageUrl(ref) {
+            return ref.startsWith('https://') ? ref : 'https://image.mux.com/' + encodeURIComponent(ref) + '/thumbnail.png?width=1920';
+        }
         function downloadThumbBlob(pid, idx) {
-            const url = 'https://image.mux.com/' + pid + '/thumbnail.png?width=1920';
+            const url = thumbImageUrl(pid);
+            const ext = /\.jpe?g$/i.test(url) ? 'jpg' : 'png';
             fetch(url).then(r => r.blob()).then(blob => {
                 const a = document.createElement('a');
                 a.href = URL.createObjectURL(blob);
-                a.download = 'Thumbnail_' + String(idx + 1).padStart(2, '0') + '.png';
+                a.download = 'Thumbnail_' + String(idx + 1).padStart(2, '0') + '.' + ext;
                 a.click();
                 URL.revokeObjectURL(a.href);
             }).catch(() => window.open(url, '_blank'));

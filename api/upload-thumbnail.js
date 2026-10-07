@@ -1,25 +1,34 @@
 import { put } from '@vercel/blob';
 import { getWebSessionAuth } from './_venues.js';
+import { thumbnailPrefix, encodeThumbPassthrough } from './_thumbnails.js';
 
 export const config = { api: { bodyParser: false } };
+
+// Detect the real image type from the file's magic bytes — never trust the client's Content-Type.
+function detectImageType(buf) {
+  if (buf.length >= 8 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47 &&
+      buf[4] === 0x0D && buf[5] === 0x0A && buf[6] === 0x1A && buf[7] === 0x0A) {
+    return { ext: 'png', contentType: 'image/png' };
+  }
+  if (buf.length >= 3 && buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF) {
+    return { ext: 'jpg', contentType: 'image/jpeg' };
+  }
+  return null;
+}
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', 'https://local-assets.com');
   res.setHeader('Access-Control-Allow-Methods', 'PUT,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Passthrough, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Passthrough, Authorization, X-User-Email');
   res.setHeader('Cache-Control', 'no-store');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const session = getWebSessionAuth(req);
-  if (!session?.muxAuth) {
+  if (!session?.muxAuth || !session.venueSlug) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
-  const auth = session.muxAuth;
 
-  const passthrough  = (req.headers['x-passthrough'] || req.query.passthrough || 'THUMB').toUpperCase();
-  const contentType  = req.headers['content-type'] || 'image/png';
-  const ext          = (contentType.includes('jpeg') || contentType.includes('jpg')) ? 'jpg' : 'png';
-  const filename     = `thumb_${Date.now()}.${ext}`;
+  const passthrough = (req.headers['x-passthrough'] || req.query.passthrough || 'THUMB').toUpperCase();
 
   try {
     // Read raw body
@@ -31,40 +40,23 @@ export default async function handler(req, res) {
     });
     if (!body.length) return res.status(400).json({ error: 'Empty body' });
 
-    // Store image in Vercel Blob
-    const blob = await put(`thumbnails/${filename}`, body, { access: 'public', contentType });
+    const type = detectImageType(body);
+    if (!type) return res.status(415).json({ error: 'Only PNG or JPEG images are supported' });
 
-    // Create Mux asset with thumbnail overlay
-    const muxRes = await fetch('https://api.mux.com/video/v1/assets', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: auth },
-      body: JSON.stringify({
-        inputs: [
-          { url: 'https://storage.googleapis.com/muxdemofiles/mux-video-intro.mp4' },
-          {
-            url: blob.url,
-            overlay_settings: {
-              vertical_align: 'top', horizontal_align: 'left',
-              width: '100%', height: '100%',
-            },
-          },
-        ],
-        playback_policy: ['public'],
-        passthrough,
-        name: passthrough + ' — ' + new Date().toLocaleDateString('en-GB', {
-          day: '2-digit', month: 'short', year: 'numeric'
-        }).toUpperCase(),
-        static_renditions: [{ resolution: 'highest' }],
-      }),
+    // Store the image itself in Vercel Blob. The passthrough tag is encoded into the
+    // pathname so list-assets can match it to its session without a database.
+    const pathname = `${thumbnailPrefix(session.venueSlug)}${encodeThumbPassthrough(passthrough)}__${Date.now()}.${type.ext}`;
+    const blob = await put(pathname, body, {
+      access: 'public',
+      contentType: type.contentType,
+      addRandomSuffix: true,
     });
 
-    const muxData = await muxRes.json();
-    if (!muxRes.ok) return res.status(muxRes.status).json({ error: muxData });
-
     return res.status(200).json({
-      blobUrl:    blob.url,
-      assetId:    muxData.data?.id,
-      playbackId: muxData.data?.playback_ids?.[0]?.id,
+      url:         blob.url,
+      pathname:    blob.pathname,
+      contentType: type.contentType,
+      passthrough,
     });
   } catch (e) {
     console.error('[upload-thumbnail]', e.message);

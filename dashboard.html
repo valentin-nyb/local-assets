@@ -280,11 +280,32 @@
             return d.toLocaleDateString('en-GB', { month: 'short', day: 'numeric', year: 'numeric' });
         }
 
+        // Marketing thumbnails are either plain images in Vercel Blob (meta.thumbnail_url)
+        // or legacy Mux assets, which only have a usable image once Mux marks them ready.
+        function thumbState(asset) {
+            if (asset.meta && asset.meta.thumbnail_url) return 'ready';
+            if (asset.status === 'errored') return 'errored';
+            var hasPid = asset.playback_ids && asset.playback_ids[0];
+            return asset.status === 'ready' && hasPid ? 'ready' : 'processing';
+        }
+        function thumbUrl(asset, width) {
+            if (asset.meta && asset.meta.thumbnail_url) return asset.meta.thumbnail_url;
+            if (thumbState(asset) !== 'ready') return null;
+            return 'https://image.mux.com/' + asset.playback_ids[0].id + '/thumbnail.png?width=' + (width || 1920);
+        }
+        function thumbFileName(url, idx) {
+            var ext = /\.jpe?g(\?|$)/i.test(url) ? 'jpg' : 'png';
+            return 'Thumbnail_' + String(idx).padStart(2, '0') + '.' + ext;
+        }
+        function escAttr(v) {
+            return String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+        }
+
         function dlThumbs(el) {
-            downloadAllThumbs(el.dataset.pids, el.dataset.title);
+            downloadAllThumbs(JSON.parse(el.dataset.urls), el.dataset.title);
         }
         function pvThumbs(el) {
-            var p = encodeURIComponent(el.dataset.pids);
+            var p = encodeURIComponent(JSON.parse(el.dataset.urls).join(','));
             var t = encodeURIComponent(el.dataset.title);
             window.open('/player.html?thumbs=' + p + '&title=' + t, '_blank');
         }
@@ -697,21 +718,23 @@
 
             function buildThumbHtml(thumbAssets, uid, asset, sessionName, sessionDate, masterAsset) {
                 var html = '';
-                var allPids = [];
-                var readyCount = 0;
+                var readyUrls = [];
                 var processingCount = 0;
+                var failedCount = 0;
                 for (var ti = 0; ti < thumbAssets.length; ti++) {
-                    var t = thumbAssets[ti];
-                    var tPid = t.asset.playback_ids && t.asset.playback_ids[0] ? t.asset.playback_ids[0].id : null;
-                    if (tPid) { allPids.push(tPid); readyCount++; }
-                    else { processingCount++; }
+                    var tState = thumbState(thumbAssets[ti].asset);
+                    if (tState === 'ready') readyUrls.push(thumbUrl(thumbAssets[ti].asset));
+                    else if (tState === 'errored') failedCount++;
+                    else processingCount++;
                 }
+                var readyCount = readyUrls.length;
                 var hasAny = thumbAssets.length > 0;
                 var canUploadMore = thumbAssets.length < 20;
                 var statusText;
                 if (hasAny) {
                     statusText = readyCount + ' UPLOADED';
                     if (processingCount > 0) statusText += ' / ' + processingCount + ' PROCESSING';
+                    if (failedCount > 0) statusText += ' / ' + failedCount + ' FAILED';
                     statusText = 'IN VAULT — ' + statusText;
                     if (canUploadMore) statusText += ' — TAP TO ADD';
                 } else {
@@ -742,26 +765,30 @@
                     html += '<div class="flex items-center gap-1.5 min-w-0 overflow-x-auto py-1" style="scrollbar-width:thin;max-width:42vw;">';
                     for (var pi = 0; pi < thumbAssets.length; pi++) {
                         var thumb = thumbAssets[pi].asset;
-                        var thumbPid = thumb.playback_ids && thumb.playback_ids[0] ? thumb.playback_ids[0].id : null;
-                        var previewUrl = thumb.meta && thumb.meta.thumbnail_url;
-                        if (!previewUrl && thumbPid) previewUrl = 'https://image.mux.com/' + thumbPid + '/thumbnail.png?width=180';
-                        if (!previewUrl) continue;
-                        var safePreviewUrl = String(previewUrl).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
-                        var previewAlt = String(thumbAssets[pi].label || 'Uploaded thumbnail').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
-                        html += '<a href="' + safePreviewUrl + '" target="_blank" rel="noopener" title="Preview ' + previewAlt + '" class="block flex-shrink-0 overflow-hidden rounded-md border border-zinc-700 hover:border-primary transition-colors" style="width:48px;height:48px;">';
-                        html += '<img src="' + safePreviewUrl + '" alt="' + previewAlt + '" loading="lazy" class="w-full h-full object-cover">';
+                        var state = thumbState(thumb);
+                        var previewAlt = escAttr(thumbAssets[pi].label || 'Uploaded thumbnail');
+                        if (state !== 'ready') {
+                            var failed = state === 'errored';
+                            html += '<div title="' + previewAlt + (failed ? ' — upload failed, please re-upload' : ' — processing') + '" class="flex-shrink-0 flex items-center justify-center rounded-md border ' + (failed ? 'border-red-500/60' : 'border-zinc-700') + ' bg-zinc-900/50" style="width:48px;height:48px;">';
+                            html += '<iconify-icon icon="' + (failed ? 'solar:danger-triangle-bold' : 'solar:hourglass-line-duotone') + '" class="' + (failed ? 'text-red-500' : 'text-zinc-500 animate-pulse') + ' text-base"></iconify-icon>';
+                            html += '</div>';
+                            continue;
+                        }
+                        html += '<a href="' + escAttr(thumbUrl(thumb)) + '" target="_blank" rel="noopener" title="Preview ' + previewAlt + '" class="relative flex-shrink-0 flex items-center justify-center overflow-hidden rounded-md border border-zinc-700 hover:border-primary transition-colors bg-zinc-900/50" style="width:48px;height:48px;">';
+                        html += '<iconify-icon icon="solar:gallery-minimalistic-bold" class="text-zinc-600 text-base"></iconify-icon>';
+                        html += '<img src="' + escAttr(thumbUrl(thumb, 180)) + '" alt="" loading="lazy" class="absolute inset-0 w-full h-full object-cover" onerror="this.remove()">';
                         html += '</a>';
                     }
                     html += '</div>';
                 }
                 html += '<div class="flex items-center gap-2 shrink-0">';
-                if (allPids.length > 0) {
-                    var pidsParam = allPids.join(',');
+                if (readyUrls.length > 0) {
+                    var urlsParam = escAttr(JSON.stringify(readyUrls));
                     var htmlTitle = sessionName.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
-                    html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download" data-pids="' + pidsParam + '" data-title="' + htmlTitle + '" onclick="dlThumbs(this)">';
+                    html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download" data-urls="' + urlsParam + '" data-title="' + htmlTitle + '" onclick="dlThumbs(this)">';
                     html += '<iconify-icon icon="solar:download-bold" class="text-primary"></iconify-icon>';
                     html += '</button>';
-                    html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Preview" data-pids="' + pidsParam + '" data-title="' + htmlTitle + '" onclick="pvThumbs(this)">';
+                    html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Preview" data-urls="' + urlsParam + '" data-title="' + htmlTitle + '" onclick="pvThumbs(this)">';
                     html += '<iconify-icon icon="solar:play-bold" class="text-primary"></iconify-icon>';
                     html += '</button>';
                 } else if (hasAny) {
@@ -1025,23 +1052,23 @@
                 if (pid && sr) verticalFiles.push({ url: 'https://stream.mux.com/' + pid + '/' + sr.name, filename: 'Vertical_' + String(i).padStart(2, '0') + '.' + sr.ext });
             }
 
-            // 4) THUMBNAILS — collect ALL with base key + numbered keys + D: dated keys, use image.mux.com
+            // 4) THUMBNAILS — collect ALL with base key + numbered keys + D: dated keys (Blob images or ready Mux assets)
             const baseThumbKey = name + ' // THUMB';
             const baseThumbs = lookupAll[baseThumbKey] || [];
             const seenThumbIds = {};
             let thumbIdx = 0;
             for (const t of baseThumbs) {
                 if (seenThumbIds[t.id]) continue;
-                const pid = t.playback_ids?.[0]?.id;
-                if (pid) { thumbFiles.push({ url: 'https://image.mux.com/' + pid + '/thumbnail.png?width=1920', filename: 'Thumbnail_' + String(thumbIdx).padStart(2, '0') + '.png' }); thumbIdx++; }
+                const url = thumbUrl(t);
+                if (url) { thumbFiles.push({ url, filename: thumbFileName(url, thumbIdx) }); thumbIdx++; }
                 seenThumbIds[t.id] = true;
             }
             // D: dated base key
             const datedThumbs = lookupAll[baseThumbKey + ' // D:' + sessionDate] || [];
             for (const t of datedThumbs) {
                 if (seenThumbIds[t.id]) continue;
-                const pid = t.playback_ids?.[0]?.id;
-                if (pid) { thumbFiles.push({ url: 'https://image.mux.com/' + pid + '/thumbnail.png?width=1920', filename: 'Thumbnail_' + String(thumbIdx).padStart(2, '0') + '.png' }); thumbIdx++; }
+                const url = thumbUrl(t);
+                if (url) { thumbFiles.push({ url, filename: thumbFileName(url, thumbIdx) }); thumbIdx++; }
                 seenThumbIds[t.id] = true;
             }
             for (let i = 1; i <= 20; i++) {
@@ -1049,8 +1076,8 @@
                 const numberedThumbs = lookupAll[key] || [];
                 for (const t of numberedThumbs) {
                     if (seenThumbIds[t.id]) continue;
-                    const pid = t.playback_ids?.[0]?.id;
-                    if (pid) { thumbFiles.push({ url: 'https://image.mux.com/' + pid + '/thumbnail.png?width=1920', filename: 'Thumbnail_' + String(thumbIdx).padStart(2, '0') + '.png' }); thumbIdx++; }
+                    const url = thumbUrl(t);
+                    if (url) { thumbFiles.push({ url, filename: thumbFileName(url, thumbIdx) }); thumbIdx++; }
                     seenThumbIds[t.id] = true;
                 }
                 // D: dated numbered key
@@ -1058,8 +1085,8 @@
                 const datedNumbered = lookupAll[datedKey] || [];
                 for (const t of datedNumbered) {
                     if (seenThumbIds[t.id]) continue;
-                    const pid = t.playback_ids?.[0]?.id;
-                    if (pid) { thumbFiles.push({ url: 'https://image.mux.com/' + pid + '/thumbnail.png?width=1920', filename: 'Thumbnail_' + String(thumbIdx).padStart(2, '0') + '.png' }); thumbIdx++; }
+                    const url = thumbUrl(t);
+                    if (url) { thumbFiles.push({ url, filename: thumbFileName(url, thumbIdx) }); thumbIdx++; }
                     seenThumbIds[t.id] = true;
                 }
             }
@@ -1670,18 +1697,17 @@
         // Track uploaded asset info for download
         const uploadedAssets = {};
 
-        async function downloadAllThumbs(pidsStr, title) {
-            const pids = pidsStr.split(',').filter(Boolean);
-            if (!pids.length) return;
-            if (pids.length === 1) {
+        async function downloadAllThumbs(urls, title) {
+            if (!urls.length) return;
+            if (urls.length === 1) {
                 // Single thumbnail — direct blob download
-                const url = 'https://image.mux.com/' + pids[0] + '/thumbnail.png?width=1920';
+                const url = urls[0];
                 try {
                     const resp = await fetch(url);
                     const blob = await resp.blob();
                     const a = document.createElement('a');
                     a.href = URL.createObjectURL(blob);
-                    a.download = 'Thumbnail_01.png';
+                    a.download = thumbFileName(url, 1);
                     a.click();
                     URL.revokeObjectURL(a.href);
                 } catch (e) { window.open(url, '_blank'); }
@@ -1690,11 +1716,10 @@
             // Multiple — zip them
             const zip = new JSZip();
             const folder = zip.folder(title.replace(/[^a-zA-Z0-9_\- ]/g, '') + '_Thumbnails');
-            for (let i = 0; i < pids.length; i++) {
-                const url = 'https://image.mux.com/' + pids[i] + '/thumbnail.png?width=1920';
-                const resp = await fetch(url);
+            for (let i = 0; i < urls.length; i++) {
+                const resp = await fetch(urls[i]);
                 const blob = await resp.blob();
-                folder.file('Thumbnail_' + String(i + 1).padStart(2, '0') + '.png', blob);
+                folder.file(thumbFileName(urls[i], i + 1), blob);
             }
             const zipBlob = await zip.generateAsync({ type: 'blob' });
             const a = document.createElement('a');
