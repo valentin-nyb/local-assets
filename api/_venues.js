@@ -18,7 +18,20 @@ export function getVenuesConfig() {
   }
 }
 
-// Returns the first venue whose `emails` array contains the given email.
+// Env-var key for a venue slug, e.g. "the-nest" → "THE_NEST"
+function venueEnvKey(slug) {
+  return slug ? slug.toUpperCase().replace(/[^A-Z0-9]+/g, '_') : '';
+}
+
+// Login emails for a venue: its `emails` array plus the comma-separated
+// <SLUG>_EMAILS env var, so access can be granted without rewriting VENUES_CONFIG.
+function venueEmails(slug, cfg) {
+  const fromEnv = (process.env[`${venueEnvKey(slug)}_EMAILS`] || '').split(',');
+  return [...(Array.isArray(cfg.emails) ? cfg.emails : []), ...fromEnv]
+    .map(e => String(e).toLowerCase().trim()).filter(Boolean);
+}
+
+// Returns the first venue whose emails (see venueEmails) contain the given email.
 // Fallback: if the email is in the ADMIN_EMAILS env var, returns the first
 // venue that has Mux credentials (enables admin accounts not listed in VENUES_CONFIG).
 export function findVenueByEmail(email) {
@@ -28,7 +41,7 @@ export function findVenueByEmail(email) {
 
   // Priority 1: explicit listing in a venue's emails array
   for (const [slug, cfg] of Object.entries(venues)) {
-    if (Array.isArray(cfg.emails) && cfg.emails.some(e => e.toLowerCase() === lower)) {
+    if (venueEmails(slug, cfg).includes(lower)) {
       console.log('[_venues] findVenueByEmail: matched via emails[]', lower, '→', slug);
       return { slug, ...cfg };
     }
@@ -57,13 +70,13 @@ export function findVenueByEmail(email) {
 // NEVER falls back to global env vars — if a venue has no explicit Mux creds, returns null.
 // This enforces strict per-venue isolation: a client can only ever see their own assets.
 export function getMuxAuthForVenue(venue) {
-  const venueEnvKey = venue?.slug?.toUpperCase().replace(/[^A-Z0-9]+/g, '_');
+  const envKey = venueEnvKey(venue?.slug);
   const id = (
-    (venueEnvKey && process.env[`${venueEnvKey}_MUX_TOKEN_ID`]) ||
+    (envKey && process.env[`${envKey}_MUX_TOKEN_ID`]) ||
     venue?.mux_token_id || ''
   ).trim();
   const secret = (
-    (venueEnvKey && process.env[`${venueEnvKey}_MUX_TOKEN_SECRET`]) ||
+    (envKey && process.env[`${envKey}_MUX_TOKEN_SECRET`]) ||
     venue?.mux_token_secret || ''
   ).trim();
   if (!id || !secret) return null;
