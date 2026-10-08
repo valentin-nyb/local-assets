@@ -50,14 +50,20 @@ export default async function handler(req, res) {
 
     // Total all-time views via Data API (youtube.readonly scope — no restricted scope needed)
     let totalViews = 0;
+    let channel = null;
     const channelRes = await fetch(
-      `https://www.googleapis.com/youtube/v3/channels?part=statistics&mine=true`,
+      `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true`,
       { headers: authHeader, ...timeout }
     );
     if (channelRes.ok) {
       const channelData = await channelRes.json();
-      const stats = channelData.items?.[0]?.statistics;
+      const item  = channelData.items?.[0];
+      const stats = item?.statistics;
       if (stats) totalViews = Number(stats.viewCount) || 0;
+      if (item) channel = {
+        title:  item.snippet?.title || '',
+        videos: Number(stats?.videoCount) || 0,
+      };
       console.log('[youtube-revenue] channel stats:', stats);
     } else {
       const err = await channelRes.json().catch(() => ({}));
@@ -71,6 +77,7 @@ export default async function handler(req, res) {
       connected: true,
       revenue:   Math.round(revenue * 100) / 100,
       views:     totalViews,
+      channel,
       currency:  'GBP',
     });
   } finally {

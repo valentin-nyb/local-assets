@@ -119,7 +119,7 @@ export default async function handler(req, res) {
       ${venue?.name
         ? `localStorage.setItem('la_venue_name', ${JSON.stringify(venue.name.toUpperCase())});`
         : `localStorage.removeItem('la_venue_name');`}
-      localStorage.removeItem('la_revenue_cache');
+      localStorage.removeItem('la_revenue_cache_v2');
       window.location.href = '/dashboard';
     </script></body></html>`);
 
