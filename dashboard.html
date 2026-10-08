@@ -301,74 +301,104 @@
             return String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
         }
 
-        // ── Vertical clip preview popup ──────────────────────────────────
-        var _clipModal = { pids: [], idx: 0, title: '' };
+        function toggleInlineAudio(id) {
+            var p = document.getElementById(id);
+            if (!p) return;
+            if (p.paused) p.play(); else p.pause();
+        }
+
+        // ── Media preview popup (vertical clips + marketing thumbnails) ─
+        var _mediaModal = { items: [], idx: 0, title: '' };
 
         function openClipModal(el) {
-            _clipModal.pids  = el.dataset.pids.split(',').filter(Boolean);
-            _clipModal.idx   = parseInt(el.dataset.idx, 10) || 0;
-            _clipModal.title = el.dataset.title || 'Clip';
-            var modal = document.getElementById('clip-modal');
+            var pids = el.dataset.pids.split(',').filter(Boolean);
+            openMediaModal(pids.map(function(pid) { return { kind: 'video', pid: pid }; }), el.dataset.idx, el.dataset.title || 'Clip');
+        }
+        function openThumbModal(el) {
+            var urls = JSON.parse(el.dataset.urls || '[]');
+            openMediaModal(urls.map(function(url) { return { kind: 'image', url: url }; }), el.dataset.idx, el.dataset.title || 'Thumbnail');
+        }
+        function openMediaModal(items, idx, title) {
+            if (!items.length) return;
+            _mediaModal.items = items;
+            _mediaModal.idx   = Math.min(Math.max(parseInt(idx, 10) || 0, 0), items.length - 1);
+            _mediaModal.title = title;
+            var modal = document.getElementById('media-modal');
             if (!modal) {
                 modal = document.createElement('div');
-                modal.id = 'clip-modal';
-                modal.className = 'fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4';
+                modal.id = 'media-modal';
+                modal.className = 'fixed inset-0 flex items-center justify-center p-4';
+                modal.style.cssText = 'z-index:2147483000;background:rgba(0,0,0,.9);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);isolation:isolate;';
                 modal.innerHTML =
-                    '<div class="relative flex items-center gap-3" onclick="event.stopPropagation()">' +
-                        '<button id="clip-prev" class="w-10 h-10 shrink-0 flex items-center justify-center rounded-full border border-zinc-700 text-zinc-300 hover:border-primary hover:text-primary transition-colors" title="Previous" onclick="stepClipModal(-1)"><iconify-icon icon="solar:alt-arrow-left-linear"></iconify-icon></button>' +
-                        '<div class="flex flex-col gap-3">' +
+                    '<div class="relative flex items-center gap-3 max-w-full" onclick="event.stopPropagation()">' +
+                        '<button id="media-prev" class="w-10 h-10 shrink-0 flex items-center justify-center rounded-full border border-zinc-700 text-zinc-300 hover:border-primary hover:text-primary transition-colors" title="Previous" onclick="stepMediaModal(-1)"><iconify-icon icon="solar:alt-arrow-left-linear"></iconify-icon></button>' +
+                        '<div class="flex flex-col gap-3 min-w-0">' +
                             '<div class="flex items-center justify-between gap-4">' +
-                                '<p id="clip-modal-title" class="text-[10px] font-mono uppercase tracking-widest text-zinc-400 truncate"></p>' +
+                                '<p id="media-modal-title" class="text-[10px] font-mono uppercase tracking-widest text-zinc-400 truncate"></p>' +
                                 '<div class="flex items-center gap-2 shrink-0">' +
-                                    '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 text-primary transition-colors" title="Download" onclick="downloadClipModal()"><iconify-icon icon="solar:download-bold"></iconify-icon></button>' +
-                                    '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-zinc-300 transition-colors" title="Close (Esc)" onclick="closeClipModal()"><iconify-icon icon="solar:close-circle-linear" class="text-lg"></iconify-icon></button>' +
+                                    '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 text-primary transition-colors" title="Download" onclick="downloadMediaModal()"><iconify-icon icon="solar:download-bold"></iconify-icon></button>' +
+                                    '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-zinc-300 transition-colors" title="Close (Esc)" onclick="closeMediaModal()"><iconify-icon icon="solar:close-circle-linear" class="text-lg"></iconify-icon></button>' +
                                 '</div>' +
                             '</div>' +
-                            '<div class="overflow-hidden rounded-xl border border-zinc-800 bg-black" style="height:min(78vh, calc((100vw - 140px) * 16 / 9));aspect-ratio:9/16;">' +
-                                '<mux-player id="clip-modal-player" stream-type="on-demand" accent-color="#39FF14" autoplay style="width:100%;height:100%;--media-object-fit:contain;"></mux-player>' +
-                            '</div>' +
+                            '<div id="media-modal-stage" class="overflow-hidden rounded-xl border border-zinc-800 bg-black flex items-center justify-center"></div>' +
                         '</div>' +
-                        '<button id="clip-next" class="w-10 h-10 shrink-0 flex items-center justify-center rounded-full border border-zinc-700 text-zinc-300 hover:border-primary hover:text-primary transition-colors" title="Next" onclick="stepClipModal(1)"><iconify-icon icon="solar:alt-arrow-right-linear"></iconify-icon></button>' +
+                        '<button id="media-next" class="w-10 h-10 shrink-0 flex items-center justify-center rounded-full border border-zinc-700 text-zinc-300 hover:border-primary hover:text-primary transition-colors" title="Next" onclick="stepMediaModal(1)"><iconify-icon icon="solar:alt-arrow-right-linear"></iconify-icon></button>' +
                     '</div>';
-                modal.addEventListener('click', closeClipModal);
+                modal.addEventListener('click', closeMediaModal);
                 document.body.appendChild(modal);
                 document.addEventListener('keydown', function(e) {
-                    if (!document.getElementById('clip-modal') || document.getElementById('clip-modal').classList.contains('hidden')) return;
-                    if (e.key === 'Escape') closeClipModal();
-                    if (e.key === 'ArrowRight') stepClipModal(1);
-                    if (e.key === 'ArrowLeft') stepClipModal(-1);
+                    var m = document.getElementById('media-modal');
+                    if (!m || m.classList.contains('hidden')) return;
+                    if (e.key === 'Escape') closeMediaModal();
+                    if (e.key === 'ArrowRight') stepMediaModal(1);
+                    if (e.key === 'ArrowLeft') stepMediaModal(-1);
                 });
             }
             modal.classList.remove('hidden');
             document.body.style.overflow = 'hidden';
-            showClipModalClip();
+            showMediaModalItem();
         }
-        function showClipModalClip() {
-            var n = _clipModal.pids.length;
-            var player = document.getElementById('clip-modal-player');
-            player.setAttribute('playback-id', _clipModal.pids[_clipModal.idx]);
-            document.getElementById('clip-modal-title').textContent =
-                _clipModal.title + ' — ' + String(_clipModal.idx + 1).padStart(2, '0') + ' / ' + String(n).padStart(2, '0');
-            document.getElementById('clip-prev').style.visibility = n > 1 ? 'visible' : 'hidden';
-            document.getElementById('clip-next').style.visibility = n > 1 ? 'visible' : 'hidden';
+        function showMediaModalItem() {
+            var n = _mediaModal.items.length;
+            var item = _mediaModal.items[_mediaModal.idx];
+            var stage = document.getElementById('media-modal-stage');
+            if (item.kind === 'video') {
+                stage.style.cssText = 'height:min(78vh, calc((100vw - 140px) * 16 / 9));aspect-ratio:9/16;';
+                stage.innerHTML = '<mux-player stream-type="on-demand" accent-color="#39FF14" autoplay style="width:100%;height:100%;--media-object-fit:contain;"></mux-player>';
+                stage.firstChild.setAttribute('playback-id', item.pid);
+            } else {
+                stage.style.cssText = 'max-height:80vh;max-width:calc(100vw - 140px);';
+                var img = document.createElement('img');
+                img.src = item.url;
+                img.alt = _mediaModal.title;
+                img.style.cssText = 'display:block;max-height:80vh;max-width:calc(100vw - 140px);object-fit:contain;';
+                stage.innerHTML = '';
+                stage.appendChild(img);
+            }
+            document.getElementById('media-modal-title').textContent =
+                _mediaModal.title + ' — ' + String(_mediaModal.idx + 1).padStart(2, '0') + ' / ' + String(n).padStart(2, '0');
+            document.getElementById('media-prev').style.visibility = n > 1 ? 'visible' : 'hidden';
+            document.getElementById('media-next').style.visibility = n > 1 ? 'visible' : 'hidden';
         }
-        function stepClipModal(dir) {
-            var n = _clipModal.pids.length;
-            _clipModal.idx = (_clipModal.idx + dir + n) % n;
-            showClipModalClip();
+        function stepMediaModal(dir) {
+            var n = _mediaModal.items.length;
+            _mediaModal.idx = (_mediaModal.idx + dir + n) % n;
+            showMediaModalItem();
         }
-        function closeClipModal() {
-            var modal = document.getElementById('clip-modal');
+        function closeMediaModal() {
+            var modal = document.getElementById('media-modal');
             if (!modal) return;
-            var player = document.getElementById('clip-modal-player');
-            if (player && player.pause) player.pause();
+            document.getElementById('media-modal-stage').innerHTML = '';  // stops playback
             modal.classList.add('hidden');
             document.body.style.overflow = '';
         }
-        function downloadClipModal() {
-            var pid = _clipModal.pids[_clipModal.idx];
-            var url = 'https://stream.mux.com/' + pid + '/highest.mp4';
-            var name = _clipModal.title.replace(/[^a-z0-9 _-]/gi, '') + '_' + String(_clipModal.idx + 1).padStart(2, '0') + '.mp4';
+        function downloadMediaModal() {
+            var item = _mediaModal.items[_mediaModal.idx];
+            var num  = _mediaModal.idx + 1;
+            var url  = item.kind === 'video' ? 'https://stream.mux.com/' + item.pid + '/highest.mp4' : item.url;
+            var name = item.kind === 'video'
+                ? _mediaModal.title.replace(/[^a-z0-9 _-]/gi, '') + '_' + String(num).padStart(2, '0') + '.mp4'
+                : thumbFileName(url, num);
             fetch(url).then(function(r) { if (!r.ok) throw new Error(r.status); return r.blob(); }).then(function(blob) {
                 var a = document.createElement('a');
                 a.href = URL.createObjectURL(blob);
@@ -380,11 +410,6 @@
 
         function dlThumbs(el) {
             downloadAllThumbs(JSON.parse(el.dataset.urls), el.dataset.title);
-        }
-        function pvThumbs(el) {
-            var p = encodeURIComponent(JSON.parse(el.dataset.urls).join(','));
-            var t = encodeURIComponent(el.dataset.title);
-            window.open('/player.html?thumbs=' + p + '&title=' + t, '_blank');
         }
 
         function formatSizeReadable(bytes) {
@@ -614,7 +639,7 @@
                         html += '<button id="dl-btn-' + uid + '" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download" onclick="singleZipDownload(\'' + pid + '\', \'' + dlFile + '\', \'' + dlExt + '\', \'' + safeLabel + '\', \'' + safeName + '\', \'' + sessionDate + '\', this)">';
                         html += '<iconify-icon icon="solar:download-bold" class="text-primary"></iconify-icon>';
                         html += '</button>';
-                        html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Play" onclick="window.open(\'/player.html?v=' + pid + '&f=' + dlFile + '&title=\' + encodeURIComponent(\'' + safeLabel + '\'), \'_blank\')">';
+                        html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Play" onclick="' + (isAudioAsset ? 'toggleInlineAudio(\'aud-' + uid + '\')' : 'window.open(\'/player.html?v=' + pid + '&f=' + dlFile + '&title=\' + encodeURIComponent(\'' + safeLabel + '\'), \'_blank\')') + '">';
                         html += '<iconify-icon icon="solar:play-bold" class="text-primary"></iconify-icon>';
                         html += '</button>';
                         if (isMasterAsset) {
@@ -630,7 +655,7 @@
                     } else if (pid) {
                         // Streamable now; the downloadable MP4 is still being generated by Mux
                         html += '<span class="text-[8px] font-mono text-yellow-500 uppercase" data-pending-asset>MP4 PREPARING</span>';
-                        html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Play (stream)" onclick="window.open(\'/player.html?v=' + pid + '&title=\' + encodeURIComponent(\'' + safeLabel + '\'), \'_blank\')">';
+                        html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Play (stream)" onclick="' + (isAudioAsset ? 'toggleInlineAudio(\'aud-' + uid + '\')' : 'window.open(\'/player.html?v=' + pid + '&title=\' + encodeURIComponent(\'' + safeLabel + '\'), \'_blank\')') + '">';
                         html += '<iconify-icon icon="solar:play-bold" class="text-primary"></iconify-icon>';
                         html += '</button>';
                     } else {
@@ -638,6 +663,14 @@
                     }
                     html += '</div>';
                     html += '</div>';
+                    if (isAudioAsset && pid) {
+                        var accentA = document.documentElement.classList.contains('dark') ? '#39FF14' : '#F97316';
+                        html += '<div class="pl-16 pr-4 pb-4" style="border-left: 2px solid ' + accentA + ';">';
+                        html += '<div class="rounded-md overflow-hidden" style="background:#0a0a0a;border:1px solid #27272a;">';
+                        html += '<mux-player id="aud-' + uid + '" audio playback-id="' + pid + '" stream-type="on-demand" accent-color="' + accentA + '" primary-color="#e4e4e7" secondary-color="#0a0a0a" style="display:block;width:100%;"></mux-player>';
+                        html += '</div>';
+                        html += '</div>';
+                    }
                 } else {
                     html += '<div class="p-4 pl-16 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-' + uid + '">';
                     if (asset.type === 'MASTER') {
@@ -824,7 +857,12 @@
                 }
                 var label = hasAny ? 'Marketing Thumbnails (' + thumbAssets.length + ')' : asset.label;
                 var safeName = sessionName.replace(/'/g, "\\'");
-                html += '<div class="p-4 pl-16 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-' + uid + '"' + (hasAny ? ' style="border-left: 2px solid ' + (document.documentElement.classList.contains('dark') ? '#39FF14' : '#F97316') + ';"' : '') + '>';
+                var accent = document.documentElement.classList.contains('dark') ? '#39FF14' : '#F97316';
+                var htmlTitle = escAttr(sessionName + ' MARKETING THUMBNAILS');
+                var urlsParam = escAttr(JSON.stringify(readyUrls));
+                html += '<div id="row-' + uid + '"' + (hasAny ? ' style="border-left: 2px solid ' + accent + ';"' : '') + '>';
+                // Header row: label + upload, download/preview buttons
+                html += '<div class="p-4 pl-16 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset">';
                 if (canUploadMore) {
                     html += '<label class="flex items-center gap-4 cursor-pointer flex-1 min-w-0">';
                 } else {
@@ -843,52 +881,61 @@
                 } else {
                     html += '</div>';
                 }
-                if (hasAny) {
-                    html += '<div class="flex items-center gap-1.5 min-w-0 overflow-x-auto py-1" style="scrollbar-width:thin;max-width:42vw;">';
-                    for (var pi = 0; pi < thumbAssets.length; pi++) {
-                        var thumb = thumbAssets[pi].asset;
-                        var state = thumbState(thumb);
-                        var previewAlt = escAttr(thumbAssets[pi].label || 'Uploaded thumbnail');
-                        if (state !== 'ready') {
-                            var failed = state === 'errored';
-                            html += '<div title="' + previewAlt + (failed ? ' — upload failed, please re-upload' : ' — processing') + '" class="flex-shrink-0 flex items-center justify-center rounded-md border ' + (failed ? 'border-red-500/60' : 'border-zinc-700') + ' bg-zinc-900/50" style="width:48px;height:48px;">';
-                            html += '<iconify-icon icon="' + (failed ? 'solar:danger-triangle-bold' : 'solar:hourglass-line-duotone') + '" class="' + (failed ? 'text-red-500' : 'text-zinc-500 animate-pulse') + ' text-base"></iconify-icon>';
-                            html += '</div>';
-                            continue;
-                        }
-                        html += '<a href="' + escAttr(thumbUrl(thumb)) + '" target="_blank" rel="noopener" title="Preview ' + previewAlt + '" class="relative flex-shrink-0 flex items-center justify-center overflow-hidden rounded-md border border-zinc-700 hover:border-primary transition-colors bg-zinc-900/50" style="width:48px;height:48px;">';
-                        html += '<iconify-icon icon="solar:gallery-minimalistic-bold" class="text-zinc-600 text-base"></iconify-icon>';
-                        html += '<img src="' + escAttr(thumbUrl(thumb, 180)) + '" alt="" loading="lazy" class="absolute inset-0 w-full h-full object-cover" onerror="this.remove()">';
-                        html += '</a>';
-                    }
-                    html += '</div>';
-                }
                 html += '<div class="flex items-center gap-2 shrink-0">';
                 if (readyUrls.length > 0) {
-                    var urlsParam = escAttr(JSON.stringify(readyUrls));
-                    var htmlTitle = sessionName.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
-                    html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download" data-urls="' + urlsParam + '" data-title="' + htmlTitle + '" onclick="dlThumbs(this)">';
+                    html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download" data-urls="' + urlsParam + '" data-title="' + escAttr(sessionName) + '" onclick="dlThumbs(this)">';
                     html += '<iconify-icon icon="solar:download-bold" class="text-primary"></iconify-icon>';
                     html += '</button>';
-                    html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Preview" data-urls="' + urlsParam + '" data-title="' + htmlTitle + '" onclick="pvThumbs(this)">';
+                    html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Preview" data-urls="' + urlsParam + '" data-idx="0" data-title="' + htmlTitle + '" onclick="openThumbModal(this)">';
                     html += '<iconify-icon icon="solar:play-bold" class="text-primary"></iconify-icon>';
                     html += '</button>';
-                } else if (hasAny) {
-                    html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors opacity-30" disabled title="Processing">';
+                } else {
+                    var dim = hasAny ? 'opacity-30' : 'opacity-10';
+                    var why = hasAny ? 'Processing' : 'No file yet';
+                    html += '<button class="w-8 h-8 flex items-center justify-center rounded-full transition-colors ' + dim + '"' + (hasAny ? '' : ' id="dl-' + uid + '"') + ' disabled title="' + why + '">';
                     html += '<iconify-icon icon="solar:download-bold" class="text-zinc-500"></iconify-icon>';
                     html += '</button>';
-                    html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors opacity-30" disabled title="Processing">';
+                    html += '<button class="w-8 h-8 flex items-center justify-center rounded-full transition-colors ' + dim + '" disabled title="' + why + '">';
                     html += '<iconify-icon icon="solar:play-bold" class="text-zinc-500"></iconify-icon>';
-                    html += '</button>';
-                } else {
-                    html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors opacity-10" id="dl-' + uid + '" disabled title="No file yet">';
-                    html += '<iconify-icon icon="solar:download-bold" class="text-zinc-700"></iconify-icon>';
-                    html += '</button>';
-                    html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors opacity-10" disabled title="No file yet">';
-                    html += '<iconify-icon icon="solar:play-bold" class="text-zinc-700"></iconify-icon>';
                     html += '</button>';
                 }
                 html += '</div>';
+                html += '</div>';
+
+                // Strip of thumbnails under the header, like the Social Pack verticals
+                if (hasAny) {
+                    html += '<div class="pl-16 pr-4 pb-4">';
+                    html += '<div class="flex overflow-x-auto" style="gap:4px;scrollbar-width:thin;scrollbar-color:#27272a transparent;padding-bottom:6px;">';
+                    for (var pi = 0; pi < thumbAssets.length; pi++) {
+                        var thumb = thumbAssets[pi].asset;
+                        var state = thumbState(thumb);
+                        var num = String(pi + 1).padStart(2, '0');
+                        var tileStyle = 'width:128px;aspect-ratio:16/9;background:#0a0a0a;border:1px solid #27272a;';
+                        html += '<div class="flex-shrink-0 flex flex-col items-center gap-1" style="width:128px">';
+                        if (state !== 'ready') {
+                            var failed = state === 'errored';
+                            html += '<div title="' + (failed ? 'Upload failed — please re-upload' : 'Processing') + '" class="flex items-center justify-center rounded-md w-full" style="' + tileStyle + (failed ? 'border-color:rgba(239,68,68,.6);' : '') + '">';
+                            html += '<iconify-icon icon="' + (failed ? 'solar:danger-triangle-bold' : 'solar:hourglass-line-duotone') + '" class="' + (failed ? 'text-red-500' : 'text-zinc-500 animate-pulse') + ' text-lg"></iconify-icon>';
+                            html += '</div>';
+                        } else {
+                            var fullUrl = thumbUrl(thumb);
+                            html += '<div class="relative overflow-hidden rounded-md group/thumb cursor-pointer w-full flex items-center justify-center" style="' + tileStyle + '" data-urls="' + urlsParam + '" data-idx="' + readyUrls.indexOf(fullUrl) + '" data-title="' + htmlTitle + '" onclick="openThumbModal(this)">';
+                            html += '<iconify-icon icon="solar:gallery-minimalistic-bold" class="text-zinc-700 text-lg"></iconify-icon>';
+                            html += '<img src="' + escAttr(thumbUrl(thumb, 480)) + '" alt="" loading="lazy" class="absolute inset-0 w-full h-full object-cover" style="opacity:.9;" onerror="this.remove()">';
+                            html += '<div class="absolute inset-0 flex items-end justify-center pb-2 opacity-0 group-hover/thumb:opacity-100 transition-opacity">';
+                            html += '<div class="flex items-center gap-1 px-2 py-0.5 rounded-full" style="background:' + accent + '">';
+                            html += '<iconify-icon icon="solar:eye-bold" class="text-black" style="font-size:9px"></iconify-icon>';
+                            html += '<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;color:#000;font-weight:700">VIEW</span>';
+                            html += '</div>';
+                            html += '</div>';
+                            html += '</div>';
+                        }
+                        html += '<span class="font-mono uppercase" style="font-size:8px;color:' + (state === 'errored' ? '#ef4444' : accent) + '">' + num + '</span>';
+                        html += '</div>';
+                    }
+                    html += '</div>';
+                    html += '</div>';
+                }
                 html += '</div>';
                 return html;
             }
@@ -1035,7 +1082,11 @@
             // Re-check while Mux is still processing an asset or generating its MP4
             clearTimeout(window._pendingAssetTimer);
             if (container.querySelector('[data-pending-asset]')) {
-                window._pendingAssetTimer = setTimeout(function() { fetchRecentUploads(); }, 15000);
+                window._pendingAssetTimer = setTimeout(function refreshWhenIdle() {
+                    var playing = Array.prototype.some.call(container.querySelectorAll('mux-player'), function(p) { return p.paused === false; });
+                    if (playing) { window._pendingAssetTimer = setTimeout(refreshWhenIdle, 15000); return; }
+                    fetchRecentUploads();
+                }, 15000);
             }
 
             // Auto-expand the pipeline artist folder + its latest date section
