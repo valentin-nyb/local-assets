@@ -62,6 +62,7 @@ export default async function handler(req, res) {
       if (stats) totalViews = Number(stats.viewCount) || 0;
       if (item) channel = {
         title:  item.snippet?.title || '',
+        avatar: item.snippet?.thumbnails?.default?.url || '',
         videos: Number(stats?.videoCount) || 0,
       };
       console.log('[youtube-revenue] channel stats:', stats);

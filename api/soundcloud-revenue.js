@@ -26,6 +26,19 @@ export default async function handler(req, res) {
 
     const { access_token } = JSON.parse(raw);
 
+    // Account shown in the Connect Platforms panel
+    let account = null;
+    try {
+      const me = await fetch('https://api.soundcloud.com/me', {
+        headers: { Authorization: `OAuth ${access_token}`, Accept: 'application/json' },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (me.ok) {
+        const u = await me.json();
+        account = { name: u.username || u.full_name || '', avatar: u.avatar_url || '', tracks: Number(u.track_count) || 0 };
+      }
+    } catch (_) {}
+
     let totalPlays = 0;
     let nextUrl = 'https://api.soundcloud.com/me/tracks?limit=200&linked_partitioning=true';
     let pages = 0;
@@ -43,7 +56,7 @@ export default async function handler(req, res) {
     }
 
     const estimatedRevenue = Math.round(totalPlays * GBP_PER_PLAY * 100) / 100;
-    return res.status(200).json({ connected: true, plays: totalPlays, estimatedRevenue, currency: 'GBP' });
+    return res.status(200).json({ connected: true, plays: totalPlays, estimatedRevenue, account, currency: 'GBP' });
   } finally {
     await redis.quit();
   }

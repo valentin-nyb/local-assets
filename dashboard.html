@@ -1473,16 +1473,11 @@
             if (ytIndicator) { ytIndicator.classList.toggle('hidden', !ytConnected); if (ytConnected) ytIndicator.classList.add('flex'); }
             if (ytLabel && ytConnected)
                 ytLabel.textContent = '£' + ytRevenue.toFixed(2) + ' · ' + Number(data.yt?.views || 0).toLocaleString() + ' views';
-            // Show which YouTube channel is connected (youtube.readonly)
-            var ytSub = document.getElementById('yt-modal-sub');
-            if (ytSub) {
-                var ch = data.yt && data.yt.channel;
-                ytSub.textContent = ytConnected && ch
-                    ? (ch.title || 'Connected') + ' · ' + Number(data.yt.views || 0).toLocaleString() + ' views · ' + ch.videos.toLocaleString() + ' videos'
-                    : 'Uploads & channel stats';
-                ytSub.style.color = ytConnected && ch ? '#a1a1aa' : '#52525b';
-                if (ytConnected && ch) ytSub.style.textTransform = 'none';
-            }
+            // Connected platforms panel: which account each platform is linked to (youtube.readonly etc.)
+            var ytCh = data.yt && data.yt.channel;
+            renderPlatformCard('yt', ytConnected, ytCh && { name: ytCh.title, avatar: ytCh.avatar, stats: [compactNum(data.yt.views) + ' views', compactNum(ytCh.videos) + ' videos'] });
+            var scAcc = data.sc && data.sc.account;
+            renderPlatformCard('sc', scConnected, scAcc && { name: scAcc.name, avatar: scAcc.avatar, stats: [compactNum(data.sc.plays) + ' plays', compactNum(scAcc.tracks) + ' tracks'] });
 
             // SoundCloud indicator
             if (scIndicator) { scIndicator.classList.toggle('hidden', !scConnected); if (scConnected) scIndicator.classList.add('flex'); }
@@ -1510,6 +1505,48 @@
             // Cache connected state for updateDistributionButtons()
             window._ytConnected = !!ytConnected;
             window._scConnected = !!scConnected;
+        }
+
+        function compactNum(n) {
+            n = Number(n) || 0;
+            return n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 0 : 1).replace(/\.0$/, '') + 'M'
+                 : n >= 1e3 ? (n / 1e3).toFixed(n >= 1e4 ? 0 : 1).replace(/\.0$/, '') + 'K'
+                 : String(n);
+        }
+
+        // Fill one platform card: status line, linked account row, or the description when not connected.
+        function renderPlatformCard(prefix, connected, account) {
+            var status = document.getElementById(prefix + '-status');
+            var row    = document.getElementById(prefix + '-account');
+            var desc   = document.getElementById(prefix + '-desc');
+            if (!status || !row || !desc) return;
+            status.textContent = connected ? 'Connected' : 'Not connected';
+            status.classList.toggle('on', !!connected);
+            desc.classList.toggle('hidden', !!connected);
+            row.classList.toggle('hidden', !connected);
+            if (!connected) { row.innerHTML = ''; return; }
+            var name = (account && account.name) || 'Connected account';
+            row.innerHTML = '';
+            var av;
+            if (account && account.avatar) {
+                av = document.createElement('img');
+                av.src = account.avatar; av.alt = ''; av.referrerPolicy = 'no-referrer';
+                av.onerror = function() { var f = document.createElement('div'); f.className = 'pm-avatar'; f.textContent = name.charAt(0).toUpperCase(); av.replaceWith(f); };
+            } else {
+                av = document.createElement('div');
+                av.textContent = name.charAt(0).toUpperCase();
+            }
+            av.className = 'pm-avatar';
+            var nm = document.createElement('div');
+            nm.className = 'pm-account-name';
+            nm.textContent = name;
+            nm.title = name;
+            var chips = document.createElement('div');
+            chips.className = 'pm-chips';
+            ((account && account.stats) || []).forEach(function(t) {
+                var c = document.createElement('span'); c.className = 'pm-chip'; c.textContent = t; chips.appendChild(c);
+            });
+            row.appendChild(av); row.appendChild(nm); row.appendChild(chips);
         }
 
         function openRevenueSettings() {
@@ -1704,14 +1741,20 @@
         }
 
         async function disconnectPlatform(platform, btn) {
+            var label = platform === 'youtube' ? 'YouTube' : 'SoundCloud';
+            if (!confirm('Disconnect ' + label + '? You won\'t be able to publish to it until you connect again.')) return;
             if (btn) { btn.disabled = true; btn.textContent = 'Disconnecting…'; }
             try {
                 const res  = await laFetch('/api/disconnect?platform=' + platform, { method: 'POST' });
                 const data = await res.json();
-                if (!res.ok) { _showRevenueModalError(data.error || 'Disconnect failed'); if (btn) { btn.disabled = false; btn.textContent = 'Disconnect'; } return; }
+                if (!res.ok) { _showRevenueModalError(data.error || 'Disconnect failed'); return; }
                 localStorage.removeItem('la_revenue_cache_v2');
                 await fetchRevenue();
-            } catch(e) { if (btn) { btn.disabled = false; btn.textContent = 'Disconnect'; } }
+            } catch(e) {
+                _showRevenueModalError('Disconnect failed — please try again');
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = 'Disconnect'; }
+            }
         }
 
         function updateDistributionButtons() {
@@ -2220,52 +2263,97 @@
         }
     </script>
 
-    <!-- Revenue connect modal -->
-    <div id="revenue-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
-        <div class="absolute inset-0" style="background:rgba(0,0,0,.75);backdrop-filter:blur(4px);" onclick="closeRevenueSettings()"></div>
-        <div class="relative rounded-2xl shadow-2xl" style="width:360px;max-width:92vw;padding:28px;background:#0d0d0d;border:1px solid #2a2a2a;color-scheme:dark;">
-            <!-- Header -->
-            <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;">
-                <span style="font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:700;color:#ffffff;text-transform:uppercase;letter-spacing:.2em;">Connect Platforms</span>
-                <button onclick="closeRevenueSettings()" style="flex-shrink:0;padding:4px;margin-left:16px;background:none;border:none;cursor:pointer;color:#71717a;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#71717a'">
-                    <iconify-icon icon="solar:close-square-linear" style="font-size:18px;display:block"></iconify-icon>
+    <!-- Connect platforms modal -->
+    <style>
+        #revenue-modal { --pm-bg:#0c0c0d; --pm-card:#121214; --pm-line:#232326; --pm-text:#fafafa; --pm-sub:#a1a1aa; --pm-dim:#71717a; --pm-chip:#1a1a1d; --pm-accent:#39FF14; }
+        html:not(.dark) #revenue-modal { --pm-bg:#ffffff; --pm-card:#fafafa; --pm-line:#e4e4e7; --pm-text:#09090b; --pm-sub:#52525b; --pm-dim:#71717a; --pm-chip:#f4f4f5; --pm-accent:#16a34a; }
+        #revenue-modal .pm-panel { width:440px; max-width:calc(100vw - 32px); background:var(--pm-bg); border:1px solid var(--pm-line); border-radius:16px; box-shadow:0 24px 80px rgba(0,0,0,.55); color:var(--pm-text); font-family:'Inter',sans-serif; }
+        #revenue-modal .pm-eyebrow { font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--pm-dim); }
+        #revenue-modal .pm-title { font-size:18px; font-weight:600; letter-spacing:-.01em; margin-top:6px; }
+        #revenue-modal .pm-lead { font-size:13px; line-height:1.5; color:var(--pm-sub); margin-top:4px; }
+        #revenue-modal .pm-close { width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; color:var(--pm-dim); background:none; border:none; cursor:pointer; transition:background .15s,color .15s; }
+        #revenue-modal .pm-close:hover { background:var(--pm-chip); color:var(--pm-text); }
+        #revenue-modal .pm-card { background:var(--pm-card); border:1px solid var(--pm-line); border-radius:12px; padding:16px; }
+        #revenue-modal .pm-logo { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+        #revenue-modal .pm-name { font-size:14px; font-weight:600; }
+        #revenue-modal .pm-status { display:inline-flex; align-items:center; gap:6px; font-size:11px; color:var(--pm-dim); margin-top:2px; }
+        #revenue-modal .pm-status::before { content:''; width:6px; height:6px; border-radius:50%; background:var(--pm-line); }
+        #revenue-modal .pm-status.on { color:var(--pm-accent); }
+        #revenue-modal .pm-status.on::before { background:var(--pm-accent); box-shadow:0 0 0 3px color-mix(in srgb, var(--pm-accent) 20%, transparent); }
+        #revenue-modal .pm-connect { height:32px; padding:0 14px; border-radius:8px; border:none; background:var(--pm-text); color:var(--pm-bg); font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; transition:opacity .15s; }
+        #revenue-modal .pm-connect:hover { opacity:.85; }
+        #revenue-modal .pm-connect:disabled { opacity:.5; cursor:default; }
+        #revenue-modal .pm-disconnect { height:32px; padding:0 10px; border-radius:8px; border:1px solid transparent; background:none; color:var(--pm-sub); font-size:12px; cursor:pointer; white-space:nowrap; transition:color .15s,border-color .15s; }
+        #revenue-modal .pm-disconnect:hover { color:#ef4444; border-color:color-mix(in srgb, #ef4444 35%, transparent); }
+        #revenue-modal .pm-account { display:flex; align-items:center; gap:10px; margin-top:14px; padding-top:14px; border-top:1px solid var(--pm-line); min-width:0; }
+        #revenue-modal .pm-avatar { width:28px; height:28px; border-radius:50%; background:var(--pm-chip); flex-shrink:0; object-fit:cover; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; color:var(--pm-sub); }
+        #revenue-modal .pm-account-name { font-size:13px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; flex:1; }
+        #revenue-modal .pm-chips { display:flex; gap:6px; flex-shrink:0; }
+        #revenue-modal .pm-chip { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--pm-sub); background:var(--pm-chip); border-radius:6px; padding:3px 7px; white-space:nowrap; }
+        #revenue-modal .pm-desc { font-size:12px; line-height:1.5; color:var(--pm-dim); margin-top:12px; }
+        #revenue-modal .pm-foot { display:flex; align-items:flex-start; gap:8px; font-size:11px; line-height:1.5; color:var(--pm-dim); }
+        #revenue-modal .pm-foot a { color:var(--pm-sub); text-decoration:underline; text-underline-offset:2px; }
+        #revenue-modal .hidden { display:none !important; }
+        @media (max-width: 480px) {
+            #revenue-modal .pm-account { flex-wrap:wrap; row-gap:8px; }
+            #revenue-modal .pm-account-name { flex-basis:calc(100% - 38px); }
+            #revenue-modal .pm-chips { width:100%; padding-left:38px; }
+        }
+    </style>
+    <div id="revenue-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="pm-title">
+        <div class="absolute inset-0" style="background:rgba(0,0,0,.7);backdrop-filter:blur(6px);" onclick="closeRevenueSettings()"></div>
+        <div class="pm-panel relative">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:24px 24px 20px;">
+                <div>
+                    <div class="pm-eyebrow">Integrations</div>
+                    <div class="pm-title" id="pm-title">Connected platforms</div>
+                    <div class="pm-lead">Publish recordings to your channels and track how they perform.</div>
+                </div>
+                <button class="pm-close" onclick="closeRevenueSettings()" aria-label="Close">
+                    <iconify-icon icon="solar:close-circle-linear" style="font-size:20px;display:block"></iconify-icon>
                 </button>
             </div>
-            <p style="font-size:9px;font-family:'JetBrains Mono',monospace;color:#71717a;text-transform:uppercase;letter-spacing:.1em;margin-bottom:24px;">Connect to track revenue from your distributed content</p>
 
-            <!-- Platform rows -->
-            <div style="display:flex;flex-direction:column;gap:16px;">
+            <div style="display:flex;flex-direction:column;gap:12px;padding:0 24px;">
                 <!-- YouTube -->
-                <div style="display:flex;align-items:center;justify-content:space-between;">
+                <div class="pm-card">
                     <div style="display:flex;align-items:center;gap:12px;">
-                        <iconify-icon icon="mdi:youtube" style="color:#FF0000;font-size:24px;flex-shrink:0"></iconify-icon>
-                        <div>
-                            <div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:#ffffff;text-transform:uppercase;letter-spacing:.1em;">YouTube</div>
-                            <div id="yt-modal-sub" style="font-size:9px;font-family:'JetBrains Mono',monospace;color:#52525b;text-transform:uppercase;letter-spacing:.1em;">Uploads &amp; channel stats</div>
+                        <div class="pm-logo" style="background:rgba(255,0,0,.1);"><iconify-icon icon="mdi:youtube" style="color:#FF0000;font-size:22px"></iconify-icon></div>
+                        <div style="flex:1;min-width:0;">
+                            <div class="pm-name">YouTube</div>
+                            <div class="pm-status" id="yt-status">Not connected</div>
                         </div>
+                        <button id="yt-modal-btn" class="pm-connect" onclick="connectYouTube(this)">Connect</button>
+                        <button id="yt-modal-disconnect" class="pm-disconnect hidden" onclick="disconnectPlatform('youtube',this)">Disconnect</button>
                     </div>
-                    <button id="yt-modal-btn" onclick="connectYouTube(this)" style="padding:6px 16px;border-radius:9999px;border:1px solid #39FF14;background:#0a0a0a;color:#39FF14;font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s;" onmouseover="this.style.background='#39FF14';this.style.color='#000000'" onmouseout="this.style.background='#0a0a0a';this.style.color='#39FF14'">Connect</button>
-                    <button id="yt-modal-disconnect" onclick="disconnectPlatform('youtube',this)" class="hidden" style="padding:6px 16px;border-radius:9999px;border:1px solid #ef4444;background:#0a0a0a;color:#ef4444;font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s;" onmouseover="this.style.background='#ef4444';this.style.color='#ffffff'" onmouseout="this.style.background='#0a0a0a';this.style.color='#ef4444'">Disconnect</button>
+                    <div id="yt-account" class="pm-account hidden"></div>
+                    <div id="yt-desc" class="pm-desc">Upload recordings to your channel with one click and see channel views here.</div>
                 </div>
 
-                <!-- Divider -->
-                <div style="border-top:1px solid #1c1c1c;"></div>
-
                 <!-- SoundCloud -->
-                <div style="display:flex;align-items:center;justify-content:space-between;">
+                <div class="pm-card">
                     <div style="display:flex;align-items:center;gap:12px;">
-                        <iconify-icon icon="mdi:soundcloud" style="color:#FF5500;font-size:24px;flex-shrink:0"></iconify-icon>
-                        <div>
-                            <div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:#ffffff;text-transform:uppercase;letter-spacing:.1em;">SoundCloud</div>
-                            <div style="font-size:9px;font-family:'JetBrains Mono',monospace;color:#52525b;text-transform:uppercase;letter-spacing:.1em;">Plays & Streams</div>
+                        <div class="pm-logo" style="background:rgba(255,85,0,.1);"><iconify-icon icon="mdi:soundcloud" style="color:#FF5500;font-size:24px"></iconify-icon></div>
+                        <div style="flex:1;min-width:0;">
+                            <div class="pm-name">SoundCloud</div>
+                            <div class="pm-status" id="sc-status">Not connected</div>
                         </div>
+                        <button id="sc-modal-btn" class="pm-connect" onclick="connectSoundCloud(this)">Connect</button>
+                        <button id="sc-modal-disconnect" class="pm-disconnect hidden" onclick="disconnectPlatform('soundcloud',this)">Disconnect</button>
                     </div>
-                    <button id="sc-modal-btn" onclick="connectSoundCloud(this)" style="padding:6px 16px;border-radius:9999px;border:1px solid #39FF14;background:#0a0a0a;color:#39FF14;font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s;" onmouseover="this.style.background='#39FF14';this.style.color='#000000'" onmouseout="this.style.background='#0a0a0a';this.style.color='#39FF14'">Connect</button>
-                    <button id="sc-modal-disconnect" onclick="disconnectPlatform('soundcloud',this)" class="hidden" style="padding:6px 16px;border-radius:9999px;border:1px solid #ef4444;background:#0a0a0a;color:#ef4444;font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s;" onmouseover="this.style.background='#ef4444';this.style.color='#ffffff'" onmouseout="this.style.background='#0a0a0a';this.style.color='#ef4444'">Disconnect</button>
+                    <div id="sc-account" class="pm-account hidden"></div>
+                    <div id="sc-desc" class="pm-desc">Publish HQ audio to your profile and track plays across your tracks.</div>
                 </div>
             </div>
 
-            <p id="revenue-modal-error" class="hidden" style="font-size:9px;font-family:'JetBrains Mono',monospace;color:#f87171;text-transform:uppercase;letter-spacing:.1em;line-height:1.6;margin-top:20px;"></p>
+            <p id="revenue-modal-error" class="hidden" style="margin:16px 24px 0;font-size:12px;line-height:1.5;color:#ef4444;"></p>
+
+            <div style="padding:20px 24px 24px;">
+                <div class="pm-foot">
+                    <iconify-icon icon="solar:shield-check-linear" style="font-size:14px;flex-shrink:0;margin-top:1px"></iconify-icon>
+                    <span>We only publish what you choose and never post automatically. You can disconnect at any time. <a href="/privacy" target="_blank" rel="noopener">Privacy policy</a></span>
+                </div>
+            </div>
         </div>
     </div>
 </body>
