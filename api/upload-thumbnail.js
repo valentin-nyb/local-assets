@@ -41,7 +41,10 @@ export default async function handler(req, res) {
     if (!body.length) return res.status(400).json({ error: 'Empty body' });
 
     const type = detectImageType(body);
-    if (!type) return res.status(415).json({ error: 'Only PNG or JPEG images are supported' });
+    if (!type) {
+      console.error('[upload-thumbnail] rejected: not a JPEG/PNG, first bytes', body.subarray(0, 8).toString('hex'));
+      return res.status(415).json({ error: 'Thumbnail must be a real JPEG or PNG image (HEIC, WebP and GIF are not supported)' });
+    }
 
     // Store the image itself in Vercel Blob. The passthrough tag is encoded into the
     // pathname so list-assets can match it to its session without a database.

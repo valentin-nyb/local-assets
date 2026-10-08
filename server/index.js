@@ -100,12 +100,16 @@ while (true) {
       continue;
     }
 
+    const abort = new AbortController();
     const heartbeat = setInterval(() => {
-      renewPipelineJob(db, job.jobId, workerId)
-        .catch(error => console.error(`[Server] Lease renewal failed for ${job.jobId}:`, error.message));
-    }, 30_000);
+      renewPipelineJob(db, job.jobId, workerId).catch(error => {
+        console.error(`[Server] Lease renewal failed for ${job.jobId}:`, error.message);
+        // Lost lease means the job was cancelled or restarted from the dashboard.
+        if (/Lost lease/.test(error.message)) abort.abort();
+      });
+    }, 5_000);
     try {
-      await runPipeline({ ...job, db, workerId, muxAuth });
+      await runPipeline({ ...job, db, workerId, muxAuth, signal: abort.signal });
     } catch (error) {
       console.error(`[Server] Unhandled pipeline error for ${job.jobId}:`, error.message);
       await updatePipelineJob(db, job.jobId, workerId, {

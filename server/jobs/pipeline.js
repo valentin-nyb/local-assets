@@ -20,15 +20,27 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 async function muxGet(apiPath, auth) {
   const r = await fetch(`https://api.mux.com${apiPath}`, { headers: { Authorization: auth } });
-  return r.json();
+  const j = await r.json();
+  // Wrong or missing venue credentials never recover by retrying, so fail the job now.
+  if (['unauthorized', 'forbidden', 'invalid_parameters'].includes(j.error?.type)) {
+    throw new Error(`Mux rejected request (${j.error.messages?.[0] || j.error.type}). Check this venue's Mux credentials in VENUES_CONFIG.`);
+  }
+  return j;
 }
 
 // ── Wait for asset (HLS-ready = start immediately, don't block on MP4) ─
 
-async function waitForAsset(uploadId, assetId, authHeader) {
+class AbortedError extends Error {}
+
+function throwIfAborted(signal) {
+  if (signal?.aborted) throw new AbortedError('Job cancelled or restarted');
+}
+
+async function waitForAsset(uploadId, assetId, authHeader, signal) {
   if (!assetId) {
     console.log(`  Polling upload ${uploadId} for asset_id...`);
     for (let i = 0; i < 72; i++) {
+      throwIfAborted(signal);
       await sleep(5000);
       const j = await muxGet(`/video/v1/uploads/${uploadId}`, authHeader);
       if (j.data?.asset_id) { assetId = j.data.asset_id; break; }
@@ -40,6 +52,7 @@ async function waitForAsset(uploadId, assetId, authHeader) {
   console.log(`  Waiting for asset ${assetId} to be ready...`);
   let playbackId, duration, srStatus;
   for (let i = 0; i < 120; i++) {
+    throwIfAborted(signal);
     await sleep(5000);
     const j = await muxGet(`/video/v1/assets/${assetId}`, authHeader);
     const a = j.data;
@@ -65,7 +78,7 @@ async function waitForAsset(uploadId, assetId, authHeader) {
 
 // ── Encode one clip ───────────────────────────────────────────────────
 
-async function processClip(videoUrl, start, dur, outPath, cropFilter) {
+async function processClip(videoUrl, start, dur, outPath, cropFilter, signal) {
   // Pre-input seeking is fast for both MP4 (HTTP range) and HLS (segment seek).
   // -allowed_extensions ALL is required for FFmpeg to accept HLS playlists over HTTPS.
   const ffBase = `ffmpeg -y -allowed_extensions ALL -protocol_whitelist file,https,http,tcp,tls,crypto`;
@@ -78,7 +91,7 @@ async function processClip(videoUrl, start, dur, outPath, cropFilter) {
     `-c:a aac -b:a 192k ` +
     `-movflags +faststart "${outPath}"`;
 
-  const { stderr } = await execAsync(cmd, { timeout: 300_000, maxBuffer: 20 * 1024 * 1024 });
+  const { stderr } = await execAsync(cmd, { timeout: 300_000, maxBuffer: 20 * 1024 * 1024, signal });
 
   // Guard: confirm output exists and is not a stub
   if (!fs.existsSync(outPath) || fs.statSync(outPath).size < 10_000) {
@@ -122,7 +135,7 @@ async function uploadClipToMux(filePath, passthrough, headers) {
 
 // ── Main export ───────────────────────────────────────────────────────
 
-export async function runPipeline({ jobId, uploadId, assetId: knownAssetId, artistName, venueSlug, db, workerId, muxAuth }) {
+export async function runPipeline({ jobId, uploadId, assetId: knownAssetId, artistName, venueSlug, db, workerId, muxAuth, signal }) {
   const { tokenId, tokenSecret } = muxAuth;
   const authHeader = 'Basic ' + Buffer.from(`${tokenId}:${tokenSecret}`).toString('base64');
   const headers    = { Authorization: authHeader, 'Content-Type': 'application/json' };
@@ -136,7 +149,7 @@ export async function runPipeline({ jobId, uploadId, assetId: knownAssetId, arti
   try {
     await setProgress(0, CLIP_COUNT, 'waiting');
 
-    const { assetId, playbackId, duration, mp4Ready } = await waitForAsset(uploadId, knownAssetId, authHeader);
+    const { assetId, playbackId, duration, mp4Ready } = await waitForAsset(uploadId, knownAssetId, authHeader, signal);
     console.log(`[Pipeline:${jobId}] Ready — ${Math.round(duration)}s, playback=${playbackId}, mp4=${mp4Ready}`);
 
     if (duration < MIN_CLIP_DUR * 2) throw new Error(`Video too short: ${Math.round(duration)}s`);
@@ -189,7 +202,7 @@ export async function runPipeline({ jobId, uploadId, assetId: knownAssetId, arti
     let idx = 0;  // safe in Node.js single-threaded async: idx++ is atomic per microtask
 
     async function worker() {
-      while (idx < clipSpecs.length) {
+      while (idx < clipSpecs.length && !signal?.aborted) {
         const { start, dur, num } = clipSpecs[idx++];
         const tag     = `${artistName} // SOCIAL // ${num}`;
         const outPath = path.join(tmpDir, `clip_${num}.mp4`);
@@ -199,27 +212,31 @@ export async function runPipeline({ jobId, uploadId, assetId: knownAssetId, arti
           if (!srcW || !srcH) throw new Error('Could not determine source dimensions for vertical reframing');
           const frameDir = path.join(tmpDir, `frames_${num}`);
           try {
-            await extractSubjectFrames(videoUrl, start, dur, frameDir);
+            await extractSubjectFrames(videoUrl, start, dur, frameDir, signal);
             const subjectTrack = await detectSubjectTrack(frameDir);
             const cropFilter = buildSubjectCropFilter(subjectTrack, srcW, srcH, dur);
-            await processClip(videoUrl, start, dur, outPath, cropFilter);
+            throwIfAborted(signal);
+            await processClip(videoUrl, start, dur, outPath, cropFilter, signal);
           } finally {
             try { fs.rmSync(frameDir, { recursive: true, force: true }); } catch (_) {}
           }
+          throwIfAborted(signal);
           await uploadClipToMux(outPath, tag, headers);
           uploaded++;
           console.log(`[Pipeline:${jobId}] ✓ ${num}  (${uploaded} ok / ${failed} failed)`);
         } catch (e) {
+          if (signal?.aborted) return;
           failed++;
           console.error(`[Pipeline:${jobId}] ✗ ${num} FAILED: ${e.message}`);
         } finally {
           try { fs.unlinkSync(outPath); } catch (_) {}
-          await setProgress(uploaded + failed, CLIP_COUNT, 'processing', { uploaded, failed });
+          if (!signal?.aborted) await setProgress(uploaded + failed, CLIP_COUNT, 'processing', { uploaded, failed });
         }
       }
     }
 
     await Promise.all(Array.from({ length: CONCURRENCY }, worker));
+    throwIfAborted(signal);
 
     const finalStatus = uploaded > 0 ? 'done' : 'error';
     const finalExtra  = { uploaded, failed };
@@ -228,6 +245,10 @@ export async function runPipeline({ jobId, uploadId, assetId: knownAssetId, arti
     console.log(`[Pipeline:${jobId}] Complete: ${uploaded} uploaded, ${failed} failed`);
 
   } catch (e) {
+    if (signal?.aborted || e instanceof AbortedError) {
+      console.log(`[Pipeline:${jobId}] Stopped: cancelled or restarted from the dashboard`);
+      return;
+    }
     console.error(`[Pipeline:${jobId}] Fatal:`, e.message);
     await setProgress(0, CLIP_COUNT, 'error', { error: e.message });
   } finally {

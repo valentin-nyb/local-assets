@@ -1718,7 +1718,8 @@
                     var isDone  = job.status === 'done';
                     var isError = job.status === 'error';
 
-                    var procLabel = pct + '%  ·  ' + (job.uploaded != null ? job.uploaded + ' UPLOADED' : job.done + ' / ' + job.total + ' CLIPS');
+                    var readyCount = job.uploaded != null ? job.uploaded : job.done;
+                    var procLabel = 'GENERATING VERTICAL CLIPS  ·  ' + readyCount + ' / ' + job.total + ' READY';
                     if (job.failed > 0) procLabel += '  ·  ' + job.failed + ' FAILED';
                     var statusLabel = {
                         queued:     'QUEUED',
@@ -1732,7 +1733,7 @@
                     var labelColor  = isError ? '#ef4444' : isDone ? barColor : (isDark ? '#71717a' : '#52525b');
 
                     var barInner;
-                    if (isQueued || isWaiting) {
+                    if (isQueued || isWaiting || (isProcessing && job.done === 0)) {
                         barInner = '<div style="position:relative;width:100%;height:100%;border-radius:9999px;overflow:hidden;">'
                             + '<div style="position:absolute;inset:0;background:' + shimmerBase + ';"></div>'
                             + '<div style="position:absolute;top:0;bottom:0;width:35%;background:linear-gradient(90deg,transparent,' + shimmerGlow + ',transparent);border-radius:9999px;animation:plShimmer 1.8s ease-in-out infinite;"></div>'
@@ -1746,7 +1747,17 @@
                     html += '<div style="margin-bottom:12px;">';
                     html += '<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:7px;">';
                     html += '<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.2em;color:' + nameColor + ';">' + (job.artistName || '') + '</span>';
+                    html += '<span style="display:flex;align-items:baseline;gap:12px;">';
                     html += '<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:0.1em;color:' + labelColor + ';">' + statusLabel + '</span>';
+                    var safeJobId = String(job.jobId || '').replace(/[^a-f0-9]/gi, '');
+                    var ctlStyle = 'font-family:\'JetBrains Mono\',monospace;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;background:none;border:0;padding:0;cursor:pointer;';
+                    if (isQueued || isWaiting || isProcessing) {
+                        html += '<button type="button" data-job="' + safeJobId + '" data-action="cancel" onclick="pipelineControl(this)" style="' + ctlStyle + 'color:#ef4444;">CANCEL</button>';
+                    }
+                    if (!isDone) {
+                        html += '<button type="button" data-job="' + safeJobId + '" data-action="restart" onclick="pipelineControl(this)" style="' + ctlStyle + 'color:' + barColor + ';">RESTART</button>';
+                    }
+                    html += '</span>';
                     html += '</div>';
                     html += '<div style="width:100%;background:' + barTrack + ';height:3px;border-radius:9999px;overflow:hidden;">' + barInner + '</div>';
                     html += '</div>';
@@ -1787,6 +1798,29 @@
                     }
                 });
             } catch (e) {}
+        }
+
+        async function pipelineControl(btn) {
+            var action = btn.dataset.action;
+            var jobId = btn.dataset.job;
+            if (!jobId || (action !== 'cancel' && action !== 'restart')) return;
+            if (action === 'cancel' && !confirm('Cancel vertical clip generation for this job?')) return;
+            btn.disabled = true;
+            btn.style.opacity = '0.4';
+            try {
+                var r = await laFetch('/api/pipeline-control', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ jobId: jobId, action: action })
+                });
+                if (!r.ok) {
+                    var data = await r.json().catch(function() { return {}; });
+                    alert(data.error || 'Could not ' + action + ' this job');
+                }
+            } catch (e) {
+                alert('Could not ' + action + ' this job');
+            }
+            fetchPipelineStatus();
         }
 
         function startPipelinePolling() {
@@ -1887,11 +1921,10 @@
             if (assetType === 'THUMB') {
                 const isSupportedImage = (file) => {
                     const type = file.type.toLowerCase();
-                    const name = file.name.toLowerCase();
-                    return (!type || type === 'image/jpeg' || type === 'image/png') && /\.(jpe?g|png)$/.test(name);
+                    return /\.(jpe?g|png)$/i.test(file.name) || type === 'image/jpeg' || type === 'image/jpg' || type === 'image/png';
                 };
                 if (files.some(file => !isSupportedImage(file))) {
-                    statusEl.textContent = 'ERROR — CHOOSE JPEG OR PNG IMAGES';
+                    statusEl.textContent = 'ERROR — CHOOSE JPG, JPEG OR PNG IMAGES';
                     statusEl.classList.remove('text-yellow-500');
                     statusEl.classList.add('text-red-500');
                     input.value = '';
@@ -1900,12 +1933,31 @@
                 const thumbTotal = Math.min(files.length, 20);
                 let thumbCompleted = 0;
 
-                function uploadThumb(file, idx) {
+                // Serverless request bodies are capped at ~4.5 MB, so shrink big photos first.
+                const MAX_THUMB_BYTES = 4000000;
+                async function prepareThumb(file) {
+                    if (file.size <= MAX_THUMB_BYTES) return file;
+                    const bmp = await createImageBitmap(file);
+                    let scale = Math.min(1, 2560 / Math.max(bmp.width, bmp.height));
+                    for (let quality = 0.9; quality >= 0.5; quality -= 0.1) {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = Math.round(bmp.width * scale);
+                        canvas.height = Math.round(bmp.height * scale);
+                        canvas.getContext('2d').drawImage(bmp, 0, 0, canvas.width, canvas.height);
+                        const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', quality));
+                        if (blob && blob.size <= MAX_THUMB_BYTES) return blob;
+                        scale *= 0.85;
+                    }
+                    throw new Error('Image too large to upload: ' + file.name);
+                }
+
+                async function uploadThumb(file, idx) {
+                    const payload = await prepareThumb(file);
                     return new Promise((resolve, reject) => {
                         const tag = thumbTotal > 1 ? `${passthrough} // ${String(idx + 1).padStart(2, '0')}` : passthrough;
                         const xhr = new XMLHttpRequest();
                         xhr.open('PUT', '/api/upload-thumbnail?passthrough=' + encodeURIComponent(tag));
-                        const thumbType = file.type || (/\.png$/i.test(file.name) ? 'image/png' : 'image/jpeg');
+                        const thumbType = payload !== file ? 'image/jpeg' : (file.type || (/\.png$/i.test(file.name) ? 'image/png' : 'image/jpeg'));
                         xhr.setRequestHeader('Content-Type', thumbType);
                         xhr.setRequestHeader('X-Passthrough', tag);
                         const _laSess = (() => { try { return JSON.parse(localStorage.getItem('la_admin') || '{}'); } catch(_) { return {}; } })();
@@ -1932,7 +1984,7 @@
                             }
                         };
                         xhr.onerror = () => reject(new Error('Network failed: ' + file.name));
-                        xhr.send(file);
+                        xhr.send(payload);
                     });
                 }
 

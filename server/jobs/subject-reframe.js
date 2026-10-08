@@ -25,7 +25,7 @@ async function getPersonDetector() {
   return modelPromise;
 }
 
-export async function extractSubjectFrames(videoUrl, start, duration, frameDir) {
+export async function extractSubjectFrames(videoUrl, start, duration, frameDir, signal) {
   fs.mkdirSync(frameDir, { recursive: true });
   await execFileAsync('ffmpeg', [
     '-nostdin', '-hide_banner', '-loglevel', 'error', '-y',
@@ -34,7 +34,7 @@ export async function extractSubjectFrames(videoUrl, start, duration, frameDir) 
     '-ss', String(start), '-t', String(duration), '-i', videoUrl,
     '-vf', 'fps=0.2,scale=320:-2:flags=bilinear',
     '-q:v', '5', path.join(frameDir, 'frame_%06d.jpg'),
-  ], { timeout: 180_000, maxBuffer: 8 * 1024 * 1024 });
+  ], { timeout: 180_000, maxBuffer: 8 * 1024 * 1024, signal });
 }
 
 function choosePerson(predictions, previous, frameWidth, frameHeight) {
