@@ -1604,7 +1604,7 @@
             throw new Error('thumbnail too large');
         }
 
-        async function setYouTubeCover(videoId, sessionName, sessionDate) {
+        async function setYouTubeCover(videoId, uploadId, sessionName, sessionDate) {
             var thumbs = (sessionFilesFor(sessionName, sessionDate).THUMB || []).map(function(t) { return thumbUrl(t); }).filter(Boolean);
             if (!thumbs.length) return { skipped: true };
             try {
@@ -1612,7 +1612,7 @@
                 var res = await laFetch('/api/youtube-upload', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'thumbnail', videoId: videoId, image: image }),
+                    body: JSON.stringify({ action: 'thumbnail', videoId: videoId, uploadId: uploadId, image: image }),
                 });
                 var j = await res.json().catch(function() { return {}; });
                 return res.ok ? { ok: true } : { error: j.error || ('HTTP ' + res.status) };
@@ -1667,7 +1667,7 @@
 
                 if (data.videoId && sessionDate) {
                     paint(100, 'SETTING COVER…');
-                    var cover = await setYouTubeCover(data.videoId, title, sessionDate);
+                    var cover = await setYouTubeCover(data.videoId, data.uploadId, title, sessionDate);
                     if (cover.error) alert('Video uploaded, but the thumbnail could not be set as its cover:\n' + cover.error +
                         (/permission|verif/i.test(cover.error) ? '\n\nCustom thumbnails need a phone-verified channel: youtube.com/verify' : ''));
                 }

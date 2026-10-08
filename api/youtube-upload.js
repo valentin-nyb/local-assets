@@ -71,7 +71,8 @@ async function initiateResumableUpload(accessToken, title, contentLength) {
 // Chunks must be multiples of 256 KiB for YouTube resumable uploads.
 const CHUNK_BYTES = 64 * 1024 * 1024;
 // Stop starting new chunks when less than this much of the function's time is left.
-const TIME_BUDGET_MS = 240_000;
+// Kept short so the dashboard gets progress updates every ~25s.
+const TIME_BUDGET_MS = 25_000;
 
 // Upload one chunk [start, end] (inclusive) from Mux to the YouTube session.
 // Returns { done, next, data } — next is the first byte YouTube still needs.
@@ -124,12 +125,6 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
 
-  const session = getWebSessionAuth(req);
-  if (!session?.email) return res.status(401).json({ error: 'Not authenticated' });
-
-  const venueSlug = session.venueSlug;
-  if (!venueSlug) return res.status(403).json({ error: 'No venue associated with this account' });
-
   let body = req.body;
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch(e) {} }
   const { playbackId, dlFile, title, uploadId, action, videoId, image } = body || {};
@@ -143,6 +138,22 @@ export default async function handler(req, res) {
   if (dlFile && !/^[A-Za-z0-9_.-]+$/.test(dlFile)) return res.status(400).json({ error: 'invalid file name' });
   if (uploadId && !/^[a-f0-9]{24}$/.test(uploadId)) return res.status(400).json({ error: 'invalid uploadId' });
   const startedAt = Date.now();
+
+  // A new upload needs a signed-in session. Continuing one (and setting its cover) is
+  // authorised by its uploadId — an unguessable id stored server-side with the venue —
+  // so long uploads keep going after the 10-minute dashboard token expires.
+  const session = getWebSessionAuth(req);
+  let upload = null;
+  if (uploadId) {
+    upload = await withRedis(r => r.get(`yt_upload:${uploadId}`)).then(v => v && JSON.parse(v)).catch(() => null);
+    if (!upload) return res.status(404).json({ error: 'Upload session expired — click YouTube again to restart' });
+    if (session?.venueSlug && session.venueSlug !== upload.venueSlug) return res.status(403).json({ error: 'Forbidden' });
+  } else if (!session?.email) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  const venueSlug = upload ? upload.venueSlug : session.venueSlug;
+  if (!venueSlug) return res.status(403).json({ error: 'No venue associated with this account' });
+  if (isThumbnail && (!upload || upload.videoId !== videoId)) return res.status(403).json({ error: 'Cover can only be set right after uploading' });
 
   const redis = createClient({ url: process.env.REDIS_URL });
   let stored;
@@ -191,13 +202,14 @@ export default async function handler(req, res) {
   try {
     const videoFile   = dlFile || 'highest.mp4';
     const muxVideoUrl = `https://stream.mux.com/${playbackId}/${videoFile}`;
-    const stateKey    = id => `yt_upload:${venueSlug}:${id}`;
+    const stateKey    = id => `yt_upload:${id}`;
 
     // Start a new YouTube upload session, or continue one from a previous call.
     let state;
-    if (uploadId) {
-      state = await withRedis(r => r.get(stateKey(uploadId))).then(v => v && JSON.parse(v));
-      if (!state || state.source !== muxVideoUrl) return res.status(404).json({ error: 'Upload session expired — click YouTube again to restart' });
+    if (upload) {
+      state = upload;
+      if (state.source !== muxVideoUrl) return res.status(400).json({ error: 'Upload session does not match this video' });
+      if (state.videoId) return res.status(200).json({ done: true, uploadId: state.id, videoId: state.videoId, url: `https://www.youtube.com/watch?v=${state.videoId}` });
     } else {
       console.log(`[youtube-upload] source: ${muxVideoUrl}`);
       const headRes = await fetch(muxVideoUrl, { method: 'HEAD', signal: AbortSignal.timeout(15000) });
@@ -220,7 +232,7 @@ export default async function handler(req, res) {
           error: `YouTube upload initiation failed (${initResult.status}): ${initResult.error}`,
         });
       }
-      state = { id: crypto.randomBytes(12).toString('hex'), uploadUrl: initResult.uploadUrl, source: muxVideoUrl, total, offset: 0 };
+      state = { id: crypto.randomBytes(12).toString('hex'), venueSlug, uploadUrl: initResult.uploadUrl, source: muxVideoUrl, total, offset: 0 };
       console.log(`[youtube-upload] resumable upload initiated for "${title}" (${state.id})`);
     }
 
@@ -229,11 +241,12 @@ export default async function handler(req, res) {
       const end = Math.min(state.offset + CHUNK_BYTES, state.total) - 1;
       const r = await putChunk(state.uploadUrl, stored.access_token, muxVideoUrl, state.offset, end, state.total);
       if (r.done) {
-        await withRedis(rd => rd.del(stateKey(state.id))).catch(() => {});
-        const videoId  = r.data?.id;
-        const videoUrl = videoId ? `https://www.youtube.com/watch?v=${videoId}` : null;
+        const newVideoId = r.data?.id;
+        const videoUrl = newVideoId ? `https://www.youtube.com/watch?v=${newVideoId}` : null;
+        // Keep a short-lived record so the cover can be set with this uploadId.
+        await withRedis(rd => rd.set(stateKey(state.id), JSON.stringify({ id: state.id, venueSlug, source: state.source, videoId: newVideoId }), { EX: 60 * 30 })).catch(() => {});
         console.log(`[youtube-upload] uploaded: ${videoUrl}`);
-        return res.status(200).json({ done: true, videoId, url: videoUrl, title: r.data?.snippet?.title });
+        return res.status(200).json({ done: true, uploadId: state.id, videoId: newVideoId, url: videoUrl, title: r.data?.snippet?.title });
       }
       state.offset = r.next;
     }
