@@ -501,11 +501,18 @@
                     if (!muxByKey[key]) muxByKey[key] = [];
                     muxByKey[key].push(a);
                 }
-                // Index by artist name so MASTER lookups find JSON-passthrough and name-only assets
+                // Index by artist name so MASTER lookups find JSON-passthrough and name-only assets.
+                // Sub-assets ("ARTIST // AUDIO|SOCIAL|THUMB …", or JSON with one of those cameras)
+                // must not land here, or the 4K row could pick a clip or thumbnail as its master.
+                const cam = meta && meta.camera ? String(meta.camera).toUpperCase().trim() : '';
+                const isSubAsset = ['AUDIO', 'SOCIAL', 'THUMB'].indexOf(cam) >= 0 ||
+                    (typeof a.passthrough === 'string' && a.passthrough.indexOf(' // ') >= 0 && !/^\s*\{/.test(a.passthrough));
                 if (meta && meta.artist) {
                     const ak = meta.artist.toUpperCase().trim();
-                    if (!muxByKey[ak]) muxByKey[ak] = [];
-                    if (!muxByKey[ak].some(x => x.id === a.id)) muxByKey[ak].push(a);
+                    if (!isSubAsset) {
+                        if (!muxByKey[ak]) muxByKey[ak] = [];
+                        if (!muxByKey[ak].some(x => x.id === a.id)) muxByKey[ak].push(a);
+                    }
                     // Also index JSON-passthrough assets by "ARTIST // CAMERA" so findLinked works
                     if (meta.camera) {
                         const ck = ak + ' // ' + meta.camera.toUpperCase().trim();
@@ -536,6 +543,8 @@
                 const candidates = muxByKey[key] || [];
                 const match = candidates.find(a => dateMatches(a, sessionDate));
                 if (match) return match;
+                // A master ("NAME") must never fall back to its sub-assets ("NAME // THUMB …")
+                if (key.indexOf(' // ') < 0) return null;
                 // Check prefix keys (e.g. "NAME // SOCIAL // 01")
                 for (const [k, arr] of Object.entries(muxByKey)) {
                     if (k.startsWith(key + ' // ')) {
