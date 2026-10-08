@@ -1,7 +1,8 @@
+import crypto from 'crypto';
 import { createClient } from 'redis';
 import { getWebSessionAuth } from './_venues.js';
 
-// Large video files need the full 300s window
+// Each call uploads as many chunks as fit in ~240s; long files continue over several calls
 export const config = { maxDuration: 300 };
 
 async function refreshYtToken(venueSlug, stored) {
@@ -67,25 +68,52 @@ async function initiateResumableUpload(accessToken, title, contentLength) {
   return { ok: true, uploadUrl };
 }
 
-async function streamToYouTube(uploadUrl, muxVideoUrl, contentLength) {
-  const muxRes = await fetch(muxVideoUrl, { signal: AbortSignal.timeout(30000) });
-  if (!muxRes.ok) return { ok: false, status: 502, error: `Mux returned ${muxRes.status}` };
+// Chunks must be multiples of 256 KiB for YouTube resumable uploads.
+const CHUNK_BYTES = 64 * 1024 * 1024;
+// Stop starting new chunks when less than this much of the function's time is left.
+const TIME_BUDGET_MS = 240_000;
 
-  const putHeaders = { 'Content-Type': 'video/mp4' };
-  if (contentLength) putHeaders['Content-Length'] = String(contentLength);
+// Upload one chunk [start, end] (inclusive) from Mux to the YouTube session.
+// Returns { done, next, data } — next is the first byte YouTube still needs.
+async function putChunk(uploadUrl, accessToken, muxVideoUrl, start, end, total) {
+  const muxRes = await fetch(muxVideoUrl, { headers: { Range: `bytes=${start}-${end}` } });
+  if (muxRes.status !== 206 && !(muxRes.status === 200 && start === 0 && end === total - 1)) {
+    throw new Error(`Mux returned ${muxRes.status} for bytes ${start}-${end}`);
+  }
+  const chunk = Buffer.from(await muxRes.arrayBuffer());
+  if (chunk.length !== end - start + 1) throw new Error(`Short read from Mux (${chunk.length} of ${end - start + 1} bytes)`);
 
   const ytRes = await fetch(uploadUrl, {
     method:  'PUT',
-    headers: putHeaders,
-    body:    muxRes.body,
-    duplex:  'half',
-    signal:  AbortSignal.timeout(270000),
+    headers: {
+      Authorization:   `Bearer ${accessToken}`,
+      'Content-Type':  'video/mp4',
+      'Content-Length': String(chunk.length),
+      'Content-Range': `bytes ${start}-${end}/${total}`,
+    },
+    body: chunk,
   });
+  if (ytRes.status === 308) {
+    const range = ytRes.headers.get('range');           // e.g. "bytes=0-67108863"
+    const next = range ? Number(range.split('-')[1]) + 1 : start;
+    return { done: false, next };
+  }
+  const text = await ytRes.text();
+  let data = null;
+  try { data = JSON.parse(text); } catch (_) {}
+  if (!ytRes.ok) {
+    const msg = data?.error?.message || data?.error?.errors?.[0]?.message || text.slice(0, 200);
+    const err = new Error(`YouTube ${ytRes.status}: ${msg}`);
+    err.status = ytRes.status;
+    throw err;
+  }
+  return { done: true, data };
+}
 
-  const rawText = await ytRes.text();
-  let data;
-  try { data = JSON.parse(rawText); } catch(_) { data = null; }
-  return { ok: ytRes.ok, status: ytRes.status, data, rawText };
+async function withRedis(fn) {
+  const redis = createClient({ url: process.env.REDIS_URL });
+  try { await redis.connect(); return await fn(redis); }
+  finally { await redis.quit().catch(() => {}); }
 }
 
 export default async function handler(req, res) {
@@ -104,8 +132,17 @@ export default async function handler(req, res) {
 
   let body = req.body;
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch(e) {} }
-  const { playbackId, dlFile, title } = body || {};
-  if (!playbackId) return res.status(400).json({ error: 'playbackId required' });
+  const { playbackId, dlFile, title, uploadId, action, videoId, image } = body || {};
+  const isThumbnail = action === 'thumbnail';
+  if (isThumbnail) {
+    if (!videoId || !/^[A-Za-z0-9_-]{11}$/.test(videoId)) return res.status(400).json({ error: 'valid videoId required' });
+    if (typeof image !== 'string' || !image) return res.status(400).json({ error: 'image required' });
+  } else if (!playbackId || !/^[A-Za-z0-9]+$/.test(playbackId)) {
+    return res.status(400).json({ error: 'valid playbackId required' });
+  }
+  if (dlFile && !/^[A-Za-z0-9_.-]+$/.test(dlFile)) return res.status(400).json({ error: 'invalid file name' });
+  if (uploadId && !/^[a-f0-9]{24}$/.test(uploadId)) return res.status(400).json({ error: 'invalid uploadId' });
+  const startedAt = Date.now();
 
   const redis = createClient({ url: process.env.REDIS_URL });
   let stored;
@@ -129,63 +166,84 @@ export default async function handler(req, res) {
     console.log('[youtube-upload] Token refreshed');
   }
 
+  // Set the session's marketing thumbnail as the uploaded video's cover.
+  if (isThumbnail) {
+    const img = Buffer.from(image, 'base64');
+    if (!img.length || img.length > 2 * 1024 * 1024) return res.status(400).json({ error: 'Thumbnail must be under 2 MB' });
+    const isJpeg = img[0] === 0xff && img[1] === 0xd8;
+    const isPng  = img[0] === 0x89 && img[1] === 0x50;
+    if (!isJpeg && !isPng) return res.status(400).json({ error: 'Thumbnail must be JPEG or PNG' });
+    const tRes = await fetch(`https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId=${videoId}&uploadType=media`, {
+      method:  'POST',
+      headers: { Authorization: `Bearer ${stored.access_token}`, 'Content-Type': isJpeg ? 'image/jpeg' : 'image/png' },
+      body:    img,
+    });
+    if (!tRes.ok) {
+      const err = await tRes.json().catch(() => ({}));
+      const msg = err?.error?.message || `HTTP ${tRes.status}`;
+      console.error('[youtube-upload] thumbnail failed:', tRes.status, msg);
+      return res.status(tRes.status < 600 ? tRes.status : 502).json({ error: msg });
+    }
+    console.log(`[youtube-upload] thumbnail set for ${videoId}`);
+    return res.status(200).json({ ok: true });
+  }
+
   try {
     const videoFile   = dlFile || 'highest.mp4';
     const muxVideoUrl = `https://stream.mux.com/${playbackId}/${videoFile}`;
-    console.log(`[youtube-upload] source: ${muxVideoUrl}`);
+    const stateKey    = id => `yt_upload:${venueSlug}:${id}`;
 
-    // HEAD to get file size for YouTube's initiation request
-    let contentLength = null;
-    try {
+    // Start a new YouTube upload session, or continue one from a previous call.
+    let state;
+    if (uploadId) {
+      state = await withRedis(r => r.get(stateKey(uploadId))).then(v => v && JSON.parse(v));
+      if (!state || state.source !== muxVideoUrl) return res.status(404).json({ error: 'Upload session expired — click YouTube again to restart' });
+    } else {
+      console.log(`[youtube-upload] source: ${muxVideoUrl}`);
       const headRes = await fetch(muxVideoUrl, { method: 'HEAD', signal: AbortSignal.timeout(15000) });
-      if (headRes.ok) contentLength = headRes.headers.get('content-length');
-    } catch(_) {}
-    console.log(`[youtube-upload] content-length: ${contentLength ? (contentLength / 1e6).toFixed(0) + ' MB' : 'unknown'}`);
+      const total = Number(headRes.headers.get('content-length')) || 0;
+      if (!headRes.ok || !total) return res.status(502).json({ error: `Could not read the video from Mux (${headRes.status})` });
+      console.log(`[youtube-upload] content-length: ${(total / 1e6).toFixed(0)} MB`);
 
-    // Initiate resumable upload
-    let initResult = await initiateResumableUpload(stored.access_token, title, contentLength);
-
-    // On 401, refresh and retry initiation
-    if (!initResult.ok && initResult.status === 401) {
-      console.log('[youtube-upload] 401 on initiation — refreshing token');
-      const newToken = await refreshYtToken(venueSlug, stored);
-      if (newToken) {
-        stored.access_token = newToken;
-        initResult = await initiateResumableUpload(newToken, title, contentLength);
+      let initResult = await initiateResumableUpload(stored.access_token, title, total);
+      if (!initResult.ok && initResult.status === 401) {
+        console.log('[youtube-upload] 401 on initiation — refreshing token');
+        const newToken = await refreshYtToken(venueSlug, stored);
+        if (newToken) {
+          stored.access_token = newToken;
+          initResult = await initiateResumableUpload(newToken, title, total);
+        }
       }
+      if (!initResult.ok) {
+        console.error(`[youtube-upload] initiation failed: HTTP ${initResult.status}:`, initResult.error);
+        return res.status(initResult.status < 600 ? initResult.status : 502).json({
+          error: `YouTube upload initiation failed (${initResult.status}): ${initResult.error}`,
+        });
+      }
+      state = { id: crypto.randomBytes(12).toString('hex'), uploadUrl: initResult.uploadUrl, source: muxVideoUrl, total, offset: 0 };
+      console.log(`[youtube-upload] resumable upload initiated for "${title}" (${state.id})`);
     }
 
-    if (!initResult.ok) {
-      console.error(`[youtube-upload] initiation failed: HTTP ${initResult.status}:`, initResult.error);
-      return res.status(initResult.status < 600 ? initResult.status : 502).json({
-        error: `YouTube upload initiation failed (${initResult.status}): ${initResult.error}`,
-      });
+    // Send 64 MB chunks until finished or the time budget runs out.
+    while (state.offset < state.total && Date.now() - startedAt < TIME_BUDGET_MS) {
+      const end = Math.min(state.offset + CHUNK_BYTES, state.total) - 1;
+      const r = await putChunk(state.uploadUrl, stored.access_token, muxVideoUrl, state.offset, end, state.total);
+      if (r.done) {
+        await withRedis(rd => rd.del(stateKey(state.id))).catch(() => {});
+        const videoId  = r.data?.id;
+        const videoUrl = videoId ? `https://www.youtube.com/watch?v=${videoId}` : null;
+        console.log(`[youtube-upload] uploaded: ${videoUrl}`);
+        return res.status(200).json({ done: true, videoId, url: videoUrl, title: r.data?.snippet?.title });
+      }
+      state.offset = r.next;
     }
 
-    console.log(`[youtube-upload] resumable upload initiated, streaming "${title}"…`);
-    const result = await streamToYouTube(initResult.uploadUrl, muxVideoUrl, contentLength);
-
-    if (!result.ok) {
-      const errMsg = result.data?.error?.message
-        || result.data?.error?.errors?.[0]?.message
-        || result.rawText?.slice(0, 200)
-        || 'Unknown error';
-      console.error(`[youtube-upload] upload failed: HTTP ${result.status}:`, errMsg);
-      return res.status(result.status < 600 ? result.status : 502).json({
-        error: `YouTube ${result.status}: ${errMsg}`,
-      });
-    }
-
-    const videoId  = result.data?.id;
-    const videoUrl = videoId ? `https://www.youtube.com/watch?v=${videoId}` : null;
-    console.log(`[youtube-upload] uploaded: ${videoUrl}`);
-    return res.status(200).json({
-      videoId,
-      url:   videoUrl,
-      title: result.data?.snippet?.title,
-    });
+    // Out of time for this call — save progress; the dashboard calls again with uploadId.
+    await withRedis(rd => rd.set(stateKey(state.id), JSON.stringify(state), { EX: 60 * 60 * 24 }));
+    console.log(`[youtube-upload] ${state.id}: ${(state.offset / 1e6).toFixed(0)} / ${(state.total / 1e6).toFixed(0)} MB — continuing in next call`);
+    return res.status(202).json({ done: false, uploadId: state.id, sent: state.offset, total: state.total });
   } catch (e) {
-    console.error('[youtube-upload] unexpected error:', e.message);
-    return res.status(500).json({ error: e.message });
+    console.error('[youtube-upload] error:', e.message);
+    return res.status(e.status && e.status < 600 ? e.status : 500).json({ error: e.message });
   }
 }

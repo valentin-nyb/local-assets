@@ -653,7 +653,7 @@
                         html += '<iconify-icon icon="solar:play-bold" class="text-primary"></iconify-icon>';
                         html += '</button>';
                         if (isMasterAsset) {
-                            html += '<button id="yt-dist-' + uid + '" class="yt-dist-btn hidden" style="display:none;align-items:center;gap:4px;padding:3px 8px;border-radius:9999px;border:1px solid #FF0000;background:transparent;color:#FF0000;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;white-space:nowrap;" onclick="distributeYouTube(\'' + pid + '\', \'' + dlFile + '\', \'' + safeName + '\', \'' + uid + '\')" onmouseover="this.style.background=\'#FF0000\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'#FF0000\'">';
+                            html += '<button id="yt-dist-' + uid + '" class="yt-dist-btn hidden" style="display:none;align-items:center;gap:4px;padding:3px 8px;border-radius:9999px;border:1px solid #FF0000;background:transparent;color:#FF0000;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;white-space:nowrap;" onclick="distributeYouTube(\'' + pid + '\', \'' + dlFile + '\', \'' + safeName + '\', \'' + uid + '\', \'' + sessionDate + '\')" onmouseover="this.style.background=\'#FF0000\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'#FF0000\'">';
                             html += '<iconify-icon icon="mdi:youtube" style="font-size:11px;flex-shrink:0"></iconify-icon> YOUTUBE';
                             html += '</button>';
                         }
@@ -1583,7 +1583,43 @@
             }
         }
 
-        async function distributeYouTube(playbackId, dlFile, title, uid) {
+        // Resize the session's first marketing thumbnail to a 1280x720 JPEG (YouTube's
+        // cover size; must be under 2 MB) and return it base64-encoded.
+        async function makeYouTubeCover(url) {
+            var bmp = await createImageBitmap(await (await fetch(url)).blob());
+            var W = 1280, H = 720;
+            var canvas = document.createElement('canvas');
+            canvas.width = W; canvas.height = H;
+            var scale = Math.max(W / bmp.width, H / bmp.height);   // cover-crop to 16:9
+            var w = bmp.width * scale, h = bmp.height * scale;
+            canvas.getContext('2d').drawImage(bmp, (W - w) / 2, (H - h) / 2, w, h);
+            for (var q = 0.9; q >= 0.5; q -= 0.1) {
+                var blob = await new Promise(function(r) { canvas.toBlob(r, 'image/jpeg', q); });
+                if (blob && blob.size < 2 * 1024 * 1024) {
+                    var buf = new Uint8Array(await blob.arrayBuffer()), bin = '';
+                    for (var i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+                    return btoa(bin);
+                }
+            }
+            throw new Error('thumbnail too large');
+        }
+
+        async function setYouTubeCover(videoId, sessionName, sessionDate) {
+            var thumbs = (sessionFilesFor(sessionName, sessionDate).THUMB || []).map(function(t) { return thumbUrl(t); }).filter(Boolean);
+            if (!thumbs.length) return { skipped: true };
+            try {
+                var image = await makeYouTubeCover(thumbs[0]);
+                var res = await laFetch('/api/youtube-upload', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'thumbnail', videoId: videoId, image: image }),
+                });
+                var j = await res.json().catch(function() { return {}; });
+                return res.ok ? { ok: true } : { error: j.error || ('HTTP ' + res.status) };
+            } catch (e) { return { error: e.message }; }
+        }
+
+        async function distributeYouTube(playbackId, dlFile, title, uid, sessionDate) {
             var btn = document.getElementById('yt-dist-' + uid);
             if (!btn) return;
 
@@ -1591,13 +1627,12 @@
             btn.onmouseover = null;
             btn.onmouseout = null;
             btn.style.color = '#fff';
-            btn.innerHTML = '<iconify-icon icon="mdi:youtube" style="font-size:11px;flex-shrink:0"></iconify-icon> UPLOADING…';
 
-            var pct = 0;
-            var timer = setInterval(function() {
-                pct += (90 - pct) * 0.012;
+            function paint(pct, label) {
                 btn.style.background = 'linear-gradient(to right,#FF0000 ' + pct.toFixed(1) + '%,transparent ' + pct.toFixed(1) + '%)';
-            }, 200);
+                btn.innerHTML = '<iconify-icon icon="mdi:youtube" style="font-size:11px;flex-shrink:0"></iconify-icon> ' + label;
+            }
+            paint(1, 'UPLOADING…');
 
             function resetBtn() {
                 btn.disabled = false;
@@ -1608,19 +1643,33 @@
                 btn.innerHTML = '<iconify-icon icon="mdi:youtube" style="font-size:11px;flex-shrink:0"></iconify-icon> YOUTUBE';
             }
 
+            // Large files upload in chunks over several calls; each reply says how far it got.
+            var uploadId = null, data = null;
             try {
-                var res = await laFetch('/api/youtube-upload', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ playbackId, dlFile, title }),
-                });
-                var data = await res.json();
-                clearInterval(timer);
+                for (var attempt = 0; attempt < 200; attempt++) {
+                    var res = await laFetch('/api/youtube-upload', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ playbackId: playbackId, dlFile: dlFile, title: title, uploadId: uploadId }),
+                    });
+                    data = await res.json().catch(function() { return {}; });
+                    if (!res.ok) {
+                        resetBtn();
+                        alert('YouTube upload failed: ' + (data.error || ('HTTP ' + res.status)));
+                        return;
+                    }
+                    if (data.done) break;
+                    uploadId = data.uploadId;
+                    var pct = data.total ? Math.max(1, data.sent / data.total * 100) : 1;
+                    paint(pct, 'UPLOADING ' + Math.floor(pct) + '%');
+                }
+                if (!data || !data.done) { resetBtn(); alert('YouTube upload did not finish — please try again.'); return; }
 
-                if (!res.ok) {
-                    resetBtn();
-                    alert('YouTube upload failed: ' + (data.error || 'Unknown error'));
-                    return;
+                if (data.videoId && sessionDate) {
+                    paint(100, 'SETTING COVER…');
+                    var cover = await setYouTubeCover(data.videoId, title, sessionDate);
+                    if (cover.error) alert('Video uploaded, but the thumbnail could not be set as its cover:\n' + cover.error +
+                        (/permission|verif/i.test(cover.error) ? '\n\nCustom thumbnails need a phone-verified channel: youtube.com/verify' : ''));
                 }
 
                 btn.style.background = '#FF0000';
@@ -1629,7 +1678,6 @@
                     if (row) row.outerHTML = '<a id="yt-dist-' + uid + '" href="' + (data.url || '#') + '" target="_blank" style="display:inline-flex;align-items:center;gap:4px;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#39FF14;text-decoration:none;">&#x2713; ON YOUTUBE</a>';
                 }, 400);
             } catch(e) {
-                clearInterval(timer);
                 resetBtn();
                 alert('YouTube upload failed: ' + e.message);
             }
