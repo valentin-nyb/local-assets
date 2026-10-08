@@ -5,6 +5,8 @@ const ALLOWED = [
   'valentin@notyourbrew.com',
   'smack.valentin@gmail.com',
   'info@local-assets.com',
+  'jliamdavies1992@gmail.com',
+  'smackeprang.v@gmail.com',
 ];
 
 export default async function handler(req, res) {
