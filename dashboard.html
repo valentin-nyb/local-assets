@@ -199,7 +199,7 @@
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="lg:col-span-2 bg-card border border-border rounded-2xl overflow-hidden">
+                <div class="lg:col-span-2 bg-card border border-border rounded-2xl overflow-hidden flex flex-col">
                     <div class="p-5 border-b border-border flex justify-between items-center">
                         <h3 class="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-zinc-500">Distribution History</h3>
                         <div class="flex items-center gap-2">
@@ -209,7 +209,8 @@
                     </div>
                     <!-- Pipeline progress banner (hidden until a job is active) -->
                     <div id="pipeline-banner" class="hidden border-b border-border bg-black/30"></div>
-                    <div id="recent-sets-list" class=""></div>
+                    <div id="recent-sets-list" class="flex-1"></div>
+                    <div id="dist-footer" class="hidden border-t border-border font-mono uppercase text-zinc-500" style="margin-top:auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;font-size:9px;letter-spacing:.2em;"></div>
                 </div>
 
                 <div class="space-y-6">
@@ -444,6 +445,22 @@
             return { artist: 'UNTITLED', date: null, camera: null };
         }
 
+        // Summary row pinned to the bottom of Distribution History, so the card
+        // reads as complete when it holds only one or two artists.
+        function renderDistFooter(artistCount, sessionCount, assetCount) {
+            var el = document.getElementById('dist-footer');
+            if (!el) return;
+            if (!artistCount) { el.classList.add('hidden'); el.style.display = 'none'; return; }
+            function plural(n, w) { return n + ' ' + w + (n !== 1 ? 'S' : ''); }
+            var stats = [plural(artistCount, 'ARTIST'), plural(sessionCount, 'SESSION'), plural(assetCount, 'ASSET')];
+            var time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            el.innerHTML = '<span style="display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;">' +
+                stats.map(function(t) { return '<span style="white-space:nowrap">' + t + '</span>'; }).join('<span class="text-zinc-700">·</span>') +
+                '</span><span class="text-zinc-600" style="white-space:nowrap">UPDATED ' + time + '</span>';
+            el.classList.remove('hidden');
+            el.style.display = 'flex';
+        }
+
         async function fetchRecentUploads(autoExpandArtist) {
             const container = document.getElementById('recent-sets-list');
             if (!container) return;
@@ -586,6 +603,7 @@
 
             if (Object.keys(artistMap).length === 0) {
                 container.innerHTML = '<div class="p-8 text-center"><p class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">NO ASSETS YET</p></div>';
+                renderDistFooter(0, 0, 0);
                 return;
             }
 
@@ -1084,6 +1102,7 @@
             });
 
             container.innerHTML = html;
+            renderDistFooter(artists.length, artists.reduce(function(n, a) { return n + a.dates.length; }, 0), muxAssets.length);
             updateDistributionButtons();
 
             // Restore previously open folders
