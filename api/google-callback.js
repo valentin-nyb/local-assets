@@ -88,8 +88,7 @@ export default async function handler(req, res) {
 
     // Check if email is authorised
     const venue       = findVenueByEmail(email);
-    const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.toLowerCase().trim()).filter(Boolean);
-    if (!venue && !adminEmails.includes(email)) {
+    if (!venue) {
       console.error('[google-callback] unauthorized:', email);
       res.setHeader('Set-Cookie', clearState);
       return res.redirect('/login.html?error=unauthorized');

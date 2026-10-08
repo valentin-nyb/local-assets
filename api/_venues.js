@@ -23,46 +23,30 @@ function venueEnvKey(slug) {
   return slug ? slug.toUpperCase().replace(/[^A-Z0-9]+/g, '_') : '';
 }
 
-// Login emails for a venue: its `emails` array plus the comma-separated
-// <SLUG>_EMAILS env var, so access can be granted without rewriting VENUES_CONFIG.
-function venueEmails(slug, cfg) {
-  const fromEnv = (process.env[`${venueEnvKey(slug)}_EMAILS`] || '').split(',');
-  return [...(Array.isArray(cfg.emails) ? cfg.emails : []), ...fromEnv]
-    .map(e => String(e).toLowerCase().trim()).filter(Boolean);
+// Login emails for a venue, from its `emails` array in VENUES_CONFIG. Entries are
+// also split on commas/whitespace, so ["a@x.com, b@y.com"] counts as two emails.
+function venueEmails(cfg) {
+  const list = Array.isArray(cfg.emails) ? cfg.emails : typeof cfg.emails === 'string' ? [cfg.emails] : [];
+  return list.flatMap(e => String(e).split(/[\s,;]+/))
+    .map(e => e.toLowerCase().trim()).filter(Boolean);
 }
 
-// Returns the first venue whose emails (see venueEmails) contain the given email.
-// Fallback: if the email is in the ADMIN_EMAILS env var, returns the first
-// venue that has Mux credentials (enables admin accounts not listed in VENUES_CONFIG).
+// Returns the venue whose `emails` contain the given email, or null.
+// VENUES_CONFIG is the only source of login access: an email that isn't listed
+// in a venue cannot sign in.
 export function findVenueByEmail(email) {
   if (!email) return null;
-  const lower = email.toLowerCase();
+  const lower = email.toLowerCase().trim();
   const venues = getVenuesConfig();
 
-  // Priority 1: explicit listing in a venue's emails array
   for (const [slug, cfg] of Object.entries(venues)) {
-    if (venueEmails(slug, cfg).includes(lower)) {
+    if (venueEmails(cfg).includes(lower)) {
       console.log('[_venues] findVenueByEmail: matched via emails[]', lower, '→', slug);
       return { slug, ...cfg };
     }
   }
 
-  // Priority 2: email is in ADMIN_EMAILS → use first venue that has Mux creds
-  const adminList = (process.env.ADMIN_EMAILS || '')
-    .split(',').map(e => e.toLowerCase().trim()).filter(Boolean);
-  if (adminList.includes(lower)) {
-    for (const [slug, cfg] of Object.entries(venues)) {
-      if ((cfg.mux_token_id || '').trim() && (cfg.mux_token_secret || '').trim()) {
-        console.log('[_venues] findVenueByEmail: ADMIN_EMAILS fallback', lower, '→', slug);
-        return { slug, ...cfg };
-      }
-    }
-  }
-
-  console.error('[_venues] findVenueByEmail: no match for', lower,
-    '| venue slugs:', Object.keys(venues),
-    '| ADMIN_EMAILS set:', !!process.env.ADMIN_EMAILS,
-    '| adminList:', adminList);
+  console.error('[_venues] findVenueByEmail: no match for', lower, '| venue slugs:', Object.keys(venues));
   return null;
 }
 

@@ -1,14 +1,6 @@
 import { findVenueByEmail } from './_venues.js';
 
-// Hardcoded fallback while VENUES_CONFIG is being stabilised
-const ALLOWED = [
-  'valentin@notyourbrew.com',
-  'smack.valentin@gmail.com',
-  'info@local-assets.com',
-  'jliamdavies1992@gmail.com',
-  'smackeprang.v@gmail.com',
-];
-
+// Access is granted only to emails listed in a venue in VENUES_CONFIG.
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return res.status(405).end();
@@ -42,16 +34,12 @@ export default async function handler(req, res) {
   const email = (payload.email || '').toLowerCase().trim();
   if (!email) return res.status(401).json({ error: 'No email in token' });
 
-  const venueEntry    = findVenueByEmail(email);
-  const inHardcoded   = ALLOWED.includes(email);
-  const inVenueConfig = venueEntry !== null;
-  const isAllowed     = inHardcoded || inVenueConfig;
+  const venueEntry = findVenueByEmail(email);
+  const isAllowed  = venueEntry !== null;
 
-  console.error('[admin-verify] login attempt', JSON.stringify({
+  console.log('[admin-verify] login attempt', JSON.stringify({
     email,
-    inHardcodedList:     inHardcoded,
-    foundInVenuesConfig: inVenueConfig,
-    venueSlug:           venueEntry?.slug ?? null,
+    venueSlug: venueEntry?.slug ?? null,
     isAllowed,
   }));
 
