@@ -1188,6 +1188,60 @@
             return null;
         }
 
+        // Hand the file list to the service worker (sw.js), which streams one ZIP
+        // to the browser's downloader. Returns false if streaming isn't available.
+        function swAck(sw, msg, ms) {
+            return new Promise(function(resolve) {
+                var ch = new MessageChannel();
+                var t = setTimeout(function() { resolve(false); }, ms);
+                ch.port1.onmessage = function() { clearTimeout(t); resolve(true); };
+                sw.postMessage(msg, [ch.port2]);
+            });
+        }
+        async function startStreamingZip(files, folderName, totalBytes, btn) {
+            if (!('serviceWorker' in navigator) || !window.ReadableStream || !window.TransformStream) return false;
+            var id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+            var msg = { type: 'la-zip', id: id, folder: folderName, files: files.map(function(f) { return { url: f.url, path: f.path }; }) };
+            var ok = false;
+            try {
+                var reg = await navigator.serviceWorker.register('/sw.js');
+                if (navigator.serviceWorker.controller) ok = await swAck(navigator.serviceWorker.controller, msg, 1500);
+                if (!ok) {
+                    // An older worker without ZIP support may be in charge — update and retry once.
+                    await reg.update().catch(function() {});
+                    await new Promise(function(r) {
+                        var t = setTimeout(r, 4000);
+                        navigator.serviceWorker.addEventListener('controllerchange', function() { clearTimeout(t); r(); }, { once: true });
+                    });
+                    if (navigator.serviceWorker.controller) ok = await swAck(navigator.serviceWorker.controller, msg, 1500);
+                }
+            } catch (e) { ok = false; }
+            if (!ok) return false;
+
+            var origHtml = btn ? btn.innerHTML : '';
+            var size = totalBytes ? ' (' + (totalBytes >= 1073741824 ? (totalBytes / 1073741824).toFixed(2) + ' GB' : Math.max(1, Math.round(totalBytes / 1048576)) + ' MB') + ')' : '';
+            if (btn) { btn.disabled = true; btn.innerHTML = '<span class="text-[8px] font-mono text-yellow-500 uppercase tracking-widest">ZIP DOWNLOADING' + size + ' — SEE BROWSER DOWNLOADS</span>'; }
+            var frame = document.createElement('iframe');
+            frame.style.display = 'none';
+            frame.src = '/__la-zip/' + id + '/' + encodeURIComponent(folderName) + '.zip';
+            document.body.appendChild(frame);
+
+            // Keep the worker alive while it streams; restore the button when it's done.
+            var ping = setInterval(function() {
+                if (navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage({ type: 'la-zip-ping', id: id });
+            }, 15000);
+            function finish() {
+                clearInterval(ping);
+                navigator.serviceWorker.removeEventListener('message', onMsg);
+                if (btn) { btn.innerHTML = origHtml; btn.disabled = false; }
+                setTimeout(function() { frame.remove(); }, 60000);
+            }
+            function onMsg(e) { if (e.data && e.data.type === 'la-zip-done' && e.data.id === id) finish(); }
+            navigator.serviceWorker.addEventListener('message', onMsg);
+            setTimeout(finish, 3 * 60 * 60 * 1000);
+            return true;
+        }
+
         async function bulkDownload(sessionName, sessionDate, btn) {
             var origHtml = btn ? btn.innerHTML : '';
             var plan = collectSessionDownloads(sessionName, sessionDate);
@@ -1204,7 +1258,14 @@
                 return (bytes / 1073741824).toFixed(2) + ' GB';
             }
 
-            // Chrome / Edge / Opera / Arc: stream every file straight into a folder on disk.
+            // One ZIP with everything inside "ARTIST_DATE/", streamed so size doesn't matter.
+            var totalBytes = files.reduce(function(t, f) { return t + (f.size || 0); }, 0);
+            if (await startStreamingZip(files, folderName, totalBytes, btn)) {
+                if (plan.skipped.length) alert('Your ZIP is downloading.\n\nNot included yet (still preparing):\n• ' + plan.skipped.join('\n• '));
+                return;
+            }
+
+            // Fallback — Chrome / Edge / Opera / Arc: stream every file straight into a folder on disk.
             var root = null;
             if (window.showDirectoryPicker) {
                 try {
