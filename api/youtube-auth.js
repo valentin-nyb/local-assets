@@ -1,6 +1,6 @@
 import { createClient } from 'redis';
 import crypto from 'crypto';
-import { findVenueByEmail } from './_venues.js';
+import { getWebSessionAuth } from './_venues.js';
 
 const REDIRECT_URI = 'https://local-assets.com/api/youtube-callback';
 
@@ -11,11 +11,11 @@ export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const email = (req.query.email || '').toLowerCase().trim();
-  if (!email) return res.status(401).json({ error: 'Email required' });
+  const session = getWebSessionAuth(req);
+  if (!session?.email) return res.status(401).json({ error: 'Not authenticated' });
 
-  const venue = findVenueByEmail(email);
-  console.log('[youtube-auth] email:', email, 'venue:', venue?.name);
+  const venue = session.venue;
+  console.log('[youtube-auth] email:', session.email, 'venue:', venue?.name);
   if (!venue) return res.status(403).json({ error: 'No venue found for this email' });
 
   const venueSlug = venue.slug;

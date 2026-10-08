@@ -242,6 +242,47 @@ document.addEventListener("DOMContentLoaded", () => {
         return m + ':' + (ss < 10 ? '0' : '') + ss;
     }
 
+    function _esc(v) {
+        return String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+    }
+
+    // Accounts listed in several venues (VENUES_CONFIG) can switch between them.
+    function _venueSwitcherHtml(session) {
+        var venues = Array.isArray(session.venues) ? session.venues : [];
+        if (venues.length < 2) return '';
+        var html = '<div style="padding:10px 16px;border-bottom:1px solid #27272a;">' +
+            '<div style="font-size:8px;text-transform:uppercase;letter-spacing:.12em;color:#52525b;margin-bottom:6px;">Switch venue</div>';
+        venues.forEach(function(v) {
+            var current = v.slug === session.venueSlug;
+            html += '<button data-venue-slug="' + _esc(v.slug) + '" onclick="window.LA_SWITCH_VENUE(this.dataset.venueSlug)"' + (current ? ' disabled' : '') +
+                ' style="display:flex;align-items:center;gap:8px;width:100%;padding:6px 0;background:none;border:none;font-family:inherit;font-size:10px;text-transform:uppercase;letter-spacing:.08em;text-align:left;cursor:' + (current ? 'default' : 'pointer') + ';color:' + (current ? '#39FF14' : '#a1a1aa') + ';">' +
+                '<span style="width:6px;height:6px;border-radius:50%;background:' + (current ? '#39FF14' : '#3f3f46') + ';flex-shrink:0;"></span>' + _esc(v.name) + '</button>';
+        });
+        return html + '</div>';
+    }
+
+    window.LA_SWITCH_VENUE = async function(slug) {
+        var session = _getAdminSession();
+        if (!session) { window.LA_ADMIN_LOGOUT(); return; }
+        try {
+            var res = await fetch('/api/switch-venue', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session.webToken || '') },
+                body: JSON.stringify({ venueSlug: slug }),
+            });
+            var data = await res.json().catch(function() { return {}; });
+            if (!res.ok) { alert(data.error || 'Could not switch venue'); return; }
+            session.webToken  = data.webToken;
+            session.venue     = (data.venue || '').toUpperCase();
+            session.venueSlug = data.venueSlug;
+            session.venues    = data.venues || session.venues;
+            localStorage.setItem('la_admin', JSON.stringify(session));
+            localStorage.setItem('la_venue_name', session.venue);
+            localStorage.removeItem('la_revenue_cache_v2');
+            window.location.reload();
+        } catch (e) { alert('Could not switch venue'); }
+    };
+
     function _toggleAuthDrop(session, btn) {
         var existing = document.getElementById('la-auth-drop');
         if (existing) {
@@ -272,6 +313,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#fff;margin-bottom:4px;">' + venue + '</div>' +
                 '<div style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#52525b;">' + (session.email || '') + '</div>' +
             '</div>' +
+            _venueSwitcherHtml(session) +
             '<div style="padding:10px 16px;border-bottom:1px solid #27272a;display:flex;align-items:center;justify-content:space-between;gap:12px;">' +
                 '<span style="font-size:8px;text-transform:uppercase;letter-spacing:.12em;color:#52525b;">Session expires</span>' +
                 '<span id="la-drop-timer" style="font-size:9px;color:#39FF14;letter-spacing:.08em;font-weight:700;">' + _sessionTimeStr(session.ts) + '</span>' +

@@ -1,6 +1,6 @@
 import { createClient } from 'redis';
 import crypto from 'crypto';
-import { findVenueByEmail } from './_venues.js';
+import { findVenueByEmail, venueChoices } from './_venues.js';
 import { signWebToken } from './_venues.js';
 
 export default async function handler(req, res) {
@@ -105,6 +105,7 @@ export default async function handler(req, res) {
       picture:  payload.picture || '',
       venue:    venue?.name     || 'Admin',
       venueSlug,
+      venues:   venueChoices(email),
       role:     venue?.role     || 'admin',
       ts:       Date.now(),
     });

@@ -31,23 +31,30 @@ function venueEmails(cfg) {
     .map(e => e.toLowerCase().trim()).filter(Boolean);
 }
 
-// Returns the venue whose `emails` contain the given email, or null.
-// VENUES_CONFIG is the only source of login access: an email that isn't listed
-// in a venue cannot sign in.
-export function findVenueByEmail(email) {
-  if (!email) return null;
+// All venues whose `emails` contain the given email. VENUES_CONFIG is the only
+// source of login access: an email that isn't listed in a venue cannot sign in.
+// An email listed in several venues can open any of them.
+export function findVenuesByEmail(email) {
+  if (!email) return [];
   const lower = email.toLowerCase().trim();
-  const venues = getVenuesConfig();
+  return Object.entries(getVenuesConfig())
+    .filter(([, cfg]) => venueEmails(cfg).includes(lower))
+    .map(([slug, cfg]) => ({ slug, ...cfg }));
+}
 
-  for (const [slug, cfg] of Object.entries(venues)) {
-    if (venueEmails(cfg).includes(lower)) {
-      console.log('[_venues] findVenueByEmail: matched via emails[]', lower, '→', slug);
-      return { slug, ...cfg };
-    }
-  }
+// The venue to use for this email: `preferredSlug` if the email belongs to it,
+// otherwise the first venue it is listed in. Null if it is listed in none.
+export function findVenueByEmail(email, preferredSlug) {
+  const venues = findVenuesByEmail(email);
+  const venue = venues.find(v => v.slug === preferredSlug) || venues[0] || null;
+  if (venue) console.log('[_venues] findVenueByEmail:', email, '→', venue.slug, venues.length > 1 ? `(1 of ${venues.length})` : '');
+  else console.error('[_venues] findVenueByEmail: no match for', email, '| venue slugs:', Object.keys(getVenuesConfig()));
+  return venue;
+}
 
-  console.error('[_venues] findVenueByEmail: no match for', lower, '| venue slugs:', Object.keys(venues));
-  return null;
+// Public list of the venues an email can open, for the venue switcher.
+export function venueChoices(email) {
+  return findVenuesByEmail(email).map(v => ({ slug: v.slug, name: v.name || v.slug }));
 }
 
 // Returns a Basic auth string using ONLY venue-specific credentials.
@@ -97,41 +104,23 @@ export function verifyWebToken(token) {
 }
 
 // ── Request helper ────────────────────────────────────────────────────────────
-// Email source priority:
-//   1. Signed webToken in Authorization header (tamper-proof)
-//   2. X-User-Email header (transparent, used when token is absent/expired)
-// Mux credentials come ONLY from the matched venue — no global fallback.
+// The user is identified ONLY by the signed webToken (Authorization: Bearer …).
+// Its venueSlug picks which of the user's venues is open; access is re-checked
+// against VENUES_CONFIG on every request. Mux credentials come only from that venue.
 
 export function getWebSessionAuth(req) {
-  // 1. Try signed webToken
-  let email = null;
   const raw   = (req.headers.authorization || req.headers['x-la-token'] || '').trim();
   const token = raw.startsWith('Bearer ') ? raw.slice(7).trim() : raw;
-  if (token) {
-    const payload = verifyWebToken(token);
-    if (payload?.email) email = payload.email.toLowerCase().trim();
-  }
-
-  // 2. Fall back to X-User-Email if no valid token
-  if (!email) {
-    const hdr = (req.headers['x-user-email'] || '').toLowerCase().trim();
-    if (hdr) email = hdr;
-  }
+  const payload = token ? verifyWebToken(token) : null;
+  const email = payload?.email ? payload.email.toLowerCase().trim() : null;
 
   if (!email) {
-    console.error('[_venues] getWebSessionAuth: no email from token or header');
+    console.error('[_venues] getWebSessionAuth: no valid session token');
     return null;
   }
 
-  const venue   = findVenueByEmail(email);
+  const venue   = findVenueByEmail(email, payload.venueSlug);
   const muxAuth = getMuxAuthForVenue(venue); // null if no venue-specific creds
-
-  console.log('[_venues] getWebSessionAuth', JSON.stringify({
-    email,
-    tokenPresent:   !!token,
-    venueFound:     venue?.slug ?? null,
-    hasMuxCreds:    !!muxAuth,
-  }));
 
   return { email, venueSlug: venue?.slug || '', venue, muxAuth };
 }

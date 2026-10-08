@@ -1,5 +1,5 @@
 import { createClient } from 'redis';
-import { findVenueByEmail, signWebToken } from './_venues.js';
+import { findVenueByEmail, signWebToken, venueChoices } from './_venues.js';
 
 async function getRedis() {
   const client = createClient({ url: process.env.REDIS_URL });
@@ -26,7 +26,7 @@ export default async function handler(req, res) {
     const venue    = findVenueByEmail(data.email);
     const webToken = signWebToken(data.email, venue?.slug || '');
 
-    return res.status(200).json({ ok: true, ...data, webToken });
+    return res.status(200).json({ ok: true, ...data, webToken, venue: venue?.name || data.venue, venueSlug: venue?.slug || '', venues: venueChoices(data.email) });
   } catch (e) {
     return res.status(500).json({ error: e.message });
   } finally {
