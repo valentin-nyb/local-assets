@@ -301,6 +301,83 @@
             return String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
         }
 
+        // ── Vertical clip preview popup ──────────────────────────────────
+        var _clipModal = { pids: [], idx: 0, title: '' };
+
+        function openClipModal(el) {
+            _clipModal.pids  = el.dataset.pids.split(',').filter(Boolean);
+            _clipModal.idx   = parseInt(el.dataset.idx, 10) || 0;
+            _clipModal.title = el.dataset.title || 'Clip';
+            var modal = document.getElementById('clip-modal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'clip-modal';
+                modal.className = 'fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4';
+                modal.innerHTML =
+                    '<div class="relative flex items-center gap-3" onclick="event.stopPropagation()">' +
+                        '<button id="clip-prev" class="w-10 h-10 shrink-0 flex items-center justify-center rounded-full border border-zinc-700 text-zinc-300 hover:border-primary hover:text-primary transition-colors" title="Previous" onclick="stepClipModal(-1)"><iconify-icon icon="solar:alt-arrow-left-linear"></iconify-icon></button>' +
+                        '<div class="flex flex-col gap-3">' +
+                            '<div class="flex items-center justify-between gap-4">' +
+                                '<p id="clip-modal-title" class="text-[10px] font-mono uppercase tracking-widest text-zinc-400 truncate"></p>' +
+                                '<div class="flex items-center gap-2 shrink-0">' +
+                                    '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 text-primary transition-colors" title="Download" onclick="downloadClipModal()"><iconify-icon icon="solar:download-bold"></iconify-icon></button>' +
+                                    '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-zinc-300 transition-colors" title="Close (Esc)" onclick="closeClipModal()"><iconify-icon icon="solar:close-circle-linear" class="text-lg"></iconify-icon></button>' +
+                                '</div>' +
+                            '</div>' +
+                            '<div class="overflow-hidden rounded-xl border border-zinc-800 bg-black" style="height:min(78vh, calc((100vw - 140px) * 16 / 9));aspect-ratio:9/16;">' +
+                                '<mux-player id="clip-modal-player" stream-type="on-demand" accent-color="#39FF14" autoplay style="width:100%;height:100%;--media-object-fit:contain;"></mux-player>' +
+                            '</div>' +
+                        '</div>' +
+                        '<button id="clip-next" class="w-10 h-10 shrink-0 flex items-center justify-center rounded-full border border-zinc-700 text-zinc-300 hover:border-primary hover:text-primary transition-colors" title="Next" onclick="stepClipModal(1)"><iconify-icon icon="solar:alt-arrow-right-linear"></iconify-icon></button>' +
+                    '</div>';
+                modal.addEventListener('click', closeClipModal);
+                document.body.appendChild(modal);
+                document.addEventListener('keydown', function(e) {
+                    if (!document.getElementById('clip-modal') || document.getElementById('clip-modal').classList.contains('hidden')) return;
+                    if (e.key === 'Escape') closeClipModal();
+                    if (e.key === 'ArrowRight') stepClipModal(1);
+                    if (e.key === 'ArrowLeft') stepClipModal(-1);
+                });
+            }
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            showClipModalClip();
+        }
+        function showClipModalClip() {
+            var n = _clipModal.pids.length;
+            var player = document.getElementById('clip-modal-player');
+            player.setAttribute('playback-id', _clipModal.pids[_clipModal.idx]);
+            document.getElementById('clip-modal-title').textContent =
+                _clipModal.title + ' — ' + String(_clipModal.idx + 1).padStart(2, '0') + ' / ' + String(n).padStart(2, '0');
+            document.getElementById('clip-prev').style.visibility = n > 1 ? 'visible' : 'hidden';
+            document.getElementById('clip-next').style.visibility = n > 1 ? 'visible' : 'hidden';
+        }
+        function stepClipModal(dir) {
+            var n = _clipModal.pids.length;
+            _clipModal.idx = (_clipModal.idx + dir + n) % n;
+            showClipModalClip();
+        }
+        function closeClipModal() {
+            var modal = document.getElementById('clip-modal');
+            if (!modal) return;
+            var player = document.getElementById('clip-modal-player');
+            if (player && player.pause) player.pause();
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+        function downloadClipModal() {
+            var pid = _clipModal.pids[_clipModal.idx];
+            var url = 'https://stream.mux.com/' + pid + '/highest.mp4';
+            var name = _clipModal.title.replace(/[^a-z0-9 _-]/gi, '') + '_' + String(_clipModal.idx + 1).padStart(2, '0') + '.mp4';
+            fetch(url).then(function(r) { if (!r.ok) throw new Error(r.status); return r.blob(); }).then(function(blob) {
+                var a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = name;
+                a.click();
+                setTimeout(function() { URL.revokeObjectURL(a.href); }, 10000);
+            }).catch(function() { window.open(url, '_blank'); });
+        }
+
         function dlThumbs(el) {
             downloadAllThumbs(JSON.parse(el.dataset.urls), el.dataset.title);
         }
@@ -652,7 +729,8 @@
                     var cpid = clips[pc].playback_ids && clips[pc].playback_ids[0] ? clips[pc].playback_ids[0].id : null;
                     if (cpid) allPids.push(cpid);
                 }
-                var galleryBase = '/player.html?socials=' + allPids.join(',') + '&title=' + encodeURIComponent(name + ' SOCIAL PACK');
+                var pidsAttr  = allPids.join(',');
+                var titleAttr = (name + ' SOCIAL PACK').replace(/&/g, '&amp;').replace(/"/g, '&quot;');
 
                 var html = '';
                 html += '<div style="border-left:2px solid ' + accent + '" class="pl-16 pr-4 py-4">';
@@ -677,7 +755,7 @@
                 html += '</div>';
                 html += '</div>';
 
-                // Horizontal scrollable strip — each thumbnail opens the full gallery at that index
+                // Horizontal scrollable strip — each thumbnail opens the preview popup at that clip
                 html += '<div class="flex overflow-x-auto" style="gap:2px;scrollbar-width:thin;scrollbar-color:#27272a transparent;padding-bottom:6px;">';
 
                 for (var i = 0; i < clips.length; i++) {
@@ -686,12 +764,12 @@
                     var num = String(i + 1).padStart(2, '0');
                     var staticSrc = pid ? 'https://image.mux.com/' + pid + '/thumbnail.png?width=180&height=320&fit_mode=smartcrop&time=5' : '';
                     var animSrc   = pid ? 'https://image.mux.com/' + pid + '/animated.gif?width=180&height=320&fit_mode=smartcrop&fps=10&start=5&duration=3' : '';
-                    var galleryUrl = galleryBase + '&active=' + i;
+                    var readyIdx = pid ? allPids.indexOf(pid) : -1;
                     var imgId = 'sclip-' + pid;
 
                     html += '<div class="flex-shrink-0 flex flex-col items-center gap-1" style="width:72px">';
                     html += '<div class="relative overflow-hidden rounded-md group/clip cursor-pointer w-full" style="aspect-ratio:9/16;background:#0a0a0a;border:1px solid #27272a;"' +
-                        (pid ? ' onclick="window.open(\'' + galleryUrl + '\',\'_blank\')"' +
+                        (pid ? ' data-pids="' + pidsAttr + '" data-idx="' + readyIdx + '" data-title="' + titleAttr + '" onclick="openClipModal(this)"' +
                                ' onmouseenter="var e=document.getElementById(\'' + imgId + '\');if(e)e.src=\'' + animSrc + '\'"' +
                                ' onmouseleave="var e=document.getElementById(\'' + imgId + '\');if(e)e.src=\'' + staticSrc + '\'"' : '') + '>';
 
