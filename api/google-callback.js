@@ -116,6 +116,9 @@ export default async function handler(req, res) {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.send(`<!DOCTYPE html><html><body><script>
       localStorage.setItem('la_admin', ${JSON.stringify(sessionData)});
+      ${venue?.name
+        ? `localStorage.setItem('la_venue_name', ${JSON.stringify(venue.name.toUpperCase())});`
+        : `localStorage.removeItem('la_venue_name');`}
       localStorage.removeItem('la_revenue_cache');
       window.location.href = '/dashboard';
     </script></body></html>`);
