@@ -62,10 +62,19 @@ export default async function handler(req, res) {
         cursor = page.hasMore ? page.cursor : undefined;
       } while (cursor);
       files.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
-      const [orgType, orgName, ownerNames] = await withRedis(r => Promise.all([
-        r.get(`brand_org_type:${slug}`), r.get(`brand_org_name:${slug}`), r.hGetAll(`brand_owner_names:${slug}`),
-      ])).catch(() => [null, null, {}]);
-      return res.status(200).json({ files, orgType: ORG_TYPES.includes(orgType) ? orgType : 'venue', orgName: orgName || '', ownerNames: ownerNames || {} });
+      const [orgType, orgName, ownerNames, pinned] = await withRedis(r => Promise.all([
+        r.get(`brand_org_type:${slug}`), r.get(`brand_org_name:${slug}`),
+        r.hGetAll(`brand_owner_names:${slug}`), r.hGetAll(`brand_owner_photo:${slug}`),
+      ])).catch(() => [null, null, {}, {}]);
+      // Profile photo per owner: the one picked with "Use as artist photo", else the newest photo
+      const ownerPhotos = {};
+      for (const f of files) {
+        if (f.category === 'photos' && !ownerPhotos[f.owner]) ownerPhotos[f.owner] = f.url;
+      }
+      for (const [owner, url] of Object.entries(pinned || {})) {
+        if (files.some(f => f.url === url)) ownerPhotos[owner] = url;
+      }
+      return res.status(200).json({ files, orgType: ORG_TYPES.includes(orgType) ? orgType : 'venue', orgName: orgName || '', ownerNames: ownerNames || {}, ownerPhotos });
     }
 
     if (req.method !== 'POST') return res.status(405).end();
@@ -88,6 +97,16 @@ export default async function handler(req, res) {
       if (owner === 'venue' || !OWNER.test(owner) || !name) return res.status(400).json({ error: 'Invalid name' });
       await withRedis(r => r.hSet(`brand_owner_names:${slug}`, owner, name));
       return res.status(200).json({ owner, name });
+    }
+
+    if (body.action === 'setPhoto') {
+      const url = String(body.url || '');
+      let pathname = '';
+      try { pathname = decodeURIComponent(new URL(url).pathname.slice(1)); } catch {}
+      const meta = pathname.startsWith(prefixFor(slug)) ? parsePath(pathname, slug) : null;
+      if (!meta || meta.category !== 'photos') return res.status(400).json({ error: 'Pick one of your photos' });
+      await withRedis(r => r.hSet(`brand_owner_photo:${slug}`, meta.owner, url));
+      return res.status(200).json({ owner: meta.owner, url });
     }
 
     if (body.action === 'move') {

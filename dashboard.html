@@ -409,6 +409,26 @@
             return { artist: 'UNTITLED', date: null, camera: null };
         }
 
+        // Artist photos from the Brand Kit replace the folder icon in Distribution History
+        function brandSlug(name) {
+            return String(name).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+        }
+        var _brandPhotos = null, _brandPhotosAt = 0;
+        function applyArtistPhotos() {
+            var paint = function() {
+                document.querySelectorAll('[data-artist-photo]').forEach(function(box) {
+                    var url = _brandPhotos && _brandPhotos[box.dataset.artistPhoto];
+                    if (!url || box.dataset.painted === url) return;
+                    box.dataset.painted = url;
+                    box.innerHTML = '<img src="' + url.replace(/"/g, '&quot;') + '" alt="" style="width:100%;height:100%;object-fit:cover">';
+                });
+            };
+            if (_brandPhotos && Date.now() - _brandPhotosAt < 300000) return paint();
+            laFetch('/api/brand').then(function(r) { return r.ok ? r.json() : null; }).then(function(d) {
+                _brandPhotos = (d && d.ownerPhotos) || {}; _brandPhotosAt = Date.now(); paint();
+            }).catch(function() {});
+        }
+
         // Summary row pinned to the bottom of Distribution History, so the card
         // reads as complete when it holds only one or two artists.
         function renderDistFooter(artistCount, sessionCount, assetCount) {
@@ -938,7 +958,7 @@
                 html += '<div class="session-group">';
                 html += '<div onclick="toggleArtistFolder(\'' + artistId + '\')" class="p-5 flex items-center justify-between hover:bg-white/[0.02] transition-colors cursor-pointer group">';
                 html += '<div class="flex items-center gap-4">';
-                html += '<div class="w-10 h-10 bg-[#050505] border border-border flex items-center justify-center rounded-xl group-hover:border-primary/50 transition-colors">';
+                html += '<div class="w-10 h-10 bg-[#050505] border border-border flex items-center justify-center rounded-xl group-hover:border-primary/50 transition-colors overflow-hidden" data-artist-photo="artist-' + brandSlug(artist.name) + '">';
                 html += '<iconify-icon icon="solar:folder-2-bold" class="text-zinc-600 group-hover:text-primary"></iconify-icon>';
                 html += '</div>';
                 html += '<div>';
@@ -1061,6 +1081,7 @@
             });
 
             container.innerHTML = html;
+            applyArtistPhotos();
             renderDistFooter(artists.length, artists.reduce(function(n, a) { return n + a.dates.length; }, 0), muxAssets.length);
             updateDistributionButtons();
 

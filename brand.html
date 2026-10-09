@@ -156,6 +156,9 @@
         .bk-preview img { max-width:85%; max-height:85%; object-fit:contain; }
         .bk-preview.doc { background-image:none; }
         .bk-preview.photo { background:var(--la-chip); }
+        .bk-avatar img.bk-avatar-photo { object-fit:cover; padding:0; }
+        .bk-tag.is-profile { color:var(--la-accent); border-color:color-mix(in srgb, var(--la-accent) 45%, transparent); }
+        .bk-file-actions .is-on { color:var(--la-accent) !important; }
         .bk-preview.photo img { max-width:100%; max-height:100%; width:100%; height:100%; object-fit:cover; }
         .bk-preview.photo .bk-bg-toggle { display:none; }
         button.bk-tag { cursor:pointer; z-index:1; }
@@ -346,7 +349,7 @@
         ];
         var IMG_EXT = /\.(png|jpe?g|svg|webp|gif)$/i;
         var FONT_EXT = /\.(otf|ttf|woff2?)$/i;
-        var _files = [], _owners = [], _uploading = false, _orgType = 'venue', _orgName = '';
+        var _files = [], _owners = [], _uploading = false, _orgType = 'venue', _orgName = '', _ownerPhotos = {};
         var ORG_LABELS = { venue: 'Venue', label: 'Record label', management: 'Management' };
 
         function slugify(name) {
@@ -379,6 +382,7 @@
                 _files = res[0].files || [];
                 _orgType = res[0].orgType || 'venue';
                 _orgName = res[0].orgName || '';
+                _ownerPhotos = res[0].ownerPhotos || {};
                 var assets = Array.isArray(res[1]) ? res[1] : (res[1].data || []);
                 var names = {};
                 assets.forEach(function(a) { var n = artistFromAsset(a); if (n) names['artist-' + slugify(n)] = n.toUpperCase(); });
@@ -411,7 +415,10 @@
                 if (o.group && o.group !== lastGroup) { heading = '<p class="bk-group">' + o.group + '</p>'; lastGroup = o.group; }
                 var files = _files.filter(function(f) { return f.owner === o.key; });
                 var logo = files.filter(function(f) { return f.category === 'logos' && IMG_EXT.test(f.name); })[0];
-                var avatar = logo ? '<img src="' + esc(logo.url) + '" alt="" crossorigin="anonymous" onload="fitPreviewBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}">' : esc(o.name.replace(/[^A-Za-z0-9 ]/g, '').split(/\s+/).map(function(w) { return w[0] || ''; }).join('').slice(0, 2) || '?');
+                var photo = _ownerPhotos[o.key];
+                var usePhoto = photo && (o.key.indexOf('artist-') === 0 || !logo);
+                var avatar = usePhoto ? '<img class="bk-avatar-photo" src="' + esc(photo) + '" alt="">'
+                    : logo ? '<img src="' + esc(logo.url) + '" alt="" crossorigin="anonymous" onload="fitPreviewBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}">' : esc(o.name.replace(/[^A-Za-z0-9 ]/g, '').split(/\s+/).map(function(w) { return w[0] || ''; }).join('').slice(0, 2) || '?');
                 var body = '';
                 if (!files.length) {
                     body = '<p class="bk-empty-owner">No brand files yet. <button type="button" data-up="' + esc(o.key) + '">Upload logos or guidelines</button></p>';
@@ -439,6 +446,16 @@
                 }).catch(function() { el.classList.add('failed'); });
             });
             wrap.querySelectorAll('[data-font-preview]').forEach(function(b) { b.addEventListener('click', function() { openFontPreview(b.dataset.fontPreview); }); });
+            wrap.querySelectorAll('[data-photo]').forEach(function(b) {
+                b.addEventListener('click', async function() {
+                    b.disabled = true;
+                    try {
+                        var r = await laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setPhoto', url: b.dataset.photo }) });
+                        var d = await r.json(); if (!r.ok) throw new Error(d.error || r.status);
+                        _ownerPhotos[d.owner] = d.url; render();
+                    } catch (e) { alert('Could not set the photo: ' + e.message); b.disabled = false; }
+                });
+            });
             wrap.querySelectorAll('[data-move]').forEach(function(b) { b.addEventListener('click', function() { openMove(b.dataset.move); }); });
             wrap.querySelectorAll('[data-org]').forEach(function(b) { b.addEventListener('click', openOrgType); });
             wrap.querySelectorAll('[data-zip]').forEach(function(b) { b.addEventListener('click', function() { downloadAll(b.dataset.zip, b); }); });
@@ -523,7 +540,8 @@
         function fileCard(f) {
             var ext = (f.name.split('.').pop() || 'file').slice(0, 5);
             var cat = CATS.filter(function(c) { return c.key === f.category; })[0] || CATS[CATS.length - 1];
-            var tag = '<button type="button" class="bk-tag" data-move="' + esc(f.url) + '" title="Change type"><iconify-icon icon="' + cat.icon + '"></iconify-icon>' + cat.tag + '<iconify-icon icon="solar:alt-arrow-down-linear" class="bk-tag-caret"></iconify-icon></button>';
+            var tagText = cat.key === 'photos' && f.owner.indexOf('artist-') === 0 ? (_ownerPhotos[f.owner] === f.url ? 'Artist photo' : 'Photo') : cat.tag;
+            var tag = '<button type="button" class="bk-tag' + (_ownerPhotos[f.owner] === f.url ? ' is-profile' : '') + '" data-move="' + esc(f.url) + '" title="Change type"><iconify-icon icon="' + cat.icon + '"></iconify-icon>' + tagText + '<iconify-icon icon="solar:alt-arrow-down-linear" class="bk-tag-caret"></iconify-icon></button>';
             var isPhoto = f.category === 'covers' || f.category === 'artwork' || f.category === 'photos';
             var preview = IMG_EXT.test(f.name)
                 ? '<div class="bk-preview' + (isPhoto ? ' photo' : '') + '">' + tag + '<img src="' + esc(f.url) + '" alt="" loading="lazy" crossorigin="anonymous" onload="fitPreviewBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}">' +
@@ -537,6 +555,7 @@
                 '<div class="bk-file-actions">' +
                     '<a href="' + esc(f.link ? f.link + '?download' : f.downloadUrl) + '" title="Download"><iconify-icon icon="solar:download-minimalistic-linear"></iconify-icon></a>' +
                     (IMG_EXT.test(f.name) || /pdf$/i.test(f.name) ? '<a href="' + esc(f.link || f.url) + '" target="_blank" rel="noopener" title="Open"><iconify-icon icon="solar:eye-linear"></iconify-icon></a>' : '') +
+                    (f.category === 'photos' ? '<button type="button" data-photo="' + esc(f.url) + '" title="' + (f.owner.indexOf('artist-') === 0 ? 'Use as artist photo' : 'Use as profile photo') + '" class="' + (_ownerPhotos[f.owner] === f.url ? 'is-on' : '') + '"><iconify-icon icon="solar:user-circle-' + (_ownerPhotos[f.owner] === f.url ? 'bold' : 'linear') + '"></iconify-icon></button>' : '') +
                     (FONT_EXT.test(f.name) ? '<button type="button" data-font-preview="' + esc(f.url) + '" title="Preview font"><iconify-icon icon="solar:eye-linear"></iconify-icon></button>' : '') +
                     '<button type="button" data-copy="' + esc(f.link || f.url) + '" title="Copy link"><iconify-icon icon="solar:link-round-linear"></iconify-icon></button>' +
                     '<button type="button" class="del" data-del="' + esc(f.url) + '" title="Delete"><iconify-icon icon="solar:trash-bin-minimalistic-linear"></iconify-icon></button>' +
