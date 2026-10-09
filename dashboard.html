@@ -112,6 +112,7 @@
             </div>
             <a id="live-feed-hero" href="/camera.html" class="block cursor-pointer hover:border-primary/50 transition-all duration-500 w-full bg-[#050505] border border-[#27272a] rounded-2xl p-5 md:p-8 relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-4 md:gap-6 shadow-2xl no-underline" style="background:#050505!important">
                 <img id="live-feed-video" src="" class="hidden absolute inset-0 w-full h-full object-cover opacity-60 transition-all duration-700 pointer-events-none" alt="">
+                <div id="live-feed-player-wrap" class="absolute inset-0 pointer-events-none" style="opacity:0;transition:opacity .6s"></div>
                 <div class="absolute inset-0 pointer-events-none" style="background:linear-gradient(90deg, rgba(0,0,0,.72) 0%, rgba(0,0,0,.35) 55%, rgba(0,0,0,.6) 100%)"></div>
                 <div class="absolute inset-0 bg-scanlines opacity-10 pointer-events-none"></div>
 
@@ -1474,6 +1475,7 @@
                 var tick = function() { v1.textContent = since ? fmtDuration((Date.now() - since) / 1000) : '—'; };
                 tick(); _heroTimer = setInterval(tick, 1000);
                 setImg(s.playbackId ? 'https://image.mux.com/' + s.playbackId + '/thumbnail.jpg?width=960&_=' + Math.floor(Date.now() / 30000) : '');
+                stopHeroLoop();
                 return;
             }
 
@@ -1490,6 +1492,7 @@
                 v1.textContent = fmtDuration(a.duration);
                 setImg(peakPreviewUrl(a));
                 focusHeroImage(a);
+                playHeroLoop(a);
             } else if (_health.loaded) {
                 badge.className = 'hidden';
                 sub.textContent = '';
@@ -1497,6 +1500,7 @@
                 l1.textContent = 'Duration';
                 v1.textContent = '—';
                 setImg('');
+                stopHeroLoop();
             }
         }
 
@@ -1509,8 +1513,50 @@
             var dur = Number(a.duration) || 0;
             var t = _peaks[a.id];
             if (t == null) { requestPeak(a.id); t = dur / 2; }
-            var start = Math.max(0, Math.min(Math.round(t - 3), Math.floor(dur - 6)));
-            return 'https://image.mux.com/' + pid + '/animated.webp?width=640&fps=15&start=' + start + '&end=' + (start + 6);
+            var hero = document.getElementById('live-feed-hero');
+            var dpr = Math.min(window.devicePixelRatio || 1, 2);
+            var w = Math.min(1920, Math.round((hero ? hero.clientWidth : 1200) * dpr));
+            var h = Math.min(1080, Math.round((hero ? hero.clientHeight : 300) * dpr));
+            var time = Math.max(0, Math.min(Math.round(t), Math.floor(dur - 1)));
+            return 'https://image.mux.com/' + pid + '/thumbnail.jpg?time=' + time + '&width=' + w + '&height=' + h + '&fit_mode=smartcrop';
+        }
+
+        // Smooth muted loop of the peak, played as real video (hardware-decoded on phones),
+        // faded in over the still once it is actually playing.
+        var _heroLoop = null;
+        function playHeroLoop(a) {
+            var wrap = document.getElementById('live-feed-player-wrap');
+            if (!wrap || !window.customElements || !customElements.get('mux-player')) return;
+            var pid = a.playback_ids[0].id, dur = Number(a.duration) || 0;
+            var t = _peaks[a.id] != null ? _peaks[a.id] : dur / 2;
+            var start = Math.max(0, Math.min(t - 4, dur - 10)), end = start + 8;
+            var key = pid + '|' + Math.round(start);
+            if (_heroLoop && _heroLoop.key === key) return;
+            wrap.style.opacity = '0';
+            wrap.innerHTML = '';
+            var mp = document.createElement('mux-player');
+            mp.setAttribute('playback-id', pid);
+            mp.setAttribute('stream-type', 'on-demand');
+            mp.setAttribute('muted', '');
+            mp.setAttribute('autoplay', 'muted');
+            mp.setAttribute('playsinline', '');
+            mp.setAttribute('preload', 'auto');
+            mp.setAttribute('start-time', String(Math.round(start)));
+            mp.setAttribute('max-resolution', '720p');
+            mp.setAttribute('disable-tracking', '');
+            mp.setAttribute('nohotkeys', '');
+            mp.setAttribute('default-hidden-captions', '');
+            mp.style.cssText = 'width:100%;height:100%;--controls:none;--media-object-fit:cover;--media-background-color:transparent;--center-controls:none;--bottom-play-button:none;';
+            mp.addEventListener('playing', function() { wrap.style.opacity = '0.6'; });
+            mp.addEventListener('timeupdate', function() { if (mp.currentTime >= end || mp.currentTime < start - 1) mp.currentTime = start; });
+            wrap.appendChild(mp);
+            _heroLoop = { key: key, el: mp };
+            if (wrap.dataset.pos) mp.style.setProperty('--media-object-position', wrap.dataset.pos);
+        }
+        function stopHeroLoop() {
+            var wrap = document.getElementById('live-feed-player-wrap');
+            if (wrap) { wrap.style.opacity = '0'; wrap.innerHTML = ''; }
+            _heroLoop = null;
         }
 
         // Keep the artist centred in the moving banner. Mux's smart crop finds the subject on a
@@ -1561,8 +1607,10 @@
             var time = Math.max(0, Math.min(Math.round(t), Math.floor(dur - 1)));
             var aspect = hero.clientWidth / Math.max(1, hero.clientHeight);
             heroFocus(a.playback_ids[0].id, time, aspect).then(function(p) {
-                img.style.objectPosition = p.x + '% ' + p.y + '%';
-            }).catch(function() { img.style.objectPosition = ''; });
+                var pos = p.x + '% ' + p.y + '%';
+                var wrap = document.getElementById('live-feed-player-wrap');
+                if (wrap) { wrap.dataset.pos = pos; if (_heroLoop) _heroLoop.el.style.setProperty('--media-object-position', pos); }
+            }).catch(function() {});
         }
         // Re-crop when the banner changes shape (rotate, resize)
         (function() {
