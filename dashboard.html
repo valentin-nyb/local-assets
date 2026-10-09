@@ -1453,6 +1453,7 @@
 
             if (live.length) {
                 var s = live[0];
+                badge.style.background = '';
                 badge.className = 'inline-flex items-center gap-2 px-3 py-1 bg-red-500 text-white rounded-full text-[10px] font-bold uppercase tracking-widest animate-pulse';
                 badge.innerHTML = '<iconify-icon icon="solar:record-circle-linear"></iconify-icon> LIVE';
                 sub.textContent = live.length > 1 ? live.length + ' cameras streaming' : '';
@@ -1470,6 +1471,7 @@
                 var a = latest.a;
                 var date = latest.meta.date || new Date(Number(a.created_at) * 1000).toISOString().slice(0, 10);
                 badge.className = 'inline-flex items-center gap-2 px-3 py-1 bg-white/10 text-white rounded-full text-[10px] font-bold uppercase tracking-widest';
+                badge.style.background = 'rgba(255,255,255,.14)';
                 badge.innerHTML = '<iconify-icon icon="solar:clapperboard-play-linear"></iconify-icon> LATEST SESSION';
                 sub.textContent = new Date(date + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
                 title.textContent = latest.meta.artist || 'Untitled';
@@ -2395,7 +2397,7 @@
     <style>
         /* Hero on phones: title left, stats stacked on the right */
         @media (max-width: 767px) {
-            #live-feed-hero { flex-direction:row !important; align-items:flex-end !important; justify-content:space-between !important; gap:16px !important; }
+            #live-feed-hero { flex-direction:row !important; align-items:center !important; justify-content:space-between !important; gap:16px !important; }
             #hero-text { text-align:left; flex:1; }
             #hero-text > div:first-child { flex-wrap:wrap; gap:6px 10px; }
             #hero-title { font-size:26px; line-height:1.05; word-break:break-word; }
