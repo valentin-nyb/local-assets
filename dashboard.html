@@ -95,8 +95,8 @@
             </div>
             <div class="flex items-center gap-6">
                 <div class="hidden md:flex items-center gap-2 bg-[#0a0a0a] border border-[#27272a] px-3 py-1.5 rounded-md shadow-[inset_0_0_10px_rgba(0,0,0,0.5)]">
-                    <span class="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-pulse"></span>
-                    <span class="text-[9px] font-mono text-[#39FF14] uppercase tracking-widest">System OK</span>
+                    <span id="sys-badge-dot" class="w-1.5 h-1.5 rounded-full bg-zinc-600"></span>
+                    <span id="sys-badge" class="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">Checking…</span>
                 </div>
                 <button id="venue-avatar" onclick="openVenueEditor()" class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center font-bold text-xs shrink-0 cursor-pointer hover:scale-105 transition-transform shadow-[0_0_10px_rgba(255,255,255,0.1)] relative" title="Change venue name">
                     A
@@ -111,28 +111,26 @@
                 <span id="venue-tier" class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">INFRASTRUCTURE TIER — ADMIN</span>
             </div>
             <a id="live-feed-hero" href="/camera.html" class="block cursor-pointer hover:border-primary/50 transition-all duration-500 w-full bg-[#050505] border border-[#27272a] rounded-2xl p-5 md:p-8 relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-4 md:gap-6 shadow-2xl no-underline" style="background:#050505!important">
-                <img id="live-feed-video" src="https://image.mux.com/q6FUhQVYgBr02BcUGR02VxR2FFP00anZQ2jZrJuQ6B01EPk/animated.gif?width=640" class="absolute inset-0 w-full h-full object-cover opacity-60 grayscale transition-all duration-700 pointer-events-none" alt="Live Feed">
+                <img id="live-feed-video" src="" class="hidden absolute inset-0 w-full h-full object-cover opacity-60 grayscale transition-all duration-700 pointer-events-none" alt="">
                 <div class="absolute inset-0 pointer-events-none" style="background:rgba(0,0,0,0.35)"></div>
                 <div class="absolute inset-0 bg-scanlines opacity-10 pointer-events-none"></div>
 
-                <div class="relative z-10">
+                <div class="relative z-10 min-w-0">
                     <div class="flex items-center gap-3 mb-3">
-                        <span class="inline-flex items-center gap-2 px-3 py-1 bg-red-500 text-white rounded-full text-[10px] font-bold uppercase tracking-widest animate-pulse">
-                            <iconify-icon icon="solar:record-circle-linear"></iconify-icon> LIVE FEED
-                        </span>
-                        <span class="font-mono text-[10px] uppercase dark:text-[#F97316]" style="color:#ffffff">Room 1 // Main Floor</span>
+                        <span id="hero-badge" class="hidden inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest"></span>
+                        <span id="hero-sub" class="font-mono text-[10px] uppercase" style="color:#ffffff"></span>
                     </div>
-                    <h2 class="text-3xl font-extrabold tracking-tighter uppercase" style="color:#ffffff">AMONGST FEW</h2>
+                    <h2 id="hero-title" class="text-3xl font-extrabold tracking-tighter uppercase" style="color:#ffffff">&nbsp;</h2>
                 </div>
 
                 <div class="flex gap-10 relative z-10 font-mono">
                     <div class="text-left">
-                        <span class="block text-[9px] uppercase mb-1 text-[#39FF14] dark:text-[#F97316]">Elapsed</span>
-                        <span id="elapsed-timer" class="text-lg font-medium" style="color:#ffffff">00:00:00</span>
+                        <span id="hero-stat1-label" class="block text-[9px] uppercase mb-1 text-[#39FF14] dark:text-[#F97316]"></span>
+                        <span id="hero-stat1" class="text-lg font-medium" style="color:#ffffff"></span>
                     </div>
                     <div class="text-left">
                         <span class="block text-[9px] uppercase mb-1 text-[#39FF14] dark:text-[#F97316]">Cameras</span>
-                        <span class="text-lg font-medium text-[#39FF14] dark:text-[#F97316]">3/3 ACTIVE</span>
+                        <span id="hero-cameras" class="text-lg font-medium text-[#39FF14] dark:text-[#F97316]">—</span>
                     </div>
                 </div>
             </a>
@@ -149,9 +147,8 @@
                     <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3 block">Cloud Storage</span>
                     <div class="flex items-end justify-between">
                         <span id="live-storage-usage" class="text-2xl font-bold text-primary">—</span>
-                        <span class="text-[10px] text-muted-foreground font-mono">/ 50 TB</span>
+                        <span id="storage-files" class="text-[10px] text-muted-foreground font-mono uppercase"></span>
                     </div>
-                    <div class="w-full bg-white/5 h-1 mt-4 rounded-full overflow-hidden"><div id="storage-bar" class="bg-primary h-full w-[0%]"></div></div>
                 </div>
                 <!-- Revenue Generated Card -->
                 <div class="bg-card border border-border p-4 md:p-5 rounded-xl flex flex-col">
@@ -212,15 +209,10 @@
                 <div class="space-y-6">
                     <div class="bg-card border border-border rounded-2xl p-6">
                         <h3 class="text-xs font-bold uppercase tracking-widest mb-6">System Health</h3>
-                        <div class="space-y-6">
-                            <div>
-                                <div class="flex justify-between text-[10px] font-mono mb-2 uppercase"><span class="text-muted-foreground">Upload Bandwidth</span><span id="bandwidth-value" class="text-white">—</span></div>
-                                <div class="w-full bg-white/5 h-1 rounded-full overflow-hidden"><div id="bandwidth-bar" class="bg-primary h-full w-[0%] shadow-[0_0_10px_#39FF14] transition-all duration-700"></div></div>
-                            </div>
-                            <div>
-                                <div class="flex justify-between text-[10px] font-mono mb-2 uppercase"><span class="text-muted-foreground">Local Storage</span><span id="nas-value" class="text-white">—</span></div>
-                                <div class="w-full bg-white/5 h-1 rounded-full overflow-hidden"><div id="nas-bar" class="bg-yellow-500 h-full transition-all duration-700" style="width: 0%;"></div></div>
-                            </div>
+                        <div class="sh-list">
+                            <div class="sh-row"><span class="sh-label">Cameras</span><span class="sh-val"><span id="sh-cam-dot" class="sh-dot"></span><span id="sh-cam">—</span></span></div>
+                            <div class="sh-row"><span class="sh-label">Video processing</span><span class="sh-val"><span id="sh-video-dot" class="sh-dot"></span><span id="sh-video">—</span></span></div>
+                            <div class="sh-row"><span class="sh-label">Vertical clips</span><span class="sh-val"><span id="sh-clips-dot" class="sh-dot"></span><span id="sh-clips">—</span></span></div>
                         </div>
                     </div>
                 </div>
@@ -230,12 +222,10 @@
         <div class="la-statusbar w-full bg-black border-t border-[#27272a] flex items-center justify-between px-4 md:px-6 shrink-0 py-5" style="padding-bottom: calc(env(safe-area-inset-bottom) + 1.25rem);">
             <div class="flex items-center gap-2 md:gap-4 text-[7px] md:text-[9px] font-mono text-zinc-600 uppercase tracking-widest">
                 <span>LOCAL / ASSETS V2.4.0</span>
-                <span class="text-zinc-800 hidden md:inline">//</span>
-                <span class="text-[#39FF14]/70 hidden md:inline">CONNECTED</span>
             </div>
             <div class="flex items-center gap-2">
-                <span class="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-pulse shadow-[0_0_8px_#39FF14]"></span>
-                <span class="text-[7px] md:text-[9px] font-mono text-zinc-400 uppercase tracking-widest">System Operational</span>
+                <span id="sys-foot-dot" class="w-1.5 h-1.5 rounded-full bg-zinc-600"></span>
+                <span id="sys-foot" class="text-[7px] md:text-[9px] font-mono text-zinc-400 uppercase tracking-widest">Checking…</span>
             </div>
         </div>
     </main>
@@ -480,9 +470,8 @@
             const thirtyDaysAgo = nowTs - (30 * 86400);
             const recentCount = muxAssets.filter(a => a.created_at > thirtyDaysAgo).length;
             const olderCount = muxAssets.length - recentCount;
-            const growthPct = olderCount > 0 ? Math.round((recentCount / olderCount) * 100) : (recentCount > 0 ? 100 : 0);
             const pctEl = document.getElementById('growth-pct');
-            if (pctEl) pctEl.textContent = '+' + growthPct + '%';
+            if (pctEl) { pctEl.textContent = '+' + recentCount + ' in 30 days'; pctEl.style.display = recentCount > 0 ? '' : 'none'; }
 
             // Calculate real cloud storage from static rendition file sizes
             let totalBytes = 0;
@@ -494,16 +483,12 @@
                 }
             }
             const storageEl = document.getElementById('live-storage-usage');
-            const totalStorageGB = parseFloat((totalBytes / (1024 * 1024 * 1024)).toFixed(2));
-            if (storageEl) storageEl.textContent = totalStorageGB.toFixed(2) + ' GB';
-            const LOCAL_LIMIT_GB = 500;
-            const storagePercent = Math.min((totalStorageGB / LOCAL_LIMIT_GB) * 100, 100);
-            const bar = document.getElementById('storage-bar');
-            if (bar) bar.style.width = Math.max(storagePercent, 0.5) + '%';
-            const nasVal = document.getElementById('nas-value');
-            const nasBar = document.getElementById('nas-bar');
-            if (nasVal) nasVal.textContent = Math.max(LOCAL_LIMIT_GB - totalStorageGB, 0).toFixed(1) + ' GB LEFT';
-            if (nasBar) { nasBar.style.width = Math.max(storagePercent, 0.5) + '%'; nasBar.style.background = storagePercent >= 85 ? '#ef4444' : storagePercent >= 65 ? '#eab308' : '#39FF14'; }
+            if (storageEl) storageEl.textContent = (totalBytes / 1e9).toFixed(2) + ' GB';
+            const fileCount = muxAssets.reduce((n, a) => n + (a.static_renditions?.files || []).filter(f => Number(f.filesize) > 0).length, 0);
+            const filesEl = document.getElementById('storage-files');
+            if (filesEl) filesEl.textContent = fileCount + ' file' + (fileCount !== 1 ? 's' : '');
+            renderVideoHealth(muxAssets);
+            setLatestSession(muxAssets);
 
             // Build a lookup: passthrough (uppercase) → array of assets
             // JSON passthrough and no-passthrough assets are also indexed by artist name.
@@ -1398,38 +1383,150 @@
             }
         }
 
-        // --- System Health: real metrics from /api/system-health ---
+        // --- System Health + hero: cameras (Mux live streams), clip pipeline, video processing ---
+        var _health = { cameras: null, pipeline: null, video: null, latest: null, loaded: false };
+
+        function setHealthRow(key, level, text) {
+            var dot = document.getElementById('sh-' + key + '-dot');
+            var val = document.getElementById('sh-' + key);
+            if (val) val.textContent = text;
+            if (dot) dot.dataset.level = level;
+        }
+
+        function renderVideoHealth(assets) {
+            var ready = 0, preparing = 0, failed = 0;
+            assets.forEach(function(a) {
+                if (a.source === 'blob') return;
+                if (a.status === 'errored') failed++;
+                else if (a.status !== 'ready') preparing++;
+                else ready++;
+            });
+            _health.video = { ready: ready, preparing: preparing, failed: failed };
+            var parts = [ready + ' ready'];
+            if (preparing) parts.push(preparing + ' processing');
+            if (failed) parts.push(failed + ' failed');
+            setHealthRow('video', failed ? 'bad' : preparing ? 'busy' : 'ok', parts.join(' · '));
+            renderSystemStatus();
+        }
+
+        function setLatestSession(assets) {
+            var latest = null;
+            assets.forEach(function(a) {
+                if (a.source === 'blob' || a.status !== 'ready' || !(a.playback_ids || []).length) return;
+                var meta = parsePassthrough(a.passthrough, a.name, a.id) || {};
+                var cam = meta.camera ? String(meta.camera).toUpperCase() : '';
+                var isSub = ['AUDIO', 'SOCIAL', 'THUMB'].indexOf(cam) >= 0 ||
+                    (typeof a.passthrough === 'string' && a.passthrough.indexOf(' // ') >= 0 && !/^\s*\{/.test(a.passthrough));
+                if (isSub) return;
+                if (!latest || Number(a.created_at) > Number(latest.a.created_at)) latest = { a: a, meta: meta };
+            });
+            _health.latest = latest;
+            renderHero();
+        }
+
+        function fmtDuration(sec) {
+            sec = Math.max(0, Math.floor(sec || 0));
+            var h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60;
+            return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+        }
+
+        var _heroTimer = null;
+        function renderHero() {
+            var badge = document.getElementById('hero-badge');
+            var sub   = document.getElementById('hero-sub');
+            var title = document.getElementById('hero-title');
+            var l1    = document.getElementById('hero-stat1-label');
+            var v1    = document.getElementById('hero-stat1');
+            var camEl = document.getElementById('hero-cameras');
+            var img   = document.getElementById('live-feed-video');
+            if (!badge || !title) return;
+            clearInterval(_heroTimer);
+
+            var streams = _health.cameras || [];
+            var live = streams.filter(function(s) { return s.status === 'active'; });
+            if (camEl) camEl.textContent = _health.cameras == null ? '—' : streams.length ? live.length + '/' + streams.length + ' LIVE' : 'NONE';
+
+            function setImg(src) {
+                if (src) { if (img.getAttribute('src') !== src) img.src = src; img.classList.remove('hidden'); }
+                else { img.removeAttribute('src'); img.classList.add('hidden'); }
+            }
+
+            if (live.length) {
+                var s = live[0];
+                badge.className = 'inline-flex items-center gap-2 px-3 py-1 bg-red-500 text-white rounded-full text-[10px] font-bold uppercase tracking-widest animate-pulse';
+                badge.innerHTML = '<iconify-icon icon="solar:record-circle-linear"></iconify-icon> LIVE';
+                sub.textContent = live.length > 1 ? live.length + ' cameras streaming' : '';
+                title.textContent = s.name || getVenueName();
+                l1.textContent = 'Live for';
+                var since = s.liveSince ? s.liveSince * 1000 : null;
+                var tick = function() { v1.textContent = since ? fmtDuration((Date.now() - since) / 1000) : '—'; };
+                tick(); _heroTimer = setInterval(tick, 1000);
+                setImg(s.playbackId ? 'https://image.mux.com/' + s.playbackId + '/thumbnail.jpg?width=960&_=' + Math.floor(Date.now() / 30000) : '');
+                return;
+            }
+
+            var latest = _health.latest;
+            if (latest) {
+                var a = latest.a;
+                var date = latest.meta.date || new Date(Number(a.created_at) * 1000).toISOString().slice(0, 10);
+                badge.className = 'inline-flex items-center gap-2 px-3 py-1 bg-white/10 text-white rounded-full text-[10px] font-bold uppercase tracking-widest';
+                badge.innerHTML = '<iconify-icon icon="solar:clapperboard-play-linear"></iconify-icon> LATEST SESSION';
+                sub.textContent = new Date(date + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                title.textContent = latest.meta.artist || 'Untitled';
+                l1.textContent = 'Duration';
+                v1.textContent = fmtDuration(a.duration);
+                setImg('https://image.mux.com/' + a.playback_ids[0].id + '/animated.gif?width=640');
+            } else if (_health.loaded) {
+                badge.className = 'hidden';
+                sub.textContent = '';
+                title.textContent = 'No sessions yet';
+                l1.textContent = 'Duration';
+                v1.textContent = '—';
+                setImg('');
+            }
+        }
+
+        function renderSystemStatus() {
+            var problems = [];
+            if (_health.pipeline && (_health.pipeline.stalled || _health.pipeline.failed)) problems.push('clips');
+            if (_health.video && _health.video.failed) problems.push('video');
+            var known = _health.pipeline !== null || _health.video !== null;
+            var text = !known ? 'Checking…' : problems.length ? 'Needs attention' : 'All systems OK';
+            var color = !known ? '#52525b' : problems.length ? '#ef4444' : '#39FF14';
+            [['sys-badge', 'sys-badge-dot'], ['sys-foot', 'sys-foot-dot']].forEach(function(ids) {
+                var t = document.getElementById(ids[0]), d = document.getElementById(ids[1]);
+                if (t) { t.textContent = text; if (ids[0] === 'sys-badge') t.style.color = color; }
+                if (d) { d.style.background = color; d.style.boxShadow = known ? '0 0 8px ' + color : 'none'; }
+            });
+        }
+
         async function fetchSystemHealth() {
             try {
                 const res = await laFetch('/api/system-health');
                 if (!res.ok) return;
                 const data = await res.json();
+                _health.cameras = data.cameras;
+                _health.pipeline = data.pipeline;
 
-                // Upload Bandwidth
-                const bwVal = document.getElementById('bandwidth-value');
-                const bwBar = document.getElementById('bandwidth-bar');
-                if (bwVal && bwBar && data.uploadMbps != null) {
-                    const mbps = data.uploadMbps;
-                    bwVal.textContent = mbps >= 1000 ? (mbps / 1000).toFixed(1) + ' GBPS' : mbps.toFixed(1) + ' MBPS';
-                    const pct = Math.min((mbps / 1000) * 100, 100);
-                    bwBar.style.width = pct + '%';
-                    bwBar.style.background = mbps >= 100 ? '#39FF14' : mbps >= 10 ? '#eab308' : '#ef4444';
-                    bwBar.style.boxShadow = mbps >= 100 ? '0 0 10px #39FF14' : mbps >= 10 ? '0 0 10px #eab308' : '0 0 10px #ef4444';
+                const cams = data.cameras;
+                if (cams == null) setHealthRow('cam', 'bad', 'Unavailable');
+                else if (!cams.length) setHealthRow('cam', 'off', 'None set up');
+                else {
+                    const live = cams.filter(c => c.status === 'active').length;
+                    setHealthRow('cam', live ? 'ok' : 'off', live + ' of ' + cams.length + ' live');
                 }
 
-                // Local Storage (Mac on site: 500 GB)
-                const nasVal = document.getElementById('nas-value');
-                const nasBar = document.getElementById('nas-bar');
-                if (nasVal && nasBar && data.storageGB != null) {
-                    const usedGB   = data.storageGB;
-                    const limitGB  = data.storageLimitGB || 500;
-                    const leftGB   = Math.max(limitGB - usedGB, 0);
-                    nasVal.textContent = leftGB.toFixed(1) + ' GB LEFT';
-                    const pct = Math.min((usedGB / limitGB) * 100, 100);
-                    nasBar.style.width = Math.max(pct, 0.3) + '%';
-                    nasBar.style.background = pct >= 85 ? '#ef4444' : pct >= 65 ? '#eab308' : '#39FF14';
-                }
+                const p = data.pipeline;
+                if (p == null) setHealthRow('clips', 'bad', 'Unavailable');
+                else if (p.stalled) setHealthRow('clips', 'bad', p.queued + ' waiting · worker offline');
+                else if (p.running) setHealthRow('clips', 'busy', p.running + ' generating' + (p.queued ? ' · ' + p.queued + ' queued' : ''));
+                else if (p.queued) setHealthRow('clips', 'busy', p.queued + ' queued');
+                else if (p.failed) setHealthRow('clips', 'bad', p.failed + ' failed today');
+                else setHealthRow('clips', 'ok', p.done ? p.done + ' done today' : 'Idle');
             } catch (e) {}
+            _health.loaded = true;
+            renderHero();
+            renderSystemStatus();
         }
 
         // ── Revenue (YouTube Analytics + SoundCloud plays) ──────────────
@@ -2257,20 +2354,6 @@
             }
         }
 
-        // Live elapsed timer
-        (function() {
-            const start = Date.now();
-            const el = document.getElementById('elapsed-timer');
-            if (!el) return;
-            function pad(n) { return n.toString().padStart(2, '0'); }
-            setInterval(() => {
-                const diff = Math.floor((Date.now() - start) / 1000);
-                const h = Math.floor(diff / 3600);
-                const m = Math.floor((diff % 3600) / 60);
-                const s = diff % 60;
-                el.textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
-            }, 1000);
-        })();
 
     </script>
     <script>
@@ -2284,6 +2367,14 @@
 
     <!-- Connect platforms modal -->
     <style>
+        .sh-list { display:flex; flex-direction:column; gap:16px; }
+        .sh-row { display:flex; align-items:center; justify-content:space-between; gap:12px; font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; }
+        .sh-label { color:#71717a; letter-spacing:.06em; }
+        .sh-val { display:flex; align-items:center; gap:8px; text-align:right; }
+        .sh-dot { width:6px; height:6px; border-radius:50%; background:#52525b; flex-shrink:0; }
+        .sh-dot[data-level="ok"] { background:#39FF14; box-shadow:0 0 8px #39FF14; }
+        .sh-dot[data-level="busy"] { background:#eab308; box-shadow:0 0 8px #eab308; }
+        .sh-dot[data-level="bad"] { background:#ef4444; box-shadow:0 0 8px #ef4444; }
         /* Media popup: arrows sit beside the media on desktop, over it on phones */
         #media-modal { --mm-side:140px; }
         @media (max-width: 640px) {

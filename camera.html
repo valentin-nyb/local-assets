@@ -25,7 +25,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="a™">
     <meta name="theme-color" content="#000000">
-    <title>local / assets™ - PTZ Command Center</title>
+    <title>local / assets™ - Cameras</title>
     <link rel="icon" type="image/x-icon" href="favicon/favicon.ico">
     <link rel="icon" type="image/svg+xml" href="favicon/favicon.svg">
     <link rel="apple-touch-icon" href="favicon/apple-touch-icon.png">
@@ -46,6 +46,23 @@
         ::-webkit-scrollbar { display: none; }
         @media (max-width: 767px) { #sidebar { position: fixed; z-index: 50; height: 100vh; } }
         .sleek-flap { writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.3em; font-size: 10px; font-weight: 800; }
+        .cam-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:16px; }
+        @media (max-width: 640px) { .cam-grid { grid-template-columns:1fr; } }
+        .cam-card { border:1px solid #27272a; background:#0a0a0a; border-radius:16px; overflow:hidden; }
+        .cam-stage { aspect-ratio:16/9; background:#000; position:relative; }
+        .cam-off { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; color:#52525b; font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.1em; text-align:center; padding:16px; }
+        .cam-off iconify-icon { font-size:24px; }
+        .cam-meta { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; }
+        .cam-label { font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.15em; color:#d4d4d8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .cam-pill { font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.15em; padding:3px 8px; border-radius:999px; border:1px solid #27272a; color:#71717a; flex-shrink:0; }
+        .cam-pill.on { color:#fff; background:#ef4444; border-color:#ef4444; }
+        .cam-empty { border:1px dashed #27272a; border-radius:16px; padding:48px 24px; display:flex; flex-direction:column; align-items:center; text-align:center; gap:8px; }
+        .cam-empty.hidden { display:none; }
+        .cam-empty-title { font-size:14px; font-weight:600; color:#e4e4e7; }
+        .cam-empty-text { font-size:12px; line-height:1.6; color:#71717a; max-width:380px; }
+        html:not(.dark) .cam-card { background:#fff; border-color:#e4e4e7; }
+        html:not(.dark) .cam-label, html:not(.dark) .cam-empty-title { color:#18181b; }
+        html:not(.dark) .cam-empty { border-color:#d4d4d8; }
     </style>
 </head>
 <body class="font-sans antialiased bg-background text-foreground overflow-hidden h-screen w-screen flex selection:bg-primary selection:text-black">
@@ -58,97 +75,45 @@
         
         <header class="h-16 flex items-center px-4 md:px-8 border-b border-[#27272a] bg-[#050505] shrink-0 justify-between w-full z-40">
             <div class="flex items-center gap-2 md:gap-3 min-w-0"><button type="button" onclick="toggleSidebar()" class="la-menu-btn" aria-label="Open menu"><iconify-icon icon="solar:hamburger-menu-linear"></iconify-icon></button>
-                <span id="venue-breadcrumb" class="text-zinc-600 text-[10px] font-mono uppercase tracking-[0.3em] hidden md:inline">KOKO LONDON</span>
+                <span id="venue-breadcrumb" class="text-zinc-600 text-[10px] font-mono uppercase tracking-[0.3em] hidden md:inline"></span>
                 <iconify-icon icon="solar:alt-arrow-right-linear" class="text-zinc-700 hidden md:block"></iconify-icon>
                 <h1 class="text-[10px] md:text-[10px] font-mono uppercase tracking-[0.2em] md:tracking-[0.3em] text-[#39FF14] font-bold m-0 truncate">
-                    PTZ COMMAND CENTER
+                    CAMERAS
                 </h1>
             </div>
             <div class="flex items-center gap-4 shrink-0">
                 <div class="hidden md:flex items-center gap-2 bg-[#0a0a0a] border border-[#27272a] px-3 py-1.5 rounded-md shadow-[inset_0_0_10px_rgba(0,0,0,0.5)]">
-                    <span class="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-pulse"></span>
-                    <span class="text-[9px] font-mono text-[#39FF14] uppercase tracking-widest">System OK</span>
+                    <span id="cam-badge-dot" class="w-1.5 h-1.5 rounded-full bg-zinc-600"></span>
+                    <span id="cam-badge" class="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">Checking…</span>
                 </div>
-<button id="venue-avatar" onclick="openVenueEditor()" class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center font-bold text-xs shrink-0 cursor-pointer hover:scale-105 transition-transform shadow-[0_0_10px_rgba(255,255,255,0.1)]" title="Change venue name">K</button>
+<button id="venue-avatar" onclick="openVenueEditor()" class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center font-bold text-xs shrink-0 cursor-pointer hover:scale-105 transition-transform shadow-[0_0_10px_rgba(255,255,255,0.1)]" title="Change venue name"></button>
             </div>
         </header>
 
         <div class="flex-1 w-full overflow-y-auto no-scrollbar">
             <div class="max-w-6xl mx-auto w-full p-4 md:p-10 flex flex-col space-y-4 md:space-y-8 mt-2 md:mt-0">
-                
-                <div class="w-full aspect-video bg-black rounded-xl md:rounded-3xl overflow-hidden border border-white/5 relative shadow-2xl shrink-0">
-                    <div class="absolute top-3 left-3 md:top-6 md:left-6 z-20 flex items-center gap-2 bg-black/40 backdrop-blur-md px-2 py-1 md:px-3 md:py-1.5 rounded border border-[#39FF14]/20">
-                        <span class="w-1.5 h-1.5 md:w-2 md:h-2 bg-[#39FF14] rounded-full animate-pulse"></span>
-                        <span class="text-[7px] md:text-[10px] font-mono text-[#39FF14] uppercase tracking-widest">[ CAM 01 // MAIN ]</span>
-                    </div>
-                    
-                    <div class="absolute top-3 right-3 md:top-6 md:right-6 z-20 text-[7px] md:text-[10px] font-mono text-[#39FF14] flex items-center gap-2 md:gap-4">
-                        <span class="bg-black/40 backdrop-blur px-1.5 py-1 md:px-2 md:py-1 rounded border border-[#39FF14]/20">[ 4K // 60FPS ]</span>
-                    </div>
-
-                    <div id="timecode" class="absolute bottom-3 right-3 md:bottom-6 md:right-6 z-20 font-mono text-[#39FF14] text-xs md:text-xl font-bold tracking-tighter bg-black/60 backdrop-blur px-2 md:px-4 py-1 rounded md:rounded-lg border border-[#39FF14]/30 shadow-[0_0_15px_rgba(57,255,20,0.2)]">
-                        00:00:00:00
-                    </div>
-
-                    <div class="absolute top-2 left-2 w-6 h-6 md:top-4 md:left-4 md:w-12 md:h-12 border-t border-l border-[#39FF14]/40 rounded-tl-lg md:rounded-tl-xl pointer-events-none"></div>
-                    <div class="absolute top-2 right-2 w-6 h-6 md:top-4 md:right-4 md:w-12 md:h-12 border-t border-r border-[#39FF14]/40 rounded-tr-lg md:rounded-tr-xl pointer-events-none"></div>
-                    <div class="absolute bottom-2 left-2 w-6 h-6 md:bottom-4 md:left-4 md:w-12 md:h-12 border-b border-l border-[#39FF14]/40 rounded-bl-lg md:rounded-bl-xl pointer-events-none"></div>
-                    <div class="absolute bottom-2 right-2 w-6 h-6 md:bottom-4 md:right-4 md:w-12 md:h-12 border-b border-r border-[#39FF14]/40 rounded-br-lg md:rounded-br-xl pointer-events-none"></div>
-
-                    <img class="main-feed-img w-full h-full object-cover" src="https://image.mux.com/o9Uel8ZfcKN01xyzS022A6lNHTxCUAfU3BIIEdnukXNHY/animated.gif?width=640" alt="CAM 01 MAIN">
-                    <img class="main-feed-img w-full h-full object-cover absolute inset-0 hidden" src="https://image.mux.com/apYlYJhFBP26XaP7FiUSEImdRZmyrTn00O7afEJVNNjU/animated.gif?width=640" alt="CAM 02 BOOTH">
-                    <img class="main-feed-img w-full h-full object-cover absolute inset-0 hidden" src="https://image.mux.com/N7Hn1XGHYkXzNPUC8a6hXmIJ02C02YNAhIV01LtVNxq1lM/animated.gif?width=640" alt="CAM 03 CROWD">
+                <div id="cam-grid" class="cam-grid"></div>
+                <div id="cam-empty" class="hidden cam-empty">
+                    <iconify-icon icon="solar:videocamera-record-linear" class="text-3xl text-zinc-600"></iconify-icon>
+                    <p class="cam-empty-title">No cameras connected</p>
+                    <p class="cam-empty-text">Cameras appear here as soon as they stream to this venue. Each camera needs its own stream set up in your account.</p>
                 </div>
-
-                <div class="grid grid-cols-3 gap-2 md:gap-4 w-full shrink-0">
-                    <button class="aspect-video rounded-lg md:rounded-2xl overflow-hidden border border-white/10 opacity-40 grayscale hover:opacity-100 hover:grayscale-0 transition-all">
-                        <img src="https://image.mux.com/o9Uel8ZfcKN01xyzS022A6lNHTxCUAfU3BIIEdnukXNHY/animated.gif?width=320" class="w-full h-full object-cover" alt="Camera 1">
-                    </button>
-                    <button class="aspect-video rounded-lg md:rounded-2xl overflow-hidden border border-white/10 opacity-40 grayscale hover:opacity-100 hover:grayscale-0 transition-all">
-                        <img src="https://image.mux.com/apYlYJhFBP26XaP7FiUSEImdRZmyrTn00O7afEJVNNjU/animated.gif?width=320" class="w-full h-full object-cover" alt="Camera 2">
-                    </button>
-                    <button class="aspect-video rounded-lg md:rounded-2xl overflow-hidden border border-white/10 opacity-40 grayscale hover:opacity-100 hover:grayscale-0 transition-all">
-                        <img src="https://image.mux.com/N7Hn1XGHYkXzNPUC8a6hXmIJ02C02YNAhIV01LtVNxq1lM/animated.gif?width=320" class="w-full h-full object-cover" alt="Camera 3">
-                    </button>
-                </div>
-
-                <div id="preset-btns" class="w-full p-2 md:p-6 border border-[#27272a] bg-[#0a0a0a]/50 rounded-xl md:rounded-3xl grid grid-cols-3 gap-2 md:gap-4 shrink-0">
-                    <button class="w-full py-3 md:py-4 rounded-lg md:rounded-full border border-[#27272a] bg-black md:bg-transparent text-[10px] font-mono text-zinc-400 uppercase tracking-widest hover:border-[#39FF14] hover:text-white transition-all">Stage View</button>
-                    <button class="w-full py-3 md:py-4 rounded-lg md:rounded-full border border-[#27272a] bg-black md:bg-transparent text-[10px] font-mono text-zinc-400 uppercase tracking-widest hover:border-[#39FF14] hover:text-white transition-all">Booth Cam</button>
-                    <button class="w-full py-3 md:py-4 rounded-lg md:rounded-full border border-[#27272a] bg-black md:bg-transparent text-[10px] font-mono text-zinc-400 uppercase tracking-widest hover:border-[#39FF14] hover:text-white transition-all">Crowd Wide</button>
-                </div>
+                <p id="cam-error" class="hidden text-center text-[10px] font-mono uppercase tracking-widest text-red-500"></p>
             </div>
         </div>
 
         <div class="la-statusbar w-full h-10 bg-black border-t border-[#27272a] flex items-center justify-between px-4 md:px-6 shrink-0">
             <div class="flex items-center gap-2 md:gap-4 text-[7px] md:text-[9px] font-mono text-zinc-600 uppercase tracking-widest">
                 <span>LOCAL / ASSETS V2.4.0</span>
-                <span class="text-zinc-800 hidden md:inline">//</span>
-                <span class="text-[#39FF14]/70 hidden md:inline">CONNECTED</span>
             </div>
             <div class="flex items-center gap-2">
-                <span class="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-pulse shadow-[0_0_8px_#39FF14]"></span>
-                <span class="text-[7px] md:text-[9px] font-mono text-zinc-400 uppercase tracking-widest">System Operational</span>
+                <span id="cam-foot-dot" class="w-1.5 h-1.5 rounded-full bg-zinc-600"></span>
+                <span id="cam-foot" class="text-[7px] md:text-[9px] font-mono text-zinc-400 uppercase tracking-widest">Checking…</span>
             </div>
         </div>
     </main>
 
     <script>
-        let tc = 0;
-        function pad(n, l = 2) { return n.toString().padStart(l, '0'); }
-        function updateTimecode() {
-            tc++;
-            const frames = tc % 60;
-            const seconds = Math.floor(tc / 60) % 60;
-            const minutes = Math.floor(tc / 3600) % 60;
-            const hours = Math.floor(tc / 216000) % 24;
-            const display = document.getElementById('timecode');
-            if (display) {
-                display.textContent = `${pad(hours)}:${pad(minutes)}:${pad(seconds)}:${pad(frames)}`;
-            }
-        }
-        setInterval(updateTimecode, 1000 / 60);
-
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebar-overlay');
@@ -163,62 +128,73 @@
             }
         }
 
-        // Camera switching
-        (function() {
-            var camButtons = document.querySelectorAll('.grid.grid-cols-3 button');
-            var mainFeeds = document.querySelectorAll('.main-feed-img');
-            var camLabels = ['[ CAM 01 // MAIN ]', '[ CAM 02 // BOOTH ]', '[ CAM 03 // CROWD ]'];
-            var presetBtns = document.querySelectorAll('#preset-btns button');
+        // Cameras: the venue's Mux live streams (one per camera)
+        function laFetch(url, opts) {
+            var sess = {}; try { sess = JSON.parse(localStorage.getItem('la_admin') || '{}'); } catch (_) {}
+            opts = Object.assign({}, opts); opts.headers = Object.assign({}, opts.headers);
+            if (sess.webToken) opts.headers['Authorization'] = 'Bearer ' + sess.webToken;
+            return fetch(url, opts);
+        }
+        function camStatus(text, color) {
+            [['cam-badge', 'cam-badge-dot'], ['cam-foot', 'cam-foot-dot']].forEach(function(ids) {
+                var t = document.getElementById(ids[0]), d = document.getElementById(ids[1]);
+                if (t) { t.textContent = text; if (ids[0] === 'cam-badge') t.style.color = color; }
+                if (d) { d.style.background = color; d.style.boxShadow = '0 0 8px ' + color; }
+            });
+        }
+        var _camKey = '';
+        async function loadCameras() {
+            var grid = document.getElementById('cam-grid');
+            var empty = document.getElementById('cam-empty');
+            var err = document.getElementById('cam-error');
+            try {
+                var res = await laFetch('/api/live-streams');
+                var data = await res.json();
+                if (!res.ok) throw new Error(data.error || res.status);
+                var streams = data.streams || [];
+                err.classList.add('hidden');
+                empty.classList.toggle('hidden', streams.length > 0);
+                var live = streams.filter(function(s) { return s.status === 'active'; }).length;
+                camStatus(streams.length ? live + ' of ' + streams.length + ' live' : 'No cameras', live ? '#39FF14' : '#71717a');
 
-            function switchCam(index) {
-                mainFeeds.forEach(function(img, i) {
-                    if (i === index) { img.classList.remove('hidden'); } else { img.classList.add('hidden'); }
+                // Only rebuild when something changed, so playing video isn't interrupted
+                var key = streams.map(function(s) { return s.id + ':' + s.status; }).join('|');
+                if (key === _camKey) return;
+                _camKey = key;
+                grid.innerHTML = '';
+                streams.forEach(function(s, i) {
+                    var card = document.createElement('div');
+                    card.className = 'cam-card';
+                    var label = 'CAM ' + String(i + 1).padStart(2, '0') + (s.name ? ' // ' + s.name : '');
+                    var isLive = s.status === 'active' && s.playbackId;
+                    card.innerHTML =
+                        '<div class="cam-stage"></div>' +
+                        '<div class="cam-meta"><span class="cam-label"></span>' +
+                        '<span class="cam-pill ' + (isLive ? 'on' : '') + '">' + (isLive ? 'LIVE' : 'OFFLINE') + '</span></div>';
+                    card.querySelector('.cam-label').textContent = label;
+                    var stage = card.querySelector('.cam-stage');
+                    if (isLive) {
+                        var mp = document.createElement('mux-player');
+                        mp.setAttribute('stream-type', 'live');
+                        mp.setAttribute('playback-id', s.playbackId);
+                        mp.setAttribute('muted', '');
+                        mp.setAttribute('autoplay', 'muted');
+                        mp.setAttribute('accent-color', '#39FF14');
+                        mp.style.cssText = 'width:100%;height:100%;--media-object-fit:cover;';
+                        stage.appendChild(mp);
+                    } else {
+                        stage.innerHTML = '<div class="cam-off"><iconify-icon icon="solar:videocamera-slash-linear"></iconify-icon><span>Waiting for the camera to start streaming</span></div>';
+                    }
+                    grid.appendChild(card);
                 });
-
-                var isDark = document.documentElement.classList.contains('dark');
-                var accent = isDark ? '#39FF14' : '#F97316';
-                var accentRgb = isDark ? '57,255,20' : '249,115,22';
-
-                camButtons.forEach(function(b) {
-                    b.style.borderColor = '';
-                    b.style.boxShadow = '';
-                    b.className = 'aspect-video rounded-lg md:rounded-2xl overflow-hidden border border-white/10 opacity-40 grayscale hover:opacity-100 hover:grayscale-0 transition-all';
-                });
-                if (camButtons[index]) {
-                    camButtons[index].className = 'aspect-video rounded-lg md:rounded-2xl overflow-hidden border-2 transition-all';
-                    camButtons[index].style.borderColor = accent;
-                    camButtons[index].style.boxShadow = '0 0 15px rgba(' + accentRgb + ', 0.3)';
-                }
-
-                presetBtns.forEach(function(b) {
-                    b.style.removeProperty('border-color');
-                    b.style.removeProperty('color');
-                });
-                if (presetBtns[index]) {
-                    presetBtns[index].style.setProperty('border-color', accent, 'important');
-                    presetBtns[index].style.setProperty('color', isDark ? 'white' : accent, 'important');
-                }
-
-                var labelEl = document.querySelector('.bg-black\\/40 .font-mono');
-                if (labelEl) labelEl.textContent = camLabels[index] || camLabels[0];
+            } catch (e) {
+                err.textContent = 'Could not load cameras — ' + e.message;
+                err.classList.remove('hidden');
+                camStatus('Unavailable', '#ef4444');
             }
-
-            camButtons.forEach(function(btn, index) {
-                btn.addEventListener('click', function() { switchCam(index); });
-            });
-
-            presetBtns.forEach(function(btn, index) {
-                btn.addEventListener('click', function() { switchCam(index); });
-            });
-
-            document.addEventListener('themechange', function() {
-                var activeIndex = Array.from(camButtons).findIndex(function(b) { return b.classList.contains('border-2'); });
-                if (activeIndex >= 0) switchCam(activeIndex);
-            });
-
-            // Init: apply theme-aware styling to first cam on load
-            switchCam(0);
-        })();
+        }
+        loadCameras();
+        setInterval(loadCameras, 15000);
     </script>
     <script>
         if ('serviceWorker' in navigator) {
