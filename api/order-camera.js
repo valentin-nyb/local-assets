@@ -44,6 +44,7 @@ export default async function handler(req, res) {
         price_data: {
           currency: CAMERA_PRODUCT.currency,
           unit_amount: CAMERA_PRODUCT.unitAmount,
+          tax_behavior: 'inclusive', // £1,299 includes VAT
           product_data: { name: CAMERA_PRODUCT.name, description: CAMERA_PRODUCT.description, images: ['https://local-assets.com/img/obsbot-tail-2.png'] },
         },
       }],
