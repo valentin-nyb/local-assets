@@ -461,23 +461,63 @@
         }
         function escHtml(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 
-        // Delete one clip or thumbnail (from Mux, or from storage for uploaded thumbnails)
-        async function deleteAsset(btn) {
+        // Delete one clip or thumbnail (from Mux, or from storage for uploaded thumbnails),
+        // after a styled confirmation that shows exactly what will be removed.
+        function showToast(text) {
+            var t = document.getElementById('la-toast');
+            if (!t) { t = document.createElement('div'); t.id = 'la-toast'; t.className = 'la-toast'; document.body.appendChild(t); }
+            t.innerHTML = '<iconify-icon icon="solar:check-circle-bold"></iconify-icon><span></span>';
+            t.querySelector('span').textContent = text;
+            t.classList.add('show');
+            clearTimeout(t._h); t._h = setTimeout(function() { t.classList.remove('show'); }, 2600);
+        }
+        function deleteAsset(btn) {
             var label = btn.dataset.delLabel || 'this file';
-            if (!confirm('Delete ' + label + '?\n\nIt will be removed permanently' + (/^blob:/.test(btn.dataset.delId) ? '.' : ', including from Mux.') + ' This can\'t be undone.')) return;
+            var isBlob = /^blob:/.test(btn.dataset.delId || '');
             var tile = btn.closest('.tile-wrap');
-            btn.disabled = true;
-            if (tile) tile.style.opacity = '.4';
-            try {
-                var r = await laFetch('/api/delete-asset', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: btn.dataset.delId, url: btn.dataset.delUrl || '' }) });
-                var d = await r.json(); if (!r.ok) throw new Error(d.error || r.status);
-                fetchRecentUploads();
-            } catch (e) {
-                if (tile) tile.style.opacity = '';
-                btn.disabled = false;
-                alert('Could not delete: ' + e.message);
-            }
+            var img = tile && tile.querySelector('img');
+            var kind = /clip/i.test(label) ? 'clip' : 'thumbnail';
+            var m = document.createElement('div');
+            m.className = 'se-backdrop';
+            m.innerHTML = '<div class="se-panel del-panel" role="alertdialog" aria-modal="true" aria-labelledby="del-title">' +
+                '<div class="del-row">' +
+                    (img ? '<div class="del-thumb ' + (kind === 'clip' ? 'tall' : '') + '"><img src="' + escHtml(img.getAttribute('src')) + '" alt=""></div>'
+                         : '<div class="del-thumb icon"><iconify-icon icon="solar:trash-bin-minimalistic-linear"></iconify-icon></div>') +
+                    '<div class="del-text"><p id="del-title" class="se-title">Delete ' + kind + '?</p>' +
+                    '<p class="del-name">' + escHtml(label) + '</p>' +
+                    '<p class="del-warn">This permanently removes the file' + (isBlob ? '' : ' from Mux') + ' and any downloads or links to it. This can\'t be undone.</p></div>' +
+                '</div>' +
+                '<p class="se-error"></p>' +
+                '<div class="se-actions"><button type="button" class="se-btn ghost" data-cancel>Cancel</button>' +
+                '<button type="button" class="se-btn danger" data-confirm><iconify-icon icon="solar:trash-bin-minimalistic-linear"></iconify-icon> Delete permanently</button></div>' +
+                '</div>';
+            document.body.appendChild(m);
+            var close = function() { m.remove(); document.removeEventListener('keydown', onKey); };
+            var onKey = function(e) { if (e.key === 'Escape' && !busy) close(); };
+            var busy = false;
+            document.addEventListener('keydown', onKey);
+            m.addEventListener('click', function(e) { if (e.target === m && !busy) close(); });
+            m.querySelector('[data-cancel]').onclick = function() { if (!busy) close(); };
+            var go = m.querySelector('[data-confirm]');
+            go.focus();
+            go.onclick = async function() {
+                busy = true; go.disabled = true; m.querySelector('[data-cancel]').disabled = true;
+                go.innerHTML = '<span class="del-spin"></span> Deleting…';
+                if (tile) tile.style.opacity = '.4';
+                try {
+                    var r = await laFetch('/api/delete-asset', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: btn.dataset.delId, url: btn.dataset.delUrl || '' }) });
+                    var d = await r.json(); if (!r.ok) throw new Error(d.error || r.status);
+                    close();
+                    showToast((kind === 'clip' ? 'Clip' : 'Thumbnail') + ' deleted');
+                    fetchRecentUploads();
+                } catch (e) {
+                    busy = false; go.disabled = false; m.querySelector('[data-cancel]').disabled = false;
+                    go.innerHTML = '<iconify-icon icon="solar:trash-bin-minimalistic-linear"></iconify-icon> Try again';
+                    if (tile) tile.style.opacity = '';
+                    m.querySelector('.se-error').textContent = 'Could not delete: ' + e.message;
+                }
+            };
         }
 
         async function editSession(btn) {
@@ -2664,6 +2704,25 @@
         .tile-wrap:hover .tile-x, .tile-x:focus-visible, .tile-x.always { opacity:1; }
         @media (hover:none) { .tile-x { opacity:1; } }
         @media (hover:hover) { .tile-x:hover { background:#ef4444; border-color:#ef4444; } }
+        /* Delete confirmation + toast */
+        .del-panel { width:420px; }
+        .del-row { display:flex; gap:14px; align-items:flex-start; }
+        .del-thumb { width:96px; aspect-ratio:16/9; border-radius:10px; overflow:hidden; flex-shrink:0; background:var(--la-chip); border:1px solid var(--la-line); display:flex; align-items:center; justify-content:center; }
+        .del-thumb.tall { width:56px; aspect-ratio:9/16; }
+        .del-thumb img { width:100%; height:100%; object-fit:cover; }
+        .del-thumb.icon iconify-icon { font-size:22px; color:var(--la-bad); }
+        .del-text { min-width:0; display:flex; flex-direction:column; gap:4px; }
+        .del-name { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--la-sub); }
+        .del-warn { font-size:13px; line-height:1.5; color:var(--la-sub); margin-top:4px; }
+        .se-btn.danger { background:var(--la-bad); color:#fff; display:inline-flex; align-items:center; gap:6px; }
+        @media (hover:hover) { .se-btn.danger:hover { filter:brightness(1.08); } }
+        .se-btn:disabled { cursor:default; }
+        .del-spin { width:12px; height:12px; border-radius:50%; border:2px solid rgba(255,255,255,.35); border-top-color:#fff; animation:delspin .7s linear infinite; display:inline-block; }
+        @keyframes delspin { to { transform:rotate(360deg); } }
+        .la-toast { position:fixed; left:50%; bottom:calc(env(safe-area-inset-bottom) + 24px); transform:translate(-50%, 20px); opacity:0; pointer-events:none; z-index:2147483001;
+            display:flex; align-items:center; gap:8px; padding:10px 16px; border-radius:999px; background:var(--la-raised); color:var(--la-text); border:1px solid var(--la-line); box-shadow:var(--la-shadow); font-size:13px; font-weight:500; transition:opacity .2s, transform .2s; }
+        .la-toast iconify-icon { color:var(--la-ok); font-size:16px; }
+        .la-toast.show { opacity:1; transform:translate(-50%, 0); }
         /* Edit session */
         .se-edit { width:28px; height:28px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; color:var(--la-dim); background:none; border:none; cursor:pointer; font-size:14px; }
         @media (hover:hover) { .se-edit:hover { background:var(--la-chip); color:var(--la-text); } }
