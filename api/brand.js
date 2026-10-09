@@ -61,17 +61,22 @@ export default async function handler(req, res) {
         cursor = page.hasMore ? page.cursor : undefined;
       } while (cursor);
       files.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
-      const orgType = await withRedis(r => r.get(`brand_org_type:${slug}`)).catch(() => null);
-      return res.status(200).json({ files, orgType: ORG_TYPES.includes(orgType) ? orgType : 'venue' });
+      const [orgType, orgName] = await withRedis(r => Promise.all([r.get(`brand_org_type:${slug}`), r.get(`brand_org_name:${slug}`)]))
+        .catch(() => [null, null]);
+      return res.status(200).json({ files, orgType: ORG_TYPES.includes(orgType) ? orgType : 'venue', orgName: orgName || '' });
     }
 
     if (req.method !== 'POST') return res.status(405).end();
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
 
-    if (body.action === 'setOrgType') {
+    if (body.action === 'setOrg') {
       if (!ORG_TYPES.includes(body.orgType)) return res.status(400).json({ error: 'Unknown type' });
-      await withRedis(r => r.set(`brand_org_type:${slug}`, body.orgType));
-      return res.status(200).json({ orgType: body.orgType });
+      const orgName = String(body.orgName ?? '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 60);
+      await withRedis(r => Promise.all([
+        r.set(`brand_org_type:${slug}`, body.orgType),
+        orgName ? r.set(`brand_org_name:${slug}`, orgName) : r.del(`brand_org_name:${slug}`),
+      ]));
+      return res.status(200).json({ orgType: body.orgType, orgName });
     }
 
     if (body.action === 'delete') {

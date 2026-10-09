@@ -299,7 +299,7 @@
             { key: 'other',      label: 'Other',      icon: 'solar:folder-linear' },
         ];
         var IMG_EXT = /\.(png|jpe?g|svg|webp|gif)$/i;
-        var _files = [], _owners = [], _uploading = false, _orgType = 'venue';
+        var _files = [], _owners = [], _uploading = false, _orgType = 'venue', _orgName = '';
         var ORG_LABELS = { venue: 'Venue', label: 'Record label', management: 'Management' };
 
         function slugify(name) {
@@ -331,13 +331,14 @@
                 ]);
                 _files = res[0].files || [];
                 _orgType = res[0].orgType || 'venue';
+                _orgName = res[0].orgName || '';
                 var assets = Array.isArray(res[1]) ? res[1] : (res[1].data || []);
                 var artists = {};
                 assets.forEach(function(a) { var n = artistFromAsset(a); if (n) artists['artist-' + slugify(n)] = n.toUpperCase(); });
                 _files.forEach(function(f) {
                     if (f.owner !== 'venue' && !artists[f.owner]) artists[f.owner] = f.owner.slice(7).replace(/-/g, ' ').toUpperCase();
                 });
-                _owners = [{ key: 'venue', name: venueName(), kind: ORG_LABELS[_orgType] + ' brand kit', org: true }].concat(
+                _owners = [{ key: 'venue', name: _orgName || venueName(), kind: ORG_LABELS[_orgType] + ' brand kit', org: true }].concat(
                     Object.keys(artists).sort(function(a, b) { return artists[a].localeCompare(artists[b]); })
                         .map(function(k) { return { key: k, name: artists[k], kind: 'Artist brand kit' }; }));
                 err.classList.add('hidden');
@@ -367,7 +368,7 @@
                 return '<section class="bk-owner">' +
                     '<div class="bk-owner-head"><div class="bk-avatar">' + avatar + '</div>' +
                     '<div class="min-w-0"><p class="bk-owner-name">' + esc(o.name) + '</p><p class="bk-owner-meta">' + esc(o.kind) + ' · ' + files.length + ' file' + (files.length !== 1 ? 's' : '') +
-                        (o.org ? ' · <button type="button" class="bk-org-edit" data-org>Change</button>' : '') + '</p></div>' +
+                        (o.org ? ' · <button type="button" class="bk-org-edit" data-org>Edit</button>' : '') + '</p></div>' +
                     '<div class="bk-owner-actions">' +
                         (files.length ? '<button type="button" class="cam-btn ghost" data-zip="' + esc(o.key) + '"><iconify-icon icon="solar:download-minimalistic-linear"></iconify-icon><span>Download all</span></button>' : '') +
                         '<button type="button" class="cam-btn ghost" data-up="' + esc(o.key) + '"><iconify-icon icon="solar:upload-minimalistic-linear"></iconify-icon><span>Upload</span></button>' +
@@ -480,22 +481,38 @@
         }
 
         function openOrgType() {
-            openCamDialog('What is ' + venueName() + '?',
-                '<p class="cam-dialog-text">This only changes how this account\'s own brand kit is labelled. Artists keep their own brand kits below.</p>' +
+            var DESC = { venue: 'A club, bar or event space', label: 'Releases music for its artists', management: 'Manages one or more artists' };
+            openCamDialog('Your brand kit',
+                '<form id="bk-org-form" class="cam-form">' +
+                '<label>Name<input name="orgName" maxlength="60" placeholder="' + esc(venueName()) + '" value="' + esc(_orgName) + '"><small>Shown on your brand kit, e.g. the label or venue name.</small></label>' +
                 '<div class="bk-org-options">' + Object.keys(ORG_LABELS).map(function(k) {
-                    return '<button type="button" class="bk-org-opt' + (k === _orgType ? ' on' : '') + '" data-type="' + k + '"><b>' + ORG_LABELS[k] + '</b><span>' +
-                        { venue: 'A club, bar or event space', label: 'Releases music for its artists', management: 'Manages one or more artists' }[k] + '</span></button>';
-                }).join('') + '</div><p id="bk-org-error" class="cam-form-error"></p>');
-            document.querySelectorAll('.bk-org-opt').forEach(function(b) {
-                b.addEventListener('click', async function() {
-                    try {
-                        var r = await laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setOrgType', orgType: b.dataset.type }) });
-                        if (!r.ok) throw new Error((await r.json()).error || r.status);
-                        _orgType = b.dataset.type;
-                        _owners[0].kind = ORG_LABELS[_orgType] + ' brand kit';
-                        closeCamDialog(); render();
-                    } catch (e) { document.getElementById('bk-org-error').textContent = 'Could not save: ' + e.message; }
+                    return '<button type="button" class="bk-org-opt' + (k === _orgType ? ' on' : '') + '" data-type="' + k + '"><b>' + ORG_LABELS[k] + '</b><span>' + DESC[k] + '</span></button>';
+                }).join('') + '</div>' +
+                '<p id="bk-org-error" class="cam-form-error"></p>' +
+                '<div class="cam-form-actions"><button type="button" class="cam-btn ghost" onclick="closeCamDialog()">Cancel</button><button type="submit" class="cam-btn primary">Save</button></div>' +
+                '</form>');
+            var form = document.getElementById('bk-org-form'), type = _orgType;
+            form.querySelectorAll('.bk-org-opt').forEach(function(b) {
+                b.addEventListener('click', function() {
+                    type = b.dataset.type;
+                    form.querySelectorAll('.bk-org-opt').forEach(function(x) { x.classList.toggle('on', x === b); });
                 });
+            });
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                var btn = form.querySelector('[type=submit]'); btn.disabled = true; btn.textContent = 'Saving…';
+                try {
+                    var r = await laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setOrg', orgType: type, orgName: form.orgName.value }) });
+                    var d = await r.json();
+                    if (!r.ok) throw new Error(d.error || r.status);
+                    _orgType = d.orgType; _orgName = d.orgName || '';
+                    _owners[0].kind = ORG_LABELS[_orgType] + ' brand kit';
+                    _owners[0].name = _orgName || venueName();
+                    closeCamDialog(); render();
+                } catch (er) {
+                    document.getElementById('bk-org-error').textContent = 'Could not save: ' + er.message;
+                    btn.disabled = false; btn.textContent = 'Save';
+                }
             });
         }
 
