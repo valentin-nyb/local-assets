@@ -461,6 +461,25 @@
         }
         function escHtml(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 
+        // Delete one clip or thumbnail (from Mux, or from storage for uploaded thumbnails)
+        async function deleteAsset(btn) {
+            var label = btn.dataset.delLabel || 'this file';
+            if (!confirm('Delete ' + label + '?\n\nIt will be removed permanently' + (/^blob:/.test(btn.dataset.delId) ? '.' : ', including from Mux.') + ' This can\'t be undone.')) return;
+            var tile = btn.closest('.tile-wrap');
+            btn.disabled = true;
+            if (tile) tile.style.opacity = '.4';
+            try {
+                var r = await laFetch('/api/delete-asset', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: btn.dataset.delId, url: btn.dataset.delUrl || '' }) });
+                var d = await r.json(); if (!r.ok) throw new Error(d.error || r.status);
+                fetchRecentUploads();
+            } catch (e) {
+                if (tile) tile.style.opacity = '';
+                btn.disabled = false;
+                alert('Could not delete: ' + e.message);
+            }
+        }
+
         async function editSession(btn) {
             var artist = btn.dataset.artist, date = btn.dataset.date, meta = sessionMeta(artist, date);
             var venues = [];
@@ -873,8 +892,9 @@
                     var animSrc   = pid ? 'https://image.mux.com/' + pid + '/animated.gif?width=180&height=320&fit_mode=smartcrop&fps=10&start=5&duration=3' : '';
                     var readyIdx = pid ? allPids.indexOf(pid) : -1;
                     var imgId = 'sclip-' + pid;
+                    var clipDel = '<button type="button" class="tile-x" title="Delete clip" data-del-id="' + escHtml(clip.id) + '" data-del-label="' + escHtml(name + ' vertical clip ' + num) + '" onclick="event.stopPropagation(); deleteAsset(this)">&times;</button>';
 
-                    html += '<div class="flex-shrink-0 flex flex-col items-center gap-1" style="width:72px">';
+                    html += '<div class="flex-shrink-0 flex flex-col items-center gap-1 tile-wrap" style="width:72px">' + clipDel;
                     html += '<div class="relative overflow-hidden rounded-md group/clip cursor-pointer w-full" style="aspect-ratio:9/16;background:var(--la-chip);border:1px solid var(--la-line);"' +
                         (pid ? ' data-pids="' + pidsAttr + '" data-idx="' + readyIdx + '" data-title="' + titleAttr + '" onclick="openClipModal(this)"' +
                                ' onmouseenter="var e=document.getElementById(\'' + imgId + '\');if(e)e.src=\'' + animSrc + '\'"' +
@@ -985,7 +1005,8 @@
                         var state = thumbState(thumb);
                         var num = String(pi + 1).padStart(2, '0');
                         var tileStyle = 'width:128px;aspect-ratio:16/9;background:var(--la-chip);border:1px solid var(--la-line);';
-                        html += '<div class="flex-shrink-0 flex flex-col items-center gap-1" style="width:128px">';
+                        html += '<div class="flex-shrink-0 flex flex-col items-center gap-1 tile-wrap" style="width:128px">' +
+                            '<button type="button" class="tile-x' + (state === 'errored' ? ' always' : '') + '" title="Delete thumbnail" data-del-id="' + escHtml(thumb.id) + '" data-del-url="' + escHtml((thumb.meta && thumb.meta.thumbnail_url) || '') + '" data-del-label="' + escHtml(sessionName + ' thumbnail ' + num) + '" onclick="event.stopPropagation(); deleteAsset(this)">&times;</button>';
                         if (state !== 'ready') {
                             var failed = state === 'errored';
                             html += '<div title="' + (failed ? 'Upload failed — please re-upload' : 'Processing') + '" class="flex items-center justify-center rounded-md w-full" style="' + tileStyle + (failed ? 'border-color:rgba(239,68,68,.6);' : '') + '">';
@@ -2636,6 +2657,13 @@
         /* The banner sits on video in both themes, so its text always stays light */
         #live-feed-hero #hero-badge, #live-feed-hero #hero-badge * { color:#ffffff !important; }
         #live-feed-hero #hero-title, #live-feed-hero #hero-sub, #live-feed-hero #hero-stat1 { color:#ffffff !important; }
+        /* Delete X on clip and thumbnail tiles */
+        .tile-wrap { position:relative; }
+        .tile-x { position:absolute; top:4px; right:4px; z-index:3; width:22px; height:22px; border-radius:999px; display:flex; align-items:center; justify-content:center;
+            background:rgba(0,0,0,.65); color:#fff; border:1px solid rgba(255,255,255,.18); font-size:16px; line-height:1; padding-bottom:1px; cursor:pointer; opacity:0; transition:opacity .15s, background .15s; -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); }
+        .tile-wrap:hover .tile-x, .tile-x:focus-visible, .tile-x.always { opacity:1; }
+        @media (hover:none) { .tile-x { opacity:1; } }
+        @media (hover:hover) { .tile-x:hover { background:#ef4444; border-color:#ef4444; } }
         /* Edit session */
         .se-edit { width:28px; height:28px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; color:var(--la-dim); background:none; border:none; cursor:pointer; font-size:14px; }
         @media (hover:hover) { .se-edit:hover { background:var(--la-chip); color:var(--la-text); } }
