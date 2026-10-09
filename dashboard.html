@@ -1592,6 +1592,7 @@
             mp.setAttribute('playsinline', '');
             mp.setAttribute('preload', 'auto');
             mp.setAttribute('start-time', String(Math.round(start)));
+            mp.setAttribute('thumbnail-time', String(Math.round(start)));
             mp.setAttribute('max-resolution', window.innerWidth >= 768 ? '1080p' : '720p');
             mp.setAttribute('disable-tracking', '');
             mp.setAttribute('nohotkeys', '');
@@ -1605,7 +1606,16 @@
             mp.addEventListener('playing', noCaptions);
             mp.style.cssText = 'width:100%;height:100%;--controls:none;--media-object-fit:cover;--media-background-color:transparent;--center-controls:none;--bottom-play-button:none;';
             // Once the video is really playing, show only the video (no second, see-through layer)
-            mp.addEventListener('playing', function() { wrap.style.opacity = '1'; });
+            // Show the player right away (its cover is the loop's first frame), then make sure it
+            // plays: iOS can refuse autoplay (Low Power Mode), so retry once metadata is in and
+            // on the first touch anywhere on the page.
+            requestAnimationFrame(function() { wrap.style.opacity = '1'; });
+            var tryPlay = function() { mp.muted = true; var p = mp.play && mp.play(); if (p && p.catch) p.catch(function() {}); };
+            mp.addEventListener('loadedmetadata', tryPlay);
+            mp.addEventListener('canplay', function() { if (mp.paused) tryPlay(); });
+            var kick = function() { if (mp.paused) tryPlay(); };
+            document.addEventListener('touchstart', kick, { once: true, passive: true });
+            document.addEventListener('click', kick, { once: true });
             mp.addEventListener('timeupdate', function() { if (mp.currentTime >= end || mp.currentTime < start - 1) mp.currentTime = start; });
             wrap.appendChild(mp);
             _heroLoop = { key: key, el: mp };
