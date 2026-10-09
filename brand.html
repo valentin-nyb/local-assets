@@ -328,9 +328,9 @@
                 _files.forEach(function(f) {
                     if (f.owner !== 'venue' && !artists[f.owner]) artists[f.owner] = f.owner.slice(7).replace(/-/g, ' ').toUpperCase();
                 });
-                _owners = [{ key: 'venue', name: venueName(), kind: 'Venue / team' }].concat(
+                _owners = [{ key: 'venue', name: venueName(), kind: 'Venue brand kit' }].concat(
                     Object.keys(artists).sort(function(a, b) { return artists[a].localeCompare(artists[b]); })
-                        .map(function(k) { return { key: k, name: artists[k], kind: 'Artist' }; }));
+                        .map(function(k) { return { key: k, name: artists[k], kind: 'Artist brand kit' }; }));
                 err.classList.add('hidden');
                 render();
             } catch (e) {
