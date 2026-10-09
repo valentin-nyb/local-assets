@@ -39,7 +39,7 @@
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-    <script src="nav-component.js?v=4"></script>
+    <script src="nav-component.js?v=5"></script>
     <style>
         /* Standardized sidebar styles used by the JS component */
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
@@ -1534,6 +1534,8 @@
             if (_heroLoop && _heroLoop.key === key) return;
             wrap.style.opacity = '0';
             wrap.innerHTML = '';
+            var still0 = document.getElementById('live-feed-video');
+            if (still0) still0.style.opacity = '';
             var mp = document.createElement('mux-player');
             mp.setAttribute('playback-id', pid);
             mp.setAttribute('stream-type', 'on-demand');
@@ -1542,12 +1544,24 @@
             mp.setAttribute('playsinline', '');
             mp.setAttribute('preload', 'auto');
             mp.setAttribute('start-time', String(Math.round(start)));
-            mp.setAttribute('max-resolution', '720p');
+            mp.setAttribute('max-resolution', window.innerWidth >= 768 ? '1080p' : '720p');
             mp.setAttribute('disable-tracking', '');
             mp.setAttribute('nohotkeys', '');
             mp.setAttribute('default-hidden-captions', '');
+            // Never show subtitles on the banner
+            var noCaptions = function() {
+                var tracks = mp.textTracks || (mp.media && mp.media.textTracks) || [];
+                for (var i = 0; i < tracks.length; i++) tracks[i].mode = 'disabled';
+            };
+            mp.addEventListener('loadedmetadata', noCaptions);
+            mp.addEventListener('playing', noCaptions);
             mp.style.cssText = 'width:100%;height:100%;--controls:none;--media-object-fit:cover;--media-background-color:transparent;--center-controls:none;--bottom-play-button:none;';
-            mp.addEventListener('playing', function() { wrap.style.opacity = '0.6'; });
+            // Once the video is really playing, show only the video (no second, see-through layer)
+            mp.addEventListener('playing', function() {
+                wrap.style.opacity = '1';
+                var still = document.getElementById('live-feed-video');
+                if (still) still.style.opacity = '0';
+            });
             mp.addEventListener('timeupdate', function() { if (mp.currentTime >= end || mp.currentTime < start - 1) mp.currentTime = start; });
             wrap.appendChild(mp);
             _heroLoop = { key: key, el: mp };
@@ -1556,6 +1570,8 @@
         function stopHeroLoop() {
             var wrap = document.getElementById('live-feed-player-wrap');
             if (wrap) { wrap.style.opacity = '0'; wrap.innerHTML = ''; }
+            var still = document.getElementById('live-feed-video');
+            if (still) still.style.opacity = '';
             _heroLoop = null;
         }
 

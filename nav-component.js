@@ -4,12 +4,13 @@ document.addEventListener("DOMContentLoaded", () => {
         var style = document.createElement('style');
         style.id = 'la-theme-switcher-css';
         style.textContent = `
-            .la-theme-switcher{display:inline-flex;background:#111;border:1px solid #27272a;border-radius:9999px;padding:3px;gap:2px}
-            .la-theme-switcher button{all:unset;display:inline-flex;align-items:center;gap:0;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.05em;text-transform:uppercase;padding:5px 10px;border-radius:9999px;cursor:pointer;color:rgba(255,255,255,.2);transition:color .3s ease-in-out,background-color .3s ease-in-out;white-space:nowrap;-webkit-user-select:none;user-select:none}
+            .la-theme-switcher{display:inline-grid;grid-template-columns:repeat(3,1fr);background:#111;border:1px solid #27272a;border-radius:9999px;padding:3px;gap:2px}
+            .la-theme-switcher button{all:unset;display:inline-flex;align-items:center;justify-content:center;gap:0;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;line-height:14px;letter-spacing:.05em;text-transform:uppercase;padding:5px 10px;border-radius:9999px;cursor:pointer;color:rgba(255,255,255,.2);transition:color .3s ease-in-out,background-color .3s ease-in-out;white-space:nowrap;-webkit-user-select:none;user-select:none}
             .la-theme-switcher button:hover{color:rgba(255,255,255,.45)}
             .la-theme-switcher button[aria-checked="true"]{background:rgba(255,255,255,.08);color:#fff}
             .la-theme-switcher button .la-theme-icon{font-size:12px;display:inline-flex;max-width:0;opacity:0;overflow:hidden;transition:max-width .3s ease-in-out,opacity .3s ease-in-out,margin .3s ease-in-out;margin-right:0}
             .la-theme-switcher button[aria-checked="true"] .la-theme-icon{max-width:18px;opacity:1;margin-right:5px}
+            .la-theme-switcher button span{margin-right:-.05em}
             html:not(.dark) .la-theme-switcher{background:#e4e4e7;border-color:#d4d4d8}
             html:not(.dark) .la-theme-switcher button{color:rgba(0,0,0,.3)}
             html:not(.dark) .la-theme-switcher button:hover{color:rgba(0,0,0,.55)}
