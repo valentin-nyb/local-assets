@@ -11,7 +11,8 @@ import { getWebSessionAuth } from './_venues.js';
 
 const CATEGORIES = ['logos', 'guidelines', 'fonts', 'other'];
 const MAX_BYTES  = 200 * 1024 * 1024;
-const OWNER      = /^(venue|artist-[a-z0-9]+(?:-[a-z0-9]+)*)$/;
+// "venue" is the account itself; artist-<slug> and venue-<slug> are artists and venues it works with
+const OWNER      = /^(venue|(?:artist|venue)-[a-z0-9]+(?:-[a-z0-9]+)*)$/;
 const ALLOWED_TYPES = [
   'image/png', 'image/jpeg', 'image/svg+xml', 'image/webp', 'image/gif',
   'image/vnd.adobe.photoshop', 'application/pdf', 'application/zip', 'application/x-zip-compressed',
@@ -61,9 +62,10 @@ export default async function handler(req, res) {
         cursor = page.hasMore ? page.cursor : undefined;
       } while (cursor);
       files.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
-      const [orgType, orgName] = await withRedis(r => Promise.all([r.get(`brand_org_type:${slug}`), r.get(`brand_org_name:${slug}`)]))
-        .catch(() => [null, null]);
-      return res.status(200).json({ files, orgType: ORG_TYPES.includes(orgType) ? orgType : 'venue', orgName: orgName || '' });
+      const [orgType, orgName, ownerNames] = await withRedis(r => Promise.all([
+        r.get(`brand_org_type:${slug}`), r.get(`brand_org_name:${slug}`), r.hGetAll(`brand_owner_names:${slug}`),
+      ])).catch(() => [null, null, {}]);
+      return res.status(200).json({ files, orgType: ORG_TYPES.includes(orgType) ? orgType : 'venue', orgName: orgName || '', ownerNames: ownerNames || {} });
     }
 
     if (req.method !== 'POST') return res.status(405).end();
@@ -77,6 +79,15 @@ export default async function handler(req, res) {
         orgName ? r.set(`brand_org_name:${slug}`, orgName) : r.del(`brand_org_name:${slug}`),
       ]));
       return res.status(200).json({ orgType: body.orgType, orgName });
+    }
+
+    if (body.action === 'setOwnerName') {
+      // Display name for an artist or venue brand kit, kept exactly as typed ("Café 1001")
+      const owner = String(body.owner || '');
+      const name  = String(body.name ?? '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 60);
+      if (owner === 'venue' || !OWNER.test(owner) || !name) return res.status(400).json({ error: 'Invalid name' });
+      await withRedis(r => r.hSet(`brand_owner_names:${slug}`, owner, name));
+      return res.status(200).json({ owner, name });
     }
 
     if (body.action === 'delete') {

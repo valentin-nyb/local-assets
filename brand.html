@@ -155,6 +155,12 @@
             background-size:16px 16px; background-position:0 0, 0 8px, 8px -8px, -8px 0; }
         .bk-preview img { max-width:85%; max-height:85%; object-fit:contain; }
         .bk-preview.doc { background-image:none; }
+        .bk-preview.bg-dark, .bk-avatar.bg-dark { background-color:#141416; background-image:linear-gradient(45deg, rgba(255,255,255,.05) 25%, transparent 25%), linear-gradient(-45deg, rgba(255,255,255,.05) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(255,255,255,.05) 75%), linear-gradient(-45deg, transparent 75%, rgba(255,255,255,.05) 75%); }
+        .bk-preview.bg-light, .bk-avatar.bg-light { background-color:#f4f4f5; background-image:linear-gradient(45deg, rgba(0,0,0,.05) 25%, transparent 25%), linear-gradient(-45deg, rgba(0,0,0,.05) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(0,0,0,.05) 75%), linear-gradient(-45deg, transparent 75%, rgba(0,0,0,.05) 75%); }
+        .bk-avatar.bg-dark, .bk-avatar.bg-light { background-size:10px 10px; background-position:0 0, 0 5px, 5px -5px, -5px 0; }
+        .bk-bg-toggle { position:absolute; top:6px; right:6px; width:26px; height:26px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:14px; color:var(--la-sub); background:var(--la-raised); border:1px solid var(--la-line); cursor:pointer; opacity:0; transition:opacity .15s; }
+        .bk-preview:hover .bk-bg-toggle, .bk-bg-toggle:focus-visible { opacity:1; }
+        @media (hover:none) { .bk-bg-toggle { opacity:1; } }
         .bk-ext { display:flex; flex-direction:column; align-items:center; gap:6px; color:var(--la-sub); }
         .bk-ext iconify-icon { font-size:30px; }
         .bk-ext span { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.12em; text-transform:uppercase; }
@@ -171,6 +177,7 @@
         .bk-drop.over, .bk-drop:focus-visible { border-color:var(--la-accent); background:var(--la-accent-soft); outline:none; }
         .bk-drop iconify-icon { font-size:26px; color:var(--la-dim); display:flex; justify-content:center; width:100%; margin:0 0 6px; }
         .cam-form .hidden { display:none !important; }
+        .bk-group { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--la-dim); margin:10px 2px -4px; }
         .bk-org-edit { font:inherit; letter-spacing:inherit; text-transform:inherit; color:var(--la-accent); background:none; border:none; padding:0; cursor:pointer; }
         .bk-org-options { display:flex; flex-direction:column; gap:8px; }
         .bk-org-opt { text-align:left; border:1px solid var(--la-line); background:var(--la-raised); border-radius:12px; padding:12px 14px; cursor:pointer; display:flex; flex-direction:column; gap:2px; }
@@ -221,12 +228,18 @@
                         <h2 class="cam-h">Brand kit</h2>
                     </div>
                     <div class="cam-actions">
+                        <button type="button" class="cam-btn ghost" onclick="openUpload('__newVenue')">
+                            <iconify-icon icon="solar:buildings-2-linear"></iconify-icon><span>Add venue</span>
+                        </button>
+                        <button type="button" class="cam-btn ghost" onclick="openUpload('__newArtist')">
+                            <iconify-icon icon="solar:user-plus-linear"></iconify-icon><span>Add artist</span>
+                        </button>
                         <button type="button" class="cam-btn primary" onclick="openUpload()">
                             <iconify-icon icon="solar:upload-minimalistic-linear"></iconify-icon><span>Upload files</span>
                         </button>
                     </div>
                 </div>
-                <p class="cam-dialog-text" style="margin:0">Keep your own and each artist's brand files in one place, so the team always downloads the right logo and guidelines.</p>
+                <p class="cam-dialog-text" style="margin:0">Keep your own, each venue's and each artist's brand files in one place, so the team always downloads the right logo and guidelines.</p>
                 <div id="bk-owners" class="bk-owners"></div>
                 <p id="bk-error" class="hidden text-center text-[10px] font-mono uppercase tracking-widest text-red-500"></p>
             </div>
@@ -333,14 +346,20 @@
                 _orgType = res[0].orgType || 'venue';
                 _orgName = res[0].orgName || '';
                 var assets = Array.isArray(res[1]) ? res[1] : (res[1].data || []);
-                var artists = {};
-                assets.forEach(function(a) { var n = artistFromAsset(a); if (n) artists['artist-' + slugify(n)] = n.toUpperCase(); });
+                var names = {};
+                assets.forEach(function(a) { var n = artistFromAsset(a); if (n) names['artist-' + slugify(n)] = n.toUpperCase(); });
                 _files.forEach(function(f) {
-                    if (f.owner !== 'venue' && !artists[f.owner]) artists[f.owner] = f.owner.slice(7).replace(/-/g, ' ').toUpperCase();
+                    if (f.owner !== 'venue' && !names[f.owner]) names[f.owner] = f.owner.replace(/^(artist|venue)-/, '').replace(/-/g, ' ').toUpperCase();
                 });
-                _owners = [{ key: 'venue', name: _orgName || venueName(), kind: ORG_LABELS[_orgType] + ' brand kit', org: true }].concat(
-                    Object.keys(artists).sort(function(a, b) { return artists[a].localeCompare(artists[b]); })
-                        .map(function(k) { return { key: k, name: artists[k], kind: 'Artist brand kit' }; }));
+                var saved = res[0].ownerNames || {};
+                Object.keys(saved).forEach(function(k) { names[k] = saved[k]; });
+                var group = function(prefix, kind, label) {
+                    return Object.keys(names).filter(function(k) { return k.indexOf(prefix) === 0; })
+                        .sort(function(a, b) { return names[a].localeCompare(names[b]); })
+                        .map(function(k) { return { key: k, name: names[k], kind: kind, group: label }; });
+                };
+                _owners = [{ key: 'venue', name: _orgName || venueName(), kind: ORG_LABELS[_orgType] + ' brand kit', org: true }]
+                    .concat(group('venue-', 'Venue brand kit', 'Venues'), group('artist-', 'Artist brand kit', 'Artists'));
                 err.classList.add('hidden');
                 render();
             } catch (e) {
@@ -352,10 +371,13 @@
         function render() {
             var wrap = document.getElementById('bk-owners');
             document.getElementById('bk-foot').textContent = _files.length + ' file' + (_files.length !== 1 ? 's' : '');
+            var lastGroup = null;
             wrap.innerHTML = _owners.map(function(o) {
+                var heading = '';
+                if (o.group && o.group !== lastGroup) { heading = '<p class="bk-group">' + o.group + '</p>'; lastGroup = o.group; }
                 var files = _files.filter(function(f) { return f.owner === o.key; });
                 var logo = files.filter(function(f) { return f.category === 'logos' && IMG_EXT.test(f.name); })[0];
-                var avatar = logo ? '<img src="' + esc(logo.url) + '" alt="">' : esc(o.name.replace(/[^A-Za-z0-9 ]/g, '').split(/\s+/).map(function(w) { return w[0] || ''; }).join('').slice(0, 2) || '?');
+                var avatar = logo ? '<img src="' + esc(logo.url) + '" alt="" crossorigin="anonymous" onload="fitPreviewBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}">' : esc(o.name.replace(/[^A-Za-z0-9 ]/g, '').split(/\s+/).map(function(w) { return w[0] || ''; }).join('').slice(0, 2) || '?');
                 var body = '';
                 if (!files.length) {
                     body = '<p class="bk-empty-owner">No brand files yet. <button type="button" data-up="' + esc(o.key) + '">Upload logos or guidelines</button></p>';
@@ -365,7 +387,7 @@
                     CATS.forEach(function(c) { files.forEach(function(f) { if (f.category === c.key) ordered.push(f); }); });
                     body = '<div class="bk-files">' + ordered.map(fileCard).join('') + '</div>';
                 }
-                return '<section class="bk-owner">' +
+                return heading + '<section class="bk-owner">' +
                     '<div class="bk-owner-head"><div class="bk-avatar">' + avatar + '</div>' +
                     '<div class="min-w-0"><p class="bk-owner-name">' + esc(o.name) + '</p><p class="bk-owner-meta">' + esc(o.kind) + ' · ' + files.length + ' file' + (files.length !== 1 ? 's' : '') +
                         (o.org ? ' · <button type="button" class="bk-org-edit" data-org>Edit</button>' : '') + '</p></div>' +
@@ -389,12 +411,44 @@
             });
         }
 
+        // Logo previews: dark backdrop behind light logos, light backdrop behind dark ones.
+        // Measures the average brightness of the logo's visible (non-transparent) pixels.
+        function fitPreviewBg(img) {
+            var box = img.parentNode, tone = null;
+            try {
+                var c = document.createElement('canvas'), n = 48;
+                c.width = n; c.height = n;
+                var ctx = c.getContext('2d', { willReadFrequently: true });
+                ctx.drawImage(img, 0, 0, n, n);
+                var d = ctx.getImageData(0, 0, n, n).data, sum = 0, cnt = 0;
+                for (var i = 0; i < d.length; i += 4) {
+                    if (d[i + 3] < 40) continue;
+                    sum += (0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]) / 255; cnt++;
+                }
+                var opaque = cnt / (n * n);
+                if (cnt && opaque < 0.97) tone = sum / cnt > 0.6 ? 'dark' : sum / cnt < 0.4 ? 'light' : null;
+            } catch (_) {
+                // Image not readable (no CORS): fall back to the file name
+                if (/white|light|negative|reverse/i.test(img.src)) tone = 'dark';
+                else if (/black|dark/i.test(img.src)) tone = 'light';
+            }
+            box.classList.remove('bg-dark', 'bg-light');
+            if (tone) box.classList.add('bg-' + tone);
+        }
+        function flipPreviewBg(btn) {
+            var box = btn.parentNode;
+            var dark = box.classList.contains('bg-dark') || (!box.classList.contains('bg-light') && !document.documentElement.classList.contains('dark'));
+            box.classList.toggle('bg-dark', !dark);
+            box.classList.toggle('bg-light', dark);
+        }
+
         function fileCard(f) {
             var ext = (f.name.split('.').pop() || 'file').slice(0, 5);
             var cat = CATS.filter(function(c) { return c.key === f.category; })[0] || CATS[3];
             var tag = '<span class="bk-tag"><iconify-icon icon="' + cat.icon + '"></iconify-icon>' + (cat.key === 'guidelines' ? 'Guidelines' : cat.label.replace(/s$/, '')) + '</span>';
             var preview = IMG_EXT.test(f.name)
-                ? '<div class="bk-preview">' + tag + '<img src="' + esc(f.url) + '" alt="" loading="lazy"></div>'
+                ? '<div class="bk-preview">' + tag + '<img src="' + esc(f.url) + '" alt="" loading="lazy" crossorigin="anonymous" onload="fitPreviewBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}">' +
+                    '<button type="button" class="bk-bg-toggle" title="Switch background" onclick="flipPreviewBg(this)"><iconify-icon icon="solar:sun-2-linear"></iconify-icon></button></div>'
                 : '<div class="bk-preview doc">' + tag + '<div class="bk-ext"><iconify-icon icon="' + (/pdf/i.test(ext) ? 'solar:document-text-linear' : /ttf|otf|woff/i.test(ext) ? 'solar:text-field-linear' : /zip/i.test(ext) ? 'solar:zip-file-linear' : 'solar:file-linear') + '"></iconify-icon><span>' + esc(ext) + '</span></div></div>';
             return '<div class="bk-file">' + preview +
                 '<div class="bk-info"><p class="bk-name" title="' + esc(f.name) + '">' + esc(f.name) + '</p><p class="bk-meta">' + fmtSize(f.size) + ' · ' + fmtDate(f.uploadedAt) + '</p></div>' +
@@ -408,12 +462,13 @@
 
         function openUpload(ownerKey) {
             var opts = _owners.map(function(o) { return '<option value="' + esc(o.key) + '"' + (o.key === ownerKey ? ' selected' : '') + '>' + esc(o.name) + (o.key === 'venue' ? ' (' + ORG_LABELS[_orgType].toLowerCase() + ')' : '') + '</option>'; }).join('') +
-                '<option value="__new">+ New artist…</option>';
+                '<option value="__newVenue"' + (ownerKey === '__newVenue' ? ' selected' : '') + '>+ New venue…</option>' +
+                '<option value="__newArtist"' + (ownerKey === '__newArtist' ? ' selected' : '') + '>+ New artist…</option>';
             openCamDialog('Upload brand files',
                 '<form id="bk-form" class="cam-form">' +
                 '<div class="bk-row2"><label>For<select name="owner">' + opts + '</select></label>' +
                 '<label>Type<select name="category">' + CATS.map(function(c) { return '<option value="' + c.key + '">' + c.label + '</option>'; }).join('') + '</select></label></div>' +
-                '<label id="bk-new-wrap" class="hidden">Artist name<input name="newArtist" maxlength="60" placeholder="e.g. DJ TENNIS"></label>' +
+                '<label id="bk-new-wrap" class="hidden"><span id="bk-new-label">Name</span><input name="newName" maxlength="60"></label>' +
                 '<div id="bk-drop" class="bk-drop" tabindex="0"><iconify-icon icon="solar:cloud-upload-linear"></iconify-icon>Drop files here or <b>browse</b>' +
                     '<small>PNG, SVG, JPG, PDF, AI, EPS, fonts or ZIP · up to 200 MB each</small></div>' +
                 '<input id="bk-input" type="file" multiple class="hidden" accept=".png,.jpg,.jpeg,.svg,.webp,.gif,.pdf,.ai,.eps,.psd,.zip,.ttf,.otf,.woff,.woff2,.txt">' +
@@ -433,7 +488,15 @@
                 else if (picked.length && /pdf/.test(picked[0].type)) form.category.value = 'guidelines';
                 else if (picked.length && /\.(ttf|otf|woff2?)$/i.test(picked[0].name)) form.category.value = 'fonts';
             };
-            form.owner.addEventListener('change', function() { document.getElementById('bk-new-wrap').classList.toggle('hidden', form.owner.value !== '__new'); });
+            var syncNew = function() {
+                var v = form.owner.value, isNew = v === '__newVenue' || v === '__newArtist';
+                document.getElementById('bk-new-wrap').classList.toggle('hidden', !isNew);
+                document.getElementById('bk-new-label').textContent = v === '__newVenue' ? 'Venue name' : 'Artist name';
+                form.newName.placeholder = v === '__newVenue' ? 'e.g. Café 1001' : 'e.g. DJ TENNIS';
+                if (isNew) setTimeout(function() { form.newName.focus(); }, 0);
+            };
+            form.owner.addEventListener('change', syncNew);
+            syncNew();
             drop.addEventListener('click', function() { input.click(); });
             drop.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } });
             input.addEventListener('change', function() { setPicked(input.files); });
@@ -444,10 +507,12 @@
                 e.preventDefault();
                 var errEl = document.getElementById('bk-form-error'); errEl.textContent = '';
                 var owner = form.owner.value;
-                if (owner === '__new') {
-                    var nm = form.newArtist.value.trim();
-                    if (!slugify(nm)) { errEl.textContent = 'Enter the artist name'; return; }
-                    owner = 'artist-' + slugify(nm);
+                if (owner === '__newVenue' || owner === '__newArtist') {
+                    var nm = form.newName.value.trim(), isVenue = owner === '__newVenue';
+                    if (!slugify(nm)) { errEl.textContent = 'Enter the ' + (isVenue ? 'venue' : 'artist') + ' name'; return; }
+                    owner = (isVenue ? 'venue-' : 'artist-') + slugify(nm);
+                    // Save the name as typed, so the brand kit shows "Café 1001" rather than "CAFE 1001"
+                    await laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setOwnerName', owner: owner, name: nm }) }).catch(function() {});
                 }
                 var slug = session().venueSlug;
                 if (!slug) { errEl.textContent = 'Sign in again to upload'; return; }
