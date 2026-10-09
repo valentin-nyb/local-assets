@@ -415,7 +415,8 @@
         function brandSlug(name) {
             return String(name).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
         }
-        var _brandPhotos = null, _venueLogos = {}, _brandPhotosAt = 0;
+        var _brandPhotos = null, _venueLogos = {}, _venueLogosByName = {}, _brandPhotosAt = 0, _venueRefetched = false;
+        function nameKey(v) { return String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ''); }
         function applyArtistPhotos() {
             var paint = function() {
                 document.querySelectorAll('[data-artist-photo]').forEach(function(box) {
@@ -425,20 +426,32 @@
                     box.innerHTML = '<img src="' + url.replace(/"/g, '&quot;') + '" alt="" style="width:100%;height:100%;object-fit:cover">';
                 });
                 // Session rows: the venue's logo from the Brand Kit replaces the calendar icon
+                var missing = false;
                 document.querySelectorAll('[data-venue-logo]').forEach(function(box) {
-                    var url = _venueLogos[box.dataset.venueLogo];
+                    var url = _venueLogos[box.dataset.venueLogo] || _venueLogosByName[nameKey(box.dataset.venueName)];
+                    if (!url) { missing = true; box.title = 'No Brand Kit logo found for venue "' + (box.dataset.venueName || '') + '" (' + Object.keys(_venueLogos).filter(function(k) { return k.indexOf('#') < 0; }).join(', ') + ')'; }
                     if (!url || box.dataset.painted === url) return;
                     box.dataset.painted = url;
                     box.title = 'Venue logo from Brand Kit';
                     box.innerHTML = '<img src="' + url.replace(/"/g, '&quot;') + '" alt="" crossorigin="anonymous" style="width:100%;height:100%;object-fit:contain;padding:4px" onload="fitLogoBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}">';
                 });
+                // A venue added to the Brand Kit since we last looked: check once more
+                if (missing && !_venueRefetched && Date.now() - _brandPhotosAt > 5000) { _venueRefetched = true; _brandPhotosAt = 0; applyArtistPhotos(); }
             };
             if (_brandPhotos && Date.now() - _brandPhotosAt < 300000) return paint();
             laFetch('/api/brand').then(function(r) { return r.ok ? r.json() : null; }).then(function(d) {
                 _brandPhotos = (d && d.ownerPhotos) || {};
-                _venueLogos = {};
+                _venueLogos = {}; _venueLogosByName = {};
+                var names = (d && d.ownerNames) || {};
                 ((d && d.files) || []).forEach(function(f) {
-                    if (f.owner.indexOf('venue-') === 0 && f.category === 'logos' && /\.(png|jpe?g|svg|webp|gif)$/i.test(f.name) && !_venueLogos[f.owner]) _venueLogos[f.owner] = f.url;
+                    if (f.owner.indexOf('venue-') !== 0 || !/\.(png|jpe?g|svg|webp|gif)$/i.test(f.name)) return;
+                    // logos first; any other image of the venue as a fallback
+                    var better = f.category === 'logos';
+                    if (!_venueLogos[f.owner] || (better && !_venueLogos[f.owner + '#logo'])) {
+                        _venueLogos[f.owner] = f.url;
+                        if (better) _venueLogos[f.owner + '#logo'] = true;
+                        _venueLogosByName[nameKey(names[f.owner] || f.owner.slice(6))] = f.url;
+                    }
                 });
                 _brandPhotosAt = Date.now(); paint();
             }).catch(function() {});
@@ -1147,7 +1160,7 @@
                     html += '<div onclick="toggleDateSection(\'' + dateId + '\')" class="p-4 pl-10 flex items-center justify-between hover:bg-white/[0.02] transition-colors cursor-pointer group">';
                     html += '<div class="flex items-center gap-3">';
                     var sVenueKey = sessionMeta(artist.name, dateStr).venue ? 'venue-' + brandSlug(sessionMeta(artist.name, dateStr).venue) : '';
-                    html += '<div class="w-8 h-8 bg-[#050505] border border-border/50 flex items-center justify-center rounded-lg overflow-hidden"' + (sVenueKey ? ' data-venue-logo="' + sVenueKey + '"' : '') + '>';
+                    html += '<div class="w-8 h-8 bg-[#050505] border border-border/50 flex items-center justify-center rounded-lg overflow-hidden"' + (sVenueKey ? ' data-venue-logo="' + sVenueKey + '" data-venue-name="' + escHtml(sessionMeta(artist.name, dateStr).venue) + '"' : '') + '>';
                     html += '<iconify-icon icon="solar:calendar-bold" class="text-zinc-600 text-sm"></iconify-icon>';
                     html += '</div>';
                     html += '<div>';
