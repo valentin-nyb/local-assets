@@ -206,6 +206,7 @@
         .bk-toolbar > .min-w-0 { flex:1 1 360px; }
         .bk-lead { font-size:13px; line-height:1.55; color:var(--la-sub); margin-top:6px; max-width:620px; }
         .bk-group { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--la-dim); margin:10px 2px -4px; }
+        .bk-owners > .bk-group:first-child { margin-top:0; }
         .bk-org-edit { font:inherit; letter-spacing:inherit; text-transform:inherit; color:var(--la-accent); background:none; border:none; padding:0; cursor:pointer; }
         .bk-org-options { display:flex; flex-direction:column; gap:8px; }
         .bk-org-opt { text-align:left; border:1px solid var(--la-line); background:var(--la-raised); border-radius:12px; padding:12px 14px; cursor:pointer; display:flex; flex-direction:column; gap:2px; }
@@ -401,7 +402,7 @@
                         .sort(function(a, b) { return names[a].localeCompare(names[b]); })
                         .map(function(k) { return { key: k, name: names[k], kind: kind, group: label }; });
                 };
-                _owners = [{ key: 'venue', name: _orgName || venueName(), kind: ORG_LABELS[_orgType] + ' brand kit', org: true }]
+                _owners = [{ key: 'venue', name: _orgName || venueName(), kind: ORG_LABELS[_orgType] + ' brand kit', org: true, group: ORG_LABELS[_orgType] }]
                     .concat(group('venue-', 'Venue brand kit', 'Venues'), group('artist-', 'Artist brand kit', 'Artists'));
                 err.classList.add('hidden');
                 render();
@@ -689,6 +690,7 @@
                     if (!r.ok) throw new Error(d.error || r.status);
                     _orgType = d.orgType; _orgName = d.orgName || '';
                     _owners[0].kind = ORG_LABELS[_orgType] + ' brand kit';
+                    _owners[0].group = ORG_LABELS[_orgType];
                     _owners[0].name = _orgName || venueName();
                     closeCamDialog(); render();
                 } catch (er) {
