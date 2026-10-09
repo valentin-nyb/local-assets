@@ -6,7 +6,7 @@ import { getWebSessionAuth } from './_venues.js';
 // so turning on Klarna there is all that's needed for monthly payments.
 export const CAMERA_PRODUCT = {
   name: 'OBSBOT Tail 2',
-  description: 'AI-powered PTZR 4K live production camera with NDI HX3',
+  description: 'AI-powered PTZR 4K live production camera with NDI HX3. Setup and integration with your local / assets dashboard included.',
   unitAmount: 129900, // pence
   currency: 'gbp',
   maxQuantity: 10,
