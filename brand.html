@@ -155,6 +155,17 @@
             background-size:16px 16px; background-position:0 0, 0 8px, 8px -8px, -8px 0; }
         .bk-preview img { max-width:85%; max-height:85%; object-fit:contain; }
         .bk-preview.doc { background-image:none; }
+        .bk-font-sample { display:flex; flex-direction:column; align-items:center; gap:2px; color:var(--la-text); opacity:0; transition:opacity .2s; max-width:90%; overflow:hidden; }
+        .bk-font.ready .bk-font-sample { opacity:1; }
+        .bk-font-sample .aa { font-size:40px; line-height:1.05; }
+        .bk-font-sample .line { font-size:13px; color:var(--la-sub); white-space:nowrap; }
+        .bk-font.failed .bk-font-sample { opacity:1; font-family:inherit; }
+        .bk-tester-input { width:100%; height:40px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 12px; font-size:14px; outline:none; }
+        .bk-tester-input:focus { border-color:var(--la-accent); }
+        .bk-tester-out { margin-top:14px; display:flex; flex-direction:column; gap:10px; color:var(--la-text); overflow:hidden; }
+        .bk-tester-out p { line-height:1.15; word-break:break-word; }
+        .bk-tester-chars { color:var(--la-sub); line-height:1.5 !important; border-top:1px solid var(--la-line-soft); padding-top:12px; }
+        .cam-dialog-panel.wide { width:620px; }
         .bk-preview.bg-dark, .bk-avatar.bg-dark { background-color:#141416; background-image:linear-gradient(45deg, rgba(255,255,255,.05) 25%, transparent 25%), linear-gradient(-45deg, rgba(255,255,255,.05) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(255,255,255,.05) 75%), linear-gradient(-45deg, transparent 75%, rgba(255,255,255,.05) 75%); }
         .bk-preview.bg-light, .bk-avatar.bg-light { background-color:#f4f4f5; background-image:linear-gradient(45deg, rgba(0,0,0,.05) 25%, transparent 25%), linear-gradient(-45deg, rgba(0,0,0,.05) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(0,0,0,.05) 75%), linear-gradient(-45deg, transparent 75%, rgba(0,0,0,.05) 75%); }
         .bk-avatar.bg-dark, .bk-avatar.bg-light { background-size:10px 10px; background-position:0 0, 0 5px, 5px -5px, -5px 0; }
@@ -312,7 +323,7 @@
             document.getElementById('cam-dialog-body').innerHTML = html;
             document.getElementById('cam-dialog').classList.remove('hidden');
         }
-        function closeCamDialog() { if (_uploading) return; document.getElementById('cam-dialog').classList.add('hidden'); }
+        function closeCamDialog() { if (_uploading) return; document.getElementById('cam-dialog').classList.add('hidden'); document.querySelector('#cam-dialog .cam-dialog-panel').classList.remove('wide'); }
         document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeCamDialog(); });
 
         // ── Brand kit ─────────────────────────────────────────────────────
@@ -324,6 +335,7 @@
             { key: 'other',      label: 'Other',      icon: 'solar:folder-linear' },
         ];
         var IMG_EXT = /\.(png|jpe?g|svg|webp|gif)$/i;
+        var FONT_EXT = /\.(otf|ttf|woff2?)$/i;
         var _files = [], _owners = [], _uploading = false, _orgType = 'venue', _orgName = '';
         var ORG_LABELS = { venue: 'Venue', label: 'Record label', management: 'Management' };
 
@@ -410,6 +422,13 @@
                     '<div class="bk-body">' + body + '</div></section>';
             }).join('');
             wrap.querySelectorAll('[data-up]').forEach(function(b) { b.addEventListener('click', function() { openUpload(b.dataset.up); }); });
+            wrap.querySelectorAll('.bk-font[data-font]').forEach(function(el) {
+                loadBrandFont(el.dataset.font).then(function(family) {
+                    el.querySelector('.bk-font-sample').style.fontFamily = family;
+                    el.classList.add('ready');
+                }).catch(function() { el.classList.add('failed'); });
+            });
+            wrap.querySelectorAll('[data-font-preview]').forEach(function(b) { b.addEventListener('click', function() { openFontPreview(b.dataset.fontPreview); }); });
             wrap.querySelectorAll('[data-org]').forEach(function(b) { b.addEventListener('click', openOrgType); });
             wrap.querySelectorAll('[data-zip]').forEach(function(b) { b.addEventListener('click', function() { downloadAll(b.dataset.zip, b); }); });
             wrap.querySelectorAll('[data-del]').forEach(function(b) { b.addEventListener('click', function() { removeFile(b.dataset.del, b); }); });
@@ -454,6 +473,41 @@
             box.classList.toggle('bg-light', dark);
         }
 
+        // Fonts are loaded straight from the uploaded file with the FontFace API
+        var _fontCache = {};
+        function loadBrandFont(url) {
+            if (!_fontCache[url]) {
+                var family = 'bkfont-' + Object.keys(_fontCache).length;
+                var face = new FontFace(family, 'url("' + url.replace(/"/g, '%22') + '")');
+                _fontCache[url] = face.load().then(function(f) { document.fonts.add(f); return '"' + family + '", system-ui'; });
+            }
+            return _fontCache[url];
+        }
+        function openFontPreview(url) {
+            var f = _files.filter(function(x) { return x.url === url; })[0] || { name: 'Font' };
+            var name = f.name.replace(/\.[^.]+$/, '');
+            openCamDialog(name,
+                '<div class="bk-tester">' +
+                '<input id="bk-tester-input" class="bk-tester-input" value="' + esc(name.replace(/[-_]+/g, ' ')) + '" maxlength="80" aria-label="Preview text">' +
+                '<div id="bk-tester-out" class="bk-tester-out">' +
+                    [56, 36, 22, 15].map(function(px) { return '<p data-sample style="font-size:' + px + 'px"></p>'; }).join('') +
+                    '<p class="bk-tester-chars" style="font-size:18px">ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz<br>0123456789 &amp; ! ? @ £ € % ( ) . , : ;</p>' +
+                '</div>' +
+                '<p id="bk-tester-status" class="bk-meta">Loading font…</p>' +
+                '<div class="cam-form-actions" style="margin-top:14px"><a class="cam-btn ghost" href="' + esc(f.link ? f.link + '?download' : f.downloadUrl || url) + '"><iconify-icon icon="solar:download-minimalistic-linear"></iconify-icon><span>Download</span></a></div>' +
+                '</div>');
+            document.querySelector('#cam-dialog .cam-dialog-panel').classList.add('wide');
+            var input = document.getElementById('bk-tester-input'), out = document.getElementById('bk-tester-out');
+            var sync = function() { out.querySelectorAll('[data-sample]').forEach(function(p) { p.textContent = input.value || 'Type something'; }); };
+            input.addEventListener('input', sync); sync();
+            loadBrandFont(url).then(function(family) {
+                out.style.fontFamily = family;
+                document.getElementById('bk-tester-status').textContent = f.size ? fmtSize(f.size) + ' · ' + f.name.split('.').pop().toUpperCase() : '';
+            }).catch(function() {
+                document.getElementById('bk-tester-status').textContent = 'This font file could not be previewed in the browser.';
+            });
+        }
+
         function fileCard(f) {
             var ext = (f.name.split('.').pop() || 'file').slice(0, 5);
             var cat = CATS.filter(function(c) { return c.key === f.category; })[0] || CATS[3];
@@ -461,12 +515,16 @@
             var preview = IMG_EXT.test(f.name)
                 ? '<div class="bk-preview">' + tag + '<img src="' + esc(f.url) + '" alt="" loading="lazy" crossorigin="anonymous" onload="fitPreviewBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}">' +
                     '<button type="button" class="bk-bg-toggle" title="Switch background" onclick="flipPreviewBg(this)"><iconify-icon icon="solar:sun-2-linear"></iconify-icon></button></div>'
+                : FONT_EXT.test(f.name)
+                ? '<div class="bk-preview doc bk-font" data-font="' + esc(f.url) + '">' + tag +
+                    '<div class="bk-font-sample"><span class="aa">Aa</span><span class="line">ABC abc 123</span></div></div>'
                 : '<div class="bk-preview doc">' + tag + '<div class="bk-ext"><iconify-icon icon="' + (/pdf/i.test(ext) ? 'solar:document-text-linear' : /ttf|otf|woff/i.test(ext) ? 'solar:text-field-linear' : /zip/i.test(ext) ? 'solar:zip-file-linear' : 'solar:file-linear') + '"></iconify-icon><span>' + esc(ext) + '</span></div></div>';
             return '<div class="bk-file">' + preview +
                 '<div class="bk-info"><p class="bk-name" title="' + esc(f.name) + '">' + esc(f.name) + '</p><p class="bk-meta">' + fmtSize(f.size) + ' · ' + fmtDate(f.uploadedAt) + '</p></div>' +
                 '<div class="bk-file-actions">' +
                     '<a href="' + esc(f.link ? f.link + '?download' : f.downloadUrl) + '" title="Download"><iconify-icon icon="solar:download-minimalistic-linear"></iconify-icon></a>' +
                     (IMG_EXT.test(f.name) || /pdf$/i.test(f.name) ? '<a href="' + esc(f.link || f.url) + '" target="_blank" rel="noopener" title="Open"><iconify-icon icon="solar:eye-linear"></iconify-icon></a>' : '') +
+                    (FONT_EXT.test(f.name) ? '<button type="button" data-font-preview="' + esc(f.url) + '" title="Preview font"><iconify-icon icon="solar:eye-linear"></iconify-icon></button>' : '') +
                     '<button type="button" data-copy="' + esc(f.link || f.url) + '" title="Copy link"><iconify-icon icon="solar:link-round-linear"></iconify-icon></button>' +
                     '<button type="button" class="del" data-del="' + esc(f.url) + '" title="Delete"><iconify-icon icon="solar:trash-bin-minimalistic-linear"></iconify-icon></button>' +
                 '</div></div>';
