@@ -88,8 +88,8 @@
         .cam-dialog.hidden { display:none; }
         .cam-dialog-panel { width:460px; max-width:100%; max-height:calc(100vh - 32px); overflow:auto; background:#0c0c0d; border:1px solid #27272a; border-radius:16px; padding:20px; box-shadow:0 24px 80px rgba(0,0,0,.55); }
         .cam-dialog-panel.wide { width:520px; }
-        .ord-hero { height:150px; border-radius:12px; margin:-4px 0 16px; display:flex; align-items:center; justify-content:center; background:radial-gradient(circle at 50% 40%, rgba(57,255,20,.16), transparent 60%), #050505; border:1px solid #1f1f22; }
-        .ord-hero iconify-icon { font-size:64px; color:#39FF14; }
+        .ord-hero { height:220px; padding:14px 0; border-radius:12px; margin:-4px 0 16px; display:flex; align-items:center; justify-content:center; background:radial-gradient(circle at 50% 45%, #3a3a40 0%, #1a1a1d 45%, #0a0a0b 80%); border:1px solid #1f1f22; overflow:hidden; }
+        .ord-hero img { height:100%; width:auto; object-fit:contain; filter:drop-shadow(0 18px 30px rgba(0,0,0,.6)); }
         .ord-title { font-size:24px; font-weight:700; letter-spacing:-.01em; margin-top:4px; color:#fafafa; }
         .ord-sub { font-size:13px; line-height:1.55; color:#a1a1aa; margin-top:4px; }
         .ord-price { display:flex; align-items:baseline; gap:8px; margin-top:16px; }
@@ -432,7 +432,7 @@
             var panel = document.querySelector('#cam-dialog .cam-dialog-panel');
             panel.classList.add('wide');
             document.getElementById('cam-dialog-body').innerHTML =
-                '<div class="ord-hero"><iconify-icon icon="solar:videocamera-record-bold-duotone"></iconify-icon></div>' +
+                '<div class="ord-hero"><img src="/img/obsbot-tail-2.png" alt="OBSBOT Tail 2 camera" width="720" height="720"></div>' +
                 '<p class="cam-eyebrow">Sold and supported by local / assets</p>' +
                 '<h3 class="ord-title">OBSBOT Tail 2</h3>' +
                 '<p class="ord-sub">AI-powered PTZR 4K live production camera with NDI HX3. Connects straight to your local / assets dashboard.</p>' +
