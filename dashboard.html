@@ -1508,9 +1508,28 @@
             var dur = Number(a.duration) || 0;
             var t = _peaks[a.id];
             if (t == null) { requestPeak(a.id); t = dur / 2; }
-            var start = Math.max(0, Math.min(Math.round(t - 3), Math.floor(dur - 6)));
-            return 'https://image.mux.com/' + pid + '/animated.webp?width=640&fps=15&start=' + start + '&end=' + (start + 6);
+            // A still frame from the peak, cropped by Mux's smart crop to the banner's exact shape,
+            // so the artist stays centred whatever the screen size.
+            var hero = document.getElementById('live-feed-hero');
+            var dpr = Math.min(window.devicePixelRatio || 1, 2);
+            var w = Math.min(1920, Math.round((hero ? hero.clientWidth : 1200) * dpr));
+            var h = Math.min(1080, Math.round((hero ? hero.clientHeight : 300) * dpr));
+            var time = Math.max(0, Math.min(Math.round(t), Math.floor(dur - 1)));
+            return 'https://image.mux.com/' + pid + '/thumbnail.jpg?time=' + time + '&width=' + w + '&height=' + h + '&fit_mode=smartcrop';
         }
+        // Re-crop when the banner changes shape (rotate, resize)
+        (function() {
+            var last = '', timer;
+            window.addEventListener('resize', function() {
+                clearTimeout(timer);
+                timer = setTimeout(function() {
+                    var hero = document.getElementById('live-feed-hero');
+                    if (!hero) return;
+                    var shape = (hero.clientWidth / Math.max(1, hero.clientHeight)).toFixed(1);
+                    if (shape !== last) { last = shape; renderHero(); }
+                }, 350);
+            });
+        })();
         function requestPeak(assetId) {
             if (_peakPending[assetId]) return;
             _peakPending[assetId] = true;
