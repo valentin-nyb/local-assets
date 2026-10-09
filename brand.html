@@ -177,6 +177,9 @@
         .bk-drop.over, .bk-drop:focus-visible { border-color:var(--la-accent); background:var(--la-accent-soft); outline:none; }
         .bk-drop iconify-icon { font-size:26px; color:var(--la-dim); display:flex; justify-content:center; width:100%; margin:0 0 6px; }
         .cam-form .hidden { display:none !important; }
+        .bk-toolbar { align-items:center; row-gap:16px; column-gap:32px; }
+        .bk-toolbar > .min-w-0 { flex:1 1 360px; }
+        .bk-lead { font-size:13px; line-height:1.55; color:var(--la-sub); margin-top:6px; max-width:620px; }
         .bk-group { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--la-dim); margin:10px 2px -4px; }
         .bk-org-edit { font:inherit; letter-spacing:inherit; text-transform:inherit; color:var(--la-accent); background:none; border:none; padding:0; cursor:pointer; }
         .bk-org-options { display:flex; flex-direction:column; gap:8px; }
@@ -197,7 +200,16 @@
         .cam-form select { height:40px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 10px; font-size:14px; outline:none; }
         .cam-form select:focus { border-color:var(--la-accent); }
         .bk-row2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-        @media (max-width:480px) { .bk-row2 { grid-template-columns:1fr; } .bk-owner-head { flex-wrap:wrap; } .bk-owner-actions { width:100%; margin-left:0; } .bk-files { grid-template-columns:repeat(2, minmax(0,1fr)); } }
+        @media (max-width:640px) {
+            .bk-row2 { grid-template-columns:1fr; }
+            .bk-owner-head { flex-wrap:wrap; row-gap:12px; }
+            .bk-owner-actions { width:100%; margin-left:0; }
+            .bk-owner-actions .cam-btn { flex:1; justify-content:center; }
+            .bk-files { grid-template-columns:repeat(2, minmax(0,1fr)); }
+            .bk-toolbar .cam-actions { width:100%; }
+            .bk-toolbar .cam-actions .cam-btn { flex:1 1 auto; justify-content:center; padding:0 10px; }
+            .bk-toolbar .cam-actions .cam-btn.primary { flex-basis:100%; order:-1; }
+        }
     </style>
 </head>
 <body class="font-sans antialiased bg-background text-foreground overflow-hidden h-screen w-screen flex selection:bg-primary selection:text-black">
@@ -222,10 +234,11 @@
         </header>
 
             <div class="max-w-6xl mx-auto w-full p-4 md:p-10 flex flex-col space-y-4 md:space-y-8 mt-2 md:mt-0">
-                <div class="cam-toolbar">
+                <div class="cam-toolbar bk-toolbar">
                     <div class="min-w-0">
                         <p class="cam-eyebrow">Logos · Guidelines · Fonts</p>
                         <h2 class="cam-h">Brand kit</h2>
+                        <p class="bk-lead">Keep your own, each venue's and each artist's brand files in one place, so the team always downloads the right logo and guidelines.</p>
                     </div>
                     <div class="cam-actions">
                         <button type="button" class="cam-btn ghost" onclick="openUpload('__newVenue')">
@@ -239,7 +252,6 @@
                         </button>
                     </div>
                 </div>
-                <p class="cam-dialog-text" style="margin:0">Keep your own, each venue's and each artist's brand files in one place, so the team always downloads the right logo and guidelines.</p>
                 <div id="bk-owners" class="bk-owners"></div>
                 <p id="bk-error" class="hidden text-center text-[10px] font-mono uppercase tracking-widest text-red-500"></p>
             </div>
