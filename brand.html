@@ -155,6 +155,13 @@
             background-size:16px 16px; background-position:0 0, 0 8px, 8px -8px, -8px 0; }
         .bk-preview img { max-width:85%; max-height:85%; object-fit:contain; }
         .bk-preview.doc { background-image:none; }
+        .bk-preview.photo { background:var(--la-chip); }
+        .bk-preview.photo img { max-width:100%; max-height:100%; width:100%; height:100%; object-fit:cover; }
+        .bk-preview.photo .bk-bg-toggle { display:none; }
+        button.bk-tag { cursor:pointer; z-index:1; }
+        .bk-tag-caret { font-size:10px !important; opacity:.7; margin-left:1px; }
+        @media (hover:hover) { button.bk-tag:hover { color:var(--la-text); border-color:var(--la-sub); } }
+        .bk-cat-opt b { display:flex; align-items:center; gap:8px; }
         .bk-font-sample { display:flex; flex-direction:column; align-items:center; gap:2px; color:var(--la-text); opacity:0; transition:opacity .2s; max-width:90%; overflow:hidden; }
         .bk-font.ready .bk-font-sample { opacity:1; }
         .bk-font-sample .aa { font-size:40px; line-height:1.05; }
@@ -247,7 +254,7 @@
             <div class="max-w-6xl mx-auto w-full p-4 md:p-10 flex flex-col space-y-4 md:space-y-8 mt-2 md:mt-0">
                 <div class="cam-toolbar bk-toolbar">
                     <div class="min-w-0">
-                        <p class="cam-eyebrow">Logos · Guidelines · Fonts</p>
+                        <p class="cam-eyebrow">Logos · Covers · Artwork · Photos · Guidelines · Fonts</p>
                         <h2 class="cam-h">Brand kit</h2>
                         <p class="bk-lead">Keep your own, each venue's and each artist's brand files in one place, so the team always downloads the right logo and guidelines.</p>
                     </div>
@@ -329,10 +336,13 @@
         // ── Brand kit ─────────────────────────────────────────────────────
         // Files are stored per owner: the venue, or "artist-<slug>" for each artist.
         var CATS = [
-            { key: 'logos',      label: 'Logos',      icon: 'solar:star-shine-linear' },
-            { key: 'guidelines', label: 'Guidelines', icon: 'solar:document-text-linear' },
-            { key: 'fonts',      label: 'Fonts',      icon: 'solar:text-field-linear' },
-            { key: 'other',      label: 'Other',      icon: 'solar:folder-linear' },
+            { key: 'logos',      label: 'Logos',      icon: 'solar:star-shine-linear', tag: 'Logo' },
+            { key: 'covers',     label: 'Album covers', icon: 'solar:vinyl-record-linear', tag: 'Album cover' },
+            { key: 'artwork',    label: 'Artwork',    icon: 'solar:gallery-wide-linear', tag: 'Artwork' },
+            { key: 'photos',     label: 'Photos',     icon: 'solar:camera-linear', tag: 'Photo' },
+            { key: 'guidelines', label: 'Guidelines', icon: 'solar:document-text-linear', tag: 'Guidelines' },
+            { key: 'fonts',      label: 'Fonts',      icon: 'solar:text-field-linear', tag: 'Font' },
+            { key: 'other',      label: 'Other',      icon: 'solar:folder-linear', tag: 'Other' },
         ];
         var IMG_EXT = /\.(png|jpe?g|svg|webp|gif)$/i;
         var FONT_EXT = /\.(otf|ttf|woff2?)$/i;
@@ -429,6 +439,7 @@
                 }).catch(function() { el.classList.add('failed'); });
             });
             wrap.querySelectorAll('[data-font-preview]').forEach(function(b) { b.addEventListener('click', function() { openFontPreview(b.dataset.fontPreview); }); });
+            wrap.querySelectorAll('[data-move]').forEach(function(b) { b.addEventListener('click', function() { openMove(b.dataset.move); }); });
             wrap.querySelectorAll('[data-org]').forEach(function(b) { b.addEventListener('click', openOrgType); });
             wrap.querySelectorAll('[data-zip]').forEach(function(b) { b.addEventListener('click', function() { downloadAll(b.dataset.zip, b); }); });
             wrap.querySelectorAll('[data-del]').forEach(function(b) { b.addEventListener('click', function() { removeFile(b.dataset.del, b); }); });
@@ -446,6 +457,7 @@
         // Measures the average brightness of the logo's visible (non-transparent) pixels.
         function fitPreviewBg(img) {
             var box = img.parentNode, tone = null;
+            if (box.classList.contains('photo')) return;
             try {
                 var c = document.createElement('canvas'), n = 48;
                 c.width = n; c.height = n;
@@ -510,10 +522,11 @@
 
         function fileCard(f) {
             var ext = (f.name.split('.').pop() || 'file').slice(0, 5);
-            var cat = CATS.filter(function(c) { return c.key === f.category; })[0] || CATS[3];
-            var tag = '<span class="bk-tag"><iconify-icon icon="' + cat.icon + '"></iconify-icon>' + (cat.key === 'guidelines' ? 'Guidelines' : cat.label.replace(/s$/, '')) + '</span>';
+            var cat = CATS.filter(function(c) { return c.key === f.category; })[0] || CATS[CATS.length - 1];
+            var tag = '<button type="button" class="bk-tag" data-move="' + esc(f.url) + '" title="Change type"><iconify-icon icon="' + cat.icon + '"></iconify-icon>' + cat.tag + '<iconify-icon icon="solar:alt-arrow-down-linear" class="bk-tag-caret"></iconify-icon></button>';
+            var isPhoto = f.category === 'covers' || f.category === 'artwork' || f.category === 'photos';
             var preview = IMG_EXT.test(f.name)
-                ? '<div class="bk-preview">' + tag + '<img src="' + esc(f.url) + '" alt="" loading="lazy" crossorigin="anonymous" onload="fitPreviewBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}">' +
+                ? '<div class="bk-preview' + (isPhoto ? ' photo' : '') + '">' + tag + '<img src="' + esc(f.url) + '" alt="" loading="lazy" crossorigin="anonymous" onload="fitPreviewBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}">' +
                     '<button type="button" class="bk-bg-toggle" title="Switch background" onclick="flipPreviewBg(this)"><iconify-icon icon="solar:sun-2-linear"></iconify-icon></button></div>'
                 : FONT_EXT.test(f.name)
                 ? '<div class="bk-preview doc bk-font" data-font="' + esc(f.url) + '">' + tag +
@@ -540,23 +553,31 @@
                 '<label>Type<select name="category">' + CATS.map(function(c) { return '<option value="' + c.key + '">' + c.label + '</option>'; }).join('') + '</select></label></div>' +
                 '<label id="bk-new-wrap" class="hidden"><span id="bk-new-label">Name</span><input name="newName" maxlength="60"></label>' +
                 '<div id="bk-drop" class="bk-drop" tabindex="0"><iconify-icon icon="solar:cloud-upload-linear"></iconify-icon>Drop files here or <b>browse</b>' +
-                    '<small>PNG, SVG, JPG, PDF, AI, EPS, fonts or ZIP · up to 200 MB each</small></div>' +
+                    '<small>Logos, covers, artwork, photos, PDFs, AI/EPS, fonts or ZIP · up to 200 MB each</small></div>' +
                 '<input id="bk-input" type="file" multiple class="hidden" accept=".png,.jpg,.jpeg,.svg,.webp,.gif,.pdf,.ai,.eps,.psd,.zip,.ttf,.otf,.woff,.woff2,.txt">' +
                 '<div id="bk-queue" class="bk-queue"></div>' +
                 '<p id="bk-form-error" class="cam-form-error"></p>' +
                 '<div class="cam-form-actions"><button type="button" class="cam-btn ghost" onclick="closeCamDialog()">Cancel</button>' +
                 '<button type="submit" class="cam-btn primary" disabled>Upload</button></div></form>');
             var form = document.getElementById('bk-form'), drop = document.getElementById('bk-drop'), input = document.getElementById('bk-input');
-            var picked = [];
+            var picked = [], catTouched = false;
+            form.category.addEventListener('change', function() { catTouched = true; });
             var setPicked = function(list) {
                 picked = Array.prototype.slice.call(list).filter(function(f) { return f.size > 0; });
                 document.getElementById('bk-queue').innerHTML = picked.map(function(f, i) {
                     return '<div class="bk-q" id="bkq-' + i + '"><span>' + esc(f.name) + '</span><span class="bar"><i></i></span><span class="st">' + fmtSize(f.size) + '</span></div>';
                 }).join('');
                 form.querySelector('[type=submit]').disabled = !picked.length;
-                if (picked.length && /^image\//.test(picked[0].type)) form.category.value = 'logos';
-                else if (picked.length && /pdf/.test(picked[0].type)) form.category.value = 'guidelines';
-                else if (picked.length && /\.(ttf|otf|woff2?)$/i.test(picked[0].name)) form.category.value = 'fonts';
+                // Suggest a type from the file, unless one was already chosen
+                if (picked.length && !catTouched) {
+                    var p0 = picked[0];
+                    if (/\.(ttf|otf|woff2?)$/i.test(p0.name)) form.category.value = 'fonts';
+                    else if (/pdf/.test(p0.type)) form.category.value = 'guidelines';
+                    else if (/^image\//.test(p0.type)) form.category.value =
+                        /cover|album|release|single|\bep\b/i.test(p0.name) ? 'covers'
+                        : /artwork|poster|flyer|visual|graphic/i.test(p0.name) ? 'artwork'
+                        : /photo|press|portrait|avatar|shot|img_|dsc/i.test(p0.name) || /jpe?g$/i.test(p0.name) ? 'photos' : 'logos';
+                }
             };
             var syncNew = function() {
                 var v = form.owner.value, isNew = v === '__newVenue' || v === '__newArtist';
@@ -648,6 +669,31 @@
                     document.getElementById('bk-org-error').textContent = 'Could not save: ' + er.message;
                     btn.disabled = false; btn.textContent = 'Save';
                 }
+            });
+        }
+
+        function openMove(url) {
+            var f = _files.filter(function(x) { return x.url === url; })[0];
+            if (!f) return;
+            openCamDialog('Change type',
+                '<p class="cam-dialog-text">' + esc(f.name) + '</p><div class="bk-org-options">' +
+                CATS.map(function(c) {
+                    return '<button type="button" class="bk-org-opt bk-cat-opt' + (c.key === f.category ? ' on' : '') + '" data-cat="' + c.key + '"><b><iconify-icon icon="' + c.icon + '"></iconify-icon> ' + c.label + '</b></button>';
+                }).join('') + '</div><p id="bk-move-error" class="cam-form-error"></p>');
+            document.querySelectorAll('.bk-cat-opt').forEach(function(b) {
+                b.addEventListener('click', async function() {
+                    if (b.dataset.cat === f.category) { closeCamDialog(); return; }
+                    document.querySelectorAll('.bk-cat-opt').forEach(function(x) { x.disabled = true; });
+                    b.querySelector('b').insertAdjacentHTML('beforeend', ' <span class="bk-meta">Moving…</span>');
+                    try {
+                        var r = await laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'move', url: url, category: b.dataset.cat }) });
+                        if (!r.ok) throw new Error((await r.json()).error || r.status);
+                        closeCamDialog(); await loadBrand();
+                    } catch (e) {
+                        document.getElementById('bk-move-error').textContent = 'Could not change type: ' + e.message;
+                        document.querySelectorAll('.bk-cat-opt').forEach(function(x) { x.disabled = false; });
+                    }
+                });
             });
         }
 

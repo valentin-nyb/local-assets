@@ -1,4 +1,4 @@
-import { list, del } from '@vercel/blob';
+import { list, del, copy } from '@vercel/blob';
 import { createClient } from 'redis';
 import { handleUpload } from '@vercel/blob/client';
 import { getWebSessionAuth } from './_venues.js';
@@ -9,7 +9,7 @@ import { getWebSessionAuth } from './_venues.js';
 // (large PDFs and font packs exceed the 4.5 MB function body limit); this route
 // only hands out upload tokens for the signed-in venue's own folder.
 
-const CATEGORIES = ['logos', 'guidelines', 'fonts', 'other'];
+const CATEGORIES = ['logos', 'covers', 'artwork', 'photos', 'guidelines', 'fonts', 'other'];
 const MAX_BYTES  = 200 * 1024 * 1024;
 // "venue" is the account itself; artist-<slug> and venue-<slug> are artists and venues it works with
 const OWNER      = /^(venue|(?:artist|venue)-[a-z0-9]+(?:-[a-z0-9]+)*)$/;
@@ -88,6 +88,22 @@ export default async function handler(req, res) {
       if (owner === 'venue' || !OWNER.test(owner) || !name) return res.status(400).json({ error: 'Invalid name' });
       await withRedis(r => r.hSet(`brand_owner_names:${slug}`, owner, name));
       return res.status(200).json({ owner, name });
+    }
+
+    if (body.action === 'move') {
+      // Change a file's type: copy it under the new category folder, then remove the original
+      const url = String(body.url || '');
+      let pathname = '';
+      try { pathname = decodeURIComponent(new URL(url).pathname.slice(1)); } catch {}
+      const meta = pathname.startsWith(prefixFor(slug)) ? parsePath(pathname, slug) : null;
+      if (!meta || !/\.public\.blob\.vercel-storage\.com$/.test(new URL(url).hostname)) return res.status(403).json({ error: 'Not your file' });
+      if (!CATEGORIES.includes(body.category)) return res.status(400).json({ error: 'Unknown type' });
+      if (body.category === meta.category) return res.status(200).json({ ok: true });
+      const parts = pathname.slice(prefixFor(slug).length).split('/');
+      const to = prefixFor(slug) + [parts[0], body.category].concat(parts.slice(2)).join('/');
+      await copy(url, to, { access: 'public', addRandomSuffix: false });
+      await del(url);
+      return res.status(200).json({ ok: true });
     }
 
     if (body.action === 'delete') {

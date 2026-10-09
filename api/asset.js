@@ -3,7 +3,7 @@ import { head } from '@vercel/blob';
 // Branded links for brand-kit files: local-assets.com/asset/<venue>/<owner>/<category>/<file>
 // (rewritten here as ?path=brand/...). Redirects to the file in Vercel Blob, so links can be
 // shared without exposing the storage URL. Only brand-kit files are reachable this way.
-const PATH = /^brand\/[a-z0-9-]+\/(venue|(?:artist|venue)-[a-z0-9]+(?:-[a-z0-9]+)*)\/(logos|guidelines|fonts|other)\/[A-Za-z0-9._-]+$/;
+const PATH = /^brand\/[a-z0-9-]+\/(venue|(?:artist|venue)-[a-z0-9]+(?:-[a-z0-9]+)*)\/(logos|covers|artwork|photos|guidelines|fonts|other)\/[A-Za-z0-9._-]+$/;
 
 export default async function handler(req, res) {
   const path = String(req.query.path || '');
