@@ -57,6 +57,9 @@ document.addEventListener("DOMContentLoaded", () => {
             <a href="/assets" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('/assets')}">
                 <iconify-icon icon="solar:cloud-upload-linear" class="text-lg"></iconify-icon>Upload Asset
             </a>
+            <a href="/brand" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('/brand')}">
+                <iconify-icon icon="solar:pallete-2-linear" class="text-lg"></iconify-icon>Brand Kit
+            </a>
         </nav>
         <div class="px-4 pt-6 mt-4 flex justify-center" style="padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1.5rem)">
             <div class="la-theme-switcher" role="radiogroup" aria-label="Theme">

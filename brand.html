@@ -1,0 +1,515 @@
+
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+<head>
+    <script>
+      (function(){
+        var s = localStorage.getItem('la_admin');
+        if (!s) { window.location.replace('/login.html'); return; }
+        try {
+          var d = JSON.parse(s);
+          if (!d.ts || Date.now() - d.ts > 10 * 60 * 1000) {
+            localStorage.removeItem('la_admin');
+            window.location.replace('/login.html');
+          }
+        } catch(e) {
+          localStorage.removeItem('la_admin');
+          window.location.replace('/login.html');
+        }
+      })();
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="a™">
+    <meta name="theme-color" content="#000000">
+    <title>local / assets™ - Brand Kit</title>
+    <link rel="icon" type="image/x-icon" href="favicon/favicon.ico">
+    <link rel="icon" type="image/svg+xml" href="favicon/favicon.svg">
+    <link rel="apple-touch-icon" href="favicon/apple-touch-icon.png">
+    <link rel="manifest" href="favicon/site.webmanifest">
+
+    <link rel="stylesheet" href="styles/tailwind.css">
+    <link rel="stylesheet" href="styles/theme.css">
+    <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <script src="nav-component.js?v=3"></script>
+    <style>
+        .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
+        .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
+        .nav-link:hover:not(.active) { background: rgba(255, 255, 255, 0.03); color: white; }
+        body { background-color: #050505; color: #ffffff; -webkit-font-smoothing: antialiased; }
+        .nav-link.active { background-color: rgba(255, 255, 255, 0.05); border: 1px solid #27272a; color: white; }
+        ::-webkit-scrollbar { display: none; }
+        @media (max-width: 767px) { #sidebar { position: fixed; z-index: 50; height: 100vh; } }
+        .sleek-flap { writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.3em; font-size: 10px; font-weight: 800; }
+        .cam-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:16px; }
+        @media (max-width: 640px) { .cam-grid { grid-template-columns:1fr; } }
+        .cam-card { border:1px solid var(--la-line); background:var(--la-surface); border-radius:16px; overflow:hidden; }
+        .cam-stage { aspect-ratio:16/9; background:#000; position:relative; }
+        .cam-off { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; color:#71717a; font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.1em; text-align:center; padding:16px; }
+        .cam-off iconify-icon { font-size:24px; }
+        .cam-meta { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; }
+        .cam-label { font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.15em; color:var(--la-text-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .cam-pill { font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.15em; padding:3px 8px; border-radius:999px; border:1px solid var(--la-line); color:var(--la-dim); flex-shrink:0; }
+        .cam-pill.on { color:#fff; background:#ef4444; border-color:var(--la-bad); }
+        .cam-empty { border:1px dashed var(--la-line); border-radius:16px; padding:48px 24px; display:flex; flex-direction:column; align-items:center; text-align:center; gap:8px; }
+        .cam-empty.hidden { display:none; }
+        .cam-toolbar { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+        .cam-eyebrow { font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--la-dim); }
+        .cam-h { font-size:22px; font-weight:700; letter-spacing:-.01em; margin-top:4px; color:var(--la-text); }
+        .cam-actions { display:flex; gap:8px; flex-wrap:wrap; }
+        .cam-btn { display:inline-flex; align-items:center; gap:8px; height:36px; padding:0 14px; border-radius:10px; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; border:1px solid transparent; text-decoration:none; transition:opacity .15s, border-color .15s, background .15s; }
+        .cam-btn iconify-icon { font-size:16px; }
+        .cam-btn.primary { background:var(--la-accent); color:var(--la-accent-ink); }
+        .cam-btn.ghost { background:transparent; color:var(--la-text); border-color:var(--la-line); }
+        .cam-btn:disabled { opacity:.5; cursor:default; }
+        @media (hover:hover) { .cam-btn.primary:hover { opacity:.85; } .cam-btn.ghost:hover { border-color:var(--la-sub); } }
+        .cam-pill.warn { color:var(--la-warn); border-color:rgba(234,179,8,.4); }
+        .cam-chips { display:flex; flex-wrap:wrap; gap:6px; padding:0 14px 12px; }
+        .cam-chip { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--la-sub); background:var(--la-chip); border-radius:6px; padding:3px 7px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .cam-chip.ndi { color:var(--la-accent); background:var(--la-accent-soft); }
+        .cam-row-actions { display:flex; flex-wrap:wrap; gap:2px; border-top:1px solid var(--la-line-soft); padding:6px 8px; }
+        .cam-link { display:inline-flex; align-items:center; gap:5px; height:32px; padding:0 7px; border-radius:8px; font-size:12px; color:var(--la-sub); background:none; border:none; cursor:pointer; text-decoration:none; }
+        .cam-link iconify-icon { font-size:15px; }
+        .cam-link.danger { margin-left:auto; }
+        @media (hover:hover) { .cam-link:hover { background:var(--la-chip); color:var(--la-text); } .cam-link.danger:hover { color:var(--la-bad); } }
+        .cam-guide { border:1px solid var(--la-line); border-radius:16px; padding:0 18px; background:var(--la-surface); }
+        .cam-guide summary { cursor:pointer; padding:16px 0; font-size:13px; font-weight:600; color:var(--la-text); display:flex; align-items:center; gap:8px; list-style:none; }
+        .cam-guide summary::-webkit-details-marker { display:none; }
+        .cam-guide ol { list-style:decimal; padding:0 0 18px 20px; display:flex; flex-direction:column; gap:10px; font-size:13px; line-height:1.6; color:var(--la-sub); }
+        .cam-guide ul { list-style:disc; padding-left:20px; margin-top:4px; }
+        .cam-guide b { color:var(--la-text); font-weight:600; }
+        .cam-guide code { font-family:'JetBrains Mono',monospace; font-size:11px; background:var(--la-chip); padding:1px 5px; border-radius:4px; color:var(--la-text); }
+        .cam-dialog { position:fixed; inset:0; z-index:100; background:var(--la-overlay); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; padding:16px; }
+        .cam-dialog.hidden { display:none; }
+        .cam-dialog-panel { width:460px; max-width:100%; max-height:calc(100vh - 32px); overflow:auto; background:var(--la-raised); border:1px solid var(--la-line); border-radius:16px; padding:20px; box-shadow:var(--la-shadow); }
+        .cam-dialog-panel.wide { width:520px; }
+        .ord-hero { height:220px; padding:14px 0; border-radius:12px; margin:-4px 0 16px; display:flex; align-items:center; justify-content:center; background:var(--la-product-bg); border:1px solid var(--la-line-soft); overflow:hidden; }
+        .ord-hero img { height:100%; width:auto; object-fit:contain; filter:drop-shadow(0 18px 28px rgba(0,0,0,.35)); }
+        .ord-title { font-size:24px; font-weight:700; letter-spacing:-.01em; margin-top:4px; color:var(--la-text); }
+        .ord-sub { font-size:13px; line-height:1.55; color:var(--la-sub); margin-top:4px; }
+        .ord-price { display:flex; align-items:baseline; gap:8px; margin-top:16px; }
+        .ord-amount { font-size:28px; font-weight:700; color:var(--la-text); }
+        .ord-per { font-size:12px; color:var(--la-dim); }
+        .ord-included { display:flex; align-items:center; gap:6px; font-size:12px; font-weight:500; color:var(--la-accent); margin-top:6px; }
+        .ord-klarna { font-size:12px; line-height:1.5; color:var(--la-sub); margin-top:6px; }
+        .ord-klarna-badge { display:inline-block; background:#FFA8CD; color:#0b051d; font-weight:800; font-size:11px; padding:1px 6px; border-radius:4px; margin-right:4px; }
+        .ord-feats { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:18px; }
+        @media (max-width:480px) { .ord-feats { grid-template-columns:1fr; } }
+        .ord-feat { display:flex; gap:10px; align-items:flex-start; }
+        .ord-feat iconify-icon { font-size:18px; color:var(--la-accent); flex-shrink:0; margin-top:1px; }
+        .ord-feat b { display:block; font-size:12px; font-weight:600; color:var(--la-text); }
+        .ord-feat span { display:block; font-size:11px; line-height:1.45; color:var(--la-dim); }
+        .ord-specs { margin-top:16px; border-top:1px solid var(--la-line-soft); padding-top:12px; }
+        .ord-specs summary { cursor:pointer; font-size:12px; color:var(--la-sub); }
+        .ord-specs dl { display:grid; grid-template-columns:auto 1fr; gap:6px 14px; margin-top:10px; font-size:12px; line-height:1.45; }
+        .ord-specs dt { color:var(--la-dim); }
+        .ord-specs dd { color:var(--la-text-2); }
+        .ord-buy { display:flex; gap:10px; margin-top:18px; }
+        .ord-qty { display:flex; align-items:center; border:1px solid var(--la-line); border-radius:10px; height:44px; flex-shrink:0; }
+        .ord-qty button { width:38px; height:100%; background:none; border:none; color:var(--la-text); font-size:18px; cursor:pointer; }
+        .ord-qty span { min-width:22px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:14px; color:var(--la-text); }
+        .ord-go { flex:1; height:44px; justify-content:center; font-size:14px; }
+        .ord-fine { font-size:11px; line-height:1.5; color:var(--la-dim); margin-top:10px; }
+        .cam-form-error a { color:var(--la-text); text-decoration:underline; }
+        .cam-dialog-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
+        .cam-dialog-title { font-size:16px; font-weight:600; color:var(--la-text); }
+        .cam-dialog-text { font-size:13px; line-height:1.55; color:var(--la-sub); margin-bottom:14px; }
+        .cam-dialog-note { display:flex; gap:8px; font-size:12px; line-height:1.5; color:var(--la-dim); margin-top:14px; }
+        .cam-icon-btn { width:32px; height:32px; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; background:none; border:none; color:var(--la-sub); cursor:pointer; font-size:18px; }
+        @media (hover:hover) { .cam-icon-btn:hover { background:var(--la-chip); color:var(--la-text); } }
+        .cam-form { display:flex; flex-direction:column; gap:14px; }
+        .cam-form label { display:flex; flex-direction:column; gap:6px; font-size:12px; font-weight:500; color:var(--la-text-2); }
+        .cam-form input { height:40px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 12px; font-size:14px; outline:none; }
+        .cam-form input:focus { border-color:var(--la-accent); }
+        .cam-form small { font-size:11px; font-weight:400; color:var(--la-dim); }
+        .cam-form-error { font-size:12px; color:var(--la-bad); min-height:0; }
+        .cam-form-actions { display:flex; justify-content:flex-end; gap:8px; }
+        .cam-field { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
+        .cam-field > span { font-size:11px; color:var(--la-dim); }
+        .cam-field > div { display:flex; align-items:center; gap:6px; background:var(--la-input); border:1px solid var(--la-line); border-radius:10px; padding:4px 4px 4px 12px; }
+        .cam-field code { flex:1; min-width:0; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--la-text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .cam-field code.secret:not(:hover):not(:focus) { filter:blur(4px); cursor:pointer; }
+        .cam-empty-title { font-size:14px; font-weight:600; color:var(--la-text); }
+        .cam-empty-text { font-size:12px; line-height:1.6; color:var(--la-dim); max-width:380px; }
+        /* ── Brand kit ── */
+        .bk-owners { display:flex; flex-direction:column; gap:16px; }
+        .bk-owner { background:var(--la-surface); border:1px solid var(--la-line); border-radius:16px; overflow:hidden; }
+        .bk-owner-head { display:flex; align-items:center; gap:14px; padding:16px 18px; }
+        .bk-avatar { width:44px; height:44px; border-radius:12px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; color:var(--la-sub); background:var(--la-chip); border:1px solid var(--la-line); overflow:hidden; }
+        .bk-avatar img { width:100%; height:100%; object-fit:contain; padding:6px; }
+        .bk-owner-name { font-size:15px; font-weight:600; color:var(--la-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .bk-owner-meta { font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:var(--la-dim); margin-top:3px; }
+        .bk-owner-actions { margin-left:auto; display:flex; gap:6px; flex-shrink:0; }
+        .bk-body { border-top:1px solid var(--la-line-soft); padding:6px 18px 18px; }
+        .bk-cat { margin-top:14px; }
+        .bk-cat-label { display:flex; align-items:center; gap:6px; font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:var(--la-dim); margin-bottom:8px; }
+        .bk-files { display:grid; grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:10px; }
+        .bk-file { border:1px solid var(--la-line); border-radius:12px; overflow:hidden; background:var(--la-raised); display:flex; flex-direction:column; min-width:0; }
+        .bk-preview { height:110px; display:flex; align-items:center; justify-content:center; position:relative;
+            background-color:var(--la-chip);
+            background-image:linear-gradient(45deg, rgba(128,128,128,.12) 25%, transparent 25%), linear-gradient(-45deg, rgba(128,128,128,.12) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(128,128,128,.12) 75%), linear-gradient(-45deg, transparent 75%, rgba(128,128,128,.12) 75%);
+            background-size:16px 16px; background-position:0 0, 0 8px, 8px -8px, -8px 0; }
+        .bk-preview img { max-width:85%; max-height:85%; object-fit:contain; }
+        .bk-preview.doc { background-image:none; }
+        .bk-ext { display:flex; flex-direction:column; align-items:center; gap:6px; color:var(--la-sub); }
+        .bk-ext iconify-icon { font-size:30px; }
+        .bk-ext span { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.12em; text-transform:uppercase; }
+        .bk-info { padding:10px 12px 4px; min-width:0; }
+        .bk-name { font-size:12px; font-weight:500; color:var(--la-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .bk-meta { font-size:11px; color:var(--la-dim); margin-top:2px; }
+        .bk-file-actions { display:flex; gap:2px; padding:4px 6px 6px; }
+        .bk-file-actions a, .bk-file-actions button { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:8px; color:var(--la-sub); background:none; border:none; cursor:pointer; font-size:16px; text-decoration:none; }
+        .bk-file-actions .del { margin-left:auto; }
+        @media (hover:hover) { .bk-file-actions a:hover, .bk-file-actions button:hover { background:var(--la-chip); color:var(--la-text); } .bk-file-actions .del:hover { color:var(--la-bad); } }
+        .bk-empty-owner { font-size:12px; color:var(--la-dim); padding:14px 0 2px; }
+        .bk-empty-owner button { color:var(--la-accent); background:none; border:none; padding:0; cursor:pointer; font:inherit; }
+        .bk-drop { border:1.5px dashed var(--la-line); border-radius:12px; padding:22px 14px; text-align:center; color:var(--la-sub); font-size:13px; cursor:pointer; transition:border-color .15s, background .15s; }
+        .bk-drop.over, .bk-drop:focus-visible { border-color:var(--la-accent); background:var(--la-accent-soft); outline:none; }
+        .bk-drop iconify-icon { font-size:26px; color:var(--la-dim); display:flex; justify-content:center; width:100%; margin:0 0 6px; }
+        .cam-form .hidden { display:none !important; }
+        .bk-tag { position:absolute; top:8px; left:8px; display:inline-flex; align-items:center; gap:4px; font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--la-sub); background:var(--la-raised); border:1px solid var(--la-line); border-radius:999px; padding:2px 7px; }
+        .bk-body .bk-files { margin-top:14px; }
+        .bk-drop small { display:block; font-size:11px; color:var(--la-dim); margin-top:4px; }
+        .bk-queue { display:flex; flex-direction:column; gap:6px; margin-top:10px; }
+        .bk-q { display:flex; align-items:center; gap:10px; font-size:12px; color:var(--la-text-2); }
+        .bk-q span:first-child { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .bk-q .bar { width:90px; height:4px; border-radius:4px; background:var(--la-chip); overflow:hidden; flex-shrink:0; }
+        .bk-q .bar i { display:block; height:100%; width:0; background:var(--la-accent); transition:width .2s; }
+        .bk-q .st { width:44px; text-align:right; font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--la-dim); flex-shrink:0; }
+        .cam-form select { height:40px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 10px; font-size:14px; outline:none; }
+        .cam-form select:focus { border-color:var(--la-accent); }
+        .bk-row2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+        @media (max-width:480px) { .bk-row2 { grid-template-columns:1fr; } .bk-owner-head { flex-wrap:wrap; } .bk-owner-actions { width:100%; margin-left:0; } .bk-files { grid-template-columns:repeat(2, minmax(0,1fr)); } }
+    </style>
+</head>
+<body class="font-sans antialiased bg-background text-foreground overflow-hidden h-screen w-screen flex selection:bg-primary selection:text-black">
+
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/90 z-40 hidden backdrop-blur-md opacity-0 transition-opacity duration-300"></div>
+
+    <aside id="sidebar" class="w-64 border-r border-[#27272a] bg-[#0a0a0a] flex flex-col transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 shrink-0 h-full"></aside>
+
+    <main class="flex-1 flex flex-col overflow-hidden relative w-full bg-[#050505]">
+        
+        <header class="h-16 flex items-center px-4 md:px-8 border-b border-[#27272a] bg-[#050505] shrink-0 justify-between w-full z-40">
+            <div class="flex items-center gap-2 md:gap-3 min-w-0"><button type="button" onclick="toggleSidebar()" class="la-menu-btn" aria-label="Open menu"><iconify-icon icon="solar:hamburger-menu-linear"></iconify-icon></button>
+                <span id="venue-breadcrumb" class="text-zinc-600 text-[10px] font-mono uppercase tracking-[0.3em] hidden md:inline"></span>
+                <iconify-icon icon="solar:alt-arrow-right-linear" class="text-zinc-700 hidden md:block"></iconify-icon>
+                <h1 class="text-[10px] md:text-[10px] font-mono uppercase tracking-[0.2em] md:tracking-[0.3em] text-[#39FF14] font-bold m-0 truncate">
+                    BRAND KIT
+                </h1>
+            </div>
+            <div class="flex items-center gap-4 shrink-0">
+<button id="venue-avatar" onclick="openVenueEditor()" class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center font-bold text-xs shrink-0 cursor-pointer hover:scale-105 transition-transform shadow-[0_0_10px_rgba(255,255,255,0.1)]" title="Change venue name"></button>
+            </div>
+        </header>
+
+            <div class="max-w-6xl mx-auto w-full p-4 md:p-10 flex flex-col space-y-4 md:space-y-8 mt-2 md:mt-0">
+                <div class="cam-toolbar">
+                    <div class="min-w-0">
+                        <p class="cam-eyebrow">Logos · Guidelines · Fonts</p>
+                        <h2 class="cam-h">Brand kit</h2>
+                    </div>
+                    <div class="cam-actions">
+                        <button type="button" class="cam-btn primary" onclick="openUpload()">
+                            <iconify-icon icon="solar:upload-minimalistic-linear"></iconify-icon><span>Upload files</span>
+                        </button>
+                    </div>
+                </div>
+                <p class="cam-dialog-text" style="margin:0">Keep the venue's and each artist's brand files in one place, so the team always downloads the right logo and guidelines.</p>
+                <div id="bk-owners" class="bk-owners"></div>
+                <p id="bk-error" class="hidden text-center text-[10px] font-mono uppercase tracking-widest text-red-500"></p>
+            </div>
+        </div>
+
+        <div class="la-statusbar w-full h-10 bg-black border-t border-[#27272a] flex items-center justify-between px-4 md:px-6 shrink-0">
+            <div class="flex items-center gap-2 md:gap-4 text-[7px] md:text-[9px] font-mono text-zinc-600 uppercase tracking-widest">
+                <span>LOCAL / ASSETS V2.4.0</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span id="bk-foot" class="text-[7px] md:text-[9px] font-mono text-zinc-400 uppercase tracking-widest"></span>
+            </div>
+        </div>
+    </main>
+
+    <div id="cam-dialog" class="cam-dialog hidden" onclick="if(event.target===this)closeCamDialog()">
+        <div class="cam-dialog-panel" role="dialog" aria-modal="true">
+            <div class="cam-dialog-head">
+                <p id="cam-dialog-title" class="cam-dialog-title"></p>
+                <button type="button" class="cam-icon-btn" onclick="closeCamDialog()" aria-label="Close"><iconify-icon icon="solar:close-circle-linear"></iconify-icon></button>
+            </div>
+            <div id="cam-dialog-body"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { upload } from 'https://cdn.jsdelivr.net/npm/@vercel/blob@2.3.3/client/+esm';
+        import { downloadZip } from 'https://cdn.jsdelivr.net/npm/client-zip@2.5.0/index.js';
+        window.blobUpload = upload;
+        window.downloadZip = downloadZip;
+    </script>
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            if (sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+                setTimeout(() => overlay.classList.add('opacity-100'), 10);
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('opacity-0');
+                setTimeout(() => overlay.classList.add('hidden'), 300);
+            }
+        }
+
+
+        function laFetch(url, opts) {
+            var sess = {}; try { sess = JSON.parse(localStorage.getItem('la_admin') || '{}'); } catch (_) {}
+            opts = Object.assign({}, opts); opts.headers = Object.assign({}, opts.headers);
+            if (sess.webToken) opts.headers['Authorization'] = 'Bearer ' + sess.webToken;
+            return fetch(url, opts);
+        }
+        function session() { try { return JSON.parse(localStorage.getItem('la_admin') || '{}'); } catch (_) { return {}; } }
+        function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+        function openCamDialog(title, html) {
+            document.getElementById('cam-dialog-title').textContent = title;
+            document.getElementById('cam-dialog-body').innerHTML = html;
+            document.getElementById('cam-dialog').classList.remove('hidden');
+        }
+        function closeCamDialog() { if (_uploading) return; document.getElementById('cam-dialog').classList.add('hidden'); }
+        document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeCamDialog(); });
+
+        // ── Brand kit ─────────────────────────────────────────────────────
+        // Files are stored per owner: the venue, or "artist-<slug>" for each artist.
+        var CATS = [
+            { key: 'logos',      label: 'Logos',      icon: 'solar:star-shine-linear' },
+            { key: 'guidelines', label: 'Guidelines', icon: 'solar:document-text-linear' },
+            { key: 'fonts',      label: 'Fonts',      icon: 'solar:text-field-linear' },
+            { key: 'other',      label: 'Other',      icon: 'solar:folder-linear' },
+        ];
+        var IMG_EXT = /\.(png|jpe?g|svg|webp|gif)$/i;
+        var _files = [], _owners = [], _uploading = false;
+
+        function slugify(name) {
+            return String(name).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+        }
+        function fmtSize(b) { return b >= 1e9 ? (b / 1e9).toFixed(1) + ' GB' : b >= 1e6 ? (b / 1e6).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1e3)) + ' KB'; }
+        function fmtDate(d) { return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); }
+        function venueName() {
+            var s = session();
+            return localStorage.getItem('la_venue_name') || s.venue || 'Venue';
+        }
+        function artistFromAsset(a) {
+            var pt = a.passthrough;
+            if (pt && typeof pt === 'object' && pt.artist) return pt.artist;
+            if (typeof pt === 'string' && pt.trim()) {
+                try { var o = JSON.parse(pt); if (o && o.artist) return o.artist; } catch (_) {}
+                var n = pt.split(' // ')[0].split(' — ')[0].trim();
+                if (n && !/^(SESSION_ARCHIVE|UNKNOWN)$/i.test(n)) return n;
+            }
+            return null;
+        }
+
+        async function loadBrand() {
+            var err = document.getElementById('bk-error');
+            try {
+                var res = await Promise.all([
+                    laFetch('/api/brand').then(function(r) { return r.json().then(function(d) { if (!r.ok) throw new Error(d.error || r.status); return d; }); }),
+                    laFetch('/api/list-assets').then(function(r) { return r.ok ? r.json() : []; }).catch(function() { return []; }),
+                ]);
+                _files = res[0].files || [];
+                var assets = Array.isArray(res[1]) ? res[1] : (res[1].data || []);
+                var artists = {};
+                assets.forEach(function(a) { var n = artistFromAsset(a); if (n) artists['artist-' + slugify(n)] = n.toUpperCase(); });
+                _files.forEach(function(f) {
+                    if (f.owner !== 'venue' && !artists[f.owner]) artists[f.owner] = f.owner.slice(7).replace(/-/g, ' ').toUpperCase();
+                });
+                _owners = [{ key: 'venue', name: venueName(), kind: 'Venue / team' }].concat(
+                    Object.keys(artists).sort(function(a, b) { return artists[a].localeCompare(artists[b]); })
+                        .map(function(k) { return { key: k, name: artists[k], kind: 'Artist' }; }));
+                err.classList.add('hidden');
+                render();
+            } catch (e) {
+                err.textContent = 'Could not load the brand kit — ' + e.message;
+                err.classList.remove('hidden');
+            }
+        }
+
+        function render() {
+            var wrap = document.getElementById('bk-owners');
+            document.getElementById('bk-foot').textContent = _files.length + ' file' + (_files.length !== 1 ? 's' : '');
+            wrap.innerHTML = _owners.map(function(o) {
+                var files = _files.filter(function(f) { return f.owner === o.key; });
+                var logo = files.filter(function(f) { return f.category === 'logos' && IMG_EXT.test(f.name); })[0];
+                var avatar = logo ? '<img src="' + esc(logo.url) + '" alt="">' : esc(o.name.replace(/[^A-Za-z0-9 ]/g, '').split(/\s+/).map(function(w) { return w[0] || ''; }).join('').slice(0, 2) || '?');
+                var body = '';
+                if (!files.length) {
+                    body = '<p class="bk-empty-owner">No brand files yet. <button type="button" data-up="' + esc(o.key) + '">Upload logos or guidelines</button></p>';
+                } else {
+                    // One grid, ordered logos → guidelines → fonts → other, each card tagged
+                    var ordered = [];
+                    CATS.forEach(function(c) { files.forEach(function(f) { if (f.category === c.key) ordered.push(f); }); });
+                    body = '<div class="bk-files">' + ordered.map(fileCard).join('') + '</div>';
+                }
+                return '<section class="bk-owner">' +
+                    '<div class="bk-owner-head"><div class="bk-avatar">' + avatar + '</div>' +
+                    '<div class="min-w-0"><p class="bk-owner-name">' + esc(o.name) + '</p><p class="bk-owner-meta">' + esc(o.kind) + ' · ' + files.length + ' file' + (files.length !== 1 ? 's' : '') + '</p></div>' +
+                    '<div class="bk-owner-actions">' +
+                        (files.length ? '<button type="button" class="cam-btn ghost" data-zip="' + esc(o.key) + '"><iconify-icon icon="solar:download-minimalistic-linear"></iconify-icon><span>Download all</span></button>' : '') +
+                        '<button type="button" class="cam-btn ghost" data-up="' + esc(o.key) + '"><iconify-icon icon="solar:upload-minimalistic-linear"></iconify-icon><span>Upload</span></button>' +
+                    '</div></div>' +
+                    '<div class="bk-body">' + body + '</div></section>';
+            }).join('');
+            wrap.querySelectorAll('[data-up]').forEach(function(b) { b.addEventListener('click', function() { openUpload(b.dataset.up); }); });
+            wrap.querySelectorAll('[data-zip]').forEach(function(b) { b.addEventListener('click', function() { downloadAll(b.dataset.zip, b); }); });
+            wrap.querySelectorAll('[data-del]').forEach(function(b) { b.addEventListener('click', function() { removeFile(b.dataset.del, b); }); });
+            wrap.querySelectorAll('[data-copy]').forEach(function(b) {
+                b.addEventListener('click', function() {
+                    navigator.clipboard.writeText(b.dataset.copy).then(function() {
+                        var i = b.querySelector('iconify-icon'); i.setAttribute('icon', 'solar:check-circle-linear');
+                        setTimeout(function() { i.setAttribute('icon', 'solar:link-round-linear'); }, 1500);
+                    });
+                });
+            });
+        }
+
+        function fileCard(f) {
+            var ext = (f.name.split('.').pop() || 'file').slice(0, 5);
+            var cat = CATS.filter(function(c) { return c.key === f.category; })[0] || CATS[3];
+            var tag = '<span class="bk-tag"><iconify-icon icon="' + cat.icon + '"></iconify-icon>' + (cat.key === 'guidelines' ? 'Guidelines' : cat.label.replace(/s$/, '')) + '</span>';
+            var preview = IMG_EXT.test(f.name)
+                ? '<div class="bk-preview">' + tag + '<img src="' + esc(f.url) + '" alt="" loading="lazy"></div>'
+                : '<div class="bk-preview doc">' + tag + '<div class="bk-ext"><iconify-icon icon="' + (/pdf/i.test(ext) ? 'solar:document-text-linear' : /ttf|otf|woff/i.test(ext) ? 'solar:text-field-linear' : /zip/i.test(ext) ? 'solar:zip-file-linear' : 'solar:file-linear') + '"></iconify-icon><span>' + esc(ext) + '</span></div></div>';
+            return '<div class="bk-file">' + preview +
+                '<div class="bk-info"><p class="bk-name" title="' + esc(f.name) + '">' + esc(f.name) + '</p><p class="bk-meta">' + fmtSize(f.size) + ' · ' + fmtDate(f.uploadedAt) + '</p></div>' +
+                '<div class="bk-file-actions">' +
+                    '<a href="' + esc(f.downloadUrl) + '" title="Download"><iconify-icon icon="solar:download-minimalistic-linear"></iconify-icon></a>' +
+                    (IMG_EXT.test(f.name) || /pdf$/i.test(f.name) ? '<a href="' + esc(f.url) + '" target="_blank" rel="noopener" title="Open"><iconify-icon icon="solar:eye-linear"></iconify-icon></a>' : '') +
+                    '<button type="button" data-copy="' + esc(f.url) + '" title="Copy link"><iconify-icon icon="solar:link-round-linear"></iconify-icon></button>' +
+                    '<button type="button" class="del" data-del="' + esc(f.url) + '" title="Delete"><iconify-icon icon="solar:trash-bin-minimalistic-linear"></iconify-icon></button>' +
+                '</div></div>';
+        }
+
+        function openUpload(ownerKey) {
+            var opts = _owners.map(function(o) { return '<option value="' + esc(o.key) + '"' + (o.key === ownerKey ? ' selected' : '') + '>' + esc(o.name) + (o.key === 'venue' ? ' (venue)' : '') + '</option>'; }).join('') +
+                '<option value="__new">+ New artist…</option>';
+            openCamDialog('Upload brand files',
+                '<form id="bk-form" class="cam-form">' +
+                '<div class="bk-row2"><label>For<select name="owner">' + opts + '</select></label>' +
+                '<label>Type<select name="category">' + CATS.map(function(c) { return '<option value="' + c.key + '">' + c.label + '</option>'; }).join('') + '</select></label></div>' +
+                '<label id="bk-new-wrap" class="hidden">Artist name<input name="newArtist" maxlength="60" placeholder="e.g. DJ TENNIS"></label>' +
+                '<div id="bk-drop" class="bk-drop" tabindex="0"><iconify-icon icon="solar:cloud-upload-linear"></iconify-icon>Drop files here or <b>browse</b>' +
+                    '<small>PNG, SVG, JPG, PDF, AI, EPS, fonts or ZIP · up to 200 MB each</small></div>' +
+                '<input id="bk-input" type="file" multiple class="hidden" accept=".png,.jpg,.jpeg,.svg,.webp,.gif,.pdf,.ai,.eps,.psd,.zip,.ttf,.otf,.woff,.woff2,.txt">' +
+                '<div id="bk-queue" class="bk-queue"></div>' +
+                '<p id="bk-form-error" class="cam-form-error"></p>' +
+                '<div class="cam-form-actions"><button type="button" class="cam-btn ghost" onclick="closeCamDialog()">Cancel</button>' +
+                '<button type="submit" class="cam-btn primary" disabled>Upload</button></div></form>');
+            var form = document.getElementById('bk-form'), drop = document.getElementById('bk-drop'), input = document.getElementById('bk-input');
+            var picked = [];
+            var setPicked = function(list) {
+                picked = Array.prototype.slice.call(list).filter(function(f) { return f.size > 0; });
+                document.getElementById('bk-queue').innerHTML = picked.map(function(f, i) {
+                    return '<div class="bk-q" id="bkq-' + i + '"><span>' + esc(f.name) + '</span><span class="bar"><i></i></span><span class="st">' + fmtSize(f.size) + '</span></div>';
+                }).join('');
+                form.querySelector('[type=submit]').disabled = !picked.length;
+                if (picked.length && /^image\//.test(picked[0].type)) form.category.value = 'logos';
+                else if (picked.length && /pdf/.test(picked[0].type)) form.category.value = 'guidelines';
+                else if (picked.length && /\.(ttf|otf|woff2?)$/i.test(picked[0].name)) form.category.value = 'fonts';
+            };
+            form.owner.addEventListener('change', function() { document.getElementById('bk-new-wrap').classList.toggle('hidden', form.owner.value !== '__new'); });
+            drop.addEventListener('click', function() { input.click(); });
+            drop.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } });
+            input.addEventListener('change', function() { setPicked(input.files); });
+            ['dragenter', 'dragover'].forEach(function(t) { drop.addEventListener(t, function(e) { e.preventDefault(); drop.classList.add('over'); }); });
+            ['dragleave', 'drop'].forEach(function(t) { drop.addEventListener(t, function(e) { e.preventDefault(); drop.classList.remove('over'); }); });
+            drop.addEventListener('drop', function(e) { setPicked(e.dataTransfer.files); });
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                var errEl = document.getElementById('bk-form-error'); errEl.textContent = '';
+                var owner = form.owner.value;
+                if (owner === '__new') {
+                    var nm = form.newArtist.value.trim();
+                    if (!slugify(nm)) { errEl.textContent = 'Enter the artist name'; return; }
+                    owner = 'artist-' + slugify(nm);
+                }
+                var slug = session().venueSlug;
+                if (!slug) { errEl.textContent = 'Sign in again to upload'; return; }
+                var btn = form.querySelector('[type=submit]'); btn.disabled = true; btn.textContent = 'Uploading…';
+                _uploading = true;
+                var failed = 0;
+                for (var i = 0; i < picked.length; i++) {
+                    var f = picked[i], row = document.getElementById('bkq-' + i);
+                    var safe = f.name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^-+/, '').slice(-120) || 'file';
+                    try {
+                        await window.blobUpload('brand/' + slug + '/' + owner + '/' + form.category.value + '/' + safe, f, {
+                            access: 'public',
+                            handleUploadUrl: '/api/brand',
+                            headers: { Authorization: 'Bearer ' + session().webToken },
+                            multipart: f.size > 50 * 1024 * 1024,
+                            onUploadProgress: function(p) { row.querySelector('i').style.width = p.percentage + '%'; row.querySelector('.st').textContent = Math.round(p.percentage) + '%'; },
+                        });
+                        row.querySelector('i').style.width = '100%'; row.querySelector('.st').textContent = 'Done';
+                    } catch (er) {
+                        failed++;
+                        row.querySelector('.st').textContent = 'Failed';
+                        row.querySelector('.st').style.color = 'var(--la-bad)';
+                        errEl.textContent = 'Could not upload ' + f.name + ': ' + er.message;
+                    }
+                }
+                _uploading = false;
+                await loadBrand();
+                if (!failed) closeCamDialog();
+                else { btn.textContent = 'Close'; btn.disabled = false; btn.type = 'button'; btn.onclick = closeCamDialog; }
+            });
+        }
+
+        async function removeFile(url, btn) {
+            var f = _files.filter(function(x) { return x.url === url; })[0];
+            if (!confirm('Delete "' + (f ? f.name : 'this file') + '" from the brand kit?')) return;
+            btn.disabled = true;
+            try {
+                var r = await laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete', url: url }) });
+                if (!r.ok) throw new Error((await r.json()).error || r.status);
+                await loadBrand();
+            } catch (e) { alert('Could not delete: ' + e.message); btn.disabled = false; }
+        }
+
+        async function downloadAll(ownerKey, btn) {
+            var owner = _owners.filter(function(o) { return o.key === ownerKey; })[0];
+            var files = _files.filter(function(f) { return f.owner === ownerKey; });
+            if (!files.length || !window.downloadZip) return;
+            var label = btn.innerHTML; btn.disabled = true; btn.querySelector('span').textContent = 'Preparing…';
+            try {
+                var folder = (owner ? owner.name : 'brand').replace(/[^A-Za-z0-9 _-]+/g, '').trim() + ' brand kit';
+                var used = {};
+                var entries = await Promise.all(files.map(async function(f) {
+                    var r = await fetch(f.url); if (!r.ok) throw new Error(f.name + ': ' + r.status);
+                    var name = folder + '/' + f.category + '/' + f.name;
+                    while (used[name]) name = name.replace(/(\.[^.\/]+)?$/, '-2$1');
+                    used[name] = 1;
+                    return { name: name, input: await r.blob() };
+                }));
+                var blob = await window.downloadZip(entries).blob();
+                var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = folder + '.zip'; a.click();
+                setTimeout(function() { URL.revokeObjectURL(a.href); }, 10000);
+            } catch (e) { alert('Could not prepare the download: ' + e.message); }
+            btn.disabled = false; btn.innerHTML = label;
+        }
+
+        loadBrand();
+    </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .catch(err => console.warn('SW:', err));
+            });
+        }
+    </script>
+</body>
+</html>
