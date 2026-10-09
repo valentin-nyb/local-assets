@@ -1489,6 +1489,7 @@
                 l1.textContent = 'Duration';
                 v1.textContent = fmtDuration(a.duration);
                 setImg(peakPreviewUrl(a));
+                focusHeroImage(a);
             } else if (_health.loaded) {
                 badge.className = 'hidden';
                 sub.textContent = '';
@@ -1508,14 +1509,60 @@
             var dur = Number(a.duration) || 0;
             var t = _peaks[a.id];
             if (t == null) { requestPeak(a.id); t = dur / 2; }
-            // A still frame from the peak, cropped by Mux's smart crop to the banner's exact shape,
-            // so the artist stays centred whatever the screen size.
-            var hero = document.getElementById('live-feed-hero');
-            var dpr = Math.min(window.devicePixelRatio || 1, 2);
-            var w = Math.min(1920, Math.round((hero ? hero.clientWidth : 1200) * dpr));
-            var h = Math.min(1080, Math.round((hero ? hero.clientHeight : 300) * dpr));
+            var start = Math.max(0, Math.min(Math.round(t - 3), Math.floor(dur - 6)));
+            return 'https://image.mux.com/' + pid + '/animated.webp?width=640&fps=15&start=' + start + '&end=' + (start + 6);
+        }
+
+        // Keep the artist centred in the moving banner. Mux's smart crop finds the subject on a
+        // still frame; we find where that crop sits inside the full frame and point the moving
+        // preview's object-position there.
+        var _focusCache = {};
+        function loadImg(src) {
+            return new Promise(function(res, rej) { var i = new Image(); i.crossOrigin = 'anonymous'; i.onload = function() { res(i); }; i.onerror = rej; i.src = src; });
+        }
+        function grey(img, w, h) {
+            var c = document.createElement('canvas'); c.width = w; c.height = h;
+            var ctx = c.getContext('2d', { willReadFrequently: true }); ctx.drawImage(img, 0, 0, w, h);
+            var d = ctx.getImageData(0, 0, w, h).data, g = new Float32Array(w * h);
+            for (var k = 0, p = 0; k < d.length; k += 4, p++) g[p] = 0.299 * d[k] + 0.587 * d[k + 1] + 0.114 * d[k + 2];
+            return g;
+        }
+        async function heroFocus(pid, time, aspect) {
+            var key = pid + '|' + time + '|' + aspect.toFixed(2);
+            if (_focusCache[key]) return _focusCache[key];
+            var base = 'https://image.mux.com/' + pid + '/thumbnail.jpg?time=' + time;
+            var full = await loadImg(base + '&width=320');
+            var W = 320, H = Math.round(320 * full.naturalHeight / full.naturalWidth);
+            var frameAspect = W / H, pos = { x: 50, y: 50 };
+            if (Math.abs(aspect - frameAspect) < 0.05) return (_focusCache[key] = pos);
+            var wide = aspect > frameAspect;                       // banner wider than video → pick a row band
+            var cw = wide ? W : Math.max(8, Math.round(H * aspect));
+            var ch = wide ? Math.max(8, Math.round(W / aspect)) : H;
+            var crop = await loadImg(base + '&width=' + cw + '&height=' + ch + '&fit_mode=smartcrop');
+            var F = grey(full, W, H), C = grey(crop, cw, ch);
+            var range = wide ? H - ch : W - cw, best = 0, bestErr = Infinity;
+            for (var off = 0; off <= range; off++) {
+                var err = 0;
+                for (var y = 0; y < ch; y += 2) for (var x = 0; x < cw; x += 2) {
+                    var fv = wide ? F[(y + off) * W + x] : F[y * W + x + off];
+                    err += Math.abs(fv - C[y * cw + x]);
+                    if (err >= bestErr) { y = ch; break; }
+                }
+                if (err < bestErr) { bestErr = err; best = off; }
+            }
+            var pct = range > 0 ? Math.round(best / range * 100) : 50;
+            pos = wide ? { x: 50, y: pct } : { x: pct, y: 50 };
+            return (_focusCache[key] = pos);
+        }
+        function focusHeroImage(a) {
+            var img = document.getElementById('live-feed-video'), hero = document.getElementById('live-feed-hero');
+            if (!img || !hero || !a.playback_ids || !a.playback_ids[0]) return;
+            var dur = Number(a.duration) || 0, t = _peaks[a.id] != null ? _peaks[a.id] : dur / 2;
             var time = Math.max(0, Math.min(Math.round(t), Math.floor(dur - 1)));
-            return 'https://image.mux.com/' + pid + '/thumbnail.jpg?time=' + time + '&width=' + w + '&height=' + h + '&fit_mode=smartcrop';
+            var aspect = hero.clientWidth / Math.max(1, hero.clientHeight);
+            heroFocus(a.playback_ids[0].id, time, aspect).then(function(p) {
+                img.style.objectPosition = p.x + '% ' + p.y + '%';
+            }).catch(function() { img.style.objectPosition = ''; });
         }
         // Re-crop when the banner changes shape (rotate, resize)
         (function() {
