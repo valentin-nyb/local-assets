@@ -446,7 +446,65 @@
             el.style.display = 'flex';
         }
 
+        // ── Session names and venues (editable from Distribution History) ──
+        var _sessionMeta = {};
+        function loadSessionMeta() {
+            return laFetch('/api/session-meta').then(function(r) { return r.ok ? r.json() : { sessions: {} }; })
+                .then(function(d) { _sessionMeta = d.sessions || {}; }).catch(function() {});
+        }
+        var _sessionMetaReady = loadSessionMeta();
+        function sessionMeta(artistName, date) { return _sessionMeta[String(artistName).toUpperCase().trim() + '|' + date] || {}; }
+        function escHtml(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+        async function editSession(btn) {
+            var artist = btn.dataset.artist, date = btn.dataset.date, meta = sessionMeta(artist, date);
+            var venues = [];
+            try {
+                var b = await laFetch('/api/brand').then(function(r) { return r.ok ? r.json() : {}; });
+                var names = b.ownerNames || {};
+                (b.files || []).forEach(function(f) { if (f.owner.indexOf('venue-') === 0 && !names[f.owner]) names[f.owner] = f.owner.slice(6).replace(/-/g, ' ').toUpperCase(); });
+                venues = Object.keys(names).filter(function(k) { return k.indexOf('venue-') === 0; }).map(function(k) { return names[k]; }).sort();
+            } catch (_) {}
+            var m = document.getElementById('session-edit');
+            if (!m) {
+                m = document.createElement('div');
+                m.id = 'session-edit';
+                m.className = 'se-backdrop';
+                m.addEventListener('click', function(e) { if (e.target === m) m.remove(); });
+                document.body.appendChild(m);
+            }
+            m.innerHTML = '<form class="se-panel" role="dialog" aria-modal="true">' +
+                '<div class="se-head"><p class="se-title">Edit session</p><button type="button" class="se-x" aria-label="Close"><iconify-icon icon="solar:close-circle-linear"></iconify-icon></button></div>' +
+                '<p class="se-sub">' + escHtml(artist) + ' · ' + escHtml(date) + '</p>' +
+                '<label>Session name<input name="sname" maxlength="80" placeholder="' + escHtml(date) + '" value="' + escHtml(meta.title || '') + '"><small>Leave empty to show the date.</small></label>' +
+                '<label>Venue<input name="svenue" maxlength="60" list="se-venues" placeholder="' + escHtml(getVenueName()) + '" value="' + escHtml(meta.venue || '') + '">' +
+                '<datalist id="se-venues">' + venues.map(function(v) { return '<option value="' + escHtml(v) + '">'; }).join('') + '</datalist>' +
+                '<small>' + (venues.length ? 'Pick one of your Brand Kit venues or type a new one.' : 'Type the venue name. Venues added in Brand Kit appear here.') + '</small></label>' +
+                '<p class="se-error"></p>' +
+                '<div class="se-actions"><button type="button" class="se-btn ghost" data-cancel>Cancel</button><button type="submit" class="se-btn primary">Save</button></div>' +
+                '</form>';
+            var form = m.querySelector('form');
+            m.querySelector('.se-x').onclick = m.querySelector('[data-cancel]').onclick = function() { m.remove(); };
+            form.sname.focus();
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                var sb = form.querySelector('[type=submit]'); sb.disabled = true; sb.textContent = 'Saving…';
+                try {
+                    var r = await laFetch('/api/session-meta', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ artist: artist, date: date, title: form.sname.value, venue: form.svenue.value }) });
+                    var d = await r.json(); if (!r.ok) throw new Error(d.error || r.status);
+                    if (d.meta.title || d.meta.venue) _sessionMeta[d.key] = d.meta; else delete _sessionMeta[d.key];
+                    m.remove();
+                    fetchRecentUploads();
+                } catch (er) {
+                    form.querySelector('.se-error').textContent = 'Could not save: ' + er.message;
+                    sb.disabled = false; sb.textContent = 'Save';
+                }
+            });
+        }
+
         async function fetchRecentUploads(autoExpandArtist) {
+            await _sessionMetaReady;
             const container = document.getElementById('recent-sets-list');
             if (!container) return;
 
@@ -601,7 +659,7 @@
                         id: 'artist_' + String(ai + 1).padStart(2, '0') + '_d_' + String(di + 1).padStart(2, '0'),
                         name: aName,
                         date: dates[di],
-                        venue: getVenueName(),
+                        venue: sessionMeta(aName, dates[di]).venue || getVenueName(),
                         assets: assetTypes.slice()
                     });
                 }
@@ -999,11 +1057,14 @@
                     html += '<iconify-icon icon="solar:calendar-bold" class="text-zinc-600 text-sm"></iconify-icon>';
                     html += '</div>';
                     html += '<div>';
-                    html += '<p class="text-xs font-bold text-zinc-300 uppercase tracking-tight">' + dateStr + '</p>';
-                    html += '<p class="text-[8px] font-mono text-zinc-600 uppercase tracking-widest" data-venue-label>' + getVenueName() + '</p>';
+                    var sMeta = sessionMeta(artist.name, dateStr);
+                    html += '<p class="text-xs font-bold text-zinc-300 uppercase tracking-tight">' + escHtml(sMeta.title || dateStr) + '</p>';
+                    html += '<p class="text-[8px] font-mono text-zinc-600 uppercase tracking-widest"' + (sMeta.venue ? '' : ' data-venue-label') + '>' +
+                        escHtml(sMeta.venue || getVenueName()) + (sMeta.title ? ' · ' + dateStr : '') + '</p>';
                     html += '</div>';
                     html += '</div>';
                     html += '<div class="flex items-center gap-2">';
+                    html += '<button type="button" onclick="event.stopPropagation(); editSession(this)" data-artist="' + escHtml(artist.name) + '" data-date="' + dateStr + '" class="se-edit" title="Edit session name and venue"><iconify-icon icon="solar:pen-linear"></iconify-icon></button>';
                     if (hasAnyLinked) {
                         var safeName = artist.name.replace(/'/g, "\\'");
                         html += '<button onclick="event.stopPropagation(); bulkDownload(\'' + safeName + '\', \'' + dateStr + '\', this)" id="zip-btn-' + dateId + '" class="flex items-center gap-1.5 px-3 py-1 rounded-full border border-primary/30 hover:bg-primary/10 transition-colors" title="Download All">';
@@ -1486,7 +1547,8 @@
                 badge.className = 'inline-flex items-center gap-2 px-3 py-1 bg-white/10 text-white rounded-full text-[10px] font-bold uppercase tracking-widest';
                 badge.style.background = 'rgba(255,255,255,.14)';
                 badge.innerHTML = '<iconify-icon icon="solar:clapperboard-play-linear"></iconify-icon> LATEST SESSION';
-                sub.textContent = new Date(date + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                var hm = sessionMeta(latest.meta.artist || '', date);
+                sub.textContent = (hm.venue ? hm.venue + ' · ' : '') + new Date(date + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
                 title.textContent = latest.meta.artist || 'Untitled';
                 l1.textContent = 'Duration';
                 v1.textContent = fmtDuration(a.duration);
@@ -2558,6 +2620,26 @@
         /* The banner sits on video in both themes, so its text always stays light */
         #live-feed-hero #hero-badge, #live-feed-hero #hero-badge * { color:#ffffff !important; }
         #live-feed-hero #hero-title, #live-feed-hero #hero-sub, #live-feed-hero #hero-stat1 { color:#ffffff !important; }
+        /* Edit session */
+        .se-edit { width:28px; height:28px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; color:var(--la-dim); background:none; border:none; cursor:pointer; font-size:14px; }
+        @media (hover:hover) { .se-edit:hover { background:var(--la-chip); color:var(--la-text); } }
+        .se-backdrop { position:fixed; inset:0; z-index:2147483000; background:var(--la-overlay); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; padding:16px; }
+        .se-panel { width:440px; max-width:100%; background:var(--la-raised); border:1px solid var(--la-line); border-radius:16px; padding:20px; box-shadow:var(--la-shadow); display:flex; flex-direction:column; gap:14px; }
+        .se-head { display:flex; align-items:center; justify-content:space-between; }
+        .se-title { font-size:16px; font-weight:600; color:var(--la-text); }
+        .se-sub { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--la-dim); margin-top:-8px; }
+        .se-x { width:32px; height:32px; border-radius:8px; background:none; border:none; color:var(--la-sub); font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+        .se-panel label { display:flex; flex-direction:column; gap:6px; font-size:12px; font-weight:500; color:var(--la-text-2); }
+        .se-panel input { height:40px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 12px; font-size:14px; outline:none; }
+        .se-panel input:focus { border-color:var(--la-accent); }
+        .se-panel small { font-size:11px; font-weight:400; color:var(--la-dim); }
+        .se-error { font-size:12px; color:var(--la-bad); }
+        .se-error:empty { display:none; }
+        .se-actions { display:flex; justify-content:flex-end; gap:8px; }
+        .se-btn { height:36px; padding:0 16px; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer; border:1px solid transparent; }
+        .se-btn.primary { background:var(--la-accent); color:var(--la-accent-ink); }
+        .se-btn.ghost { background:none; color:var(--la-text); border-color:var(--la-line); }
+        .se-btn:disabled { opacity:.6; }
         .sh-list { display:flex; flex-direction:column; gap:18px; }
         .sh-row { display:flex; flex-direction:column; gap:6px; min-width:0; }
         .sh-label { font-family:'JetBrains Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:.14em; color:var(--la-dim); }
