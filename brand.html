@@ -199,6 +199,9 @@
         .bk-drop.over, .bk-drop:focus-visible { border-color:var(--la-accent); background:var(--la-accent-soft); outline:none; }
         .bk-drop iconify-icon { font-size:26px; color:var(--la-dim); display:flex; justify-content:center; width:100%; margin:0 0 6px; }
         .cam-form .hidden { display:none !important; }
+        .bk-del-owner { padding:0 10px !important; }
+        @media (hover:hover) { .bk-del-owner:hover { color:var(--la-bad) !important; border-color:color-mix(in srgb, var(--la-bad) 45%, transparent) !important; } }
+        @media (max-width:640px) { .bk-owner-actions .bk-del-owner { flex:0 0 auto !important; } }
         .bk-toolbar { align-items:center; row-gap:16px; column-gap:32px; }
         .bk-toolbar > .min-w-0 { flex:1 1 360px; }
         .bk-lead { font-size:13px; line-height:1.55; color:var(--la-sub); margin-top:6px; max-width:620px; }
@@ -437,6 +440,7 @@
                     '<div class="bk-owner-actions">' +
                         (files.length ? '<button type="button" class="cam-btn ghost" data-zip="' + esc(o.key) + '"><iconify-icon icon="solar:download-minimalistic-linear"></iconify-icon><span>Download all</span></button>' : '') +
                         '<button type="button" class="cam-btn ghost" data-up="' + esc(o.key) + '"><iconify-icon icon="solar:upload-minimalistic-linear"></iconify-icon><span>Upload</span></button>' +
+                        (o.key.indexOf('venue-') === 0 ? '<button type="button" class="cam-btn ghost bk-del-owner" data-del-owner="' + esc(o.key) + '" title="Delete venue"><iconify-icon icon="solar:trash-bin-minimalistic-linear"></iconify-icon></button>' : '') +
                     '</div></div>' +
                     '<div class="bk-body">' + body + '</div></section>';
             }).join('');
@@ -460,6 +464,7 @@
             });
             wrap.querySelectorAll('[data-move]').forEach(function(b) { b.addEventListener('click', function() { openMove(b.dataset.move); }); });
             wrap.querySelectorAll('[data-org]').forEach(function(b) { b.addEventListener('click', openOrgType); });
+            wrap.querySelectorAll('[data-del-owner]').forEach(function(b) { b.addEventListener('click', function() { deleteOwner(b.dataset.delOwner, b); }); });
             wrap.querySelectorAll('[data-zip]').forEach(function(b) { b.addEventListener('click', function() { downloadAll(b.dataset.zip, b); }); });
             wrap.querySelectorAll('[data-del]').forEach(function(b) { b.addEventListener('click', function() { removeFile(b.dataset.del, b); }); });
             wrap.querySelectorAll('[data-copy]').forEach(function(b) {
@@ -716,6 +721,21 @@
                     }
                 });
             });
+        }
+
+        async function deleteOwner(key, btn) {
+            var o = _owners.filter(function(x) { return x.key === key; })[0];
+            var n = _files.filter(function(f) { return f.owner === key; }).length;
+            if (!(await laConfirm({ title: 'Delete ' + (o ? o.name : 'this venue') + '?',
+                message: 'The venue and ' + (n ? 'its ' + n + ' file' + (n !== 1 ? 's' : '') : 'its brand kit') + ' will be removed, and links to them will stop working. Sessions keep the venue name as text. This can\'t be undone.',
+                confirmText: 'Delete venue', danger: true }))) return;
+            btn.disabled = true;
+            try {
+                var r = await laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'deleteOwner', owner: key }) });
+                var d = await r.json(); if (!r.ok) throw new Error(d.error || r.status);
+                await loadBrand();
+                laToast('Venue deleted');
+            } catch (e) { btn.disabled = false; alert('Could not delete the venue: ' + e.message); }
         }
 
         async function removeFile(url, btn) {

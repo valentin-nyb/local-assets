@@ -99,6 +99,21 @@ export default async function handler(req, res) {
       return res.status(200).json({ owner, name });
     }
 
+    if (body.action === 'deleteOwner') {
+      // Remove a venue (or artist) brand kit: every file in its folder, its saved name and photo
+      const owner = String(body.owner || '');
+      if (owner === 'venue' || !OWNER.test(owner)) return res.status(400).json({ error: 'This brand kit can\'t be deleted' });
+      const prefix = `${prefixFor(slug)}${owner}/`;
+      let cursor, removed = 0;
+      do {
+        const page = await list({ prefix, cursor, limit: 1000 });
+        if (page.blobs.length) { await del(page.blobs.map(b => b.url)); removed += page.blobs.length; }
+        cursor = page.hasMore ? page.cursor : undefined;
+      } while (cursor);
+      await withRedis(r => Promise.all([r.hDel(`brand_owner_names:${slug}`, owner), r.hDel(`brand_owner_photo:${slug}`, owner)]));
+      return res.status(200).json({ ok: true, removed });
+    }
+
     if (body.action === 'setPhoto') {
       const url = String(body.url || '');
       let pathname = '';
