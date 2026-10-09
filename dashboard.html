@@ -1490,7 +1490,7 @@
                 title.textContent = latest.meta.artist || 'Untitled';
                 l1.textContent = 'Duration';
                 v1.textContent = fmtDuration(a.duration);
-                setImg(peakPreviewUrl(a));
+                setImg('');            // no still: the banner is only the muted video
                 focusHeroImage(a);
                 playHeroLoop(a);
             } else if (_health.loaded) {
@@ -1504,38 +1504,24 @@
             }
         }
 
-        // Banner preview: a few seconds from the set's peak (see /api/peak-moment). Until the
-        // peak is known, show the middle of the set rather than the opening seconds.
+        // Banner loop position: the set's peak (see /api/peak-moment). Until the peak is known,
+        // loop the middle of the set rather than the opening seconds.
         var _peaks = (function() { try { return JSON.parse(localStorage.getItem('la_peaks') || '{}'); } catch (_) { return {}; } })();
         var _peakPending = {};
-        function peakPreviewUrl(a) {
-            var pid = a.playback_ids[0].id;
-            var dur = Number(a.duration) || 0;
-            var t = _peaks[a.id];
-            if (t == null) { requestPeak(a.id); t = dur / 2; }
-            var hero = document.getElementById('live-feed-hero');
-            var dpr = Math.min(window.devicePixelRatio || 1, 2);
-            var w = Math.min(1920, Math.round((hero ? hero.clientWidth : 1200) * dpr));
-            var h = Math.min(1080, Math.round((hero ? hero.clientHeight : 300) * dpr));
-            var time = Math.max(0, Math.min(Math.round(t), Math.floor(dur - 1)));
-            return 'https://image.mux.com/' + pid + '/thumbnail.jpg?time=' + time + '&width=' + w + '&height=' + h + '&fit_mode=smartcrop';
-        }
-
-        // Smooth muted loop of the peak, played as real video (hardware-decoded on phones),
-        // faded in over the still once it is actually playing.
+        // The banner is a muted, autoplaying loop of the long-form video around its peak,
+        // played as real video (hardware-decoded on phones) and faded in once it plays.
         var _heroLoop = null;
         function playHeroLoop(a) {
             var wrap = document.getElementById('live-feed-player-wrap');
             if (!wrap || !window.customElements || !customElements.get('mux-player')) return;
             var pid = a.playback_ids[0].id, dur = Number(a.duration) || 0;
+            if (_peaks[a.id] == null) requestPeak(a.id);   // re-renders with the peak once known
             var t = _peaks[a.id] != null ? _peaks[a.id] : dur / 2;
             var start = Math.max(0, Math.min(t - 4, dur - 10)), end = start + 8;
             var key = pid + '|' + Math.round(start);
             if (_heroLoop && _heroLoop.key === key) return;
             wrap.style.opacity = '0';
             wrap.innerHTML = '';
-            var still0 = document.getElementById('live-feed-video');
-            if (still0) still0.style.opacity = '';
             var mp = document.createElement('mux-player');
             mp.setAttribute('playback-id', pid);
             mp.setAttribute('stream-type', 'on-demand');
@@ -1557,11 +1543,7 @@
             mp.addEventListener('playing', noCaptions);
             mp.style.cssText = 'width:100%;height:100%;--controls:none;--media-object-fit:cover;--media-background-color:transparent;--center-controls:none;--bottom-play-button:none;';
             // Once the video is really playing, show only the video (no second, see-through layer)
-            mp.addEventListener('playing', function() {
-                wrap.style.opacity = '1';
-                var still = document.getElementById('live-feed-video');
-                if (still) still.style.opacity = '0';
-            });
+            mp.addEventListener('playing', function() { wrap.style.opacity = '1'; });
             mp.addEventListener('timeupdate', function() { if (mp.currentTime >= end || mp.currentTime < start - 1) mp.currentTime = start; });
             wrap.appendChild(mp);
             _heroLoop = { key: key, el: mp };
@@ -1570,8 +1552,6 @@
         function stopHeroLoop() {
             var wrap = document.getElementById('live-feed-player-wrap');
             if (wrap) { wrap.style.opacity = '0'; wrap.innerHTML = ''; }
-            var still = document.getElementById('live-feed-video');
-            if (still) still.style.opacity = '';
             _heroLoop = null;
         }
 
