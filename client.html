@@ -29,6 +29,17 @@
         .asset-card:hover { border-color: rgba(57, 255, 20, 0.5); transform: translateY(-2px); }
         .type-badge { font-size: 9px; letter-spacing: 0.15em; padding: 2px 8px; border-radius: 2px; text-transform: uppercase; font-family: 'JetBrains Mono', monospace; }
         .type-master { background: rgba(57, 255, 20, 0.15); color: #39FF14; }
+        @media (max-width: 640px) {
+            .cp-hide-sm { display: none; }
+            header img[alt="logo"] { height: 15px; }
+            header .h-16.justify-between { gap: 14px; }
+            header .flex.items-center.gap-4 button, #sc-header a { letter-spacing: .06em !important; }
+            header .flex.items-center.gap-4 { gap: 12px; }
+            #sc-header, #sc-header * { white-space: nowrap; }
+            .cp-filter-row { flex-wrap: wrap; gap: 10px; }
+            .cp-filters { flex-wrap: wrap; }
+        }
+        html:not(.dark) .type-master { background: var(--la-accent-soft); color: var(--la-accent); }
         .type-social-clip { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
         .type-audio { background: rgba(168, 85, 247, 0.15); color: #a855f7; }
         .type-thumbnail { background: rgba(234, 179, 8, 0.15); color: #eab308; }
@@ -68,8 +79,8 @@
             <div class="max-w-7xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
                 <div class="flex items-center gap-4">
                     <a href="index.html"><img src="logos/White@2x.png" alt="logo" class="h-5"></a>
-                    <span class="text-[#333] font-mono text-xs">//</span>
-                    <span class="font-mono text-xs tracking-[0.2em] text-[#888] uppercase">Client Portal</span>
+                    <span class="text-[#333] font-mono text-xs cp-hide-sm">//</span>
+                    <span class="font-mono text-xs tracking-[0.2em] text-[#888] uppercase cp-hide-sm">Client Portal</span>
                 </div>
                 <div class="flex items-center gap-4">
                     <span id="header-email" class="font-mono text-[10px] text-[#666] hidden md:block"></span>
@@ -122,8 +133,8 @@
 
             <!-- ASSETS TAB -->
             <div id="panel-assets">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="flex gap-2">
+                <div class="flex items-center justify-between mb-4 cp-filter-row">
+                    <div class="flex gap-2 cp-filters">
                         <button onclick="filterAssets('all')" class="filter-btn font-mono text-[10px] uppercase tracking-wider px-3 py-1.5 bg-[#39FF14] text-black" data-filter="all">All</button>
                         <button onclick="filterAssets('master')" class="filter-btn font-mono text-[10px] uppercase tracking-wider px-3 py-1.5 border border-[#333] text-[#888] hover:text-white" data-filter="master">Masters</button>
                         <button onclick="filterAssets('social-clip')" class="filter-btn font-mono text-[10px] uppercase tracking-wider px-3 py-1.5 border border-[#333] text-[#888] hover:text-white" data-filter="social-clip">Clips</button>
@@ -306,13 +317,9 @@
         </div>
 
         <!-- STATUS BAR -->
-        <div class="fixed bottom-0 left-0 right-0 h-10 border-t border-white/10 bg-black/80 backdrop-blur-md flex items-center justify-between px-8 z-50 pointer-events-none">
+        <div class="la-statusbar fixed bottom-0 left-0 right-0 h-10 border-t border-white/10 bg-black/80 backdrop-blur-md flex items-center justify-between px-8 z-50 pointer-events-none">
             <div class="font-mono text-[9px] text-zinc-500 uppercase tracking-widest">
                 LOCAL / ASSETS™ CLIENT PORTAL <span class="text-[#39FF14]/50 mx-2">//</span> <span id="footer-tier"></span>
-            </div>
-            <div class="flex items-center gap-2">
-                <div class="w-1.5 h-1.5 bg-[#39FF14] rounded-full animate-pulse pulse-dot"></div>
-                <span class="font-mono text-[9px] text-zinc-500 uppercase tracking-widest">Connected</span>
             </div>
         </div>
     </div>

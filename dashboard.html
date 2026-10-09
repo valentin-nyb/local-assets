@@ -191,7 +191,7 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6" style="align-items:start">
                 <div class="lg:col-span-2 bg-card border border-border rounded-2xl overflow-hidden flex flex-col">
                     <div class="p-5 border-b border-border flex justify-between items-center">
                         <h3 class="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-zinc-500">Distribution History</h3>
@@ -210,9 +210,9 @@
                     <div class="bg-card border border-border rounded-2xl p-6">
                         <h3 class="text-xs font-bold uppercase tracking-widest mb-6">System Health</h3>
                         <div class="sh-list">
-                            <div class="sh-row"><span class="sh-label">Cameras</span><span class="sh-val"><span id="sh-cam-dot" class="sh-dot"></span><span id="sh-cam">—</span></span></div>
-                            <div class="sh-row"><span class="sh-label">Video processing</span><span class="sh-val"><span id="sh-video-dot" class="sh-dot"></span><span id="sh-video">—</span></span></div>
-                            <div class="sh-row"><span class="sh-label">Vertical clips</span><span class="sh-val"><span id="sh-clips-dot" class="sh-dot"></span><span id="sh-clips">—</span></span></div>
+                            <div class="sh-row"><span class="sh-label">Cameras</span><span class="sh-val"><span id="sh-cam-dot" class="sh-dot"></span><span id="sh-cam">—</span></span><span id="sh-cam-detail" class="sh-detail"></span></div>
+                            <div class="sh-row"><span class="sh-label">Video processing</span><span class="sh-val"><span id="sh-video-dot" class="sh-dot"></span><span id="sh-video">—</span></span><span id="sh-video-detail" class="sh-detail"></span></div>
+                            <div class="sh-row"><span class="sh-label">Vertical clips</span><span class="sh-val"><span id="sh-clips-dot" class="sh-dot"></span><span id="sh-clips">—</span></span><span id="sh-clips-detail" class="sh-detail"></span></div>
                         </div>
                     </div>
                 </div>
@@ -327,7 +327,7 @@
                                     '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-zinc-300 transition-colors" title="Close (Esc)" onclick="closeMediaModal()"><iconify-icon icon="solar:close-circle-linear" class="text-lg"></iconify-icon></button>' +
                                 '</div>' +
                             '</div>' +
-                            '<div id="media-modal-stage" class="overflow-hidden rounded-xl border border-zinc-800 bg-black flex items-center justify-center"></div>' +
+                            '<div id="media-modal-stage" class="overflow-hidden rounded-xl bg-black flex items-center justify-center" style="border:1px solid rgba(255,255,255,.12)"></div>' +
                         '</div>' +
                         '<button id="media-next" class="mm-nav w-10 h-10 shrink-0 flex items-center justify-center rounded-full border border-zinc-700 text-zinc-300 hover:border-primary hover:text-primary transition-colors" title="Next" onclick="stepMediaModal(1)"><iconify-icon icon="solar:alt-arrow-right-linear"></iconify-icon></button>' +
                     '</div>';
@@ -1386,18 +1386,30 @@
         // --- System Health + hero: cameras (Mux live streams), clip pipeline, video processing ---
         var _health = { cameras: null, pipeline: null, video: null, latest: null, loaded: false };
 
-        function setHealthRow(key, level, text) {
+        function setHealthRow(key, level, text, detail) {
             var dot = document.getElementById('sh-' + key + '-dot');
             var val = document.getElementById('sh-' + key);
+            var det = document.getElementById('sh-' + key + '-detail');
             if (val) val.textContent = text;
+            if (det) det.textContent = detail || '';
             if (dot) dot.dataset.level = level;
         }
 
         function renderVideoHealth(assets) {
-            var ready = 0, preparing = 0, failed = 0;
+            var ready = 0, preparing = 0, failed = 0, failedNames = [];
             assets.forEach(function(a) {
                 if (a.source === 'blob') return;
-                if (a.status === 'errored') failed++;
+                if (a.status === 'errored') {
+                    failed++;
+                    var m = parsePassthrough(a.passthrough, a.name, a.id) || {};
+                    // "ARTIST // THUMB // D:2026-10-08 // 04" → "ARTIST · thumbnail 04"
+                    var KIND = { THUMB: 'thumbnail', SOCIAL: 'vertical clip', AUDIO: 'HQ audio' };
+                    var parts = typeof a.passthrough === 'string' && !/^\s*\{/.test(a.passthrough) ? a.passthrough.split(' // ') : [];
+                    var kind = KIND[(parts[1] || m.camera || '').toUpperCase()] || 'long-form video';
+                    var num = parts.filter(function(x) { return /^\d{1,3}$/.test(x); })[0];
+                    var label = (m.artist || 'Untitled') + ' · ' + kind + (num ? ' ' + num : '');
+                    failedNames.push(label + ' (' + new Date(Number(a.created_at) * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + ')');
+                }
                 else if (a.status !== 'ready') preparing++;
                 else ready++;
             });
@@ -1405,7 +1417,8 @@
             var parts = [ready + ' ready'];
             if (preparing) parts.push(preparing + ' processing');
             if (failed) parts.push(failed + ' failed');
-            setHealthRow('video', failed ? 'bad' : preparing ? 'busy' : 'ok', parts.join(' · '));
+            setHealthRow('video', failed ? 'bad' : preparing ? 'busy' : 'ok', parts.join(' · '),
+                failed ? 'Mux could not process: ' + failedNames.join(', ') + '. Upload it again.' : '');
             renderSystemStatus();
         }
 
@@ -1520,7 +1533,7 @@
             if (_health.video && _health.video.failed) problems.push('video');
             var known = _health.pipeline !== null || _health.video !== null;
             var text = !known ? 'Checking…' : problems.length ? 'Needs attention' : 'All systems OK';
-            var color = !known ? '#52525b' : problems.length ? '#ef4444' : '#39FF14';
+            var color = !known ? 'var(--la-dim)' : problems.length ? 'var(--la-bad)' : 'var(--la-ok)';
             [['sys-badge', 'sys-badge-dot'], ['sys-foot', 'sys-foot-dot']].forEach(function(ids) {
                 var t = document.getElementById(ids[0]), d = document.getElementById(ids[1]);
                 if (t) { t.textContent = text; if (ids[0] === 'sys-badge') t.style.color = color; }
@@ -1537,20 +1550,20 @@
                 _health.pipeline = data.pipeline;
 
                 const cams = data.cameras;
-                if (cams == null) setHealthRow('cam', 'bad', 'Unavailable');
-                else if (!cams.length) setHealthRow('cam', 'off', 'None set up');
+                if (cams == null) setHealthRow('cam', 'bad', 'Could not check cameras');
+                else if (!cams.length) setHealthRow('cam', 'off', 'No cameras added yet');
                 else {
                     const live = cams.filter(c => c.status === 'active').length;
-                    setHealthRow('cam', live ? 'ok' : 'off', live + ' of ' + cams.length + ' live');
+                    setHealthRow('cam', live ? 'ok' : 'off', live + ' of ' + cams.length + ' streaming');
                 }
 
                 const p = data.pipeline;
-                if (p == null) setHealthRow('clips', 'bad', 'Unavailable');
-                else if (p.stalled) setHealthRow('clips', 'bad', p.queued + ' waiting · worker offline');
-                else if (p.running) setHealthRow('clips', 'busy', p.running + ' generating' + (p.queued ? ' · ' + p.queued + ' queued' : ''));
-                else if (p.queued) setHealthRow('clips', 'busy', p.queued + ' queued');
-                else if (p.failed) setHealthRow('clips', 'bad', p.failed + ' failed today');
-                else setHealthRow('clips', 'ok', p.done ? p.done + ' done today' : 'Idle');
+                if (p == null) setHealthRow('clips', 'bad', 'Could not check clips');
+                else if (p.stalled) setHealthRow('clips', 'bad', p.queued + ' waiting', 'Nothing has picked these up for ' + p.oldestQueuedMin + ' min — the clip worker looks offline.');
+                else if (p.running) setHealthRow('clips', 'busy', 'Generating clips for ' + p.running + ' session' + (p.running !== 1 ? 's' : ''), p.queued ? p.queued + ' more waiting' : '');
+                else if (p.queued) setHealthRow('clips', 'busy', p.queued + ' waiting to start');
+                else if (p.failed) setHealthRow('clips', 'bad', p.failed + ' failed in the last 24 h', 'Open the session in Distribution History to restart it.');
+                else setHealthRow('clips', 'ok', p.done ? 'Up to date · ' + p.done + ' finished in the last 24 h' : 'Up to date');
             } catch (e) {}
             _health.loaded = true;
             renderHero();
@@ -2405,14 +2418,16 @@
             #hero-stats > div { text-align:right !important; }
             #hero-stats .text-lg { font-size:15px; }
         }
-        .sh-list { display:flex; flex-direction:column; gap:16px; }
-        .sh-row { display:flex; align-items:center; justify-content:space-between; gap:12px; font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; }
-        .sh-label { color:#71717a; letter-spacing:.06em; }
-        .sh-val { display:flex; align-items:center; gap:8px; text-align:right; }
-        .sh-dot { width:6px; height:6px; border-radius:50%; background:#52525b; flex-shrink:0; }
-        .sh-dot[data-level="ok"] { background:#39FF14; box-shadow:0 0 8px #39FF14; }
-        .sh-dot[data-level="busy"] { background:#eab308; box-shadow:0 0 8px #eab308; }
-        .sh-dot[data-level="bad"] { background:#ef4444; box-shadow:0 0 8px #ef4444; }
+        .sh-list { display:flex; flex-direction:column; gap:18px; }
+        .sh-row { display:flex; flex-direction:column; gap:6px; min-width:0; }
+        .sh-label { font-family:'JetBrains Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:.14em; color:var(--la-dim); }
+        .sh-val { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:500; color:var(--la-text); line-height:1.3; }
+        .sh-detail { font-size:11px; line-height:1.45; color:var(--la-dim); padding-left:14px; }
+        .sh-detail:empty { display:none; }
+        .sh-dot { width:6px; height:6px; border-radius:50%; background:var(--la-dim); flex-shrink:0; }
+        .sh-dot[data-level="ok"] { background:var(--la-ok); box-shadow:0 0 8px var(--la-ok); }
+        .sh-dot[data-level="busy"] { background:var(--la-warn); box-shadow:0 0 8px var(--la-warn); }
+        .sh-dot[data-level="bad"] { background:var(--la-bad); box-shadow:0 0 8px var(--la-bad); }
         /* Media popup: arrows sit beside the media on desktop, over it on phones */
         #media-modal { --mm-side:140px; }
         @media (max-width: 640px) {

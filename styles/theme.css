@@ -173,7 +173,9 @@ html:not(.dark) .nav-link.active {
 }
 
 /* Logo invert for light mode */
-html:not(.dark) #sidebar img[alt="logo"] {
+html:not(.dark) #sidebar img[alt="logo"],
+html:not(.dark) header img[alt="logo"],
+html:not(.dark) img[src*="White@2x"] {
     filter: brightness(0) !important;
 }
 
@@ -402,3 +404,53 @@ html:not(.dark) .la-menu-btn { background: #fff; border-color: #e4e4e7; color: #
     #preset-btns { padding: 8px; }
     #preset-btns button { font-size: 9px; letter-spacing: .08em; padding-left: 4px; padding-right: 4px; }
 }
+
+/* ── Shared colour tokens (dark default, light when <html> lacks .dark) ── */
+:root {
+    --la-bg: #050505;
+    --la-surface: #0a0a0a;
+    --la-raised: #0c0c0d;
+    --la-line: #27272a;
+    --la-line-soft: #1f1f22;
+    --la-chip: #18181b;
+    --la-input: #000000;
+    --la-text: #fafafa;
+    --la-text-2: #d4d4d8;
+    --la-sub: #a1a1aa;
+    --la-dim: #71717a;
+    --la-accent: #39FF14;
+    --la-accent-ink: #000000;
+    --la-accent-soft: rgba(57, 255, 20, 0.08);
+    --la-ok: #39FF14;
+    --la-warn: #eab308;
+    --la-bad: #ef4444;
+    --la-overlay: rgba(0, 0, 0, 0.75);
+    --la-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+    --la-product-bg: radial-gradient(circle at 50% 45%, #3a3a40 0%, #1a1a1d 45%, #0a0a0b 80%);
+}
+html:not(.dark) {
+    --la-bg: #f5f5f5;
+    --la-surface: #ffffff;
+    --la-raised: #ffffff;
+    --la-line: #e4e4e7;
+    --la-line-soft: #f0f0f1;
+    --la-chip: #f4f4f5;
+    --la-input: #ffffff;
+    --la-text: #09090b;
+    --la-text-2: #27272a;
+    --la-sub: #52525b;
+    --la-dim: #71717a;
+    --la-accent: #F97316;
+    --la-accent-ink: #ffffff;
+    --la-accent-soft: rgba(249, 115, 22, 0.1);
+    --la-ok: #16a34a;
+    --la-warn: #ca8a04;
+    --la-bad: #dc2626;
+    --la-overlay: rgba(9, 9, 11, 0.45);
+    --la-shadow: 0 24px 60px rgba(0, 0, 0, 0.18);
+    --la-product-bg: radial-gradient(circle at 50% 45%, #ffffff 0%, #f1f1f3 50%, #e4e4e7 100%);
+}
+
+/* Player header: neon green text and icons switch to the light-mode accent */
+html:not(.dark) #site-header [style*="#39FF14"] { color: var(--la-accent) !important; }
+html:not(.dark) #site-header [class*="border-[#39FF14]"] { border-color: var(--la-accent) !important; }

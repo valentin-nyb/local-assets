@@ -48,102 +48,94 @@
         .sleek-flap { writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.3em; font-size: 10px; font-weight: 800; }
         .cam-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:16px; }
         @media (max-width: 640px) { .cam-grid { grid-template-columns:1fr; } }
-        .cam-card { border:1px solid #27272a; background:#0a0a0a; border-radius:16px; overflow:hidden; }
+        .cam-card { border:1px solid var(--la-line); background:var(--la-surface); border-radius:16px; overflow:hidden; }
         .cam-stage { aspect-ratio:16/9; background:#000; position:relative; }
-        .cam-off { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; color:#52525b; font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.1em; text-align:center; padding:16px; }
+        .cam-off { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; color:#71717a; font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.1em; text-align:center; padding:16px; }
         .cam-off iconify-icon { font-size:24px; }
         .cam-meta { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; }
-        .cam-label { font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.15em; color:#d4d4d8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-        .cam-pill { font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.15em; padding:3px 8px; border-radius:999px; border:1px solid #27272a; color:#71717a; flex-shrink:0; }
-        .cam-pill.on { color:#fff; background:#ef4444; border-color:#ef4444; }
-        .cam-empty { border:1px dashed #27272a; border-radius:16px; padding:48px 24px; display:flex; flex-direction:column; align-items:center; text-align:center; gap:8px; }
+        .cam-label { font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.15em; color:var(--la-text-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .cam-pill { font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.15em; padding:3px 8px; border-radius:999px; border:1px solid var(--la-line); color:var(--la-dim); flex-shrink:0; }
+        .cam-pill.on { color:#fff; background:#ef4444; border-color:var(--la-bad); }
+        .cam-empty { border:1px dashed var(--la-line); border-radius:16px; padding:48px 24px; display:flex; flex-direction:column; align-items:center; text-align:center; gap:8px; }
         .cam-empty.hidden { display:none; }
         .cam-toolbar { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; }
-        .cam-eyebrow { font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:#71717a; }
-        .cam-h { font-size:22px; font-weight:700; letter-spacing:-.01em; margin-top:4px; }
+        .cam-eyebrow { font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--la-dim); }
+        .cam-h { font-size:22px; font-weight:700; letter-spacing:-.01em; margin-top:4px; color:var(--la-text); }
         .cam-actions { display:flex; gap:8px; flex-wrap:wrap; }
         .cam-btn { display:inline-flex; align-items:center; gap:8px; height:36px; padding:0 14px; border-radius:10px; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; border:1px solid transparent; text-decoration:none; transition:opacity .15s, border-color .15s, background .15s; }
         .cam-btn iconify-icon { font-size:16px; }
-        .cam-btn.primary { background:#39FF14; color:#000; }
-        .cam-btn.ghost { background:transparent; color:#e4e4e7; border-color:#27272a; }
+        .cam-btn.primary { background:var(--la-accent); color:var(--la-accent-ink); }
+        .cam-btn.ghost { background:transparent; color:var(--la-text); border-color:var(--la-line); }
         .cam-btn:disabled { opacity:.5; cursor:default; }
-        @media (hover:hover) { .cam-btn.primary:hover { opacity:.85; } .cam-btn.ghost:hover { border-color:#52525b; } }
-        .cam-pill.warn { color:#eab308; border-color:rgba(234,179,8,.4); }
+        @media (hover:hover) { .cam-btn.primary:hover { opacity:.85; } .cam-btn.ghost:hover { border-color:var(--la-sub); } }
+        .cam-pill.warn { color:var(--la-warn); border-color:rgba(234,179,8,.4); }
         .cam-chips { display:flex; flex-wrap:wrap; gap:6px; padding:0 14px 12px; }
-        .cam-chip { font-family:'JetBrains Mono',monospace; font-size:10px; color:#a1a1aa; background:#18181b; border-radius:6px; padding:3px 7px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-        .cam-chip.ndi { color:#39FF14; background:rgba(57,255,20,.08); }
-        .cam-row-actions { display:flex; flex-wrap:wrap; gap:2px; border-top:1px solid #1f1f22; padding:6px 8px; }
-        .cam-link { display:inline-flex; align-items:center; gap:5px; height:32px; padding:0 7px; border-radius:8px; font-size:12px; color:#a1a1aa; background:none; border:none; cursor:pointer; text-decoration:none; }
+        .cam-chip { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--la-sub); background:var(--la-chip); border-radius:6px; padding:3px 7px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .cam-chip.ndi { color:var(--la-accent); background:var(--la-accent-soft); }
+        .cam-row-actions { display:flex; flex-wrap:wrap; gap:2px; border-top:1px solid var(--la-line-soft); padding:6px 8px; }
+        .cam-link { display:inline-flex; align-items:center; gap:5px; height:32px; padding:0 7px; border-radius:8px; font-size:12px; color:var(--la-sub); background:none; border:none; cursor:pointer; text-decoration:none; }
         .cam-link iconify-icon { font-size:15px; }
         .cam-link.danger { margin-left:auto; }
-        @media (hover:hover) { .cam-link:hover { background:#18181b; color:#fafafa; } .cam-link.danger:hover { color:#ef4444; } }
-        .cam-guide { border:1px solid #27272a; border-radius:16px; padding:0 18px; background:#0a0a0a; }
-        .cam-guide summary { cursor:pointer; padding:16px 0; font-size:13px; font-weight:600; color:#e4e4e7; display:flex; align-items:center; gap:8px; list-style:none; }
+        @media (hover:hover) { .cam-link:hover { background:var(--la-chip); color:var(--la-text); } .cam-link.danger:hover { color:var(--la-bad); } }
+        .cam-guide { border:1px solid var(--la-line); border-radius:16px; padding:0 18px; background:var(--la-surface); }
+        .cam-guide summary { cursor:pointer; padding:16px 0; font-size:13px; font-weight:600; color:var(--la-text); display:flex; align-items:center; gap:8px; list-style:none; }
         .cam-guide summary::-webkit-details-marker { display:none; }
-        .cam-guide ol { list-style:decimal; padding:0 0 18px 20px; display:flex; flex-direction:column; gap:10px; font-size:13px; line-height:1.6; color:#a1a1aa; }
+        .cam-guide ol { list-style:decimal; padding:0 0 18px 20px; display:flex; flex-direction:column; gap:10px; font-size:13px; line-height:1.6; color:var(--la-sub); }
         .cam-guide ul { list-style:disc; padding-left:20px; margin-top:4px; }
-        .cam-guide b { color:#e4e4e7; font-weight:600; }
-        .cam-guide code { font-family:'JetBrains Mono',monospace; font-size:11px; background:#18181b; padding:1px 5px; border-radius:4px; color:#e4e4e7; }
-        .cam-dialog { position:fixed; inset:0; z-index:100; background:rgba(0,0,0,.75); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; padding:16px; }
+        .cam-guide b { color:var(--la-text); font-weight:600; }
+        .cam-guide code { font-family:'JetBrains Mono',monospace; font-size:11px; background:var(--la-chip); padding:1px 5px; border-radius:4px; color:var(--la-text); }
+        .cam-dialog { position:fixed; inset:0; z-index:100; background:var(--la-overlay); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; padding:16px; }
         .cam-dialog.hidden { display:none; }
-        .cam-dialog-panel { width:460px; max-width:100%; max-height:calc(100vh - 32px); overflow:auto; background:#0c0c0d; border:1px solid #27272a; border-radius:16px; padding:20px; box-shadow:0 24px 80px rgba(0,0,0,.55); }
+        .cam-dialog-panel { width:460px; max-width:100%; max-height:calc(100vh - 32px); overflow:auto; background:var(--la-raised); border:1px solid var(--la-line); border-radius:16px; padding:20px; box-shadow:var(--la-shadow); }
         .cam-dialog-panel.wide { width:520px; }
-        .ord-hero { height:220px; padding:14px 0; border-radius:12px; margin:-4px 0 16px; display:flex; align-items:center; justify-content:center; background:radial-gradient(circle at 50% 45%, #3a3a40 0%, #1a1a1d 45%, #0a0a0b 80%); border:1px solid #1f1f22; overflow:hidden; }
-        .ord-hero img { height:100%; width:auto; object-fit:contain; filter:drop-shadow(0 18px 30px rgba(0,0,0,.6)); }
-        .ord-title { font-size:24px; font-weight:700; letter-spacing:-.01em; margin-top:4px; color:#fafafa; }
-        .ord-sub { font-size:13px; line-height:1.55; color:#a1a1aa; margin-top:4px; }
+        .ord-hero { height:220px; padding:14px 0; border-radius:12px; margin:-4px 0 16px; display:flex; align-items:center; justify-content:center; background:var(--la-product-bg); border:1px solid var(--la-line-soft); overflow:hidden; }
+        .ord-hero img { height:100%; width:auto; object-fit:contain; filter:drop-shadow(0 18px 28px rgba(0,0,0,.35)); }
+        .ord-title { font-size:24px; font-weight:700; letter-spacing:-.01em; margin-top:4px; color:var(--la-text); }
+        .ord-sub { font-size:13px; line-height:1.55; color:var(--la-sub); margin-top:4px; }
         .ord-price { display:flex; align-items:baseline; gap:8px; margin-top:16px; }
-        .ord-amount { font-size:28px; font-weight:700; color:#fafafa; }
-        .ord-per { font-size:12px; color:#71717a; }
-        .ord-included { display:flex; align-items:center; gap:6px; font-size:12px; font-weight:500; color:#39FF14; margin-top:6px; }
-        .ord-klarna { font-size:12px; line-height:1.5; color:#a1a1aa; margin-top:6px; }
+        .ord-amount { font-size:28px; font-weight:700; color:var(--la-text); }
+        .ord-per { font-size:12px; color:var(--la-dim); }
+        .ord-included { display:flex; align-items:center; gap:6px; font-size:12px; font-weight:500; color:var(--la-accent); margin-top:6px; }
+        .ord-klarna { font-size:12px; line-height:1.5; color:var(--la-sub); margin-top:6px; }
         .ord-klarna-badge { display:inline-block; background:#FFA8CD; color:#0b051d; font-weight:800; font-size:11px; padding:1px 6px; border-radius:4px; margin-right:4px; }
         .ord-feats { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:18px; }
         @media (max-width:480px) { .ord-feats { grid-template-columns:1fr; } }
         .ord-feat { display:flex; gap:10px; align-items:flex-start; }
-        .ord-feat iconify-icon { font-size:18px; color:#39FF14; flex-shrink:0; margin-top:1px; }
-        .ord-feat b { display:block; font-size:12px; font-weight:600; color:#e4e4e7; }
-        .ord-feat span { display:block; font-size:11px; line-height:1.45; color:#71717a; }
-        .ord-specs { margin-top:16px; border-top:1px solid #1f1f22; padding-top:12px; }
-        .ord-specs summary { cursor:pointer; font-size:12px; color:#a1a1aa; }
+        .ord-feat iconify-icon { font-size:18px; color:var(--la-accent); flex-shrink:0; margin-top:1px; }
+        .ord-feat b { display:block; font-size:12px; font-weight:600; color:var(--la-text); }
+        .ord-feat span { display:block; font-size:11px; line-height:1.45; color:var(--la-dim); }
+        .ord-specs { margin-top:16px; border-top:1px solid var(--la-line-soft); padding-top:12px; }
+        .ord-specs summary { cursor:pointer; font-size:12px; color:var(--la-sub); }
         .ord-specs dl { display:grid; grid-template-columns:auto 1fr; gap:6px 14px; margin-top:10px; font-size:12px; line-height:1.45; }
-        .ord-specs dt { color:#71717a; }
-        .ord-specs dd { color:#d4d4d8; }
+        .ord-specs dt { color:var(--la-dim); }
+        .ord-specs dd { color:var(--la-text-2); }
         .ord-buy { display:flex; gap:10px; margin-top:18px; }
-        .ord-qty { display:flex; align-items:center; border:1px solid #27272a; border-radius:10px; height:44px; flex-shrink:0; }
-        .ord-qty button { width:38px; height:100%; background:none; border:none; color:#e4e4e7; font-size:18px; cursor:pointer; }
-        .ord-qty span { min-width:22px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:14px; color:#fafafa; }
+        .ord-qty { display:flex; align-items:center; border:1px solid var(--la-line); border-radius:10px; height:44px; flex-shrink:0; }
+        .ord-qty button { width:38px; height:100%; background:none; border:none; color:var(--la-text); font-size:18px; cursor:pointer; }
+        .ord-qty span { min-width:22px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:14px; color:var(--la-text); }
         .ord-go { flex:1; height:44px; justify-content:center; font-size:14px; }
-        .ord-fine { font-size:11px; line-height:1.5; color:#71717a; margin-top:10px; }
-        .cam-form-error a { color:#e4e4e7; text-decoration:underline; }
-        html:not(.dark) .ord-title, html:not(.dark) .ord-amount { color:#18181b; }
+        .ord-fine { font-size:11px; line-height:1.5; color:var(--la-dim); margin-top:10px; }
+        .cam-form-error a { color:var(--la-text); text-decoration:underline; }
         .cam-dialog-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
-        .cam-dialog-title { font-size:16px; font-weight:600; color:#fafafa; }
-        .cam-dialog-text { font-size:13px; line-height:1.55; color:#a1a1aa; margin-bottom:14px; }
-        .cam-dialog-note { display:flex; gap:8px; font-size:12px; line-height:1.5; color:#71717a; margin-top:14px; }
-        .cam-icon-btn { width:32px; height:32px; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; background:none; border:none; color:#a1a1aa; cursor:pointer; font-size:18px; }
-        @media (hover:hover) { .cam-icon-btn:hover { background:#18181b; color:#fafafa; } }
+        .cam-dialog-title { font-size:16px; font-weight:600; color:var(--la-text); }
+        .cam-dialog-text { font-size:13px; line-height:1.55; color:var(--la-sub); margin-bottom:14px; }
+        .cam-dialog-note { display:flex; gap:8px; font-size:12px; line-height:1.5; color:var(--la-dim); margin-top:14px; }
+        .cam-icon-btn { width:32px; height:32px; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; background:none; border:none; color:var(--la-sub); cursor:pointer; font-size:18px; }
+        @media (hover:hover) { .cam-icon-btn:hover { background:var(--la-chip); color:var(--la-text); } }
         .cam-form { display:flex; flex-direction:column; gap:14px; }
-        .cam-form label { display:flex; flex-direction:column; gap:6px; font-size:12px; font-weight:500; color:#d4d4d8; }
-        .cam-form input { height:40px; border-radius:10px; border:1px solid #27272a; background:#000; color:#fafafa; padding:0 12px; font-size:14px; outline:none; }
-        .cam-form input:focus { border-color:#39FF14; }
-        .cam-form small { font-size:11px; font-weight:400; color:#71717a; }
-        .cam-form-error { font-size:12px; color:#ef4444; min-height:0; }
+        .cam-form label { display:flex; flex-direction:column; gap:6px; font-size:12px; font-weight:500; color:var(--la-text-2); }
+        .cam-form input { height:40px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 12px; font-size:14px; outline:none; }
+        .cam-form input:focus { border-color:var(--la-accent); }
+        .cam-form small { font-size:11px; font-weight:400; color:var(--la-dim); }
+        .cam-form-error { font-size:12px; color:var(--la-bad); min-height:0; }
         .cam-form-actions { display:flex; justify-content:flex-end; gap:8px; }
         .cam-field { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
-        .cam-field > span { font-size:11px; color:#71717a; }
-        .cam-field > div { display:flex; align-items:center; gap:6px; background:#000; border:1px solid #27272a; border-radius:10px; padding:4px 4px 4px 12px; }
-        .cam-field code { flex:1; min-width:0; font-family:'JetBrains Mono',monospace; font-size:12px; color:#e4e4e7; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .cam-field > span { font-size:11px; color:var(--la-dim); }
+        .cam-field > div { display:flex; align-items:center; gap:6px; background:var(--la-input); border:1px solid var(--la-line); border-radius:10px; padding:4px 4px 4px 12px; }
+        .cam-field code { flex:1; min-width:0; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--la-text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .cam-field code.secret:not(:hover):not(:focus) { filter:blur(4px); cursor:pointer; }
-        html:not(.dark) .cam-btn.ghost { color:#18181b; border-color:#d4d4d8; }
-        html:not(.dark) .cam-guide { background:#fff; border-color:#e4e4e7; }
-        html:not(.dark) .cam-guide summary, html:not(.dark) .cam-guide b, html:not(.dark) .cam-h { color:#18181b; }
-        html:not(.dark) .cam-chip, html:not(.dark) .cam-guide code { background:#f4f4f5; color:#3f3f46; }
-        .cam-empty-title { font-size:14px; font-weight:600; color:#e4e4e7; }
-        .cam-empty-text { font-size:12px; line-height:1.6; color:#71717a; max-width:380px; }
-        html:not(.dark) .cam-card { background:#fff; border-color:#e4e4e7; }
-        html:not(.dark) .cam-label, html:not(.dark) .cam-empty-title { color:#18181b; }
-        html:not(.dark) .cam-empty { border-color:#d4d4d8; }
+        .cam-empty-title { font-size:14px; font-weight:600; color:var(--la-text); }
+        .cam-empty-text { font-size:12px; line-height:1.6; color:var(--la-dim); max-width:380px; }
     </style>
 </head>
 <body class="font-sans antialiased bg-background text-foreground overflow-hidden h-screen w-screen flex selection:bg-primary selection:text-black">
@@ -192,11 +184,7 @@
                 <div id="cam-empty" class="hidden cam-empty">
                     <iconify-icon icon="solar:videocamera-record-linear" class="text-3xl text-zinc-600"></iconify-icon>
                     <p class="cam-empty-title">No cameras yet</p>
-                    <p class="cam-empty-text">Add each OBSBOT Tail 2 at this venue. You'll get the stream details to send its video here.</p>
-                    <div class="cam-actions" style="margin-top:8px">
-                        <button type="button" class="cam-btn primary" onclick="openCamForm()"><iconify-icon icon="solar:add-circle-linear"></iconify-icon><span>Add camera</span></button>
-                        <button type="button" class="cam-btn ghost" onclick="openOrderCameras()"><iconify-icon icon="solar:cart-large-2-linear"></iconify-icon><span>Order cameras</span></button>
-                    </div>
+                    <p class="cam-empty-text">Add each OBSBOT Tail 2 at this venue with <b>Add camera</b>. You'll get the stream details to send its video here.</p>
                 </div>
 
                 <details class="cam-guide">
@@ -287,7 +275,7 @@
                 err.classList.add('hidden');
                 empty.classList.toggle('hidden', _cams.length > 0);
                 var live = _cams.filter(function(c) { return c.status === 'active'; }).length;
-                camStatus(_cams.length ? live + ' of ' + _cams.length + ' live' : 'No cameras', live ? '#39FF14' : '#71717a');
+                camStatus(_cams.length ? live + ' of ' + _cams.length + ' live' : 'No cameras', live ? 'var(--la-ok)' : 'var(--la-dim)');
 
                 // Only rebuild when something changed, so playing video isn't interrupted
                 var key = JSON.stringify(_cams.map(function(c) { return [c.id, c.status, c.name, c.ndiName, c.ip]; }));
@@ -298,7 +286,7 @@
             } catch (e) {
                 err.textContent = 'Could not load cameras — ' + e.message;
                 err.classList.remove('hidden');
-                camStatus('Unavailable', '#ef4444');
+                camStatus('Unavailable', 'var(--la-bad)');
             }
         }
 
