@@ -453,7 +453,12 @@
                 .then(function(d) { _sessionMeta = d.sessions || {}; }).catch(function() {});
         }
         var _sessionMetaReady = loadSessionMeta();
-        function sessionMeta(artistName, date) { return _sessionMeta[String(artistName).toUpperCase().trim() + '|' + date] || {}; }
+        function sessionMeta(artistName, date) {
+            var m = Object.assign({}, _sessionMeta[String(artistName).toUpperCase().trim() + '|' + date] || {});
+            if (/^\d{4}-\d{2}-\d{2}$/.test(m.title || '')) { m.date = m.date || m.title; m.title = ''; }
+            m.shownDate = m.date || date;   // the one date to show for this session
+            return m;
+        }
         function escHtml(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 
         async function editSession(btn) {
@@ -475,8 +480,9 @@
             }
             m.innerHTML = '<form class="se-panel" role="dialog" aria-modal="true">' +
                 '<div class="se-head"><p class="se-title">Edit session</p><button type="button" class="se-x" aria-label="Close"><iconify-icon icon="solar:close-circle-linear"></iconify-icon></button></div>' +
-                '<p class="se-sub">' + escHtml(artist) + ' · ' + escHtml(date) + '</p>' +
-                '<label>Session name<input name="sname" maxlength="80" placeholder="' + escHtml(date) + '" value="' + escHtml(meta.title || '') + '"><small>Leave empty to show the date.</small></label>' +
+                '<p class="se-sub">' + escHtml(artist) + '</p>' +
+                '<label>Session name<input name="sname" maxlength="80" placeholder="e.g. Boiler Room Puglia" value="' + escHtml(meta.title || '') + '"><small>Optional. Leave empty to show the date.</small></label>' +
+                '<label>Date<input name="sdate" type="date" value="' + escHtml(meta.shownDate) + '"><small>When the set happened.</small></label>' +
                 '<label>Venue<input name="svenue" maxlength="60" list="se-venues" placeholder="' + escHtml(getVenueName()) + '" value="' + escHtml(meta.venue || '') + '">' +
                 '<datalist id="se-venues">' + venues.map(function(v) { return '<option value="' + escHtml(v) + '">'; }).join('') + '</datalist>' +
                 '<small>' + (venues.length ? 'Pick one of your Brand Kit venues or type a new one.' : 'Type the venue name. Venues added in Brand Kit appear here.') + '</small></label>' +
@@ -491,9 +497,9 @@
                 var sb = form.querySelector('[type=submit]'); sb.disabled = true; sb.textContent = 'Saving…';
                 try {
                     var r = await laFetch('/api/session-meta', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ artist: artist, date: date, title: form.sname.value, venue: form.svenue.value }) });
+                        body: JSON.stringify({ artist: artist, date: date, title: form.sname.value, venue: form.svenue.value, shownDate: form.sdate.value }) });
                     var d = await r.json(); if (!r.ok) throw new Error(d.error || r.status);
-                    if (d.meta.title || d.meta.venue) _sessionMeta[d.key] = d.meta; else delete _sessionMeta[d.key];
+                    if (d.meta.title || d.meta.venue || d.meta.date) _sessionMeta[d.key] = d.meta; else delete _sessionMeta[d.key];
                     m.remove();
                     fetchRecentUploads();
                 } catch (er) {
@@ -1058,9 +1064,9 @@
                     html += '</div>';
                     html += '<div>';
                     var sMeta = sessionMeta(artist.name, dateStr);
-                    html += '<p class="text-xs font-bold text-zinc-300 uppercase tracking-tight">' + escHtml(sMeta.title || dateStr) + '</p>';
+                    html += '<p class="text-xs font-bold text-zinc-300 uppercase tracking-tight">' + escHtml(sMeta.title || sMeta.shownDate) + '</p>';
                     html += '<p class="text-[8px] font-mono text-zinc-600 uppercase tracking-widest"' + (sMeta.venue ? '' : ' data-venue-label') + '>' +
-                        escHtml(sMeta.venue || getVenueName()) + (sMeta.title ? ' · ' + dateStr : '') + '</p>';
+                        escHtml(sMeta.venue || getVenueName()) + (sMeta.title ? ' · ' + sMeta.shownDate : '') + '</p>';
                     html += '</div>';
                     html += '</div>';
                     html += '<div class="flex items-center gap-2">';
@@ -1548,7 +1554,7 @@
                 badge.style.background = 'rgba(255,255,255,.14)';
                 badge.innerHTML = '<iconify-icon icon="solar:clapperboard-play-linear"></iconify-icon> LATEST SESSION';
                 var hm = sessionMeta(latest.meta.artist || '', date);
-                sub.textContent = (hm.venue ? hm.venue + ' · ' : '') + new Date(date + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                sub.textContent = (hm.venue ? hm.venue + ' · ' : '') + new Date(hm.shownDate + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
                 title.textContent = latest.meta.artist || 'Untitled';
                 l1.textContent = 'Duration';
                 v1.textContent = fmtDuration(a.duration);
@@ -2642,6 +2648,8 @@
         .se-panel label { display:flex; flex-direction:column; gap:6px; font-size:12px; font-weight:500; color:var(--la-text-2); }
         .se-panel input { height:40px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 12px; font-size:14px; outline:none; }
         .se-panel input:focus { border-color:var(--la-accent); }
+        .se-panel input[type=date] { color-scheme:dark; }
+        html:not(.dark) .se-panel input[type=date] { color-scheme:light; }
         .se-panel small { font-size:11px; font-weight:400; color:var(--la-dim); }
         .se-error { font-size:12px; color:var(--la-bad); }
         .se-error:empty { display:none; }

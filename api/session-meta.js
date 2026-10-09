@@ -32,9 +32,14 @@ export default async function handler(req, res) {
     const artist = clean(body.artist, 80).toUpperCase();
     const date = String(body.date || '');
     if (!artist || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'Invalid session' });
-    const meta = { title: clean(body.title, 80), venue: clean(body.venue, 60) };
+    const shownDate = String(body.shownDate || '');
+    const meta = {
+      title: clean(body.title, 80),
+      venue: clean(body.venue, 60),
+      date: /^\d{4}-\d{2}-\d{2}$/.test(shownDate) && shownDate !== date ? shownDate : '',  // the session's real date, if different from the upload date
+    };
     const field = `${artist}|${date}`;
-    await withRedis(r => (meta.title || meta.venue) ? r.hSet(key, field, JSON.stringify(meta)) : r.hDel(key, field));
+    await withRedis(r => (meta.title || meta.venue || meta.date) ? r.hSet(key, field, JSON.stringify(meta)) : r.hDel(key, field));
     return res.status(200).json({ key: field, meta });
   } catch (e) {
     console.error('[session-meta]', e.message);
