@@ -37,6 +37,7 @@
     <link rel="stylesheet" href="styles/theme.css">
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <script src="/la-dialogs.js?v=1"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="nav-component.js?v=5"></script>
@@ -509,7 +510,7 @@
                         body: JSON.stringify({ id: btn.dataset.delId, url: btn.dataset.delUrl || '' }) });
                     var d = await r.json(); if (!r.ok) throw new Error(d.error || r.status);
                     close();
-                    showToast((kind === 'clip' ? 'Clip' : 'Thumbnail') + ' deleted');
+                    laToast((kind === 'clip' ? 'Clip' : 'Thumbnail') + ' deleted');
                     fetchRecentUploads();
                 } catch (e) {
                     busy = false; go.disabled = false; m.querySelector('[data-cancel]').disabled = false;
@@ -2145,7 +2146,7 @@
 
         async function disconnectPlatform(platform, btn) {
             var label = platform === 'youtube' ? 'YouTube' : 'SoundCloud';
-            if (!confirm('Disconnect ' + label + '? You won\'t be able to publish to it until you connect again.')) return;
+            if (!(await laConfirm({ title: 'Disconnect ' + label + '?', message: 'You won\'t be able to publish to ' + label + ' until you connect it again. Nothing already published is removed.', confirmText: 'Disconnect', danger: true }))) return;
             if (btn) { btn.disabled = true; btn.textContent = 'Disconnecting…'; }
             try {
                 const res  = await laFetch('/api/disconnect?platform=' + platform, { method: 'POST' });
@@ -2371,7 +2372,7 @@
             var action = btn.dataset.action;
             var jobId = btn.dataset.job;
             if (!jobId || (action !== 'cancel' && action !== 'restart')) return;
-            if (action === 'cancel' && !confirm('Cancel vertical clip generation for this job?')) return;
+            if (action === 'cancel' && !(await laConfirm({ title: 'Stop generating clips?', message: 'Vertical clips for this session will stop being made. You can restart it later.', confirmText: 'Stop', danger: true }))) return;
             btn.disabled = true;
             btn.style.opacity = '0.4';
             try {

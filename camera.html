@@ -35,6 +35,7 @@
     <link rel="stylesheet" href="styles/theme.css">
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <script src="/la-dialogs.js?v=1"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
     <script src="nav-component.js?v=5"></script>
     <style>
@@ -395,10 +396,10 @@
             });
         }
 
-        function removeCamera(c, btn) {
-            if (!confirm('Remove "' + c.name + '"? Its stream key will stop working.')) return;
+        async function removeCamera(c, btn) {
+            if (!(await laConfirm({ title: 'Remove ' + c.name + '?', message: 'Its stream will be deleted and the stream key will stop working. You can add the camera again later.', confirmText: 'Remove camera', danger: true }))) return;
             btn.disabled = true;
-            camApi({ action: 'remove', id: c.id }).then(function() { _camKey = ''; loadCameras(); })
+            camApi({ action: 'remove', id: c.id }).then(function() { _camKey = ''; loadCameras(); laToast('Camera removed'); })
                 .catch(function(e) { alert('Could not remove camera: ' + e.message); btn.disabled = false; });
         }
 

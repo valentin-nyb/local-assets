@@ -35,6 +35,7 @@
     <link rel="stylesheet" href="styles/theme.css">
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <script src="/la-dialogs.js?v=1"></script>
     <script src="nav-component.js?v=5"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
@@ -719,12 +720,13 @@
 
         async function removeFile(url, btn) {
             var f = _files.filter(function(x) { return x.url === url; })[0];
-            if (!confirm('Delete "' + (f ? f.name : 'this file') + '" from the brand kit?')) return;
+            if (!(await laConfirm({ title: 'Delete ' + (f ? f.name : 'this file') + '?', message: 'It will be removed from the brand kit, and links to it will stop working. This can\'t be undone.', confirmText: 'Delete permanently', danger: true }))) return;
             btn.disabled = true;
             try {
                 var r = await laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete', url: url }) });
                 if (!r.ok) throw new Error((await r.json()).error || r.status);
                 await loadBrand();
+                laToast('File deleted');
             } catch (e) { alert('Could not delete: ' + e.message); btn.disabled = false; }
         }
 
