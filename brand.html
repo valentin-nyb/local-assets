@@ -398,9 +398,9 @@
             return '<div class="bk-file">' + preview +
                 '<div class="bk-info"><p class="bk-name" title="' + esc(f.name) + '">' + esc(f.name) + '</p><p class="bk-meta">' + fmtSize(f.size) + ' · ' + fmtDate(f.uploadedAt) + '</p></div>' +
                 '<div class="bk-file-actions">' +
-                    '<a href="' + esc(f.downloadUrl) + '" title="Download"><iconify-icon icon="solar:download-minimalistic-linear"></iconify-icon></a>' +
-                    (IMG_EXT.test(f.name) || /pdf$/i.test(f.name) ? '<a href="' + esc(f.url) + '" target="_blank" rel="noopener" title="Open"><iconify-icon icon="solar:eye-linear"></iconify-icon></a>' : '') +
-                    '<button type="button" data-copy="' + esc(f.url) + '" title="Copy link"><iconify-icon icon="solar:link-round-linear"></iconify-icon></button>' +
+                    '<a href="' + esc(f.link ? f.link + '?download' : f.downloadUrl) + '" title="Download"><iconify-icon icon="solar:download-minimalistic-linear"></iconify-icon></a>' +
+                    (IMG_EXT.test(f.name) || /pdf$/i.test(f.name) ? '<a href="' + esc(f.link || f.url) + '" target="_blank" rel="noopener" title="Open"><iconify-icon icon="solar:eye-linear"></iconify-icon></a>' : '') +
+                    '<button type="button" data-copy="' + esc(f.link || f.url) + '" title="Copy link"><iconify-icon icon="solar:link-round-linear"></iconify-icon></button>' +
                     '<button type="button" class="del" data-del="' + esc(f.url) + '" title="Delete"><iconify-icon icon="solar:trash-bin-minimalistic-linear"></iconify-icon></button>' +
                 '</div></div>';
         }

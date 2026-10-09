@@ -37,5 +37,11 @@
       "maxDuration": 300,
       "includeFiles": "node_modules/ffmpeg-static/ffmpeg"
     }
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/asset/:path*",
+      "destination": "/api/asset?path=brand/:path*"
+    }
+  ]
 }

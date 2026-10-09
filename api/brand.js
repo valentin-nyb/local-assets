@@ -56,7 +56,7 @@ export default async function handler(req, res) {
         const page = await list({ prefix: prefixFor(slug), cursor, limit: 1000 });
         for (const b of page.blobs) {
           const meta = parsePath(b.pathname, slug);
-          if (meta) files.push({ ...meta, url: b.url, downloadUrl: b.downloadUrl, size: b.size, uploadedAt: b.uploadedAt });
+          if (meta) files.push({ ...meta, url: b.url, downloadUrl: b.downloadUrl, link: 'https://local-assets.com/asset/' + b.pathname.slice('brand/'.length), size: b.size, uploadedAt: b.uploadedAt });
         }
         cursor = page.hasMore ? page.cursor : undefined;
       } while (cursor);
