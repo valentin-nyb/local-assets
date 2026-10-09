@@ -1,5 +1,6 @@
 import { createClient } from 'redis';
 import { getWebSessionAuth } from './_venues.js';
+import { refreshScToken } from './_soundcloud.js';
 
 // SoundCloud doesn't expose actual earnings via API.
 // Estimate using SoundCloud Pro partner programme approximate rate.
@@ -24,15 +25,20 @@ export default async function handler(req, res) {
     const raw = await redis.get(`sc_tokens:${venueSlug}`);
     if (!raw) return res.status(200).json({ connected: false, plays: 0, estimatedRevenue: 0 });
 
-    const { access_token } = JSON.parse(raw);
+    let { access_token, refresh_token } = JSON.parse(raw);
+    const getMe = () => fetch('https://api.soundcloud.com/me', {
+      headers: { Authorization: `OAuth ${access_token}`, Accept: 'application/json' },
+      signal: AbortSignal.timeout(10000),
+    });
 
     // Account shown in the Connect Platforms panel
     let account = null;
     try {
-      const me = await fetch('https://api.soundcloud.com/me', {
-        headers: { Authorization: `OAuth ${access_token}`, Accept: 'application/json' },
-        signal: AbortSignal.timeout(10000),
-      });
+      let me = await getMe();
+      if (me.status === 401 && refresh_token) {
+        const fresh = await refreshScToken(venueSlug, refresh_token);
+        if (fresh) { access_token = fresh; me = await getMe(); }
+      }
       if (me.ok) {
         const u = await me.json();
         account = { name: u.username || u.full_name || '', avatar: u.avatar_url || '', tracks: Number(u.track_count) || 0 };

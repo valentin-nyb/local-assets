@@ -380,3 +380,25 @@ html:not(.dark) .vault-card-header {
 html:not(.dark) .asset-tray {
     background: rgba(0, 0, 0, 0.02) !important;
 }
+
+
+/* ── Mobile chrome ─────────────────────────────────────────────── */
+/* Menu button in the page header replaces the old floating side tab. */
+.la-menu-btn { display: none; }
+@media (max-width: 767px) {
+    .la-menu-btn {
+        display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        width: 36px; height: 36px; margin-right: 6px; border-radius: 10px;
+        border: 1px solid #27272a; background: #0a0a0a; color: #e4e4e7; font-size: 18px;
+    }
+    .la-menu-btn:active { transform: scale(.95); }
+    /* The bottom status bar is decorative; give phones the space back. */
+    .la-statusbar { display: none !important; }
+    main { padding-bottom: env(safe-area-inset-bottom); }
+}
+html:not(.dark) .la-menu-btn { background: #fff; border-color: #e4e4e7; color: #09090b; }
+@media (max-width: 767px) {
+    /* Camera presets sit in one row on phones */
+    #preset-btns { padding: 8px; }
+    #preset-btns button { font-size: 9px; letter-spacing: .08em; padding-left: 4px; padding-right: 4px; }
+}
