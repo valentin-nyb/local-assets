@@ -1,4 +1,5 @@
 import { list, del } from '@vercel/blob';
+import { createClient } from 'redis';
 import { handleUpload } from '@vercel/blob/client';
 import { getWebSessionAuth } from './_venues.js';
 
@@ -21,6 +22,14 @@ const ALLOWED_TYPES = [
 ];
 
 const prefixFor = slug => `brand/${slug}/`;
+// What kind of organisation the account is; only changes the label of its own brand kit.
+const ORG_TYPES = ['venue', 'label', 'management'];
+
+async function withRedis(fn) {
+  const redis = createClient({ url: process.env.REDIS_URL });
+  await redis.connect();
+  try { return await fn(redis); } finally { await redis.quit().catch(() => {}); }
+}
 
 function parsePath(pathname, slug) {
   const rest = pathname.slice(prefixFor(slug).length).split('/');
@@ -52,11 +61,18 @@ export default async function handler(req, res) {
         cursor = page.hasMore ? page.cursor : undefined;
       } while (cursor);
       files.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
-      return res.status(200).json({ files });
+      const orgType = await withRedis(r => r.get(`brand_org_type:${slug}`)).catch(() => null);
+      return res.status(200).json({ files, orgType: ORG_TYPES.includes(orgType) ? orgType : 'venue' });
     }
 
     if (req.method !== 'POST') return res.status(405).end();
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+
+    if (body.action === 'setOrgType') {
+      if (!ORG_TYPES.includes(body.orgType)) return res.status(400).json({ error: 'Unknown type' });
+      await withRedis(r => r.set(`brand_org_type:${slug}`, body.orgType));
+      return res.status(200).json({ orgType: body.orgType });
+    }
 
     if (body.action === 'delete') {
       const url = String(body.url || '');
