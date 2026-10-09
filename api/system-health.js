@@ -11,7 +11,8 @@ async function getPipelineHealth(venueSlug) {
     `SELECT
        count(*) FILTER (WHERE status = 'queued')                                        AS queued,
        count(*) FILTER (WHERE status NOT IN ('queued', 'done', 'error', 'cancelled'))   AS running,
-       count(*) FILTER (WHERE status = 'error' AND updated_at > now() - interval '24 hours') AS failed,
+       count(*) FILTER (WHERE status = 'error' AND error IS DISTINCT FROM 'Cancelled by user'
+                         AND updated_at > now() - interval '24 hours')                    AS failed,
        count(*) FILTER (WHERE status = 'done'  AND updated_at > now() - interval '24 hours') AS done,
        extract(epoch FROM now() - min(created_at) FILTER (WHERE status = 'queued')) / 60   AS oldest_queued_min
      FROM pipeline_jobs WHERE venue_slug = $1`,

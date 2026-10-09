@@ -58,6 +58,57 @@
         .cam-pill.on { color:#fff; background:#ef4444; border-color:#ef4444; }
         .cam-empty { border:1px dashed #27272a; border-radius:16px; padding:48px 24px; display:flex; flex-direction:column; align-items:center; text-align:center; gap:8px; }
         .cam-empty.hidden { display:none; }
+        .cam-toolbar { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+        .cam-eyebrow { font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:#71717a; }
+        .cam-h { font-size:22px; font-weight:700; letter-spacing:-.01em; margin-top:4px; }
+        .cam-actions { display:flex; gap:8px; flex-wrap:wrap; }
+        .cam-btn { display:inline-flex; align-items:center; gap:8px; height:36px; padding:0 14px; border-radius:10px; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; border:1px solid transparent; text-decoration:none; transition:opacity .15s, border-color .15s, background .15s; }
+        .cam-btn iconify-icon { font-size:16px; }
+        .cam-btn.primary { background:#39FF14; color:#000; }
+        .cam-btn.ghost { background:transparent; color:#e4e4e7; border-color:#27272a; }
+        .cam-btn:disabled { opacity:.5; cursor:default; }
+        @media (hover:hover) { .cam-btn.primary:hover { opacity:.85; } .cam-btn.ghost:hover { border-color:#52525b; } }
+        .cam-pill.warn { color:#eab308; border-color:rgba(234,179,8,.4); }
+        .cam-chips { display:flex; flex-wrap:wrap; gap:6px; padding:0 14px 12px; }
+        .cam-chip { font-family:'JetBrains Mono',monospace; font-size:10px; color:#a1a1aa; background:#18181b; border-radius:6px; padding:3px 7px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .cam-chip.ndi { color:#39FF14; background:rgba(57,255,20,.08); }
+        .cam-row-actions { display:flex; flex-wrap:wrap; gap:2px; border-top:1px solid #1f1f22; padding:6px 8px; }
+        .cam-link { display:inline-flex; align-items:center; gap:5px; height:32px; padding:0 7px; border-radius:8px; font-size:12px; color:#a1a1aa; background:none; border:none; cursor:pointer; text-decoration:none; }
+        .cam-link iconify-icon { font-size:15px; }
+        .cam-link.danger { margin-left:auto; }
+        @media (hover:hover) { .cam-link:hover { background:#18181b; color:#fafafa; } .cam-link.danger:hover { color:#ef4444; } }
+        .cam-guide { border:1px solid #27272a; border-radius:16px; padding:0 18px; background:#0a0a0a; }
+        .cam-guide summary { cursor:pointer; padding:16px 0; font-size:13px; font-weight:600; color:#e4e4e7; display:flex; align-items:center; gap:8px; list-style:none; }
+        .cam-guide summary::-webkit-details-marker { display:none; }
+        .cam-guide ol { list-style:decimal; padding:0 0 18px 20px; display:flex; flex-direction:column; gap:10px; font-size:13px; line-height:1.6; color:#a1a1aa; }
+        .cam-guide ul { list-style:disc; padding-left:20px; margin-top:4px; }
+        .cam-guide b { color:#e4e4e7; font-weight:600; }
+        .cam-guide code { font-family:'JetBrains Mono',monospace; font-size:11px; background:#18181b; padding:1px 5px; border-radius:4px; color:#e4e4e7; }
+        .cam-dialog { position:fixed; inset:0; z-index:100; background:rgba(0,0,0,.75); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; padding:16px; }
+        .cam-dialog.hidden { display:none; }
+        .cam-dialog-panel { width:460px; max-width:100%; max-height:calc(100vh - 32px); overflow:auto; background:#0c0c0d; border:1px solid #27272a; border-radius:16px; padding:20px; box-shadow:0 24px 80px rgba(0,0,0,.55); }
+        .cam-dialog-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
+        .cam-dialog-title { font-size:16px; font-weight:600; color:#fafafa; }
+        .cam-dialog-text { font-size:13px; line-height:1.55; color:#a1a1aa; margin-bottom:14px; }
+        .cam-dialog-note { display:flex; gap:8px; font-size:12px; line-height:1.5; color:#71717a; margin-top:14px; }
+        .cam-icon-btn { width:32px; height:32px; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; background:none; border:none; color:#a1a1aa; cursor:pointer; font-size:18px; }
+        @media (hover:hover) { .cam-icon-btn:hover { background:#18181b; color:#fafafa; } }
+        .cam-form { display:flex; flex-direction:column; gap:14px; }
+        .cam-form label { display:flex; flex-direction:column; gap:6px; font-size:12px; font-weight:500; color:#d4d4d8; }
+        .cam-form input { height:40px; border-radius:10px; border:1px solid #27272a; background:#000; color:#fafafa; padding:0 12px; font-size:14px; outline:none; }
+        .cam-form input:focus { border-color:#39FF14; }
+        .cam-form small { font-size:11px; font-weight:400; color:#71717a; }
+        .cam-form-error { font-size:12px; color:#ef4444; min-height:0; }
+        .cam-form-actions { display:flex; justify-content:flex-end; gap:8px; }
+        .cam-field { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
+        .cam-field > span { font-size:11px; color:#71717a; }
+        .cam-field > div { display:flex; align-items:center; gap:6px; background:#000; border:1px solid #27272a; border-radius:10px; padding:4px 4px 4px 12px; }
+        .cam-field code { flex:1; min-width:0; font-family:'JetBrains Mono',monospace; font-size:12px; color:#e4e4e7; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .cam-field code.secret:not(:hover):not(:focus) { filter:blur(4px); cursor:pointer; }
+        html:not(.dark) .cam-btn.ghost { color:#18181b; border-color:#d4d4d8; }
+        html:not(.dark) .cam-guide { background:#fff; border-color:#e4e4e7; }
+        html:not(.dark) .cam-guide summary, html:not(.dark) .cam-guide b, html:not(.dark) .cam-h { color:#18181b; }
+        html:not(.dark) .cam-chip, html:not(.dark) .cam-guide code { background:#f4f4f5; color:#3f3f46; }
         .cam-empty-title { font-size:14px; font-weight:600; color:#e4e4e7; }
         .cam-empty-text { font-size:12px; line-height:1.6; color:#71717a; max-width:380px; }
         html:not(.dark) .cam-card { background:#fff; border-color:#e4e4e7; }
@@ -92,12 +143,47 @@
 
         <div class="flex-1 w-full overflow-y-auto no-scrollbar">
             <div class="max-w-6xl mx-auto w-full p-4 md:p-10 flex flex-col space-y-4 md:space-y-8 mt-2 md:mt-0">
+                <div class="cam-toolbar">
+                    <div class="min-w-0">
+                        <p class="cam-eyebrow">OBSBOT Tail 2 · NDI HX3</p>
+                        <h2 class="cam-h">Cameras</h2>
+                    </div>
+                    <div class="cam-actions">
+                        <a class="cam-btn ghost" href="https://www.obsbot.com/store/products/obsbot-tail-2" target="_blank" rel="noopener" title="Opens the official OBSBOT store">
+                            <iconify-icon icon="solar:cart-large-2-linear"></iconify-icon><span>Order cameras</span>
+                        </a>
+                        <button type="button" class="cam-btn primary" onclick="openCamForm()">
+                            <iconify-icon icon="solar:add-circle-linear"></iconify-icon><span>Add camera</span>
+                        </button>
+                    </div>
+                </div>
+
                 <div id="cam-grid" class="cam-grid"></div>
                 <div id="cam-empty" class="hidden cam-empty">
                     <iconify-icon icon="solar:videocamera-record-linear" class="text-3xl text-zinc-600"></iconify-icon>
-                    <p class="cam-empty-title">No cameras connected</p>
-                    <p class="cam-empty-text">Cameras appear here as soon as they stream to this venue. Each camera needs its own stream set up in your account.</p>
+                    <p class="cam-empty-title">No cameras yet</p>
+                    <p class="cam-empty-text">Add each OBSBOT Tail 2 at this venue. You'll get the stream details to send its video here.</p>
+                    <div class="cam-actions" style="margin-top:8px">
+                        <button type="button" class="cam-btn primary" onclick="openCamForm()"><iconify-icon icon="solar:add-circle-linear"></iconify-icon><span>Add camera</span></button>
+                        <a class="cam-btn ghost" href="https://www.obsbot.com/store/products/obsbot-tail-2" target="_blank" rel="noopener"><iconify-icon icon="solar:cart-large-2-linear"></iconify-icon><span>Order cameras</span></a>
+                    </div>
                 </div>
+
+                <details class="cam-guide">
+                    <summary><iconify-icon icon="solar:book-2-linear"></iconify-icon> How to connect an OBSBOT Tail 2 with NDI</summary>
+                    <ol>
+                        <li><b>Connect the camera</b> to the venue network with an Ethernet cable. The Tail 2 is powered over the same cable from a PoE+ switch.</li>
+                        <li><b>Turn on NDI</b> in the OBSBOT Start app (or the camera's web page) and give it a clear NDI name, e.g. <code>MAIN FLOOR</code>. Activate NDI there if the app asks.</li>
+                        <li><b>Add the camera here</b> with the same name, its NDI name and its IP address (shown in the OBSBOT app).</li>
+                        <li><b>Send the video to local / assets</b> with <em>Stream setup</em> on the camera card, either:
+                            <ul>
+                                <li>directly from the camera: paste the RTMP server and stream key into the camera's live-streaming (RTMP) settings, or</li>
+                                <li>from the venue computer: in OBS with the free DistroAV plugin, add the camera's NDI source, then use the same server and key under Settings → Stream.</li>
+                            </ul>
+                        </li>
+                        <li><b>Pan, tilt, zoom and AI tracking</b>: use <em>Controls</em> on the camera card while you're on the venue network. It opens the camera's own control page.</li>
+                    </ol>
+                </details>
                 <p id="cam-error" class="hidden text-center text-[10px] font-mono uppercase tracking-widest text-red-500"></p>
             </div>
         </div>
@@ -112,6 +198,16 @@
             </div>
         </div>
     </main>
+
+    <div id="cam-dialog" class="cam-dialog hidden" onclick="if(event.target===this)closeCamDialog()">
+        <div class="cam-dialog-panel" role="dialog" aria-modal="true">
+            <div class="cam-dialog-head">
+                <p id="cam-dialog-title" class="cam-dialog-title"></p>
+                <button type="button" class="cam-icon-btn" onclick="closeCamDialog()" aria-label="Close"><iconify-icon icon="solar:close-circle-linear"></iconify-icon></button>
+            </div>
+            <div id="cam-dialog-body"></div>
+        </div>
+    </div>
 
     <script>
         function toggleSidebar() {
@@ -128,13 +224,18 @@
             }
         }
 
-        // Cameras: the venue's Mux live streams (one per camera)
+        // Cameras: OBSBOT Tail 2s registered for this venue, each with its own Mux live stream
         function laFetch(url, opts) {
             var sess = {}; try { sess = JSON.parse(localStorage.getItem('la_admin') || '{}'); } catch (_) {}
             opts = Object.assign({}, opts); opts.headers = Object.assign({}, opts.headers);
             if (sess.webToken) opts.headers['Authorization'] = 'Bearer ' + sess.webToken;
             return fetch(url, opts);
         }
+        function camApi(body) {
+            return laFetch('/api/cameras', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+                .then(function(r) { return r.json().then(function(d) { if (!r.ok) throw new Error(d.error || r.status); return d; }); });
+        }
+        function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
         function camStatus(text, color) {
             [['cam-badge', 'cam-badge-dot'], ['cam-foot', 'cam-foot-dot']].forEach(function(ids) {
                 var t = document.getElementById(ids[0]), d = document.getElementById(ids[1]);
@@ -142,57 +243,147 @@
                 if (d) { d.style.background = color; d.style.boxShadow = '0 0 8px ' + color; }
             });
         }
-        var _camKey = '';
+
+        var _cams = [], _camKey = '';
         async function loadCameras() {
             var grid = document.getElementById('cam-grid');
             var empty = document.getElementById('cam-empty');
             var err = document.getElementById('cam-error');
             try {
-                var res = await laFetch('/api/live-streams');
+                var res = await laFetch('/api/cameras');
                 var data = await res.json();
                 if (!res.ok) throw new Error(data.error || res.status);
-                var streams = data.streams || [];
+                _cams = data.cameras || [];
                 err.classList.add('hidden');
-                empty.classList.toggle('hidden', streams.length > 0);
-                var live = streams.filter(function(s) { return s.status === 'active'; }).length;
-                camStatus(streams.length ? live + ' of ' + streams.length + ' live' : 'No cameras', live ? '#39FF14' : '#71717a');
+                empty.classList.toggle('hidden', _cams.length > 0);
+                var live = _cams.filter(function(c) { return c.status === 'active'; }).length;
+                camStatus(_cams.length ? live + ' of ' + _cams.length + ' live' : 'No cameras', live ? '#39FF14' : '#71717a');
 
                 // Only rebuild when something changed, so playing video isn't interrupted
-                var key = streams.map(function(s) { return s.id + ':' + s.status; }).join('|');
+                var key = JSON.stringify(_cams.map(function(c) { return [c.id, c.status, c.name, c.ndiName, c.ip]; }));
                 if (key === _camKey) return;
                 _camKey = key;
                 grid.innerHTML = '';
-                streams.forEach(function(s, i) {
-                    var card = document.createElement('div');
-                    card.className = 'cam-card';
-                    var label = 'CAM ' + String(i + 1).padStart(2, '0') + (s.name ? ' // ' + s.name : '');
-                    var isLive = s.status === 'active' && s.playbackId;
-                    card.innerHTML =
-                        '<div class="cam-stage"></div>' +
-                        '<div class="cam-meta"><span class="cam-label"></span>' +
-                        '<span class="cam-pill ' + (isLive ? 'on' : '') + '">' + (isLive ? 'LIVE' : 'OFFLINE') + '</span></div>';
-                    card.querySelector('.cam-label').textContent = label;
-                    var stage = card.querySelector('.cam-stage');
-                    if (isLive) {
-                        var mp = document.createElement('mux-player');
-                        mp.setAttribute('stream-type', 'live');
-                        mp.setAttribute('playback-id', s.playbackId);
-                        mp.setAttribute('muted', '');
-                        mp.setAttribute('autoplay', 'muted');
-                        mp.setAttribute('accent-color', '#39FF14');
-                        mp.style.cssText = 'width:100%;height:100%;--media-object-fit:cover;';
-                        stage.appendChild(mp);
-                    } else {
-                        stage.innerHTML = '<div class="cam-off"><iconify-icon icon="solar:videocamera-slash-linear"></iconify-icon><span>Waiting for the camera to start streaming</span></div>';
-                    }
-                    grid.appendChild(card);
-                });
+                _cams.forEach(function(c, i) { grid.appendChild(cameraCard(c, i)); });
             } catch (e) {
                 err.textContent = 'Could not load cameras — ' + e.message;
                 err.classList.remove('hidden');
                 camStatus('Unavailable', '#ef4444');
             }
         }
+
+        function cameraCard(c, i) {
+            var card = document.createElement('div');
+            card.className = 'cam-card';
+            var isLive = c.status === 'active' && c.playbackId;
+            var pill = isLive ? '<span class="cam-pill on">LIVE</span>'
+                : c.status === 'missing' ? '<span class="cam-pill warn">STREAM MISSING</span>'
+                : '<span class="cam-pill">OFFLINE</span>';
+            var chips = '';
+            if (c.model) chips += '<span class="cam-chip">' + esc(c.model) + '</span>';
+            if (c.ndiName) chips += '<span class="cam-chip ndi" title="NDI source name">NDI · ' + esc(c.ndiName) + '</span>';
+            if (c.ip) chips += '<span class="cam-chip">' + esc(c.ip) + '</span>';
+            var actions = '';
+            if (c.ip) actions += '<a class="cam-link" href="http://' + esc(c.ip) + '/" target="_blank" rel="noopener" title="Works on the venue network"><iconify-icon icon="solar:gamepad-linear"></iconify-icon>Controls</a>';
+            if (!c.external) {
+                actions += '<button type="button" class="cam-link" data-act="setup"><iconify-icon icon="solar:link-round-linear"></iconify-icon>Stream setup</button>';
+                actions += '<button type="button" class="cam-link" data-act="edit"><iconify-icon icon="solar:pen-linear"></iconify-icon>Edit</button>';
+                actions += '<button type="button" class="cam-link danger" data-act="remove"><iconify-icon icon="solar:trash-bin-minimalistic-linear"></iconify-icon>Remove</button>';
+            }
+            card.innerHTML =
+                '<div class="cam-stage"></div>' +
+                '<div class="cam-meta"><span class="cam-label">CAM ' + String(i + 1).padStart(2, '0') + ' // ' + esc(c.name) + '</span>' + pill + '</div>' +
+                (chips ? '<div class="cam-chips">' + chips + '</div>' : '') +
+                (actions ? '<div class="cam-row-actions">' + actions + '</div>' : '');
+            var stage = card.querySelector('.cam-stage');
+            if (isLive) {
+                var mp = document.createElement('mux-player');
+                mp.setAttribute('stream-type', 'live');
+                mp.setAttribute('playback-id', c.playbackId);
+                mp.setAttribute('muted', '');
+                mp.setAttribute('autoplay', 'muted');
+                mp.setAttribute('accent-color', '#39FF14');
+                mp.style.cssText = 'width:100%;height:100%;--media-object-fit:cover;';
+                stage.appendChild(mp);
+            } else {
+                stage.innerHTML = '<div class="cam-off"><iconify-icon icon="solar:videocamera-record-linear"></iconify-icon><span>' +
+                    (c.status === 'missing' ? 'This camera\'s stream was deleted in Mux' : 'Waiting for video') + '</span></div>';
+            }
+            card.querySelectorAll('[data-act]').forEach(function(b) {
+                b.addEventListener('click', function() {
+                    var act = b.dataset.act;
+                    if (act === 'setup') openStreamSetup(c);
+                    if (act === 'edit') openCamForm(c);
+                    if (act === 'remove') removeCamera(c, b);
+                });
+            });
+            return card;
+        }
+
+        function openCamDialog(title, html) {
+            document.getElementById('cam-dialog-title').textContent = title;
+            document.getElementById('cam-dialog-body').innerHTML = html;
+            document.getElementById('cam-dialog').classList.remove('hidden');
+        }
+        function closeCamDialog() { document.getElementById('cam-dialog').classList.add('hidden'); }
+        document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeCamDialog(); });
+
+        function openCamForm(c) {
+            openCamDialog(c ? 'Edit camera' : 'Add camera',
+                '<form id="cam-form" class="cam-form">' +
+                '<label>Name<input name="name" maxlength="40" required placeholder="Main floor" value="' + esc(c && c.name) + '"></label>' +
+                '<label>NDI source name<input name="ndiName" maxlength="80" placeholder="OBSBOT-TAIL2 (MAIN FLOOR)" value="' + esc(c && c.ndiName) + '"><small>As shown in the OBSBOT app or NDI Studio Monitor.</small></label>' +
+                '<label>IP address<input name="ip" maxlength="70" placeholder="192.168.1.50" value="' + esc(c && c.ip) + '"><small>Optional. Used to open the camera\'s controls on the venue network.</small></label>' +
+                '<p id="cam-form-error" class="cam-form-error"></p>' +
+                '<div class="cam-form-actions"><button type="button" class="cam-btn ghost" onclick="closeCamDialog()">Cancel</button>' +
+                '<button type="submit" class="cam-btn primary">' + (c ? 'Save' : 'Add camera') + '</button></div>' +
+                '</form>');
+            var form = document.getElementById('cam-form');
+            form.name.focus();
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                var btn = form.querySelector('[type=submit]');
+                btn.disabled = true; btn.textContent = c ? 'Saving…' : 'Adding…';
+                camApi({ action: c ? 'update' : 'add', id: c && c.id, name: form.name.value, ndiName: form.ndiName.value, ip: form.ip.value })
+                    .then(function(d) { _camKey = ''; return loadCameras().then(function() { if (c) closeCamDialog(); else openStreamSetup(d.camera); }); })
+                    .catch(function(err) { document.getElementById('cam-form-error').textContent = err.message; btn.disabled = false; btn.textContent = c ? 'Save' : 'Add camera'; });
+            });
+        }
+
+        function openStreamSetup(c) {
+            openCamDialog('Stream setup — ' + c.name, '<p class="cam-dialog-text">Loading…</p>');
+            camApi({ action: 'connection', id: c.id }).then(function(d) {
+                function row(label, value, secret) {
+                    return '<div class="cam-field"><span>' + label + '</span><div><code' + (secret ? ' class="secret"' : '') + '>' + esc(value) + '</code>' +
+                        '<button type="button" class="cam-icon-btn" data-copy="' + esc(value) + '" title="Copy"><iconify-icon icon="solar:copy-linear"></iconify-icon></button></div></div>';
+                }
+                document.getElementById('cam-dialog-body').innerHTML =
+                    '<p class="cam-dialog-text">Paste these into the camera\'s RTMP live-streaming settings, or into OBS (Settings → Stream → Custom) on the venue computer that receives this camera over NDI.</p>' +
+                    row('Server', d.rtmpsUrl) +
+                    row('Server (if RTMPS isn\'t supported)', d.rtmpUrl) +
+                    row('Stream key', d.streamKey, true) +
+                    (d.srtUrl ? row('SRT (alternative)', d.srtUrl, true) : '') +
+                    '<p class="cam-dialog-note"><iconify-icon icon="solar:shield-warning-linear"></iconify-icon> Keep the stream key private. Anyone with it can send video to this camera slot.</p>';
+                document.querySelectorAll('[data-copy]').forEach(function(b) {
+                    b.addEventListener('click', function() {
+                        navigator.clipboard.writeText(b.dataset.copy).then(function() {
+                            var icon = b.querySelector('iconify-icon'); icon.setAttribute('icon', 'solar:check-circle-linear');
+                            setTimeout(function() { icon.setAttribute('icon', 'solar:copy-linear'); }, 1500);
+                        });
+                    });
+                });
+            }).catch(function(e) {
+                document.getElementById('cam-dialog-body').innerHTML = '<p class="cam-form-error">' + esc(e.message) + '</p>';
+            });
+        }
+
+        function removeCamera(c, btn) {
+            if (!confirm('Remove "' + c.name + '"? Its stream key will stop working.')) return;
+            btn.disabled = true;
+            camApi({ action: 'remove', id: c.id }).then(function() { _camKey = ''; loadCameras(); })
+                .catch(function(e) { alert('Could not remove camera: ' + e.message); btn.disabled = false; });
+        }
+
         loadCameras();
         setInterval(loadCameras, 15000);
     </script>
