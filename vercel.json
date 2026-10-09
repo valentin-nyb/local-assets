@@ -4,17 +4,38 @@
     {
       "source": "/(dashboard|assets|camera|login)(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate, proxy-revalidate" },
-        { "key": "Pragma", "value": "no-cache" }
+        {
+          "key": "Cache-Control",
+          "value": "no-store, no-cache, must-revalidate, proxy-revalidate"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        }
       ]
     },
     {
       "source": "/api/(.*)",
       "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "https://local-assets.com" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, DELETE, OPTIONS" },
-        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization, X-User-Email" }
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "https://local-assets.com"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization, X-User-Email"
+        }
       ]
     }
-  ]
+  ],
+  "functions": {
+    "api/peak-moment.js": {
+      "maxDuration": 300,
+      "includeFiles": "node_modules/ffmpeg-static/ffmpeg"
+    }
+  }
 }

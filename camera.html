@@ -87,6 +87,35 @@
         .cam-dialog { position:fixed; inset:0; z-index:100; background:rgba(0,0,0,.75); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; padding:16px; }
         .cam-dialog.hidden { display:none; }
         .cam-dialog-panel { width:460px; max-width:100%; max-height:calc(100vh - 32px); overflow:auto; background:#0c0c0d; border:1px solid #27272a; border-radius:16px; padding:20px; box-shadow:0 24px 80px rgba(0,0,0,.55); }
+        .cam-dialog-panel.wide { width:520px; }
+        .ord-hero { height:150px; border-radius:12px; margin:-4px 0 16px; display:flex; align-items:center; justify-content:center; background:radial-gradient(circle at 50% 40%, rgba(57,255,20,.16), transparent 60%), #050505; border:1px solid #1f1f22; }
+        .ord-hero iconify-icon { font-size:64px; color:#39FF14; }
+        .ord-title { font-size:24px; font-weight:700; letter-spacing:-.01em; margin-top:4px; color:#fafafa; }
+        .ord-sub { font-size:13px; line-height:1.55; color:#a1a1aa; margin-top:4px; }
+        .ord-price { display:flex; align-items:baseline; gap:8px; margin-top:16px; }
+        .ord-amount { font-size:28px; font-weight:700; color:#fafafa; }
+        .ord-per { font-size:12px; color:#71717a; }
+        .ord-klarna { font-size:12px; line-height:1.5; color:#a1a1aa; margin-top:6px; }
+        .ord-klarna-badge { display:inline-block; background:#FFA8CD; color:#0b051d; font-weight:800; font-size:11px; padding:1px 6px; border-radius:4px; margin-right:4px; }
+        .ord-feats { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:18px; }
+        @media (max-width:480px) { .ord-feats { grid-template-columns:1fr; } }
+        .ord-feat { display:flex; gap:10px; align-items:flex-start; }
+        .ord-feat iconify-icon { font-size:18px; color:#39FF14; flex-shrink:0; margin-top:1px; }
+        .ord-feat b { display:block; font-size:12px; font-weight:600; color:#e4e4e7; }
+        .ord-feat span { display:block; font-size:11px; line-height:1.45; color:#71717a; }
+        .ord-specs { margin-top:16px; border-top:1px solid #1f1f22; padding-top:12px; }
+        .ord-specs summary { cursor:pointer; font-size:12px; color:#a1a1aa; }
+        .ord-specs dl { display:grid; grid-template-columns:auto 1fr; gap:6px 14px; margin-top:10px; font-size:12px; line-height:1.45; }
+        .ord-specs dt { color:#71717a; }
+        .ord-specs dd { color:#d4d4d8; }
+        .ord-buy { display:flex; gap:10px; margin-top:18px; }
+        .ord-qty { display:flex; align-items:center; border:1px solid #27272a; border-radius:10px; height:44px; flex-shrink:0; }
+        .ord-qty button { width:38px; height:100%; background:none; border:none; color:#e4e4e7; font-size:18px; cursor:pointer; }
+        .ord-qty span { min-width:22px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:14px; color:#fafafa; }
+        .ord-go { flex:1; height:44px; justify-content:center; font-size:14px; }
+        .ord-fine { font-size:11px; line-height:1.5; color:#71717a; margin-top:10px; }
+        .cam-form-error a { color:#e4e4e7; text-decoration:underline; }
+        html:not(.dark) .ord-title, html:not(.dark) .ord-amount { color:#18181b; }
         .cam-dialog-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
         .cam-dialog-title { font-size:16px; font-weight:600; color:#fafafa; }
         .cam-dialog-text { font-size:13px; line-height:1.55; color:#a1a1aa; margin-bottom:14px; }
@@ -149,9 +178,9 @@
                         <h2 class="cam-h">Cameras</h2>
                     </div>
                     <div class="cam-actions">
-                        <a class="cam-btn ghost" href="https://www.obsbot.com/store/products/obsbot-tail-2" target="_blank" rel="noopener" title="Opens the official OBSBOT store">
+                        <button type="button" class="cam-btn ghost" onclick="openOrderCameras()">
                             <iconify-icon icon="solar:cart-large-2-linear"></iconify-icon><span>Order cameras</span>
-                        </a>
+                        </button>
                         <button type="button" class="cam-btn primary" onclick="openCamForm()">
                             <iconify-icon icon="solar:add-circle-linear"></iconify-icon><span>Add camera</span>
                         </button>
@@ -165,7 +194,7 @@
                     <p class="cam-empty-text">Add each OBSBOT Tail 2 at this venue. You'll get the stream details to send its video here.</p>
                     <div class="cam-actions" style="margin-top:8px">
                         <button type="button" class="cam-btn primary" onclick="openCamForm()"><iconify-icon icon="solar:add-circle-linear"></iconify-icon><span>Add camera</span></button>
-                        <a class="cam-btn ghost" href="https://www.obsbot.com/store/products/obsbot-tail-2" target="_blank" rel="noopener"><iconify-icon icon="solar:cart-large-2-linear"></iconify-icon><span>Order cameras</span></a>
+                        <button type="button" class="cam-btn ghost" onclick="openOrderCameras()"><iconify-icon icon="solar:cart-large-2-linear"></iconify-icon><span>Order cameras</span></button>
                     </div>
                 </div>
 
@@ -325,7 +354,7 @@
             document.getElementById('cam-dialog-body').innerHTML = html;
             document.getElementById('cam-dialog').classList.remove('hidden');
         }
-        function closeCamDialog() { document.getElementById('cam-dialog').classList.add('hidden'); }
+        function closeCamDialog() { document.getElementById('cam-dialog').classList.add('hidden'); document.querySelector('#cam-dialog .cam-dialog-panel').classList.remove('wide'); }
         document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeCamDialog(); });
 
         function openCamForm(c) {
@@ -383,6 +412,77 @@
             camApi({ action: 'remove', id: c.id }).then(function() { _camKey = ''; loadCameras(); })
                 .catch(function(e) { alert('Could not remove camera: ' + e.message); btn.disabled = false; });
         }
+
+        // ── Order cameras (sold by local / assets, paid through Stripe Checkout) ──
+        var CAMERA_PRICE = 1299;
+        function gbp(n) { return '£' + n.toLocaleString('en-GB', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }); }
+        function openOrderCameras() {
+            var feats = [
+                ['solar:videocamera-record-linear', '4K at 60fps', '1/1.5" sensor, also 1080p at 120fps'],
+                ['solar:magnifer-zoom-in-linear', '5× optical zoom', 'up to 12× hybrid zoom'],
+                ['solar:user-check-rounded-linear', 'AI Tracking 2.0', 'follows the DJ, auto-zoom framing, group tracking'],
+                ['solar:wi-fi-router-linear', 'NDI HX3', 'video over your venue network'],
+                ['solar:plug-circle-linear', 'One-cable setup', 'PoE+ Ethernet, plus 3G-SDI, HDMI and USB'],
+                ['solar:smartphone-rotate-angle-linear', 'PTZR', 'pan, tilt, zoom and 90° rotation for vertical video'],
+            ].map(function(f) {
+                return '<div class="ord-feat"><iconify-icon icon="' + f[0] + '"></iconify-icon><div><b>' + f[1] + '</b><span>' + f[2] + '</span></div></div>';
+            }).join('');
+            openCamDialog('', '');
+            var panel = document.querySelector('#cam-dialog .cam-dialog-panel');
+            panel.classList.add('wide');
+            document.getElementById('cam-dialog-body').innerHTML =
+                '<div class="ord-hero"><iconify-icon icon="solar:videocamera-record-bold-duotone"></iconify-icon></div>' +
+                '<p class="cam-eyebrow">Sold and supported by local / assets</p>' +
+                '<h3 class="ord-title">OBSBOT Tail 2</h3>' +
+                '<p class="ord-sub">AI-powered PTZR 4K live production camera with NDI HX3. Connects straight to your local / assets dashboard.</p>' +
+                '<div class="ord-price"><span class="ord-amount">' + gbp(CAMERA_PRICE) + '</span><span class="ord-per">per camera</span></div>' +
+                '<p class="ord-klarna"><span class="ord-klarna-badge">Klarna.</span> Or pay in 3 interest-free payments of ' + gbp(Math.round(CAMERA_PRICE / 3)) + ', or spread the cost monthly.</p>' +
+                '<div class="ord-feats">' + feats + '</div>' +
+                '<details class="ord-specs"><summary>Full specifications</summary><dl>' +
+                    '<dt>Video</dt><dd>4K 60fps, 1080p 120fps, HDR (4K/1080p at 30fps)</dd>' +
+                    '<dt>Sensor</dt><dd>1/1.5" CMOS, dual native ISO, all-pixel PDAF autofocus</dd>' +
+                    '<dt>Zoom</dt><dd>5× optical, up to 12× hybrid</dd>' +
+                    '<dt>Outputs</dt><dd>NDI HX3, 3G-SDI, HDMI 2.0, USB 3.0, Ethernet with PoE+</dd>' +
+                    '<dt>Control</dt><dd>RS-232, FreeD, OBSBOT Start app, web control page</dd>' +
+                    '<dt>Audio</dt><dd>3.5mm mic-in and line-in</dd>' +
+                    '<dt>Other</dt><dd>microSD recording, Wi-Fi 6, tally light, 5000mAh battery (up to 5 hours)</dd>' +
+                '</dl></details>' +
+                '<div class="ord-buy">' +
+                    '<div class="ord-qty"><button type="button" aria-label="Fewer" data-q="-1">−</button><span id="ord-qty">1</span><button type="button" aria-label="More" data-q="1">+</button></div>' +
+                    '<button type="button" id="ord-go" class="cam-btn primary ord-go">Checkout · <span id="ord-total">' + gbp(CAMERA_PRICE) + '</span></button>' +
+                '</div>' +
+                '<p id="ord-error" class="cam-form-error"></p>' +
+                '<p class="ord-fine">Pay by card, Apple Pay, Google Pay or Klarna. Pay-later and monthly options depend on eligibility and are offered by the provider at checkout. UK delivery.</p>';
+            var qty = 1;
+            panel.querySelectorAll('[data-q]').forEach(function(b) {
+                b.addEventListener('click', function() {
+                    qty = Math.min(10, Math.max(1, qty + Number(b.dataset.q)));
+                    document.getElementById('ord-qty').textContent = qty;
+                    document.getElementById('ord-total').textContent = gbp(qty * CAMERA_PRICE);
+                });
+            });
+            var go = document.getElementById('ord-go');
+            go.addEventListener('click', function() {
+                go.disabled = true;
+                var label = go.innerHTML; go.textContent = 'Opening checkout…';
+                laFetch('/api/order-camera', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quantity: qty }) })
+                    .then(function(r) { return r.json().then(function(d) { if (!r.ok) throw new Error(d.error || r.status); return d; }); })
+                    .then(function(d) { window.location.href = d.url; })
+                    .catch(function(e) {
+                        go.disabled = false; go.innerHTML = label;
+                        document.getElementById('ord-error').innerHTML = e.message === 'payments_not_configured'
+                            ? 'Online checkout isn\'t switched on yet. Email <a href="mailto:info@local-assets.com?subject=' + encodeURIComponent('Camera order: ' + qty + ' × OBSBOT Tail 2') + '">info@local-assets.com</a> and we\'ll send you a payment link.'
+                            : 'Could not open checkout: ' + esc(e.message);
+                    });
+            });
+        }
+        // Back from Stripe Checkout
+        (function() {
+            var o = new URLSearchParams(location.search).get('order');
+            if (!o) return;
+            history.replaceState({}, '', '/camera');
+            if (o === 'success') openCamDialog('Order received', '<p class="cam-dialog-text">Thank you, your cameras are ordered. We\'ll email you the delivery details. Once they arrive, add each one here with <b>Add camera</b>.</p>');
+        })();
 
         loadCameras();
         setInterval(loadCameras, 15000);
