@@ -135,59 +135,36 @@
                 </div>
             </a>
 
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-                <div class="bg-card border border-border p-4 md:p-5 rounded-xl">
-                    <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3 block">Total Assets Captured</span>
-                    <div class="flex flex-col items-start gap-1">
-                        <span id="live-asset-total" class="text-2xl font-bold leading-tight">—</span>
-                        <span id="growth-pct" class="text-[10px] text-primary font-mono bg-primary/10 px-2 py-0.5 rounded border border-primary/20 leading-none">—</span>
-                    </div>
+            <div class="kpi-grid">
+                <div class="kpi">
+                    <div class="kpi-head"><span class="kpi-label">Total assets</span><iconify-icon icon="solar:folder-with-files-linear" class="kpi-icon"></iconify-icon></div>
+                    <div id="live-asset-total" class="kpi-value">—</div>
+                    <div class="kpi-sub"><span id="growth-pct"></span></div>
                 </div>
-                <div class="bg-card border border-border p-4 md:p-5 rounded-xl">
-                    <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3 block">Cloud Storage</span>
-                    <div class="flex items-end justify-between">
-                        <span id="live-storage-usage" class="text-2xl font-bold text-primary">—</span>
-                        <span id="storage-files" class="text-[10px] text-muted-foreground font-mono uppercase"></span>
-                    </div>
+                <div class="kpi">
+                    <div class="kpi-head"><span class="kpi-label">Cloud storage</span><iconify-icon icon="solar:cloud-storage-linear" class="kpi-icon"></iconify-icon></div>
+                    <div id="live-storage-usage" class="kpi-value">—</div>
+                    <div class="kpi-sub"><span id="storage-files"></span></div>
                 </div>
-                <!-- Revenue Generated Card -->
-                <div class="bg-card border border-border p-4 md:p-5 rounded-xl flex flex-col">
-                    <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3 block">Revenue Generated</span>
-                    <!-- Two-column body: left = total + action, right = platform details -->
-                    <div class="flex flex-row items-center gap-4 flex-1">
-                        <!-- Left: big total + button -->
-                        <div class="flex flex-col flex-1 min-w-0 justify-center gap-3">
-                            <span id="revenue-total" class="text-[35px] font-black leading-none block">—</span>
-                            <!-- Connected: Manage button -->
-                            <div id="revenue-indicators" class="hidden flex-col gap-0">
-                                <button id="revenue-manage-prompt" onclick="openRevenueSettings()" class="rev-btn" style="align-self:flex-start;padding:4px 14px;border-color:#FF5500;color:#FF5500;background:transparent;" onmouseover="this.style.background='#FF5500';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='#FF5500'">Manage</button>
-                            </div>
-                            <!-- Not connected: Connect button -->
-                            <div id="revenue-connect-prompt">
-                                <button onclick="openRevenueSettings()" class="rev-btn" style="padding:4px 14px 4px 10px;gap:6px;border-color:#FF5500;color:#FF5500;background:transparent;" onmouseover="this.style.background='#FF5500';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='#FF5500'">
-                                    <iconify-icon icon="solar:link-bold" style="font-size:11px;flex-shrink:0"></iconify-icon>
-                                    <span>Connect Platforms</span>
-                                </button>
-                            </div>
+                <div class="kpi">
+                    <div class="kpi-head">
+                        <span class="kpi-label">Revenue</span>
+                        <button id="revenue-indicators" type="button" onclick="openRevenueSettings()" class="kpi-action hidden">Manage</button>
+                        <button id="revenue-connect-prompt" type="button" onclick="openRevenueSettings()" class="kpi-action">Connect</button>
+                    </div>
+                    <div id="revenue-total" class="kpi-value">—</div>
+                    <div class="kpi-sub kpi-sub-stack">
+                        <div id="revenue-platform-panel" class="hidden kpi-platforms">
+                            <span id="yt-indicator" class="hidden kpi-platform"><iconify-icon icon="mdi:youtube" style="color:#FF0000"></iconify-icon><span id="yt-revenue-label"></span></span>
+                            <span id="sc-indicator" class="hidden kpi-platform"><iconify-icon icon="mdi:soundcloud" style="color:#FF5500"></iconify-icon><span id="sc-revenue-label"></span></span>
                         </div>
-                        <!-- Right: platform indicators stacked (YouTube above SoundCloud) -->
-                        <div id="revenue-platform-panel" class="hidden flex-col gap-3 items-end shrink-0">
-                            <span id="yt-indicator" class="hidden items-center gap-4 text-[11px] font-mono text-zinc-400 uppercase tracking-wider">
-                                <iconify-icon icon="mdi:youtube" style="color:#FF0000;font-size:12px;flex-shrink:0"></iconify-icon>
-                                <span id="yt-revenue-label">£0.00</span>
-                            </span>
-                            <span id="sc-indicator" class="hidden items-center gap-4 text-[11px] font-mono text-zinc-400 uppercase tracking-wider">
-                                <iconify-icon icon="mdi:soundcloud" style="color:#FF5500;font-size:13px;flex-shrink:0"></iconify-icon>
-                                <span id="sc-revenue-label">0 plays</span>
-                            </span>
-                        </div>
+                        <span id="revenue-empty" class="kpi-muted">Connect YouTube or SoundCloud</span>
                     </div>
                 </div>
-                <div id="next-event-card" class="bg-card border border-border p-4 md:p-5 rounded-xl relative overflow-hidden">
-                    <div class="absolute right-0 top-0 bottom-0 w-1 bg-red-500 animate-pulse"></div>
-                    <span class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest mb-3 block">Next Event</span>
-                    <span id="next-event-title" class="block text-sm font-bold text-white uppercase tracking-tight">Loading...</span>
-                    <span id="next-event-time" class="text-[10px] text-muted-foreground font-mono uppercase"></span>
+                <div id="next-event-card" class="kpi">
+                    <div class="kpi-head"><span class="kpi-label">Next event</span><iconify-icon icon="solar:calendar-linear" class="kpi-icon"></iconify-icon></div>
+                    <div id="next-event-title" class="kpi-value kpi-value-text">—</div>
+                    <div class="kpi-sub"><span id="next-event-time"></span></div>
                 </div>
             </div>
 
@@ -471,7 +448,9 @@
             const recentCount = muxAssets.filter(a => a.created_at > thirtyDaysAgo).length;
             const olderCount = muxAssets.length - recentCount;
             const pctEl = document.getElementById('growth-pct');
-            if (pctEl) { pctEl.textContent = '+' + recentCount + ' in 30 days'; pctEl.style.display = recentCount > 0 ? '' : 'none'; }
+            if (pctEl) pctEl.innerHTML = recentCount > 0
+                ? '<span class="kpi-up">+' + recentCount + '</span> in the last 30 days'
+                : 'None in the last 30 days';
 
             // Calculate real cloud storage from static rendition file sizes
             let totalBytes = 0;
@@ -486,7 +465,7 @@
             if (storageEl) storageEl.textContent = (totalBytes / 1e9).toFixed(2) + ' GB';
             const fileCount = muxAssets.reduce((n, a) => n + (a.static_renditions?.files || []).filter(f => Number(f.filesize) > 0).length, 0);
             const filesEl = document.getElementById('storage-files');
-            if (filesEl) filesEl.textContent = fileCount + ' file' + (fileCount !== 1 ? 's' : '');
+            if (filesEl) filesEl.textContent = fileCount + ' downloadable file' + (fileCount !== 1 ? 's' : '');
             renderVideoHealth(muxAssets);
             setLatestSession(muxAssets);
 
@@ -1622,11 +1601,13 @@
             if (indicators)    { if (anyConnected) { indicators.classList.remove('hidden'); indicators.classList.add('flex'); } else { indicators.classList.add('hidden'); indicators.classList.remove('flex'); } }
             if (platformPanel) { if (anyConnected) { platformPanel.classList.remove('hidden'); platformPanel.classList.add('flex'); } else { platformPanel.classList.add('hidden'); platformPanel.classList.remove('flex'); } }
             if (connectPrompt) connectPrompt.classList.toggle('hidden', !!anyConnected);
+            var revEmpty = document.getElementById('revenue-empty');
+            if (revEmpty) revEmpty.classList.toggle('hidden', !!anyConnected);
 
             // YouTube indicator
             if (ytIndicator) { ytIndicator.classList.toggle('hidden', !ytConnected); if (ytConnected) ytIndicator.classList.add('flex'); }
             if (ytLabel && ytConnected)
-                ytLabel.textContent = '£' + ytRevenue.toFixed(2) + ' · ' + Number(data.yt?.views || 0).toLocaleString() + ' views';
+                ytLabel.textContent = '£' + ytRevenue.toFixed(2) + ' · ' + compactNum(data.yt?.views || 0) + ' views';
             // Connected platforms panel: which account each platform is linked to (youtube.readonly etc.)
             var ytCh = data.yt && data.yt.channel;
             renderPlatformCard('yt', ytConnected, ytCh && { name: ytCh.title, avatar: ytCh.avatar, stats: [compactNum(data.yt.views) + ' views', compactNum(ytCh.videos) + ' videos'] });
@@ -1636,7 +1617,7 @@
             // SoundCloud indicator
             if (scIndicator) { scIndicator.classList.toggle('hidden', !scConnected); if (scConnected) scIndicator.classList.add('flex'); }
             if (scLabel && scConnected)
-                scLabel.textContent = Number(data.sc?.plays || 0).toLocaleString() + ' plays';
+                scLabel.textContent = '£' + scRevenue.toFixed(2) + ' · ' + compactNum(data.sc?.plays || 0) + ' plays';
 
 
             // Show/hide SoundCloud distribute buttons in distribution history
@@ -2156,8 +2137,8 @@
                 const res = await fetch('/api/next-event');
                 const data = await res.json();
                 if (data.error || !data.events?.length) {
-                    titleEl.textContent = 'NO UPCOMING EVENTS';
-                    timeEl.textContent = '';
+                    titleEl.textContent = 'Nothing scheduled';
+                    timeEl.textContent = 'Events from your calendar appear here';
                     return;
                 }
                 const ev = data.events[0];
@@ -2179,9 +2160,12 @@
                     const date = start.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
                     timeEl.textContent = date + ', ' + time;
                 }
+                const days = Math.round(diffMs / 86400000);
+                if (!isToday && !isTomorrow && days > 1) timeEl.textContent += ' · in ' + days + ' days';
+                titleEl.title = titleEl.textContent;
             } catch (e) {
-                titleEl.textContent = 'CALENDAR OFFLINE';
-                timeEl.textContent = '';
+                titleEl.textContent = 'Calendar unavailable';
+                timeEl.textContent = 'Try again in a moment';
             }
         }
 
@@ -2418,6 +2402,26 @@
             #hero-stats > div { text-align:right !important; }
             #hero-stats .text-lg { font-size:15px; }
         }
+        /* KPI cards: label row, one value, one detail line */
+        .kpi-grid { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:16px; }
+        @media (max-width: 1100px) { .kpi-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+        @media (max-width: 560px)  { .kpi-grid { grid-template-columns:1fr; gap:12px; } }
+        .kpi { background:var(--la-surface); border:1px solid var(--la-line); border-radius:14px; padding:18px 20px; display:flex; flex-direction:column; min-height:132px; min-width:0; }
+        .kpi-head { display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:20px; }
+        .kpi-label { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--la-dim); }
+        .kpi-icon { font-size:16px; color:var(--la-dim); }
+        .kpi-action { font-size:11px; font-weight:500; color:var(--la-sub); background:none; border:1px solid var(--la-line); border-radius:999px; padding:2px 10px; cursor:pointer; transition:color .15s, border-color .15s; }
+        @media (hover:hover) { .kpi-action:hover { color:var(--la-accent); border-color:var(--la-accent); } }
+        .kpi-action.hidden, .kpi .hidden { display:none !important; }
+        .kpi-value { margin-top:14px; font-size:28px; font-weight:600; letter-spacing:-.02em; line-height:1.15; color:var(--la-text); font-variant-numeric:tabular-nums; }
+        .kpi-value-text { font-size:18px; letter-spacing:-.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding:5px 0 4px; }
+        .kpi-sub { margin-top:auto; padding-top:10px; font-size:12px; line-height:1.4; color:var(--la-dim); min-width:0; }
+        .kpi-sub > span { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .kpi-up { display:inline !important; color:var(--la-ok); font-weight:600; }
+        .kpi-platforms { display:flex; flex-wrap:wrap; gap:4px 14px; }
+        .kpi-platform { display:inline-flex; align-items:center; gap:6px; white-space:nowrap; font-variant-numeric:tabular-nums; }
+        .kpi-platform iconify-icon { font-size:14px; }
+        .kpi-muted { color:var(--la-dim); }
         .sh-list { display:flex; flex-direction:column; gap:18px; }
         .sh-row { display:flex; flex-direction:column; gap:6px; min-width:0; }
         .sh-label { font-family:'JetBrains Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:.14em; color:var(--la-dim); }
