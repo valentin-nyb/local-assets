@@ -19,7 +19,7 @@ export default async function handler(req, res) {
       headers: { Authorization: `Basic ${auth}`, 'Content-Type': 'application/json' }
     });
     const data = await response.json();
-    if (!response.ok) throw new Error(data.error?.messages?.[0] || 'Mux error');
+    if (!response.ok) throw new Error(data.error?.messages?.[0] || 'Cloud Storage error');
     return res.status(200).json(data.data);
   } catch (e) {
     return res.status(500).json({ error: e.message });

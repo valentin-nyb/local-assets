@@ -37,12 +37,12 @@ export default async function handler(req, res) {
       headers: { Authorization: session.muxAuth }, signal: AbortSignal.timeout(10000),
     });
     if (check.status === 404) return res.status(404).json({ error: 'Not found in your account' });
-    if (!check.ok) return res.status(502).json({ error: `Mux ${check.status}` });
+    if (!check.ok) return res.status(502).json({ error: `Cloud Storage error (${check.status})` });
 
     const r = await fetch(`https://api.mux.com/video/v1/assets/${id}`, {
       method: 'DELETE', headers: { Authorization: session.muxAuth }, signal: AbortSignal.timeout(10000),
     });
-    if (!r.ok && r.status !== 404) return res.status(502).json({ error: `Mux ${r.status}` });
+    if (!r.ok && r.status !== 404) return res.status(502).json({ error: `Cloud Storage error (${r.status})` });
     console.log('[delete-asset]', session.email, session.venueSlug, id);
     return res.status(200).json({ ok: true });
   } catch (e) {

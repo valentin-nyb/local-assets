@@ -214,7 +214,7 @@ export default async function handler(req, res) {
       console.log(`[youtube-upload] source: ${muxVideoUrl}`);
       const headRes = await fetch(muxVideoUrl, { method: 'HEAD', signal: AbortSignal.timeout(15000) });
       const total = Number(headRes.headers.get('content-length')) || 0;
-      if (!headRes.ok || !total) return res.status(502).json({ error: `Could not read the video from Mux (${headRes.status})` });
+      if (!headRes.ok || !total) return res.status(502).json({ error: `Could not read the video from Cloud Storage (${headRes.status})` });
       console.log(`[youtube-upload] content-length: ${(total / 1e6).toFixed(0)} MB`);
 
       let initResult = await initiateResumableUpload(stored.access_token, title, total);

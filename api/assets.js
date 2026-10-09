@@ -23,7 +23,7 @@ export default async function handler(req, res) {
       if (!r.ok) {
         const txt = await r.text();
         console.error('[api/assets] Mux error', r.status, txt);
-        return res.status(502).json({ error: 'Mux API error', status: r.status });
+        return res.status(502).json({ error: 'Cloud Storage error', status: r.status });
       }
       const { data } = await r.json();
       if (!data || data.length === 0) break;

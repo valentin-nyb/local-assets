@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     hasMuxAuth: !!session?.muxAuth,
   }));
   if (!session?.muxAuth) {
-    return res.status(401).json({ error: 'Not authenticated — no Mux credentials for this account' });
+    return res.status(401).json({ error: 'Not authenticated — no Cloud Storage access for this account' });
   }
 
   let body = req.body;

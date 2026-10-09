@@ -486,7 +486,7 @@
                 '<div class="del-body">' +
                     '<p id="del-title" class="del-title">Delete ' + kind + '?</p>' +
                     '<span class="del-name">' + escHtml(label) + '</span>' +
-                    '<p class="del-warn">This permanently removes the file' + (isBlob ? '' : ' from Mux') + ' and any downloads or links to it. This can\'t be undone.</p>' +
+                    '<p class="del-warn">This permanently removes the file' + (isBlob ? '' : ' from Cloud Storage') + ' and any downloads or links to it. This can\'t be undone.</p>' +
                     '<p class="se-error"></p>' +
                 '</div>' +
                 '<div class="del-actions"><button type="button" class="se-btn ghost" data-cancel>Cancel</button>' +
@@ -1297,7 +1297,7 @@
                 if (!entry[t[0]]) return;
                 var r = readyRendition(entry[t[0]]);
                 if (r) files.push({ url: r.url, path: t[2] + '.' + r.ext, size: r.size, label: t[1] });
-                else skipped.push(t[1] + ' (MP4 still preparing in Mux)');
+                else skipped.push(t[1] + ' (MP4 still preparing in Cloud Storage)');
             });
             var clips = entry.SOCIAL || [];
             var clipsPending = 0;
@@ -1546,7 +1546,7 @@
             if (preparing) parts.push(preparing + ' processing');
             if (failed) parts.push(failed + ' failed');
             setHealthRow('video', failed ? 'bad' : preparing ? 'busy' : 'ok', parts.join(' · '),
-                failed ? 'Mux could not process: ' + failedNames.join(', ') + '. Upload it again.' : '');
+                failed ? 'Cloud Storage could not process: ' + failedNames.join(', ') + '. Upload it again.' : '');
             renderSystemStatus();
         }
 
@@ -2291,7 +2291,7 @@
                     if (job.failed > 0) procLabel += '  ·  ' + job.failed + ' FAILED';
                     var statusLabel = {
                         queued:     'QUEUED',
-                        waiting:    'WAITING FOR MUX',
+                        waiting:    'WAITING FOR CLOUD STORAGE',
                         processing: procLabel,
                         done:       job.uploaded != null ? '✓  ' + job.uploaded + ' CLIPS UPLOADED' : '✓  COMPLETE',
                         error:      '✕  ' + (job.error ? job.error.slice(0, 60) : 'ERROR')

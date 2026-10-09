@@ -4,7 +4,7 @@ export async function listLiveStreams(muxAuth) {
     headers: { Authorization: muxAuth },
     signal: AbortSignal.timeout(10000),
   });
-  if (!res.ok) throw new Error('Mux live-streams ' + res.status);
+  if (!res.ok) throw new Error('Cloud Storage live streams ' + res.status);
   const { data = [] } = await res.json();
 
   const streams = data

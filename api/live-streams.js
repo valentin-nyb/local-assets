@@ -13,6 +13,6 @@ export default async function handler(req, res) {
     return res.status(200).json({ streams: await listLiveStreams(session.muxAuth) });
   } catch (e) {
     console.error('[live-streams]', e.message);
-    return res.status(502).json({ error: 'Could not load cameras from Mux' });
+    return res.status(502).json({ error: 'Could not load cameras from Cloud Storage' });
   }
 }

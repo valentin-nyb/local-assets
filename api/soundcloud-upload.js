@@ -71,7 +71,7 @@ export default async function handler(req, res) {
 
     const audioRes = await fetch(audioUrl, { signal: AbortSignal.timeout(120000) });
     if (!audioRes.ok) {
-      return res.status(502).json({ error: `Could not fetch audio from Mux (${audioRes.status}) — static rendition may still be processing` });
+      return res.status(502).json({ error: `Could not fetch the audio from Cloud Storage (${audioRes.status}) — it may still be processing` });
     }
 
     const audioBuffer = Buffer.from(await audioRes.arrayBuffer());

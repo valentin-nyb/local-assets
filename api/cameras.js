@@ -34,7 +34,7 @@ async function mux(muxAuth, path, init = {}) {
     signal: AbortSignal.timeout(10000),
   });
   const body = r.status === 204 ? {} : await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(body?.error?.messages?.[0] || `Mux ${r.status}`);
+  if (!r.ok) throw new Error(body?.error?.messages?.[0] || `Cloud Storage error (${r.status})`);
   return body.data;
 }
 
