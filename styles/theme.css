@@ -394,9 +394,10 @@ html:not(.dark) .asset-tray {
         border: 1px solid #27272a; background: #0a0a0a; color: #e4e4e7; font-size: 18px;
     }
     .la-menu-btn:active { transform: scale(.95); }
-    /* The bottom status bar is decorative; give phones the space back. */
-    .la-statusbar { display: none !important; }
-    main { padding-bottom: env(safe-area-inset-bottom); }
+    /* Status bar stays visible on phones, compact and clear of the home indicator */
+    .la-statusbar { height: auto !important; min-height: 40px; padding-top: 10px !important; padding-bottom: calc(env(safe-area-inset-bottom) + 10px) !important; }
+    .la-statusbar.la-statusbar-floating { display: none !important; }
+    .la-statusbar span { font-size: 9px !important; }
 }
 html:not(.dark) .la-menu-btn { background: #fff; border-color: #e4e4e7; color: #09090b; }
 @media (max-width: 767px) {
@@ -454,3 +455,9 @@ html:not(.dark) {
 /* Player header: neon green text and icons switch to the light-mode accent */
 html:not(.dark) #site-header [style*="#39FF14"] { color: var(--la-accent) !important; }
 html:not(.dark) #site-header [class*="border-[#39FF14]"] { border-color: var(--la-accent) !important; }
+
+/* Phones: size the app to the visible screen (100vh includes the area behind the browser bars) */
+@supports (height: 100dvh) {
+    body.h-screen { height: 100dvh; }
+    #sidebar { max-height: 100dvh; }
+}
