@@ -223,8 +223,9 @@
         .bk-switch[aria-checked="true"] { background:var(--la-accent); }
         .bk-switch[aria-checked="true"]::after { transform:translateX(16px); }
         .bk-wm-status { font-size:12px; color:var(--la-dim); margin-top:16px; min-height:16px; }
-        .bk-wm-preview { position:relative; width:150px; aspect-ratio:9/16; border-radius:12px; overflow:hidden; background:linear-gradient(180deg,#3f3f46,#18181b); align-self:start; }
-        .bk-wm-preview img.bg { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+        .bk-wm-preview { position:relative; width:150px; aspect-ratio:9/16; border-radius:12px; overflow:hidden; align-self:start;
+            background-color:#141416; background-image:linear-gradient(45deg, rgba(255,255,255,.05) 25%, transparent 25%), linear-gradient(-45deg, rgba(255,255,255,.05) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(255,255,255,.05) 75%), linear-gradient(-45deg, transparent 75%, rgba(255,255,255,.05) 75%);
+            background-size:16px 16px; background-position:0 0, 0 8px, 8px -8px, -8px 0; }
         .bk-wm-preview img.logo { position:absolute; object-fit:contain; transition:all .15s; }
         .bk-wm-cap { font-size:11px; color:var(--la-dim); text-align:center; margin-top:8px; }
         @media (max-width: 640px) {
@@ -411,7 +412,7 @@
         }
 
         // ── Watermark on vertical clips ──
-        var _wm = null, _wmBg = '';
+        var _wm = null;
         var WM_POS = [['br', 'Bottom right'], ['bl', 'Bottom left'], ['tr', 'Top right'], ['tl', 'Top left']];
         var WM_SIZE = [['s', 'Small'], ['m', 'Medium'], ['l', 'Large']];
         var WM_PX = { s: 160, m: 220, l: 300 };
@@ -450,7 +451,7 @@
                     '</div>' +
                     '<p class="bk-wm-status" id="bk-wm-status">' + (noLogo ? 'Upload a logo to your brand kit to use a watermark.' : '') + '</p>' +
                 '</div>' +
-                '<div class="bk-wm-preview-wrap"><div class="bk-wm-preview">' + (_wmBg ? '<img class="bg" alt="" src="' + esc(_wmBg) + '">' : '') +
+                '<div class="bk-wm-preview-wrap"><div class="bk-wm-preview">' +
                     '<img class="logo" alt="" id="bk-wm-logo"></div><p class="bk-wm-cap">Preview</p></div>';
             positionPreview();
             box.querySelectorAll('[data-wm]').forEach(function(el) {
@@ -502,10 +503,6 @@
                 _ownerPhotos = res[0].ownerPhotos || {};
                 _wm = res[0].watermark || { enabled: true, logo: 'auto', position: 'br', size: 'm', opacity: 0.9 };
                 var assets = Array.isArray(res[1]) ? res[1] : (res[1].data || []);
-                // Latest session still, as the background of the watermark preview
-                var latest = assets.filter(function(a) { return a.status === 'ready' && (a.playback_ids || []).length && Number(a.duration) > 120; })
-                    .sort(function(a, b) { return Number(b.created_at) - Number(a.created_at); })[0];
-                if (latest) _wmBg = 'https://image.mux.com/' + latest.playback_ids[0].id + '/thumbnail.jpg?width=300&height=534&fit_mode=smartcrop&time=' + Math.round(Number(latest.duration) * 0.45);
                 var names = {};
                 assets.forEach(function(a) { var n = artistFromAsset(a); if (n) names['artist-' + slugify(n)] = n.toUpperCase(); });
                 _files.forEach(function(f) {
