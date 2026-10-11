@@ -34,13 +34,13 @@ async function prepareLogo(watermark, dir) {
 }
 
 // Draws the text with the uploaded font file (TTF, OTF or WOFF) as an SVG path, then rasterises it
-async function prepareText(text, size, dir) {
+async function prepareText(text, size, dir, maxWidth = TEXT_MAX_WIDTH) {
   const font = opentype.parse(new Uint8Array(await download(text.font)).buffer);
   let px = TEXT_PX[size] || TEXT_PX.m;
   let p = font.getPath(text.value, 0, 0, px);
   let bb = p.getBoundingBox();
-  if (bb.x2 - bb.x1 > TEXT_MAX_WIDTH) {
-    px = px * TEXT_MAX_WIDTH / (bb.x2 - bb.x1);
+  if (bb.x2 - bb.x1 > maxWidth) {
+    px = px * maxWidth / (bb.x2 - bb.x1);
     p = font.getPath(text.value, 0, 0, px);
     bb = p.getBoundingBox();
   }
@@ -71,11 +71,23 @@ export async function prepareWatermark(watermark, dir) {
   if (logo) layers.push({ file: logo.file, ...place(position, 0) });
   if (watermark.text?.value && watermark.text.font) {
     try {
-      const t = await prepareText(watermark.text, watermark.size, dir);
       const tPos = watermark.text.position || 'bl';
-      // Same corner as the logo: the text sits next to it, further from the edge of the frame
-      const shift = logo && tPos === position ? logo.h + STACK_GAP : 0;
-      layers.push({ file: t.file, ...place(tPos, shift) });
+      // On the same row as the logo, the text keeps clear of it
+      const room = logo && tPos !== position && tPos[0] === position[0] ? 1080 - 2 * MARGIN_X - logo.w - 48 : TEXT_MAX_WIDTH;
+      const t = await prepareText(watermark.text, watermark.size, dir, Math.min(TEXT_MAX_WIDTH, room));
+      if (logo && tPos === position) {
+        // Same corner as the logo: the text sits next to it, further from the edge of the frame
+        layers.push({ file: t.file, ...place(tPos, logo.h + STACK_GAP) });
+      } else if (logo && tPos[0] === position[0]) {
+        // Same row, other side: the text lines up with the middle of the logo
+        const x = `${MARGIN_X}`;
+        const y = tPos[0] === 't'
+          ? `${MARGIN_TOP + Math.round((logo.h - t.h) / 2)}`
+          : `H-${MARGIN_BOTTOM + Math.round((logo.h + t.h) / 2)}`;
+        layers.push({ file: t.file, x, y });
+      } else {
+        layers.push({ file: t.file, ...place(tPos, 0) });
+      }
     } catch (e) { console.error(`  Watermark text skipped: ${e.message}`); }
   }
   if (!layers.length) return null;
