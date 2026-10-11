@@ -203,6 +203,9 @@
         .bk-file-actions { display:flex; gap:2px; padding:4px 6px 6px; }
         .bk-file-actions a, .bk-file-actions button { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:8px; color:var(--la-sub); background:none; border:none; cursor:pointer; font-size:16px; text-decoration:none; }
         .bk-file-actions .del { margin-left:auto; }
+        .bk-use-wm { position:absolute; right:6px; bottom:6px; z-index:1; height:24px; padding:0 9px; border-radius:999px; font:500 11px Inter,ui-sans-serif,system-ui,sans-serif; white-space:nowrap; color:#fafafa; background:rgba(10,10,10,.78); border:1px solid rgba(255,255,255,.14); cursor:pointer; backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); }
+        .bk-use-wm.is-on { color:var(--la-accent-ink); background:var(--la-accent); border-color:transparent; }
+        @media (hover:hover) { .bk-use-wm:not(.is-on):hover { background:rgba(10,10,10,.92); border-color:rgba(255,255,255,.3); } }
         @media (hover:hover) { .bk-file-actions a:hover, .bk-file-actions button:hover { background:var(--la-chip); color:var(--la-text); } .bk-file-actions .del:hover { color:var(--la-bad); } }
         .bk-empty-owner { font-size:12px; color:var(--la-dim); padding:14px 0 2px; }
         .bk-empty-owner button { color:var(--la-accent); background:none; border:none; padding:0; cursor:pointer; font:inherit; }
@@ -599,6 +602,12 @@
         }
         var _wmSaveT;
         function saveWatermark() {
+            // Keep the logo cards' "Use as watermark" buttons in step with the panel
+            document.querySelectorAll('[data-use-wm]').forEach(function(b) {
+                var on = _wm.enabled && _wm.logo === b.dataset.useWm;
+                b.classList.toggle('is-on', on);
+                b.textContent = on ? 'Watermark' : 'Use as watermark';
+            });
             clearTimeout(_wmSaveT);
             _wmSaveT = setTimeout(function() {
                 var st = document.getElementById('bk-wm-status');
@@ -702,6 +711,7 @@
                 pv.classList.add('is-openable');
                 pv.addEventListener('click', function(e) { if (!e.target.closest('button')) open.click(); });
             });
+            wrap.querySelectorAll('[data-use-wm]').forEach(function(b) { b.addEventListener('click', function() { useLogoAsWatermark(b.dataset.useWm); }); });
             wrap.querySelectorAll('[data-file-preview]').forEach(function(b) { b.addEventListener('click', function() { openFilePreview(b.dataset.filePreview); }); });
             wrap.querySelectorAll('[data-move]').forEach(function(b) { b.addEventListener('click', function() { openMove(b.dataset.move); }); });
             wrap.querySelectorAll('[data-org]').forEach(function(b) { b.addEventListener('click', openOrgType); });
@@ -750,6 +760,19 @@
             box.classList.toggle('bg-light', dark);
         }
 
+        // Logos the clip worker can stamp on clips
+        function wmLogoFile(f) { return f.category === 'logos' && /\.(png|svg|webp|jpe?g)$/i.test(f.name); }
+        function wmUsesLogo(f) { return !!_wm && _wm.enabled && _wm.logo === f.url; }
+        // From a logo card or its popup: this logo becomes the watermark, bottom right
+        function useLogoAsWatermark(url) {
+            if (!_wm) return;
+            _wm.logo = url; _wm.position = 'br'; _wm.enabled = true;
+            closeCamDialog();
+            renderWatermark();
+            saveWatermark();
+            document.getElementById('bk-wm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
         // A file opened from its card: preview, download, and its local-assets.com share link
         function openFilePreview(url) {
             var f = _files.filter(function(x) { return x.url === url; })[0];
@@ -765,7 +788,11 @@
                 '<p class="bk-meta" style="margin-top:10px">' + fmtSize(f.size) + ' · ' + fmtDate(f.uploadedAt) + '</p>' +
                 '<label class="bk-share-label" for="bk-share-link">Share link</label>' +
                 '<div class="bk-share"><input id="bk-share-link" readonly value="' + esc(link) + '"><button type="button" class="cam-btn ghost" id="bk-share-copy">Copy link</button></div>' +
-                '<div class="cam-form-actions" style="margin-top:16px"><a class="cam-btn primary" href="' + esc(f.link ? f.link + '?download' : f.downloadUrl) + '">Download</a></div>');
+                '<div class="cam-form-actions" style="margin-top:16px">' +
+                    (wmLogoFile(f) ? '<button type="button" class="cam-btn ghost" id="bk-file-wm">' + (wmUsesLogo(f) ? 'Used as watermark' : 'Use as watermark') + '</button>' : '') +
+                    '<a class="cam-btn primary" href="' + esc(f.link ? f.link + '?download' : f.downloadUrl) + '">Download</a></div>');
+            var useWm = document.getElementById('bk-file-wm');
+            if (useWm) useWm.addEventListener('click', function() { useLogoAsWatermark(f.url); });
             document.querySelector('#cam-dialog .cam-dialog-panel').classList.add('wide');
             var input = document.getElementById('bk-share-link'), copy = document.getElementById('bk-share-copy');
             input.addEventListener('focus', function() { input.select(); });
@@ -833,7 +860,8 @@
             var isPhoto = f.category === 'covers' || f.category === 'artwork' || f.category === 'photos';
             var preview = IMG_EXT.test(f.name)
                 ? '<div class="bk-preview' + (isPhoto ? ' photo' : '') + '">' + tag + '<img src="' + esc(f.url) + '" alt="" loading="lazy" crossorigin="anonymous" onload="fitPreviewBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}">' +
-                    '<button type="button" class="bk-bg-toggle" title="Switch background" onclick="flipPreviewBg(this)"><iconify-icon icon="solar:sun-2-linear"></iconify-icon></button></div>'
+                    '<button type="button" class="bk-bg-toggle" title="Switch background" onclick="flipPreviewBg(this)"><iconify-icon icon="solar:sun-2-linear"></iconify-icon></button>' +
+                    (wmLogoFile(f) ? '<button type="button" class="bk-use-wm' + (wmUsesLogo(f) ? ' is-on' : '') + '" data-use-wm="' + esc(f.url) + '" title="Stamp this logo bottom right on every vertical clip">' + (wmUsesLogo(f) ? 'Watermark' : 'Use as watermark') + '</button>' : '') + '</div>'
                 : FONT_EXT.test(f.name)
                 ? '<div class="bk-preview bk-font bg-dark" data-font="' + esc(f.url) + '">' + tag +
                     '<div class="bk-font-sample"><span class="aa">Aa</span><span class="line">ABC abc 123</span></div></div>'
