@@ -218,7 +218,7 @@
         .bk-toolbar { align-items:center; row-gap:16px; column-gap:32px; }
         .bk-toolbar > .min-w-0 { flex:1 1 360px; }
         .bk-lead { font-size:13px; line-height:1.55; color:var(--la-sub); margin-top:6px; max-width:620px; }
-        .bk-wm { display:grid; grid-template-columns:minmax(0,1fr) 160px; gap:28px; background:var(--la-surface); border:1px solid var(--la-line); border-radius:16px; padding:24px; }
+        .bk-wm { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:28px; background:var(--la-surface); border:1px solid var(--la-line); border-radius:16px; padding:24px; }
         .bk-wm.hidden { display:none; }
         .bk-wm-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
         .bk-wm-title { font-size:15px; font-weight:600; color:var(--la-text); }
@@ -236,7 +236,7 @@
         .bk-switch[aria-checked="true"] { background:var(--la-accent); }
         .bk-switch[aria-checked="true"]::after { transform:translateX(16px); }
         .bk-wm-status { font-size:12px; color:var(--la-dim); margin-top:16px; min-height:16px; }
-        .bk-wm-preview { position:relative; width:160px; aspect-ratio:9/16; border-radius:12px; overflow:hidden; align-self:start;
+        .bk-wm-preview { position:relative; width:160px; aspect-ratio:9/16; transition:width .2s; border-radius:12px; overflow:hidden; align-self:start;
             background-color:var(--la-chip); background-image:linear-gradient(45deg, rgba(128,128,128,.12) 25%, transparent 25%), linear-gradient(-45deg, rgba(128,128,128,.12) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(128,128,128,.12) 75%), linear-gradient(-45deg, transparent 75%, rgba(128,128,128,.12) 75%);
             background-size:16px 16px; background-position:0 0, 0 8px, 8px -8px, -8px 0; }
         .bk-wm-preview img.logo { position:absolute; object-fit:contain; transition:all .15s; }
@@ -248,6 +248,8 @@
         .bk-wm-textmeta { flex-basis:100%; display:flex; align-items:center; gap:12px; min-width:0; }
         .bk-wm-link { font-size:12px; color:var(--la-sub); background:none; border:none; padding:0; cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
         .bk-wm-hint { font-size:12px; color:var(--la-dim); line-height:1.5; }
+        .bk-wm-preview.horizontal { width:300px; max-width:100%; aspect-ratio:16/9; }
+        .bk-wm-frame { display:flex; justify-content:center; margin-bottom:10px; }
         .bk-wm-cap { font-size:11px; color:var(--la-dim); text-align:center; margin-top:8px; }
         .bk-wm-export { width:100%; justify-content:center; margin-top:12px; }
         @media (max-width: 640px) {
@@ -441,6 +443,9 @@
         // Largest logo box per size, in px on a 1080×1920 clip (same as the clip worker)
         var WM_BOX = { s: [160, 110], m: [240, 170], l: [340, 240] };
         var WM_MARGIN_X = 120;   // side margin in px on a 1080-wide clip, same as the clip worker
+        var WM_FRAMES = [['vertical', 'Vertical'], ['horizontal', 'Horizontal']];
+        var _wmFrame = 'vertical';
+        function frameCaption() { return _wmFrame === 'horizontal' ? 'Horizontal · 1920 × 1080' : 'Vertical · 1080 × 1920'; }
         var WM_TEXT_POS = [['bl', 'Bottom left'], ['tl', 'Top left']];
         var WM_TEXT_PX = { s: 44, m: 56, l: 72 };
         // The clip worker draws watermark text from these font files (not WOFF2)
@@ -480,7 +485,7 @@
             box.innerHTML =
                 '<div>' +
                     '<div class="bk-wm-head"><div><p class="bk-wm-title">Watermark</p>' +
-                    '<p class="bk-wm-sub">Adds your logo, and text in one of your fonts, to every vertical clip, placed clear of the captions and buttons on TikTok, Reels and Shorts. Applies to clips made from now on.</p></div>' +
+                    '<p class="bk-wm-sub">Adds your logo, and text in one of your fonts, to every vertical clip and thumbnail, placed clear of the captions and buttons on TikTok, Reels and Shorts. Applies to clips made from now on.</p></div>' +
                     '<button type="button" class="bk-switch" role="switch" aria-label="Watermark" aria-checked="' + _wm.enabled + '" data-wm="enabled"></button></div>' +
                     '<div class="bk-wm-rows' + (_wm.enabled ? '' : ' off') + '">' +
                         '<span class="bk-wm-label">Logo</span><select data-wm="logo"' + (noLogo ? ' disabled' : '') + '>' + logoOpts + '</select>' +
@@ -496,8 +501,9 @@
                     '</div>' +
                     '<p class="bk-wm-status" id="bk-wm-status">' + (noLogo && !wmText() ? 'Upload a logo to your brand kit to use a watermark.' : '') + '</p>' +
                 '</div>' +
-                '<div class="bk-wm-preview-wrap"><div class="bk-wm-preview">' +
-                    '<img class="logo" alt="" id="bk-wm-logo"><span class="text" id="bk-wm-text"></span></div><p class="bk-wm-cap">Clip preview · 1080 × 1920</p>' +
+                '<div class="bk-wm-preview-wrap"><div class="bk-wm-frame">' + seg('frame', WM_FRAMES, _wmFrame) + '</div>' +
+                    '<div class="bk-wm-preview' + (_wmFrame === 'horizontal' ? ' horizontal' : '') + '" id="bk-wm-preview">' +
+                    '<img class="logo" alt="" id="bk-wm-logo"><span class="text" id="bk-wm-text"></span></div><p class="bk-wm-cap" id="bk-wm-cap">' + frameCaption() + '</p>' +
                     '<button type="button" class="cam-btn ghost bk-wm-export" id="bk-wm-export">Export PNG</button></div>';
             var img = document.getElementById('bk-wm-logo');
             img.addEventListener('load', positionPreview);
@@ -510,7 +516,10 @@
             }
             box.querySelectorAll('[data-wm]').forEach(function(el) {
                 var key = el.dataset.wm;
-                var apply = function(v) { if (key === 'textpos') _wm.text.position = v; else _wm[key] = v; if (key === 'enabled') renderWatermark(); else { box.querySelectorAll('[data-wm="' + key + '"][data-v]').forEach(function(b) { b.setAttribute('aria-pressed', b.dataset.v === v); }); positionPreview(); } saveWatermark(); };
+                var apply = function(v) {
+                    // The frame only changes the preview and export, it isn't saved
+                    if (key === 'frame') { _wmFrame = v; renderWatermark(); return; }
+                    if (key === 'textpos') _wm.text.position = v; else _wm[key] = v; if (key === 'enabled') renderWatermark(); else { box.querySelectorAll('[data-wm="' + key + '"][data-v]').forEach(function(b) { b.setAttribute('aria-pressed', b.dataset.v === v); }); positionPreview(); } saveWatermark(); };
                 if (el.tagName === 'SELECT') el.addEventListener('change', function() { apply(el.value); });
                 else if (el.type === 'range') { el.addEventListener('input', function() { _wm.opacity = el.value / 100; positionPreview(); }); el.addEventListener('change', function() { saveWatermark(); }); }
                 else if (key === 'enabled') el.addEventListener('click', function() { apply(!_wm.enabled); });
@@ -521,7 +530,8 @@
             var img = document.getElementById('bk-wm-logo');
             if (!img) return;
             var url = wmPreviewLogo();
-            var k = 160 / 1080, p = _wm.position;
+            var L = WM_LAYOUT[_wmFrame], pv = document.getElementById('bk-wm-preview');
+            var k = (pv ? pv.offsetWidth : 160) / L.W, p = _wm.position;
             var txt = document.getElementById('bk-wm-text'), tf = wmText();
             if (txt) {
                 if (!tf) txt.style.display = 'none';
@@ -536,15 +546,15 @@
                     txt.style.maxWidth = 'none';
                     // On the same row as the logo, the text keeps clear of it (as on the clips)
                     var lwClip = lhClip ? lhClip * img.naturalWidth / img.naturalHeight : 0;
-                    var room = lhClip && tp !== p && tp[0] === p[0] ? Math.min(760, 1080 - 2 * WM_MARGIN_X - lwClip - 48) : 760;
+                    var room = lhClip && tp !== p && tp[0] === p[0] ? Math.min(760, L.W - 2 * L.mx - lwClip - 48) : 760;
                     if (txt.offsetWidth / k > room) txt.style.fontSize = (WM_TEXT_PX[_wm.size] * room / (txt.offsetWidth / k)) * k + 'px';
                     var thClip = txt.offsetHeight / k;
                     // Same corner as the logo: next to it. Same row, other side: lined up with the middle of the logo.
                     var shift = !lhClip ? 0 : tp === p ? lhClip + 24 : tp[0] === p[0] ? (lhClip - thClip) / 2 : 0;
                     txt.style.opacity = _wm.opacity;
-                    txt.style.left = Math.round(WM_MARGIN_X * k) + 'px';
-                    txt.style.top = tp === 'tl' ? Math.round((220 + shift) * k) + 'px' : 'auto';
-                    txt.style.bottom = tp === 'bl' ? Math.round((320 + shift) * k) + 'px' : 'auto';
+                    txt.style.left = Math.round(L.mx * k) + 'px';
+                    txt.style.top = tp === 'tl' ? Math.round((L.top + shift) * k) + 'px' : 'auto';
+                    txt.style.bottom = tp === 'bl' ? Math.round((L.bottom + shift) * k) + 'px' : 'auto';
                 }
             }
             if (!url) { img.style.display = 'none'; return; }
@@ -556,10 +566,10 @@
             img.style.width = Math.round(lw * k) + 'px';
             img.style.height = Math.round(lw / ar * k) + 'px';
             img.style.opacity = _wm.opacity;
-            img.style.left = p[1] === 'l' ? Math.round(WM_MARGIN_X * k) + 'px' : 'auto';
-            img.style.right = p[1] === 'r' ? Math.round(WM_MARGIN_X * k) + 'px' : 'auto';
-            img.style.top = p[0] === 't' ? Math.round(220 * k) + 'px' : 'auto';
-            img.style.bottom = p[0] === 'b' ? Math.round(320 * k) + 'px' : 'auto';
+            img.style.left = p[1] === 'l' ? Math.round(L.mx * k) + 'px' : 'auto';
+            img.style.right = p[1] === 'r' ? Math.round(L.mx * k) + 'px' : 'auto';
+            img.style.top = p[0] === 't' ? Math.round(L.top * k) + 'px' : 'auto';
+            img.style.bottom = p[0] === 'b' ? Math.round(L.bottom * k) + 'px' : 'auto';
         }
         // Where the watermark sits in each frame, in px. Vertical clears the TikTok, Reels and Shorts buttons;
         // horizontal (YouTube) only needs a margin.
@@ -610,14 +620,14 @@
             document.body.appendChild(a); a.click(); a.remove();
             setTimeout(function() { URL.revokeObjectURL(a.href); }, 5000);
         }
-        // The watermark at the clip's real size (1080 × 1920) on a transparent background
+        // The watermark at full size (1080 × 1920 or 1920 × 1080) on a transparent background
         function exportWatermarkPng() {
             var btn = document.getElementById('bk-wm-export'), st = document.getElementById('bk-wm-status');
             if (!wmPreviewLogo() && !wmText()) { if (st) st.textContent = 'Nothing to export yet. Add a logo or text.'; return; }
             btn.disabled = true;
-            var L = WM_LAYOUT.vertical, c = document.createElement('canvas'); c.width = L.W; c.height = L.H;
+            var L = WM_LAYOUT[_wmFrame], c = document.createElement('canvas'); c.width = L.W; c.height = L.H;
             drawWatermark(c.getContext('2d'), L).then(function() {
-                c.toBlob(function(blob) { saveBlob(blob, 'watermark-1080x1920.png'); btn.disabled = false; }, 'image/png');
+                c.toBlob(function(blob) { saveBlob(blob, 'watermark-' + L.W + 'x' + L.H + '.png'); btn.disabled = false; }, 'image/png');
             }).catch(function() {
                 btn.disabled = false;
                 if (st) st.textContent = 'Could not export. Try again.';
@@ -688,6 +698,9 @@
             var imgP = loadImage(f.url);
             // Small previews drawn with the same code as the full-size files
             imgP.then(function(img) {
+                // Start with the format that matches the picture; both stay selectable
+                var landscape = img.naturalWidth >= img.naturalHeight;
+                form.horizontal.checked = landscape; form.vertical.checked = !landscape;
                 [['bk-thumb-h', WM_LAYOUT.horizontal], ['bk-thumb-v', WM_LAYOUT.vertical]].forEach(function(x) {
                     renderThumb(img, x[1]).then(function(full) {
                         var cv = document.getElementById(x[0]); if (!cv) return;
