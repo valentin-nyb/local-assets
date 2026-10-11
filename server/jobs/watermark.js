@@ -8,13 +8,13 @@ import opentype from 'opentype.js';
 // The logo and the text are each turned into a PNG once per job, then laid over every clip by ffmpeg.
 
 // Largest logo box per size [width, height] in px on a 1080-wide frame; the logo keeps its proportions
-const BOX = { s: [160, 110], m: [240, 170], l: [340, 240] };
+const BOX = { s: [120, 84], m: [180, 128], l: [260, 184] };
 const TEXT_PX = { s: 44, m: 56, l: 72 };     // text size in px
 const TEXT_MAX_WIDTH = 760;
 // Side margin: about 11% of the width, clear of the edge and of the like and share buttons on the right
 const MARGIN_X = 120;
 // Bottom and top margins clear the captions and buttons TikTok, Reels and Shorts draw over the clip
-const MARGIN_BOTTOM = 320;
+const MARGIN_BOTTOM = 200;
 const MARGIN_TOP = 220;
 const STACK_GAP = 24;                        // between logo and text when they share a corner
 

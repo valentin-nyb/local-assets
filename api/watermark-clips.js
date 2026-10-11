@@ -6,8 +6,9 @@ import { resolveWatermark } from './_watermark.js';
 import { renderWatermarkPng } from './_watermark-render.js';
 
 // Puts the Brand Kit watermark on a session's existing vertical clips.
-// Mux makes a watermarked copy of each clip (same tag, so it takes the clip's place);
-// once a copy is ready the original is deleted. Copies that fail leave the original as it was.
+// Mux makes a watermarked copy of each clip (same tag, so it takes the clip's place). Once a copy is
+// ready, the clean original is kept but hidden (tag "… // SOCIALRAW // NN"), so applying a changed
+// watermark later always starts from the clean clip, never stamps twice. Failed copies change nothing.
 //   POST { action: 'apply', artist, clipIds: [...] }
 //   POST { action: 'sweep' }   finishes pending swaps (called when the dashboard loads)
 
@@ -21,7 +22,10 @@ const muxReq = (auth, path, init = {}) => fetch('https://api.mux.com' + path, {
   return body.data;
 });
 
-const swapsKey = slug => `wm_swaps:${slug}`;   // hash newId → oldId
+const swapsKey = slug => `wm_swaps:${slug}`;   // hash newId → JSON { old: shown clip, raw: clean source }
+const rawKey   = slug => `wm_raw:${slug}`;     // hash watermarked clip → its clean original
+const hideTag  = pt => pt.replace(/ \/\/ SOCIAL(?= \/\/|$)/i, ' // SOCIALRAW');
+const parseSwap = v => { try { const o = JSON.parse(v); if (o && o.old) return o; } catch {} return { old: v, raw: v }; };
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
@@ -38,12 +42,22 @@ export default async function handler(req, res) {
     if (body.action === 'sweep') {
       const swaps = await redis.hGetAll(swapsKey(slug));
       let done = 0, pending = 0;
-      for (const [newId, oldId] of Object.entries(swaps)) {
+      for (const [newId, val] of Object.entries(swaps)) {
+        const { old: oldId, raw: rawId } = parseSwap(val);
         let status;
         try { status = (await muxReq(auth, `/video/v1/assets/${encodeURIComponent(newId)}`)).status; }
         catch (e) { status = e.status === 404 ? 'gone' : 'unknown'; }
         if (status === 'ready') {
-          await muxReq(auth, `/video/v1/assets/${encodeURIComponent(oldId)}`, { method: 'DELETE' }).catch(e => { if (e.status !== 404) throw e; });
+          if (oldId === rawId) {
+            // First watermark: hide the clean original instead of deleting it
+            const orig = await muxReq(auth, `/video/v1/assets/${encodeURIComponent(oldId)}`).catch(() => null);
+            if (orig) await muxReq(auth, `/video/v1/assets/${encodeURIComponent(oldId)}`, { method: 'PATCH', body: JSON.stringify({ passthrough: hideTag(String(orig.passthrough || '')) }) });
+          } else {
+            // Re-applied: the previous watermarked copy goes, the clean original stays hidden
+            await muxReq(auth, `/video/v1/assets/${encodeURIComponent(oldId)}`, { method: 'DELETE' }).catch(e => { if (e.status !== 404) throw e; });
+            await redis.hDel(rawKey(slug), oldId);
+          }
+          await redis.hSet(rawKey(slug), newId, rawId);
           await redis.hDel(swapsKey(slug), newId); done++;
         } else if (status === 'errored' || status === 'gone') {
           // The copy failed: keep the original, drop the copy
@@ -66,7 +80,8 @@ export default async function handler(req, res) {
     const blob = await put(`watermarks/${slug}/${crypto.randomBytes(6).toString('hex')}.png`, png, { access: 'public', contentType: 'image/png', addRandomSuffix: false });
 
     // Clips already being replaced are skipped
-    const pendingOld = new Set(Object.values(await redis.hGetAll(swapsKey(slug))));
+    const pendingOld = new Set(Object.values(await redis.hGetAll(swapsKey(slug))).map(v => parseSwap(v).old));
+    const raws = await redis.hGetAll(rawKey(slug));
     let started = 0;
     const errors = [];
     for (const id of ids) {
@@ -74,13 +89,15 @@ export default async function handler(req, res) {
       try {
         const clip = await muxReq(auth, `/video/v1/assets/${encodeURIComponent(id)}`);
         const pt = String(clip.passthrough || '');
+        // Start from the clean original when this clip already carries a watermark
+        const rawId = raws[id] || id;
         // Only this session's vertical clips, from this venue's own Cloud Storage
         if (!pt.toUpperCase().startsWith(artist + ' // SOCIAL')) { errors.push(`One clip isn't a vertical clip of ${artist}`); continue; }
         const copy = await muxReq(auth, '/video/v1/assets', {
           method: 'POST',
           body: JSON.stringify({
             input: [
-              { url: `mux://assets/${id}` },
+              { url: `mux://assets/${rawId}` },
               { url: blob.url, overlay_settings: { vertical_align: 'top', horizontal_align: 'left', width: '100%', opacity: '100%' } },
             ],
             playback_policy: ['public'],
@@ -88,7 +105,7 @@ export default async function handler(req, res) {
             static_renditions: [{ resolution: 'highest' }],
           }),
         });
-        await redis.hSet(swapsKey(slug), copy.id, id);
+        await redis.hSet(swapsKey(slug), copy.id, JSON.stringify({ old: id, raw: rawId }));
         started++;
       } catch (e) {
         errors.push(e.message);

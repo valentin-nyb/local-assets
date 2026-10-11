@@ -447,7 +447,7 @@
         var WM_POS = [['bl', 'Bottom left'], ['br', 'Bottom right'], ['tl', 'Top left'], ['tr', 'Top right']];
         var WM_SIZE = [['s', 'Small'], ['m', 'Medium'], ['l', 'Large']];
         // Largest logo box per size, in px on a 1080×1920 clip (same as the clip worker)
-        var WM_BOX = { s: [160, 110], m: [240, 170], l: [340, 240] };
+        var WM_BOX = { s: [120, 84], m: [180, 128], l: [260, 184] };
         var WM_MARGIN_X = 120;   // side margin in px on a 1080-wide clip, same as the clip worker
         var WM_FRAMES = [['vertical', 'Vertical'], ['horizontal', 'Horizontal']];
         var _wmFrame = 'vertical';
@@ -607,7 +607,7 @@
         // Where the watermark sits in each frame, in px. Vertical clears the TikTok, Reels and Shorts buttons;
         // horizontal (YouTube) only needs a margin.
         var WM_LAYOUT = {
-            vertical:   { W: 1080, H: 1920, mx: WM_MARGIN_X, top: 220, bottom: 320 },
+            vertical:   { W: 1080, H: 1920, mx: WM_MARGIN_X, top: 220, bottom: 200 },
             horizontal: { W: 1920, H: 1080, mx: 96, top: 72, bottom: 72 },
         };
         // Thumbnails have no captions or buttons over them, so the watermark sits near the edge

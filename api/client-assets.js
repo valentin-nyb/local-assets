@@ -20,7 +20,8 @@ export default async function handler(req, res) {
 
     const allAssets = result.data || [];
 
-    const enriched = allAssets.map(asset => {
+    // Clean originals kept behind watermarked clips ("… // SOCIALRAW // NN") are not shown
+    const enriched = allAssets.filter(a => !String(a.passthrough || '').toUpperCase().includes('// SOCIALRAW')).map(asset => {
       const playbackId = asset.playback_ids?.[0]?.id;
       const pt = (asset.passthrough || '').toUpperCase();
       let assetType = 'master';
