@@ -10,7 +10,8 @@ import { renderWatermarkPng } from './_watermark-render.js';
 // ready, the clean original is kept but hidden (tag "… // SOCIALRAW // NN"), so applying a changed
 // watermark later always starts from the clean clip, never stamps twice. Failed copies change nothing.
 //   POST { action: 'apply', artist, clipIds: [...] }
-//   POST { action: 'sweep' }   finishes pending swaps (called when the dashboard loads)
+//   POST { action: 'remove', clipIds: [...] }   deletes the watermarked copies and brings back the originals
+//   POST { action: 'sweep' }   finishes pending swaps and reports which clips carry a watermark
 
 const muxReq = (auth, path, init = {}) => fetch('https://api.mux.com' + path, {
   ...init,
@@ -65,7 +66,27 @@ export default async function handler(req, res) {
           await redis.hDel(swapsKey(slug), newId);
         } else pending++;
       }
-      return res.status(200).json({ done, pending });
+      const watermarked = Object.keys(await redis.hGetAll(rawKey(slug)));
+      const pendingIds = Object.values(await redis.hGetAll(swapsKey(slug))).map(v => parseSwap(v).old);
+      return res.status(200).json({ done, pending, watermarked, pendingIds });
+    }
+
+    if (body.action === 'remove') {
+      const ids = Array.isArray(body.clipIds) ? body.clipIds.map(String).slice(0, 30) : [];
+      const raws = await redis.hGetAll(rawKey(slug));
+      let removed = 0;
+      for (const id of ids) {
+        const rawId = raws[id];
+        if (!rawId) continue;
+        // Original back in place first, then the watermarked copy goes
+        const orig = await muxReq(auth, `/video/v1/assets/${encodeURIComponent(rawId)}`).catch(e => { if (e.status === 404) return null; throw e; });
+        if (!orig) { await redis.hDel(rawKey(slug), id); continue; }   // original gone: leave the watermarked clip
+        await muxReq(auth, `/video/v1/assets/${encodeURIComponent(rawId)}`, { method: 'PATCH', body: JSON.stringify({ passthrough: String(orig.passthrough || '').replace(/ \/\/ SOCIALRAW(?= \/\/|$)/i, ' // SOCIAL') }) });
+        await muxReq(auth, `/video/v1/assets/${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(e => { if (e.status !== 404) throw e; });
+        await redis.hDel(rawKey(slug), id);
+        removed++;
+      }
+      return res.status(200).json({ removed });
     }
 
     if (body.action !== 'apply') return res.status(400).json({ error: 'Unknown action' });

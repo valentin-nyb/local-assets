@@ -78,7 +78,8 @@
         div.w-8.h-8:empty, div.w-10.h-10:empty, div.w-12.h-12:empty { display:none; }
         .wm-apply { height:28px; padding:0 12px; border-radius:999px; border:1px solid var(--la-line); background:transparent; color:var(--la-text); font:500 11px Inter,ui-sans-serif,system-ui,sans-serif; cursor:pointer; white-space:nowrap; }
         .wm-apply:disabled { opacity:.6; cursor:default; }
-        @media (hover:hover) { .wm-apply:not(:disabled):hover { border-color:var(--la-accent); color:var(--la-accent); } }
+        .wm-apply.is-remove { color:var(--la-bad, #ef4444); border-color:color-mix(in srgb, var(--la-bad, #ef4444) 45%, transparent); }
+        @media (hover:hover) { .wm-apply:not(:disabled):not(.is-remove):hover { border-color:var(--la-accent); color:var(--la-accent); } .wm-apply.is-remove:hover { background:color-mix(in srgb, var(--la-bad, #ef4444) 12%, transparent); } }
     </style>
 </head>
 <body class="font-sans antialiased bg-background text-foreground overflow-hidden h-screen w-screen flex selection:bg-primary selection:text-black">
@@ -614,26 +615,46 @@
 
         // ── Watermark on existing vertical clips ──
         // Mux makes a watermarked copy of each clip; the copy replaces the original when it is ready.
+        var _wmState = { watermarked: [], pendingIds: [] };
+        // Each session's button: Apply, Watermarking… (copies processing) or Remove (red)
+        function paintWatermarkButtons() {
+            document.querySelectorAll('.wm-apply').forEach(function(btn) {
+                var ids = (btn.dataset.wmClips || '').split(',').filter(Boolean);
+                var pending = ids.some(function(id) { return _wmState.pendingIds.indexOf(id) >= 0; });
+                var marked = ids.length && ids.every(function(id) { return _wmState.watermarked.indexOf(id) >= 0; });
+                btn.classList.toggle('is-remove', !pending && !!marked);
+                btn.disabled = pending;
+                btn.textContent = pending ? 'Watermarking…' : marked ? 'Remove watermark' : 'Apply watermark';
+            });
+        }
         document.addEventListener('click', async function(e) {
             var btn = e.target.closest('.wm-apply');
             if (!btn) return;
             e.stopPropagation();
             var ids = (btn.dataset.wmClips || '').split(',').filter(Boolean);
-            if (!(await laConfirm({ title: 'Apply the watermark?', message: 'Your Brand Kit watermark is added to these ' + ids.length + ' vertical clips. Each clip is replaced by the watermarked version when it is ready, in a few minutes.', confirmText: 'Apply watermark' }))) return;
-            btn.disabled = true; btn.textContent = 'Applying…';
+            var removing = btn.classList.contains('is-remove');
+            var ok = await laConfirm(removing
+                ? { title: 'Remove the watermark?', message: 'The watermarked versions of these ' + ids.length + ' clips are deleted and the originals come back, ready for a new watermark.', confirmText: 'Remove watermark', danger: true }
+                : { title: 'Apply the watermark?', message: 'Your Brand Kit watermark is added to these ' + ids.length + ' vertical clips. The originals are kept, so you can remove it or change it later.', confirmText: 'Apply watermark' });
+            if (!ok) return;
+            btn.disabled = true; btn.textContent = removing ? 'Removing…' : 'Applying…';
             try {
-                var r = await laFetch('/api/watermark-clips', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'apply', artist: btn.dataset.wmArtist, clipIds: ids }) });
+                var r = await laFetch('/api/watermark-clips', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(removing ? { action: 'remove', clipIds: ids } : { action: 'apply', artist: btn.dataset.wmArtist, clipIds: ids }) });
                 var d = await r.json().catch(function() { return {}; });
                 if (!r.ok) throw new Error(d.error || r.status);
-                btn.textContent = 'Watermarking…';
-                laToast(d.started ? 'Watermarking ' + d.started + ' clip' + (d.started !== 1 ? 's' : '') + '. They update in a few minutes.' : 'These clips are already being watermarked.');
+                if (removing) {
+                    laToast(d.removed ? 'Watermark removed from ' + d.removed + ' clip' + (d.removed !== 1 ? 's' : '') : 'These clips have no saved originals to bring back.');
+                    fetchRecentUploads();
+                } else {
+                    laToast(d.started ? 'Watermarking ' + d.started + ' clip' + (d.started !== 1 ? 's' : '') + '. They update in a few minutes.' : 'These clips are already being watermarked.');
+                }
                 sweepWatermarks();
             } catch (er) {
-                btn.disabled = false; btn.textContent = 'Apply watermark';
-                laAlert('Could not apply the watermark: ' + er.message, { tone: 'error' });
+                paintWatermarkButtons();
+                laAlert('Could not ' + (removing ? 'remove' : 'apply') + ' the watermark: ' + er.message, { tone: 'error' });
             }
         });
-        // Finishes swaps whose watermarked copy is ready; checks again while any are pending
+        // Finishes swaps whose watermarked copy is ready and refreshes the buttons; checks again while any are pending
         var _wmSweepT;
         function sweepWatermarks() {
             clearTimeout(_wmSweepT);
@@ -641,7 +662,8 @@
                 .then(function(r) { return r.ok ? r.json() : null; })
                 .then(function(d) {
                     if (!d) return;
-                    if (d.done) fetchRecentUploads();
+                    _wmState = { watermarked: d.watermarked || [], pendingIds: d.pendingIds || [] };
+                    if (d.done) fetchRecentUploads(); else paintWatermarkButtons();
                     if (d.pending) _wmSweepT = setTimeout(sweepWatermarks, 30000);
                 }).catch(function() {});
         }
@@ -1295,6 +1317,7 @@
             applyArtistPhotos();
             renderDistFooter(artists.length, artists.reduce(function(n, a) { return n + a.dates.length; }, 0), muxAssets.length);
             updateDistributionButtons();
+            paintWatermarkButtons();
 
             // Restore previously open folders
             _savedOpen.forEach(function(id) {
