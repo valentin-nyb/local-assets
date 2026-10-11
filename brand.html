@@ -194,6 +194,15 @@
         .bk-file-actions a, .bk-file-actions button { display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:8px; color:var(--la-sub); background:none; border:none; cursor:pointer; font-size:16px; text-decoration:none; }
         .bk-file-actions .del { margin-left:auto; }
         .bk-use-wm { position:absolute; right:6px; bottom:6px; z-index:1; height:24px; padding:0 9px; border-radius:999px; font:500 11px Inter,ui-sans-serif,system-ui,sans-serif; white-space:nowrap; color:#fafafa; background:rgba(10,10,10,.78); border:1px solid rgba(255,255,255,.14); cursor:pointer; backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); }
+        .bk-thumb-previews { display:grid; grid-template-columns:minmax(0,16fr) minmax(0,5fr); gap:14px; align-items:end; margin-top:16px; }
+        .bk-thumb-opt { display:flex; flex-direction:column; gap:8px; cursor:pointer; position:relative; }
+        .bk-thumb-opt input { position:absolute; top:8px; left:8px; z-index:1; width:16px; height:16px; accent-color:var(--la-accent); }
+        .bk-thumb-frame { display:block; border-radius:10px; overflow:hidden; border:1px solid var(--la-line); background:var(--la-chip); }
+        .bk-thumb-frame.h { aspect-ratio:16/9; } .bk-thumb-frame.v { aspect-ratio:9/16; }
+        .bk-thumb-frame canvas { width:100%; height:100%; display:block; }
+        .bk-thumb-opt input:not(:checked) ~ .bk-thumb-frame { opacity:.35; }
+        .bk-thumb-cap { font-size:12px; color:var(--la-text); line-height:1.35; }
+        .bk-thumb-cap small { display:block; font-size:11px; color:var(--la-dim); }
         .bk-use-wm.is-on { color:var(--la-accent-ink); background:var(--la-accent); border-color:transparent; }
         @media (hover:hover) { .bk-use-wm:not(.is-on):hover { background:rgba(10,10,10,.92); border-color:rgba(255,255,255,.3); } }
         @media (hover:hover) { .bk-file-actions a:hover, .bk-file-actions button:hover { background:var(--la-chip); color:var(--la-text); } .bk-file-actions .del:hover { color:var(--la-bad); } }
@@ -552,57 +561,163 @@
             img.style.top = p[0] === 't' ? Math.round(220 * k) + 'px' : 'auto';
             img.style.bottom = p[0] === 'b' ? Math.round(320 * k) + 'px' : 'auto';
         }
-        // The watermark at the clip's real size (1080 × 1920) on a transparent background,
-        // placed exactly as the clip worker places it
-        function exportWatermarkPng() {
-            var btn = document.getElementById('bk-wm-export'), st = document.getElementById('bk-wm-status');
-            var W = 1080, H = 1920, url = wmPreviewLogo(), tf = wmText(), p = _wm.position;
-            if (!url && !tf) { if (st) st.textContent = 'Nothing to export yet. Add a logo or text.'; return; }
-            btn.disabled = true;
-            var loadLogo = url ? new Promise(function(res, rej) {
+        // Where the watermark sits in each frame, in px. Vertical clears the TikTok, Reels and Shorts buttons;
+        // horizontal (YouTube) only needs a margin.
+        var WM_LAYOUT = {
+            vertical:   { W: 1080, H: 1920, mx: WM_MARGIN_X, top: 220, bottom: 320 },
+            horizontal: { W: 1920, H: 1080, mx: 96, top: 72, bottom: 72 },
+        };
+        function loadImage(url) {
+            return new Promise(function(res, rej) {
                 var im = new Image(); im.crossOrigin = 'anonymous';
                 im.onload = function() { res(im); }; im.onerror = rej; im.src = url;
-            }) : Promise.resolve(null);
-            var loadFont = tf ? loadBrandFont(tf.url) : Promise.resolve(null);
-            Promise.all([loadLogo, loadFont]).then(function(r) {
-                var logo = r[0], family = r[1];
-                var c = document.createElement('canvas'); c.width = W; c.height = H;
-                var g = c.getContext('2d');
+            });
+        }
+        // Draws the current watermark onto a canvas context, placed exactly as on the clips
+        function drawWatermark(g, L) {
+            var url = wmPreviewLogo(), tf = wmText(), p = _wm.position;
+            return Promise.all([url ? loadImage(url) : null, tf ? loadBrandFont(tf.url) : null]).then(function(r) {
+                var logo = r[0], family = r[1], W = L.W, H = L.H;
+                g.save();
                 g.imageSmoothingQuality = 'high';
                 g.globalAlpha = _wm.opacity;
-                var box = WM_BOX[_wm.size] || WM_BOX.m, lh = 0;
+                var box = WM_BOX[_wm.size] || WM_BOX.m, lh = 0, ar = 1;
                 if (logo) {
-                    var ar = (logo.naturalWidth || 2) / (logo.naturalHeight || 1);
+                    ar = (logo.naturalWidth || 2) / (logo.naturalHeight || 1);
                     var lw = Math.min(box[0], box[1] * ar); lh = lw / ar;
-                    var lx = p[1] === 'l' ? WM_MARGIN_X : W - WM_MARGIN_X - lw;
-                    var ly = p[0] === 't' ? 220 : H - 320 - lh;
-                    g.drawImage(logo, lx, ly, lw, lh);
+                    g.drawImage(logo, p[1] === 'l' ? L.mx : W - L.mx - lw, p[0] === 't' ? L.top : H - L.bottom - lh, lw, lh);
                 }
                 if (tf && family) {
-                    var px = WM_TEXT_PX[_wm.size] || WM_TEXT_PX.m, pad = 12;
+                    var px = WM_TEXT_PX[_wm.size] || WM_TEXT_PX.m, pad = 12, tp = _wm.text.position;
+                    var room = logo && tp !== p && tp[0] === p[0] ? Math.min(760, W - 2 * L.mx - lh * ar - 48) : 760;
                     g.font = px + 'px ' + family;
-                    var tp = _wm.text.position;
-                    var room = logo && tp !== p && tp[0] === p[0] ? Math.min(760, W - 2 * WM_MARGIN_X - lh * ar - 48) : 760;
                     var m = g.measureText(_wm.text.value), tw = m.actualBoundingBoxLeft + m.actualBoundingBoxRight;
                     if (tw > room) { px = px * room / tw; g.font = px + 'px ' + family; m = g.measureText(_wm.text.value); }
                     var th = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent + pad * 2;
                     var shift = !logo ? 0 : tp === p ? lh + 24 : tp[0] === p[0] ? (lh - th) / 2 : 0;
-                    var top = tp === 'tl' ? 220 + shift : H - 320 - shift - th;
+                    var top = tp === 'tl' ? L.top + shift : H - L.bottom - shift - th;
                     g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = 8; g.shadowOffsetY = 2;
                     g.fillStyle = '#fff';
-                    g.fillText(_wm.text.value, WM_MARGIN_X + pad + m.actualBoundingBoxLeft, top + pad + m.actualBoundingBoxAscent);
+                    g.fillText(_wm.text.value, L.mx + pad + m.actualBoundingBoxLeft, top + pad + m.actualBoundingBoxAscent);
                 }
-                c.toBlob(function(blob) {
-                    var a = document.createElement('a');
-                    a.href = URL.createObjectURL(blob);
-                    a.download = 'watermark-1080x1920.png';
-                    document.body.appendChild(a); a.click(); a.remove();
-                    setTimeout(function() { URL.revokeObjectURL(a.href); }, 5000);
-                    btn.disabled = false;
-                }, 'image/png');
+                g.restore();
+            });
+        }
+        function saveBlob(blob, name) {
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = name;
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(function() { URL.revokeObjectURL(a.href); }, 5000);
+        }
+        // The watermark at the clip's real size (1080 × 1920) on a transparent background
+        function exportWatermarkPng() {
+            var btn = document.getElementById('bk-wm-export'), st = document.getElementById('bk-wm-status');
+            if (!wmPreviewLogo() && !wmText()) { if (st) st.textContent = 'Nothing to export yet. Add a logo or text.'; return; }
+            btn.disabled = true;
+            var L = WM_LAYOUT.vertical, c = document.createElement('canvas'); c.width = L.W; c.height = L.H;
+            drawWatermark(c.getContext('2d'), L).then(function() {
+                c.toBlob(function(blob) { saveBlob(blob, 'watermark-1080x1920.png'); btn.disabled = false; }, 'image/png');
             }).catch(function() {
                 btn.disabled = false;
                 if (st) st.textContent = 'Could not export. Try again.';
+            });
+        }
+
+        // ── Set as thumbnail: a Brand Kit image, cropped to fill, with the watermark on top ──
+        var _sessions = [];   // [{ artist, date }] from Cloud Storage, newest first
+        function buildSessions(assets) {
+            var seen = {};
+            _sessions = [];
+            assets.slice().sort(function(a, b) { return Number(b.created_at) - Number(a.created_at); }).forEach(function(a) {
+                var pt = a.passthrough, artist = null, date = null;
+                if (typeof pt !== 'string' || !pt.trim()) return;
+                try {
+                    var o = JSON.parse(pt);
+                    if (!o || !o.artist || ['AUDIO', 'SOCIAL', 'THUMB'].indexOf(String(o.camera || '').toUpperCase()) >= 0) return;
+                    artist = o.artist; date = o.date;
+                } catch (_) {
+                    if (pt.indexOf(' // ') >= 0) return;
+                    artist = pt;
+                }
+                artist = String(artist).toUpperCase().trim();
+                // Same session date as Distribution History
+                if (!date) { var ms = Number(a.created_at) * 1000; if (isNaN(ms)) return; date = new Date(ms).toISOString().slice(0, 10); }
+                if (seen[artist + '|' + date]) return;
+                seen[artist + '|' + date] = true;
+                _sessions.push({ artist: artist, date: date });
+            });
+        }
+        function fmtSessionDate(d) {
+            var t = new Date(d + 'T12:00:00Z');
+            return isNaN(t) ? d : t.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+        // Image cropped to fill W×H (centre), then the watermark
+        function renderThumb(img, L) {
+            var c = document.createElement('canvas'); c.width = L.W; c.height = L.H;
+            var g = c.getContext('2d');
+            g.imageSmoothingQuality = 'high';
+            var s = Math.max(L.W / img.naturalWidth, L.H / img.naturalHeight);
+            var w = img.naturalWidth * s, h = img.naturalHeight * s;
+            g.drawImage(img, (L.W - w) / 2, (L.H - h) / 2, w, h);
+            return (_wm && _wm.enabled ? drawWatermark(g, L) : Promise.resolve()).then(function() { return c; });
+        }
+        function openSetThumbnail(url) {
+            var f = _files.filter(function(x) { return x.url === url; })[0];
+            if (!f) return;
+            var ownerArtist = f.owner.indexOf('artist-') === 0 ? f.owner : null;
+            var list = ownerArtist ? _sessions.filter(function(x) { return 'artist-' + slugify(x.artist) === ownerArtist; }) : _sessions;
+            if (!list.length) list = _sessions;
+            var opts = list.map(function(x, i) { return '<option value="' + i + '">' + esc(x.artist + ' · ' + fmtSessionDate(x.date)) + '</option>'; }).join('');
+            openCamDialog('Set as thumbnail',
+                '<form id="bk-thumb-form" class="cam-form">' +
+                (list.length
+                    ? '<label>Session<select name="session">' + opts + '</select><small>Added to this session\'s thumbnails in Distribution History.</small></label>'
+                    : '<p class="cam-dialog-text">There are no sessions yet. Thumbnails can be set once a set has been recorded or uploaded.</p>') +
+                '<div class="bk-thumb-previews">' +
+                    '<label class="bk-thumb-opt"><input type="checkbox" name="horizontal" checked><span class="bk-thumb-frame h"><canvas id="bk-thumb-h"></canvas></span><span class="bk-thumb-cap">Horizontal · 1920 × 1080<small>YouTube</small></span></label>' +
+                    '<label class="bk-thumb-opt"><input type="checkbox" name="vertical" checked><span class="bk-thumb-frame v"><canvas id="bk-thumb-v"></canvas></span><span class="bk-thumb-cap">Vertical · 1080 × 1920<small>Reels, TikTok, Shorts</small></span></label>' +
+                '</div>' +
+                '<p class="bk-meta" style="margin-top:8px">' + (_wm && _wm.enabled ? 'Your watermark is applied exactly as on the clips.' : 'The watermark is off, so the image is used as it is.') + '</p>' +
+                '<p id="bk-thumb-error" class="cam-form-error"></p>' +
+                '<div class="cam-form-actions"><button type="button" class="cam-btn ghost" onclick="closeCamDialog()">Cancel</button>' +
+                    '<button type="submit" class="cam-btn primary"' + (list.length ? '' : ' disabled') + '>Set as thumbnail</button></div>' +
+                '</form>');
+            document.querySelector('#cam-dialog .cam-dialog-panel').classList.add('wide');
+            var form = document.getElementById('bk-thumb-form'), err = document.getElementById('bk-thumb-error');
+            var imgP = loadImage(f.url);
+            // Small previews drawn with the same code as the full-size files
+            imgP.then(function(img) {
+                [['bk-thumb-h', WM_LAYOUT.horizontal], ['bk-thumb-v', WM_LAYOUT.vertical]].forEach(function(x) {
+                    renderThumb(img, x[1]).then(function(full) {
+                        var cv = document.getElementById(x[0]); if (!cv) return;
+                        cv.width = x[1].W / 4; cv.height = x[1].H / 4;
+                        var g = cv.getContext('2d'); g.imageSmoothingQuality = 'high';
+                        g.drawImage(full, 0, 0, cv.width, cv.height);
+                    });
+                });
+            }).catch(function() { err.textContent = 'This image could not be loaded.'; });
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                var sess = list[Number(form.session && form.session.value)];
+                var kinds = ['horizontal', 'vertical'].filter(function(k) { return form[k].checked; });
+                if (!sess || !kinds.length) { err.textContent = kinds.length ? '' : 'Choose at least one format.'; return; }
+                var btn = form.querySelector('[type=submit]'); btn.disabled = true; btn.textContent = 'Saving…'; err.textContent = '';
+                try {
+                    var img = await imgP;
+                    var tag = sess.artist + ' // THUMB // D:' + sess.date;
+                    for (var k = 0; k < kinds.length; k++) {
+                        var cv = await renderThumb(img, WM_LAYOUT[kinds[k]]);
+                        var blob = await new Promise(function(r) { cv.toBlob(r, 'image/jpeg', 0.92); });
+                        var r = await laFetch('/api/upload-thumbnail?passthrough=' + encodeURIComponent(tag), { method: 'PUT', headers: { 'Content-Type': 'image/jpeg', 'X-Passthrough': tag }, body: blob });
+                        if (!r.ok) throw new Error((await r.json().catch(function() { return {}; })).error || r.status);
+                    }
+                    closeCamDialog();
+                    laToast && laToast(kinds.length > 1 ? 'Thumbnails added to ' + sess.artist : 'Thumbnail added to ' + sess.artist);
+                } catch (er) {
+                    err.textContent = 'Could not save: ' + er.message;
+                    btn.disabled = false; btn.textContent = 'Set as thumbnail';
+                }
             });
         }
         var _wmSaveT;
@@ -635,6 +750,7 @@
                 _ownerPhotos = res[0].ownerPhotos || {};
                 _wm = res[0].watermark || { enabled: true, logo: 'auto', position: 'br', size: 'm', opacity: 0.9 };
                 var assets = Array.isArray(res[1]) ? res[1] : (res[1].data || []);
+                buildSessions(assets);
                 var names = {};
                 assets.forEach(function(a) { var n = artistFromAsset(a); if (n) names['artist-' + slugify(n)] = n.toUpperCase(); });
                 _files.forEach(function(f) {
@@ -716,6 +832,7 @@
                 pv.classList.add('is-openable');
                 pv.addEventListener('click', function(e) { if (!e.target.closest('button')) open.click(); });
             });
+            wrap.querySelectorAll('[data-set-thumb]').forEach(function(b) { b.addEventListener('click', function() { openSetThumbnail(b.dataset.setThumb); }); });
             wrap.querySelectorAll('[data-use-wm]').forEach(function(b) { b.addEventListener('click', function() { useLogoAsWatermark(b.dataset.useWm); }); });
             wrap.querySelectorAll('[data-file-preview]').forEach(function(b) { b.addEventListener('click', function() { openFilePreview(b.dataset.filePreview); }); });
             wrap.querySelectorAll('[data-move]').forEach(function(b) { b.addEventListener('click', function() { openMove(b.dataset.move); }); });
@@ -739,6 +856,8 @@
         // Logo backgrounds follow the light or dark theme (kept as a hook for the image onload)
         function fitPreviewBg(img) {}
 
+        // Pictures that can become a session thumbnail (covers, artwork, photos)
+        function thumbFile(f) { return f.category !== 'logos' && /\.(png|jpe?g|webp)$/i.test(f.name); }
         // Logos the clip worker can stamp on clips
         function wmLogoFile(f) { return f.category === 'logos' && /\.(png|svg|webp|jpe?g)$/i.test(f.name); }
         function wmUsesLogo(f) { return !!_wm && _wm.enabled && wmPreviewLogo() === f.url; }
@@ -768,10 +887,13 @@
                 '<label class="bk-share-label" for="bk-share-link">Share link</label>' +
                 '<div class="bk-share"><input id="bk-share-link" readonly value="' + esc(link) + '"><button type="button" class="cam-btn ghost" id="bk-share-copy">Copy link</button></div>' +
                 '<div class="cam-form-actions" style="margin-top:16px">' +
+                    (thumbFile(f) ? '<button type="button" class="cam-btn ghost" id="bk-file-thumb">Set as thumbnail</button>' : '') +
                     (wmLogoFile(f) ? '<button type="button" class="cam-btn ghost" id="bk-file-wm">' + (wmUsesLogo(f) ? 'Used as watermark' : 'Use as watermark') + '</button>' : '') +
                     '<a class="cam-btn primary" href="' + esc(f.link ? f.link + '?download' : f.downloadUrl) + '">Download</a></div>');
             var useWm = document.getElementById('bk-file-wm');
             if (useWm) useWm.addEventListener('click', function() { useLogoAsWatermark(f.url); });
+            var setThumb = document.getElementById('bk-file-thumb');
+            if (setThumb) setThumb.addEventListener('click', function() { openSetThumbnail(f.url); });
             document.querySelector('#cam-dialog .cam-dialog-panel').classList.add('wide');
             var input = document.getElementById('bk-share-link'), copy = document.getElementById('bk-share-copy');
             input.addEventListener('focus', function() { input.select(); });
@@ -840,6 +962,7 @@
             var preview = IMG_EXT.test(f.name)
                 ? '<div class="bk-preview' + (isPhoto ? ' photo' : '') + '">' + tag + '<img src="' + esc(f.url) + '" alt="" loading="lazy" crossorigin="anonymous" onload="fitPreviewBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}">' +
                     '' +
+                    (thumbFile(f) ? '<button type="button" class="bk-use-wm" data-set-thumb="' + esc(f.url) + '" title="Use this image as a session thumbnail, with your watermark">Set as thumbnail</button>' : '') +
                     (wmLogoFile(f) ? '<button type="button" class="bk-use-wm' + (wmUsesLogo(f) ? ' is-on' : '') + '" data-use-wm="' + esc(f.url) + '" title="Stamp this logo bottom right on every vertical clip">' + (wmUsesLogo(f) ? 'Watermark' : 'Use as watermark') + '</button>' : '') + '</div>'
                 : FONT_EXT.test(f.name)
                 ? '<div class="bk-preview bk-font" data-font="' + esc(f.url) + '">' + tag +
