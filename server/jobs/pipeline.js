@@ -6,7 +6,7 @@ import path from 'path';
 import os from 'os';
 import { extractSubjectFrames, detectSubjectTrack, buildSubjectCropFilter } from './subject-reframe.js';
 import { updatePipelineJob } from './pipeline-db.js';
-import { prepareWatermark, overlayChain } from './watermark.js';
+import { prepareWatermark, overlayInputs, overlayChain } from './watermark.js';
 
 const execAsync = promisify(exec);
 
@@ -84,9 +84,9 @@ async function processClip(videoUrl, start, dur, outPath, cropFilter, signal, wa
   // -allowed_extensions ALL is required for FFmpeg to accept HLS playlists over HTTPS.
   const ffBase = `ffmpeg -y -allowed_extensions ALL -protocol_whitelist file,https,http,tcp,tls,crypto`;
 
-  // With a Brand Kit logo: crop to 9:16, then lay the logo over it (second input)
+  // With a Brand Kit watermark: crop to 9:16, then lay the logo and text over it (inputs 1..)
   const video = watermark
-    ? `-i "${watermark.file}" -filter_complex "[0:v]${cropFilter}[v];${overlayChain(watermark)}" -map "[out]"`
+    ? `${overlayInputs(watermark)} -filter_complex "[0:v]${cropFilter}[v];${overlayChain(watermark)}" -map "[out]"`
     : `-vf "${cropFilter}" -map 0:v:0`;
 
   const cmd =
@@ -159,7 +159,7 @@ export async function runPipeline({ jobId, uploadId, assetId: knownAssetId, arti
 
     if (duration < MIN_CLIP_DUR * 2) throw new Error(`Video too short: ${Math.round(duration)}s`);
 
-    // Brand Kit logo for every clip. A logo problem never blocks the clips themselves.
+    // Brand Kit logo and text for every clip. A watermark problem never blocks the clips themselves.
     let watermark = null;
     try { watermark = await prepareWatermark(wmSettings, tmpDir); }
     catch (e) { console.error(`[Pipeline:${jobId}] Watermark skipped: ${e.message}`); }

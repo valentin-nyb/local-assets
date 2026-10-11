@@ -170,6 +170,9 @@
         .bk-font.ready .bk-font-sample { opacity:1; }
         .bk-font-sample .aa { font-size:40px; line-height:1.05; }
         .bk-font-sample .line { font-size:13px; color:var(--la-sub); white-space:nowrap; }
+        /* Font cards sit on the same dark checkered background as logo cards, in both themes */
+        .bk-font.bg-dark .bk-font-sample { color:#fff; }
+        .bk-font.bg-dark .bk-font-sample .line { color:rgba(255,255,255,.6); }
         .bk-font.failed .bk-font-sample { opacity:1; font-family:inherit; }
         .bk-tester-input { width:100%; height:40px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 12px; font-size:14px; outline:none; }
         .bk-tester-input:focus { border-color:var(--la-accent); }
@@ -205,7 +208,7 @@
         .bk-toolbar { align-items:center; row-gap:16px; column-gap:32px; }
         .bk-toolbar > .min-w-0 { flex:1 1 360px; }
         .bk-lead { font-size:13px; line-height:1.55; color:var(--la-sub); margin-top:6px; max-width:620px; }
-        .bk-wm { display:grid; grid-template-columns:minmax(0,1fr) 150px; gap:28px; background:var(--la-surface); border:1px solid var(--la-line); border-radius:16px; padding:24px; }
+        .bk-wm { display:grid; grid-template-columns:minmax(0,1fr) 160px; gap:28px; background:var(--la-surface); border:1px solid var(--la-line); border-radius:16px; padding:24px; }
         .bk-wm.hidden { display:none; }
         .bk-wm-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
         .bk-wm-title { font-size:15px; font-weight:600; color:var(--la-text); }
@@ -223,10 +226,17 @@
         .bk-switch[aria-checked="true"] { background:var(--la-accent); }
         .bk-switch[aria-checked="true"]::after { transform:translateX(16px); }
         .bk-wm-status { font-size:12px; color:var(--la-dim); margin-top:16px; min-height:16px; }
-        .bk-wm-preview { position:relative; width:150px; aspect-ratio:9/16; border-radius:12px; overflow:hidden; align-self:start;
+        .bk-wm-preview { position:relative; width:160px; aspect-ratio:9/16; border-radius:12px; overflow:hidden; align-self:start;
             background-color:#141416; background-image:linear-gradient(45deg, rgba(255,255,255,.05) 25%, transparent 25%), linear-gradient(-45deg, rgba(255,255,255,.05) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(255,255,255,.05) 75%), linear-gradient(-45deg, transparent 75%, rgba(255,255,255,.05) 75%);
             background-size:16px 16px; background-position:0 0, 0 8px, 8px -8px, -8px 0; }
         .bk-wm-preview img.logo { position:absolute; object-fit:contain; transition:all .15s; }
+        .bk-wm-preview .text { position:absolute; color:#fff; white-space:nowrap; line-height:1; text-shadow:0 1px 3px rgba(0,0,0,.35); transition:all .15s; }
+        .bk-wm-textrow { display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; min-width:0; }
+        .bk-wm-textrow input { height:36px; flex:1 1 200px; max-width:260px; min-width:0; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 10px; font-size:13px; outline:none; }
+        .bk-wm-textrow input:focus { border-color:var(--la-accent); }
+        .bk-wm-font { font-size:12px; color:var(--la-dim); }
+        .bk-wm-link { font-size:12px; color:var(--la-sub); background:none; border:none; padding:0; cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
+        .bk-wm-hint { font-size:12px; color:var(--la-dim); line-height:1.5; }
         .bk-wm-cap { font-size:11px; color:var(--la-dim); text-align:center; margin-top:8px; }
         @media (max-width: 640px) {
             .bk-wm { grid-template-columns:minmax(0,1fr); padding:18px; }
@@ -236,6 +246,7 @@
             .bk-seg[data-n="3"] { grid-template-columns:repeat(3,1fr); }
             .bk-wm select { max-width:none; }
             .bk-wm-preview-wrap { justify-self:center; }
+            .bk-wm-textrow input { max-width:none; flex-basis:100%; }
         }
         .bk-group { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--la-dim); margin:10px 2px -4px; }
         .bk-owners > .bk-group:first-child { margin-top:0; }
@@ -415,13 +426,23 @@
         var _wm = null;
         var WM_POS = [['br', 'Bottom right'], ['bl', 'Bottom left'], ['tr', 'Top right'], ['tl', 'Top left']];
         var WM_SIZE = [['s', 'Small'], ['m', 'Medium'], ['l', 'Large']];
-        var WM_PX = { s: 160, m: 220, l: 300 };
+        // Largest logo box per size, in px on a 1080×1920 clip (same as the clip worker)
+        var WM_BOX = { s: [160, 110], m: [240, 170], l: [340, 240] };
+        var WM_TEXT_POS = [['bl', 'Bottom left'], ['tl', 'Top left']];
+        var WM_TEXT_PX = { s: 44, m: 56, l: 72 };
+        // The clip worker draws watermark text from these font files (not WOFF2)
+        var WM_TEXT_FONT = /\.(ttf|otf|woff)$/i;
         function wmLogos() { return _files.filter(function(f) { return f.category === 'logos' && /\.(png|svg|webp|jpe?g)$/i.test(f.name); }); }
         function wmPreviewLogo() {
             var logos = wmLogos();
             if (/^https:/.test(_wm.logo)) { var m = logos.filter(function(f) { return f.url === _wm.logo; })[0]; if (m) return m.url; }
             var own = logos.filter(function(f) { return f.owner === 'venue'; })[0];
             return (own || logos[0] || {}).url || '';
+        }
+        // The watermark text, while its font is still in the brand kit
+        function wmText() {
+            if (!_wm.text || !_wm.text.value) return null;
+            return _files.filter(function(f) { return f.url === _wm.text.font; })[0] || null;
         }
         function renderWatermark() {
             var box = document.getElementById('bk-wm');
@@ -441,22 +462,35 @@
             box.innerHTML =
                 '<div>' +
                     '<div class="bk-wm-head"><div><p class="bk-wm-title">Watermark</p>' +
-                    '<p class="bk-wm-sub">Adds a logo to every vertical clip, placed clear of the captions and buttons on TikTok, Reels and Shorts. Applies to clips made from now on.</p></div>' +
+                    '<p class="bk-wm-sub">Adds your logo, and text in one of your fonts, to every vertical clip, placed clear of the captions and buttons on TikTok, Reels and Shorts. Applies to clips made from now on.</p></div>' +
                     '<button type="button" class="bk-switch" role="switch" aria-label="Watermark" aria-checked="' + _wm.enabled + '" data-wm="enabled"></button></div>' +
                     '<div class="bk-wm-rows' + (_wm.enabled ? '' : ' off') + '">' +
                         '<span class="bk-wm-label">Logo</span><select data-wm="logo"' + (noLogo ? ' disabled' : '') + '>' + logoOpts + '</select>' +
                         '<span class="bk-wm-label">Position</span>' + seg('position', WM_POS, _wm.position) +
+                        '<span class="bk-wm-label">Text</span>' + (wmText()
+                            ? '<div class="bk-wm-textrow"><input id="bk-wm-text-input" value="' + esc(_wm.text.value) + '" maxlength="60" aria-label="Watermark text">' +
+                              seg('textpos', WM_TEXT_POS, _wm.text.position) +
+                              '<span class="bk-wm-font">' + esc(wmText().name.replace(/\.[^.]+$/, '')) + '</span>' +
+                              '<button type="button" class="bk-wm-link" id="bk-wm-text-remove">Remove</button></div>'
+                            : '<p class="bk-wm-hint">None. Preview one of your fonts, type your text and choose Use as watermark.</p>') +
                         '<span class="bk-wm-label">Size</span>' + seg('size', WM_SIZE, _wm.size) +
                         '<span class="bk-wm-label">Opacity</span><input type="range" min="30" max="100" step="5" value="' + Math.round(_wm.opacity * 100) + '" data-wm="opacity" aria-label="Opacity">' +
                     '</div>' +
-                    '<p class="bk-wm-status" id="bk-wm-status">' + (noLogo ? 'Upload a logo to your brand kit to use a watermark.' : '') + '</p>' +
+                    '<p class="bk-wm-status" id="bk-wm-status">' + (noLogo && !wmText() ? 'Upload a logo to your brand kit to use a watermark.' : '') + '</p>' +
                 '</div>' +
                 '<div class="bk-wm-preview-wrap"><div class="bk-wm-preview">' +
-                    '<img class="logo" alt="" id="bk-wm-logo"></div><p class="bk-wm-cap">Preview</p></div>';
+                    '<img class="logo" alt="" id="bk-wm-logo"><span class="text" id="bk-wm-text"></span></div><p class="bk-wm-cap">Clip preview · 1080 × 1920</p></div>';
+            var img = document.getElementById('bk-wm-logo');
+            img.addEventListener('load', positionPreview);
             positionPreview();
+            var tIn = document.getElementById('bk-wm-text-input');
+            if (tIn) {
+                tIn.addEventListener('input', function() { if (tIn.value.trim()) { _wm.text.value = tIn.value.trim(); positionPreview(); saveWatermark(); } });
+                document.getElementById('bk-wm-text-remove').addEventListener('click', function() { _wm.text = null; renderWatermark(); saveWatermark(); });
+            }
             box.querySelectorAll('[data-wm]').forEach(function(el) {
                 var key = el.dataset.wm;
-                var apply = function(v) { _wm[key] = v; if (key === 'enabled') renderWatermark(); else { box.querySelectorAll('[data-wm="' + key + '"][data-v]').forEach(function(b) { b.setAttribute('aria-pressed', b.dataset.v === v); }); positionPreview(); } saveWatermark(); };
+                var apply = function(v) { if (key === 'textpos') _wm.text.position = v; else _wm[key] = v; if (key === 'enabled') renderWatermark(); else { box.querySelectorAll('[data-wm="' + key + '"][data-v]').forEach(function(b) { b.setAttribute('aria-pressed', b.dataset.v === v); }); positionPreview(); } saveWatermark(); };
                 if (el.tagName === 'SELECT') el.addEventListener('change', function() { apply(el.value); });
                 else if (el.type === 'range') { el.addEventListener('input', function() { _wm.opacity = el.value / 100; positionPreview(); }); el.addEventListener('change', function() { saveWatermark(); }); }
                 else if (key === 'enabled') el.addEventListener('click', function() { apply(!_wm.enabled); });
@@ -467,12 +501,33 @@
             var img = document.getElementById('bk-wm-logo');
             if (!img) return;
             var url = wmPreviewLogo();
+            var k = 160 / 1080, p = _wm.position;
+            var txt = document.getElementById('bk-wm-text'), tf = wmText();
+            if (txt) {
+                if (!tf) txt.style.display = 'none';
+                else {
+                    txt.style.display = '';
+                    txt.textContent = _wm.text.value;
+                    loadBrandFont(tf.url).then(function(family) { txt.style.fontFamily = family; }).catch(function() {});
+                    var tp = _wm.text.position;
+                    // Same corner as the logo: text sits next to it, further from the edge
+                    var shift = url && tp === p && img.complete && img.naturalWidth ? Math.min((WM_BOX[_wm.size] || WM_BOX.m)[1], (WM_BOX[_wm.size] || WM_BOX.m)[0] * img.naturalHeight / img.naturalWidth) + 24 : 0;
+                    txt.style.fontSize = Math.round(WM_TEXT_PX[_wm.size] * k) + 'px';
+                    txt.style.maxWidth = Math.round(760 * k) + 'px';
+                    txt.style.opacity = _wm.opacity;
+                    txt.style.left = Math.round(56 * k) + 'px';
+                    txt.style.top = tp === 'tl' ? Math.round((220 + shift) * k) + 'px' : 'auto';
+                    txt.style.bottom = tp === 'bl' ? Math.round((320 + shift) * k) + 'px' : 'auto';
+                }
+            }
             if (!url) { img.style.display = 'none'; return; }
             if (img.getAttribute('src') !== url) img.src = url;
-            var k = 150 / 1080, p = _wm.position;
             img.style.display = '';
-            img.style.width = Math.round(WM_PX[_wm.size] * k) + 'px';
-            img.style.maxHeight = Math.round(160 * k) + 'px';
+            // Fit the logo inside the size's box, keeping its proportions
+            var box = WM_BOX[_wm.size] || WM_BOX.m, ar = img.naturalWidth && img.naturalHeight ? img.naturalWidth / img.naturalHeight : 2;
+            var lw = Math.min(box[0], box[1] * ar);
+            img.style.width = Math.round(lw * k) + 'px';
+            img.style.height = Math.round(lw / ar * k) + 'px';
             img.style.opacity = _wm.opacity;
             img.style.left = p[1] === 'l' ? Math.round(56 * k) + 'px' : 'auto';
             img.style.right = p[1] === 'r' ? Math.round(56 * k) + 'px' : 'auto';
@@ -645,12 +700,25 @@
                     '<p class="bk-tester-chars" style="font-size:18px">ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz<br>0123456789 &amp; ! ? @ £ € % ( ) . , : ;</p>' +
                 '</div>' +
                 '<p id="bk-tester-status" class="bk-meta">Loading font…</p>' +
-                '<div class="cam-form-actions" style="margin-top:14px"><a class="cam-btn ghost" href="' + esc(f.link ? f.link + '?download' : f.downloadUrl || url) + '"><iconify-icon icon="solar:download-minimalistic-linear"></iconify-icon><span>Download</span></a></div>' +
+                '<div class="cam-form-actions" style="margin-top:14px"><a class="cam-btn ghost" href="' + esc(f.link ? f.link + '?download' : f.downloadUrl || url) + '"><iconify-icon icon="solar:download-minimalistic-linear"></iconify-icon><span>Download</span></a>' +
+                    (WM_TEXT_FONT.test(f.name) ? '<button type="button" class="cam-btn primary" id="bk-tester-wm">Use as watermark</button>' : '') + '</div>' +
+                (WM_TEXT_FONT.test(f.name) ? '' : '<p class="bk-meta" style="margin-top:8px">To use this font for watermark text, upload it as TTF, OTF or WOFF.</p>') +
                 '</div>');
             document.querySelector('#cam-dialog .cam-dialog-panel').classList.add('wide');
             var input = document.getElementById('bk-tester-input'), out = document.getElementById('bk-tester-out');
             var sync = function() { out.querySelectorAll('[data-sample]').forEach(function(p) { p.textContent = input.value || 'Type something'; }); };
             input.addEventListener('input', sync); sync();
+            var useWm = document.getElementById('bk-tester-wm');
+            if (useWm) useWm.addEventListener('click', function() {
+                var value = input.value.replace(/\s+/g, ' ').trim().slice(0, 60);
+                if (!value) { input.focus(); return; }
+                _wm.text = { value: value, font: url, position: (_wm.text && _wm.text.position) || 'bl' };
+                _wm.enabled = true;
+                closeCamDialog();
+                renderWatermark();
+                saveWatermark();
+                document.getElementById('bk-wm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
             loadBrandFont(url).then(function(family) {
                 out.style.fontFamily = family;
                 document.getElementById('bk-tester-status').textContent = f.size ? fmtSize(f.size) + ' · ' + f.name.split('.').pop().toUpperCase() : '';
@@ -669,7 +737,7 @@
                 ? '<div class="bk-preview' + (isPhoto ? ' photo' : '') + '">' + tag + '<img src="' + esc(f.url) + '" alt="" loading="lazy" crossorigin="anonymous" onload="fitPreviewBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}">' +
                     '<button type="button" class="bk-bg-toggle" title="Switch background" onclick="flipPreviewBg(this)"><iconify-icon icon="solar:sun-2-linear"></iconify-icon></button></div>'
                 : FONT_EXT.test(f.name)
-                ? '<div class="bk-preview doc bk-font" data-font="' + esc(f.url) + '">' + tag +
+                ? '<div class="bk-preview bk-font bg-dark" data-font="' + esc(f.url) + '">' + tag +
                     '<div class="bk-font-sample"><span class="aa">Aa</span><span class="line">ABC abc 123</span></div></div>'
                 : '<div class="bk-preview doc">' + tag + '<div class="bk-ext"><iconify-icon icon="' + (/pdf/i.test(ext) ? 'solar:document-text-linear' : /ttf|otf|woff/i.test(ext) ? 'solar:text-field-linear' : /zip/i.test(ext) ? 'solar:zip-file-linear' : 'solar:file-linear') + '"></iconify-icon><span>' + esc(ext) + '</span></div></div>';
             return '<div class="bk-file">' + preview +
