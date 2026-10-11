@@ -68,7 +68,7 @@
                     <p class="font-mono text-xs text-red-400" id="client-login-error-text"></p>
                 </div>
             </div>
-            <p class="text-center mt-6 font-mono text-[10px] text-[#555]">Don't have an account? <a href="index.html" class="text-[#39FF14] hover:underline">Select a tier →</a></p>
+            <p class="text-center mt-6 font-mono text-[10px] text-[#555]">Don't have an account? <a href="index.html" class="text-[#39FF14] hover:underline">Select a tier</a></p>
         </div>
     </div>
 
@@ -148,7 +148,7 @@
                     <!-- Populated by JS -->
                 </div>
                 <div id="assets-empty" class="hidden py-20 text-center">
-                    <iconify-icon icon="solar:folder-open-linear" class="text-5xl text-[#333] mb-4 block mx-auto"></iconify-icon>
+                    
                     <p class="font-mono text-sm text-[#666]">No assets yet — upload your first master.</p>
                 </div>
                 <div id="assets-loading" class="py-20 text-center">
@@ -166,7 +166,7 @@
                     </div>
                     <div id="upload-zone" class="upload-zone p-12 text-center cursor-pointer" onclick="document.getElementById('upload-file').click()">
                         <input id="upload-file" type="file" accept="video/*,audio/*" class="hidden" onchange="handleFileSelected(this)">
-                        <iconify-icon icon="solar:upload-linear" class="text-4xl text-[#555] mb-4 block mx-auto"></iconify-icon>
+                        
                         <p class="font-mono text-sm text-[#888] mb-2">Drop your file here or click to browse</p>
                         <p class="font-mono text-[10px] text-[#555]">4K Video / Audio • No size limit</p>
                     </div>
@@ -181,7 +181,7 @@
                         <p id="upload-status" class="font-mono text-[10px] text-[#666] mt-2">Preparing upload...</p>
                     </div>
                     <div id="upload-success" class="hidden mt-6 p-4 border border-[#39FF14]/30 bg-[#39FF14]/5">
-                        <p class="font-mono text-xs text-[#39FF14]">✓ Upload complete — asset is now processing. Audio, clips, and thumbnails will be auto-generated.</p>
+                        <p class="font-mono text-xs text-[#39FF14]">Upload complete — asset is now processing. Audio, clips, and thumbnails will be auto-generated.</p>
                     </div>
                 </div>
             </div>
@@ -189,7 +189,7 @@
             <!-- DISTRIBUTION TAB -->
             <div id="panel-distribution" class="hidden">
                 <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-8 text-center">
-                    <iconify-icon icon="solar:earth-linear" class="text-5xl text-[#39FF14] mb-4 block mx-auto"></iconify-icon>
+                    
                     <h3 class="font-mono text-sm uppercase tracking-wider text-white mb-2">Distribution Status</h3>
                     <p class="font-mono text-xs text-[#666] mb-6 max-w-md mx-auto">Your assets are automatically distributed to our partner network once processing completes.</p>
                     <div id="distribution-list" class="space-y-3 max-w-md mx-auto text-left">
@@ -213,7 +213,7 @@
                         </div>
                     </div>
                     <button onclick="refreshAnalytics()" class="font-mono text-[10px] tracking-wider px-4 py-2 border border-[#39FF14] text-[#39FF14] hover:bg-[#39FF14] hover:text-black transition-all uppercase">
-                        <iconify-icon icon="solar:refresh-bold" class="inline-block mr-1"></iconify-icon> Refresh
+                         Refresh
                     </button>
                 </div>
 
@@ -222,7 +222,7 @@
                     <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-6 hover:border-[#39FF14]/30 transition-colors">
                         <div class="flex items-center justify-between mb-3">
                             <span class="font-mono text-xs text-[#666] uppercase">Total Revenue</span>
-                            <iconify-icon icon="solar:wallet-bold" class="text-xl text-[#39FF14]"></iconify-icon>
+                            
                         </div>
                         <div class="text-4xl font-bold text-white mb-1" id="total-revenue-client">£—</div>
                         <p class="font-mono text-[9px] text-[#555]">Combined platforms</p>
@@ -230,7 +230,7 @@
                     <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-6 hover:border-red-500/30 transition-colors">
                         <div class="flex items-center justify-between mb-3">
                             <span class="font-mono text-xs text-[#666] uppercase">YouTube Revenue</span>
-                            <iconify-icon icon="mdi:youtube" class="text-xl text-[#FF0000]"></iconify-icon>
+                            
                         </div>
                         <div class="text-4xl font-bold text-white mb-1" id="yt-revenue-client">£—</div>
                         <p class="font-mono text-[9px] text-[#555]" id="yt-views-client">— views</p>
@@ -238,7 +238,7 @@
                     <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-6 hover:border-[#FF5500]/30 transition-colors">
                         <div class="flex items-center justify-between mb-3">
                             <span class="font-mono text-xs text-[#666] uppercase">SoundCloud Revenue</span>
-                            <iconify-icon icon="mdi:soundcloud" class="text-xl text-[#FF5500]"></iconify-icon>
+                            
                         </div>
                         <div class="text-4xl font-bold text-white mb-1" id="sc-revenue-client">£—</div>
                         <p class="font-mono text-[9px] text-[#555]" id="sc-plays-client">— plays</p>
@@ -251,28 +251,28 @@
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                         <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
                             <div class="flex items-center gap-2 mb-2">
-                                <iconify-icon icon="solar:eye-bold" class="text-sm text-[#39FF14]"></iconify-icon>
+                                
                                 <span class="font-mono text-xs text-[#666] uppercase">Views</span>
                             </div>
                             <div class="text-2xl font-bold text-white" id="yt-total-views-client">—</div>
                         </div>
                         <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
                             <div class="flex items-center gap-2 mb-2">
-                                <iconify-icon icon="solar:clock-circle-bold" class="text-sm text-[#39FF14]"></iconify-icon>
+                                
                                 <span class="font-mono text-xs text-[#666] uppercase">Watch Time</span>
                             </div>
                             <div class="text-2xl font-bold text-white" id="yt-watch-time-client">—</div>
                         </div>
                         <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
                             <div class="flex items-center gap-2 mb-2">
-                                <iconify-icon icon="solar:users-group-rounded-bold" class="text-sm text-[#39FF14]"></iconify-icon>
+                                
                                 <span class="font-mono text-xs text-[#666] uppercase">Subscribers</span>
                             </div>
                             <div class="text-2xl font-bold text-white" id="yt-subscribers-client">—</div>
                         </div>
                         <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
                             <div class="flex items-center gap-2 mb-2">
-                                <iconify-icon icon="solar:chart-bold" class="text-sm text-[#39FF14]"></iconify-icon>
+                                
                                 <span class="font-mono text-xs text-[#666] uppercase">Avg CTR</span>
                             </div>
                             <div class="text-2xl font-bold text-white" id="yt-ctr-client">—</div>
@@ -286,28 +286,28 @@
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
                             <div class="flex items-center gap-2 mb-2">
-                                <iconify-icon icon="solar:play-circle-bold" class="text-sm text-[#39FF14]"></iconify-icon>
+                                
                                 <span class="font-mono text-xs text-[#666] uppercase">Plays</span>
                             </div>
                             <div class="text-2xl font-bold text-white" id="sc-total-plays-client">—</div>
                         </div>
                         <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
                             <div class="flex items-center gap-2 mb-2">
-                                <iconify-icon icon="solar:download-bold" class="text-sm text-[#39FF14]"></iconify-icon>
+                                
                                 <span class="font-mono text-xs text-[#666] uppercase">Downloads</span>
                             </div>
                             <div class="text-2xl font-bold text-white" id="sc-downloads-client">—</div>
                         </div>
                         <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
                             <div class="flex items-center gap-2 mb-2">
-                                <iconify-icon icon="solar:heart-bold" class="text-sm text-[#39FF14]"></iconify-icon>
+                                
                                 <span class="font-mono text-xs text-[#666] uppercase">Favorites</span>
                             </div>
                             <div class="text-2xl font-bold text-white" id="sc-favorites-client">—</div>
                         </div>
                         <div class="border border-[#1a1a1a] bg-[#0a0a0a] p-4">
                             <div class="flex items-center gap-2 mb-2">
-                                <iconify-icon icon="solar:share-bold" class="text-sm text-[#39FF14]"></iconify-icon>
+                                
                                 <span class="font-mono text-xs text-[#666] uppercase">Reposts</span>
                             </div>
                             <div class="text-2xl font-bold text-white" id="sc-reposts-client">—</div>
@@ -445,9 +445,7 @@
     function buildAssetCard(asset) {
         var thumb = asset.thumbnail
             ? '<img src="' + asset.thumbnail + '" class="w-full h-40 object-cover" alt="" loading="lazy">'
-            : '<div class="w-full h-40 bg-[#111] flex items-center justify-center"><iconify-icon icon="solar:' +
-              (asset.type === 'audio' ? 'music-note-bold' : 'videocamera-linear') +
-              '" class="text-3xl text-[#333]"></iconify-icon></div>';
+            : '<div class="w-full h-40 bg-[#111] flex items-center justify-center"></div>';
 
         var duration = asset.duration ? formatDuration(asset.duration) : '';
         var status = asset.status === 'ready'
@@ -676,7 +674,7 @@
             var data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Upload failed');
 
-            btn.textContent = '✓ Live on SoundCloud';
+            btn.textContent = 'Live on SoundCloud';
             btn.style.color = '#39FF14';
             btn.disabled = false;
             btn.onclick = function() { window.open(data.url, '_blank'); };

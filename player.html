@@ -223,7 +223,7 @@
     <header id="site-header">
         <div class="flex items-center gap-3 min-w-0">
             <a href="javascript:history.back()" class="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0">
-                <iconify-icon icon="solar:alt-arrow-left-linear" style="color:#71717a;font-size:18px;"></iconify-icon>
+                
                 <span style="font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:#71717a;">BACK</span>
             </a>
             <span style="color:#3f3f46;" class="hidden md:inline">|</span>
@@ -234,7 +234,7 @@
         <div class="flex items-center gap-3 shrink-0">
             <span id="asset-title-mobile" style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#71717a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px;" class="md:hidden"></span>
             <a id="download-link" href="#" download class="hidden items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#39FF14]/30 transition-colors">
-                <iconify-icon icon="solar:download-bold" style="color:#39FF14;font-size:14px;"></iconify-icon>
+                
                 <span style="font-size:8px;letter-spacing:.18em;text-transform:uppercase;color:#39FF14;">DOWNLOAD</span>
             </a>
         </div>
@@ -301,7 +301,7 @@
                     <div id="clip-info-bar">
                         <span id="clip-name-label"></span>
                         <button id="clip-dl-btn">
-                            <iconify-icon icon="solar:download-bold" style="font-size:13px;"></iconify-icon>
+                            
                             DOWNLOAD
                         </button>
                     </div>
@@ -424,9 +424,6 @@
             if (ext === 'm4a' || ext === 'wav' || ext === 'mp3') {
                 container.innerHTML = `
                     <div class="w-full max-w-lg text-center space-y-6 px-6">
-                        <div class="w-24 h-24 mx-auto bg-[#0a0a0a] border border-[#27272a] rounded-2xl flex items-center justify-center">
-                            <iconify-icon icon="solar:music-note-bold" class="text-[#39FF14] text-3xl"></iconify-icon>
-                        </div>
                         <audio controls autoplay class="w-full" style="filter:hue-rotate(90deg) brightness(1.2);">
                             <source src="${streamUrl}" type="audio/${ext === 'm4a' ? 'mp4' : ext}">
                         </audio>

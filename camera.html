@@ -211,7 +211,7 @@
         <header class="h-16 flex items-center px-4 md:px-8 border-b border-[#27272a] bg-[#050505] shrink-0 justify-between w-full z-40">
             <div class="flex items-center gap-2 md:gap-3 min-w-0"><button type="button" onclick="toggleSidebar()" class="la-menu-btn" aria-label="Open menu"><iconify-icon icon="solar:hamburger-menu-linear"></iconify-icon></button>
                 <span id="venue-breadcrumb" class="text-zinc-600 text-[10px] font-mono uppercase tracking-[0.3em] hidden md:inline"></span>
-                <iconify-icon icon="solar:alt-arrow-right-linear" class="text-zinc-700 hidden md:block"></iconify-icon>
+                
                 <h1 class="text-[10px] md:text-[10px] font-mono uppercase tracking-[0.2em] md:tracking-[0.3em] text-[#39FF14] font-bold m-0 truncate">
                     CAMERAS
                 </h1>
@@ -234,10 +234,10 @@
                     </div>
                     <div class="cam-actions" id="cam-head-actions" style="display:none">
                         <button type="button" class="cam-btn ghost" onclick="openOrderCameras()">
-                            <iconify-icon icon="solar:cart-large-2-linear"></iconify-icon><span>Order cameras</span>
+                            <span>Order cameras</span>
                         </button>
                         <button type="button" class="cam-btn primary" onclick="openCamForm()">
-                            <iconify-icon icon="solar:add-circle-linear"></iconify-icon><span>Add camera</span>
+                            <span>Add camera</span>
                         </button>
                     </div>
                 </div>
@@ -249,8 +249,8 @@
                         <h2 class="ci-title">Record every set. Get the clips automatically.</h2>
                         <p class="ci-text">Each OBSBOT Tail 2 streams over the venue's Wi-Fi or network straight to your Cloud Storage. When the set ends, the recording is in Distribution History as a session for the artist on stage, with vertical clips ready for social media.</p>
                         <div class="ci-actions">
-                            <button type="button" class="cam-btn primary" onclick="openCamForm()"><iconify-icon icon="solar:add-circle-linear"></iconify-icon>Connect a camera</button>
-                            <button type="button" class="cam-btn ghost" onclick="openOrderCameras()"><iconify-icon icon="solar:cart-large-minimalistic-linear"></iconify-icon>Order cameras · £1,299</button>
+                            <button type="button" class="cam-btn primary" onclick="openCamForm()">Connect a camera</button>
+                            <button type="button" class="cam-btn ghost" onclick="openOrderCameras()">Order cameras · £1,299</button>
                         </div>
                         <p class="ci-note">Setup and integration included with every camera ordered from us.</p>
                     </div>
@@ -258,12 +258,12 @@
                     <div class="ci-example" aria-label="Example of a connected camera">
                         <span class="ci-tag">EXAMPLE</span>
                         <div class="cam-card">
-                            <div class="cam-stage" id="ci-stage"><div class="ci-stage-fallback"><iconify-icon icon="solar:videocamera-record-linear"></iconify-icon></div></div>
+                            <div class="cam-stage" id="ci-stage"><div class="ci-stage-fallback"></div></div>
                             <div class="cam-meta"><span class="cam-label">CAM 01 // MAIN FLOOR</span><span class="cam-pill on">LIVE · REC</span></div>
                             <div class="cam-chips"><span class="cam-chip">OBSBOT Tail 2</span><span class="cam-chip ndi">NDI · MAIN FLOOR</span></div>
-                            <div class="cam-onstage" style="cursor:default"><iconify-icon icon="solar:microphone-3-linear"></iconify-icon><span style="min-width:0"><span class="lbl">ON STAGE</span><span class="val" id="ci-artist">ARTIST NAME</span></span><span class="go">Recording + clips</span></div>
+                            <div class="cam-onstage" style="cursor:default"><span style="min-width:0"><span class="lbl">ON STAGE</span><span class="val" id="ci-artist">ARTIST NAME</span></span><span class="go">Recording + clips</span></div>
                         </div>
-                        <div class="ci-arrow"><iconify-icon icon="solar:arrow-down-linear"></iconify-icon><span>When the stream stops</span></div>
+                        <div class="ci-arrow"><span>When the stream stops</span></div>
                         <div class="ci-result">
                             <div class="ci-result-head"><span><b id="ci-artist2">ARTIST NAME</b> · new session in Distribution History</span></div>
                             <ol class="ci-flow" aria-label="What happens to the recording">
@@ -286,7 +286,7 @@
                 </div>
 
                 <details class="cam-guide">
-                    <summary><iconify-icon icon="solar:book-2-linear"></iconify-icon> How to connect an OBSBOT Tail 2 with NDI</summary>
+                    <summary> How to connect an OBSBOT Tail 2 with NDI</summary>
                     <ol>
                         <li><b>Connect the camera</b> to the venue network: Wi-Fi, or an Ethernet cable (the Tail 2 is powered over the same cable from a PoE+ switch). Ethernet is steadier for long sets.</li>
                         <li><b>Turn on NDI</b> in the OBSBOT Start app (or the camera's web page) and give it a clear NDI name, e.g. <code>MAIN FLOOR</code>. Activate NDI there if the app asks.</li>
@@ -438,21 +438,21 @@
             if (c.ndiName) chips += '<span class="cam-chip ndi" title="NDI source name">NDI · ' + esc(c.ndiName) + '</span>';
             if (c.ip) chips += '<span class="cam-chip">' + esc(c.ip) + '</span>';
             var actions = '';
-            if (c.ip) actions += '<a class="cam-link" href="http://' + esc(c.ip) + '/" target="_blank" rel="noopener" title="Works on the venue network"><iconify-icon icon="solar:gamepad-linear"></iconify-icon>Controls</a>';
+            if (c.ip) actions += '<a class="cam-link" href="http://' + esc(c.ip) + '/" target="_blank" rel="noopener" title="Works on the venue network">Controls</a>';
             if (!c.external) {
-                actions += '<button type="button" class="cam-link" data-act="setup"><iconify-icon icon="solar:link-round-linear"></iconify-icon>Stream setup</button>';
-                actions += '<button type="button" class="cam-link" data-act="edit"><iconify-icon icon="solar:pen-linear"></iconify-icon>Edit</button>';
-                actions += '<button type="button" class="cam-link danger" data-act="remove"><iconify-icon icon="solar:trash-bin-minimalistic-linear"></iconify-icon>Remove</button>';
+                actions += '<button type="button" class="cam-link" data-act="setup">Stream setup</button>';
+                actions += '<button type="button" class="cam-link" data-act="edit">Edit</button>';
+                actions += '<button type="button" class="cam-link danger" data-act="remove">Remove</button>';
             }
             card.innerHTML =
                 '<div class="cam-stage"></div>' +
                 '<div class="cam-meta"><span class="cam-label">CAM ' + String(i + 1).padStart(2, '0') + ' // ' + esc(c.name) + '</span>' + pill + '</div>' +
                 (chips ? '<div class="cam-chips">' + chips + '</div>' : '') +
                 (c.external ? '' :
-                    '<button type="button" class="cam-onstage" data-act="stage"><iconify-icon icon="solar:microphone-3-linear"></iconify-icon>' +
+                    '<button type="button" class="cam-onstage" data-act="stage">' +
                     '<span style="min-width:0"><span class="lbl">ON STAGE</span><span class="val' + (c.artist ? '' : ' empty') + '">' + esc(c.artist || 'Set the artist') + '</span></span>' +
                     '<span class="go">' + (c.autoClips === false ? 'Recording only' : 'Recording + clips') + '</span></button>' +
-                    (c.recording === false && c.status !== 'missing' ? '<div class="cam-recoff"><iconify-icon icon="solar:danger-triangle-linear"></iconify-icon><span>Recording is off for this camera</span><button type="button" data-act="rec">Turn on</button></div>' : '')) +
+                    (c.recording === false && c.status !== 'missing' ? '<div class="cam-recoff"><span>Recording is off for this camera</span><button type="button" data-act="rec">Turn on</button></div>' : '')) +
                 (actions ? '<div class="cam-row-actions">' + actions + '</div>' : '');
             var stage = card.querySelector('.cam-stage');
             if (isLive) {
@@ -465,7 +465,7 @@
                 mp.style.cssText = 'width:100%;height:100%;--media-object-fit:cover;';
                 stage.appendChild(mp);
             } else {
-                stage.innerHTML = '<div class="cam-off"><iconify-icon icon="solar:videocamera-record-linear"></iconify-icon><span>' +
+                stage.innerHTML = '<div class="cam-off"><span>' +
                     (c.status === 'missing' ? 'This camera\'s stream was deleted from Cloud Storage' : 'Waiting for video') + '</span></div>';
             }
             card.querySelectorAll('[data-act]').forEach(function(b) {
@@ -524,7 +524,7 @@
                     row('Server (if RTMPS isn\'t supported)', d.rtmpUrl) +
                     row('Stream key', d.streamKey, true) +
                     (d.srtUrl ? row('SRT (alternative)', d.srtUrl, true) : '') +
-                    '<p class="cam-dialog-note"><iconify-icon icon="solar:shield-warning-linear"></iconify-icon> Keep the stream key private. Anyone with it can send video to this camera slot.</p>';
+                    '<p class="cam-dialog-note"> Keep the stream key private. Anyone with it can send video to this camera slot.</p>';
                 document.querySelectorAll('[data-copy]').forEach(function(b) {
                     b.addEventListener('click', function() {
                         navigator.clipboard.writeText(b.dataset.copy).then(function() {
@@ -608,7 +608,7 @@
                 ['solar:plug-circle-linear', 'One-cable setup', 'PoE+ Ethernet, plus 3G-SDI, HDMI and USB'],
                 ['solar:smartphone-rotate-angle-linear', 'PTZR', 'pan, tilt, zoom and 90° rotation for vertical video'],
             ].map(function(f) {
-                return '<div class="ord-feat"><iconify-icon icon="' + f[0] + '"></iconify-icon><div><b>' + f[1] + '</b><span>' + f[2] + '</span></div></div>';
+                return '<div class="ord-feat"><div><b>' + f[1] + '</b><span>' + f[2] + '</span></div></div>';
             }).join('');
             openCamDialog('', '');
             var panel = document.querySelector('#cam-dialog .cam-dialog-panel');
@@ -619,7 +619,7 @@
                 '<h3 class="ord-title">OBSBOT Tail 2</h3>' +
                 '<p class="ord-sub">AI-powered PTZR 4K live production camera with NDI HX3. Connects straight to your local / assets dashboard.</p>' +
                 '<div class="ord-price"><span class="ord-amount">' + gbp(CAMERA_PRICE) + '</span><span class="ord-per">per camera, inc. VAT</span></div>' +
-                '<p class="ord-included"><iconify-icon icon="solar:check-circle-bold"></iconify-icon> Setup and integration with your local / assets dashboard included</p>' +
+                '<p class="ord-included"> Setup and integration with your local / assets dashboard included</p>' +
                 '<p class="ord-klarna"><span class="ord-klarna-badge">Klarna.</span> Or pay in 3 interest-free payments of ' + gbp(Math.round(CAMERA_PRICE / 3)) + ', or spread the cost monthly.</p>' +
                 '<div class="ord-feats">' + feats + '</div>' +
                 '<details class="ord-specs"><summary>Full specifications</summary><dl>' +

@@ -50,30 +50,30 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
         <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
             <a href="/dashboard" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('/dashboard')}">
-                <iconify-icon icon="solar:widget-5-linear" class="text-lg"></iconify-icon>Overview
+                Overview
             </a>
             <a href="/camera" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('/camera')}">
-                <iconify-icon icon="solar:videocamera-record-linear" class="text-lg"></iconify-icon>Camera Control
+                Camera Control
             </a>
             <a href="/brand" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('/brand')}">
-                <iconify-icon icon="solar:pallete-2-linear" class="text-lg"></iconify-icon>Brand Kit
+                Brand Kit
             </a>
             <a href="/assets" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('/assets')}">
-                <iconify-icon icon="solar:cloud-upload-linear" class="text-lg"></iconify-icon>Upload Asset
+                Upload Asset
             </a>
         </nav>
         <div class="px-4 pt-6 mt-4 flex justify-center" style="padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1.5rem)">
             <div class="la-theme-switcher" role="radiogroup" aria-label="Theme">
                 <button type="button" role="radio" aria-checked="${saved === 'light' ? 'true' : 'false'}" data-theme="light">
-                    <iconify-icon icon="solar:sun-linear" class="la-theme-icon"></iconify-icon>
+                    
                     <span>Light</span>
                 </button>
                 <button type="button" role="radio" aria-checked="${saved === 'dark' || !['light','dark','auto'].includes(saved) ? 'true' : 'false'}" data-theme="dark">
-                    <iconify-icon icon="solar:moon-linear" class="la-theme-icon"></iconify-icon>
+                    
                     <span>Dark</span>
                 </button>
                 <button type="button" role="radio" aria-checked="${saved === 'auto' ? 'true' : 'false'}" data-theme="auto">
-                    <iconify-icon icon="solar:monitor-linear" class="la-theme-icon"></iconify-icon>
+                    
                     <span>Auto</span>
                 </button>
             </div>

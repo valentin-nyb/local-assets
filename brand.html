@@ -161,7 +161,6 @@
         .bk-tag.is-profile { color:var(--la-accent); border-color:color-mix(in srgb, var(--la-accent) 45%, transparent); }
         .bk-file-actions .is-on { color:var(--la-accent) !important; }
         .bk-preview.photo img { max-width:100%; max-height:100%; width:100%; height:100%; object-fit:cover; }
-        .bk-preview.photo .bk-bg-toggle { display:none; }
         button.bk-tag { cursor:pointer; z-index:1; }
         .bk-tag-caret { font-size:10px !important; opacity:.7; margin-left:1px; }
         @media (hover:hover) { button.bk-tag:hover { color:var(--la-text); border-color:var(--la-sub); } }
@@ -170,9 +169,6 @@
         .bk-font.ready .bk-font-sample { opacity:1; }
         .bk-font-sample .aa { font-size:40px; line-height:1.05; }
         .bk-font-sample .line { font-size:13px; color:var(--la-sub); white-space:nowrap; }
-        /* Font cards sit on the same dark checkered background as logo cards, in both themes */
-        .bk-font.bg-dark .bk-font-sample { color:#fff; }
-        .bk-font.bg-dark .bk-font-sample .line { color:rgba(255,255,255,.6); }
         .bk-font.failed .bk-font-sample { opacity:1; font-family:inherit; }
         .bk-tester-input { width:100%; height:40px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 12px; font-size:14px; outline:none; }
         .bk-tester-input:focus { border-color:var(--la-accent); }
@@ -188,12 +184,6 @@
         .bk-share { display:flex; gap:8px; }
         .bk-share input { flex:1; min-width:0; height:36px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 10px; font-size:13px; outline:none; text-overflow:ellipsis; }
         .bk-share input:focus { border-color:var(--la-accent); }
-        .bk-preview.bg-dark, .bk-avatar.bg-dark { background-color:#141416; background-image:linear-gradient(45deg, rgba(255,255,255,.05) 25%, transparent 25%), linear-gradient(-45deg, rgba(255,255,255,.05) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(255,255,255,.05) 75%), linear-gradient(-45deg, transparent 75%, rgba(255,255,255,.05) 75%); }
-        .bk-preview.bg-light, .bk-avatar.bg-light { background-color:#f4f4f5; background-image:linear-gradient(45deg, rgba(0,0,0,.05) 25%, transparent 25%), linear-gradient(-45deg, rgba(0,0,0,.05) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(0,0,0,.05) 75%), linear-gradient(-45deg, transparent 75%, rgba(0,0,0,.05) 75%); }
-        .bk-avatar.bg-dark, .bk-avatar.bg-light { background-size:10px 10px; background-position:0 0, 0 5px, 5px -5px, -5px 0; }
-        .bk-bg-toggle { position:absolute; top:6px; right:6px; width:26px; height:26px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:14px; color:var(--la-sub); background:var(--la-raised); border:1px solid var(--la-line); cursor:pointer; opacity:0; transition:opacity .15s; }
-        .bk-preview:hover .bk-bg-toggle, .bk-bg-toggle:focus-visible { opacity:1; }
-        @media (hover:none) { .bk-bg-toggle { opacity:1; } }
         .bk-ext { display:flex; flex-direction:column; align-items:center; gap:6px; color:var(--la-sub); }
         .bk-ext iconify-icon { font-size:30px; }
         .bk-ext span { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.12em; text-transform:uppercase; }
@@ -238,14 +228,15 @@
         .bk-switch[aria-checked="true"]::after { transform:translateX(16px); }
         .bk-wm-status { font-size:12px; color:var(--la-dim); margin-top:16px; min-height:16px; }
         .bk-wm-preview { position:relative; width:160px; aspect-ratio:9/16; border-radius:12px; overflow:hidden; align-self:start;
-            background-color:#141416; background-image:linear-gradient(45deg, rgba(255,255,255,.05) 25%, transparent 25%), linear-gradient(-45deg, rgba(255,255,255,.05) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(255,255,255,.05) 75%), linear-gradient(-45deg, transparent 75%, rgba(255,255,255,.05) 75%);
+            background-color:var(--la-chip); background-image:linear-gradient(45deg, rgba(128,128,128,.12) 25%, transparent 25%), linear-gradient(-45deg, rgba(128,128,128,.12) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(128,128,128,.12) 75%), linear-gradient(-45deg, transparent 75%, rgba(128,128,128,.12) 75%);
             background-size:16px 16px; background-position:0 0, 0 8px, 8px -8px, -8px 0; }
         .bk-wm-preview img.logo { position:absolute; object-fit:contain; transition:all .15s; }
         .bk-wm-preview .text { position:absolute; color:#fff; white-space:nowrap; line-height:1; text-shadow:0 1px 3px rgba(0,0,0,.35); transition:all .15s; }
         .bk-wm-textrow { display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; min-width:0; }
         .bk-wm-textrow input { height:36px; flex:1 1 200px; max-width:260px; min-width:0; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 10px; font-size:13px; outline:none; }
         .bk-wm-textrow input:focus { border-color:var(--la-accent); }
-        .bk-wm-font { font-size:12px; color:var(--la-dim); }
+        .bk-wm-font { font-size:12px; color:var(--la-dim); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .bk-wm-textmeta { flex-basis:100%; display:flex; align-items:center; gap:12px; min-width:0; }
         .bk-wm-link { font-size:12px; color:var(--la-sub); background:none; border:none; padding:0; cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
         .bk-wm-hint { font-size:12px; color:var(--la-dim); line-height:1.5; }
         .bk-wm-cap { font-size:11px; color:var(--la-dim); text-align:center; margin-top:8px; }
@@ -304,7 +295,7 @@
         <header class="h-16 flex items-center px-4 md:px-8 border-b border-[#27272a] bg-[#050505] shrink-0 justify-between w-full z-40">
             <div class="flex items-center gap-2 md:gap-3 min-w-0"><button type="button" onclick="toggleSidebar()" class="la-menu-btn" aria-label="Open menu"><iconify-icon icon="solar:hamburger-menu-linear"></iconify-icon></button>
                 <span id="venue-breadcrumb" class="text-zinc-600 text-[10px] font-mono uppercase tracking-[0.3em] hidden md:inline"></span>
-                <iconify-icon icon="solar:alt-arrow-right-linear" class="text-zinc-700 hidden md:block"></iconify-icon>
+                
                 <h1 class="text-[10px] md:text-[10px] font-mono uppercase tracking-[0.2em] md:tracking-[0.3em] text-[#39FF14] font-bold m-0 truncate">
                     BRAND KIT
                 </h1>
@@ -324,13 +315,13 @@
                     </div>
                     <div class="cam-actions">
                         <button type="button" class="cam-btn ghost" onclick="openUpload('__newVenue')">
-                            <iconify-icon icon="solar:buildings-2-linear"></iconify-icon><span>Add venue</span>
+                            <span>Add venue</span>
                         </button>
                         <button type="button" class="cam-btn ghost" onclick="openUpload('__newArtist')">
-                            <iconify-icon icon="solar:user-plus-linear"></iconify-icon><span>Add artist</span>
+                            <span>Add artist</span>
                         </button>
                         <button type="button" class="cam-btn primary" onclick="openUpload()">
-                            <iconify-icon icon="solar:upload-minimalistic-linear"></iconify-icon><span>Upload files</span>
+                            <span>Upload files</span>
                         </button>
                     </div>
                 </div>
@@ -468,9 +459,14 @@
                     return '<button type="button" data-wm="' + name + '" data-v="' + o[0] + '" aria-pressed="' + (o[0] === val) + '">' + o[1] + '</button>';
                 }).join('') + '</div>';
             };
-            var logoOpts = '<option value="auto"' + (_wm.logo === 'auto' ? ' selected' : '') + '>Artist logo, or yours if they have none</option>' +
-                '<option value="account"' + (_wm.logo === 'account' ? ' selected' : '') + '>Always your logo</option>' +
-                logos.map(function(f) { return '<option value="' + esc(f.url) + '"' + (_wm.logo === f.url ? ' selected' : '') + '>' + esc(ownerName(f.owner) + ' · ' + f.name) + '</option>'; }).join('');
+            // Only the saved logos, by name. Older settings ("auto"/"account") show the logo they resolve to.
+            var current = wmPreviewLogo();
+            var perOwner = {};
+            logos.forEach(function(f) { perOwner[f.owner] = (perOwner[f.owner] || 0) + 1; });
+            var logoOpts = logos.map(function(f) {
+                var label = ownerName(f.owner) + (perOwner[f.owner] > 1 ? ' · ' + f.name.replace(/\.[^.]+$/, '') : '');
+                return '<option value="' + esc(f.url) + '"' + (current === f.url ? ' selected' : '') + '>' + esc(label) + '</option>';
+            }).join('');
             var noLogo = !logos.length;
             box.innerHTML =
                 '<div>' +
@@ -483,8 +479,8 @@
                         '<span class="bk-wm-label">Text</span>' + (wmText()
                             ? '<div class="bk-wm-textrow"><input id="bk-wm-text-input" value="' + esc(_wm.text.value) + '" maxlength="60" aria-label="Watermark text">' +
                               seg('textpos', WM_TEXT_POS, _wm.text.position) +
-                              '<span class="bk-wm-font">' + esc(wmText().name.replace(/\.[^.]+$/, '')) + '</span>' +
-                              '<button type="button" class="bk-wm-link" id="bk-wm-text-remove">Remove</button></div>'
+                              '<div class="bk-wm-textmeta"><span class="bk-wm-font">' + esc(wmText().name.replace(/\.[^.]+$/, '')) + '</span>' +
+                              '<button type="button" class="bk-wm-link" id="bk-wm-text-remove">Remove</button></div></div>'
                             : '<p class="bk-wm-hint">None. Preview one of your fonts, type your text and choose Use as watermark.</p>') +
                         '<span class="bk-wm-label">Size</span>' + seg('size', WM_SIZE, _wm.size) +
                         '<span class="bk-wm-label">Opacity</span><input type="range" min="30" max="100" step="5" value="' + Math.round(_wm.opacity * 100) + '" data-wm="opacity" aria-label="Opacity">' +
@@ -613,7 +609,7 @@
         function saveWatermark() {
             // Keep the logo cards' "Use as watermark" buttons in step with the panel
             document.querySelectorAll('[data-use-wm]').forEach(function(b) {
-                var on = _wm.enabled && _wm.logo === b.dataset.useWm;
+                var on = _wm.enabled && wmPreviewLogo() === b.dataset.useWm;
                 b.classList.toggle('is-on', on);
                 b.textContent = on ? 'Watermark' : 'Use as watermark';
             });
@@ -687,10 +683,10 @@
                 return heading + '<section class="bk-owner">' +
                     '<div class="bk-owner-head"><div class="bk-avatar">' + avatar + '</div>' +
                     '<div class="min-w-0"><p class="bk-owner-name">' + esc(o.name) + '</p><p class="bk-owner-meta">' + esc(o.kind) + ' · ' + files.length + ' file' + (files.length !== 1 ? 's' : '') +
-                        (o.org ? ' · <button type="button" class="bk-org-edit" data-org>Edit</button>' : '') + '</p></div>' +
+                        ' · <button type="button" class="bk-org-edit" ' + (o.org ? 'data-org' : 'data-edit-owner="' + esc(o.key) + '"') + '>Edit</button></p></div>' +
                     '<div class="bk-owner-actions">' +
-                        (files.length ? '<button type="button" class="cam-btn ghost" data-zip="' + esc(o.key) + '"><iconify-icon icon="solar:download-minimalistic-linear"></iconify-icon><span>Download all</span></button>' : '') +
-                        '<button type="button" class="cam-btn ghost" data-up="' + esc(o.key) + '"><iconify-icon icon="solar:upload-minimalistic-linear"></iconify-icon><span>Upload</span></button>' +
+                        (files.length ? '<button type="button" class="cam-btn ghost" data-zip="' + esc(o.key) + '"><span>Download all</span></button>' : '') +
+                        '<button type="button" class="cam-btn ghost" data-up="' + esc(o.key) + '"><span>Upload</span></button>' +
                         (o.key.indexOf('venue-') === 0 ? '<button type="button" class="cam-btn ghost bk-del-owner" data-del-owner="' + esc(o.key) + '" title="Delete venue"><iconify-icon icon="solar:trash-bin-minimalistic-linear"></iconify-icon></button>' : '') +
                     '</div></div>' +
                     '<div class="bk-body">' + body + '</div></section>';
@@ -724,6 +720,7 @@
             wrap.querySelectorAll('[data-file-preview]').forEach(function(b) { b.addEventListener('click', function() { openFilePreview(b.dataset.filePreview); }); });
             wrap.querySelectorAll('[data-move]').forEach(function(b) { b.addEventListener('click', function() { openMove(b.dataset.move); }); });
             wrap.querySelectorAll('[data-org]').forEach(function(b) { b.addEventListener('click', openOrgType); });
+            wrap.querySelectorAll('[data-edit-owner]').forEach(function(b) { b.addEventListener('click', function() { openOwnerEdit(b.dataset.editOwner); }); });
             wrap.querySelectorAll('[data-del-owner]').forEach(function(b) { b.addEventListener('click', function() { deleteOwner(b.dataset.delOwner, b); }); });
             wrap.querySelectorAll('[data-zip]').forEach(function(b) { b.addEventListener('click', function() { downloadAll(b.dataset.zip, b); }); });
             wrap.querySelectorAll('[data-del]').forEach(function(b) { b.addEventListener('click', function() { removeFile(b.dataset.del, b); }); });
@@ -739,39 +736,12 @@
 
         // Logo previews: dark backdrop behind light logos, light backdrop behind dark ones.
         // Measures the average brightness of the logo's visible (non-transparent) pixels.
-        function fitPreviewBg(img) {
-            var box = img.parentNode, tone = null;
-            if (box.classList.contains('photo')) return;
-            try {
-                var c = document.createElement('canvas'), n = 48;
-                c.width = n; c.height = n;
-                var ctx = c.getContext('2d', { willReadFrequently: true });
-                ctx.drawImage(img, 0, 0, n, n);
-                var d = ctx.getImageData(0, 0, n, n).data, sum = 0, cnt = 0;
-                for (var i = 0; i < d.length; i += 4) {
-                    if (d[i + 3] < 40) continue;
-                    sum += (0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]) / 255; cnt++;
-                }
-                var opaque = cnt / (n * n);
-                if (cnt && opaque < 0.97) tone = sum / cnt > 0.6 ? 'dark' : sum / cnt < 0.4 ? 'light' : null;
-            } catch (_) {
-                // Image not readable (no CORS): fall back to the file name
-                if (/white|light|negative|reverse/i.test(img.src)) tone = 'dark';
-                else if (/black|dark/i.test(img.src)) tone = 'light';
-            }
-            box.classList.remove('bg-dark', 'bg-light');
-            if (tone) box.classList.add('bg-' + tone);
-        }
-        function flipPreviewBg(btn) {
-            var box = btn.parentNode;
-            var dark = box.classList.contains('bg-dark') || (!box.classList.contains('bg-light') && !document.documentElement.classList.contains('dark'));
-            box.classList.toggle('bg-dark', !dark);
-            box.classList.toggle('bg-light', dark);
-        }
+        // Logo backgrounds follow the light or dark theme (kept as a hook for the image onload)
+        function fitPreviewBg(img) {}
 
         // Logos the clip worker can stamp on clips
         function wmLogoFile(f) { return f.category === 'logos' && /\.(png|svg|webp|jpe?g)$/i.test(f.name); }
-        function wmUsesLogo(f) { return !!_wm && _wm.enabled && _wm.logo === f.url; }
+        function wmUsesLogo(f) { return !!_wm && _wm.enabled && wmPreviewLogo() === f.url; }
         // From a logo card or its popup: this logo becomes the watermark, bottom right
         function useLogoAsWatermark(url) {
             if (!_wm) return;
@@ -834,7 +804,7 @@
                     '<p class="bk-tester-chars" style="font-size:18px">ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz<br>0123456789 &amp; ! ? @ £ € % ( ) . , : ;</p>' +
                 '</div>' +
                 '<p id="bk-tester-status" class="bk-meta">Loading font…</p>' +
-                '<div class="cam-form-actions" style="margin-top:14px"><a class="cam-btn ghost" href="' + esc(f.link ? f.link + '?download' : f.downloadUrl || url) + '"><iconify-icon icon="solar:download-minimalistic-linear"></iconify-icon><span>Download</span></a>' +
+                '<div class="cam-form-actions" style="margin-top:14px"><a class="cam-btn ghost" href="' + esc(f.link ? f.link + '?download' : f.downloadUrl || url) + '"><span>Download</span></a>' +
                     (WM_TEXT_FONT.test(f.name) ? '<button type="button" class="cam-btn primary" id="bk-tester-wm">Use as watermark</button>' : '') + '</div>' +
                 (WM_TEXT_FONT.test(f.name) ? '' : '<p class="bk-meta" style="margin-top:8px">To use this font for watermark text, upload it as TTF, OTF or WOFF.</p>') +
                 '</div>');
@@ -865,16 +835,16 @@
             var ext = (f.name.split('.').pop() || 'file').slice(0, 5);
             var cat = CATS.filter(function(c) { return c.key === f.category; })[0] || CATS[CATS.length - 1];
             var tagText = cat.key === 'photos' && f.owner.indexOf('artist-') === 0 ? (_ownerPhotos[f.owner] === f.url ? 'Artist photo' : 'Photo') : cat.tag;
-            var tag = '<button type="button" class="bk-tag' + (_ownerPhotos[f.owner] === f.url ? ' is-profile' : '') + '" data-move="' + esc(f.url) + '" title="Change type"><iconify-icon icon="' + cat.icon + '"></iconify-icon>' + tagText + '<iconify-icon icon="solar:alt-arrow-down-linear" class="bk-tag-caret"></iconify-icon></button>';
+            var tag = '<button type="button" class="bk-tag' + (_ownerPhotos[f.owner] === f.url ? ' is-profile' : '') + '" data-move="' + esc(f.url) + '" title="Change type">' + tagText + '</button>';
             var isPhoto = f.category === 'covers' || f.category === 'artwork' || f.category === 'photos';
             var preview = IMG_EXT.test(f.name)
                 ? '<div class="bk-preview' + (isPhoto ? ' photo' : '') + '">' + tag + '<img src="' + esc(f.url) + '" alt="" loading="lazy" crossorigin="anonymous" onload="fitPreviewBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}">' +
-                    '<button type="button" class="bk-bg-toggle" title="Switch background" onclick="flipPreviewBg(this)"><iconify-icon icon="solar:sun-2-linear"></iconify-icon></button>' +
+                    '' +
                     (wmLogoFile(f) ? '<button type="button" class="bk-use-wm' + (wmUsesLogo(f) ? ' is-on' : '') + '" data-use-wm="' + esc(f.url) + '" title="Stamp this logo bottom right on every vertical clip">' + (wmUsesLogo(f) ? 'Watermark' : 'Use as watermark') + '</button>' : '') + '</div>'
                 : FONT_EXT.test(f.name)
-                ? '<div class="bk-preview bk-font bg-dark" data-font="' + esc(f.url) + '">' + tag +
+                ? '<div class="bk-preview bk-font" data-font="' + esc(f.url) + '">' + tag +
                     '<div class="bk-font-sample"><span class="aa">Aa</span><span class="line">ABC abc 123</span></div></div>'
-                : '<div class="bk-preview doc">' + tag + '<div class="bk-ext"><iconify-icon icon="' + (/pdf/i.test(ext) ? 'solar:document-text-linear' : /ttf|otf|woff/i.test(ext) ? 'solar:text-field-linear' : /zip/i.test(ext) ? 'solar:zip-file-linear' : 'solar:file-linear') + '"></iconify-icon><span>' + esc(ext) + '</span></div></div>';
+                : '<div class="bk-preview doc">' + tag + '<div class="bk-ext"><span>' + esc(ext) + '</span></div></div>';
             return '<div class="bk-file">' + preview +
                 '<div class="bk-info"><p class="bk-name" title="' + esc(f.name) + '">' + esc(f.name) + '</p><p class="bk-meta">' + fmtSize(f.size) + ' · ' + fmtDate(f.uploadedAt) + '</p></div>' +
                 '<div class="bk-file-actions">' +
@@ -896,7 +866,7 @@
                 '<div class="bk-row2"><label>For<select name="owner">' + opts + '</select></label>' +
                 '<label>Type<select name="category">' + CATS.map(function(c) { return '<option value="' + c.key + '">' + c.label + '</option>'; }).join('') + '</select></label></div>' +
                 '<label id="bk-new-wrap" class="hidden"><span id="bk-new-label">Name</span><input name="newName" maxlength="60"></label>' +
-                '<div id="bk-drop" class="bk-drop" tabindex="0"><iconify-icon icon="solar:cloud-upload-linear"></iconify-icon>Drop files here or <b>browse</b>' +
+                '<div id="bk-drop" class="bk-drop" tabindex="0">Drop files here or <b>browse</b>' +
                     '<small>Logos, covers, artwork, photos, PDFs, AI/EPS, fonts or ZIP · up to 200 MB each</small></div>' +
                 '<input id="bk-input" type="file" multiple class="hidden" accept=".png,.jpg,.jpeg,.svg,.webp,.gif,.pdf,.ai,.eps,.psd,.zip,.ttf,.otf,.woff,.woff2,.txt">' +
                 '<div id="bk-queue" class="bk-queue"></div>' +
@@ -1017,16 +987,57 @@
             });
         }
 
+        // Rename a venue's or artist's brand kit (the account's own kit is edited with openOrgType)
+        function openOwnerEdit(key) {
+            var o = _owners.filter(function(x) { return x.key === key; })[0];
+            if (!o) return;
+            var isVenue = key.indexOf('venue-') === 0;
+            openCamDialog(isVenue ? 'Edit venue' : 'Edit artist',
+                '<form id="bk-owner-form" class="cam-form">' +
+                '<label>Name<input name="ownerName" maxlength="60" required value="' + esc(o.name) + '"><small>Shown on the brand kit, exactly as typed.</small></label>' +
+                '<p id="bk-owner-error" class="cam-form-error"></p>' +
+                '<div class="cam-form-actions">' +
+                    (isVenue ? '<button type="button" class="cam-btn ghost bk-owner-del" style="margin-right:auto">Delete venue</button>' : '') +
+                    '<button type="button" class="cam-btn ghost" onclick="closeCamDialog()">Cancel</button><button type="submit" class="cam-btn primary">Save</button></div>' +
+                '</form>');
+            var form = document.getElementById('bk-owner-form');
+            var del = form.querySelector('.bk-owner-del');
+            if (del) del.addEventListener('click', function() { closeCamDialog(); deleteOwner(key, del); });
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                var nm = form.ownerName.value.trim();
+                if (!nm) return;
+                var btn = form.querySelector('[type=submit]'); btn.disabled = true; btn.textContent = 'Saving…';
+                try {
+                    var r = await laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setOwnerName', owner: key, name: nm }) });
+                    var d = await r.json();
+                    if (!r.ok) throw new Error(d.error || r.status);
+                    o.name = d.name;
+                    closeCamDialog(); render(); renderWatermark();
+                } catch (er) {
+                    document.getElementById('bk-owner-error').textContent = 'Could not save: ' + er.message;
+                    btn.disabled = false; btn.textContent = 'Save';
+                }
+            });
+        }
+
         function openMove(url) {
             var f = _files.filter(function(x) { return x.url === url; })[0];
             if (!f) return;
             openCamDialog('Change type',
                 '<p class="cam-dialog-text">' + esc(f.name) + '</p><div class="bk-org-options">' +
                 CATS.map(function(c) {
-                    return '<button type="button" class="bk-org-opt bk-cat-opt' + (c.key === f.category ? ' on' : '') + '" data-cat="' + c.key + '"><b><iconify-icon icon="' + c.icon + '"></iconify-icon> ' + c.label + '</b></button>';
-                }).join('') + '</div><p id="bk-move-error" class="cam-form-error"></p>');
+                    return '<button type="button" class="bk-org-opt bk-cat-opt' + (c.key === f.category ? ' on' : '') + '" data-cat="' + c.key + '"><b>' + c.label + '</b></button>';
+                }).join('') +
+                (/\.(png|svg|webp|jpe?g)$/i.test(f.name) ? '<button type="button" class="bk-org-opt bk-cat-opt' + (wmUsesLogo(f) ? ' on' : '') + '" data-cat="watermark"><b>Watermark</b><span>Saved as a logo and stamped bottom right on every vertical clip</span></button>' : '') +
+                '</div><p id="bk-move-error" class="cam-form-error"></p>');
             document.querySelectorAll('.bk-cat-opt').forEach(function(b) {
                 b.addEventListener('click', async function() {
+                    if (b.dataset.cat === 'watermark') {
+                        if (f.category === 'logos') { useLogoAsWatermark(f.url); return; }
+                        b.dataset.cat = 'logos';
+                        var asWatermark = true;
+                    }
                     if (b.dataset.cat === f.category) { closeCamDialog(); return; }
                     document.querySelectorAll('.bk-cat-opt').forEach(function(x) { x.disabled = true; });
                     b.querySelector('b').insertAdjacentHTML('beforeend', ' <span class="bk-meta">Moving…</span>');
@@ -1034,6 +1045,8 @@
                         var r = await laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'move', url: url, category: b.dataset.cat }) });
                         if (!r.ok) throw new Error((await r.json()).error || r.status);
                         closeCamDialog(); await loadBrand();
+                        // Moved into logos: same file name in the logos folder
+                        if (asWatermark) useLogoAsWatermark(url.replace('/' + f.category + '/', '/logos/'));
                     } catch (e) {
                         document.getElementById('bk-move-error').textContent = 'Could not change type: ' + e.message;
                         document.querySelectorAll('.bk-cat-opt').forEach(function(x) { x.disabled = false; });

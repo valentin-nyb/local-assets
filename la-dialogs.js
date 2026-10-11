@@ -43,7 +43,7 @@
       m.className = 'lad-backdrop';
       var tone = opts.tone || 'info';
       m.innerHTML = '<div class="lad-panel" role="' + (opts.cancel ? 'alertdialog' : 'dialog') + '" aria-modal="true">' +
-        '<div class="lad-head"><div class="lad-icon ' + tone + '"><iconify-icon icon="' + (ICONS[tone] || ICONS.info) + '"></iconify-icon></div>' +
+        '<div class="lad-head">' +
         '<div style="min-width:0;width:100%"><p class="lad-title"></p>' + (opts.message ? '<p class="lad-msg"></p>' : '') + '</div></div>' +
         '<div class="lad-actions">' + (opts.cancel ? '<button type="button" class="lad-btn ghost" data-v="0"></button>' : '') +
         '<button type="button" class="lad-btn ' + (tone === 'danger' ? 'danger' : 'primary') + '" data-v="1"></button></div></div>';
@@ -86,7 +86,7 @@
   window.laToast = function (text) {
     var t = document.getElementById('lad-toast');
     if (!t) { t = document.createElement('div'); t.id = 'lad-toast'; t.className = 'lad-toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
-    t.innerHTML = '<iconify-icon icon="solar:check-circle-bold"></iconify-icon><span></span>';
+    t.innerHTML = '<span></span>';
     t.querySelector('span').textContent = text;
     t.classList.add('show');
     clearTimeout(t._h); t._h = setTimeout(function () { t.classList.remove('show'); }, 2600);

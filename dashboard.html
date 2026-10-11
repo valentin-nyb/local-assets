@@ -89,7 +89,7 @@
                 <span id="venue-breadcrumb" class="text-zinc-600 text-[10px] font-mono uppercase tracking-[0.3em] hidden md:inline">
                     ADMIN
                 </span>
-                <iconify-icon icon="solar:alt-arrow-right-linear" class="text-zinc-700 hidden md:block"></iconify-icon>
+                
                 <h1 class="text-[10px] font-mono uppercase tracking-[0.3em] text-[#39FF14] font-bold m-0">
                     DASHBOARD OVERVIEW
                 </h1>
@@ -157,8 +157,8 @@
                     <div id="revenue-total" class="kpi-value">—</div>
                     <div class="kpi-sub kpi-sub-stack">
                         <div id="revenue-platform-panel" class="hidden kpi-platforms">
-                            <span id="yt-indicator" class="hidden kpi-platform"><iconify-icon icon="mdi:youtube" style="color:#FF0000"></iconify-icon><span id="yt-revenue-label"></span></span>
-                            <span id="sc-indicator" class="hidden kpi-platform"><iconify-icon icon="mdi:soundcloud" style="color:#FF5500"></iconify-icon><span id="sc-revenue-label"></span></span>
+                            <span id="yt-indicator" class="hidden kpi-platform"><span id="yt-revenue-label"></span></span>
+                            <span id="sc-indicator" class="hidden kpi-platform"><span id="sc-revenue-label"></span></span>
                         </div>
                         <span id="revenue-empty" class="kpi-muted">Connect YouTube or SoundCloud</span>
                     </div>
@@ -505,7 +505,7 @@
         function showToast(text) {
             var t = document.getElementById('la-toast');
             if (!t) { t = document.createElement('div'); t.id = 'la-toast'; t.className = 'la-toast'; document.body.appendChild(t); }
-            t.innerHTML = '<iconify-icon icon="solar:check-circle-bold"></iconify-icon><span></span>';
+            t.innerHTML = '<span></span>';
             t.querySelector('span').textContent = text;
             t.classList.add('show');
             clearTimeout(t._h); t._h = setTimeout(function() { t.classList.remove('show'); }, 2600);
@@ -520,7 +520,7 @@
             m.className = 'se-backdrop';
             m.innerHTML = '<div class="se-panel del-panel" role="alertdialog" aria-modal="true" aria-labelledby="del-title">' +
                 (img ? '<div class="del-preview' + (kind === 'clip' ? ' tall' : '') + '"><img src="' + escHtml(img.getAttribute('src')) + '" alt=""></div>'
-                     : '<div class="del-badge"><iconify-icon icon="solar:trash-bin-minimalistic-linear"></iconify-icon></div>') +
+                     : '') +
                 '<div class="del-body">' +
                     '<p id="del-title" class="del-title">Delete ' + kind + '?</p>' +
                     '<span class="del-name">' + escHtml(label) + '</span>' +
@@ -552,7 +552,7 @@
                     fetchRecentUploads();
                 } catch (e) {
                     busy = false; go.disabled = false; m.querySelector('[data-cancel]').disabled = false;
-                    go.innerHTML = '<iconify-icon icon="solar:trash-bin-minimalistic-linear"></iconify-icon> Try again';
+                    go.innerHTML = ' Try again';
                     if (tile) tile.style.opacity = '';
                     m.querySelector('.se-error').textContent = 'Could not delete: ' + e.message;
                 }
@@ -799,7 +799,7 @@
                     html += '<div class="p-4 pl-16 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-' + uid + '" style="border-left: 2px solid var(--la-accent);">';
                     html += '<div class="flex items-center gap-4 flex-1 min-w-0">';
                     html += '<div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-primary/50 shrink-0">';
-                    html += '<iconify-icon icon="' + asset.icon + '" class="text-primary text-sm"></iconify-icon>';
+                    html += '';
                     html += '</div>';
                     html += '<div class="min-w-0">';
                     html += '<p class="text-[10px] font-bold text-zinc-300 uppercase" id="label-' + uid + '">' + asset.label + '</p>';
@@ -816,12 +816,12 @@
                         html += '</button>';
                         if (isMasterAsset) {
                             html += '<button id="yt-dist-' + uid + '" class="yt-dist-btn hidden" style="display:none;align-items:center;gap:4px;padding:3px 8px;border-radius:9999px;border:1px solid #FF0000;background:transparent;color:#FF0000;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;white-space:nowrap;" onclick="distributeYouTube(\'' + pid + '\', \'' + dlFile + '\', \'' + safeName + '\', \'' + uid + '\', \'' + sessionDate + '\')" onmouseover="this.style.background=\'#FF0000\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'#FF0000\'">';
-                            html += '<iconify-icon icon="mdi:youtube" style="font-size:11px;flex-shrink:0"></iconify-icon> YOUTUBE';
+                            html += ' YOUTUBE';
                             html += '</button>';
                         }
                         if (isAudioAsset) {
                             html += '<button id="sc-dist-' + uid + '" class="sc-dist-btn hidden" style="display:none;align-items:center;gap:4px;padding:3px 8px;border-radius:9999px;border:1px solid #FF5500;background:transparent;color:#FF5500;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;white-space:nowrap;" onclick="distributeSoundCloud(\'' + pid + '\', \'' + dlFile + '\', \'' + safeName + '\', \'' + uid + '\')" onmouseover="this.style.background=\'#FF5500\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'#FF5500\'">';
-                            html += '<iconify-icon icon="mdi:soundcloud" style="font-size:11px;flex-shrink:0"></iconify-icon> SOUNDCLOUD';
+                            html += ' SOUNDCLOUD';
                             html += '</button>';
                         }
                     } else if (pid) {
@@ -848,7 +848,7 @@
                         // MASTER: keep inline file picker
                         html += '<label class="flex items-center gap-4 cursor-pointer flex-1 min-w-0">';
                         html += '<div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-border/50 shrink-0">';
-                        html += '<iconify-icon icon="' + asset.icon + '" class="' + asset.color + ' text-sm"></iconify-icon>';
+                        html += '';
                         html += '</div>';
                         html += '<div class="min-w-0">';
                         html += '<p class="text-[10px] font-bold text-zinc-300 uppercase" id="label-' + uid + '">' + asset.label + '</p>';
@@ -861,7 +861,7 @@
                         var allowMultiple = (asset.type === 'SOCIAL' || asset.type === 'THUMB');
                         html += '<label class="flex items-center gap-4 cursor-pointer flex-1 min-w-0">';
                         html += '<div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-border/50 shrink-0">';
-                        html += '<iconify-icon icon="' + asset.icon + '" class="' + asset.color + ' text-sm"></iconify-icon>';
+                        html += '';
                         html += '</div>';
                         html += '<div class="min-w-0">';
                         html += '<p class="text-[10px] font-bold text-zinc-300 uppercase" id="label-' + uid + '">' + asset.label + '</p>';
@@ -943,7 +943,7 @@
                 html += '<div class="flex items-center justify-between mb-3">';
                 html += '<div class="flex items-center gap-3">';
                 html += '<div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border flex-shrink-0" style="border-color:color-mix(in srgb, ' + accent + ' 50%, transparent)">';
-                html += '<iconify-icon icon="solar:iphone-bold" class="text-sm" style="color:' + accent + '"></iconify-icon>';
+                html += '';
                 html += '</div>';
                 html += '<div>';
                 html += '<p class="text-[10px] font-bold text-zinc-300 uppercase">Social Pack Verticals</p>';
@@ -982,13 +982,13 @@
                     if (staticSrc) {
                         html += '<img id="' + imgId + '" src="' + staticSrc + '" class="w-full h-full object-cover" loading="lazy" style="opacity:.9;">';
                     } else {
-                        html += '<div class="w-full h-full flex items-center justify-center"><iconify-icon icon="solar:iphone-bold" class="text-zinc-700 text-lg"></iconify-icon></div>';
+                        html += '<div class="w-full h-full flex items-center justify-center"></div>';
                     }
 
                     if (pid) {
                         html += '<div class="absolute inset-0 flex items-end justify-center pb-2 opacity-0 group-hover/clip:opacity-100 transition-opacity">';
                         html += '<div class="flex items-center gap-1 px-2 py-0.5 rounded-full" style="background:' + accent + '">';
-                        html += '<iconify-icon icon="solar:play-bold" class="text-black" style="font-size:9px"></iconify-icon>';
+                        html += '';
                         html += '<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;color:#000;font-weight:700">PLAY</span>';
                         html += '</div>';
                         html += '</div>';
@@ -1042,7 +1042,7 @@
                     html += '<div class="flex items-center gap-4 flex-1 min-w-0">';
                 }
                 html += '<div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border ' + (hasAny ? 'border-primary/50' : 'border-border/50') + ' shrink-0">';
-                html += '<iconify-icon icon="solar:gallery-minimalistic-bold" class="text-primary text-sm"></iconify-icon>';
+                html += '';
                 html += '</div>';
                 html += '<div class="min-w-0">';
                 html += '<p class="text-[10px] font-bold text-zinc-300 uppercase" id="label-' + uid + '">' + label + '</p>';
@@ -1089,16 +1089,16 @@
                         if (state !== 'ready') {
                             var failed = state === 'errored';
                             html += '<div title="' + (failed ? 'Upload failed — please re-upload' : 'Processing') + '" class="flex items-center justify-center rounded-md w-full" style="' + tileStyle + (failed ? 'border-color:rgba(239,68,68,.6);' : '') + '">';
-                            html += '<iconify-icon icon="' + (failed ? 'solar:danger-triangle-bold' : 'solar:hourglass-line-duotone') + '" class="' + (failed ? 'text-red-500' : 'text-zinc-500 animate-pulse') + ' text-lg"></iconify-icon>';
+                            html += '<span class="text-[8px] font-mono uppercase tracking-widest ' + (failed ? 'text-red-500' : 'text-zinc-500 animate-pulse') + '">' + (failed ? 'Failed' : 'Processing') + '</span>';
                             html += '</div>';
                         } else {
                             var fullUrl = thumbUrl(thumb);
                             html += '<div class="relative overflow-hidden rounded-md group/thumb cursor-pointer w-full flex items-center justify-center" style="' + tileStyle + '" data-urls="' + urlsParam + '" data-idx="' + readyUrls.indexOf(fullUrl) + '" data-title="' + htmlTitle + '" onclick="openThumbModal(this)">';
-                            html += '<iconify-icon icon="solar:gallery-minimalistic-bold" class="text-zinc-700 text-lg"></iconify-icon>';
+                            html += '';
                             html += '<img src="' + escAttr(thumbUrl(thumb, 480)) + '" alt="" loading="lazy" class="absolute inset-0 w-full h-full object-cover" style="opacity:.9;" onerror="this.remove()">';
                             html += '<div class="absolute inset-0 flex items-end justify-center pb-2 opacity-0 group-hover/thumb:opacity-100 transition-opacity">';
                             html += '<div class="flex items-center gap-1 px-2 py-0.5 rounded-full" style="background:' + accent + '">';
-                            html += '<iconify-icon icon="solar:eye-bold" class="text-black" style="font-size:9px"></iconify-icon>';
+                            html += '';
                             html += '<span style="font-family:\'JetBrains Mono\',monospace;font-size:7px;color:#000;font-weight:700">VIEW</span>';
                             html += '</div>';
                             html += '</div>';
@@ -1124,7 +1124,7 @@
                 html += '<div onclick="toggleArtistFolder(\'' + artistId + '\')" class="p-5 flex items-center justify-between hover:bg-white/[0.02] transition-colors cursor-pointer group">';
                 html += '<div class="flex items-center gap-4">';
                 html += '<div class="w-10 h-10 bg-[#050505] border border-border flex items-center justify-center rounded-xl group-hover:border-primary/50 transition-colors overflow-hidden" data-artist-photo="artist-' + brandSlug(artist.name) + '">';
-                html += '<iconify-icon icon="solar:folder-2-bold" class="text-zinc-600 group-hover:text-primary"></iconify-icon>';
+                html += '<span class="text-[11px] font-bold text-zinc-400">' + escHtml(String(artist.name).replace(/[^A-Za-z0-9 ]/g, '').split(/\s+/).map(function(w) { return w[0] || ''; }).join('').slice(0, 2).toUpperCase()) + '</span>';
                 html += '</div>';
                 html += '<div>';
                 html += '<p class="text-sm font-black text-white uppercase tracking-tight">' + artist.name + '</p>';
@@ -1132,7 +1132,7 @@
                 html += '</div>';
                 html += '</div>';
                 html += '<div class="flex items-center gap-2">';
-                html += '<iconify-icon id="arrow-' + artistId + '" icon="solar:alt-arrow-down-linear" class="text-zinc-700 transition-transform duration-300"></iconify-icon>';
+                html += '';
                 html += '</div>';
                 html += '</div>';
                 html += '<div id="preview-' + artistId + '" class="hidden">';
@@ -1161,7 +1161,7 @@
                     html += '<div class="flex items-center gap-3">';
                     var sVenueKey = sessionMeta(artist.name, dateStr).venue ? 'venue-' + brandSlug(sessionMeta(artist.name, dateStr).venue) : '';
                     html += '<div class="w-8 h-8 bg-[#050505] border border-border/50 flex items-center justify-center rounded-lg overflow-hidden"' + (sVenueKey ? ' data-venue-logo="' + sVenueKey + '" data-venue-name="' + escHtml(sessionMeta(artist.name, dateStr).venue) + '"' : '') + '>';
-                    html += '<iconify-icon icon="solar:calendar-bold" class="text-zinc-600 text-sm"></iconify-icon>';
+                    html += '';
                     html += '</div>';
                     html += '<div>';
                     var sMeta = sessionMeta(artist.name, dateStr);
@@ -1178,7 +1178,7 @@
                         html += '<span class="text-[8px] font-mono text-primary uppercase tracking-widest">DOWNLOAD</span>';
                         html += '</button>';
                     }
-                    html += '<iconify-icon id="arrow-' + dateId + '" icon="solar:alt-arrow-down-linear" class="text-zinc-700 transition-transform duration-300 text-sm"></iconify-icon>';
+                    html += '';
                     html += '</div>';
                     html += '</div>';
                     html += '<div id="preview-' + dateId + '" class="hidden bg-black/40">';
@@ -1635,7 +1635,7 @@
                 var s = live[0];
                 badge.style.background = '';
                 badge.className = 'inline-flex items-center gap-2 px-3 py-1 bg-red-500 text-white rounded-full text-[10px] font-bold uppercase tracking-widest animate-pulse';
-                badge.innerHTML = '<iconify-icon icon="solar:record-circle-linear"></iconify-icon> LIVE';
+                badge.innerHTML = ' LIVE';
                 sub.textContent = live.length > 1 ? live.length + ' cameras streaming' : '';
                 title.textContent = s.name || getVenueName();
                 l1.textContent = 'Live for';
@@ -1653,7 +1653,7 @@
                 var date = latest.meta.date || new Date(Number(a.created_at) * 1000).toISOString().slice(0, 10);
                 badge.className = 'inline-flex items-center gap-2 px-3 py-1 bg-white/10 text-white rounded-full text-[10px] font-bold uppercase tracking-widest';
                 badge.style.background = 'rgba(255,255,255,.14)';
-                badge.innerHTML = '<iconify-icon icon="solar:clapperboard-play-linear"></iconify-icon> LATEST SESSION';
+                badge.innerHTML = ' LATEST SESSION';
                 var hm = sessionMeta(latest.meta.artist || '', date);
                 sub.textContent = (hm.venue ? hm.venue + ' · ' : '') + new Date(hm.shownDate + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
                 title.textContent = latest.meta.artist || 'Untitled';
@@ -2017,7 +2017,7 @@
             btn.onmouseover = null;
             btn.onmouseout = null;
             btn.style.color = '#fff';
-            btn.innerHTML = '<iconify-icon icon="mdi:soundcloud" style="font-size:11px;flex-shrink:0"></iconify-icon> UPLOADING…';
+            btn.innerHTML = ' UPLOADING…';
 
             // Decelerate toward 90% — fills fast at first, slows as it approaches
             var pct = 0;
@@ -2032,7 +2032,7 @@
                 btn.style.color = '#FF5500';
                 btn.onmouseover = function(){ this.style.background='#FF5500'; this.style.color='#fff'; };
                 btn.onmouseout  = function(){ this.style.background='transparent'; this.style.color='#FF5500'; };
-                btn.innerHTML = '<iconify-icon icon="mdi:soundcloud" style="font-size:11px;flex-shrink:0"></iconify-icon> SOUNDCLOUD';
+                btn.innerHTML = ' SOUNDCLOUD';
             }
 
             try {
@@ -2110,7 +2110,7 @@
 
             function paint(pct, label) {
                 btn.style.background = 'linear-gradient(to right,#FF0000 ' + pct.toFixed(1) + '%,transparent ' + pct.toFixed(1) + '%)';
-                btn.innerHTML = '<iconify-icon icon="mdi:youtube" style="font-size:11px;flex-shrink:0"></iconify-icon> ' + label;
+                btn.innerHTML = ' ' + label;
             }
             paint(1, 'UPLOADING…');
 
@@ -2120,7 +2120,7 @@
                 btn.style.color = '#FF0000';
                 btn.onmouseover = function(){ this.style.background='#FF0000'; this.style.color='#fff'; };
                 btn.onmouseout  = function(){ this.style.background='transparent'; this.style.color='#FF0000'; };
-                btn.innerHTML = '<iconify-icon icon="mdi:youtube" style="font-size:11px;flex-shrink:0"></iconify-icon> YOUTUBE';
+                btn.innerHTML = ' YOUTUBE';
             }
 
             // Large files upload in chunks over several calls; each reply says how far it got.
@@ -2332,8 +2332,8 @@
                         queued:     'QUEUED',
                         waiting:    'WAITING FOR CLOUD STORAGE',
                         processing: procLabel,
-                        done:       job.uploaded != null ? '✓  ' + job.uploaded + ' CLIPS UPLOADED' : '✓  COMPLETE',
-                        error:      '✕  ' + (job.error ? job.error.slice(0, 60) : 'ERROR')
+                        done:       job.uploaded != null ? job.uploaded + ' CLIPS UPLOADED' : 'COMPLETE',
+                        error:      (job.error ? job.error.slice(0, 60) : 'ERROR')
                     }[job.status] || job.status.toUpperCase();
 
                     var accentColor = isError ? '#ef4444' : barColor;
@@ -2868,7 +2868,6 @@
                 <!-- YouTube -->
                 <div class="pm-card">
                     <div style="display:flex;align-items:center;gap:12px;">
-                        <div class="pm-logo" style="background:rgba(255,0,0,.1);"><iconify-icon icon="mdi:youtube" style="color:#FF0000;font-size:22px"></iconify-icon></div>
                         <div style="flex:1;min-width:0;">
                             <div class="pm-name">YouTube</div>
                             <div class="pm-status" id="yt-status">Not connected</div>
@@ -2883,7 +2882,6 @@
                 <!-- SoundCloud -->
                 <div class="pm-card">
                     <div style="display:flex;align-items:center;gap:12px;">
-                        <div class="pm-logo" style="background:rgba(255,85,0,.1);"><iconify-icon icon="mdi:soundcloud" style="color:#FF5500;font-size:24px"></iconify-icon></div>
                         <div style="flex:1;min-width:0;">
                             <div class="pm-name">SoundCloud</div>
                             <div class="pm-status" id="sc-status">Not connected</div>
@@ -2900,7 +2898,7 @@
 
             <div style="padding:20px 24px 24px;">
                 <div class="pm-foot">
-                    <iconify-icon icon="solar:shield-check-linear" style="font-size:14px;flex-shrink:0;margin-top:1px"></iconify-icon>
+                    
                     <span>We only publish what you choose and never post automatically. You can disconnect at any time. <a href="/privacy" target="_blank" rel="noopener">Privacy policy</a></span>
                 </div>
             </div>

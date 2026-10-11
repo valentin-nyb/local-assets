@@ -76,6 +76,10 @@
         /* Per-word glitch hover — only the span under the cursor turns green */
         #hero-title span.word-hovered { color: #39FF14; }
     </style>
+    <style>
+        /* Titles: Helvetica Neue Black, all caps (same rule as styles/theme.css) */
+        h1:not(header h1), h2, h3 { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif !important; font-weight: 900 !important; text-transform: uppercase !important; letter-spacing: 0 !important; font-style: normal !important; }
+    </style>
 </head>
 
 <body class="font-sans antialiased bg-background text-foreground overflow-x-hidden selection:bg-primary selection:text-black">
@@ -169,7 +173,7 @@
                     <div class="relative pl-16 md:pl-20 pb-12">
                         <div class="absolute left-4 md:left-6 w-4 h-4 border-2 border-primary bg-primary -translate-x-[7px] shadow-[0_0_10px_rgba(57,255,20,0.8)]"></div>
                         <div class="border border-[#333] bg-[#0a0a0a] p-6 hover:border-primary/50 transition-colors">
-                            <div class="flex items-center gap-3 mb-4"><iconify-icon icon="solar:server-square-linear" class="text-primary text-xl"></iconify-icon><span class="font-mono text-xs tracking-[0.2em] text-muted-foreground">STEP 01</span></div>
+                            <div class="flex items-center gap-3 mb-4"><span class="font-mono text-xs tracking-[0.2em] text-muted-foreground">STEP 01</span></div>
                             <h3 class="md:text-xl text-foreground text-lg font-semibold font-mono mb-1">CAPTURE</h3>
                             <p class="font-mono text-xs text-muted-foreground mb-4">04:00 AM</p>
                             <p class="text-foreground/80 text-sm font-mono">250GB Raw 4K Footage Securely Uploaded to Cloud Storage.</p>
@@ -181,18 +185,18 @@
                     <div class="relative pl-16 md:pl-20 pb-12">
                         <div class="absolute left-4 md:left-6 w-4 h-4 border-2 border-primary bg-primary -translate-x-[7px] shadow-[0_0_10px_rgba(57,255,20,0.8)]"></div>
                         <div class="border border-[#333] bg-[#0a0a0a] p-6 hover:border-primary/50 transition-colors">
-                            <div class="flex items-center gap-3 mb-4"><iconify-icon icon="solar:lock-keyhole-linear" class="text-primary text-xl"></iconify-icon><span class="font-mono text-xs tracking-[0.2em] text-muted-foreground">STEP 02</span></div>
+                            <div class="flex items-center gap-3 mb-4"><span class="font-mono text-xs tracking-[0.2em] text-muted-foreground">STEP 02</span></div>
                             <h3 class="md:text-xl text-foreground text-lg font-semibold font-mono mb-1">MANAGE</h3>
                             <p class="font-mono text-xs text-muted-foreground mb-4">14:00 PM</p>
                             <div class="border border-[#333] bg-[#1a1a1a] p-3 mb-4"><p class="font-mono text-xs text-foreground/80">Your assets <span class="text-primary">ARE READY</span> for Distribution.</p></div>
-                            <div class="flex items-center gap-3"><div class="w-8 h-8 border-2 border-primary bg-primary/20 flex items-center justify-center rounded-full"><iconify-icon icon="solar:check-circle-linear" class="text-primary"></iconify-icon></div><span class="font-mono text-sm text-primary">APPROVED via Mobile (No emails sent)</span></div>
+                            <div class="flex items-center gap-3"><span class="font-mono text-sm text-primary">APPROVED via Mobile (No emails sent)</span></div>
                         </div>
                     </div>
 
                     <div class="md:pl-20 pb-12 pl-16 relative">
                         <div class="absolute left-4 md:left-6 w-4 h-4 border-2 border-primary bg-black -translate-x-[7px] animate-pulse"></div>
                         <div class="border border-[#333] bg-[#0a0a0a] p-6 opacity-100 hover:opacity-100 transition-opacity duration-300">
-                            <div class="flex items-center gap-3 mb-4"><iconify-icon icon="solar:earth-linear" class="text-primary text-xl"></iconify-icon><span class="font-mono text-xs tracking-[0.2em] text-muted-foreground">STEP 03</span></div>
+                            <div class="flex items-center gap-3 mb-4"><span class="font-mono text-xs tracking-[0.2em] text-muted-foreground">STEP 03</span></div>
                             <h3 class="md:text-xl text-foreground text-lg font-medium font-mono mb-1">DISTRIBUTE</h3>
                             <p class="font-mono text-xs text-muted-foreground mb-4">18:00 PM</p>
                             <p class="text-foreground/80 text-sm font-mono mb-6">Global Distribution Initiated. Monetization Active.</p>
@@ -218,9 +222,6 @@
                     <div class="flex-shrink-0 w-[85vw] md:w-auto snap-center reveal delay-100">
                         <div class="group h-full border border-border bg-card/50 backdrop-blur-sm p-6 md:p-8 hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 relative overflow-hidden">
                             <span class="font-mono text-[10px] tracking-[0.2em] text-primary/70 uppercase mb-6 block">CAPTURE INFRASTRUCTURE</span>
-                            <div class="w-16 h-16 border border-border bg-background flex items-center justify-center mb-6 group-hover:border-primary/50 group-hover:bg-primary/10 transition-all duration-300 group-hover:rotate-6">
-                                <iconify-icon icon="solar:videocamera-record-linear" class="text-3xl text-primary"></iconify-icon>
-                            </div>
                             <h3 class="md:text-2xl text-xl font-semibold mb-4">We Film. You Own.</h3>
                             <p class="text-muted-foreground text-sm font-mono leading-relaxed">Multi-camera setups installed and operated at your venue. Every set captured in cinematic 4K — zero effort from your team.</p>
                         </div>
@@ -228,9 +229,6 @@
                     <div class="flex-shrink-0 w-[85vw] md:w-auto snap-center reveal delay-200">
                         <div class="group h-full border border-border bg-card/50 backdrop-blur-sm p-6 md:p-8 hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 relative overflow-hidden text-primary">
                             <span class="text-[10px] text-primary/70 uppercase block tracking-[0.2em] font-mono mb-6">CONTENT VAULT</span>
-                            <div class="w-16 h-16 border border-primary/50 bg-primary/10 flex items-center justify-center mb-6 rotate-6">
-                                <iconify-icon icon="solar:server-square-linear" class="text-3xl"></iconify-icon>
-                            </div>
                             <h3 class="md:text-2xl text-xl font-semibold mb-4">Every night builds your library.</h3>
                             <p class="text-primary/80 text-sm font-mono leading-relaxed">4K masters, vertical social clips, HQ audio, marketing thumbnails — all managed in your cloud vault. Ready for your team, anytime.</p>
                         </div>
@@ -238,9 +236,6 @@
                     <div class="flex-shrink-0 w-[85vw] md:w-auto snap-center reveal delay-300">
                         <div class="group h-full border border-border bg-card/50 backdrop-blur-sm p-6 md:p-8 hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 relative overflow-hidden">
                             <span class="font-mono text-[10px] tracking-[0.2em] text-primary/70 uppercase mb-6 block">DISTRIBUTION & REVENUE</span>
-                            <div class="w-16 h-16 border border-border bg-background flex items-center justify-center mb-6 group-hover:border-primary/50 group-hover:bg-primary/10 transition-all duration-300 group-hover:rotate-6">
-                                <iconify-icon icon="solar:earth-linear" class="text-3xl text-primary"></iconify-icon>
-                            </div>
                             <h3 class="text-xl md:text-2xl font-semibold mb-4">Monetize every event.</h3>
                             <p class="text-muted-foreground text-sm font-mono leading-relaxed">Content distributed across YouTube, SoundCloud and social platforms. SEO-optimised. Monetization handled. Revenue generated automatically.</p>
                         </div>
@@ -257,27 +252,18 @@
                     
                     <div class="space-y-8">
                         <div class="flex items-center gap-6 group">
-                            <div class="w-12 h-12 border border-primary/30 flex items-center justify-center group-hover:border-primary transition-colors">
-                                <iconify-icon icon="solar:database-linear" class="text-primary text-xl"></iconify-icon>
-                            </div>
                             <div class="flex flex-col">
                                 <span class="font-mono text-sm tracking-widest uppercase text-white">Automated Ingestion</span>
                                 <span class="font-mono text-[10px] text-muted-foreground mt-1">Raw 4K sets sync directly to your cloud.</span>
                             </div>
                         </div>
                         <div class="flex items-center gap-6 group">
-                            <div class="w-12 h-12 border border-primary/30 flex items-center justify-center group-hover:border-primary transition-colors">
-                                <iconify-icon icon="solar:videocamera-record-linear" class="text-primary text-xl"></iconify-icon>
-                            </div>
                             <div class="flex flex-col">
                                 <span class="font-mono text-sm tracking-widest uppercase text-white">Multi-Camera Integration</span>
                                 <span class="font-mono text-[10px] text-muted-foreground mt-1">Control all venue angles from your phone.</span>
                             </div>
                         </div>
                         <div class="flex items-center gap-6 group">
-                            <div class="w-12 h-12 border border-primary/30 flex items-center justify-center group-hover:border-primary transition-colors">
-                                <iconify-icon icon="solar:wallet-linear" class="text-primary text-xl"></iconify-icon>
-                            </div>
                             <div class="flex flex-col">
                                 <span class="font-mono text-sm tracking-widest uppercase text-white">Marketing assets ready</span>
                                 <span class="font-mono text-[10px] text-muted-foreground mt-1">All assets are ready for distribution.</span>
@@ -320,9 +306,6 @@
                                 <span class="text-[9px] font-mono text-muted-foreground uppercase tracking-widest block mb-3 pl-1">Processing Asset</span>
                                 <div class="flex items-center justify-between p-3 bg-[#111] border border-[#222] rounded-xl">
                                     <div class="flex items-center gap-3">
-                                        <div class="w-8 h-8 bg-black border border-[#333] rounded flex items-center justify-center text-primary">
-                                            <iconify-icon icon="solar:music-note-bold" class="text-lg"></iconify-icon>
-                                        </div>
                                         <div>
                                             <p class="text-[10px] font-bold uppercase text-white tracking-wide">AMONGST FEW</p>
                                             <p class="text-[8px] font-mono text-muted-foreground uppercase mt-1">142GB • ROOM 2</p>
@@ -377,11 +360,11 @@
                     <span class="text-muted-foreground text-lg">/mo</span>
                 </div>
                 <ul class="space-y-3 text-sm text-muted-foreground font-mono mb-8">
-                    <li>✓ Content intake & quality control</li>
-                    <li>✓ Up to 8 events processed / month</li>
-                    <li>✓ 6 vertical social clips</li>
-                    <li>✓ Basic multi-platform distribution</li>
-                    <li>✓ 250 GB cloud storage</li>
+                    <li>Content intake & quality control</li>
+                    <li>Up to 8 events processed / month</li>
+                    <li>6 vertical social clips</li>
+                    <li>Basic multi-platform distribution</li>
+                    <li>250 GB cloud storage</li>
                 </ul>
                 <button onclick="selectTier('starter-distribution')" class="mt-auto w-full py-4 font-mono text-sm border border-border text-foreground hover:border-primary hover:text-primary uppercase">Select Tier</button>
             </div>
@@ -393,14 +376,14 @@
                     <span class="text-muted-foreground text-lg">/mo</span>
                 </div>
                 <ul class="space-y-3 text-sm text-muted-foreground font-mono mb-8">
-                    <li>✓ Content intake & quality control</li>
-                    <li>✓ Up to 8 events processed / month</li>
-                    <li>✓ 12+ vertical social clips</li>
-                    <li>✓ Marketing thumbnails</li>
-                    <li>✓ Multi-platform distribution</li>
-                    <li>✓ YouTube & SoundCloud SEO</li>
-                    <li>✓ Priority 48-hour turnaround</li>
-                    <li>✓ 500 GB cloud storage</li>
+                    <li>Content intake & quality control</li>
+                    <li>Up to 8 events processed / month</li>
+                    <li>12+ vertical social clips</li>
+                    <li>Marketing thumbnails</li>
+                    <li>Multi-platform distribution</li>
+                    <li>YouTube & SoundCloud SEO</li>
+                    <li>Priority 48-hour turnaround</li>
+                    <li>500 GB cloud storage</li>
                 </ul>
                 <button onclick="selectTier('liveset-distribution')" class="mt-auto w-full py-4 font-mono text-sm border border-border text-foreground hover:border-primary hover:text-primary uppercase">Select Tier</button>
             </div>
@@ -409,14 +392,14 @@
                 <h3 class="text-muted-foreground text-sm tracking-wider font-mono mb-6 uppercase">Enterprise</h3>
                 <div class="mb-4"><span class="text-4xl md:text-5xl font-semibold text-foreground">Enquire</span></div>
                 <ul class="space-y-3 text-sm text-muted-foreground font-mono mb-8">
-                    <li>✓ Dedicated account manager</li>
-                    <li>✓ Unlimited events processed</li>
-                    <li>✓ Custom content packages</li>
-                    <li>✓ Multi-platform distribution & SEO</li>
-                    <li>✓ Priority 24-hour turnaround</li>
-                    <li>✓ Unlimited cloud storage</li>
-                    <li>✓ API access for marketing teams</li>
-                    <li>✓ Quarterly performance reports</li>
+                    <li>Dedicated account manager</li>
+                    <li>Unlimited events processed</li>
+                    <li>Custom content packages</li>
+                    <li>Multi-platform distribution & SEO</li>
+                    <li>Priority 24-hour turnaround</li>
+                    <li>Unlimited cloud storage</li>
+                    <li>API access for marketing teams</li>
+                    <li>Quarterly performance reports</li>
                 </ul>
                 <a href="mailto:hello@local-assets.com?subject=Enterprise%20Distribution%20Enquiry" class="mt-auto w-full py-4 font-mono text-sm border border-border text-foreground hover:border-primary hover:text-primary uppercase text-center block no-underline">Contact Us</a>
             </div>
@@ -430,14 +413,14 @@
                     <span class="text-muted-foreground text-lg">/mo</span>
                 </div>
                 <ul class="space-y-3 text-sm text-muted-foreground font-mono mb-8">
-                    <li>✓ Multi-camera capture (up to 2 cameras)</li>
-                    <li>✓ Up to 4 event nights / month</li>
-                    <li>✓ 4K master recordings</li>
-                    <li>✓ HQ audio capture</li>
-                    <li>✓ 12 vertical social clips</li>
-                    <li>✓ Marketing thumbnails</li>
-                    <li>✓ Basic distribution</li>
-                    <li>✓ 2 TB cloud storage</li>
+                    <li>Multi-camera capture (up to 2 cameras)</li>
+                    <li>Up to 4 event nights / month</li>
+                    <li>4K master recordings</li>
+                    <li>HQ audio capture</li>
+                    <li>12 vertical social clips</li>
+                    <li>Marketing thumbnails</li>
+                    <li>Basic distribution</li>
+                    <li>2 TB cloud storage</li>
                 </ul>
                 <button onclick="selectTier('starter-creative')" class="mt-auto w-full py-4 font-mono text-sm border border-border text-foreground hover:border-primary hover:text-primary uppercase">Select Tier</button>
             </div>
@@ -450,16 +433,16 @@
                     <span class="text-muted-foreground text-lg">/mo</span>
                 </div>
                 <ul class="space-y-3 text-sm text-muted-foreground font-mono mb-8">
-                    <li>✓ Multi-camera capture (up to 3 cameras)</li>
-                    <li>✓ Up to 8 event nights / month</li>
-                    <li>✓ 4K master recordings</li>
-                    <li>✓ HQ audio capture</li>
-                    <li>✓ 30+ vertical social clips</li>
-                    <li>✓ Marketing thumbnails & Watermark</li>
-                    <li>✓ Multi-platform distribution & SEO</li>
-                    <li>✓ Quarterly performance reports</li>
-                    <li>✓ Priority 48-hour turnaround</li>
-                    <li>✓ 20 TB cloud storage</li>
+                    <li>Multi-camera capture (up to 3 cameras)</li>
+                    <li>Up to 8 event nights / month</li>
+                    <li>4K master recordings</li>
+                    <li>HQ audio capture</li>
+                    <li>30+ vertical social clips</li>
+                    <li>Marketing thumbnails & Watermark</li>
+                    <li>Multi-platform distribution & SEO</li>
+                    <li>Quarterly performance reports</li>
+                    <li>Priority 48-hour turnaround</li>
+                    <li>20 TB cloud storage</li>
                 </ul>
                 <button onclick="selectTier('liveset-creative')" class="mt-auto w-full py-4 font-mono text-sm bg-primary text-black font-semibold hover:bg-white uppercase">Select Tier</button>
             </div>
@@ -468,16 +451,16 @@
                 <h3 class="text-muted-foreground text-sm tracking-wider font-mono mb-6 uppercase">Enterprise</h3>
                 <div class="mb-4"><span class="text-4xl md:text-5xl font-semibold text-foreground">Enquire</span></div>
                 <ul class="space-y-3 text-sm text-muted-foreground font-mono mb-8">
-                    <li>✓ Full camera infrastructure setup</li>
-                    <li>✓ Dedicated on-site crew</li>
-                    <li>✓ Unlimited event coverage</li>
-                    <li>✓ Custom content packages</li>
-                    <li>✓ Multi-platform distribution & SEO</li>
-                    <li>✓ Priority 24-hour turnaround</li>
-                    <li>✓ Unlimited cloud storage</li>
-                    <li>✓ PTZ camera control panel</li>
-                    <li>✓ API access for marketing teams</li>
-                    <li>✓ Live-streaming</li>
+                    <li>Full camera infrastructure setup</li>
+                    <li>Dedicated on-site crew</li>
+                    <li>Unlimited event coverage</li>
+                    <li>Custom content packages</li>
+                    <li>Multi-platform distribution & SEO</li>
+                    <li>Priority 24-hour turnaround</li>
+                    <li>Unlimited cloud storage</li>
+                    <li>PTZ camera control panel</li>
+                    <li>API access for marketing teams</li>
+                    <li>Live-streaming</li>
                 </ul>
                 <a href="mailto:hello@local-assets.com?subject=Enterprise%20Creative%20Enquiry" class="mt-auto w-full py-4 font-mono text-sm border border-border text-foreground hover:border-primary hover:text-primary uppercase text-center block no-underline">Contact Us</a>
             </div>
