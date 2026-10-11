@@ -201,6 +201,7 @@
         .bk-thumb-frame.h { aspect-ratio:16/9; } .bk-thumb-frame.v { aspect-ratio:9/16; }
         .bk-thumb-frame canvas { width:100%; height:100%; display:block; }
         .bk-thumb-opt input:not(:checked) ~ .bk-thumb-frame { opacity:.35; }
+        .bk-thumb-note { margin-right:auto; align-self:center; flex:1 1 auto; min-width:0; font-size:12px; color:var(--la-dim); }
         .bk-thumb-cap { font-size:12px; color:var(--la-text); line-height:1.35; }
         .bk-thumb-cap small { display:block; font-size:11px; color:var(--la-dim); }
         .bk-use-wm.is-on { color:var(--la-accent-ink); background:var(--la-accent); border-color:transparent; }
@@ -449,6 +450,7 @@
         function frameCaption() { return _wmFrame === 'horizontal' ? 'Horizontal · 1920 × 1080' : 'Vertical · 1080 × 1920'; }
         var WM_TEXT_POS = [['bl', 'Bottom left'], ['br', 'Bottom right'], ['tl', 'Top left'], ['tr', 'Top right']];
         var WM_TEXT_SRC = [['artist', 'Artist name'], ['custom', 'Custom']];
+        var WM_TEXT_COLOR = [['white', 'White'], ['black', 'Black']];
         var WM_TEXT_PX = { s: 44, m: 56, l: 72 };
         // The clip worker draws watermark text from these font files (not WOFF2)
         var WM_TEXT_FONT = /\.(ttf|otf|woff)$/i;
@@ -504,6 +506,7 @@
                             ? '<div class="bk-wm-textrow">' + seg('textsrc', WM_TEXT_SRC, _wm.text.source === 'artist' ? 'artist' : 'custom') +
                               (_wm.text.source === 'artist' ? '' : '<input id="bk-wm-text-input" value="' + esc(_wm.text.value) + '" maxlength="60" aria-label="Watermark text">') +
                               seg('textpos', WM_TEXT_POS, _wm.text.position) +
+                              seg('textcolor', WM_TEXT_COLOR, _wm.text.color === 'black' ? 'black' : 'white') +
                               '<div class="bk-wm-textmeta">' + (_wm.text.source === 'artist' ? '<span class="bk-wm-font">Each clip shows the name of the artist on stage.</span>' : '') +
                               '<span class="bk-wm-font">' + esc(wmText().name.replace(/\.[^.]+$/, '')) + '</span>' +
                               '<button type="button" class="bk-wm-link" id="bk-wm-text-remove">Remove</button></div></div>'
@@ -540,6 +543,7 @@
                     // The frame only changes the preview and export, it isn't saved
                     if (key === 'frame') { _wmFrame = v; renderWatermark(); return; }
                     if (key === 'textsrc') { _wm.text.source = v; if (v === 'custom' && !_wm.text.value) _wm.text.value = _orgName || venueName(); renderWatermark(); saveWatermark(); return; }
+                    if (key === 'textcolor') { _wm.text.color = v; box.querySelectorAll('[data-wm="textcolor"][data-v]').forEach(function(b) { b.setAttribute('aria-pressed', b.dataset.v === v); }); positionPreview(); saveWatermark(); return; }
                     if (key === 'textpos') _wm.text.position = v; else _wm[key] = v; if (key === 'enabled') renderWatermark(); else { box.querySelectorAll('[data-wm="' + key + '"][data-v]').forEach(function(b) { b.setAttribute('aria-pressed', b.dataset.v === v); }); positionPreview(); } saveWatermark(); };
                 if (el.tagName === 'SELECT') el.addEventListener('change', function() { apply(el.value); });
                 else if (el.type === 'range') { el.addEventListener('input', function() { _wm.opacity = el.value / 100; positionPreview(); }); el.addEventListener('change', function() { saveWatermark(); }); }
@@ -559,6 +563,9 @@
                 else {
                     txt.style.display = '';
                     txt.textContent = wmTextValue();
+                    var blackText = _wm.text.color === 'black';
+                    txt.style.color = blackText ? '#000' : '#fff';
+                    txt.style.textShadow = blackText ? '0 1px 3px rgba(255,255,255,.25)' : '0 1px 3px rgba(0,0,0,.35)';
                     loadBrandFont(tf.url).then(function(family) { if (txt.dataset.family !== family) { txt.dataset.family = family; txt.style.fontFamily = family; positionPreview(); } }).catch(function() {});
                     var tp = _wm.text.position;
                     // Same corner as the logo: text sits next to it, further from the edge
@@ -634,8 +641,9 @@
                     var th = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent + pad * 2;
                     var shift = !logo ? 0 : tp === p ? lh + 24 : tp[0] === p[0] ? (lh - th) / 2 : 0;
                     var top = tp[0] === 't' ? L.top + shift : H - L.bottom - shift - th;
-                    g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = 8; g.shadowOffsetY = 2;
-                    g.fillStyle = '#fff';
+                    var blackText = _wm.text.color === 'black';
+                    g.shadowColor = blackText ? 'rgba(255,255,255,.25)' : 'rgba(0,0,0,.35)'; g.shadowBlur = 8; g.shadowOffsetY = 2;
+                    g.fillStyle = blackText ? '#000' : '#fff';
                     var left = tp[1] === 'l' ? L.mx + pad : W - L.mx - pad - tw;
                     g.fillText(tv, left + m.actualBoundingBoxLeft, top + pad + m.actualBoundingBoxAscent);
                 }
@@ -717,9 +725,9 @@
                     '<label class="bk-thumb-opt"><input type="checkbox" name="horizontal" checked><span class="bk-thumb-frame h"><canvas id="bk-thumb-h"></canvas></span><span class="bk-thumb-cap">Horizontal · 1920 × 1080<small>YouTube</small></span></label>' +
                     '<label class="bk-thumb-opt"><input type="checkbox" name="vertical" checked><span class="bk-thumb-frame v"><canvas id="bk-thumb-v"></canvas></span><span class="bk-thumb-cap">Vertical · 1080 × 1920<small>Reels, TikTok, Shorts</small></span></label>' +
                 '</div>' +
-                '<p class="bk-meta" style="margin-top:8px">' + (_wm && _wm.enabled ? 'Your watermark is applied exactly as on the clips.' : 'The watermark is off, so the image is used as it is.') + '</p>' +
                 '<p id="bk-thumb-error" class="cam-form-error"></p>' +
-                '<div class="cam-form-actions"><button type="button" class="cam-btn ghost" onclick="closeCamDialog()">Cancel</button>' +
+                '<div class="cam-form-actions"><span class="bk-thumb-note">' + (_wm && _wm.enabled ? 'Your watermark is applied exactly as on the clips.' : 'The watermark is off, so the image is used as it is.') + '</span>' +
+                    '<button type="button" class="cam-btn ghost" onclick="closeCamDialog()">Cancel</button>' +
                     '<button type="submit" class="cam-btn primary"' + (list.length ? '' : ' disabled') + '>Set as thumbnail</button></div>' +
                 '</form>');
             document.querySelector('#cam-dialog .cam-dialog-panel').classList.add('wide');

@@ -48,11 +48,12 @@ async function prepareText(text, size, dir, maxWidth = TEXT_MAX_WIDTH) {
   const pad = 12;
   const w = Math.ceil(bb.x2 - bb.x1) + pad * 2, h = Math.ceil(bb.y2 - bb.y1) + pad * 2;
   const d = font.getPath(text.value, pad - bb.x1, pad - bb.y1, px).toPathData(2);
-  // A soft shadow keeps white text readable on bright scenes
+  // White or black text; a soft shadow in the opposite tone keeps it readable on busy scenes
+  const black = text.color === 'black';
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">` +
     `<filter id="s" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="4"/></filter>` +
-    `<path d="${d}" fill="#000" fill-opacity=".35" filter="url(#s)" transform="translate(0 2)"/>` +
-    `<path d="${d}" fill="#fff"/></svg>`;
+    `<path d="${d}" fill="${black ? '#fff' : '#000'}" fill-opacity="${black ? '.25' : '.35'}" filter="url(#s)" transform="translate(0 2)"/>` +
+    `<path d="${d}" fill="${black ? '#000' : '#fff'}"/></svg>`;
   const file = path.join(dir, 'watermark-text.png');
   await sharp(Buffer.from(svg)).png().toFile(file);
   return { file, w, h };
