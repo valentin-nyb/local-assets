@@ -250,6 +250,7 @@
         .bk-wm-hint { font-size:12px; color:var(--la-dim); line-height:1.5; }
         .bk-wm-preview.horizontal { width:300px; max-width:100%; aspect-ratio:16/9; }
         .bk-wm-frame { display:flex; justify-content:center; margin-bottom:10px; }
+        .bk-wm-foot { grid-column:1 / -1; display:flex; align-items:center; justify-content:flex-end; gap:12px; padding-top:18px; border-top:1px solid var(--la-line-soft); font-size:12px; color:var(--la-sub); }
         .bk-wm-cap { font-size:11px; color:var(--la-dim); text-align:center; margin-top:8px; }
         .bk-wm-export { width:100%; justify-content:center; margin-top:12px; }
         @media (max-width: 640px) {
@@ -495,7 +496,7 @@
                 '<div>' +
                     '<div class="bk-wm-head"><div><p class="bk-wm-title">Watermark</p>' +
                     '<p class="bk-wm-sub">Adds your logo, and text in one of your fonts, to every vertical clip and thumbnail, placed clear of the captions and buttons on TikTok, Reels and Shorts. Applies to clips made from now on.</p></div>' +
-                    '<button type="button" class="bk-switch" role="switch" aria-label="Watermark" aria-checked="' + _wm.enabled + '" data-wm="enabled"></button></div>' +
+                    '</div>' +
                     '<div class="bk-wm-rows' + (_wm.enabled ? '' : ' off') + '">' +
                         '<span class="bk-wm-label">Logo</span><select data-wm="logo"' + (noLogo ? ' disabled' : '') + '>' + logoOpts + '</select>' +
                         '<span class="bk-wm-label">Position</span>' + seg('position', WM_POS, _wm.position) +
@@ -517,7 +518,8 @@
                 '<div class="bk-wm-preview-wrap"><div class="bk-wm-frame">' + seg('frame', WM_FRAMES, _wmFrame) + '</div>' +
                     '<div class="bk-wm-preview' + (_wmFrame === 'horizontal' ? ' horizontal' : '') + '" id="bk-wm-preview">' +
                     '<img class="logo" alt="" id="bk-wm-logo"><span class="text" id="bk-wm-text"></span></div><p class="bk-wm-cap" id="bk-wm-cap">' + frameCaption() + '</p>' +
-                    '<button type="button" class="cam-btn ghost bk-wm-export" id="bk-wm-export">Export PNG</button></div>';
+                    '<button type="button" class="cam-btn ghost bk-wm-export" id="bk-wm-export">Export PNG</button></div>' +
+                '<div class="bk-wm-foot"><span>' + (_wm.enabled ? 'Watermark on' : 'Watermark off') + '</span><button type="button" class="bk-switch" role="switch" aria-label="Watermark" aria-checked="' + _wm.enabled + '" data-wm="enabled"></button></div>';
             var img = document.getElementById('bk-wm-logo');
             img.addEventListener('load', positionPreview);
             document.getElementById('bk-wm-export').addEventListener('click', exportWatermarkPng);
