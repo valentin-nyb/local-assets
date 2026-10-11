@@ -599,6 +599,11 @@
             vertical:   { W: 1080, H: 1920, mx: WM_MARGIN_X, top: 220, bottom: 320 },
             horizontal: { W: 1920, H: 1080, mx: 96, top: 72, bottom: 72 },
         };
+        // Thumbnails have no captions or buttons over them, so the watermark sits near the edge
+        var THUMB_LAYOUT = {
+            horizontal: WM_LAYOUT.horizontal,
+            vertical:   { W: 1080, H: 1920, mx: 96, top: 96, bottom: 110 },
+        };
         function loadImage(url) {
             return new Promise(function(res, rej) {
                 var im = new Image(); im.crossOrigin = 'anonymous';
@@ -725,7 +730,7 @@
                 // Start with the format that matches the picture; both stay selectable
                 var landscape = img.naturalWidth >= img.naturalHeight;
                 form.horizontal.checked = landscape; form.vertical.checked = !landscape;
-                [['bk-thumb-h', WM_LAYOUT.horizontal], ['bk-thumb-v', WM_LAYOUT.vertical]].forEach(function(x) {
+                [['bk-thumb-h', THUMB_LAYOUT.horizontal], ['bk-thumb-v', THUMB_LAYOUT.vertical]].forEach(function(x) {
                     renderThumb(img, x[1]).then(function(full) {
                         var cv = document.getElementById(x[0]); if (!cv) return;
                         cv.width = x[1].W / 4; cv.height = x[1].H / 4;
@@ -744,7 +749,7 @@
                     var img = await imgP;
                     var tag = sess.artist + ' // THUMB // D:' + sess.date;
                     for (var k = 0; k < kinds.length; k++) {
-                        var cv = await renderThumb(img, WM_LAYOUT[kinds[k]]);
+                        var cv = await renderThumb(img, THUMB_LAYOUT[kinds[k]]);
                         var blob = await new Promise(function(r) { cv.toBlob(r, 'image/jpeg', 0.92); });
                         var r = await laFetch('/api/upload-thumbnail?passthrough=' + encodeURIComponent(tag), { method: 'PUT', headers: { 'Content-Type': 'image/jpeg', 'X-Passthrough': tag }, body: blob });
                         if (!r.ok) throw new Error((await r.json().catch(function() { return {}; })).error || r.status);
