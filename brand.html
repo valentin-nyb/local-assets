@@ -180,6 +180,14 @@
         .bk-tester-out p { line-height:1.15; word-break:break-word; }
         .bk-tester-chars { color:var(--la-sub); line-height:1.5 !important; border-top:1px solid var(--la-line-soft); padding-top:12px; }
         .cam-dialog-panel.wide { width:620px; }
+        .bk-preview.is-openable { cursor:zoom-in; }
+        .bk-file-view { height:auto; min-height:220px; max-height:56vh; border-radius:12px; padding:20px; background-size:16px 16px; background-position:0 0, 0 8px, 8px -8px, -8px 0; }
+        .bk-file-view img { max-width:100%; max-height:calc(56vh - 40px); }
+        .bk-file-pdf { width:100%; height:56vh; border:1px solid var(--la-line); border-radius:12px; background:#fff; }
+        .bk-share-label { display:block; font-size:12px; color:var(--la-sub); margin:16px 0 6px; }
+        .bk-share { display:flex; gap:8px; }
+        .bk-share input { flex:1; min-width:0; height:36px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 10px; font-size:13px; outline:none; text-overflow:ellipsis; }
+        .bk-share input:focus { border-color:var(--la-accent); }
         .bk-preview.bg-dark, .bk-avatar.bg-dark { background-color:#141416; background-image:linear-gradient(45deg, rgba(255,255,255,.05) 25%, transparent 25%), linear-gradient(-45deg, rgba(255,255,255,.05) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(255,255,255,.05) 75%), linear-gradient(-45deg, transparent 75%, rgba(255,255,255,.05) 75%); }
         .bk-preview.bg-light, .bk-avatar.bg-light { background-color:#f4f4f5; background-image:linear-gradient(45deg, rgba(0,0,0,.05) 25%, transparent 25%), linear-gradient(-45deg, rgba(0,0,0,.05) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(0,0,0,.05) 75%), linear-gradient(-45deg, transparent 75%, rgba(0,0,0,.05) 75%); }
         .bk-avatar.bg-dark, .bk-avatar.bg-light { background-size:10px 10px; background-position:0 0, 0 5px, 5px -5px, -5px 0; }
@@ -687,6 +695,14 @@
                     } catch (e) { alert('Could not set the photo: ' + e.message); b.disabled = false; }
                 });
             });
+            // Clicking a card's preview opens it, like the eye button
+            wrap.querySelectorAll('.bk-file').forEach(function(card) {
+                var pv = card.querySelector('.bk-preview'), open = card.querySelector('[data-file-preview],[data-font-preview]');
+                if (!pv || !open) return;
+                pv.classList.add('is-openable');
+                pv.addEventListener('click', function(e) { if (!e.target.closest('button')) open.click(); });
+            });
+            wrap.querySelectorAll('[data-file-preview]').forEach(function(b) { b.addEventListener('click', function() { openFilePreview(b.dataset.filePreview); }); });
             wrap.querySelectorAll('[data-move]').forEach(function(b) { b.addEventListener('click', function() { openMove(b.dataset.move); }); });
             wrap.querySelectorAll('[data-org]').forEach(function(b) { b.addEventListener('click', openOrgType); });
             wrap.querySelectorAll('[data-del-owner]').forEach(function(b) { b.addEventListener('click', function() { deleteOwner(b.dataset.delOwner, b); }); });
@@ -732,6 +748,33 @@
             var dark = box.classList.contains('bg-dark') || (!box.classList.contains('bg-light') && !document.documentElement.classList.contains('dark'));
             box.classList.toggle('bg-dark', !dark);
             box.classList.toggle('bg-light', dark);
+        }
+
+        // A file opened from its card: preview, download, and its local-assets.com share link
+        function openFilePreview(url) {
+            var f = _files.filter(function(x) { return x.url === url; })[0];
+            if (!f) return;
+            var link = f.link || f.url;
+            var view = IMG_EXT.test(f.name)
+                ? '<div class="bk-preview bk-file-view' + (f.category === 'logos' ? '' : ' photo') + '"><img src="' + esc(f.url) + '" alt="" crossorigin="anonymous" onload="fitPreviewBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}"></div>'
+                : /pdf$/i.test(f.name)
+                ? '<iframe class="bk-file-pdf" src="' + esc(f.url) + '" title="' + esc(f.name) + '"></iframe>'
+                : '<p class="bk-meta">This file can\'t be shown in the browser. Download it to open it.</p>';
+            openCamDialog(f.name,
+                view +
+                '<p class="bk-meta" style="margin-top:10px">' + fmtSize(f.size) + ' · ' + fmtDate(f.uploadedAt) + '</p>' +
+                '<label class="bk-share-label" for="bk-share-link">Share link</label>' +
+                '<div class="bk-share"><input id="bk-share-link" readonly value="' + esc(link) + '"><button type="button" class="cam-btn ghost" id="bk-share-copy">Copy link</button></div>' +
+                '<div class="cam-form-actions" style="margin-top:16px"><a class="cam-btn primary" href="' + esc(f.link ? f.link + '?download' : f.downloadUrl) + '">Download</a></div>');
+            document.querySelector('#cam-dialog .cam-dialog-panel').classList.add('wide');
+            var input = document.getElementById('bk-share-link'), copy = document.getElementById('bk-share-copy');
+            input.addEventListener('focus', function() { input.select(); });
+            copy.addEventListener('click', function() {
+                navigator.clipboard.writeText(link).then(function() {
+                    copy.textContent = 'Copied';
+                    setTimeout(function() { copy.textContent = 'Copy link'; }, 1500);
+                }).catch(function() { input.select(); });
+            });
         }
 
         // Fonts are loaded straight from the uploaded file with the FontFace API
@@ -799,7 +842,7 @@
                 '<div class="bk-info"><p class="bk-name" title="' + esc(f.name) + '">' + esc(f.name) + '</p><p class="bk-meta">' + fmtSize(f.size) + ' · ' + fmtDate(f.uploadedAt) + '</p></div>' +
                 '<div class="bk-file-actions">' +
                     '<a href="' + esc(f.link ? f.link + '?download' : f.downloadUrl) + '" title="Download"><iconify-icon icon="solar:download-minimalistic-linear"></iconify-icon></a>' +
-                    (IMG_EXT.test(f.name) || /pdf$/i.test(f.name) ? '<a href="' + esc(f.link || f.url) + '" target="_blank" rel="noopener" title="Open"><iconify-icon icon="solar:eye-linear"></iconify-icon></a>' : '') +
+                    (FONT_EXT.test(f.name) ? '' : '<button type="button" data-file-preview="' + esc(f.url) + '" title="Open"><iconify-icon icon="solar:eye-linear"></iconify-icon></button>') +
                     (f.category === 'photos' ? '<button type="button" data-photo="' + esc(f.url) + '" title="' + (f.owner.indexOf('artist-') === 0 ? 'Use as artist photo' : 'Use as profile photo') + '" class="' + (_ownerPhotos[f.owner] === f.url ? 'is-on' : '') + '"><iconify-icon icon="solar:user-circle-' + (_ownerPhotos[f.owner] === f.url ? 'bold' : 'linear') + '"></iconify-icon></button>' : '') +
                     (FONT_EXT.test(f.name) ? '<button type="button" data-font-preview="' + esc(f.url) + '" title="Preview font"><iconify-icon icon="solar:eye-linear"></iconify-icon></button>' : '') +
                     '<button type="button" data-copy="' + esc(f.link || f.url) + '" title="Copy link"><iconify-icon icon="solar:link-round-linear"></iconify-icon></button>' +
