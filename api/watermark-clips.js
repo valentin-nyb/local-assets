@@ -75,13 +75,13 @@ export default async function handler(req, res) {
         const clip = await muxReq(auth, `/video/v1/assets/${encodeURIComponent(id)}`);
         const pt = String(clip.passthrough || '');
         // Only this session's vertical clips, from this venue's own Cloud Storage
-        if (!pt.toUpperCase().startsWith(artist + ' // SOCIAL')) { errors.push(`${id}: not a vertical clip of ${artist}`); continue; }
+        if (!pt.toUpperCase().startsWith(artist + ' // SOCIAL')) { errors.push(`One clip isn't a vertical clip of ${artist}`); continue; }
         const copy = await muxReq(auth, '/video/v1/assets', {
           method: 'POST',
           body: JSON.stringify({
             input: [
               { url: `mux://assets/${id}` },
-              { url: blob.url, overlay_settings: { vertical_align: 'top', horizontal_align: 'left', vertical_margin: '0%', horizontal_margin: '0%', width: '100%', opacity: '100%' } },
+              { url: blob.url, overlay_settings: { vertical_align: 'top', horizontal_align: 'left', width: '100%', opacity: '100%' } },
             ],
             playback_policy: ['public'],
             passthrough: pt,
@@ -91,7 +91,7 @@ export default async function handler(req, res) {
         await redis.hSet(swapsKey(slug), copy.id, id);
         started++;
       } catch (e) {
-        errors.push(`${id}: ${e.message}`);
+        errors.push(e.message);
       }
     }
     if (errors.length) console.error('[watermark-clips]', slug, errors.join(' | '));
