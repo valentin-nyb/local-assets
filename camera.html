@@ -398,9 +398,11 @@
 
         // The intro's example card uses this venue's latest session, when there is one
         function fillIntroExample() {
-            // The account's own logo from the Brand Kit on the "branded" example clips
+            // The watermark logo chosen in Brand Kit on the "branded" example clips (else the account's own logo)
             laFetch('/api/brand').then(function(r) { return r.ok ? r.json() : {}; }).then(function(d) {
-                var logo = (d.files || []).filter(function(f) { return f.owner === 'venue' && f.category === 'logos' && /\.(png|svg|webp)$/i.test(f.name); })[0];
+                var logos = (d.files || []).filter(function(f) { return f.category === 'logos' && /\.(png|svg|webp|jpe?g)$/i.test(f.name); });
+                var chosen = d.watermark && /^https:/.test(d.watermark.logo || '') ? d.watermark.logo : null;
+                var logo = logos.filter(function(f) { return f.url === chosen; })[0] || logos.filter(function(f) { return f.owner === 'venue'; })[0];
                 if (!logo) return;
                 document.querySelectorAll('.ci-wm').forEach(function(w) { w.classList.add('has-logo'); w.style.backgroundImage = 'url(' + JSON.stringify(logo.url) + ')'; w.textContent = ''; w.innerHTML = '&#8203;'; });
             }).catch(function() {});
