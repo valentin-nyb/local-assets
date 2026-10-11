@@ -428,6 +428,7 @@
         var WM_SIZE = [['s', 'Small'], ['m', 'Medium'], ['l', 'Large']];
         // Largest logo box per size, in px on a 1080×1920 clip (same as the clip worker)
         var WM_BOX = { s: [160, 110], m: [240, 170], l: [340, 240] };
+        var WM_MARGIN_X = 120;   // side margin in px on a 1080-wide clip, same as the clip worker
         var WM_TEXT_POS = [['bl', 'Bottom left'], ['tl', 'Top left']];
         var WM_TEXT_PX = { s: 44, m: 56, l: 72 };
         // The clip worker draws watermark text from these font files (not WOFF2)
@@ -515,7 +516,7 @@
                     txt.style.fontSize = Math.round(WM_TEXT_PX[_wm.size] * k) + 'px';
                     txt.style.maxWidth = Math.round(760 * k) + 'px';
                     txt.style.opacity = _wm.opacity;
-                    txt.style.left = Math.round(56 * k) + 'px';
+                    txt.style.left = Math.round(WM_MARGIN_X * k) + 'px';
                     txt.style.top = tp === 'tl' ? Math.round((220 + shift) * k) + 'px' : 'auto';
                     txt.style.bottom = tp === 'bl' ? Math.round((320 + shift) * k) + 'px' : 'auto';
                 }
@@ -529,8 +530,8 @@
             img.style.width = Math.round(lw * k) + 'px';
             img.style.height = Math.round(lw / ar * k) + 'px';
             img.style.opacity = _wm.opacity;
-            img.style.left = p[1] === 'l' ? Math.round(56 * k) + 'px' : 'auto';
-            img.style.right = p[1] === 'r' ? Math.round(56 * k) + 'px' : 'auto';
+            img.style.left = p[1] === 'l' ? Math.round(WM_MARGIN_X * k) + 'px' : 'auto';
+            img.style.right = p[1] === 'r' ? Math.round(WM_MARGIN_X * k) + 'px' : 'auto';
             img.style.top = p[0] === 't' ? Math.round(220 * k) + 'px' : 'auto';
             img.style.bottom = p[0] === 'b' ? Math.round(320 * k) + 'px' : 'auto';
         }

@@ -11,7 +11,8 @@ import opentype from 'opentype.js';
 const BOX = { s: [160, 110], m: [240, 170], l: [340, 240] };
 const TEXT_PX = { s: 44, m: 56, l: 72 };     // text size in px
 const TEXT_MAX_WIDTH = 760;
-const MARGIN_X = 56;
+// Side margin: about 11% of the width, clear of the edge and of the like and share buttons on the right
+const MARGIN_X = 120;
 // Bottom and top margins clear the captions and buttons TikTok, Reels and Shorts draw over the clip
 const MARGIN_BOTTOM = 320;
 const MARGIN_TOP = 220;
