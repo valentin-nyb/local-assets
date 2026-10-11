@@ -1,5 +1,6 @@
 import { createClient } from 'redis';
 import { getWebSessionAuth } from './_venues.js';
+import { calendarKey, cleanCalendarUrl, fetchEvents } from './_calendar.js';
 import { listLiveStreams } from './_live.js';
 
 // Venue cameras (OBSBOT Tail 2 with NDI HX3).
@@ -79,7 +80,20 @@ export default async function handler(req, res) {
       for (const s of byId.values()) {
         cameras.push({ id: s.id, streamId: s.id, name: s.name || 'Camera', model: '', ndiName: '', ip: '', status: s.status, playbackId: s.playbackId, liveSince: s.liveSince || null, recording: s.recording, external: true });
       }
-      return res.status(200).json({ cameras });
+      // The venue calendar: who is on now, and the next sets
+      let calendar = { connected: false };
+      const calUrl = await withRedis(r => r.get(calendarKey(slug))).catch(() => null);
+      if (calUrl) {
+        calendar = { connected: true, host: new URL(calUrl).hostname };
+        try {
+          const now = Date.now();
+          const events = await fetchEvents(calUrl, now - 12 * 3600e3, now + 14 * 86400e3);
+          const cur = events.find(e => e.start <= now && e.end > now);
+          calendar.current = cur ? { artist: cur.artist, start: cur.start, end: cur.end } : null;
+          calendar.upcoming = events.filter(e => e.start > now).slice(0, 5).map(e => ({ artist: e.artist, start: e.start, end: e.end }));
+        } catch (e) { calendar.error = 'The calendar could not be read'; }
+      }
+      return res.status(200).json({ cameras, calendar });
     }
 
     if (req.method !== 'POST') return res.status(405).end();
@@ -119,6 +133,20 @@ export default async function handler(req, res) {
         await redis.hSet(STREAM_MAP, cam.streamId, slug);
         return res.status(200).json({ camera: cam });
       });
+    }
+
+    if (body.action === 'setCalendar') {
+      // Empty link disconnects; otherwise the link must be a readable iCal calendar
+      if (!String(body.url || '').trim()) {
+        await withRedis(r => r.del(calendarKey(slug)));
+        return res.status(200).json({ calendar: { connected: false } });
+      }
+      const url = cleanCalendarUrl(body.url);
+      if (!url) return res.status(400).json({ error: 'Paste the calendar\'s iCal link (it starts with https:// or webcal://).' });
+      try { await fetchEvents(url, Date.now(), Date.now() + 86400e3); }
+      catch { return res.status(400).json({ error: 'That link could not be read as a calendar. Use the secret iCal address from Google Calendar, or a public link from Apple Calendar.' }); }
+      await withRedis(r => r.set(calendarKey(slug), url));
+      return res.status(200).json({ calendar: { connected: true, host: new URL(url).hostname } });
     }
 
     if (body.action === 'onStage') {

@@ -95,6 +95,24 @@
         .cam-link iconify-icon { font-size:15px; }
         .cam-link.danger { margin-left:auto; }
         @media (hover:hover) { .cam-link:hover { background:var(--la-chip); color:var(--la-text); } .cam-link.danger:hover { color:var(--la-bad); } }
+        .cal-panel { border:1px solid var(--la-line); border-radius:16px; padding:22px; background:var(--la-surface); margin-bottom:16px; }
+        .cal-head { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; }
+        .cal-title { font-size:15px; color:var(--la-text); }
+        .cal-sub { font-size:13px; line-height:1.55; color:var(--la-sub); margin-top:4px; max-width:640px; }
+        .cal-state { flex-shrink:0; font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.15em; text-transform:uppercase; color:var(--la-dim); border:1px solid var(--la-line); border-radius:999px; padding:4px 10px; }
+        .cal-state.on { color:var(--la-accent); border-color:color-mix(in srgb, var(--la-accent) 45%, transparent); }
+        .cal-form { display:flex; gap:8px; margin-top:16px; }
+        .cal-form input { flex:1; min-width:0; height:38px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 12px; font-size:13px; outline:none; }
+        .cal-form input:focus { border-color:var(--la-accent); }
+        .cal-form .hidden { display:none; }
+        .cal-help { font-size:12px; color:var(--la-dim); margin-top:8px; line-height:1.5; }
+        .cal-list { margin-top:14px; display:grid; gap:6px; }
+        .cal-list:empty { display:none; }
+        .cal-row { display:flex; align-items:baseline; gap:12px; padding:10px 12px; border-radius:10px; background:var(--la-chip); font-size:13px; }
+        .cal-row b { font:700 13px "Helvetica Neue", Helvetica, Arial, sans-serif; color:var(--la-text); text-transform:uppercase; }
+        .cal-row .when { margin-left:auto; color:var(--la-sub); font-size:12px; white-space:nowrap; }
+        .cal-row .now { font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.15em; color:var(--la-accent); }
+        @media (max-width:640px) { .cal-form { flex-wrap:wrap; } .cal-form input { flex-basis:100%; } .cal-head { flex-direction:column; } }
         .cam-guide { border:1px solid var(--la-line); border-radius:16px; padding:0 18px; background:var(--la-surface); }
         .cam-guide summary { cursor:pointer; padding:16px 0; font-size:13px; font-weight:600; color:var(--la-text); display:flex; align-items:center; gap:8px; list-style:none; }
         .cam-guide summary::-webkit-details-marker { display:none; }
@@ -283,12 +301,30 @@
                     <ol class="ci-steps">
                         <li><b>1</b><div><strong>Plug in</strong><span>Power the camera and connect it to the venue's Wi-Fi or an Ethernet cable.</span></div></li>
                         <li><b>2</b><div><strong>Connect it here</strong><span>Press <em>Connect a camera</em> and give it a name. You get a stream address and key.</span></div></li>
-                        <li><b>3</b><div><strong>Add your Brand Kit</strong><span>Upload logos and fonts for your venue and each artist in <a href="/brand" class="ci-link">Brand Kit</a>.</span></div></li>
-                        <li><b>4</b><div><strong>Set the watermark</strong><span>Pick the logo, position and size, and add a line of text in one of your fonts. Every clip gets it.</span></div></li>
-                        <li><b>5</b><div><strong>Choose thumbnails</strong><span>Use any artwork or photo as a session thumbnail, horizontal and vertical, watermarked.</span></div></li>
-                        <li><b>6</b><div><strong>Post</strong><span>Download the clips from Distribution History, or send them to YouTube and SoundCloud.</span></div></li>
+                        <li><b>3</b><div><strong>Connect your calendar</strong><span>Paste your calendar's iCal link below. Each event is a set: the title is the DJ, the start and end are the exact times.</span></div></li>
+                        <li><b>4</b><div><strong>Stream the night</strong><span>Start the camera before the first set and stop it after the last. Each set is cut at its exact times and saved for its DJ in Distribution History.</span></div></li>
+                        <li><b>5</b><div><strong>Add your Brand Kit</strong><span>Upload logos and fonts for your venue and each artist in <a href="/brand" class="ci-link">Brand Kit</a>.</span></div></li>
+                        <li><b>6</b><div><strong>Set the watermark</strong><span>Pick the logo, position and size, and add a line of text in one of your fonts. Every clip gets it.</span></div></li>
+                        <li><b>7</b><div><strong>Choose thumbnails</strong><span>Use any artwork or photo as a session thumbnail, horizontal and vertical, watermarked.</span></div></li>
+                        <li><b>8</b><div><strong>Post</strong><span>Download the clips from Distribution History, or send them to YouTube and SoundCloud.</span></div></li>
                     </ol>
                 </div>
+
+                <section class="cal-panel" id="cal-panel" aria-labelledby="cal-title">
+                    <div class="cal-head">
+                        <div><h2 class="cal-title" id="cal-title">Calendar</h2>
+                        <p class="cal-sub">Every event in your calendar is a set. The title is the DJ, and the start and end are where the recording is cut. Sets are saved with their exact times in Distribution History.</p></div>
+                        <span class="cal-state" id="cal-state">Not connected</span>
+                    </div>
+                    <form class="cal-form" id="cal-form">
+                        <input name="url" id="cal-url" type="url" inputmode="url" autocomplete="off" placeholder="https://calendar.google.com/calendar/ical/…/basic.ics" aria-label="Calendar iCal link">
+                        <button type="submit" class="cam-btn primary" id="cal-save">Connect</button>
+                        <button type="button" class="cam-btn ghost hidden" id="cal-remove">Disconnect</button>
+                    </form>
+                    <p class="cal-help">Google Calendar: Settings, your calendar, Integrate calendar, <em>Secret address in iCal format</em>. Apple Calendar: share the calendar as Public and copy the link.</p>
+                    <p class="cam-form-error" id="cal-error"></p>
+                    <div class="cal-list" id="cal-list"></div>
+                </section>
 
                 <details class="cam-guide">
                     <summary> How to connect an OBSBOT Tail 2 with NDI</summary>
@@ -365,7 +401,41 @@
             });
         }
 
-        var _cams = [], _camKey = '';
+        var _cams = [], _camKey = '', _calNow = null;
+        // ── Venue calendar: who plays when ──
+        function fmtTime(ms) { return new Date(ms).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' }); }
+        function fmtDay(ms) { return new Date(ms).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/London' }); }
+        function renderCalendar(cal) {
+            _calNow = cal.current || null;
+            var state = document.getElementById('cal-state');
+            state.textContent = cal.connected ? (cal.error ? 'Can\'t read calendar' : 'Connected') : 'Not connected';
+            state.classList.toggle('on', !!cal.connected && !cal.error);
+            document.getElementById('cal-save').textContent = cal.connected ? 'Change' : 'Connect';
+            document.getElementById('cal-remove').classList.toggle('hidden', !cal.connected);
+            var input = document.getElementById('cal-url');
+            if (cal.connected) input.placeholder = 'Connected to ' + cal.host + '. Paste a new link to change it.';
+            var rows = [];
+            if (cal.current) rows.push('<div class="cal-row"><span class="now">ON NOW</span><b>' + esc(cal.current.artist) + '</b><span class="when">' + fmtTime(cal.current.start) + ' – ' + fmtTime(cal.current.end) + '</span></div>');
+            (cal.upcoming || []).forEach(function(e) { rows.push('<div class="cal-row"><b>' + esc(e.artist) + '</b><span class="when">' + fmtDay(e.start) + ' · ' + fmtTime(e.start) + ' – ' + fmtTime(e.end) + '</span></div>'); });
+            if (cal.connected && !cal.error && !rows.length) rows.push('<p class="cal-help">No sets in the next two weeks.</p>');
+            document.getElementById('cal-list').innerHTML = rows.join('');
+        }
+        async function saveCalendar(url) {
+            var err = document.getElementById('cal-error'), btn = document.getElementById('cal-save');
+            err.textContent = ''; btn.disabled = true;
+            try {
+                var r = await laFetch('/api/cameras', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setCalendar', url: url }) });
+                var d = await r.json().catch(function() { return {}; });
+                if (!r.ok) throw new Error(d.error || r.status);
+                document.getElementById('cal-url').value = '';
+                _camKey = ''; await loadCameras();
+            } catch (e) { err.textContent = e.message; }
+            btn.disabled = false;
+        }
+        document.getElementById('cal-form').addEventListener('submit', function(e) { e.preventDefault(); var v = document.getElementById('cal-url').value.trim(); if (v) saveCalendar(v); });
+        document.getElementById('cal-remove').addEventListener('click', async function() {
+            if (await laConfirm({ title: 'Disconnect the calendar?', message: 'Recordings will be split by the On stage name set on each camera instead.', confirmText: 'Disconnect', danger: true })) saveCalendar('');
+        });
         async function loadCameras() {
             var grid = document.getElementById('cam-grid');
             var empty = document.getElementById('cam-empty');
@@ -375,6 +445,7 @@
                 var data = await res.json();
                 if (!res.ok) throw new Error(data.error || res.status);
                 _cams = data.cameras || [];
+                renderCalendar(data.calendar || { connected: false });
                 err.classList.add('hidden');
                 empty.classList.toggle('hidden', _cams.length > 0);
                 document.getElementById('cam-head-actions').style.display = _cams.length ? '' : 'none';
@@ -383,7 +454,7 @@
                 camStatus(_cams.length ? live + ' of ' + _cams.length + ' live' : 'No cameras', live ? 'var(--la-ok)' : 'var(--la-dim)');
 
                 // Only rebuild when something changed, so playing video isn't interrupted
-                var key = JSON.stringify(_cams.map(function(c) { return [c.id, c.status, c.name, c.ndiName, c.ip, c.artist, c.autoClips, c.recording]; }));
+                var key = JSON.stringify(_cams.map(function(c) { return [c.id, c.status, c.name, c.ndiName, c.ip, c.artist, c.autoClips, c.recording]; }).concat([_calNow && _calNow.artist]));
                 if (key === _camKey) return;
                 _camKey = key;
                 grid.innerHTML = '';
@@ -458,8 +529,9 @@
                 (chips ? '<div class="cam-chips">' + chips + '</div>' : '') +
                 (c.external ? '' :
                     '<button type="button" class="cam-onstage" data-act="stage">' +
-                    '<span style="min-width:0"><span class="lbl">ON STAGE</span><span class="val' + (c.artist ? '' : ' empty') + '">' + esc(c.artist || 'Set the artist') + '</span></span>' +
-                    '<span class="go">' + (c.autoClips === false ? 'Recording only' : 'Recording + clips') + '</span></button>' +
+                    // The calendar's current set wins over the name typed on the card
+                    '<span style="min-width:0"><span class="lbl">ON STAGE</span><span class="val' + (_calNow || c.artist ? '' : ' empty') + '">' + esc(_calNow ? _calNow.artist : (c.artist || 'Set the artist')) + '</span></span>' +
+                    '<span class="go">' + (_calNow ? 'From calendar' : c.autoClips === false ? 'Recording only' : 'Recording + clips') + '</span></button>' +
                     (c.recording === false && c.status !== 'missing' ? '<div class="cam-recoff"><span>Recording is off for this camera</span><button type="button" data-act="rec">Turn on</button></div>' : '')) +
                 (actions ? '<div class="cam-row-actions">' + actions + '</div>' : '');
             var stage = card.querySelector('.cam-stage');

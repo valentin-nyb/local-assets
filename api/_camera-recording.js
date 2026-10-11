@@ -3,6 +3,7 @@ import { createClient } from 'redis';
 import { getVenuesConfig, getMuxAuthForVenue } from './_venues.js';
 import { getPipelineDb } from './_pipeline-db.js';
 import { resolveWatermark } from './_watermark.js';
+import { venueEvents } from './_calendar.js';
 
 // When a camera's broadcast ends, Mux has saved it as an asset. This turns that recording
 // into dashboard sessions: one per artist who was "on stage" (set on the Camera page),
@@ -21,7 +22,9 @@ const muxReq = (auth, path, init = {}) => fetch('https://api.mux.com' + path, {
 });
 
 const londonDate = ms => new Date(ms).toLocaleDateString('en-CA', { timeZone: 'Europe/London' }); // YYYY-MM-DD
-const tag = (artist, date) => JSON.stringify({ artist, date, camera: 'MASTER' });
+// start/end: the set's exact times from the venue calendar (UTC, to the minute)
+const minute = ms => new Date(ms).toISOString().slice(0, 16) + 'Z';
+const tag = (artist, date, set) => JSON.stringify(set ? { artist, date, camera: 'MASTER', start: minute(set.from), end: minute(set.to) } : { artist, date, camera: 'MASTER' });
 
 // Splits the recording at each artist change. Times are seconds from the start of the recording.
 export function buildSets(defaultArtist, markers, startMs, duration) {
@@ -86,11 +89,22 @@ export async function processCameraRecording(event) {
     const date    = londonDate(startMs);
     const markers = (await redis.lRange(`cam_markers:${streamId}`, 0, -1)).map(m => { try { return JSON.parse(m); } catch { return null; } }).filter(Boolean);
 
-    const sets = buildSets(cam.artist || '', markers, startMs, duration)
+    // The venue calendar decides who played when: each set is cut at its exact start and end.
+    // Without calendar sets, the On stage changes made on the Camera page split the recording.
+    const endMs = startMs + duration * 1000;
+    const events = await venueEvents(redis, slug, startMs, endMs).catch(e => { console.error('[camera-rec] calendar:', e.message); return []; });
+    const calSets = events.map(ev => ({
+      artist: ev.artist,
+      start: Math.max(0, (ev.start - startMs) / 1000),
+      end: Math.min(duration, (ev.end - startMs) / 1000),
+      from: Math.max(ev.start, startMs), to: Math.min(ev.end, endMs),
+    })).filter(x => x.end - x.start >= MIN_SET_SEC);
+
+    const sets = calSets.length ? calSets : buildSets(cam.artist || '', markers, startMs, duration)
       .map(s => ({ ...s, artist: (s.artist || camName).toUpperCase().trim() }));
 
     let sessions;
-    if (sets.length === 1) {
+    if (!calSets.length && sets.length === 1) {
       await muxReq(auth, `/video/v1/assets/${assetId}`, { method: 'PATCH', body: JSON.stringify({ passthrough: tag(sets[0].artist, date) }) });
       sessions = [{ assetId, artist: sets[0].artist }];
     } else {
@@ -102,14 +116,15 @@ export async function processCameraRecording(event) {
           body: JSON.stringify({
             input: [{ url: `mux://assets/${assetId}`, start_time: Math.floor(s.start), end_time: Math.ceil(s.end) }],
             playback_policy: ['public'],
-            passthrough: tag(s.artist, date),
+            passthrough: tag(s.artist, date, calSets.length ? s : null),
+            static_renditions: [{ resolution: 'highest' }],
           }),
         });
         sessions.push({ assetId: clip.id, artist: s.artist });
       }
       await muxReq(auth, `/video/v1/assets/${assetId}`, { method: 'PATCH', body: JSON.stringify({ passthrough: tag(camName + ' FULL RECORDING', date) }) });
     }
-    console.log(`[camera-rec] ${slug} ${camName}: ${sessions.map(s => s.artist).join(', ')}`);
+    console.log(`[camera-rec] ${slug} ${camName}${calSets.length ? ' (calendar)' : ''}: ${sessions.map(s => s.artist).join(', ')}`);
 
     // Markers up to the end of this recording are used up
     await redis.del(`cam_markers:${streamId}`);
