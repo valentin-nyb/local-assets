@@ -51,12 +51,17 @@ export async function claimNextJob(db, workerId) {
     );
     await client.query('COMMIT');
     const row = result.rows[0];
-    return row && {
+    if (!row) return null;
+    // Camera recordings are queued as "asset:<id>": the Mux asset already exists
+    const isAsset = String(row.upload_id || '').startsWith('asset:');
+    const job = {
       jobId: row.id,
-      uploadId: row.upload_id,
+      uploadId: isAsset ? null : row.upload_id,
       artistName: row.artist_name,
       venueSlug: row.venue_slug,
     };
+    if (isAsset) job.assetId = row.upload_id.slice(6);
+    return job;
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});
     throw error;

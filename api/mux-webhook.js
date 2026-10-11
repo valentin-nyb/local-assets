@@ -1,5 +1,6 @@
 import Mux from '@mux/mux-node';
 import { put } from '@vercel/blob';
+import { processCameraRecording } from './_camera-recording.js';
 
 const mux = new Mux({ 
   tokenId: (process.env.PROD_MUX_TOKEN_ID || process.env.MUX_TOKEN_ID || '').trim(), 
@@ -149,7 +150,7 @@ export default async function handler(req, res) {
 
         // Set asset name = passthrough + date
         try {
-            if (passthrough) {
+            if (passthrough && !data.live_stream_id) {
                 const d = new Date((data.created_at || Date.now() / 1000) * 1000);
                 const dateStr = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
                 await mux.video.assets.update(assetId, { name: passthrough + ' — ' + dateStr });
@@ -159,7 +160,8 @@ export default async function handler(req, res) {
         }
 
         // ── AUTO-PIPELINE: only for MASTER assets ────────────────────
-        if (isMasterAsset(passthrough) && duration > 10 && playbackId) {
+        // Camera recordings are handled when the broadcast ends (video.asset.live_stream_completed)
+        if (!data.live_stream_id && isMasterAsset(passthrough) && duration > 10 && playbackId) {
             console.log(`[Pipeline] MASTER "${passthrough}" (${Math.round(duration)}s) — generating audio + clips + thumbs...`);
 
             const results = await Promise.allSettled([
@@ -173,6 +175,12 @@ export default async function handler(req, res) {
             }
             console.log(`[Pipeline] Done for "${passthrough}"`);
         }
+    }
+
+    // ── CAMERA BROADCAST ENDED → sessions per artist + vertical clips ──
+    if (type === 'video.asset.live_stream_completed') {
+        try { await processCameraRecording(data); }
+        catch (e) { console.error('[camera-rec] failed:', e.message); }
     }
 
     // ── AI TRACK READY → supplement with highlight clips ─────────────

@@ -73,6 +73,21 @@
         .cam-chips { display:flex; flex-wrap:wrap; gap:6px; padding:0 14px 12px; }
         .cam-chip { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--la-sub); background:var(--la-chip); border-radius:6px; padding:3px 7px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .cam-chip.ndi { color:var(--la-accent); background:var(--la-accent-soft); }
+        .cam-onstage { display:flex; align-items:center; gap:10px; margin:0 14px 12px; padding:10px 12px; border-radius:10px; background:var(--la-chip); border:none; width:calc(100% - 28px); text-align:left; cursor:pointer; color:var(--la-text); font-family:inherit; }
+        .cam-onstage iconify-icon { font-size:18px; color:var(--la-accent); flex-shrink:0; }
+        .cam-onstage .lbl { display:block; font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.15em; color:var(--la-dim); }
+        .cam-onstage .val { display:block; font-size:13px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .cam-onstage .val.empty { color:var(--la-sub); font-weight:500; }
+        .cam-onstage .go { margin-left:auto; font-size:11px; color:var(--la-sub); flex-shrink:0; }
+        @media (hover:hover) { .cam-onstage:hover { background:var(--la-line-soft); } }
+        .cam-recoff { display:flex; align-items:center; gap:8px; margin:0 14px 12px; font-size:12px; color:var(--la-warn); }
+        .cam-recoff button { margin-left:auto; height:28px; padding:0 10px; border-radius:8px; border:1px solid var(--la-line); background:none; color:var(--la-text); font-size:12px; cursor:pointer; font-family:inherit; flex-shrink:0; }
+        .cam-check { flex-direction:row !important; align-items:flex-start; gap:10px !important; cursor:pointer; }
+        .cam-check input { width:16px; height:16px; padding:0; margin-top:1px; accent-color:var(--la-accent); flex-shrink:0; }
+        .cam-check span { display:flex; flex-direction:column; gap:3px; }
+        .cam-steps { margin:0 0 16px; padding:0; list-style:none; display:flex; flex-direction:column; gap:8px; }
+        .cam-steps li { display:flex; gap:10px; font-size:12px; line-height:1.5; color:var(--la-sub); }
+        .cam-steps b { flex-shrink:0; width:20px; height:20px; border-radius:999px; background:var(--la-accent-soft); color:var(--la-accent); font-size:11px; display:flex; align-items:center; justify-content:center; }
         .cam-row-actions { display:flex; flex-wrap:wrap; gap:2px; border-top:1px solid var(--la-line-soft); padding:6px 8px; }
         .cam-link { display:inline-flex; align-items:center; gap:5px; height:32px; padding:0 7px; border-radius:8px; font-size:12px; color:var(--la-sub); background:none; border:none; cursor:pointer; text-decoration:none; }
         .cam-link iconify-icon { font-size:15px; }
@@ -135,6 +150,39 @@
         .cam-field > div { display:flex; align-items:center; gap:6px; background:var(--la-input); border:1px solid var(--la-line); border-radius:10px; padding:4px 4px 4px 12px; }
         .cam-field code { flex:1; min-width:0; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--la-text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .cam-field code.secret:not(:hover):not(:focus) { filter:blur(4px); cursor:pointer; }
+        .cam-intro { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,400px); grid-template-rows:auto 1fr; gap:28px 48px; align-items:start; border:1px solid var(--la-line); background:var(--la-surface); border-radius:20px; padding:32px; }
+        .cam-intro.hidden { display:none; }
+        .ci-title { font-size:26px; line-height:1.2; font-weight:600; letter-spacing:-.02em; color:var(--la-text); margin:10px 0 12px; }
+        .ci-text { font-size:14px; line-height:1.65; color:var(--la-sub); max-width:520px; }
+        .ci-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:22px; }
+        .ci-actions .cam-btn { height:42px; padding:0 18px; font-size:13px; }
+        .ci-note { font-size:12px; color:var(--la-dim); margin-top:12px; }
+        .ci-example { grid-row:span 2; position:relative; }
+        .ci-tag { position:absolute; top:-10px; left:16px; z-index:2; font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.2em; padding:3px 8px; border-radius:999px; background:var(--la-raised); border:1px solid var(--la-line); color:var(--la-sub); }
+        .ci-example .cam-card { pointer-events:none; }
+        .ci-example .cam-stage img { width:100%; height:100%; object-fit:cover; display:block; }
+        .ci-stage-fallback { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:radial-gradient(circle at 50% 40%, #27272a, #000 70%); color:#52525b; font-size:30px; }
+        .ci-arrow { display:flex; align-items:center; justify-content:center; gap:6px; padding:12px 0; font-size:11px; color:var(--la-dim); }
+        .ci-arrow iconify-icon { font-size:14px; color:var(--la-accent); }
+        .ci-result { border:1px solid var(--la-line); border-radius:16px; padding:14px; background:var(--la-surface); }
+        .ci-result-head { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--la-sub); }
+        .ci-result-head b { color:var(--la-text); font-weight:600; }
+        .ci-result-head iconify-icon { font-size:16px; color:var(--la-accent); flex-shrink:0; }
+        .ci-verts { display:grid; grid-template-columns:repeat(6,1fr); gap:6px; margin-top:12px; }
+        .ci-verts i { aspect-ratio:9/16; border-radius:6px; background:var(--la-chip) center/cover no-repeat; border:1px solid var(--la-line); }
+        .ci-result-foot { font-size:11px; color:var(--la-dim); margin-top:10px; }
+        .ci-steps { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px 24px; align-self:start; padding-top:22px; border-top:1px solid var(--la-line-soft); }
+        .ci-steps li { display:flex; gap:12px; }
+        .ci-steps li > b { flex-shrink:0; width:24px; height:24px; border-radius:999px; background:var(--la-accent-soft); color:var(--la-accent); font-size:12px; display:flex; align-items:center; justify-content:center; }
+        .ci-steps strong { display:block; font-size:13px; font-weight:600; color:var(--la-text); margin-bottom:3px; }
+        .ci-steps span { font-size:12px; line-height:1.55; color:var(--la-sub); }
+        @media (max-width: 900px) {
+            .cam-intro { grid-template-columns:minmax(0,1fr); padding:22px 18px; gap:28px; }
+            .ci-example { grid-row:auto; }
+            .ci-title { font-size:22px; }
+            .ci-steps { grid-template-columns:minmax(0,1fr); }
+            .ci-actions .cam-btn { flex:1 1 auto; justify-content:center; }
+        }
         .cam-empty-title { font-size:14px; font-weight:600; color:var(--la-text); }
         .cam-empty-text { font-size:12px; line-height:1.6; color:var(--la-dim); max-width:380px; }
     </style>
@@ -171,7 +219,7 @@
                         <p class="cam-eyebrow">OBSBOT Tail 2 · NDI HX3</p>
                         <h2 class="cam-h">Cameras</h2>
                     </div>
-                    <div class="cam-actions">
+                    <div class="cam-actions" id="cam-head-actions" style="display:none">
                         <button type="button" class="cam-btn ghost" onclick="openOrderCameras()">
                             <iconify-icon icon="solar:cart-large-2-linear"></iconify-icon><span>Order cameras</span>
                         </button>
@@ -182,16 +230,46 @@
                 </div>
 
                 <div id="cam-grid" class="cam-grid"></div>
-                <div id="cam-empty" class="hidden cam-empty">
-                    <iconify-icon icon="solar:videocamera-record-linear" class="text-3xl text-zinc-600"></iconify-icon>
-                    <p class="cam-empty-title">No cameras yet</p>
-                    <p class="cam-empty-text">Add each OBSBOT Tail 2 at this venue with <b>Add camera</b>. You'll get the stream details to send its video here.</p>
+                <div id="cam-empty" class="hidden cam-intro">
+                    <div class="ci-copy">
+                        <p class="cam-eyebrow">How it works</p>
+                        <h2 class="ci-title">Record every set. Get the clips automatically.</h2>
+                        <p class="ci-text">Each OBSBOT Tail 2 streams over the venue's Wi-Fi or network straight to your Cloud Storage. When the set ends, the recording is in Distribution History as a session for the artist on stage, with 30 vertical clips ready for social media.</p>
+                        <div class="ci-actions">
+                            <button type="button" class="cam-btn primary" onclick="openCamForm()"><iconify-icon icon="solar:add-circle-linear"></iconify-icon>Connect a camera</button>
+                            <button type="button" class="cam-btn ghost" onclick="openOrderCameras()"><iconify-icon icon="solar:cart-large-minimalistic-linear"></iconify-icon>Order cameras · £1,299</button>
+                        </div>
+                        <p class="ci-note">Setup and integration included with every camera ordered from us.</p>
+                    </div>
+
+                    <div class="ci-example" aria-label="Example of a connected camera">
+                        <span class="ci-tag">EXAMPLE</span>
+                        <div class="cam-card">
+                            <div class="cam-stage" id="ci-stage"><div class="ci-stage-fallback"><iconify-icon icon="solar:videocamera-record-linear"></iconify-icon></div></div>
+                            <div class="cam-meta"><span class="cam-label">CAM 01 // MAIN FLOOR</span><span class="cam-pill on">LIVE · REC</span></div>
+                            <div class="cam-chips"><span class="cam-chip">OBSBOT Tail 2</span><span class="cam-chip ndi">NDI · MAIN FLOOR</span></div>
+                            <div class="cam-onstage" style="cursor:default"><iconify-icon icon="solar:microphone-3-linear"></iconify-icon><span style="min-width:0"><span class="lbl">ON STAGE</span><span class="val" id="ci-artist">ARTIST NAME</span></span><span class="go">Recording + clips</span></div>
+                        </div>
+                        <div class="ci-arrow"><iconify-icon icon="solar:arrow-down-linear"></iconify-icon><span>When the stream stops</span></div>
+                        <div class="ci-result">
+                            <div class="ci-result-head"><iconify-icon icon="solar:folder-with-files-linear"></iconify-icon><span><b id="ci-artist2">ARTIST NAME</b> · new session in Distribution History</span></div>
+                            <div class="ci-verts" id="ci-verts"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+                            <p class="ci-result-foot">Full recording + 30 vertical clips</p>
+                        </div>
+                    </div>
+
+                    <ol class="ci-steps">
+                        <li><b>1</b><div><strong>Plug in</strong><span>Power the camera and connect it to the venue's Wi-Fi or an Ethernet cable.</span></div></li>
+                        <li><b>2</b><div><strong>Connect it here</strong><span>Press <em>Connect a camera</em> and give it a name. You get a stream address and key.</span></div></li>
+                        <li><b>3</b><div><strong>Paste into the camera</strong><span>In the OBSBOT Start app, open the camera's live streaming (RTMP) settings and paste the server and stream key.</span></div></li>
+                        <li><b>4</b><div><strong>Set who's on stage</strong><span>Before each set, type the artist's name on the camera card. Stop the stream when the night ends.</span></div></li>
+                    </ol>
                 </div>
 
                 <details class="cam-guide">
                     <summary><iconify-icon icon="solar:book-2-linear"></iconify-icon> How to connect an OBSBOT Tail 2 with NDI</summary>
                     <ol>
-                        <li><b>Connect the camera</b> to the venue network with an Ethernet cable. The Tail 2 is powered over the same cable from a PoE+ switch.</li>
+                        <li><b>Connect the camera</b> to the venue network: Wi-Fi, or an Ethernet cable (the Tail 2 is powered over the same cable from a PoE+ switch). Ethernet is steadier for long sets.</li>
                         <li><b>Turn on NDI</b> in the OBSBOT Start app (or the camera's web page) and give it a clear NDI name, e.g. <code>MAIN FLOOR</code>. Activate NDI there if the app asks.</li>
                         <li><b>Add the camera here</b> with the same name, its NDI name and its IP address (shown in the OBSBOT app).</li>
                         <li><b>Send the video to local / assets</b> with <em>Stream setup</em> on the camera card, either:
@@ -275,27 +353,54 @@
                 _cams = data.cameras || [];
                 err.classList.add('hidden');
                 empty.classList.toggle('hidden', _cams.length > 0);
+                document.getElementById('cam-head-actions').style.display = _cams.length ? '' : 'none';
+                if (!_cams.length && !fillIntroExample.done) { fillIntroExample.done = true; fillIntroExample(); }
                 var live = _cams.filter(function(c) { return c.status === 'active'; }).length;
                 camStatus(_cams.length ? live + ' of ' + _cams.length + ' live' : 'No cameras', live ? 'var(--la-ok)' : 'var(--la-dim)');
 
                 // Only rebuild when something changed, so playing video isn't interrupted
-                var key = JSON.stringify(_cams.map(function(c) { return [c.id, c.status, c.name, c.ndiName, c.ip]; }));
+                var key = JSON.stringify(_cams.map(function(c) { return [c.id, c.status, c.name, c.ndiName, c.ip, c.artist, c.autoClips, c.recording]; }));
                 if (key === _camKey) return;
                 _camKey = key;
                 grid.innerHTML = '';
                 _cams.forEach(function(c, i) { grid.appendChild(cameraCard(c, i)); });
             } catch (e) {
+                document.getElementById('cam-head-actions').style.display = '';
                 err.textContent = 'Could not load cameras — ' + e.message;
                 err.classList.remove('hidden');
                 camStatus('Unavailable', 'var(--la-bad)');
             }
         }
 
+        // The intro's example card uses this venue's latest session, when there is one
+        function fillIntroExample() {
+            laFetch('/api/list-assets').then(function(r) { return r.ok ? r.json() : []; }).then(function(list) {
+                list = Array.isArray(list) ? list : (list.data || list.assets || []);
+                var artistOf = function(a) {
+                    var pt = a.passthrough || '';
+                    try { var o = JSON.parse(pt); if (o && o.artist) return ['AUDIO','SOCIAL','THUMB'].indexOf(String(o.camera || '').toUpperCase()) >= 0 ? '' : o.artist; } catch (_) {}
+                    return pt && pt.indexOf(' // ') < 0 ? pt : '';
+                };
+                var masters = list.filter(function(a) { return a.status === 'ready' && (a.playback_ids || []).length && artistOf(a) && Number(a.duration) > 120; })
+                    .sort(function(a, b) { return Number(b.created_at) - Number(a.created_at); });
+                var m = masters[0];
+                if (!m) return;
+                var pid = m.playback_ids[0].id, dur = Number(m.duration);
+                var name = String(artistOf(m)).toUpperCase();
+                document.getElementById('ci-artist').textContent = name;
+                document.getElementById('ci-artist2').textContent = name;
+                document.getElementById('ci-stage').innerHTML = '<img alt="" src="https://image.mux.com/' + pid + '/thumbnail.jpg?width=800&height=450&fit_mode=smartcrop&time=' + Math.round(dur * 0.45) + '">';
+                document.querySelectorAll('#ci-verts i').forEach(function(t, i) {
+                    t.style.backgroundImage = 'url(https://image.mux.com/' + pid + '/thumbnail.jpg?width=180&height=320&fit_mode=smartcrop&time=' + Math.round(dur * (0.15 + i * 0.13)) + ')';
+                });
+            }).catch(function() {});
+        }
+
         function cameraCard(c, i) {
             var card = document.createElement('div');
             card.className = 'cam-card';
             var isLive = c.status === 'active' && c.playbackId;
-            var pill = isLive ? '<span class="cam-pill on">LIVE</span>'
+            var pill = isLive ? '<span class="cam-pill on">' + (c.recording ? 'LIVE · REC' : 'LIVE') + '</span>'
                 : c.status === 'missing' ? '<span class="cam-pill warn">STREAM MISSING</span>'
                 : '<span class="cam-pill">OFFLINE</span>';
             var chips = '';
@@ -313,6 +418,11 @@
                 '<div class="cam-stage"></div>' +
                 '<div class="cam-meta"><span class="cam-label">CAM ' + String(i + 1).padStart(2, '0') + ' // ' + esc(c.name) + '</span>' + pill + '</div>' +
                 (chips ? '<div class="cam-chips">' + chips + '</div>' : '') +
+                (c.external ? '' :
+                    '<button type="button" class="cam-onstage" data-act="stage"><iconify-icon icon="solar:microphone-3-linear"></iconify-icon>' +
+                    '<span style="min-width:0"><span class="lbl">ON STAGE</span><span class="val' + (c.artist ? '' : ' empty') + '">' + esc(c.artist || 'Set the artist') + '</span></span>' +
+                    '<span class="go">' + (c.autoClips === false ? 'Recording only' : 'Recording + clips') + '</span></button>' +
+                    (c.recording === false && c.status !== 'missing' ? '<div class="cam-recoff"><iconify-icon icon="solar:danger-triangle-linear"></iconify-icon><span>Recording is off for this camera</span><button type="button" data-act="rec">Turn on</button></div>' : '')) +
                 (actions ? '<div class="cam-row-actions">' + actions + '</div>' : '');
             var stage = card.querySelector('.cam-stage');
             if (isLive) {
@@ -334,6 +444,8 @@
                     if (act === 'setup') openStreamSetup(c);
                     if (act === 'edit') openCamForm(c);
                     if (act === 'remove') removeCamera(c, b);
+                    if (act === 'stage') openOnStage(c);
+                    if (act === 'rec') enableRecording(c, b);
                 });
             });
             return card;
@@ -401,6 +513,57 @@
             btn.disabled = true;
             camApi({ action: 'remove', id: c.id }).then(function() { _camKey = ''; loadCameras(); laToast('Camera removed'); })
                 .catch(function(e) { alert('Could not remove camera: ' + e.message); btn.disabled = false; });
+        }
+
+        // ── On stage: names the recording, and splits it when the artist changes mid-stream ──
+        var _artistNames = null;
+        function loadArtistNames() {
+            if (_artistNames) return Promise.resolve(_artistNames);
+            return laFetch('/api/brand').then(function(r) { return r.ok ? r.json() : {}; }).then(function(d) {
+                var names = {};
+                Object.keys(d.ownerNames || {}).forEach(function(o) { if (o.indexOf('artist-') === 0) names[d.ownerNames[o]] = 1; });
+                (d.files || []).forEach(function(f) { if (f.owner.indexOf('artist-') === 0 && !(d.ownerNames || {})[f.owner]) names[f.owner.slice(7).replace(/-/g, ' ').toUpperCase()] = 1; });
+                _cams.forEach(function(c) { if (c.artist) names[c.artist] = 1; });
+                return (_artistNames = Object.keys(names).sort());
+            }).catch(function() { return []; });
+        }
+        function openOnStage(c) {
+            var live = c.status === 'active';
+            openCamDialog('On stage — ' + c.name,
+                '<ol class="cam-steps">' +
+                '<li><b>1</b><span>Every broadcast from this camera is recorded to Cloud Storage.</span></li>' +
+                '<li><b>2</b><span>When the stream stops, the recording appears in Distribution History as a session for the artist below.</span></li>' +
+                '<li><b>3</b><span>Change the artist between sets while streaming and the recording is split at that moment, one session per artist.</span></li>' +
+                '</ol>' +
+                '<form id="stage-form" class="cam-form">' +
+                '<label>Artist on stage<input name="artist" list="stage-artists" maxlength="60" placeholder="DJ TENNIS" autocomplete="off" value="' + esc(c.artist) + '"><datalist id="stage-artists"></datalist>' +
+                (live ? '<small>Streaming now. Saving a new name starts a new set from this moment.</small>' : '<small>Set this before the stream starts.</small>') + '</label>' +
+                '<label class="cam-check"><input type="checkbox" name="autoClips"' + (c.autoClips === false ? '' : ' checked') + '><span>Make vertical clips automatically<small>30 vertical clips for social media from each set, once the recording is saved.</small></span></label>' +
+                '<p id="stage-error" class="cam-form-error"></p>' +
+                '<div class="cam-form-actions"><button type="button" class="cam-btn ghost" onclick="closeCamDialog()">Cancel</button>' +
+                '<button type="submit" class="cam-btn primary">' + (live && c.artist ? 'Start new set' : 'Save') + '</button></div>' +
+                '</form>');
+            var form = document.getElementById('stage-form');
+            loadArtistNames().then(function(list) {
+                var dl = document.getElementById('stage-artists');
+                if (dl) dl.innerHTML = list.map(function(n) { return '<option value="' + esc(n) + '">'; }).join('');
+            });
+            form.artist.focus();
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                var btn = form.querySelector('[type=submit]');
+                btn.disabled = true; btn.textContent = 'Saving…';
+                camApi({ action: 'onStage', id: c.id, artist: form.artist.value.trim().toUpperCase(), autoClips: form.autoClips.checked })
+                    .then(function() { _camKey = ''; closeCamDialog(); laToast(form.artist.value.trim() ? form.artist.value.trim().toUpperCase() + ' is on stage' : 'Saved'); return loadCameras(); })
+                    .catch(function(err) { document.getElementById('stage-error').textContent = err.message; btn.disabled = false; btn.textContent = 'Save'; });
+            });
+        }
+        async function enableRecording(c, btn) {
+            if (!(await laConfirm({ title: 'Turn on recording for ' + c.name + '?', message: 'This camera gets a new stream key. Enter the new key in the camera (or OBS) before its next stream.', confirmText: 'Turn on recording' }))) return;
+            btn.disabled = true;
+            camApi({ action: 'enableRecording', id: c.id })
+                .then(function(d) { _camKey = ''; return loadCameras().then(function() { openStreamSetup(d.camera); }); })
+                .catch(function(e) { alert('Could not turn on recording: ' + e.message); btn.disabled = false; });
         }
 
         // ── Order cameras (sold by local / assets, paid through Stripe Checkout) ──

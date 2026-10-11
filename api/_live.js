@@ -15,6 +15,7 @@ export async function listLiveStreams(muxAuth) {
       status:      s.status,                       // 'active' while the camera is sending video
       playbackId:  (s.playback_ids || []).find(p => p.policy === 'public')?.id || null,
       activeAssetId: s.active_asset_id || null,
+      recording:   !!s.new_asset_settings,          // saved as an asset when the broadcast ends
       createdAt:   Number(s.created_at) || null,
     }));
 
