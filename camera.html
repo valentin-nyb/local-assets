@@ -171,6 +171,11 @@
         .ci-verts { display:grid; grid-template-columns:repeat(6,1fr); gap:6px; margin-top:12px; }
         .ci-verts i { aspect-ratio:9/16; border-radius:6px; background:var(--la-chip) center/cover no-repeat; border:1px solid var(--la-line); }
         .ci-result-foot { font-size:11px; color:var(--la-dim); margin-top:10px; }
+        .ci-branded { grid-template-columns:repeat(4,1fr); gap:8px; }
+        .ci-branded i { position:relative; }
+        .ci-wm { position:absolute; top:7%; right:8%; width:34%; height:9%; border-radius:4px; background:rgba(0,0,0,.45) center/contain no-repeat; -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; color:#fff; font:600 7px/1 'JetBrains Mono',monospace; letter-spacing:.12em; }
+        .ci-wm:empty::after { content:'LOGO'; }
+        .ci-wm.has-logo { background-color:transparent; -webkit-backdrop-filter:none; backdrop-filter:none; }
         .ci-steps { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px 24px; align-self:start; padding-top:22px; border-top:1px solid var(--la-line-soft); }
         .ci-steps li { display:flex; gap:12px; }
         .ci-steps li > b { flex-shrink:0; width:24px; height:24px; border-radius:999px; background:var(--la-accent-soft); color:var(--la-accent); font-size:12px; display:flex; align-items:center; justify-content:center; }
@@ -255,6 +260,12 @@
                             <div class="ci-result-head"><iconify-icon icon="solar:folder-with-files-linear"></iconify-icon><span><b id="ci-artist2">ARTIST NAME</b> · new session in Distribution History</span></div>
                             <div class="ci-verts" id="ci-verts"><i></i><i></i><i></i><i></i><i></i><i></i></div>
                             <p class="ci-result-foot">Full recording + 30 vertical clips</p>
+                        </div>
+                        <div class="ci-arrow"><iconify-icon icon="solar:arrow-down-linear"></iconify-icon><span>Brand Kit applied</span></div>
+                        <div class="ci-result">
+                            <div class="ci-result-head"><iconify-icon icon="solar:palette-round-linear"></iconify-icon><span><b>Branded and ready to post</b> · logo and watermark on every clip</span></div>
+                            <div class="ci-verts ci-branded" id="ci-branded"><i><span class="ci-wm"></span></i><i><span class="ci-wm"></span></i><i><span class="ci-wm"></span></i><i><span class="ci-wm"></span></i></div>
+                            <p class="ci-result-foot">Venue, label and artist logos from your Brand Kit</p>
                         </div>
                     </div>
 
@@ -374,6 +385,12 @@
 
         // The intro's example card uses this venue's latest session, when there is one
         function fillIntroExample() {
+            // The account's own logo from the Brand Kit on the "branded" example clips
+            laFetch('/api/brand').then(function(r) { return r.ok ? r.json() : {}; }).then(function(d) {
+                var logo = (d.files || []).filter(function(f) { return f.owner === 'venue' && f.category === 'logos' && /\.(png|svg|webp)$/i.test(f.name); })[0];
+                if (!logo) return;
+                document.querySelectorAll('.ci-wm').forEach(function(w) { w.classList.add('has-logo'); w.style.backgroundImage = 'url(' + JSON.stringify(logo.url) + ')'; w.textContent = ''; w.innerHTML = '&#8203;'; });
+            }).catch(function() {});
             laFetch('/api/list-assets').then(function(r) { return r.ok ? r.json() : []; }).then(function(list) {
                 list = Array.isArray(list) ? list : (list.data || list.assets || []);
                 var artistOf = function(a) {
@@ -390,8 +407,8 @@
                 document.getElementById('ci-artist').textContent = name;
                 document.getElementById('ci-artist2').textContent = name;
                 document.getElementById('ci-stage').innerHTML = '<img alt="" src="https://image.mux.com/' + pid + '/thumbnail.jpg?width=800&height=450&fit_mode=smartcrop&time=' + Math.round(dur * 0.45) + '">';
-                document.querySelectorAll('#ci-verts i').forEach(function(t, i) {
-                    t.style.backgroundImage = 'url(https://image.mux.com/' + pid + '/thumbnail.jpg?width=180&height=320&fit_mode=smartcrop&time=' + Math.round(dur * (0.15 + i * 0.13)) + ')';
+                document.querySelectorAll('#ci-verts i, #ci-branded i').forEach(function(t, i) {
+                    t.style.backgroundImage = 'url(https://image.mux.com/' + pid + '/thumbnail.jpg?width=180&height=320&fit_mode=smartcrop&time=' + Math.round(dur * (0.15 + (i % 6) * 0.13)) + ')';
                 });
             }).catch(function() {});
         }
