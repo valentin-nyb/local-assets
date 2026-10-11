@@ -4,14 +4,14 @@ import { list } from '@vercel/blob';
 // When a clip job is queued, it is resolved to a concrete logo URL and saved on the job,
 // so the clip worker never needs Redis or Blob access of its own.
 
-export const WATERMARK_DEFAULTS = { enabled: true, logo: 'auto', position: 'br', size: 'm', opacity: 0.9, text: null };
+export const WATERMARK_DEFAULTS = { enabled: true, logo: 'auto', position: 'bl', size: 'm', opacity: 0.9, text: null };
 const POSITIONS = ['br', 'bl', 'tr', 'tl'];
 const SIZES = ['s', 'm', 'l'];
 // ffmpeg reads these; SVG is rasterised by the worker
 const LOGO_FILE = /\.(png|svg|webp|jpe?g)$/i;
 // The worker draws watermark text with opentype.js, which reads these (not WOFF2)
 export const TEXT_FONT_FILE = /\.(ttf|otf|woff)$/i;
-const TEXT_POSITIONS = ['bl', 'tl'];
+const TEXT_POSITIONS = ['br', 'bl', 'tr', 'tl'];
 const BLOB_URL = /^https:\/\/[a-z0-9]+\.public\.blob\.vercel-storage\.com\//;
 
 export const watermarkKey = slug => `brand_watermark:${slug}`;
@@ -32,11 +32,12 @@ export function cleanWatermark(input = {}) {
   // "auto" = the artist's logo, else the account's; "account" = always the account's; or one file's URL
   if (input.logo === 'auto' || input.logo === 'account') w.logo = input.logo;
   else if (typeof input.logo === 'string' && BLOB_URL.test(input.logo)) w.logo = input.logo;
-  // Text in one of the account's fonts, set from the font preview; left corners only (the logo usually sits right)
+  // Text in one of the account's fonts: a fixed line, or the name of the artist on each clip
   const t = input.text;
+  const source = t?.source === 'artist' ? 'artist' : 'custom';
   const value = t && String(t.value ?? '').replace(/[\u0000-\u001f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 60);
-  if (value && typeof t.font === 'string' && BLOB_URL.test(t.font) && TEXT_FONT_FILE.test(new URL(t.font).pathname)) {
-    w.text = { value, font: t.font, position: TEXT_POSITIONS.includes(t.position) ? t.position : 'bl' };
+  if ((value || source === 'artist') && typeof t.font === 'string' && BLOB_URL.test(t.font) && TEXT_FONT_FILE.test(new URL(t.font).pathname)) {
+    w.text = { source, value: value || '', font: t.font, position: TEXT_POSITIONS.includes(t.position) ? t.position : 'br' };
   }
   return w;
 }
@@ -71,7 +72,10 @@ export async function resolveWatermark(redis, slug, artist) {
   if (!url && w.logo === 'auto' && artist) url = logos.find(l => l.owner === 'artist-' + slugify(artist))?.url || null;
   if (!url) url = logos.find(l => l.owner === 'venue')?.url || null;
   // Only a font still in this account's brand kit
-  const text = w.text && fonts.has(w.text.font) ? w.text : null;
+  let text = w.text && fonts.has(w.text.font) ? w.text : null;
+  // "Artist name": each session's own artist
+  if (text?.source === 'artist') text = artist ? { ...text, value: String(artist).toUpperCase().trim() } : null;
+  if (text && !text.value) text = null;
   if (!url && !text) return null;
   return { url, position: w.position, size: w.size, opacity: w.opacity, text };
 }

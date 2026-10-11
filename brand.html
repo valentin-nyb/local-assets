@@ -438,7 +438,7 @@
 
         // ── Watermark on vertical clips ──
         var _wm = null;
-        var WM_POS = [['br', 'Bottom right'], ['bl', 'Bottom left'], ['tr', 'Top right'], ['tl', 'Top left']];
+        var WM_POS = [['bl', 'Bottom left'], ['br', 'Bottom right'], ['tl', 'Top left'], ['tr', 'Top right']];
         var WM_SIZE = [['s', 'Small'], ['m', 'Medium'], ['l', 'Large']];
         // Largest logo box per size, in px on a 1080×1920 clip (same as the clip worker)
         var WM_BOX = { s: [160, 110], m: [240, 170], l: [340, 240] };
@@ -446,7 +446,8 @@
         var WM_FRAMES = [['vertical', 'Vertical'], ['horizontal', 'Horizontal']];
         var _wmFrame = 'vertical';
         function frameCaption() { return _wmFrame === 'horizontal' ? 'Horizontal · 1920 × 1080' : 'Vertical · 1080 × 1920'; }
-        var WM_TEXT_POS = [['bl', 'Bottom left'], ['tl', 'Top left']];
+        var WM_TEXT_POS = [['bl', 'Bottom left'], ['br', 'Bottom right'], ['tl', 'Top left'], ['tr', 'Top right']];
+        var WM_TEXT_SRC = [['artist', 'Artist name'], ['custom', 'Custom']];
         var WM_TEXT_PX = { s: 44, m: 56, l: 72 };
         // The clip worker draws watermark text from these font files (not WOFF2)
         var WM_TEXT_FONT = /\.(ttf|otf|woff)$/i;
@@ -458,8 +459,16 @@
             return (own || logos[0] || {}).url || '';
         }
         // The watermark text, while its font is still in the brand kit
+        // The text shown in previews: the latest session's artist when the text is "Artist name"
+        function wmTextValue() {
+            if (!_wm.text) return '';
+            if (_wm.text.source === 'artist') return (_sessions[0] && _sessions[0].artist) || 'DJ NAME';
+            return _wm.text.value || '';
+        }
+        // Fonts the clip worker can draw text with
+        function wmTextFonts() { return _files.filter(function(f) { return f.category === 'fonts' && WM_TEXT_FONT.test(f.name); }); }
         function wmText() {
-            if (!_wm.text || !_wm.text.value) return null;
+            if (!_wm.text || !wmTextValue()) return null;
             return _files.filter(function(f) { return f.url === _wm.text.font; })[0] || null;
         }
         function renderWatermark() {
@@ -491,11 +500,15 @@
                         '<span class="bk-wm-label">Logo</span><select data-wm="logo"' + (noLogo ? ' disabled' : '') + '>' + logoOpts + '</select>' +
                         '<span class="bk-wm-label">Position</span>' + seg('position', WM_POS, _wm.position) +
                         '<span class="bk-wm-label">Text</span>' + (wmText()
-                            ? '<div class="bk-wm-textrow"><input id="bk-wm-text-input" value="' + esc(_wm.text.value) + '" maxlength="60" aria-label="Watermark text">' +
+                            ? '<div class="bk-wm-textrow">' + seg('textsrc', WM_TEXT_SRC, _wm.text.source === 'artist' ? 'artist' : 'custom') +
+                              (_wm.text.source === 'artist' ? '' : '<input id="bk-wm-text-input" value="' + esc(_wm.text.value) + '" maxlength="60" aria-label="Watermark text">') +
                               seg('textpos', WM_TEXT_POS, _wm.text.position) +
-                              '<div class="bk-wm-textmeta"><span class="bk-wm-font">' + esc(wmText().name.replace(/\.[^.]+$/, '')) + '</span>' +
+                              '<div class="bk-wm-textmeta">' + (_wm.text.source === 'artist' ? '<span class="bk-wm-font">Each clip shows the name of the artist on stage.</span>' : '') +
+                              '<span class="bk-wm-font">' + esc(wmText().name.replace(/\.[^.]+$/, '')) + '</span>' +
                               '<button type="button" class="bk-wm-link" id="bk-wm-text-remove">Remove</button></div></div>'
-                            : '<p class="bk-wm-hint">None. Preview one of your fonts, type your text and choose Use as watermark.</p>') +
+                            : wmTextFonts().length
+                            ? '<div class="bk-wm-textrow"><button type="button" class="cam-btn ghost" id="bk-wm-text-artist">Add artist name</button><span class="bk-wm-font">Or preview a font, type your text and choose Use as watermark.</span></div>'
+                            : '<p class="bk-wm-hint">Upload a font (TTF, OTF or WOFF) to add the artist\'s name or a line of text.</p>') +
                         '<span class="bk-wm-label">Size</span>' + seg('size', WM_SIZE, _wm.size) +
                         '<span class="bk-wm-label">Opacity</span><input type="range" min="30" max="100" step="5" value="' + Math.round(_wm.opacity * 100) + '" data-wm="opacity" aria-label="Opacity">' +
                     '</div>' +
@@ -509,6 +522,11 @@
             img.addEventListener('load', positionPreview);
             document.getElementById('bk-wm-export').addEventListener('click', exportWatermarkPng);
             positionPreview();
+            var addArtist = document.getElementById('bk-wm-text-artist');
+            if (addArtist) addArtist.addEventListener('click', function() {
+                _wm.text = { source: 'artist', value: '', font: wmTextFonts()[0].url, position: 'br' };
+                renderWatermark(); saveWatermark();
+            });
             var tIn = document.getElementById('bk-wm-text-input');
             if (tIn) {
                 tIn.addEventListener('input', function() { if (tIn.value.trim()) { _wm.text.value = tIn.value.trim(); positionPreview(); saveWatermark(); } });
@@ -519,6 +537,7 @@
                 var apply = function(v) {
                     // The frame only changes the preview and export, it isn't saved
                     if (key === 'frame') { _wmFrame = v; renderWatermark(); return; }
+                    if (key === 'textsrc') { _wm.text.source = v; if (v === 'custom' && !_wm.text.value) _wm.text.value = _orgName || venueName(); renderWatermark(); saveWatermark(); return; }
                     if (key === 'textpos') _wm.text.position = v; else _wm[key] = v; if (key === 'enabled') renderWatermark(); else { box.querySelectorAll('[data-wm="' + key + '"][data-v]').forEach(function(b) { b.setAttribute('aria-pressed', b.dataset.v === v); }); positionPreview(); } saveWatermark(); };
                 if (el.tagName === 'SELECT') el.addEventListener('change', function() { apply(el.value); });
                 else if (el.type === 'range') { el.addEventListener('input', function() { _wm.opacity = el.value / 100; positionPreview(); }); el.addEventListener('change', function() { saveWatermark(); }); }
@@ -537,7 +556,7 @@
                 if (!tf) txt.style.display = 'none';
                 else {
                     txt.style.display = '';
-                    txt.textContent = _wm.text.value;
+                    txt.textContent = wmTextValue();
                     loadBrandFont(tf.url).then(function(family) { if (txt.dataset.family !== family) { txt.dataset.family = family; txt.style.fontFamily = family; positionPreview(); } }).catch(function() {});
                     var tp = _wm.text.position;
                     // Same corner as the logo: text sits next to it, further from the edge
@@ -552,9 +571,10 @@
                     // Same corner as the logo: next to it. Same row, other side: lined up with the middle of the logo.
                     var shift = !lhClip ? 0 : tp === p ? lhClip + 24 : tp[0] === p[0] ? (lhClip - thClip) / 2 : 0;
                     txt.style.opacity = _wm.opacity;
-                    txt.style.left = Math.round(L.mx * k) + 'px';
-                    txt.style.top = tp === 'tl' ? Math.round((L.top + shift) * k) + 'px' : 'auto';
-                    txt.style.bottom = tp === 'bl' ? Math.round((L.bottom + shift) * k) + 'px' : 'auto';
+                    txt.style.left = tp[1] === 'l' ? Math.round(L.mx * k) + 'px' : 'auto';
+                    txt.style.right = tp[1] === 'r' ? Math.round(L.mx * k) + 'px' : 'auto';
+                    txt.style.top = tp[0] === 't' ? Math.round((L.top + shift) * k) + 'px' : 'auto';
+                    txt.style.bottom = tp[0] === 'b' ? Math.round((L.bottom + shift) * k) + 'px' : 'auto';
                 }
             }
             if (!url) { img.style.display = 'none'; return; }
@@ -601,14 +621,16 @@
                     var px = WM_TEXT_PX[_wm.size] || WM_TEXT_PX.m, pad = 12, tp = _wm.text.position;
                     var room = logo && tp !== p && tp[0] === p[0] ? Math.min(760, W - 2 * L.mx - lh * ar - 48) : 760;
                     g.font = px + 'px ' + family;
-                    var m = g.measureText(_wm.text.value), tw = m.actualBoundingBoxLeft + m.actualBoundingBoxRight;
-                    if (tw > room) { px = px * room / tw; g.font = px + 'px ' + family; m = g.measureText(_wm.text.value); }
+                    var tv = wmTextValue();
+                    var m = g.measureText(tv), tw = m.actualBoundingBoxLeft + m.actualBoundingBoxRight;
+                    if (tw > room) { px = px * room / tw; g.font = px + 'px ' + family; m = g.measureText(tv); tw = m.actualBoundingBoxLeft + m.actualBoundingBoxRight; }
                     var th = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent + pad * 2;
                     var shift = !logo ? 0 : tp === p ? lh + 24 : tp[0] === p[0] ? (lh - th) / 2 : 0;
-                    var top = tp === 'tl' ? L.top + shift : H - L.bottom - shift - th;
+                    var top = tp[0] === 't' ? L.top + shift : H - L.bottom - shift - th;
                     g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = 8; g.shadowOffsetY = 2;
                     g.fillStyle = '#fff';
-                    g.fillText(_wm.text.value, L.mx + pad + m.actualBoundingBoxLeft, top + pad + m.actualBoundingBoxAscent);
+                    var left = tp[1] === 'l' ? L.mx + pad : W - L.mx - pad - tw;
+                    g.fillText(tv, left + m.actualBoundingBoxLeft, top + pad + m.actualBoundingBoxAscent);
                 }
                 g.restore();
             });
@@ -761,7 +783,7 @@
                 _orgType = res[0].orgType || 'venue';
                 _orgName = res[0].orgName || '';
                 _ownerPhotos = res[0].ownerPhotos || {};
-                _wm = res[0].watermark || { enabled: true, logo: 'auto', position: 'br', size: 'm', opacity: 0.9 };
+                _wm = res[0].watermark || { enabled: true, logo: 'auto', position: 'bl', size: 'm', opacity: 0.9 };
                 var assets = Array.isArray(res[1]) ? res[1] : (res[1].data || []);
                 buildSessions(assets);
                 var names = {};
@@ -874,10 +896,10 @@
         // Logos the clip worker can stamp on clips
         function wmLogoFile(f) { return f.category === 'logos' && /\.(png|svg|webp|jpe?g)$/i.test(f.name); }
         function wmUsesLogo(f) { return !!_wm && _wm.enabled && wmPreviewLogo() === f.url; }
-        // From a logo card or its popup: this logo becomes the watermark, bottom right
+        // From a logo card or its popup: this logo becomes the watermark, bottom left
         function useLogoAsWatermark(url) {
             if (!_wm) return;
-            _wm.logo = url; _wm.position = 'br'; _wm.enabled = true;
+            _wm.logo = url; _wm.position = 'bl'; _wm.enabled = true;
             closeCamDialog();
             renderWatermark();
             saveWatermark();
@@ -951,7 +973,7 @@
             if (useWm) useWm.addEventListener('click', function() {
                 var value = input.value.replace(/\s+/g, ' ').trim().slice(0, 60);
                 if (!value) { input.focus(); return; }
-                _wm.text = { value: value, font: url, position: (_wm.text && _wm.text.position) || 'bl' };
+                _wm.text = { source: 'custom', value: value, font: url, position: (_wm.text && _wm.text.position) || 'br' };
                 _wm.enabled = true;
                 closeCamDialog();
                 renderWatermark();
@@ -976,7 +998,7 @@
                 ? '<div class="bk-preview' + (isPhoto ? ' photo' : '') + '">' + tag + '<img src="' + esc(f.url) + '" alt="" loading="lazy" crossorigin="anonymous" onload="fitPreviewBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}">' +
                     '' +
                     (thumbFile(f) ? '<button type="button" class="bk-use-wm" data-set-thumb="' + esc(f.url) + '" title="Use this image as a session thumbnail, with your watermark">Set as thumbnail</button>' : '') +
-                    (wmLogoFile(f) ? '<button type="button" class="bk-use-wm' + (wmUsesLogo(f) ? ' is-on' : '') + '" data-use-wm="' + esc(f.url) + '" title="Stamp this logo bottom right on every vertical clip">' + (wmUsesLogo(f) ? 'Watermark' : 'Use as watermark') + '</button>' : '') + '</div>'
+                    (wmLogoFile(f) ? '<button type="button" class="bk-use-wm' + (wmUsesLogo(f) ? ' is-on' : '') + '" data-use-wm="' + esc(f.url) + '" title="Stamp this logo bottom left on every vertical clip">' + (wmUsesLogo(f) ? 'Watermark' : 'Use as watermark') + '</button>' : '') + '</div>'
                 : FONT_EXT.test(f.name)
                 ? '<div class="bk-preview bk-font" data-font="' + esc(f.url) + '">' + tag +
                     '<div class="bk-font-sample"><span class="aa">Aa</span><span class="line">ABC abc 123</span></div></div>'
@@ -1165,7 +1187,7 @@
                 CATS.map(function(c) {
                     return '<button type="button" class="bk-org-opt bk-cat-opt' + (c.key === f.category ? ' on' : '') + '" data-cat="' + c.key + '"><b>' + c.label + '</b></button>';
                 }).join('') +
-                (/\.(png|svg|webp|jpe?g)$/i.test(f.name) ? '<button type="button" class="bk-org-opt bk-cat-opt' + (wmUsesLogo(f) ? ' on' : '') + '" data-cat="watermark"><b>Watermark</b><span>Saved as a logo and stamped bottom right on every vertical clip</span></button>' : '') +
+                (/\.(png|svg|webp|jpe?g)$/i.test(f.name) ? '<button type="button" class="bk-org-opt bk-cat-opt' + (wmUsesLogo(f) ? ' on' : '') + '" data-cat="watermark"><b>Watermark</b><span>Saved as a logo and stamped bottom left on every vertical clip</span></button>' : '') +
                 '</div><p id="bk-move-error" class="cam-form-error"></p>');
             document.querySelectorAll('.bk-cat-opt').forEach(function(b) {
                 b.addEventListener('click', async function() {

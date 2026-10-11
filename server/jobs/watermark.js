@@ -61,7 +61,7 @@ async function prepareText(text, size, dir, maxWidth = TEXT_MAX_WIDTH) {
 // Returns the overlays to apply, each { file, x, y } as ffmpeg overlay expressions, plus opacity
 export async function prepareWatermark(watermark, dir) {
   if (!watermark?.url && !watermark?.text?.value) return null;
-  const position = watermark.position || 'br';
+  const position = watermark.position || 'bl';
   const layers = [];
   let logo = null;
   if (watermark.url) {
@@ -71,7 +71,7 @@ export async function prepareWatermark(watermark, dir) {
   if (logo) layers.push({ file: logo.file, ...place(position, 0) });
   if (watermark.text?.value && watermark.text.font) {
     try {
-      const tPos = watermark.text.position || 'bl';
+      const tPos = watermark.text.position || 'br';
       // On the same row as the logo, the text keeps clear of it
       const room = logo && tPos !== position && tPos[0] === position[0] ? 1080 - 2 * MARGIN_X - logo.w - 48 : TEXT_MAX_WIDTH;
       const t = await prepareText(watermark.text, watermark.size, dir, Math.min(TEXT_MAX_WIDTH, room));
@@ -80,7 +80,7 @@ export async function prepareWatermark(watermark, dir) {
         layers.push({ file: t.file, ...place(tPos, logo.h + STACK_GAP) });
       } else if (logo && tPos[0] === position[0]) {
         // Same row, other side: the text lines up with the middle of the logo
-        const x = `${MARGIN_X}`;
+        const x = tPos[1] === 'l' ? `${MARGIN_X}` : `W-w-${MARGIN_X}`;
         const y = tPos[0] === 't'
           ? `${MARGIN_TOP + Math.round((logo.h - t.h) / 2)}`
           : `H-${MARGIN_BOTTOM + Math.round((logo.h + t.h) / 2)}`;
