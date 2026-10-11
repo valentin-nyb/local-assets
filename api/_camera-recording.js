@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { createClient } from 'redis';
 import { getVenuesConfig, getMuxAuthForVenue } from './_venues.js';
 import { getPipelineDb } from './_pipeline-db.js';
+import { resolveWatermark } from './_watermark.js';
 
 // When a camera's broadcast ends, Mux has saved it as an asset. This turns that recording
 // into dashboard sessions: one per artist who was "on stage" (set on the Camera page),
@@ -116,10 +117,11 @@ export async function processCameraRecording(event) {
     if (cam.autoClips === false) return;
     const db = getPipelineDb();
     for (const s of sessions) {
+      const watermark = await resolveWatermark(redis, slug, s.artist).catch(() => null);
       // "asset:<id>" tells the clip worker the asset already exists (uploads pass a Mux upload id)
       await db.query(
-        `INSERT INTO pipeline_jobs (id, upload_id, artist_name, venue_slug) VALUES ($1, $2, $3, $4)`,
-        [crypto.randomBytes(8).toString('hex'), 'asset:' + s.assetId, s.artist, slug]
+        `INSERT INTO pipeline_jobs (id, upload_id, artist_name, venue_slug, watermark) VALUES ($1, $2, $3, $4, $5)`,
+        [crypto.randomBytes(8).toString('hex'), 'asset:' + s.assetId, s.artist, slug, watermark && JSON.stringify(watermark)]
       );
     }
   } finally {

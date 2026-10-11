@@ -6,6 +6,7 @@ import path from 'path';
 import os from 'os';
 import { extractSubjectFrames, detectSubjectTrack, buildSubjectCropFilter } from './subject-reframe.js';
 import { updatePipelineJob } from './pipeline-db.js';
+import { prepareWatermark, overlayChain } from './watermark.js';
 
 const execAsync = promisify(exec);
 
@@ -78,15 +79,19 @@ async function waitForAsset(uploadId, assetId, authHeader, signal) {
 
 // ── Encode one clip ───────────────────────────────────────────────────
 
-async function processClip(videoUrl, start, dur, outPath, cropFilter, signal) {
+async function processClip(videoUrl, start, dur, outPath, cropFilter, signal, watermark) {
   // Pre-input seeking is fast for both MP4 (HTTP range) and HLS (segment seek).
   // -allowed_extensions ALL is required for FFmpeg to accept HLS playlists over HTTPS.
   const ffBase = `ffmpeg -y -allowed_extensions ALL -protocol_whitelist file,https,http,tcp,tls,crypto`;
 
+  // With a Brand Kit logo: crop to 9:16, then lay the logo over it (second input)
+  const video = watermark
+    ? `-i "${watermark.file}" -filter_complex "[0:v]${cropFilter}[v];${overlayChain(watermark)}" -map "[out]"`
+    : `-vf "${cropFilter}" -map 0:v:0`;
+
   const cmd =
     `${ffBase} -ss ${start} -t ${dur} -i "${videoUrl}" ` +
-    `-map 0:v:0 -map 0:a:0? ` +
-    `-vf "${cropFilter}" ` +
+    `${video} -map 0:a:0? ` +
     `-c:v libx264 -preset ultrafast -crf 22 -b:v 5000k -maxrate 6000k -bufsize 8000k ` +
     `-c:a aac -b:a 192k ` +
     `-movflags +faststart "${outPath}"`;
@@ -135,7 +140,7 @@ async function uploadClipToMux(filePath, passthrough, headers) {
 
 // ── Main export ───────────────────────────────────────────────────────
 
-export async function runPipeline({ jobId, uploadId, assetId: knownAssetId, artistName, venueSlug, db, workerId, muxAuth, signal }) {
+export async function runPipeline({ jobId, uploadId, assetId: knownAssetId, artistName, venueSlug, watermark: wmSettings, db, workerId, muxAuth, signal }) {
   const { tokenId, tokenSecret } = muxAuth;
   const authHeader = 'Basic ' + Buffer.from(`${tokenId}:${tokenSecret}`).toString('base64');
   const headers    = { Authorization: authHeader, 'Content-Type': 'application/json' };
@@ -153,6 +158,11 @@ export async function runPipeline({ jobId, uploadId, assetId: knownAssetId, arti
     console.log(`[Pipeline:${jobId}] Ready — ${Math.round(duration)}s, playback=${playbackId}, mp4=${mp4Ready}`);
 
     if (duration < MIN_CLIP_DUR * 2) throw new Error(`Video too short: ${Math.round(duration)}s`);
+
+    // Brand Kit logo for every clip. A logo problem never blocks the clips themselves.
+    let watermark = null;
+    try { watermark = await prepareWatermark(wmSettings, tmpDir); }
+    catch (e) { console.error(`[Pipeline:${jobId}] Watermark skipped: ${e.message}`); }
 
     // highest.mp4 = best available quality static rendition; HLS fallback via .m3u8
     const videoUrl = mp4Ready
@@ -216,7 +226,7 @@ export async function runPipeline({ jobId, uploadId, assetId: knownAssetId, arti
             const subjectTrack = await detectSubjectTrack(frameDir);
             const cropFilter = buildSubjectCropFilter(subjectTrack, srcW, srcH, dur);
             throwIfAborted(signal);
-            await processClip(videoUrl, start, dur, outPath, cropFilter, signal);
+            await processClip(videoUrl, start, dur, outPath, cropFilter, signal, watermark);
           } finally {
             try { fs.rmSync(frameDir, { recursive: true, force: true }); } catch (_) {}
           }

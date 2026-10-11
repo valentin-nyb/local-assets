@@ -205,6 +205,37 @@
         .bk-toolbar { align-items:center; row-gap:16px; column-gap:32px; }
         .bk-toolbar > .min-w-0 { flex:1 1 360px; }
         .bk-lead { font-size:13px; line-height:1.55; color:var(--la-sub); margin-top:6px; max-width:620px; }
+        .bk-wm { display:grid; grid-template-columns:minmax(0,1fr) 150px; gap:28px; background:var(--la-surface); border:1px solid var(--la-line); border-radius:16px; padding:24px; }
+        .bk-wm.hidden { display:none; }
+        .bk-wm-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
+        .bk-wm-title { font-size:15px; font-weight:600; color:var(--la-text); }
+        .bk-wm-sub { font-size:13px; line-height:1.55; color:var(--la-sub); margin-top:4px; max-width:520px; }
+        .bk-wm-rows { display:grid; grid-template-columns:110px minmax(0,1fr); gap:14px 16px; align-items:center; margin-top:20px; }
+        .bk-wm-rows.off { opacity:.45; pointer-events:none; }
+        .bk-wm-label { font-size:12px; color:var(--la-sub); }
+        .bk-seg { display:inline-flex; justify-self:start; padding:3px; gap:2px; border-radius:10px; background:var(--la-chip); }
+        .bk-seg button { height:30px; padding:0 12px; border-radius:7px; border:none; background:none; color:var(--la-sub); font:500 12px Inter,ui-sans-serif,system-ui,sans-serif; cursor:pointer; }
+        .bk-seg button[aria-pressed="true"] { background:var(--la-raised); color:var(--la-text); box-shadow:0 1px 2px rgba(0,0,0,.25); }
+        .bk-wm select { height:36px; width:100%; max-width:380px; justify-self:start; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 10px; font-size:13px; }
+        .bk-wm input[type=range] { width:200px; max-width:100%; accent-color:var(--la-accent); }
+        .bk-switch { position:relative; width:40px; height:24px; border-radius:999px; border:none; background:var(--la-line); cursor:pointer; flex-shrink:0; transition:background .15s; }
+        .bk-switch::after { content:''; position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:999px; background:#fff; transition:transform .15s; }
+        .bk-switch[aria-checked="true"] { background:var(--la-accent); }
+        .bk-switch[aria-checked="true"]::after { transform:translateX(16px); }
+        .bk-wm-status { font-size:12px; color:var(--la-dim); margin-top:16px; min-height:16px; }
+        .bk-wm-preview { position:relative; width:150px; aspect-ratio:9/16; border-radius:12px; overflow:hidden; background:linear-gradient(180deg,#3f3f46,#18181b); align-self:start; }
+        .bk-wm-preview img.bg { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+        .bk-wm-preview img.logo { position:absolute; object-fit:contain; transition:all .15s; }
+        .bk-wm-cap { font-size:11px; color:var(--la-dim); text-align:center; margin-top:8px; }
+        @media (max-width: 640px) {
+            .bk-wm { grid-template-columns:minmax(0,1fr); padding:18px; }
+            .bk-wm-rows { grid-template-columns:minmax(0,1fr); gap:8px; }
+            .bk-wm-label { margin-top:6px; }
+            .bk-seg { display:grid; grid-template-columns:1fr 1fr; justify-self:stretch; }
+            .bk-seg[data-n="3"] { grid-template-columns:repeat(3,1fr); }
+            .bk-wm select { max-width:none; }
+            .bk-wm-preview-wrap { justify-self:center; }
+        }
         .bk-group { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--la-dim); margin:10px 2px -4px; }
         .bk-owners > .bk-group:first-child { margin-top:0; }
         .bk-org-edit { font:inherit; letter-spacing:inherit; text-transform:inherit; color:var(--la-accent); background:none; border:none; padding:0; cursor:pointer; }
@@ -279,6 +310,7 @@
                         </button>
                     </div>
                 </div>
+                <section id="bk-wm" class="bk-wm hidden"></section>
                 <div id="bk-owners" class="bk-owners"></div>
                 <p id="bk-error" class="hidden text-center text-[10px] font-mono uppercase tracking-widest text-red-500"></p>
             </div>
@@ -378,6 +410,85 @@
             return null;
         }
 
+        // ── Watermark on vertical clips ──
+        var _wm = null, _wmBg = '';
+        var WM_POS = [['br', 'Bottom right'], ['bl', 'Bottom left'], ['tr', 'Top right'], ['tl', 'Top left']];
+        var WM_SIZE = [['s', 'Small'], ['m', 'Medium'], ['l', 'Large']];
+        var WM_PX = { s: 160, m: 220, l: 300 };
+        function wmLogos() { return _files.filter(function(f) { return f.category === 'logos' && /\.(png|svg|webp|jpe?g)$/i.test(f.name); }); }
+        function wmPreviewLogo() {
+            var logos = wmLogos();
+            if (/^https:/.test(_wm.logo)) { var m = logos.filter(function(f) { return f.url === _wm.logo; })[0]; if (m) return m.url; }
+            var own = logos.filter(function(f) { return f.owner === 'venue'; })[0];
+            return (own || logos[0] || {}).url || '';
+        }
+        function renderWatermark() {
+            var box = document.getElementById('bk-wm');
+            if (!_wm) { box.classList.add('hidden'); return; }
+            box.classList.remove('hidden');
+            var logos = wmLogos();
+            var ownerName = function(k) { var o = _owners.filter(function(x) { return x.key === k; })[0]; return o ? o.name : k; };
+            var seg = function(name, opts, val) {
+                return '<div class="bk-seg" role="group" data-n="' + opts.length + '">' + opts.map(function(o) {
+                    return '<button type="button" data-wm="' + name + '" data-v="' + o[0] + '" aria-pressed="' + (o[0] === val) + '">' + o[1] + '</button>';
+                }).join('') + '</div>';
+            };
+            var logoOpts = '<option value="auto"' + (_wm.logo === 'auto' ? ' selected' : '') + '>Artist logo, or yours if they have none</option>' +
+                '<option value="account"' + (_wm.logo === 'account' ? ' selected' : '') + '>Always your logo</option>' +
+                logos.map(function(f) { return '<option value="' + esc(f.url) + '"' + (_wm.logo === f.url ? ' selected' : '') + '>' + esc(ownerName(f.owner) + ' · ' + f.name) + '</option>'; }).join('');
+            var noLogo = !logos.length;
+            box.innerHTML =
+                '<div>' +
+                    '<div class="bk-wm-head"><div><p class="bk-wm-title">Watermark</p>' +
+                    '<p class="bk-wm-sub">Adds a logo to every vertical clip, placed clear of the captions and buttons on TikTok, Reels and Shorts. Applies to clips made from now on.</p></div>' +
+                    '<button type="button" class="bk-switch" role="switch" aria-label="Watermark" aria-checked="' + _wm.enabled + '" data-wm="enabled"></button></div>' +
+                    '<div class="bk-wm-rows' + (_wm.enabled ? '' : ' off') + '">' +
+                        '<span class="bk-wm-label">Logo</span><select data-wm="logo"' + (noLogo ? ' disabled' : '') + '>' + logoOpts + '</select>' +
+                        '<span class="bk-wm-label">Position</span>' + seg('position', WM_POS, _wm.position) +
+                        '<span class="bk-wm-label">Size</span>' + seg('size', WM_SIZE, _wm.size) +
+                        '<span class="bk-wm-label">Opacity</span><input type="range" min="30" max="100" step="5" value="' + Math.round(_wm.opacity * 100) + '" data-wm="opacity" aria-label="Opacity">' +
+                    '</div>' +
+                    '<p class="bk-wm-status" id="bk-wm-status">' + (noLogo ? 'Upload a logo to your brand kit to use a watermark.' : '') + '</p>' +
+                '</div>' +
+                '<div class="bk-wm-preview-wrap"><div class="bk-wm-preview">' + (_wmBg ? '<img class="bg" alt="" src="' + esc(_wmBg) + '">' : '') +
+                    '<img class="logo" alt="" id="bk-wm-logo"></div><p class="bk-wm-cap">Preview</p></div>';
+            positionPreview();
+            box.querySelectorAll('[data-wm]').forEach(function(el) {
+                var key = el.dataset.wm;
+                var apply = function(v) { _wm[key] = v; if (key === 'enabled') renderWatermark(); else { box.querySelectorAll('[data-wm="' + key + '"][data-v]').forEach(function(b) { b.setAttribute('aria-pressed', b.dataset.v === v); }); positionPreview(); } saveWatermark(); };
+                if (el.tagName === 'SELECT') el.addEventListener('change', function() { apply(el.value); });
+                else if (el.type === 'range') { el.addEventListener('input', function() { _wm.opacity = el.value / 100; positionPreview(); }); el.addEventListener('change', function() { saveWatermark(); }); }
+                else if (key === 'enabled') el.addEventListener('click', function() { apply(!_wm.enabled); });
+                else el.addEventListener('click', function() { apply(el.dataset.v); });
+            });
+        }
+        function positionPreview() {
+            var img = document.getElementById('bk-wm-logo');
+            if (!img) return;
+            var url = wmPreviewLogo();
+            if (!url) { img.style.display = 'none'; return; }
+            if (img.getAttribute('src') !== url) img.src = url;
+            var k = 150 / 1080, p = _wm.position;
+            img.style.display = '';
+            img.style.width = Math.round(WM_PX[_wm.size] * k) + 'px';
+            img.style.maxHeight = Math.round(160 * k) + 'px';
+            img.style.opacity = _wm.opacity;
+            img.style.left = p[1] === 'l' ? Math.round(56 * k) + 'px' : 'auto';
+            img.style.right = p[1] === 'r' ? Math.round(56 * k) + 'px' : 'auto';
+            img.style.top = p[0] === 't' ? Math.round(220 * k) + 'px' : 'auto';
+            img.style.bottom = p[0] === 'b' ? Math.round(320 * k) + 'px' : 'auto';
+        }
+        var _wmSaveT;
+        function saveWatermark() {
+            clearTimeout(_wmSaveT);
+            _wmSaveT = setTimeout(function() {
+                var st = document.getElementById('bk-wm-status');
+                laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setWatermark', watermark: _wm }) })
+                    .then(function(r) { if (!r.ok) throw new Error(r.status); if (st) st.textContent = 'Saved'; })
+                    .catch(function() { if (st) st.textContent = 'Could not save. Try again.'; });
+            }, 350);
+        }
+
         async function loadBrand() {
             var err = document.getElementById('bk-error');
             try {
@@ -389,7 +500,12 @@
                 _orgType = res[0].orgType || 'venue';
                 _orgName = res[0].orgName || '';
                 _ownerPhotos = res[0].ownerPhotos || {};
+                _wm = res[0].watermark || { enabled: true, logo: 'auto', position: 'br', size: 'm', opacity: 0.9 };
                 var assets = Array.isArray(res[1]) ? res[1] : (res[1].data || []);
+                // Latest session still, as the background of the watermark preview
+                var latest = assets.filter(function(a) { return a.status === 'ready' && (a.playback_ids || []).length && Number(a.duration) > 120; })
+                    .sort(function(a, b) { return Number(b.created_at) - Number(a.created_at); })[0];
+                if (latest) _wmBg = 'https://image.mux.com/' + latest.playback_ids[0].id + '/thumbnail.jpg?width=300&height=534&fit_mode=smartcrop&time=' + Math.round(Number(latest.duration) * 0.45);
                 var names = {};
                 assets.forEach(function(a) { var n = artistFromAsset(a); if (n) names['artist-' + slugify(n)] = n.toUpperCase(); });
                 _files.forEach(function(f) {
@@ -406,6 +522,7 @@
                     .concat(group('venue-', 'Venue brand kit', 'Venues'), group('artist-', 'Artist brand kit', 'Artists'));
                 err.classList.add('hidden');
                 render();
+                renderWatermark();
             } catch (e) {
                 err.textContent = 'Could not load the brand kit — ' + e.message;
                 err.classList.remove('hidden');

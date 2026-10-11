@@ -2,6 +2,7 @@ import { list, del, copy } from '@vercel/blob';
 import { createClient } from 'redis';
 import { handleUpload } from '@vercel/blob/client';
 import { getWebSessionAuth } from './_venues.js';
+import { cleanWatermark, readWatermark, watermarkKey } from './_watermark.js';
 
 // Brand kit: logos, guidelines, fonts and other brand files for a venue and its artists.
 // Files live in Vercel Blob under brand/<venueSlug>/<owner>/<category>/<file>, where
@@ -62,10 +63,11 @@ export default async function handler(req, res) {
         cursor = page.hasMore ? page.cursor : undefined;
       } while (cursor);
       files.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
-      const [orgType, orgName, ownerNames, pinned] = await withRedis(r => Promise.all([
+      const [orgType, orgName, ownerNames, pinned, watermark] = await withRedis(r => Promise.all([
         r.get(`brand_org_type:${slug}`), r.get(`brand_org_name:${slug}`),
         r.hGetAll(`brand_owner_names:${slug}`), r.hGetAll(`brand_owner_photo:${slug}`),
-      ])).catch(() => [null, null, {}, {}]);
+        readWatermark(r, slug),
+      ])).catch(() => [null, null, {}, {}, cleanWatermark()]);
       // Profile photo per owner: the one picked with "Use as artist photo", else the newest photo
       const ownerPhotos = {};
       for (const f of files) {
@@ -74,7 +76,7 @@ export default async function handler(req, res) {
       for (const [owner, url] of Object.entries(pinned || {})) {
         if (files.some(f => f.url === url)) ownerPhotos[owner] = url;
       }
-      return res.status(200).json({ files, orgType: ORG_TYPES.includes(orgType) ? orgType : 'venue', orgName: orgName || '', ownerNames: ownerNames || {}, ownerPhotos });
+      return res.status(200).json({ files, orgType: ORG_TYPES.includes(orgType) ? orgType : 'venue', orgName: orgName || '', ownerNames: ownerNames || {}, ownerPhotos, watermark });
     }
 
     if (req.method !== 'POST') return res.status(405).end();
@@ -88,6 +90,12 @@ export default async function handler(req, res) {
         orgName ? r.set(`brand_org_name:${slug}`, orgName) : r.del(`brand_org_name:${slug}`),
       ]));
       return res.status(200).json({ orgType: body.orgType, orgName });
+    }
+
+    if (body.action === 'setWatermark') {
+      const watermark = cleanWatermark(body.watermark);
+      await withRedis(r => r.set(watermarkKey(slug), JSON.stringify(watermark)));
+      return res.status(200).json({ watermark });
     }
 
     if (body.action === 'setOwnerName') {

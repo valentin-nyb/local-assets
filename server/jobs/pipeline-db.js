@@ -46,7 +46,7 @@ export async function claimNextJob(db, workerId) {
            updated_at = now()
        FROM candidate
        WHERE job.id = candidate.id
-       RETURNING job.id, job.upload_id, job.artist_name, job.venue_slug`,
+       RETURNING job.id, job.upload_id, job.artist_name, job.venue_slug, job.watermark`,
       [workerId]
     );
     await client.query('COMMIT');
@@ -61,6 +61,7 @@ export async function claimNextJob(db, workerId) {
       venueSlug: row.venue_slug,
     };
     if (isAsset) job.assetId = row.upload_id.slice(6);
+    if (row.watermark) job.watermark = row.watermark;
     return job;
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});

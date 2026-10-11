@@ -48,6 +48,7 @@
         @media (max-width: 767px) { #sidebar { position: fixed; z-index: 50; height: 100vh; } }
         .sleek-flap { writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.3em; font-size: 10px; font-weight: 800; }
         .cam-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:16px; }
+        .cam-grid:empty { display:none; }
         @media (max-width: 640px) { .cam-grid { grid-template-columns:1fr; } }
         .cam-card { border:1px solid var(--la-line); background:var(--la-surface); border-radius:16px; overflow:hidden; }
         .cam-stage { aspect-ratio:16/9; background:#000; position:relative; }
@@ -170,10 +171,13 @@
         .ci-result-head iconify-icon { font-size:16px; color:var(--la-accent); flex-shrink:0; }
         .ci-verts { display:grid; grid-template-columns:repeat(6,1fr); gap:6px; margin-top:12px; }
         .ci-verts i { aspect-ratio:9/16; border-radius:6px; background:var(--la-chip) center/cover no-repeat; border:1px solid var(--la-line); }
+        .ci-verts i { position:relative; overflow:hidden; }
+        .ci-loop { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
+        .ci-wm { z-index:1; }
         .ci-result-foot { font-size:11px; color:var(--la-dim); margin-top:10px; }
         .ci-branded { grid-template-columns:repeat(4,1fr); gap:8px; }
         .ci-branded i { position:relative; }
-        .ci-wm { position:absolute; top:7%; right:8%; width:34%; height:9%; border-radius:4px; background:rgba(0,0,0,.45) center/contain no-repeat; -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; color:#fff; font:600 7px/1 'JetBrains Mono',monospace; letter-spacing:.12em; }
+        .ci-wm { position:absolute; bottom:6%; right:8%; width:34%; height:9%; border-radius:4px; background:rgba(0,0,0,.45) center/contain no-repeat; -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; color:#fff; font:600 7px/1 'JetBrains Mono',monospace; letter-spacing:.12em; }
         .ci-wm:empty::after { content:'LOGO'; }
         .ci-wm.has-logo { background-color:transparent; -webkit-backdrop-filter:none; backdrop-filter:none; }
         .ci-steps { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px 24px; align-self:start; padding-top:22px; border-top:1px solid var(--la-line-soft); }
@@ -239,7 +243,7 @@
                     <div class="ci-copy">
                         <p class="cam-eyebrow">How it works</p>
                         <h2 class="ci-title">Record every set. Get the clips automatically.</h2>
-                        <p class="ci-text">Each OBSBOT Tail 2 streams over the venue's Wi-Fi or network straight to your Cloud Storage. When the set ends, the recording is in Distribution History as a session for the artist on stage, with 30 vertical clips ready for social media.</p>
+                        <p class="ci-text">Each OBSBOT Tail 2 streams over the venue's Wi-Fi or network straight to your Cloud Storage. When the set ends, the recording is in Distribution History as a session for the artist on stage, with vertical clips ready for social media.</p>
                         <div class="ci-actions">
                             <button type="button" class="cam-btn primary" onclick="openCamForm()"><iconify-icon icon="solar:add-circle-linear"></iconify-icon>Connect a camera</button>
                             <button type="button" class="cam-btn ghost" onclick="openOrderCameras()"><iconify-icon icon="solar:cart-large-minimalistic-linear"></iconify-icon>Order cameras · £1,299</button>
@@ -259,7 +263,7 @@
                         <div class="ci-result">
                             <div class="ci-result-head"><iconify-icon icon="solar:folder-with-files-linear"></iconify-icon><span><b id="ci-artist2">ARTIST NAME</b> · new session in Distribution History</span></div>
                             <div class="ci-verts" id="ci-verts"><i></i><i></i><i></i><i></i><i></i><i></i></div>
-                            <p class="ci-result-foot">Full recording + 30 vertical clips</p>
+                            <p class="ci-result-foot">Full recording + vertical clips</p>
                         </div>
                         <div class="ci-arrow"><iconify-icon icon="solar:arrow-down-linear"></iconify-icon><span>Brand Kit applied</span></div>
                         <div class="ci-result">
@@ -406,9 +410,14 @@
                 var name = String(artistOf(m)).toUpperCase();
                 document.getElementById('ci-artist').textContent = name;
                 document.getElementById('ci-artist2').textContent = name;
-                document.getElementById('ci-stage').innerHTML = '<img alt="" src="https://image.mux.com/' + pid + '/thumbnail.jpg?width=800&height=450&fit_mode=smartcrop&time=' + Math.round(dur * 0.45) + '">';
+                // Short silent loops from the session (animated WebP: plays like a GIF, smaller)
+                var loop = function(t, w) { var a = Math.round(t); return 'https://image.mux.com/' + pid + '/animated.webp?start=' + a + '&end=' + (a + 4) + '&width=' + w + '&fps=10'; };
+                document.getElementById('ci-stage').innerHTML = '<img alt="" class="ci-loop" src="' + loop(dur * 0.45, 480) + '">';
                 document.querySelectorAll('#ci-verts i, #ci-branded i').forEach(function(t, i) {
-                    t.style.backgroundImage = 'url(https://image.mux.com/' + pid + '/thumbnail.jpg?width=180&height=320&fit_mode=smartcrop&time=' + Math.round(dur * (0.15 + (i % 6) * 0.13)) + ')';
+                    var img = document.createElement('img');
+                    img.alt = ''; img.className = 'ci-loop'; img.loading = 'lazy';
+                    img.src = loop(dur * (0.15 + (i % 6) * 0.13), 200);
+                    t.insertBefore(img, t.firstChild);
                 });
             }).catch(function() {});
         }
@@ -555,7 +564,7 @@
                 '<form id="stage-form" class="cam-form">' +
                 '<label>Artist on stage<input name="artist" list="stage-artists" maxlength="60" placeholder="DJ TENNIS" autocomplete="off" value="' + esc(c.artist) + '"><datalist id="stage-artists"></datalist>' +
                 (live ? '<small>Streaming now. Saving a new name starts a new set from this moment.</small>' : '<small>Set this before the stream starts.</small>') + '</label>' +
-                '<label class="cam-check"><input type="checkbox" name="autoClips"' + (c.autoClips === false ? '' : ' checked') + '><span>Make vertical clips automatically<small>30 vertical clips for social media from each set, once the recording is saved.</small></span></label>' +
+                '<label class="cam-check"><input type="checkbox" name="autoClips"' + (c.autoClips === false ? '' : ' checked') + '><span>Make vertical clips automatically<small>Vertical clips for social media from each set, once the recording is saved.</small></span></label>' +
                 '<p id="stage-error" class="cam-form-error"></p>' +
                 '<div class="cam-form-actions"><button type="button" class="cam-btn ghost" onclick="closeCamDialog()">Cancel</button>' +
                 '<button type="submit" class="cam-btn primary">' + (live && c.artist ? 'Start new set' : 'Save') + '</button></div>' +
