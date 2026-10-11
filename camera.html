@@ -175,6 +175,10 @@
         .ci-loop { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
         .ci-wm { z-index:1; }
         .ci-result-foot { font-size:11px; color:var(--la-dim); margin-top:10px; }
+        .ci-flow { list-style:none; margin:12px 0 0; padding:0; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; counter-reset:flow; }
+        .ci-flow li { counter-increment:flow; font-size:11px; line-height:1.35; color:var(--la-text); padding:8px 10px; border-radius:10px; background:var(--la-chip); }
+        .ci-flow li::before { content:counter(flow, decimal-leading-zero); display:block; font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.12em; color:var(--la-accent); margin-bottom:3px; }
+        @media (max-width:640px) { .ci-flow { grid-template-columns:repeat(2,minmax(0,1fr)); } }
         .ci-branded { grid-template-columns:repeat(4,1fr); gap:8px; }
         .ci-branded i { position:relative; }
         .ci-wm { position:absolute; bottom:6%; right:8%; width:34%; height:9%; border-radius:4px; background:rgba(0,0,0,.45) center/contain no-repeat; -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; color:#fff; font:600 7px/1 'JetBrains Mono',monospace; letter-spacing:.12em; }
@@ -261,15 +265,15 @@
                         </div>
                         <div class="ci-arrow"><iconify-icon icon="solar:arrow-down-linear"></iconify-icon><span>When the stream stops</span></div>
                         <div class="ci-result">
-                            <div class="ci-result-head"><iconify-icon icon="solar:folder-with-files-linear"></iconify-icon><span><b id="ci-artist2">ARTIST NAME</b> · new session in Distribution History</span></div>
-                            <div class="ci-verts" id="ci-verts"><i></i><i></i><i></i><i></i><i></i><i></i></div>
-                            <p class="ci-result-foot">Full recording + vertical clips</p>
-                        </div>
-                        <div class="ci-arrow"><iconify-icon icon="solar:arrow-down-linear"></iconify-icon><span>Brand Kit applied</span></div>
-                        <div class="ci-result">
-                            <div class="ci-result-head"><iconify-icon icon="solar:palette-round-linear"></iconify-icon><span><b>Branded and ready to post</b> · logo and watermark on every clip</span></div>
+                            <div class="ci-result-head"><span><b id="ci-artist2">ARTIST NAME</b> · new session in Distribution History</span></div>
+                            <ol class="ci-flow" aria-label="What happens to the recording">
+                                <li>Reframed to vertical</li>
+                                <li>Key moments cut</li>
+                                <li>Brand Kit watermark</li>
+                                <li>Exported in HD</li>
+                            </ol>
                             <div class="ci-verts ci-branded" id="ci-branded"><i><span class="ci-wm"></span></i><i><span class="ci-wm"></span></i><i><span class="ci-wm"></span></i><i><span class="ci-wm"></span></i></div>
-                            <p class="ci-result-foot">Venue, label and artist logos from your Brand Kit</p>
+                            <p class="ci-result-foot">Vertical clips at 1080 × 1920, ready to post. The full recording is kept too.</p>
                         </div>
                     </div>
 
@@ -413,10 +417,10 @@
                 // Short silent loops from the session (animated WebP: plays like a GIF, smaller)
                 var loop = function(t, w) { var a = Math.round(t); return 'https://image.mux.com/' + pid + '/animated.webp?start=' + a + '&end=' + (a + 4) + '&width=' + w + '&fps=10'; };
                 document.getElementById('ci-stage').innerHTML = '<img alt="" class="ci-loop" src="' + loop(dur * 0.45, 480) + '">';
-                document.querySelectorAll('#ci-verts i, #ci-branded i').forEach(function(t, i) {
+                document.querySelectorAll('#ci-branded i').forEach(function(t, i) {
                     var img = document.createElement('img');
                     img.alt = ''; img.className = 'ci-loop'; img.loading = 'lazy';
-                    img.src = loop(dur * (0.15 + (i % 6) * 0.13), 200);
+                    img.src = loop(dur * (0.15 + i * 0.2), 240);
                     t.insertBefore(img, t.firstChild);
                 });
             }).catch(function() {});
