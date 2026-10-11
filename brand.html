@@ -238,6 +238,7 @@
         .bk-wm-link { font-size:12px; color:var(--la-sub); background:none; border:none; padding:0; cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
         .bk-wm-hint { font-size:12px; color:var(--la-dim); line-height:1.5; }
         .bk-wm-cap { font-size:11px; color:var(--la-dim); text-align:center; margin-top:8px; }
+        .bk-wm-export { width:100%; justify-content:center; margin-top:12px; }
         @media (max-width: 640px) {
             .bk-wm { grid-template-columns:minmax(0,1fr); padding:18px; }
             .bk-wm-rows { grid-template-columns:minmax(0,1fr); gap:8px; }
@@ -480,9 +481,11 @@
                     '<p class="bk-wm-status" id="bk-wm-status">' + (noLogo && !wmText() ? 'Upload a logo to your brand kit to use a watermark.' : '') + '</p>' +
                 '</div>' +
                 '<div class="bk-wm-preview-wrap"><div class="bk-wm-preview">' +
-                    '<img class="logo" alt="" id="bk-wm-logo"><span class="text" id="bk-wm-text"></span></div><p class="bk-wm-cap">Clip preview · 1080 × 1920</p></div>';
+                    '<img class="logo" alt="" id="bk-wm-logo"><span class="text" id="bk-wm-text"></span></div><p class="bk-wm-cap">Clip preview · 1080 × 1920</p>' +
+                    '<button type="button" class="cam-btn ghost bk-wm-export" id="bk-wm-export">Export PNG</button></div>';
             var img = document.getElementById('bk-wm-logo');
             img.addEventListener('load', positionPreview);
+            document.getElementById('bk-wm-export').addEventListener('click', exportWatermarkPng);
             positionPreview();
             var tIn = document.getElementById('bk-wm-text-input');
             if (tIn) {
@@ -534,6 +537,57 @@
             img.style.right = p[1] === 'r' ? Math.round(WM_MARGIN_X * k) + 'px' : 'auto';
             img.style.top = p[0] === 't' ? Math.round(220 * k) + 'px' : 'auto';
             img.style.bottom = p[0] === 'b' ? Math.round(320 * k) + 'px' : 'auto';
+        }
+        // The watermark at the clip's real size (1080 × 1920) on a transparent background,
+        // placed exactly as the clip worker places it
+        function exportWatermarkPng() {
+            var btn = document.getElementById('bk-wm-export'), st = document.getElementById('bk-wm-status');
+            var W = 1080, H = 1920, url = wmPreviewLogo(), tf = wmText(), p = _wm.position;
+            if (!url && !tf) { if (st) st.textContent = 'Nothing to export yet. Add a logo or text.'; return; }
+            btn.disabled = true;
+            var loadLogo = url ? new Promise(function(res, rej) {
+                var im = new Image(); im.crossOrigin = 'anonymous';
+                im.onload = function() { res(im); }; im.onerror = rej; im.src = url;
+            }) : Promise.resolve(null);
+            var loadFont = tf ? loadBrandFont(tf.url) : Promise.resolve(null);
+            Promise.all([loadLogo, loadFont]).then(function(r) {
+                var logo = r[0], family = r[1];
+                var c = document.createElement('canvas'); c.width = W; c.height = H;
+                var g = c.getContext('2d');
+                g.imageSmoothingQuality = 'high';
+                g.globalAlpha = _wm.opacity;
+                var box = WM_BOX[_wm.size] || WM_BOX.m, lh = 0;
+                if (logo) {
+                    var ar = (logo.naturalWidth || 2) / (logo.naturalHeight || 1);
+                    var lw = Math.min(box[0], box[1] * ar); lh = lw / ar;
+                    var lx = p[1] === 'l' ? WM_MARGIN_X : W - WM_MARGIN_X - lw;
+                    var ly = p[0] === 't' ? 220 : H - 320 - lh;
+                    g.drawImage(logo, lx, ly, lw, lh);
+                }
+                if (tf && family) {
+                    var px = WM_TEXT_PX[_wm.size] || WM_TEXT_PX.m, pad = 12;
+                    g.font = px + 'px ' + family;
+                    var m = g.measureText(_wm.text.value), tw = m.actualBoundingBoxLeft + m.actualBoundingBoxRight;
+                    if (tw > 760) { px = px * 760 / tw; g.font = px + 'px ' + family; m = g.measureText(_wm.text.value); }
+                    var th = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent + pad * 2;
+                    var tp = _wm.text.position, shift = logo && tp === p ? lh + 24 : 0;
+                    var top = tp === 'tl' ? 220 + shift : H - 320 - shift - th;
+                    g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = 8; g.shadowOffsetY = 2;
+                    g.fillStyle = '#fff';
+                    g.fillText(_wm.text.value, WM_MARGIN_X + pad + m.actualBoundingBoxLeft, top + pad + m.actualBoundingBoxAscent);
+                }
+                c.toBlob(function(blob) {
+                    var a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = 'watermark-1080x1920.png';
+                    document.body.appendChild(a); a.click(); a.remove();
+                    setTimeout(function() { URL.revokeObjectURL(a.href); }, 5000);
+                    btn.disabled = false;
+                }, 'image/png');
+            }).catch(function() {
+                btn.disabled = false;
+                if (st) st.textContent = 'Could not export. Try again.';
+            });
         }
         var _wmSaveT;
         function saveWatermark() {
