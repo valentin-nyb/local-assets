@@ -74,6 +74,8 @@
             font-size: 10px;
             font-weight: 800;
         }
+        /* Boxes that used to hold an icon: hidden until something (a logo or photo) fills them */
+        div.w-8.h-8:empty, div.w-10.h-10:empty, div.w-12.h-12:empty { display:none; }
     </style>
 </head>
 <body class="font-sans antialiased bg-background text-foreground overflow-hidden h-screen w-screen flex selection:bg-primary selection:text-black">
@@ -1290,29 +1292,19 @@
         function toggleArtistFolder(id) {
             var preview = document.getElementById('preview-' + id);
             var arrow = document.getElementById('arrow-' + id);
-            if (!preview || !arrow) return;
+            if (!preview) return;
             var isHidden = preview.classList.contains('hidden');
-            if (isHidden) {
-                preview.classList.remove('hidden');
-                arrow.style.transform = 'rotate(180deg)';
-            } else {
-                preview.classList.add('hidden');
-                arrow.style.transform = 'rotate(0deg)';
-            }
+            preview.classList.toggle('hidden', !isHidden);
+            if (arrow) arrow.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
         }
 
         function toggleDateSection(id) {
             var preview = document.getElementById('preview-' + id);
             var arrow = document.getElementById('arrow-' + id);
-            if (!preview || !arrow) return;
+            if (!preview) return;
             var isHidden = preview.classList.contains('hidden');
-            if (isHidden) {
-                preview.classList.remove('hidden');
-                arrow.style.transform = 'rotate(180deg)';
-            } else {
-                preview.classList.add('hidden');
-                arrow.style.transform = 'rotate(0deg)';
-            }
+            preview.classList.toggle('hidden', !isHidden);
+            if (arrow) arrow.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
         }
 
         // Files each session row is showing, recorded while the list renders, so
