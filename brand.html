@@ -703,10 +703,13 @@
             var t = new Date(d + 'T12:00:00Z');
             return isNaN(t) ? d : t.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
         }
-        // Image cropped to fill W×H (centre), then the watermark
-        function renderThumb(img, L) {
-            var c = document.createElement('canvas'); c.width = L.W; c.height = L.H;
+        // Image cropped to fill W×H (centre), then the watermark. scale 2 renders at 4K;
+        // everything is drawn in frame coordinates so the watermark keeps its place.
+        function renderThumb(img, L, scale) {
+            scale = scale || 1;
+            var c = document.createElement('canvas'); c.width = L.W * scale; c.height = L.H * scale;
             var g = c.getContext('2d');
+            g.scale(scale, scale);
             g.imageSmoothingQuality = 'high';
             var s = Math.max(L.W / img.naturalWidth, L.H / img.naturalHeight);
             var w = img.naturalWidth * s, h = img.naturalHeight * s;
@@ -761,8 +764,16 @@
                     var img = await imgP;
                     var tag = sess.artist + ' // THUMB // D:' + sess.date;
                     for (var k = 0; k < kinds.length; k++) {
-                        var cv = await renderThumb(img, THUMB_LAYOUT[kinds[k]]);
-                        var blob = await new Promise(function(r) { cv.toBlob(r, 'image/jpeg', 0.92); });
+                        var L = THUMB_LAYOUT[kinds[k]];
+                        // Highest resolution the picture supports: 4K when it covers twice the frame
+                        var cover = Math.min(img.naturalWidth / L.W, img.naturalHeight / L.H);
+                        var cv = await renderThumb(img, L, cover >= 2 ? 2 : cover >= 1.33 ? 1.5 : 1);
+                        // Best JPEG quality that fits the 4 MB upload limit
+                        var blob = null;
+                        for (var q = 0.97; q >= 0.6; q -= 0.07) {
+                            blob = await new Promise(function(r) { cv.toBlob(r, 'image/jpeg', q); });
+                            if (blob && blob.size <= 4000000) break;
+                        }
                         var r = await laFetch('/api/upload-thumbnail?passthrough=' + encodeURIComponent(tag), { method: 'PUT', headers: { 'Content-Type': 'image/jpeg', 'X-Passthrough': tag }, body: blob });
                         if (!r.ok) throw new Error((await r.json().catch(function() { return {}; })).error || r.status);
                     }
