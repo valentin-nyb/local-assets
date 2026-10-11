@@ -799,6 +799,15 @@
                 _orgName = res[0].orgName || '';
                 _ownerPhotos = res[0].ownerPhotos || {};
                 _wm = res[0].watermark || { enabled: true, logo: 'auto', position: 'bl', size: 'm', opacity: 0.9 };
+                // One-time move to the current layout: logo bottom left, name bottom right
+                // (settings saved before it had the logo bottom right and the text bottom left)
+                try {
+                    if (!localStorage.getItem('la_wm_layout2') && _wm.position === 'br' && _wm.text && _wm.text.position === 'bl') {
+                        _wm.position = 'bl'; _wm.text.position = 'br';
+                        saveWatermark();
+                    }
+                    localStorage.setItem('la_wm_layout2', '1');
+                } catch (_) {}
                 var assets = Array.isArray(res[1]) ? res[1] : (res[1].data || []);
                 buildSessions(assets);
                 var names = {};
