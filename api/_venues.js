@@ -34,11 +34,14 @@ function venueEmails(cfg) {
 // All venues whose `emails` contain the given email. VENUES_CONFIG is the only
 // source of login access: an email that isn't listed in a venue cannot sign in.
 // An email listed in several venues can open any of them.
+// local / assets admins (PLATFORM_ADMINS, default info@local-assets.com) can open every venue.
+export const platformAdmins = () => (process.env.PLATFORM_ADMINS || 'info@local-assets.com').split(/[\s,;]+/).map(e => e.toLowerCase().trim()).filter(Boolean);
 export function findVenuesByEmail(email) {
   if (!email) return [];
   const lower = email.toLowerCase().trim();
+  const admin = platformAdmins().includes(lower);
   return Object.entries(getVenuesConfig())
-    .filter(([, cfg]) => venueEmails(cfg).includes(lower))
+    .filter(([, cfg]) => admin || venueEmails(cfg).includes(lower))
     .map(([slug, cfg]) => ({ slug, ...cfg }));
 }
 
