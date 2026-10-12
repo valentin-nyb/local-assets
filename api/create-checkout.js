@@ -14,7 +14,7 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
 
-  const sk = process.env.STRIPE_SECRET_KEY;
+  const sk = (process.env.LA_STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY);   // local / assets own Stripe account first, else the Vercel integration
   if (!sk) return res.status(500).json({ error: 'STRIPE_SECRET_KEY not configured — add it in Vercel Environment Variables' });
 
   let body = req.body;

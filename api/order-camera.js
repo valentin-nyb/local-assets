@@ -20,7 +20,7 @@ export default async function handler(req, res) {
   const fromHome = req.body?.from === 'home' || !session.email;
   const back = fromHome ? 'https://local-assets.com/' : 'https://local-assets.com/camera';
 
-  const sk = process.env.STRIPE_SECRET_KEY;
+  const sk = (process.env.LA_STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY);   // local / assets own Stripe account first, else the Vercel integration
 
   if (req.method === 'GET') {
     return res.status(200).json({

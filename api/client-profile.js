@@ -28,7 +28,7 @@ export default async function handler(req, res) {
 
   // If requesting billing portal
   if (req.query.action === 'billing-portal') {
-    const sk = process.env.STRIPE_SECRET_KEY;
+    const sk = (process.env.LA_STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY);   // local / assets own Stripe account first, else the Vercel integration
     if (!sk || !profile.stripeCustomerId) {
       return res.status(400).json({ error: 'Billing not available' });
     }

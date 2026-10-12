@@ -151,7 +151,7 @@ export function priceUsage(usage, rates, plan) {
 }
 
 export function stripeClient() {
-  const sk = process.env.STRIPE_SECRET_KEY;
+  const sk = (process.env.LA_STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY);   // local / assets own Stripe account first, else the Vercel integration
   return sk ? new Stripe(sk) : null;
 }
 

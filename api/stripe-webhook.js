@@ -10,7 +10,7 @@ export const config = { api: { bodyParser: false } };
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).send('POST only');
 
-  const sk = process.env.STRIPE_SECRET_KEY;
+  const sk = (process.env.LA_STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY);   // local / assets own Stripe account first, else the Vercel integration
   const whSecret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!sk || !whSecret) return res.status(500).json({ error: 'Missing Stripe env vars' });
 
