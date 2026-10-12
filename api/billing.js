@@ -114,7 +114,7 @@ export default async function handler(req, res) {
         // Admin: every invoice of this venue (venue, artists, labels); a venue: its own
         let list = [];
         if (isAdmin) list = (await stripe.invoices.search({ query: `metadata['venueSlug']:'${slug.replace(/'/g, '')}'`, limit: 50 }).catch(() => ({ data: [] }))).data;
-        else if (data.customer) list = (await stripe.invoices.list({ customer: data.customer, limit: 24 })).data;
+        else if (data.customer) list = (await stripe.invoices.list({ customer: data.customer, limit: 24 }).catch(() => ({ data: [] }))).data;
         invoices = list.sort((x, y) => y.created - x.created).map(i => {
           const t = i.metadata?.target || 'venue';
           const own = data.statuses?.[i.id];

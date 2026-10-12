@@ -158,7 +158,11 @@ export function stripeClient() {
 // The venue's Stripe customer, made on first use
 export async function venueCustomer(stripe, redis, slug, { email, name }) {
   const saved = await redis.get(`billing_customer:${slug}`);
-  if (saved) { if (email) await stripe.customers.update(saved, { email, name: name || undefined }).catch(() => {}); return saved; }
+  if (saved) {
+    // A customer saved from another Stripe account (after switching accounts) is made again here
+    const ok = await stripe.customers.retrieve(saved).then(c => !c.deleted).catch(() => false);
+    if (ok) { if (email) await stripe.customers.update(saved, { email, name: name || undefined }).catch(() => {}); return saved; }
+  }
   const c = await stripe.customers.create({ email: email || undefined, name: name || slug, metadata: { venueSlug: slug } });
   await redis.set(`billing_customer:${slug}`, c.id);
   return c.id;
