@@ -74,8 +74,9 @@ export default async function handler(req, res) {
   const isAdmin = admins().includes(session.email) && isAdminVenue;
   if (admins().includes(session.email)) console.log('[billing] venue', session.venueSlug, JSON.stringify(session.venue?.name || ''), 'admin view:', isAdmin, '| venues:', Object.keys(getVenuesConfig()).join(','));
   const cfg = getVenuesConfig();
-  // Every venue can be billed, the local / assets one too (its own artists); other venues come first
-  const billable = [...Object.keys(cfg).filter(k => k !== session.venueSlug), session.venueSlug].filter(k => cfg[k]);
+    // local / assets is the admin account, not a venue: only real venues are billed
+  const isAdminEntry = k => k === ADMIN_VENUE || k === session.venueSlug && isAdminVenue || /^local\s*[\/-]?\s*assets\b/i.test(String(cfg[k]?.name || '').trim());
+  const billable = Object.keys(cfg).filter(k => !isAdminEntry(k));
   let slug = session.venueSlug, auth = session.muxAuth, venueName = session.venue?.name || session.venueSlug;
   if (isAdmin) {
     let bodyVenue = '';
@@ -143,7 +144,7 @@ export default async function handler(req, res) {
       return res.status(200).json({
         venue: venueName, target, period: { label: base.label, start: base.start, end: base.end, elapsed },
         usage: data.usage, ...priced, invoices, stripe: !!stripe, isAdmin,
-        ...(isAdmin ? { stripeAccount, venueSlug: slug, venues: billable.map(k => ({ slug: k, name: k === session.venueSlug ? 'local / assets (own artists)' : (cfg[k]?.name || k) })), rates: data.rates, plans: data.plans, assignments: data.assignments, artists: data.artists, labels: data.labels, assignment: a } : {}),
+        ...(isAdmin ? { stripeAccount, venueSlug: slug, venues: billable.map(k => ({ slug: k, name: cfg[k]?.name || k })), rates: data.rates, plans: data.plans, assignments: data.assignments, artists: data.artists, labels: data.labels, assignment: a } : {}),
       });
     }
 
