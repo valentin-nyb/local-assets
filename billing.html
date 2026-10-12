@@ -151,7 +151,8 @@
                 <section class="bl-section hidden" id="bl-send-box">
                     <div class="bl-section-head"><h3>Bill to</h3><span class="bl-msg" id="bl-stripe-acct">Choose who to see and invoice: plan price, plus usage above what the plan includes</span></div>
                     <form id="bl-send-form" class="bl-admin">
-                        <label>Venue<select name="venue" id="bl-venue"></select></label>
+                        <label>Account<select name="venue" id="bl-venue"></select></label>
+                        <label>Account type<select name="accountType" id="bl-acct-type"><option value="venue">Venue</option><option value="artist">Artist</option><option value="label">Record label</option><option value="management">Management</option></select></label>
                         <label>Bill to<select name="target" id="bl-target"></select></label>
                         <label>Email<input name="email" type="email" placeholder="accounts@venue.com"></label>
                         <label>Plan<select name="plan" id="bl-plan-select"></select></label>
@@ -345,9 +346,10 @@
             if (document.activeElement !== f.marginPct) f.marginPct.value = Math.round((d.rates.margin || 0) * 1000) / 10;
             // Venue to bill (admin), then the venue itself, its artists or its record labels
             _venue = d.venueSlug || _venue;
+            document.getElementById('bl-acct-type').value = d.accountType || 'venue';
             document.getElementById('bl-venue').innerHTML = (d.venues || []).map(function(v) { return '<option value="' + esc(v.slug) + '"' + (v.slug === d.venueSlug ? ' selected' : '') + '>' + esc(v.name) + '</option>'; }).join('');
             var tsel = document.getElementById('bl-target');
-            var opts = [['venue', (d.venue || 'This venue') + ' (venue)']]
+            var opts = [['venue', (d.venue || 'This account') + ' (' + String(d.accountTypeLabel || 'account').toLowerCase() + ')']]
                 .concat((d.artists || []).map(function(a) { return ['artist:' + a, a + ' (artist)']; }))
                 .concat((d.labels || []).map(function(l) { return ['label:' + l, l + ' (record label)']; }));
             tsel.innerHTML = opts.map(function(o) { return '<option value="' + esc(o[0]) + '"' + (o[0] === d.target ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('');
@@ -398,6 +400,10 @@
             this.disabled = false;
         });
         // Changing who is billed, the plan or the period updates the preview
+        document.getElementById('bl-acct-type').addEventListener('change', async function() {
+            try { await post({ action: 'setAccountType', accountType: this.value }); laToast('Account type saved'); load(); }
+            catch (e) { laAlert('Could not save: ' + e.message, { tone: 'error' }); }
+        });
         document.getElementById('bl-venue').addEventListener('change', function() { _venue = this.value; _target = 'venue'; _planOverride = undefined; document.getElementById('bl-plans').dataset.editing = ''; load(); });
         document.getElementById('bl-target').addEventListener('change', function() { _target = this.value; _planOverride = undefined; load(); });
         document.getElementById('bl-plan-select').addEventListener('change', function() { _planOverride = this.value; load(); });
@@ -430,7 +436,7 @@
             await load();
             btn.disabled = false; btn.textContent = 'Preview';
             if (!_data) return;
-            var who = sf.target.options[sf.target.selectedIndex].text.replace(/\s*\((venue|artist|record label)\)$/i, '');
+            var who = sf.target.options[sf.target.selectedIndex].text.replace(/\s*\((venue|artist|record label|management|account)\)$/i, '');
             var html = invoiceHtml(_data, who, sf.email.value.trim(), sf.period.value);
             var m = document.createElement('div');
             m.className = 'inv-backdrop';

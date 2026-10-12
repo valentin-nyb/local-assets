@@ -18,6 +18,7 @@ import {
 const admins = () => (process.env.BILLING_ADMINS || 'info@local-assets.com').split(/[\s,]+/).map(s => s.toLowerCase()).filter(Boolean);
 const cleanTarget = t => (t === 'venue' || /^(artist|label):[^<>]{1,60}$/.test(String(t || ''))) ? String(t) : 'venue';
 const STATUSES = ['paid', 'unpaid', 'waiting'];
+const TYPE_LABEL = { venue: 'Venue', artist: 'Artist', label: 'Record label', management: 'Management' };
 const cleanText = (v, n) => String(v ?? '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, n);
 
 async function withRedis(fn) {
@@ -107,7 +108,9 @@ export default async function handler(req, res) {
         // Artists from the Brand Kit too, not only those with sessions
         for (const [k, v] of Object.entries(names || {})) if (k.startsWith('artist-') && v) artists.push(String(v).toUpperCase().trim());
         const statuses = await redis.hGetAll(`billing_status:${slug}`);
-        return { rates, plans, assignments, customer, usage, artists: [...new Set(artists)].sort(), labels, statuses };
+        // The account's own type from its Brand Kit (venue, artist, record label or management)
+        const accountType = (await redis.get(`account_type:${slug}`)) || getVenuesConfig()[slug]?.type || (/team$/i.test(String(getVenuesConfig()[slug]?.name || '')) ? 'management' : 'venue');
+        return { rates, plans, assignments, customer, usage, artists: [...new Set(artists)].sort(), labels, statuses, accountType };
       });
       const a = data.assignments[target] || {};
       const planId = req.query.plan !== undefined && isAdmin ? String(req.query.plan) : (a.plan || '');
@@ -128,7 +131,7 @@ export default async function handler(req, res) {
             id: i.id, number: i.number, status: own || fromStripe, total: i.total / 100, currency: i.currency,
             created: i.created * 1000, url: i.hosted_invoice_url, pdf: i.invoice_pdf,
             billedTo: i.customer_name || (t === 'venue' ? venueName : t.replace(/^(artist|label):/, '')),
-            kind: t === 'venue' ? 'Venue' : t.startsWith('label:') ? 'Record label' : 'Artist',
+            kind: t === 'venue' ? TYPE_LABEL[data.accountType] || 'Account' : t.startsWith('label:') ? 'Record label' : 'Artist',
           };
         });
       }
@@ -152,7 +155,7 @@ export default async function handler(req, res) {
       const elapsed = Math.min(1, Math.max(0, (Date.now() - base.start) / (base.end - base.start)));
       return res.status(200).json({
         venue: venueName, target, period: { label: base.label, start: base.start, end: base.end, elapsed },
-        usage: data.usage, ...priced, invoices, stripe: !!stripe, isAdmin, subscription,
+        usage: data.usage, ...priced, invoices, stripe: !!stripe, isAdmin, subscription, accountType: data.accountType, accountTypeLabel: TYPE_LABEL[data.accountType] || 'Account',
         // Plans a client can move to (name, price, what's included)
         plansOffered: data.plans.map(p => ({ id: p.id, name: p.name, price: p.price, maxClips: p.maxClips, cameras: p.cameras || 0, features: p.features || [], included: p.included })),
         currentPlan: (data.assignments.venue || {}).plan || '',
@@ -269,6 +272,13 @@ export default async function handler(req, res) {
       const rec = { plan: cleanText(body.plan, 40), email: cleanText(body.email, 120), name: cleanText(body.name, 80), monthly: !!body.monthly };
       if (rec.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rec.email)) return res.status(400).json({ error: 'Enter a valid email' });
       await withRedis(redis => redis.hSet(assignKey(slug), target, JSON.stringify(rec)));
+      return res.status(200).json({ ok: true });
+    }
+
+    if (body.action === 'setAccountType') {
+      const t = String(body.accountType || '');
+      if (!TYPE_LABEL[t]) return res.status(400).json({ error: 'Unknown type' });
+      await withRedis(r => r.set(`account_type:${slug}`, t));
       return res.status(200).json({ ok: true });
     }
 
