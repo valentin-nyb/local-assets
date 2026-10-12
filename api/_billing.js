@@ -30,7 +30,7 @@ export const DEFAULT_PLANS = [
     features: ['Content intake & quality control', 'Up to 8 events processed / month', '12+ vertical social clips', 'Marketing thumbnails', 'Multi-platform distribution', 'YouTube & SoundCloud SEO', 'Priority 48-hour turnaround', '500 GB cloud storage'] },
   { id: 'starter-creative', name: 'Creative & Production · Starter', price: 5500, maxClips: 12, cameras: 1,
     included: { storedMinutes: 12000, deliveredMinutes: 100000, fileGB: 2000 },
-    features: ['1 camera included', 'Up to 4 event nights / month', '4K master recordings', 'HQ audio capture', '12 vertical social clips', 'Marketing thumbnails', 'Basic distribution', '2 TB cloud storage'] },
+    features: ['1 camera included', 'Starlink Mini mobile connection included', 'Up to 4 event nights / month', '4K master recordings', 'HQ audio capture', '12 vertical social clips', 'Marketing thumbnails', 'Basic distribution', '2 TB cloud storage'] },
   { id: 'liveset-creative', name: 'Creative & Production · Live-Set', price: 7500, maxClips: 0, cameras: 1,
     included: { storedMinutes: 60000, deliveredMinutes: 500000, fileGB: 20000 },
     features: ['1 camera included', 'Mac mini + Starlink private network included', 'Up to 8 event nights / month', '4K master recordings', 'HQ audio capture', 'Unlimited vertical social clips', 'Marketing thumbnails & watermark', 'Multi-platform distribution & SEO', 'Quarterly performance reports', 'Priority 48-hour turnaround', '20 TB cloud storage'] },
