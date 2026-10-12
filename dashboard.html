@@ -731,7 +731,7 @@
         try { _cutting = JSON.parse(sessionStorage.getItem('la_cutting') || '{}'); } catch (_) {}
         function sessionKey(btn) { return btn.dataset.wmArtist + '|' + btn.dataset.wmDate; }
         // "Working" only while cuts are running: a few minutes after starting, or while the server reports new clips processing
-        function isCutting(btn) { var t = _cutting[sessionKey(btn)]; return !!t && (Date.now() - t < 6 * 60e3 || _wmState.verticalsPending > 0) && Date.now() - t < 20 * 60e3; }
+        function isCutting(btn) { var t = _cutting[sessionKey(btn)]; return !!t && Date.now() - t < 4 * 60e3; }
         function paintWatermarkButtons() {
             document.querySelectorAll('.wm-apply').forEach(function(btn) {
                 var ids = (btn.dataset.wmClips || '').split(',').filter(Boolean);
@@ -793,7 +793,7 @@
                 if (!r.ok) throw new Error(d.error || r.status);
                 _cutting[sessionKey(btn)] = Date.now();
                 try { sessionStorage.setItem('la_cutting', JSON.stringify(_cutting)); } catch (_) {}
-                laToast(d.started ? 'Cutting ' + d.started + ' vertical clip' + (d.started !== 1 ? 's' : '') + '. They replace the current ones in a few minutes.' : 'The vertical clips are already cut or being cut.');
+                laToast(d.started ? 'Cutting ' + d.started + ' vertical clip' + (d.started !== 1 ? 's' : '') + '. They replace the current ones in a few minutes.' : 'The vertical clips are already cut. If they don\'t show, reload the page.');
                 paintWatermarkButtons();
                 _wmSweepT = setTimeout(sweepWatermarks, 60000);
             } catch (er) {

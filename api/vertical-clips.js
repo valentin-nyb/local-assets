@@ -2,7 +2,7 @@ import { pausedBy, sendPaused } from './_suspend.js';
 import { createClient } from 'redis';
 import { waitUntil } from '@vercel/functions';
 import { getWebSessionAuth } from './_venues.js';
-import { listAllAssets, sessionClips, startVerticals, cutVertical, verifyJob, venueAuth } from './_verticals.js';
+import { listAllAssets, sessionClips, startVerticals, cutVertical, verifyJob, venueAuth, finishVerticals } from './_verticals.js';
 
 // Vertical originals for a session, cut once from its full recording.
 //   POST { action: 'start', artist, date }   (signed-in venue) starts the clips that aren't cut yet
@@ -48,7 +48,10 @@ export default async function handler(req, res) {
   try {
     const { master } = sessionClips(await listAllAssets(session.muxAuth), artist, String(body.date || ''));
     if (!master) return res.status(400).json({ error: 'The full recording of this session is not in Cloud Storage.' });
+    // Finish or clear earlier attempts first, so a retry always starts the clips that are still missing
+    await finishVerticals(redis, session.venueSlug, session.muxAuth, await listAllAssets(session.muxAuth)).catch(e => console.error('[vertical-clips] finish', e.message));
     const started = await startVerticals(redis, session.venueSlug, master, artist, `https://${req.headers.host}`, true);
+    console.log('[vertical-clips] start', session.venueSlug, artist, master.id, 'started', started, 'status', master.status, 'policy', (master.playback_ids || [])[0]?.policy);
     return res.status(200).json({ started });
   } catch (e) {
     console.error('[vertical-clips]', e.message);

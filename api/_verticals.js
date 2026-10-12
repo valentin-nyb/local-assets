@@ -123,6 +123,14 @@ export async function startVerticals(redis, slug, master, artist, origin, retry 
   if (retry) await redis.del(failKey(master.id));   // pressed by hand: try failed clips again
   const pid = (master.playback_ids || [])[0]?.id;
   if (!pid) throw new Error('The full recording has no playback ID yet');
+  if (retry) {
+    // Clips already cut that no longer exist (deleted or failed) are cut again
+    const done = await redis.hGetAll(doneKey(master.id));
+    for (const [n, id] of Object.entries(done)) {
+      const ok = await muxReq(venueAuth(slug), `/video/v1/assets/${encodeURIComponent(id)}`).then(a => a.status !== 'errored').catch(() => false);
+      if (!ok) await redis.hDel(doneKey(master.id), n);
+    }
+  }
   const done = await redis.hGetAll(doneKey(master.id));
   const fails = await redis.hGetAll(failKey(master.id));
   // A clip that failed twice isn't retried automatically
