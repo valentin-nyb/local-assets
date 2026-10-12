@@ -87,11 +87,11 @@ export default async function handler(req, res) {
         calendar = { connected: true, host: new URL(calUrl).hostname };
         try {
           const now = Date.now();
-          const events = await fetchEvents(calUrl, now - 12 * 3600e3, now + 14 * 86400e3);
+          const events = await fetchEvents(calUrl, now - 12 * 3600e3, now + 60 * 86400e3);
           const cur = events.find(e => e.start <= now && e.end > now);
           calendar.current = cur ? { artist: cur.artist, start: cur.start, end: cur.end } : null;
-          calendar.upcoming = events.filter(e => e.start > now).slice(0, 5).map(e => ({ artist: e.artist, start: e.start, end: e.end }));
-        } catch (e) { calendar.error = 'The calendar could not be read'; }
+          calendar.upcoming = events.filter(e => e.start > now).slice(0, 6).map(e => ({ artist: e.artist, start: e.start, end: e.end }));
+        } catch (e) { console.error('[cameras] calendar', slug, e.message); calendar.error = e.message || 'The calendar could not be read'; }
       }
       return res.status(200).json({ cameras, calendar });
     }
@@ -144,7 +144,7 @@ export default async function handler(req, res) {
       const url = cleanCalendarUrl(body.url);
       if (!url) return res.status(400).json({ error: 'Paste the calendar\'s iCal link (it starts with https:// or webcal://).' });
       try { await fetchEvents(url, Date.now(), Date.now() + 86400e3); }
-      catch { return res.status(400).json({ error: 'That link could not be read as a calendar. Use the secret iCal address from Google Calendar, or a public link from Apple Calendar.' }); }
+      catch (e) { return res.status(400).json({ error: (/web page/.test(e.message) ? 'That link opens a web page, not the calendar file. ' : 'That link could not be read as a calendar. ') + 'Use the secret iCal address from Google Calendar, or a public link from Apple Calendar.' }); }
       await withRedis(r => r.set(calendarKey(slug), url));
       return res.status(200).json({ calendar: { connected: true, host: new URL(url).hostname } });
     }

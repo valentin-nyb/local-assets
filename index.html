@@ -117,6 +117,40 @@
         .vc-wm { position:absolute; z-index:1; bottom:6%; left:7%; width:30%; height:6%; background:url(/logos/White@2x.png) left center/contain no-repeat; }
         .vc-name { position:absolute; z-index:1; bottom:6.5%; right:7%; max-width:55%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font:900 7px/1 "Helvetica Neue", Helvetica, Arial, sans-serif; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.5); }
         .vc-foot { font-size:11px; color:#71717a; margin-top:10px; }
+        .vc-order { border:0; cursor:pointer; }
+        .ord-wrap { position:fixed; inset:0; z-index:100; display:none; align-items:center; justify-content:center; padding:16px; background:rgba(0,0,0,.75); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); }
+        .ord-wrap.open { display:flex; }
+        .ord-panel { position:relative; width:100%; max-width:560px; max-height:calc(100dvh - 32px); overflow-y:auto; background:#0e0e10; border:1px solid #27272a; border-radius:20px; padding:24px; color:#fff; }
+        .ord-x { position:absolute; top:12px; right:12px; width:34px; height:34px; border-radius:10px; border:0; background:#18181b; color:#a1a1aa; font-size:18px; line-height:1; cursor:pointer; }
+        .ord-x:hover { color:#fff; }
+        .ord-hero { height:220px; padding:14px 0; border-radius:12px; margin-bottom:16px; display:flex; align-items:center; justify-content:center; background:radial-gradient(circle at 50% 45%, #27272a, #0a0a0a 70%); border:1px solid #1f1f22; }
+        .ord-hero img { height:100%; width:auto; object-fit:contain; filter:drop-shadow(0 18px 28px rgba(0,0,0,.45)); }
+        .ord-eyebrow { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:#71717a; }
+        .ord-title { font:900 26px/1.1 "Helvetica Neue", Helvetica, Arial, sans-serif; text-transform:uppercase; margin-top:6px; }
+        .ord-sub { font-size:13px; line-height:1.55; color:#a1a1aa; margin-top:6px; }
+        .ord-price { display:flex; align-items:baseline; gap:8px; margin-top:16px; }
+        .ord-amount { font:700 28px/1 "Helvetica Neue", Helvetica, Arial, sans-serif; }
+        .ord-per { font-size:12px; color:#71717a; }
+        .ord-included { font-size:12px; font-weight:500; color:#39FF14; margin-top:8px; }
+        .ord-klarna { font-size:12px; line-height:1.5; color:#a1a1aa; margin-top:6px; }
+        .ord-klarna b { display:inline-block; background:#FFA8CD; color:#0b051d; font-weight:800; font-size:11px; padding:1px 6px; border-radius:4px; margin-right:4px; }
+        .ord-feats { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:18px; }
+        .ord-feats b { display:block; font-size:12px; font-weight:600; }
+        .ord-feats span { display:block; font-size:11px; line-height:1.45; color:#71717a; }
+        .ord-specs { margin-top:16px; border-top:1px solid #1f1f22; padding-top:12px; }
+        .ord-specs summary { cursor:pointer; font-size:12px; color:#a1a1aa; }
+        .ord-specs dl { display:grid; grid-template-columns:auto 1fr; gap:6px 14px; margin-top:10px; font-size:12px; line-height:1.45; }
+        .ord-specs dt { color:#71717a; } .ord-specs dd { color:#d4d4d8; margin:0; }
+        .ord-buy { display:flex; gap:10px; margin-top:18px; }
+        .ord-qty { display:flex; align-items:center; border:1px solid #27272a; border-radius:10px; height:44px; flex-shrink:0; }
+        .ord-qty button { width:38px; height:100%; background:none; border:0; color:#fff; font-size:18px; cursor:pointer; }
+        .ord-qty span { min-width:22px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:14px; }
+        .ord-go { flex:1; height:44px; border:0; border-radius:10px; background:#39FF14; color:#000; font:700 14px/1 "Helvetica Neue", Helvetica, Arial, sans-serif; cursor:pointer; }
+        .ord-go:disabled { opacity:.6; cursor:default; }
+        .ord-error { font-size:12px; color:#f87171; margin-top:10px; } .ord-error:empty { display:none; } .ord-error a { color:#fff; text-decoration:underline; }
+        .ord-fine { font-size:11px; line-height:1.5; color:#71717a; margin-top:10px; }
+        .ord-done { font-size:14px; line-height:1.6; color:#a1a1aa; margin-top:10px; }
+        @media (max-width:480px) { .ord-feats { grid-template-columns:1fr; } .ord-panel { padding:18px; } .ord-hero { height:170px; } }
         @media (max-width:900px) {
             .vc-cams { grid-template-columns:minmax(0,1fr); padding:22px 18px; gap:32px; margin-top:64px; }
             .vc-title { font-size:22px; }
@@ -375,7 +409,7 @@
                         <span class="vc-eyebrow">// Cameras</span>
                         <h3 class="vc-title">Record every set. Get the clips automatically.</h3>
                         <p class="vc-text">Each OBSBOT Tail 2 streams over the venue's Wi-Fi or network straight to your cloud. When the set ends, the recording is a session for the artist on stage, with vertical clips ready for social media.</p>
-                        <a class="vc-order" href="/login.html?next=%2Fcamera%3Forder%3Dnew">Order cameras · £1,299</a>
+                        <button type="button" class="vc-order" onclick="openCameraOrder()">Order cameras · £1,299</button>
                         <p class="vc-note">Setup and integration included with every camera ordered from us.</p>
                         <ol class="vc-steps">
                             <li><b>1</b><div><strong>Plug in</strong><span>Power the OBSBOT Tail 2 and connect it to the venue's Wi-Fi or an Ethernet cable.</span></div></li>
@@ -745,5 +779,84 @@
         })();
     </script>
 
+
+    <div class="ord-wrap" id="ord-wrap" role="dialog" aria-modal="true" aria-labelledby="ord-title" onclick="if (event.target === this) closeCameraOrder()">
+        <div class="ord-panel">
+            <button type="button" class="ord-x" aria-label="Close" onclick="closeCameraOrder()">×</button>
+            <div id="ord-body"></div>
+        </div>
+    </div>
+    <script>
+    // Camera order popup: product details and Stripe Checkout, no sign-in needed
+    var CAMERA_PRICE = 1299;
+    function gbp(n) { return '£' + n.toLocaleString('en-GB', { maximumFractionDigits: 0 }); }
+    function closeCameraOrder() { document.getElementById('ord-wrap').classList.remove('open'); document.body.style.overflow = ''; }
+    function showCameraOrder(html) { document.getElementById('ord-body').innerHTML = html; document.getElementById('ord-wrap').classList.add('open'); document.body.style.overflow = 'hidden'; }
+    document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeCameraOrder(); });
+    function openCameraOrder() {
+        var feats = [
+            ['4K at 60fps', '1/1.5" sensor, also 1080p at 120fps'],
+            ['5× optical zoom', 'up to 12× hybrid zoom'],
+            ['AI Tracking 2.0', 'follows the DJ, auto-zoom framing, group tracking'],
+            ['NDI HX3', 'video over your venue network'],
+            ['One-cable setup', 'PoE+ Ethernet, plus 3G-SDI, HDMI and USB'],
+            ['PTZR', 'pan, tilt, zoom and 90° rotation for vertical video']
+        ].map(function(f) { return '<div><b>' + f[0] + '</b><span>' + f[1] + '</span></div>'; }).join('');
+        showCameraOrder(
+            '<div class="ord-hero"><img src="/img/obsbot-tail-2.png" alt="OBSBOT Tail 2 camera" width="720" height="720"></div>' +
+            '<p class="ord-eyebrow">Sold and supported by local / assets</p>' +
+            '<h3 class="ord-title" id="ord-title">OBSBOT Tail 2</h3>' +
+            '<p class="ord-sub">AI-powered PTZR 4K live production camera with NDI HX3. Records every set straight to your local / assets cloud, with vertical clips made automatically.</p>' +
+            '<div class="ord-price"><span class="ord-amount">' + gbp(CAMERA_PRICE) + '</span><span class="ord-per">per camera, inc. VAT</span></div>' +
+            '<p class="ord-included">Setup and integration with your local / assets dashboard included</p>' +
+            '<p class="ord-klarna"><b>Klarna.</b> Or pay in 3 interest-free payments of ' + gbp(Math.round(CAMERA_PRICE / 3)) + ', or spread the cost monthly.</p>' +
+            '<div class="ord-feats">' + feats + '</div>' +
+            '<details class="ord-specs"><summary>Full specifications</summary><dl>' +
+                '<dt>Video</dt><dd>4K 60fps, 1080p 120fps, HDR (4K/1080p at 30fps)</dd>' +
+                '<dt>Sensor</dt><dd>1/1.5" CMOS, dual native ISO, all-pixel PDAF autofocus</dd>' +
+                '<dt>Zoom</dt><dd>5× optical, up to 12× hybrid</dd>' +
+                '<dt>Outputs</dt><dd>NDI HX3, 3G-SDI, HDMI 2.0, USB 3.0, Ethernet with PoE+</dd>' +
+                '<dt>Control</dt><dd>RS-232, FreeD, OBSBOT Start app, web control page</dd>' +
+                '<dt>Audio</dt><dd>3.5mm mic-in and line-in</dd>' +
+                '<dt>Other</dt><dd>microSD recording, Wi-Fi 6, tally light, 5000mAh battery (up to 5 hours)</dd>' +
+            '</dl></details>' +
+            '<div class="ord-buy"><div class="ord-qty"><button type="button" aria-label="Fewer" data-q="-1">−</button><span id="ord-qty">1</span><button type="button" aria-label="More" data-q="1">+</button></div>' +
+            '<button type="button" id="ord-go" class="ord-go">Checkout · <span id="ord-total">' + gbp(CAMERA_PRICE) + '</span></button></div>' +
+            '<p id="ord-error" class="ord-error"></p>' +
+            '<p class="ord-fine">Pay by card, Apple Pay, Google Pay or Klarna. Prices include VAT. Pay-later and monthly options depend on eligibility and are offered by the provider at checkout. UK delivery.</p>');
+        var qty = 1;
+        document.querySelectorAll('#ord-body [data-q]').forEach(function(b) {
+            b.addEventListener('click', function() {
+                qty = Math.min(10, Math.max(1, qty + Number(b.dataset.q)));
+                document.getElementById('ord-qty').textContent = qty;
+                document.getElementById('ord-total').textContent = gbp(qty * CAMERA_PRICE);
+            });
+        });
+        var go = document.getElementById('ord-go');
+        go.addEventListener('click', function() {
+            var label = go.innerHTML, err = document.getElementById('ord-error');
+            go.disabled = true; go.textContent = 'Opening checkout…'; err.textContent = '';
+            var headers = { 'Content-Type': 'application/json' };
+            try { var s = JSON.parse(localStorage.getItem('la_admin') || 'null'); if (s && s.webToken) headers.Authorization = 'Bearer ' + s.webToken; } catch (_) {}
+            fetch('/api/order-camera', { method: 'POST', headers: headers, body: JSON.stringify({ quantity: qty, from: 'home' }) })
+                .then(function(r) { return r.json().catch(function() { return {}; }).then(function(d) { if (!r.ok) throw new Error(d.error || r.status); return d; }); })
+                .then(function(d) { window.location.href = d.url; })
+                .catch(function(e) {
+                    go.disabled = false; go.innerHTML = label;
+                    var mail = '<a href="mailto:info@local-assets.com?subject=' + encodeURIComponent('Camera order: ' + qty + ' × OBSBOT Tail 2') + '">info@local-assets.com</a>';
+                    err.innerHTML = e.message === 'payments_not_configured'
+                        ? 'Online checkout isn\'t switched on yet. Email ' + mail + ' and we\'ll send you a payment link.'
+                        : 'Could not open checkout. Try again, or email ' + mail + '.';
+                });
+        });
+    }
+    // Back from Stripe Checkout
+    (function() {
+        var o = new URLSearchParams(location.search).get('order');
+        if (!o) return;
+        history.replaceState({}, '', '/');
+        if (o === 'success') showCameraOrder('<p class="ord-eyebrow">Order received</p><h3 class="ord-title" id="ord-title">Thank you</h3><p class="ord-done">Your cameras are ordered. We\'ll email you the delivery details and book the setup with you. Once they arrive, sign in and add each one under Cameras.</p>');
+    })();
+    </script>
 </body>
 </html>

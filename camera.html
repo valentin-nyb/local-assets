@@ -417,7 +417,7 @@
             var rows = [];
             if (cal.current) rows.push('<div class="cal-row"><span class="now">ON NOW</span><b>' + esc(cal.current.artist) + '</b><span class="when">' + fmtTime(cal.current.start) + ' – ' + fmtTime(cal.current.end) + '</span></div>');
             (cal.upcoming || []).forEach(function(e) { rows.push('<div class="cal-row"><b>' + esc(e.artist) + '</b><span class="when">' + fmtDay(e.start) + ' · ' + fmtTime(e.start) + ' – ' + fmtTime(e.end) + '</span></div>'); });
-            if (cal.connected && !cal.error && !rows.length) rows.push('<p class="cal-help">No sets in the next two weeks.</p>');
+            if (cal.connected && !cal.error && !rows.length) rows.push('<p class="cal-help">No sets in the next two months. Each event in the calendar should be one set, titled with the DJ\'s name.</p>');
             document.getElementById('cal-list').innerHTML = rows.join('');
         }
         async function saveCalendar(url) {
@@ -745,7 +745,6 @@
             var o = new URLSearchParams(location.search).get('order');
             if (!o) return;
             history.replaceState({}, '', '/camera');
-            if (o === 'new') return openOrderCameras();
             if (o === 'success') openCamDialog('Order received', '<p class="cam-dialog-text">Thank you, your cameras are ordered. We\'ll email you the delivery details. Once they arrive, add each one here with <b>Add camera</b>.</p>');
         })();
 

@@ -15,8 +15,10 @@ export const CAMERA_PRODUCT = {
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
 
-  const session = getWebSessionAuth(req);
-  if (!session?.email) return res.status(401).json({ error: 'Not authenticated' });
+  // Signed-in venues and visitors on the home page can both order; Stripe asks guests for their email
+  const session = getWebSessionAuth(req) || {};
+  const fromHome = req.body?.from === 'home' || !session.email;
+  const back = fromHome ? 'https://local-assets.com/' : 'https://local-assets.com/camera';
 
   const sk = process.env.STRIPE_SECRET_KEY;
 
@@ -37,7 +39,7 @@ export default async function handler(req, res) {
     const stripe = new Stripe(sk);
     const checkout = await stripe.checkout.sessions.create({
       mode: 'payment',
-      customer_email: session.email,
+      ...(session.email ? { customer_email: session.email } : {}),
       line_items: [{
         quantity: qty,
         adjustable_quantity: { enabled: true, minimum: 1, maximum: CAMERA_PRODUCT.maxQuantity },
@@ -50,9 +52,9 @@ export default async function handler(req, res) {
       }],
       shipping_address_collection: { allowed_countries: ['GB'] },
       phone_number_collection: { enabled: true },
-      success_url: 'https://local-assets.com/camera?order=success',
-      cancel_url:  'https://local-assets.com/camera?order=cancelled',
-      metadata: { kind: 'camera_order', venueSlug: session.venueSlug || '', email: session.email },
+      success_url: back + '?order=success',
+      cancel_url:  back + '?order=cancelled',
+      metadata: { kind: 'camera_order', venueSlug: session.venueSlug || '', email: session.email || '' },
       payment_intent_data: { metadata: { kind: 'camera_order', venueSlug: session.venueSlug || '' } },
     });
     return res.status(200).json({ url: checkout.url });
