@@ -130,9 +130,15 @@ export async function startVerticals(redis, slug, master, artist, origin, retry 
   if (retry) {
     // Clips already cut that no longer exist (deleted or failed) are cut again
     const done = await redis.hGetAll(doneKey(master.id));
+    const masterHasSound = (master.tracks || []).some(t => t.type === 'audio');
     for (const [n, id] of Object.entries(done)) {
-      const ok = await muxReq(venueAuth(slug), `/video/v1/assets/${encodeURIComponent(id)}`).then(a => a.status !== 'errored').catch(() => false);
-      if (!ok) await redis.hDel(doneKey(master.id), n);
+      const a = await muxReq(venueAuth(slug), `/video/v1/assets/${encodeURIComponent(id)}`).catch(() => null);
+      const silent = a?.status === 'ready' && masterHasSound && !(a.tracks || []).some(t => t.type === 'audio');
+      if (!a || a.status === 'errored' || silent) {
+        await redis.hDel(doneKey(master.id), n);
+        // A clip cut without sound is replaced by the new cut once that's ready
+        if (silent) await redis.sRem(originalsKey(slug), id);
+      }
     }
   }
   const done = await redis.hGetAll(doneKey(master.id));
@@ -146,6 +152,25 @@ export async function startVerticals(redis, slug, master, artist, origin, retry 
     signal: AbortSignal.timeout(20000),
   }).catch(e => console.error('[verticals] start', t.n, e.message))));
   return todo.length;
+}
+
+// The best video rendition and the separate sound rendition of an HLS stream (absolute URLs)
+async function streamParts(url) {
+  const r = await fetch(url, { signal: AbortSignal.timeout(15000) });
+  if (!r.ok) throw new Error('playlist ' + r.status);
+  const text = await r.text();
+  const abs = u => new URL(u, url).href;
+  const lines = text.split(/\r?\n/);
+  const audioLine = lines.find(l => /^#EXT-X-MEDIA:.*TYPE=AUDIO/.test(l) && /URI="/.test(l));
+  const audio = audioLine ? abs(/URI="([^"]+)"/.exec(audioLine)[1]) : null;
+  let best = null, bw = -1;
+  lines.forEach((l, i) => {
+    if (!l.startsWith('#EXT-X-STREAM-INF')) return;
+    const b = Number((/BANDWIDTH=(\d+)/.exec(l) || [])[1] || 0);
+    const u = lines.slice(i + 1).find(x => x && !x.startsWith('#'));
+    if (u && b > bw) { bw = b; best = abs(u); }
+  });
+  return { video: best, audio };
 }
 
 function run(args) {
@@ -169,14 +194,18 @@ export async function cutVertical(redis, auth, job) {
     // never has to jump into the middle of the stream (which fails on recordings stored as fMP4).
     // If that comes out empty, fall back to the downloadable MP4 when it exists.
     const len = Math.max(1, job.end - job.start);
-    const encode = ['-map', '0:v:0', '-map', '0:a:0?',
-      '-vf', 'crop=trunc(ih*9/16/2)*2:ih,scale=1080:1920:flags=lanczos,setsar=1,fps=30',
+    const tail = ['-vf', 'crop=trunc(ih*9/16/2)*2:ih,scale=1080:1920:flags=lanczos,setsar=1,fps=30',
       '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p',
       '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', out];
+    const encode = ['-map', '0:v:0', '-map', '0:a:0?', ...tail];
     const sizeOf = () => (fs.existsSync(out) ? fs.statSync(out).size : 0);
-    await run(['-hide_banner', '-loglevel', 'warning', '-y',
-      '-i', `https://stream.mux.com/${job.pid}.m3u8?rendition_order=desc&asset_start_time=${Math.floor(job.start)}&asset_end_time=${Math.ceil(job.end)}`,
-      '-t', String(len), ...encode]).catch(e => console.error('[verticals] instant clip', e.message));
+    // Mux keeps the sound as its own track in the stream, so the best picture and the sound are read as two inputs
+    const clipUrl = `https://stream.mux.com/${job.pid}.m3u8?rendition_order=desc&asset_start_time=${Math.floor(job.start)}&asset_end_time=${Math.ceil(job.end)}`;
+    const { video, audio } = await streamParts(clipUrl).catch(e => { console.error('[verticals] playlist', e.message); return {}; });
+    const inputs = video && audio ? ['-i', video, '-i', audio] : ['-i', clipUrl];
+    const maps = video && audio ? ['-map', '0:v:0', '-map', '1:a:0'] : ['-map', '0:v:0', '-map', '0:a:0?'];
+    await run(['-hide_banner', '-loglevel', 'warning', '-y', ...inputs, '-t', String(len), ...maps, ...tail])
+      .catch(e => console.error('[verticals] instant clip', e.message));
     if (sizeOf() < 200 * 1024) {
       await run(['-hide_banner', '-loglevel', 'warning', '-y',
         '-ss', String(job.start), '-t', String(len), '-i', `https://stream.mux.com/${job.pid}/highest.mp4`, ...encode])
