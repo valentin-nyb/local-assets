@@ -103,14 +103,14 @@ export function venueChoices(email) {
 // This enforces strict per-venue isolation: a client can only ever see their own assets.
 export function getMuxAuthForVenue(venue) {
   const envKey = venueEnvKey(venue?.slug);
-  const id = (
-    (envKey && process.env[`${envKey}_MUX_TOKEN_ID`]) ||
-    venue?.mux_token_id || ''
-  ).trim();
-  const secret = (
-    (envKey && process.env[`${envKey}_MUX_TOKEN_SECRET`]) ||
-    venue?.mux_token_secret || ''
-  ).trim();
+  // Env names with or without "_TEAM" (AMONGST_FEW_… or AMONGST_FEW_TEAM_…), so a key pair added
+  // under either spelling is used together, never mixed with older keys from VENUES_CONFIG
+  const keys = envKey ? [...new Set([envKey, envKey.replace(/_TEAM$/, ''), envKey.replace(/_TEAM$/, '') + '_TEAM'])] : [];
+  const envId = keys.map(k => process.env[`${k}_MUX_TOKEN_ID`]).find(Boolean);
+  const envSecret = keys.map(k => process.env[`${k}_MUX_TOKEN_SECRET`]).find(Boolean);
+  const fromEnv = envId && envSecret;
+  const id = (fromEnv ? envId : venue?.mux_token_id || '').trim();
+  const secret = (fromEnv ? envSecret : venue?.mux_token_secret || '').trim();
   if (!id || !secret) return null;
   return 'Basic ' + Buffer.from(`${id}:${secret}`).toString('base64');
 }
