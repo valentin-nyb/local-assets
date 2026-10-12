@@ -83,7 +83,7 @@ export default async function handler(req, res) {
       const swaps = await redis.hGetAll(swapsKey(slug));
       let done = 0, pending = 0;
       for (const [newId, val] of Object.entries(swaps)) {
-        const { old: oldId } = parseSwap(val);
+        const { old: oldId, n: swapN } = parseSwap(val);
         let status;
         try { status = (await muxReq(auth, `/video/v1/assets/${encodeURIComponent(newId)}`)).status; }
         catch (e) { status = e.status === 404 ? 'gone' : 'unknown'; }
@@ -92,7 +92,7 @@ export default async function handler(req, res) {
           const old = await muxReq(auth, `/video/v1/assets/${encodeURIComponent(oldId)}`).catch(() => null);
           if (old) {
             const all = old.source_asset_id ? [old, await muxReq(auth, `/video/v1/assets/${encodeURIComponent(old.source_asset_id)}`).catch(() => null)].filter(Boolean) : [old];
-            if (cleanCheck(all, await markedSet(redis, slug))(old)) await setTag(auth, oldId, String(old.passthrough || '').replace(/ \/\/ SOCIAL(?= \/\/|$)/i, ' // SOCIALRAW'));
+            if (cleanCheck(all, await markedSet(redis, slug))(old)) { const oi = socialInfo(old); await setTag(auth, oldId, oi ? tagFor(oi.artist, oi.n || swapN || 1, true) : String(old.passthrough || '').replace(/ \/\/ SOCIAL(?= \/\/|$)/i, ' // SOCIALRAW')); }
             else { await del(auth, oldId); await redis.sRem(markedKey(slug), oldId); }
           }
           await redis.hDel(swapsKey(slug), newId); done++;
@@ -166,19 +166,16 @@ export default async function handler(req, res) {
         const pt = String(clip.passthrough || '').trim();
         const m = SUB.exec(pt);
         // Only this session's vertical clips, from this venue's own Cloud Storage
-        if (!m || m[1].toUpperCase() !== artist) {
-          errors.push(socialInfo(clip)?.artist === artist ? 'These clips are being made vertical first. Apply the watermark once the vertical clips are in, in a few minutes.' : `One clip isn't a vertical clip of ${artist}`);
-          continue;
-        }
-        const n = Number(m[3]);
+        // Clips in older tag formats are numbered by their place in the session
+        const info = socialInfo(clip);
+        if (!info || info.artist !== artist) { errors.push(`One clip isn't a clip of ${artist}`); continue; }
+        const n = info.n || (ids.indexOf(id) + 1);
         // Always from the clean vertical original: this clip, or the original kept hidden behind it
         let input, size;
-        const kept = (hidden.get(n) || []).find(a => isClean(a) && a.status === 'ready' && videoSize(a)[1] > videoSize(a)[0]);
+        const kept = (hidden.get(n) || []).find(a => isClean(a) && a.status === 'ready');
         if (isClean(clip)) { input = { url: `mux://assets/${clip.id}` }; size = videoSize(clip); }
         else if (kept) { input = { url: `mux://assets/${kept.id}` }; size = videoSize(kept); }
-        else { errors.push(`Clip ${String(n).padStart(2, '0')} has no vertical original yet. Make the vertical originals first.`); continue; }
-        // Watermarks go on vertical originals only
-        if (size[0] > size[1]) { errors.push(`Clip ${String(n).padStart(2, '0')} isn't vertical yet. Make the vertical originals first.`); continue; }
+        else { errors.push(`Clip ${String(n).padStart(2, '0')} has no clean version to start from.`); continue; }
         const overlayUrl = await overlayFor(size[0] || 1080, size[1] || 1920);
         const copy = await muxReq(auth, '/video/v1/assets', {
           method: 'POST',
@@ -189,7 +186,7 @@ export default async function handler(req, res) {
             static_renditions: [{ resolution: 'highest' }],
           }),
         });
-        await redis.hSet(swapsKey(slug), copy.id, JSON.stringify({ old: id }));
+        await redis.hSet(swapsKey(slug), copy.id, JSON.stringify({ old: id, n }));
         await redis.sAdd(markedKey(slug), copy.id);
         started++;
       } catch (e) {

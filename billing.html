@@ -1,0 +1,243 @@
+
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+<head>
+    <script>
+      (function(){
+        var s = localStorage.getItem('la_admin');
+        if (!s) { window.location.replace('/login.html'); return; }
+        try {
+          var d = JSON.parse(s);
+          if (!d.ts || Date.now() - d.ts > 10 * 60 * 1000) {
+            localStorage.removeItem('la_admin');
+            window.location.replace('/login.html');
+          }
+        } catch(e) {
+          localStorage.removeItem('la_admin');
+          window.location.replace('/login.html');
+        }
+      })();
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="a™">
+    <meta name="theme-color" content="#000000">
+    <title>local / assets™ - Billing</title>
+    <link rel="icon" type="image/x-icon" href="favicon/favicon.ico">
+    <link rel="icon" type="image/svg+xml" href="favicon/favicon.svg">
+    <link rel="apple-touch-icon" href="favicon/apple-touch-icon.png">
+    <link rel="manifest" href="favicon/site.webmanifest">
+
+    <link rel="stylesheet" href="styles/tailwind.css">
+    <link rel="stylesheet" href="styles/theme.css">
+    <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <script src="/la-dialogs.js?v=2"></script>
+    <script src="nav-component.js?v=5"></script>
+    <style>
+        .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
+        .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
+        .nav-link:hover:not(.active) { background: rgba(255, 255, 255, 0.03); color: white; }
+        body { background-color: #050505; color: #ffffff; -webkit-font-smoothing: antialiased; }
+        .nav-link.active { background-color: rgba(255, 255, 255, 0.05); border: 1px solid #27272a; color: white; }
+        ::-webkit-scrollbar { display: none; }
+        @media (max-width: 767px) { #sidebar { position: fixed; z-index: 50; height: 100vh; } }
+        .cam-btn { display:inline-flex; align-items:center; gap:8px; height:36px; padding:0 14px; border-radius:10px; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; border:1px solid transparent; text-decoration:none; transition:opacity .15s, border-color .15s, background .15s; }
+        .cam-btn.primary { background:var(--la-accent); color:var(--la-accent-ink); }
+        .cam-btn.ghost { background:transparent; color:var(--la-text); border-color:var(--la-line); }
+        .cam-btn:disabled { opacity:.5; cursor:default; }
+        .bl-eyebrow { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--la-dim); }
+        .bl-h { font-size:26px; line-height:1.2; color:var(--la-text); margin-top:6px; }
+        .bl-sub { font-size:13px; line-height:1.6; color:var(--la-sub); margin-top:6px; max-width:640px; }
+        .bl-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+        .bl-card { border:1px solid var(--la-line); background:var(--la-surface); border-radius:16px; padding:20px; min-width:0; }
+        .bl-card .lbl { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--la-dim); }
+        .bl-card .val { font:700 30px/1.1 "Helvetica Neue", Helvetica, Arial, sans-serif; color:var(--la-text); margin-top:12px; }
+        .bl-card .note { font-size:12px; color:var(--la-sub); margin-top:8px; }
+        .bl-bar { height:4px; border-radius:99px; background:var(--la-chip); margin-top:14px; overflow:hidden; }
+        .bl-bar i { display:block; height:100%; background:var(--la-accent); }
+        .bl-section { border:1px solid var(--la-line); background:var(--la-surface); border-radius:16px; overflow:hidden; }
+        .bl-section-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:18px 20px; border-bottom:1px solid var(--la-line-soft); }
+        .bl-section-head h3 { font-size:14px; color:var(--la-text); }
+        .bl-table { width:100%; border-collapse:collapse; font-size:13px; }
+        .bl-table th { text-align:left; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--la-dim); font-weight:500; padding:12px 20px; border-bottom:1px solid var(--la-line-soft); }
+        .bl-table td { padding:14px 20px; border-bottom:1px solid var(--la-line-soft); color:var(--la-text-2); vertical-align:top; }
+        .bl-table tr:last-child td { border-bottom:0; }
+        .bl-table .num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+        .bl-table .svc { color:var(--la-text); font-weight:600; }
+        .bl-table .unit { display:block; font-size:11px; color:var(--la-dim); margin-top:2px; font-weight:400; }
+        .bl-table tfoot td { color:var(--la-text); font-weight:700; border-top:1px solid var(--la-line); }
+        .bl-pill { display:inline-block; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.1em; text-transform:uppercase; padding:3px 8px; border-radius:99px; background:var(--la-chip); color:var(--la-sub); }
+        .bl-pill.paid { background:var(--la-accent-soft); color:var(--la-accent); }
+        .bl-pill.open { background:rgba(245,158,11,.12); color:#f59e0b; }
+        .bl-link { color:var(--la-text); text-decoration:underline; text-underline-offset:2px; margin-right:12px; }
+        .bl-empty { padding:28px 20px; font-size:13px; color:var(--la-dim); }
+        .bl-admin { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:12px; padding:20px; }
+        .bl-admin label { display:flex; flex-direction:column; gap:6px; font-size:11px; color:var(--la-dim); }
+        .bl-admin input { height:38px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 12px; font-size:13px; outline:none; }
+        .bl-admin input:focus { border-color:var(--la-accent); }
+        .bl-admin-actions { display:flex; flex-wrap:wrap; gap:8px; padding:0 20px 20px; align-items:center; }
+        .bl-msg { font-size:12px; color:var(--la-sub); }
+        .bl-scroll { overflow-x:auto; }
+        @media (max-width:640px) { .bl-table .rate { display:none; } .bl-link { margin-right:8px; } }
+        @media (max-width:900px) { .bl-grid { grid-template-columns:minmax(0,1fr); } .bl-h { font-size:22px; } .bl-table th, .bl-table td { padding:12px 14px; } }
+    </style>
+</head>
+<body class="font-sans antialiased bg-background text-foreground overflow-hidden h-screen w-screen flex selection:bg-primary selection:text-black">
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/90 z-40 hidden backdrop-blur-md opacity-0 transition-opacity duration-300"></div>
+    <aside id="sidebar" class="w-64 border-r border-[#27272a] bg-[#0a0a0a] flex flex-col transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 shrink-0 h-full"></aside>
+    <main class="flex-1 flex flex-col overflow-hidden relative w-full bg-[#050505]">
+        <header class="h-16 flex items-center px-4 md:px-8 border-b border-[#27272a] bg-[#050505] shrink-0 justify-between w-full z-40">
+            <div class="flex items-center gap-2 md:gap-3 min-w-0"><button type="button" onclick="toggleSidebar()" class="la-menu-btn" aria-label="Open menu"><iconify-icon icon="solar:hamburger-menu-linear"></iconify-icon></button>
+                <span id="venue-breadcrumb" class="text-zinc-600 text-[10px] font-mono uppercase tracking-[0.3em] hidden md:inline"></span>
+                <h1 class="text-[10px] font-mono uppercase tracking-[0.2em] md:tracking-[0.3em] text-[#39FF14] font-bold m-0 truncate">BILLING</h1>
+            </div>
+            <div class="flex items-center gap-4 shrink-0">
+                <button id="venue-avatar" class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center font-bold text-xs shrink-0"></button>
+            </div>
+        </header>
+        <div class="flex-1 w-full overflow-y-auto no-scrollbar">
+            <div class="max-w-6xl mx-auto w-full p-4 md:p-10 flex flex-col gap-6 md:gap-8">
+                <div>
+                    <p class="bl-eyebrow" id="bl-period">This month</p>
+                    <h2 class="bl-h">Billing</h2>
+                    <p class="bl-sub">Everything local / assets runs for you, billed in one place: your plan, plus what you use of video storage, streaming and file storage. An itemised invoice is sent on the 1st of each month.</p>
+                </div>
+                <p id="bl-error" class="bl-msg hidden" style="color:var(--la-bad)"></p>
+                <div class="bl-grid">
+                    <div class="bl-card"><p class="lbl">Estimated invoice</p><p class="val" id="bl-total">—</p><p class="note" id="bl-total-note">Loading usage…</p><div class="bl-bar"><i id="bl-bar" style="width:0"></i></div></div>
+                    <div class="bl-card"><p class="lbl">Plan</p><p class="val" id="bl-plan">—</p><p class="note" id="bl-plan-note"></p></div>
+                    <div class="bl-card"><p class="lbl">Usage so far</p><p class="val" id="bl-usage">—</p><p class="note" id="bl-usage-note"></p></div>
+                </div>
+                <section class="bl-section">
+                    <div class="bl-section-head"><h3>Usage this month</h3><span class="bl-msg" id="bl-usage-head"></span></div>
+                    <div class="bl-scroll"><table class="bl-table" id="bl-lines"></table></div>
+                </section>
+                <section class="bl-section">
+                    <div class="bl-section-head"><h3>Invoices</h3></div>
+                    <div class="bl-scroll" id="bl-invoices"><p class="bl-empty">Loading…</p></div>
+                </section>
+                <section class="bl-section hidden" id="bl-admin">
+                    <div class="bl-section-head"><h3>Pricing (local / assets only)</h3><span class="bl-msg">Your costs per unit, in £, and the margin added on top</span></div>
+                    <form id="bl-rates" class="bl-admin">
+                        <label>Video storage, per minute per month<input name="videoStorage" inputmode="decimal"></label>
+                        <label>Streaming, per minute<input name="videoDelivery" inputmode="decimal"></label>
+                        <label>New video processing, per minute<input name="videoEncoding" inputmode="decimal"></label>
+                        <label>File storage, per GB per month<input name="fileStorage" inputmode="decimal"></label>
+                        <label>Margin, %<input name="marginPct" inputmode="decimal"></label>
+                    </form>
+                    <form id="bl-plan-form" class="bl-admin" style="padding-top:0">
+                        <label>This venue's plan<input name="name" placeholder="e.g. Infrastructure"></label>
+                        <label>Monthly price, £<input name="price" inputmode="decimal" placeholder="e.g. 299"></label>
+                    </form>
+                    <div class="bl-admin-actions">
+                        <button type="button" class="cam-btn primary" id="bl-save">Save pricing</button>
+                        <button type="button" class="cam-btn ghost" id="bl-send">Send this month's invoice now</button>
+                        <span class="bl-msg" id="bl-admin-msg"></span>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+    <script>
+        function toggleSidebar() {
+            var sidebar = document.getElementById('sidebar'), overlay = document.getElementById('sidebar-overlay');
+            if (sidebar.classList.contains('-translate-x-full')) { sidebar.classList.remove('-translate-x-full'); overlay.classList.remove('hidden'); setTimeout(function() { overlay.classList.add('opacity-100'); }, 10); }
+            else { sidebar.classList.add('-translate-x-full'); overlay.classList.add('opacity-0'); setTimeout(function() { overlay.classList.add('hidden'); }, 300); }
+        }
+        function laFetch(url, opts) {
+            var sess = {}; try { sess = JSON.parse(localStorage.getItem('la_admin') || '{}'); } catch (_) {}
+            opts = Object.assign({}, opts); opts.headers = Object.assign({}, opts.headers);
+            if (sess.webToken) opts.headers['Authorization'] = 'Bearer ' + sess.webToken;
+            return fetch(url, opts);
+        }
+        function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+        function money(n, cur) { return new Intl.NumberFormat('en-GB', { style: 'currency', currency: (cur || 'gbp').toUpperCase(), minimumFractionDigits: 2 }).format(n || 0); }
+        function qty(n) { return Number(n || 0).toLocaleString('en-GB', { maximumFractionDigits: 2 }); }
+        function rate(n) { return '£' + Number(n || 0).toLocaleString('en-GB', { maximumFractionDigits: 5 }); }
+        (function() {
+            try { var s = JSON.parse(localStorage.getItem('la_admin') || '{}'); var v = (s.venue || '').toUpperCase();
+                document.getElementById('venue-breadcrumb').textContent = v; document.getElementById('venue-avatar').textContent = (v || '?').charAt(0); } catch (_) {}
+        })();
+
+        var _data = null;
+        async function load() {
+            var err = document.getElementById('bl-error');
+            try {
+                var r = await laFetch('/api/billing');
+                var d = await r.json();
+                if (!r.ok) throw new Error(d.error || r.status);
+                _data = d; render(d); err.classList.add('hidden');
+            } catch (e) { err.textContent = 'Could not load billing: ' + e.message; err.classList.remove('hidden'); }
+        }
+        function render(d) {
+            var cur = d.currency;
+            document.getElementById('bl-period').textContent = d.period.label;
+            document.getElementById('bl-total').textContent = money(d.total, cur);
+            document.getElementById('bl-total-note').textContent = 'So far this month · sent on the 1st';
+            document.getElementById('bl-bar').style.width = Math.round(d.period.elapsed * 100) + '%';
+            document.getElementById('bl-plan').textContent = d.plan ? money(d.planAmount, cur) : 'None';
+            document.getElementById('bl-plan-note').textContent = d.plan ? d.plan.name + ' · monthly' : 'Usage only';
+            document.getElementById('bl-usage').textContent = money(d.usageTotal, cur);
+            document.getElementById('bl-usage-note').textContent = qty(d.usage.videos) + ' videos · ' + qty(d.usage.fileBytes / 1e9) + ' GB of files';
+            document.getElementById('bl-usage-head').textContent = (d.usage.notes || []).join(' ');
+            var admin = d.isAdmin;
+            var rows = d.lines.map(function(l) {
+                return '<tr><td class="svc">' + esc(l.label) + '</td><td class="num">' + qty(l.quantity) + '<span class="unit">' + esc(l.unit) + '</span></td>' +
+                    (admin ? '<td class="num rate">' + rate(l.rate) + '<span class="unit">cost ' + money(l.cost, cur) + '</span></td>' : '') +
+                    '<td class="num">' + (l.rate ? money(l.amount, cur) : 'Included') + '</td></tr>';
+            }).join('');
+            if (d.plan) rows = '<tr><td class="svc">' + esc(d.plan.name) + '<span class="unit">Monthly plan</span></td><td class="num">1</td>' + (admin ? '<td class="num rate"></td>' : '') + '<td class="num">' + money(d.planAmount, cur) + '</td></tr>' + rows;
+            document.getElementById('bl-lines').innerHTML =
+                '<thead><tr><th>Service</th><th class="num">Usage</th>' + (admin ? '<th class="num rate">Rate</th>' : '') + '<th class="num">Amount</th></tr></thead>' +
+                '<tbody>' + rows + '</tbody><tfoot><tr><td>Total so far</td><td></td>' + (admin ? '<td class="rate"></td>' : '') + '<td class="num">' + money(d.total, cur) + '</td></tr></tfoot>';
+            var inv = document.getElementById('bl-invoices');
+            if (!d.invoices.length) inv.innerHTML = '<p class="bl-empty">' + (d.stripe ? 'No invoices yet. Your first invoice is sent on the 1st.' : 'Invoices appear here once billing is set up.') + '</p>';
+            else inv.innerHTML = '<table class="bl-table"><thead><tr><th>Invoice</th><th>Date</th><th>Status</th><th class="num">Amount</th><th></th></tr></thead><tbody>' +
+                d.invoices.map(function(i) {
+                    var st = i.status === 'paid' ? 'paid' : i.status === 'open' ? 'open' : '';
+                    return '<tr><td class="svc">' + esc(i.number || i.id) + '</td><td style="white-space:nowrap">' + new Date(i.created).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + '</td>' +
+                        '<td><span class="bl-pill ' + st + '">' + esc(i.status === 'open' ? 'Due' : i.status) + '</span></td><td class="num">' + money(i.total, i.currency) + '</td>' +
+                        '<td class="num">' + (i.url ? '<a class="bl-link" href="' + esc(i.url) + '" target="_blank" rel="noopener">' + (i.status === 'open' ? 'Pay' : 'View') + '</a>' : '') + (i.pdf ? '<a class="bl-link" href="' + esc(i.pdf) + '" target="_blank" rel="noopener">PDF</a>' : '') + '</td></tr>';
+                }).join('') + '</tbody></table>';
+            var box = document.getElementById('bl-admin');
+            box.classList.toggle('hidden', !admin);
+            if (admin && d.rates) {
+                var f = document.getElementById('bl-rates');
+                ['videoStorage', 'videoDelivery', 'videoEncoding', 'fileStorage'].forEach(function(k) { if (document.activeElement !== f[k]) f[k].value = d.rates[k]; });
+                if (document.activeElement !== f.marginPct) f.marginPct.value = Math.round((d.rates.margin || 0) * 1000) / 10;
+                var pf = document.getElementById('bl-plan-form');
+                if (d.plan && document.activeElement !== pf.name) { pf.name.value = d.plan.name; pf.price.value = d.plan.price; }
+            }
+        }
+        function post(body) {
+            return laFetch('/api/billing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+                .then(function(r) { return r.json().then(function(d) { if (!r.ok) throw new Error(d.error || r.status); return d; }); });
+        }
+        document.getElementById('bl-save').addEventListener('click', async function() {
+            var msg = document.getElementById('bl-admin-msg'), f = document.getElementById('bl-rates'), pf = document.getElementById('bl-plan-form');
+            this.disabled = true; msg.textContent = 'Saving…';
+            try {
+                await post({ action: 'setRates', rates: { videoStorage: f.videoStorage.value, videoDelivery: f.videoDelivery.value, videoEncoding: f.videoEncoding.value, fileStorage: f.fileStorage.value, margin: Number(f.marginPct.value) / 100 } });
+                if (pf.name.value.trim() && pf.price.value !== '') await post({ action: 'setPlan', name: pf.name.value, price: pf.price.value });
+                msg.textContent = 'Saved'; await load();
+            } catch (e) { msg.textContent = 'Could not save: ' + e.message; }
+            this.disabled = false;
+        });
+        document.getElementById('bl-send').addEventListener('click', async function() {
+            var msg = document.getElementById('bl-admin-msg');
+            if (!(await laConfirm({ title: 'Send the invoice now?', message: 'An itemised invoice for this month so far is created in Stripe and emailed to this venue.', confirmText: 'Send invoice' }))) return;
+            this.disabled = true; msg.textContent = 'Creating the invoice…';
+            try {
+                var d = await post({ action: 'invoiceNow', period: 'current' });
+                msg.textContent = d.skipped ? (d.reason || 'Nothing to invoice') : 'Invoice sent'; await load();
+            } catch (e) { msg.textContent = 'Could not send: ' + e.message; }
+            this.disabled = false;
+        });
+        load();
+    </script>
+</body>
+</html>

@@ -2,7 +2,7 @@
   "cleanUrls": true,
   "headers": [
     {
-      "source": "/(dashboard|assets|camera|login|brand)(.*)",
+      "source": "/(dashboard|assets|camera|login|brand|billing)(.*)",
       "headers": [
         {
           "key": "Cache-Control",
@@ -41,12 +41,21 @@
       "maxDuration": 300,
       "memory": 3009,
       "includeFiles": "node_modules/ffmpeg-static/ffmpeg"
+    },
+    "api/billing.js": {
+      "maxDuration": 120
     }
   },
   "rewrites": [
     {
       "source": "/asset/:path*",
       "destination": "/api/asset?path=brand/:path*"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/billing?cron=1",
+      "schedule": "0 6 1 * *"
     }
   ]
 }

@@ -61,6 +61,9 @@ document.addEventListener("DOMContentLoaded", () => {
             <a href="/assets" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('/assets')}">
                 Upload Asset
             </a>
+            <a href="/billing" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('/billing')}">
+                Billing
+            </a>
         </nav>
         <div class="px-4 pt-6 mt-4 flex justify-center" style="padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1.5rem)">
             <div class="la-theme-switcher" role="radiogroup" aria-label="Theme">
@@ -283,7 +286,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             var data = await res.json().catch(function() { return {}; });
             var cur = _getAdminSession();
-            if (res.ok && data.webToken && cur) { cur.webToken = data.webToken; localStorage.setItem('la_admin', JSON.stringify(cur)); }
+            if (res.ok && data.webToken && cur) { cur.webToken = data.webToken; cur.ts = Date.now(); localStorage.setItem('la_admin', JSON.stringify(cur)); }
         } catch (e) {} finally { _refreshing = false; }
     }
     setInterval(_refreshToken, 5 * 60 * 1000);

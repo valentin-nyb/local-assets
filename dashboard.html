@@ -644,15 +644,16 @@
         var _cutting = {};   // sessions whose vertical originals are being cut, by "ARTIST|date" → started at
         try { _cutting = JSON.parse(sessionStorage.getItem('la_cutting') || '{}'); } catch (_) {}
         function sessionKey(btn) { return btn.dataset.wmArtist + '|' + btn.dataset.wmDate; }
-        function isCutting(btn) { var t = _cutting[sessionKey(btn)]; return t && Date.now() - t < 15 * 60e3; }
+        // "Working" only while cuts are running: a few minutes after starting, or while the server reports new clips processing
+        function isCutting(btn) { var t = _cutting[sessionKey(btn)]; return !!t && (Date.now() - t < 6 * 60e3 || _wmState.verticalsPending > 0) && Date.now() - t < 20 * 60e3; }
         function paintWatermarkButtons() {
             document.querySelectorAll('.wm-apply').forEach(function(btn) {
                 var ids = (btn.dataset.wmClips || '').split(',').filter(Boolean);
                 var pending = ids.some(function(id) { return _wmState.pendingIds.indexOf(id) >= 0; });
                 var marked = ids.some(function(id) { return _wmState.watermarked.indexOf(id) >= 0; });
                 var horizontal = ids.some(function(id) { return _wmState.horizontal.indexOf(id) >= 0; });
-                // Watermarks go on vertical originals only
-                btn.classList.toggle('hidden', !marked && !pending && (horizontal || isCutting(btn)));
+                // Hidden only while new vertical clips are being made for this session
+                btn.classList.toggle('hidden', !marked && !pending && isCutting(btn));
                 btn.classList.toggle('is-remove', !pending && !!marked);
                 btn.disabled = pending;
                 btn.textContent = pending ? 'Watermarking…' : marked ? 'Remove watermark' : 'Apply watermark';
@@ -664,7 +665,7 @@
                 var cutting = isCutting(btn);
                 btn.classList.toggle('hidden', !(horizontal || Number(btn.dataset.missing) > 0) && !cutting);
                 btn.disabled = cutting;
-                btn.textContent = cutting ? 'Cutting vertical clips…' : 'Make vertical clips';
+                btn.textContent = cutting ? 'Making vertical clips…' : horizontal ? 'Make vertical (9:16)' : 'Cut missing clips';
             });
         }
         document.addEventListener('click', async function(e) {
@@ -698,7 +699,7 @@
             var btn = e.target.closest('.wm-restore');
             if (!btn) return;
             e.stopPropagation();
-            if (!await laConfirm({ title: 'Make the vertical clips?', message: 'Each clip is cut once from the full recording at 1080 × 1920 and kept as the original. The current clips are replaced when the new ones are ready, in a few minutes.', confirmText: 'Make vertical clips' })) return;
+            if (!await laConfirm({ title: 'Make vertical clips?', message: 'Each clip is cut once from the 4K long form at 1080 × 1920 (9:16) and kept as the original. The current clips are replaced when the new ones are ready, in a few minutes.', confirmText: 'Make vertical clips' })) return;
             btn.disabled = true; btn.textContent = 'Starting…';
             try {
                 var r = await laFetch('/api/vertical-clips', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'start', artist: btn.dataset.wmArtist, date: btn.dataset.wmDate }) });
@@ -725,7 +726,7 @@
                     _wmState = { watermarked: d.watermarked || [], pendingIds: d.pendingIds || [], horizontal: d.horizontal || [], verticalsPending: d.verticalsPending || 0 };
                     // Vertical clips that replaced every horizontal one end the "cutting" state
                     var cuttingAny = Object.keys(_cutting).some(function(k) { return Date.now() - _cutting[k] < 15 * 60e3; });
-                    if (cuttingAny && !_wmState.horizontal.length && !d.verticalsPending) { _cutting = {}; try { sessionStorage.removeItem('la_cutting'); } catch (_) {} cuttingAny = false; }
+                    if (cuttingAny && !d.verticalsPending && Object.keys(_cutting).every(function(k) { return Date.now() - _cutting[k] > 6 * 60e3; })) { _cutting = {}; try { sessionStorage.removeItem('la_cutting'); } catch (_) {} cuttingAny = false; }
                     if (d.done) fetchRecentUploads(); else paintWatermarkButtons();
                     if (d.pending || cuttingAny) _wmSweepT = setTimeout(sweepWatermarks, 30000);
                 }).catch(function() {});
