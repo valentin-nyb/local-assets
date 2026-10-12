@@ -562,7 +562,13 @@
                     if (key === 'textsrc') { _wm.text.source = v; if (v === 'custom' && !_wm.text.value) _wm.text.value = _orgName || venueName(); renderWatermark(); saveWatermark(); return; }
                     if (key === 'textsize') { _wm.text.size = v; box.querySelectorAll('[data-wm="textsize"][data-v]').forEach(function(b) { b.setAttribute('aria-pressed', b.dataset.v === v); }); positionPreview(); saveWatermark(); return; }
                     if (key === 'textcolor') { _wm.text.color = v; box.querySelectorAll('[data-wm="textcolor"][data-v]').forEach(function(b) { b.setAttribute('aria-pressed', b.dataset.v === v); }); positionPreview(); saveWatermark(); return; }
-                    if (key === 'textpos') _wm.text.position = v; else _wm[key] = v; if (key === 'enabled') renderWatermark(); else { box.querySelectorAll('[data-wm="' + key + '"][data-v]').forEach(function(b) { b.setAttribute('aria-pressed', b.dataset.v === v); }); positionPreview(); } saveWatermark(); };
+                    if (key === 'textpos') _wm.text.position = v; else _wm[key] = v; if (key === 'enabled') {
+                        // On/off in place: rebuilding the panel would make the preview text jump
+                        var sw = box.querySelector('[data-wm="enabled"]'); if (sw) sw.setAttribute('aria-checked', v);
+                        var lbl = box.querySelector('.bk-wm-foot span'); if (lbl) lbl.textContent = v ? 'Watermark on' : 'Watermark off';
+                        var rows = box.querySelector('.bk-wm-rows'); if (rows) rows.classList.toggle('off', !v);
+                        document.querySelectorAll('[data-use-wm]').forEach(function(b) { var on = v && wmPreviewLogo() === b.dataset.useWm; b.classList.toggle('is-on', on); b.textContent = on ? 'Watermark' : 'Use as watermark'; });
+                    } else { box.querySelectorAll('[data-wm="' + key + '"][data-v]').forEach(function(b) { b.setAttribute('aria-pressed', b.dataset.v === v); }); positionPreview(); } saveWatermark(); };
                 if (el.tagName === 'SELECT') el.addEventListener('change', function() { apply(el.value); });
                 else if (el.type === 'range') { el.addEventListener('input', function() { _wm.opacity = el.value / 100; positionPreview(); }); el.addEventListener('change', function() { saveWatermark(); }); }
                 else if (key === 'enabled') el.addEventListener('click', function() { apply(!_wm.enabled); });
