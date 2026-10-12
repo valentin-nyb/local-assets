@@ -161,15 +161,23 @@ export async function cutVertical(redis, auth, job) {
   if (await redis.hGet(doneKey(job.masterId), String(job.n))) return { skipped: 'already cut' };
   const out = path.join(os.tmpdir(), `v-${job.masterId}-${job.n}-${Date.now()}.mp4`);
   try {
-    await run([
-      '-hide_banner', '-loglevel', 'warning', '-y',
-      '-ss', String(job.start), '-t', String(job.end - job.start),
-      '-i', `https://stream.mux.com/${job.pid}.m3u8?rendition_order=desc`,
-      '-map', '0:v:0', '-map', '0:a:0?',
+    // Read only the part to cut: Mux instant clipping serves just that stretch of the recording, so the cutter
+    // never has to jump into the middle of the stream (which fails on recordings stored as fMP4).
+    // If that comes out empty, fall back to the downloadable MP4 when it exists.
+    const len = Math.max(1, job.end - job.start);
+    const encode = ['-map', '0:v:0', '-map', '0:a:0?',
       '-vf', 'crop=trunc(ih*9/16/2)*2:ih,scale=1080:1920:flags=lanczos,setsar=1,fps=30',
       '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p',
-      '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', out,
-    ]);
+      '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', out];
+    const sizeOf = () => (fs.existsSync(out) ? fs.statSync(out).size : 0);
+    await run(['-hide_banner', '-loglevel', 'warning', '-y',
+      '-i', `https://stream.mux.com/${job.pid}.m3u8?rendition_order=desc&asset_start_time=${Math.floor(job.start)}&asset_end_time=${Math.ceil(job.end)}`,
+      '-t', String(len), ...encode]).catch(e => console.error('[verticals] instant clip', e.message));
+    if (sizeOf() < 200 * 1024) {
+      await run(['-hide_banner', '-loglevel', 'warning', '-y',
+        '-ss', String(job.start), '-t', String(len), '-i', `https://stream.mux.com/${job.pid}/highest.mp4`, ...encode])
+        .catch(e => console.error('[verticals] mp4 fallback', e.message));
+    }
     // A cut that came out empty (stream not readable) is an error, not a clip
     const size = fs.existsSync(out) ? fs.statSync(out).size : 0;
     console.log('[verticals] cut', job.slug, job.artist, job.n, Math.round(size / 1024) + ' KB');
