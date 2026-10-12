@@ -5,11 +5,11 @@ import opentype from 'opentype.js';
 // laid out exactly like the clip worker (server/jobs/watermark.js) and the Brand Kit preview.
 // Mux puts it over a clip as an overlay covering the whole frame.
 
-const BOX = { s: [120, 84], m: [180, 128], l: [260, 184] };
-const TEXT_PX = { s: 44, m: 56, l: 72 };
+const BOX = { s: [120, 80], m: [160, 110], l: [220, 150] };
+const TEXT_PX = { s: 36, m: 46, l: 60 };
 const TEXT_MAX_WIDTH = 760;
 const STACK_GAP = 24;
-export const VERTICAL = { W: 1080, H: 1920, mx: 120, top: 220, bottom: 200 };
+export const VERTICAL = { W: 1080, H: 1920, mx: 60, top: 140, bottom: 120 };
 
 async function download(url) {
   const r = await fetch(url, { signal: AbortSignal.timeout(20000) });

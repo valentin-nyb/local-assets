@@ -447,15 +447,15 @@
         var WM_POS = [['bl', 'Bottom left'], ['br', 'Bottom right'], ['tl', 'Top left'], ['tr', 'Top right']];
         var WM_SIZE = [['s', 'Small'], ['m', 'Medium'], ['l', 'Large']];
         // Largest logo box per size, in px on a 1080×1920 clip (same as the clip worker)
-        var WM_BOX = { s: [120, 84], m: [180, 128], l: [260, 184] };
-        var WM_MARGIN_X = 120;   // side margin in px on a 1080-wide clip, same as the clip worker
+        var WM_BOX = { s: [120, 80], m: [160, 110], l: [220, 150] };
+        var WM_MARGIN_X = 60;   // side margin in px on a 1080-wide clip, same as the clip worker
         var WM_FRAMES = [['vertical', 'Vertical'], ['horizontal', 'Horizontal']];
         var _wmFrame = 'vertical';
         function frameCaption() { return _wmFrame === 'horizontal' ? 'Horizontal · 1920 × 1080' : 'Vertical · 1080 × 1920'; }
         var WM_TEXT_POS = [['bl', 'Bottom left'], ['br', 'Bottom right'], ['tl', 'Top left'], ['tr', 'Top right']];
         var WM_TEXT_SRC = [['artist', 'Artist name'], ['custom', 'Custom']];
         var WM_TEXT_COLOR = [['white', 'White'], ['black', 'Black']];
-        var WM_TEXT_PX = { s: 44, m: 56, l: 72 };
+        var WM_TEXT_PX = { s: 36, m: 46, l: 60 };
         // The clip worker draws watermark text from these font files (not WOFF2)
         var WM_TEXT_FONT = /\.(ttf|otf|woff)$/i;
         function wmLogos() { return _files.filter(function(f) { return f.category === 'logos' && /\.(png|svg|webp|jpe?g)$/i.test(f.name); }); }
@@ -604,16 +604,15 @@
             img.style.top = p[0] === 't' ? Math.round(L.top * k) + 'px' : 'auto';
             img.style.bottom = p[0] === 'b' ? Math.round(L.bottom * k) + 'px' : 'auto';
         }
-        // Where the watermark sits in each frame, in px. Vertical clears the TikTok, Reels and Shorts buttons;
-        // horizontal (YouTube) only needs a margin.
+        // Where the watermark sits in each frame, in px: close to the edge and low, same sizes in both frames
         var WM_LAYOUT = {
-            vertical:   { W: 1080, H: 1920, mx: WM_MARGIN_X, top: 220, bottom: 200 },
-            horizontal: { W: 1920, H: 1080, mx: 96, top: 72, bottom: 72 },
+            vertical:   { W: 1080, H: 1920, mx: WM_MARGIN_X, top: 140, bottom: 120 },
+            horizontal: { W: 1920, H: 1080, mx: 60, top: 52, bottom: 52 },
         };
         // Thumbnails have no captions or buttons over them, so the watermark sits near the edge
         var THUMB_LAYOUT = {
             horizontal: WM_LAYOUT.horizontal,
-            vertical:   { W: 1080, H: 1920, mx: 96, top: 96, bottom: 110 },
+            vertical:   { W: 1080, H: 1920, mx: 60, top: 80, bottom: 80 },
         };
         function loadImage(url) {
             return new Promise(function(res, rej) {

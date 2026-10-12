@@ -80,6 +80,7 @@
         .wm-apply:disabled { opacity:.6; cursor:default; }
         .wm-restore { height:28px; padding:0 12px; border-radius:999px; border:1px solid var(--la-line); background:transparent; color:var(--la-sub); font:500 11px Inter,ui-sans-serif,system-ui,sans-serif; cursor:pointer; white-space:nowrap; }
         .wm-restore:disabled { opacity:.6; cursor:default; }
+        .wm-restore.hidden { display:none; }
         @media (hover:hover) { .wm-restore:not(:disabled):hover { color:var(--la-text); border-color:var(--la-text); } }
         .wm-apply.is-remove { color:var(--la-bad, #ef4444); border-color:color-mix(in srgb, var(--la-bad, #ef4444) 45%, transparent); }
         @media (hover:hover) { .wm-apply:not(:disabled):not(.is-remove):hover { border-color:var(--la-accent); color:var(--la-accent); } .wm-apply.is-remove:hover { background:color-mix(in srgb, var(--la-bad, #ef4444) 12%, transparent); } }
@@ -629,6 +630,13 @@
                 btn.disabled = pending;
                 btn.textContent = pending ? 'Watermarking…' : marked ? 'Remove watermark' : 'Apply watermark';
             });
+            // Restore originals: shown when clips are missing or carry a watermark
+            document.querySelectorAll('.wm-restore').forEach(function(btn) {
+                var ids = (btn.dataset.wmClips || '').split(',').filter(Boolean);
+                var marked = ids.some(function(id) { return _wmState.watermarked.indexOf(id) >= 0; });
+                var pending = ids.some(function(id) { return _wmState.pendingIds.indexOf(id) >= 0; });
+                btn.classList.toggle('hidden', !(Number(btn.dataset.missing) > 0 || marked) || pending);
+            });
         }
         document.addEventListener('click', async function(e) {
             var btn = e.target.closest('.wm-apply');
@@ -662,16 +670,18 @@
             var btn = e.target.closest('.wm-restore');
             if (!btn) return;
             e.stopPropagation();
+            if (!await laConfirm({ title: 'Restore the original clips?', message: 'Watermarked clips are swapped back for their originals without a watermark, and deleted clips are cut again from the full recording.', confirmText: 'Restore originals' })) return;
             btn.disabled = true; btn.textContent = 'Restoring…';
             try {
                 var r = await laFetch('/api/watermark-clips', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'restore', artist: btn.dataset.wmArtist, date: btn.dataset.wmDate }) });
                 var d = await r.json().catch(function() { return {}; });
                 if (!r.ok) throw new Error(d.error || r.status);
                 var n = (d.restored || 0) + (d.recreated || 0);
-                laToast(n ? n + ' clip' + (n !== 1 ? 's' : '') + ' restored without a watermark. New cuts take a few minutes to process.' : 'Nothing to restore.');
+                laToast(n ? n + ' clip' + (n !== 1 ? 's' : '') + ' back to the original without a watermark.' + (d.recreated ? ' Re-cut clips take a few minutes to process.' : '') : 'These clips are already the originals.');
+                sweepWatermarks();
                 fetchRecentUploads();
             } catch (er) {
-                btn.disabled = false; btn.textContent = 'Restore clips';
+                btn.disabled = false; btn.textContent = 'Restore originals';
                 laAlert('Could not restore the clips: ' + er.message, { tone: 'error' });
             }
         });
@@ -1047,7 +1057,8 @@
                 var mAsset = mBucket.filter(function(a) { return new Date(a.created_at * 1000).toISOString().slice(0, 10) === sessionDate; })[0] || mBucket[0];
                 var expected = mAsset ? Math.min(Math.floor(Number(mAsset.duration) / 30), 5) : 0;
                 html += '<div class="flex items-center gap-2">';
-                if (expected > clips.length) html += '<button type="button" class="wm-restore" data-wm-artist="' + escHtml(name) + '" data-wm-date="' + escHtml(sessionDate) + '" title="Cut the missing clips again from the full recording">Restore ' + (expected - clips.length) + ' clip' + (expected - clips.length !== 1 ? 's' : '') + '</button>';
+                var missing = Math.max(0, expected - clips.length);
+                html += '<button type="button" class="wm-restore' + (missing ? '' : ' hidden') + '" data-missing="' + missing + '" data-wm-artist="' + escHtml(name) + '" data-wm-date="' + escHtml(sessionDate) + '" data-wm-clips="' + escHtml(clips.map(function(c) { return c.id; }).join(',')) + '" title="Bring back the original clips without a watermark">Restore originals</button>';
                 html += '<button type="button" class="wm-apply" data-wm-artist="' + escHtml(name) + '" data-wm-date="' + escHtml(sessionDate) + '" data-wm-clips="' + escHtml(clips.map(function(c) { return c.id; }).join(',')) + '" title="Put the Brand Kit watermark on these clips">Apply watermark</button>';
                 html += '</div>';
                 html += '</div>';

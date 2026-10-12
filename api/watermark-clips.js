@@ -50,8 +50,8 @@ async function listAllAssets(auth) {
 
 const SUB = /^(.+?) \/\/ (SOCIAL|SOCIALRAW) \/\/ (\d+)$/i;
 
-// Brings a session's vertical clips back to clean originals: hidden originals are shown again,
-// and clips that no longer exist are cut again from the full recording at their original times.
+// Brings a session's vertical clips back to clean originals: watermarked clips are swapped for their
+// hidden originals, and clips that no longer exist are cut again from the full recording at their original times.
 async function restoreClips(redis, slug, auth, artist, date) {
   const assets = await listAllAssets(auth);
   const masterOf = a => {
@@ -75,9 +75,20 @@ async function restoreClips(redis, slug, auth, artist, date) {
   }
   const pendingOld = new Set(Object.values(await redis.hGetAll(swapsKey(slug))).map(v => parseSwap(v).old));
   let restored = 0, recreated = 0;
+  const rawOf = await redis.hGetAll(rawKey(slug));
   for (const t of clipTimes(Number(master.duration))) {
-    if (shown.has(t.n)) continue;
     const raw = hidden.get(t.n);
+    const cur = shown.get(t.n);
+    if (cur) {
+      // Shown with a watermark: its clean original takes its place again
+      if (raw && rawOf[cur.id] === raw.id && !pendingOld.has(cur.id)) {
+        await muxReq(auth, `/video/v1/assets/${encodeURIComponent(raw.id)}`, { method: 'PATCH', body: JSON.stringify({ passthrough: `${artist} // SOCIAL // ${String(t.n).padStart(2, '0')}` }) });
+        await muxReq(auth, `/video/v1/assets/${encodeURIComponent(cur.id)}`, { method: 'DELETE' }).catch(e => { if (e.status !== 404) throw e; });
+        await redis.hDel(rawKey(slug), cur.id);
+        restored++;
+      }
+      continue;
+    }
     const tag = `${artist} // SOCIAL // ${String(t.n).padStart(2, '0')}`;
     if (raw) {
       if (pendingOld.has(raw.id)) continue;
