@@ -435,14 +435,17 @@
                     box.dataset.painted = url;
                     box.innerHTML = '<img src="' + url.replace(/"/g, '&quot;') + '" alt="" style="width:100%;height:100%;object-fit:cover">';
                 });
-                // Session rows: the venue's logo from the Brand Kit replaces the calendar icon
-                var missing = false;
+                // Session rows: the venue's logo from the Brand Kit replaces the calendar icon.
+                // Dark theme shows a white logo on a dark tile, light theme a black logo on a light tile.
+                var missing = false, dark = document.documentElement.classList.contains('dark');
                 document.querySelectorAll('[data-venue-logo]').forEach(function(box) {
-                    var url = _venueLogos[box.dataset.venueLogo] || _venueLogosByName[nameKey(box.dataset.venueName)];
-                    if (!url) { missing = true; box.title = 'No Brand Kit logo found for venue "' + (box.dataset.venueName || '') + '" (' + Object.keys(_venueLogos).filter(function(k) { return k.indexOf('#') < 0; }).join(', ') + ')'; }
-                    if (!url || box.dataset.painted === url) return;
-                    box.dataset.painted = url;
+                    var list = _venueLogos[box.dataset.venueLogo] || _venueLogosByName[nameKey(box.dataset.venueName)];
+                    if (!list || !list.length) { missing = true; box.title = 'No Brand Kit logo found for venue "' + (box.dataset.venueName || '') + '"'; return; }
+                    var url = pickVenueLogo(list, dark), key = url + (dark ? '#d' : '#l');
+                    if (box.dataset.painted === key) return;
+                    box.dataset.painted = key;
                     box.title = 'Venue logo from Brand Kit';
+                    box.style.setProperty('background', dark ? '#141416' : '#f4f4f5', 'important');
                     box.innerHTML = '<img src="' + url.replace(/"/g, '&quot;') + '" alt="" crossorigin="anonymous" style="width:100%;height:100%;object-fit:contain;padding:4px" onload="fitLogoBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}">';
                 });
                 // A venue added to the Brand Kit since we last looked: check once more
@@ -458,28 +461,44 @@
                     if ((f.owner !== 'venue' && f.owner.indexOf('venue-') !== 0) || !/\.(png|jpe?g|svg|webp|gif)$/i.test(f.name)) return;
                     // logos first; any other image of the venue as a fallback
                     var better = f.category === 'logos';
-                    if (!_venueLogos[f.owner] || (better && !_venueLogos[f.owner + '#logo'])) {
-                        _venueLogos[f.owner] = f.url;
-                        if (better) _venueLogos[f.owner + '#logo'] = true;
-                        _venueLogosByName[nameKey(f.owner === 'venue' ? (d.orgName || getVenueName()) : (names[f.owner] || f.owner.slice(6)))] = f.url;
-                    }
+                    // Every image of the venue, logos first, so the theme can pick the white or the black one
+                    var list = _venueLogos[f.owner] || (_venueLogos[f.owner] = []);
+                    list[better ? 'unshift' : 'push']({ url: f.url, name: f.name, logo: better });
+                    _venueLogosByName[nameKey(f.owner === 'venue' ? (d.orgName || getVenueName()) : (names[f.owner] || f.owner.slice(6)))] = list;
                 });
                 _brandPhotosAt = Date.now(); paint();
             }).catch(function() {});
         }
-        // Light logos get a dark backing, dark logos a light one (measured from visible pixels)
+        // The white version of a logo for the dark theme, the black one for the light theme
+        function pickVenueLogo(list, dark) {
+            var logos = list.filter(function(x) { return x.logo; });
+            var pool = logos.length ? logos : list;
+            var want = dark ? /white|light|blanc|bianco|neg|inverse|reverse/i : /black|dark|noir|nero|negro/i;
+            return (pool.filter(function(x) { return want.test(x.name); })[0] || pool[0]).url;
+        }
+        // Repaint the venue logos when the theme changes
+        new MutationObserver(function() { if (_brandPhotos) applyArtistPhotos(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+        // A one-colour logo in the wrong colour for the theme is flipped (black → white in dark);
+        // a colourful one keeps its colours on a contrasting tile
         function fitLogoBg(img) {
-            var box = img.parentNode, tone = null;
+            var box = img.parentNode, dark = document.documentElement.classList.contains('dark');
             try {
                 var c = document.createElement('canvas'), n = 32; c.width = n; c.height = n;
                 var ctx = c.getContext('2d', { willReadFrequently: true }); ctx.drawImage(img, 0, 0, n, n);
-                var d = ctx.getImageData(0, 0, n, n).data, sum = 0, cnt = 0;
-                for (var i = 0; i < d.length; i += 4) { if (d[i + 3] < 40) continue; sum += (0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]) / 255; cnt++; }
-                if (cnt && cnt / (n * n) < 0.97) tone = sum / cnt > 0.6 ? 'dark' : sum / cnt < 0.4 ? 'light' : null;
+                var d = ctx.getImageData(0, 0, n, n).data, sum = 0, sat = 0, cnt = 0;
+                for (var i = 0; i < d.length; i += 4) {
+                    if (d[i + 3] < 40) continue;
+                    var mx = Math.max(d[i], d[i + 1], d[i + 2]), mn = Math.min(d[i], d[i + 1], d[i + 2]);
+                    sum += (0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]) / 255; sat += mx ? (mx - mn) / mx : 0; cnt++;
+                }
+                if (!cnt || cnt / (n * n) >= 0.97) return;   // a photo or a logo on a solid square: leave it
+                var lum = sum / cnt, mono = sat / cnt < 0.15;
+                var wrong = dark ? lum < 0.4 : lum > 0.6;
+                if (!wrong) return;
+                if (mono) img.style.filter = 'invert(1)';
+                else box.style.setProperty('background', dark ? '#f4f4f5' : '#141416', 'important');
             } catch (_) {}
-            if (tone) box.style.setProperty('background', tone === 'dark' ? '#141416' : '#f4f4f5', 'important');
         }
-
         // Summary row pinned to the bottom of Distribution History, so the card
         // reads as complete when it holds only one or two artists.
         function renderDistFooter(artistCount, sessionCount, assetCount) {
