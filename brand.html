@@ -1052,7 +1052,8 @@
             var cat = CATS.filter(function(c) { return c.key === f.category; })[0] || CATS[CATS.length - 1];
             var tagText = cat.key === 'photos' && f.owner.indexOf('artist-') === 0 ? (_ownerPhotos[f.owner] === f.url ? 'Artist photo' : 'Photo') : cat.tag;
             var tag = '<button type="button" class="bk-tag' + (_ownerPhotos[f.owner] === f.url ? ' is-profile' : '') + '" data-move="' + esc(f.url) + '" title="Change type">' + tagText + '</button>';
-            var isPhoto = f.category === 'covers' || f.category === 'artwork' || f.category === 'photos';
+            // Photos fill the card; JPGs filed as logos are photos too (no transparency). Transparent logos stay whole.
+            var isPhoto = f.category === 'covers' || f.category === 'artwork' || f.category === 'photos' || /\.jpe?g$/i.test(f.name);
             var preview = IMG_EXT.test(f.name)
                 ? '<div class="bk-preview' + (isPhoto ? ' photo' : '') + '">' + tag + '<img src="' + esc(f.url) + '" alt="" loading="lazy" crossorigin="anonymous" onload="fitPreviewBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}">' +
                     '' +
