@@ -77,7 +77,7 @@ export async function renderWatermarkPng(wm, L = VERTICAL, width = L.W) {
     const tPos = wm.text.position || 'br';
     const sameRow = logo && tPos !== position && tPos[0] === position[0];
     const room = sameRow ? Math.min(TEXT_MAX_WIDTH * s, L.W - 2 * L.mx - logo.w - 48 * s) : TEXT_MAX_WIDTH * s;
-    const t = await textLayer(wm.text, wm.size, room, s).catch(e => { console.error('[watermark-render] text:', e.message); return null; });
+    const t = await textLayer(wm.text, wm.text.size || wm.size, room, s).catch(e => { console.error('[watermark-render] text:', e.message); return null; });
     if (t) {
       // Same corner: next to the logo. Same row, other side: lined up with the middle of the logo.
       const shift = !logo ? 0 : tPos === position ? logo.h + STACK_GAP * s : sameRow ? (logo.h - t.h) / 2 : 0;

@@ -457,6 +457,8 @@
         var WM_TEXT_POS = [['bl', 'Bottom left'], ['br', 'Bottom right'], ['tl', 'Top left'], ['tr', 'Top right']];
         var WM_TEXT_SRC = [['artist', 'Artist name'], ['custom', 'Custom']];
         var WM_TEXT_COLOR = [['white', 'White'], ['black', 'Black']];
+        // The text has its own size; until one is chosen it follows the logo's
+        function wmTextSize() { return (_wm.text && WM_TEXT_PX[_wm.text.size]) ? _wm.text.size : (_wm.size || 'm'); }
         var WM_TEXT_PX = { s: 36, m: 46, l: 60 };
         // The clip worker draws watermark text from these font files (not WOFF2)
         var WM_TEXT_FONT = /\.(ttf|otf|woff)$/i;
@@ -519,7 +521,8 @@
                             : wmTextFonts().length
                             ? '<div class="bk-wm-textrow"><button type="button" class="cam-btn ghost" id="bk-wm-text-artist">Add artist name</button><span class="bk-wm-font">Or preview a font, type your text and choose Use as watermark.</span></div>'
                             : '<p class="bk-wm-hint">Upload a font (TTF, OTF or WOFF) to add the artist\'s name or a line of text.</p>') +
-                        '<span class="bk-wm-label">Size</span>' + seg('size', WM_SIZE, _wm.size) +
+                        '<span class="bk-wm-label">Logo size</span>' + seg('size', WM_SIZE, _wm.size) +
+                        (wmText() ? '<span class="bk-wm-label">Text size</span>' + seg('textsize', WM_SIZE, wmTextSize()) : '') +
                         '<span class="bk-wm-label">Opacity</span><input type="range" min="30" max="100" step="5" value="' + Math.round(_wm.opacity * 100) + '" data-wm="opacity" aria-label="Opacity">' +
                     '</div>' +
                     '<p class="bk-wm-status" id="bk-wm-status">' + (noLogo && !wmText() ? 'Upload a logo to your brand kit to use a watermark.' : '') + '</p>' +
@@ -550,6 +553,7 @@
                     // The frame only changes the preview and export, it isn't saved
                     if (key === 'frame') { _wmFrame = v; renderWatermark(); return; }
                     if (key === 'textsrc') { _wm.text.source = v; if (v === 'custom' && !_wm.text.value) _wm.text.value = _orgName || venueName(); renderWatermark(); saveWatermark(); return; }
+                    if (key === 'textsize') { _wm.text.size = v; box.querySelectorAll('[data-wm="textsize"][data-v]').forEach(function(b) { b.setAttribute('aria-pressed', b.dataset.v === v); }); positionPreview(); saveWatermark(); return; }
                     if (key === 'textcolor') { _wm.text.color = v; box.querySelectorAll('[data-wm="textcolor"][data-v]').forEach(function(b) { b.setAttribute('aria-pressed', b.dataset.v === v); }); positionPreview(); saveWatermark(); return; }
                     if (key === 'textpos') _wm.text.position = v; else _wm[key] = v; if (key === 'enabled') renderWatermark(); else { box.querySelectorAll('[data-wm="' + key + '"][data-v]').forEach(function(b) { b.setAttribute('aria-pressed', b.dataset.v === v); }); positionPreview(); } saveWatermark(); };
                 if (el.tagName === 'SELECT') el.addEventListener('change', function() { apply(el.value); });
@@ -577,12 +581,12 @@
                     var tp = _wm.text.position;
                     // Same corner as the logo: text sits next to it, further from the edge
                     var lhClip = url && img.complete && img.naturalWidth ? Math.min((WM_BOX[_wm.size] || WM_BOX.m)[1], (WM_BOX[_wm.size] || WM_BOX.m)[0] * img.naturalHeight / img.naturalWidth) : 0;
-                    txt.style.fontSize = Math.round(WM_TEXT_PX[_wm.size] * k) + 'px';
+                    txt.style.fontSize = Math.round(WM_TEXT_PX[wmTextSize()] * k) + 'px';
                     txt.style.maxWidth = 'none';
                     // On the same row as the logo, the text keeps clear of it (as on the clips)
                     var lwClip = lhClip ? lhClip * img.naturalWidth / img.naturalHeight : 0;
                     var room = lhClip && tp !== p && tp[0] === p[0] ? Math.min(760, L.W - 2 * L.mx - lwClip - 48) : 760;
-                    if (txt.offsetWidth / k > room) txt.style.fontSize = (WM_TEXT_PX[_wm.size] * room / (txt.offsetWidth / k)) * k + 'px';
+                    if (txt.offsetWidth / k > room) txt.style.fontSize = (WM_TEXT_PX[wmTextSize()] * room / (txt.offsetWidth / k)) * k + 'px';
                     var thClip = txt.offsetHeight / k;
                     // Same corner as the logo: next to it. Same row, other side: lined up with the middle of the logo.
                     var shift = !lhClip ? 0 : tp === p ? lhClip + 24 : tp[0] === p[0] ? (lhClip - thClip) / 2 : 0;
@@ -646,7 +650,7 @@
                     g.drawImage(logo, p[1] === 'l' ? L.mx : W - L.mx - lw, p[0] === 't' ? L.top : H - L.bottom - lh, lw, lh);
                 }
                 if (tf && family) {
-                    var px = WM_TEXT_PX[_wm.size] || WM_TEXT_PX.m, pad = 12, tp = _wm.text.position;
+                    var px = WM_TEXT_PX[wmTextSize()] || WM_TEXT_PX.m, pad = 12, tp = _wm.text.position;
                     var room = logo && tp !== p && tp[0] === p[0] ? Math.min(760, W - 2 * L.mx - lh * ar - 48) : 760;
                     g.font = px + 'px ' + family;
                     var tv = wmTextValue();
@@ -1032,7 +1036,7 @@
             if (useWm) useWm.addEventListener('click', function() {
                 var value = input.value.replace(/\s+/g, ' ').trim().slice(0, 60);
                 if (!value) { input.focus(); return; }
-                _wm.text = { source: 'custom', value: value, font: url, position: (_wm.text && _wm.text.position) || 'br', color: color };
+                _wm.text = { source: 'custom', value: value, font: url, position: (_wm.text && _wm.text.position) || 'br', color: color, size: _wm.text && _wm.text.size };
                 _wm.enabled = true;
                 closeCamDialog();
                 renderWatermark();

@@ -75,7 +75,7 @@ export async function prepareWatermark(watermark, dir) {
       const tPos = watermark.text.position || 'br';
       // On the same row as the logo, the text keeps clear of it
       const room = logo && tPos !== position && tPos[0] === position[0] ? 1080 - 2 * MARGIN_X - logo.w - 48 : TEXT_MAX_WIDTH;
-      const t = await prepareText(watermark.text, watermark.size, dir, Math.min(TEXT_MAX_WIDTH, room));
+      const t = await prepareText(watermark.text, watermark.text.size || watermark.size, dir, Math.min(TEXT_MAX_WIDTH, room));
       if (logo && tPos === position) {
         // Same corner as the logo: the text sits next to it, further from the edge of the frame
         layers.push({ file: t.file, ...place(tPos, logo.h + STACK_GAP) });

@@ -37,7 +37,7 @@ export function cleanWatermark(input = {}) {
   const source = t?.source === 'artist' ? 'artist' : 'custom';
   const value = t && String(t.value ?? '').replace(/[\u0000-\u001f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 60);
   if ((value || source === 'artist') && typeof t.font === 'string' && BLOB_URL.test(t.font) && TEXT_FONT_FILE.test(new URL(t.font).pathname)) {
-    w.text = { source, value: value || '', font: t.font, position: TEXT_POSITIONS.includes(t.position) ? t.position : 'br', color: t.color === 'black' ? 'black' : 'white' };
+    w.text = { source, value: value || '', font: t.font, position: TEXT_POSITIONS.includes(t.position) ? t.position : 'br', color: t.color === 'black' ? 'black' : 'white', ...(['s', 'm', 'l'].includes(t.size) ? { size: t.size } : {}) };
   }
   return w;
 }
