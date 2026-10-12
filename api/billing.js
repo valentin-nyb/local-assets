@@ -121,17 +121,35 @@ export default async function handler(req, res) {
       if (stripe) {
         // Admin: every invoice of this venue (venue, artists, labels); a venue: its own
         let list = [];
-        if (isAdmin) list = (await stripe.invoices.search({ query: `metadata['venueSlug']:'${slug.replace(/'/g, '')}'`, limit: 50 }).catch(() => ({ data: [] }))).data;
+        // Admin: every invoice sent to any client account (all venues, artists, record labels, managements)
+        if (isAdmin) {
+          for await (const inv of stripe.invoices.list({ limit: 100 })) {
+            if (inv.metadata?.venueSlug) list.push(inv);
+            if (list.length >= 300) break;
+          }
+        }
         else if (data.customer) list = (await stripe.invoices.list({ customer: data.customer, limit: 24 }).catch(() => ({ data: [] }))).data;
+        // Each account's type and name, and saved statuses, for the invoices of every account
+        const acctTypes = {}, allStatuses = { ...(data.statuses || {}) };
+        if (isAdmin) {
+          await withRedis(async r => {
+            for (const v of [...new Set(list.map(i => i.metadata.venueSlug))]) {
+              acctTypes[v] = (await r.get(`account_type:${v}`)) || cfg[v]?.type || (/team$/i.test(String(cfg[v]?.name || '')) ? 'management' : 'venue');
+              Object.assign(allStatuses, await r.hGetAll(`billing_status:${v}`));
+            }
+          });
+        }
         invoices = list.sort((x, y) => y.created - x.created).map(i => {
           const t = i.metadata?.target || 'venue';
-          const own = data.statuses?.[i.id];
+          const iv = i.metadata?.venueSlug || slug;
+          const own = allStatuses[i.id];
           const fromStripe = i.status === 'paid' ? 'paid' : i.status === 'uncollectible' || i.status === 'void' ? 'unpaid' : 'waiting';
           return {
             id: i.id, number: i.number, status: own || fromStripe, total: i.total / 100, currency: i.currency,
             created: i.created * 1000, url: i.hosted_invoice_url, pdf: i.invoice_pdf,
-            billedTo: i.customer_name || (t === 'venue' ? venueName : t.replace(/^(artist|label):/, '')),
-            kind: t === 'venue' ? TYPE_LABEL[data.accountType] || 'Account' : t.startsWith('label:') ? 'Record label' : 'Artist',
+            billedTo: i.customer_name || (t === 'venue' ? (cfg[iv]?.name || venueName) : t.replace(/^(artist|label):/, '')),
+            kind: t === 'venue' ? TYPE_LABEL[acctTypes[iv] || data.accountType] || 'Account' : t.startsWith('label:') ? 'Record label' : 'Artist',
+            account: iv, accountName: cfg[iv]?.name || iv,
           };
         });
       }
@@ -288,15 +306,16 @@ export default async function handler(req, res) {
       if (!/^in_[A-Za-z0-9]+$/.test(id) || !status) return res.status(400).json({ error: 'Unknown invoice or status' });
       const stripe = stripeClient();
       const inv = stripe ? await stripe.invoices.retrieve(id).catch(() => null) : null;
-      if (!inv || inv.metadata?.venueSlug !== slug) return res.status(404).json({ error: 'Invoice not found' });
+      if (!inv || !inv.metadata?.venueSlug) return res.status(404).json({ error: 'Invoice not found' });
+      const invSlug = inv.metadata.venueSlug;
       // Stripe follows where it can: paid outside Stripe, or written off; it can't reopen a paid invoice
       if (status === 'paid' && inv.status === 'open') await stripe.invoices.pay(id, { paid_out_of_band: true }).catch(() => {});
       if (status === 'unpaid' && inv.status === 'open') await stripe.invoices.markUncollectible(id).catch(() => {});
       await withRedis(async redis => {
-        await redis.hSet(`billing_status:${slug}`, id, status);
+        await redis.hSet(`billing_status:${invSlug}`, id, status);
         // Not paid pauses the account it was for; paid or waiting lifts that
-        if (status === 'unpaid') await redis.hSet(unpaidKey(slug), id, JSON.stringify({ target: inv.metadata?.target || 'venue', number: inv.number || '', url: inv.hosted_invoice_url || '' }));
-        else await redis.hDel(unpaidKey(slug), id);
+        if (status === 'unpaid') await redis.hSet(unpaidKey(invSlug), id, JSON.stringify({ target: inv.metadata?.target || 'venue', number: inv.number || '', url: inv.hosted_invoice_url || '' }));
+        else await redis.hDel(unpaidKey(invSlug), id);
       });
       return res.status(200).json({ ok: true, status });
     }

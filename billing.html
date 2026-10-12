@@ -81,6 +81,8 @@
         .bl-admin input:focus { border-color:var(--la-accent); }
         .bl-admin-actions { display:flex; flex-wrap:wrap; gap:8px; padding:0 20px 20px; align-items:center; }
         .bl-msg { font-size:12px; color:var(--la-sub); }
+        .bl-inv-filter { height:34px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 10px; font-size:12px; max-width:280px; }
+        .bl-inv-filter.hidden { display:none; }
         .bl-cancel-body { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:18px 20px; flex-wrap:wrap; }
         .bl-cancel-body .bl-msg { max-width:620px; line-height:1.55; }
         .bl-danger { background:transparent; color:var(--la-bad, #ef4444); border-color:color-mix(in srgb, var(--la-bad, #ef4444) 45%, transparent); }
@@ -180,7 +182,7 @@
                     <div class="bl-offer" id="bl-offer"></div>
                 </section>
                 <section class="bl-section">
-                    <div class="bl-section-head"><h3>Invoices</h3></div>
+                    <div class="bl-section-head"><h3>Invoices</h3><select id="bl-inv-filter" class="bl-inv-filter hidden" aria-label="Show invoices for"></select></div>
                     <div class="bl-scroll" id="bl-invoices"><p class="bl-empty">Loading…</p></div>
                 </section>
                 <section class="bl-section hidden" id="bl-plans-box">
@@ -273,12 +275,27 @@
             var inv = document.getElementById('bl-invoices');
             var LABEL = { paid: 'Paid', unpaid: 'Not paid', waiting: 'Waiting for payment' };
             if (!d.invoices.length) inv.innerHTML = '<p class="bl-empty">' + (d.stripe ? 'No invoices yet.' : 'Invoices appear here once billing is set up.') + '</p>';
-            else inv.innerHTML = '<table class="bl-table"><thead><tr><th>Invoice</th><th>Billed to</th><th>Date</th><th>Status</th><th class="num">Amount</th><th></th></tr></thead><tbody>' +
-                d.invoices.map(function(i) {
+            // Admin: every account's invoices, filterable by account or by who was billed
+            var filt = document.getElementById('bl-inv-filter');
+            filt.classList.toggle('hidden', !admin || !d.invoices.length);
+            if (admin) {
+                var keep = filt.value, accts = {}, whos = {};
+                d.invoices.forEach(function(i) { accts[i.account] = i.accountName; whos[i.billedTo + '|' + i.kind] = i.billedTo + ' (' + i.kind.toLowerCase() + ')'; });
+                filt.innerHTML = '<option value="">All invoices (' + d.invoices.length + ')</option>' +
+                    '<optgroup label="Account">' + Object.keys(accts).map(function(k) { return '<option value="a:' + esc(k) + '">' + esc(accts[k]) + '</option>'; }).join('') + '</optgroup>' +
+                    '<optgroup label="Billed to">' + Object.keys(whos).sort().map(function(k) { return '<option value="b:' + esc(k) + '">' + esc(whos[k]) + '</option>'; }).join('') + '</optgroup>';
+                if (keep && filt.querySelector('option[value="' + keep.replace(/"/g, '\\"') + '"]')) filt.value = keep;
+            }
+            var shown = d.invoices.filter(function(i) {
+                var f = admin ? filt.value : '';
+                return !f || (f.indexOf('a:') === 0 ? i.account === f.slice(2) : (i.billedTo + '|' + i.kind) === f.slice(2));
+            });
+            if (d.invoices.length) inv.innerHTML = '<table class="bl-table"><thead><tr><th>Invoice</th><th>Billed to</th>' + (admin ? '<th>Account</th>' : '') + '<th>Date</th><th>Status</th><th class="num">Amount</th><th></th></tr></thead><tbody>' +
+                shown.map(function(i) {
                     var status = admin
                         ? '<select class="bl-status ' + i.status + '" data-invoice="' + esc(i.id) + '">' + ['paid', 'waiting', 'unpaid'].map(function(k) { return '<option value="' + k + '"' + (k === i.status ? ' selected' : '') + '>' + LABEL[k] + '</option>'; }).join('') + '</select>'
                         : '<span class="bl-pill ' + (i.status === 'paid' ? 'paid' : 'open') + '">' + LABEL[i.status] + '</span>';
-                    return '<tr><td class="svc">' + esc(i.number || i.id) + '</td><td>' + esc(i.billedTo) + '<span class="bl-who">' + esc(i.kind) + '</span></td><td style="white-space:nowrap">' + new Date(i.created).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + '</td>' +
+                    return '<tr><td class="svc">' + esc(i.number || i.id) + '</td><td>' + esc(i.billedTo) + '<span class="bl-who">' + esc(i.kind) + '</span></td>' + (admin ? '<td>' + esc(i.accountName || '') + '</td>' : '') + '<td style="white-space:nowrap">' + new Date(i.created).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + '</td>' +
                         '<td>' + status + '</td><td class="num">' + money(i.total, i.currency) + '</td>' +
                         '<td class="num">' + (i.url ? '<a class="bl-link" href="' + esc(i.url) + '" target="_blank" rel="noopener">' + (i.status !== 'paid' ? 'Pay' : 'View') + '</a>' : '') + (i.pdf ? '<a class="bl-link" href="' + esc(i.pdf) + '" target="_blank" rel="noopener">PDF</a>' : '') + '</td></tr>';
                 }).join('') + '</tbody></table>';
@@ -401,6 +418,7 @@
             this.disabled = false;
         });
         // Changing who is billed, the plan or the period updates the preview
+        document.getElementById('bl-inv-filter').addEventListener('change', function() { if (_data) render(_data); });
         document.getElementById('bl-acct-type').addEventListener('change', async function() {
             try { await post({ action: 'setAccountType', accountType: this.value }); laToast('Account type saved'); load(); }
             catch (e) { laAlert('Could not save: ' + e.message, { tone: 'error' }); }
