@@ -11,11 +11,28 @@ export function getVenuesConfig() {
     try { return JSON.parse(raw.replace(/\+/g, '%2B')); } catch (e2) {
       // 3. Full URL-decode then parse
       try { return JSON.parse(decodeURIComponent(raw)); } catch (e3) {
-        console.error('[_venues] VENUES_CONFIG parse failed — raw:', e1.message, '| +escape:', e2.message, '| decoded:', e3.message);
-        return {};
+        // 4. Hand-edited JSON: missing commas between lines, trailing commas, curly quotes
+        try {
+          const fixed = repairJson(raw);
+          const cfg = JSON.parse(fixed);
+          if (!getVenuesConfig._warned) { getVenuesConfig._warned = true; console.warn('[_venues] VENUES_CONFIG had JSON mistakes (missing or extra commas); read it after repairing them. Fix the value in Vercel when convenient.'); }
+          return cfg;
+        } catch (e4) {
+          console.error('[_venues] VENUES_CONFIG parse failed — raw:', e1.message, '| +escape:', e2.message, '| decoded:', e3.message, '| repaired:', e4.message);
+          return {};
+        }
       }
     }
   }
+}
+
+function repairJson(raw) {
+  return String(raw)
+    .replace(/[\u201C\u201D]/g, '"').replace(/[\u2018\u2019]/g, "'")
+    // a value or closing bracket at the end of a line, followed by a new key or object: add the comma
+    .replace(/("|\d|true|false|null|\}|\])(\s*\r?\n\s*)(["{])/g, '$1,$2$3')
+    // a comma right before a closing bracket: remove it
+    .replace(/,(\s*[}\]])/g, '$1');
 }
 
 // Env-var key for a venue slug, e.g. "the-nest" → "THE_NEST"
