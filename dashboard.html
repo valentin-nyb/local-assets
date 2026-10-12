@@ -1196,12 +1196,24 @@
                 // full recording it was cut after (the newest one uploaded before it), so a new
                 // session never shows another session's clips.
                 var masters = (muxByKey[name] || []).filter(function (a) {
-                    return !(typeof a.passthrough === 'string' && a.passthrough.indexOf(' // ') >= 0 && !/^\s*\{/.test(a.passthrough));
+                    return Number(a.duration) > 10 && !(typeof a.passthrough === 'string' && a.passthrough.indexOf(' // ') >= 0 && !/^\s*\{/.test(a.passthrough));
                 }).sort(function (a, b) { return Number(a.created_at) - Number(b.created_at); });
                 var ownMaster = findLinked(name, sessionDate);
-                function cutFrom(c) {
+                // The recording a clip belongs to: the one it was cut from, else that of the clip it was copied
+                // from (a watermarked copy), else the newest recording uploaded before it
+                var assetById = {};
+                muxAssets.forEach(function (a) { assetById[a.id] = a; });
+                function cutFrom(c, depth) {
+                    depth = depth || 0;
+                    var ext = c.meta && c.meta.external_id;
+                    for (var mi = 0; mi < masters.length; mi++) if (masters[mi].id === ext) return masters[mi];
+                    var src = c.source_asset_id && assetById[c.source_asset_id];
+                    if (src && depth < 5) {
+                        for (var mj = 0; mj < masters.length; mj++) if (masters[mj].id === src.id) return masters[mj];
+                        if (/ \/\/ SOCIAL/i.test(String(src.passthrough || ''))) return cutFrom(src, depth + 1);
+                    }
                     var m = null;
-                    for (var mi = 0; mi < masters.length; mi++) if (Number(masters[mi].created_at) <= Number(c.created_at)) m = masters[mi];
+                    for (var mk = 0; mk < masters.length; mk++) if (Number(masters[mk].created_at) <= Number(c.created_at)) m = masters[mk];
                     return m;
                 }
                 var clips = [];

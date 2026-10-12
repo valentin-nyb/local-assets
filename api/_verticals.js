@@ -62,6 +62,30 @@ export async function listAllAssets(auth) {
   return out;
 }
 
+// The full recordings of an artist, oldest first
+export function artistMasters(assets, artist) {
+  const masterOf = a => {
+    const pt = String(a.passthrough || '').trim();
+    if (pt.toUpperCase() === artist) return true;
+    try { const o = JSON.parse(pt); return o && String(o.artist || '').toUpperCase().trim() === artist && !['AUDIO', 'SOCIAL', 'SOCIALRAW', 'THUMB'].includes(String(o.camera || '').toUpperCase()); } catch { return false; }
+  };
+  return assets.filter(a => masterOf(a) && Number(a.duration) > 10).sort((a, b) => Number(a.created_at) - Number(b.created_at));
+}
+// The recording a clip belongs to: the one it was cut from (meta.external_id), else that of the clip it was
+// copied from (a watermarked copy), else the newest recording uploaded before it (clips from before sessions were recorded)
+export function clipOwner(a, byId, masters, depth = 0) {
+  const ext = a?.meta?.external_id;
+  if (ext && masters.some(m => m.id === ext)) return ext;
+  const src = a?.source_asset_id && byId.get(a.source_asset_id);
+  if (src && depth < 5) {
+    if (masters.some(m => m.id === src.id)) return src.id;
+    if (socialInfo(src)) return clipOwner(src, byId, masters, depth + 1);
+  }
+  let owner = null;
+  for (const m of masters) if (Number(m.created_at) <= Number(a.created_at)) owner = m.id;
+  return owner;
+}
+
 // The session's full recording and its clips by number
 export function sessionClips(assets, artist, date) {
   const masterOf = a => {
@@ -72,14 +96,17 @@ export function sessionClips(assets, artist, date) {
   const day = a => new Date(Number(a.created_at) * 1000).toISOString().slice(0, 10);
   const masters = assets.filter(a => a.status === 'ready' && masterOf(a) && Number(a.duration) > 10)
     .sort((a, b) => Number(b.created_at) - Number(a.created_at));
-  const master = masters.find(a => day(a) === date) || masters[0] || null;
+  // The session's own date (set at upload) first, then the upload day
+  const dateOf = a => { try { const o = JSON.parse(a.passthrough); if (o?.date) return String(o.date); } catch {} return null; };
+  const master = masters.find(a => dateOf(a) === date) || masters.find(a => !dateOf(a) && day(a) === date) || masters.find(a => day(a) === date) || masters[0] || null;
   const shown = new Map(), hidden = new Map();
   if (!master) return { master, shown, hidden };
-  const next = masters.filter(a => Number(a.created_at) > Number(master.created_at)).pop();
+  const byId = new Map(assets.map(a => [a.id, a]));
+  const all = artistMasters(assets, artist);
   for (const a of assets) {
     const m = SUB.exec(String(a.passthrough || '').trim());
     if (!m || m[1].toUpperCase() !== artist) continue;
-    if (Number(a.created_at) < Number(master.created_at) || (next && Number(a.created_at) >= Number(next.created_at))) continue;
+    if (clipOwner(a, byId, all) !== master.id) continue;
     const n = Number(m[3]);
     if (m[2].toUpperCase() === 'SOCIAL') shown.set(n, a);
     else hidden.set(n, [...(hidden.get(n) || []), a]);
@@ -284,6 +311,7 @@ export async function cutVertical(redis, auth, job) {
         input: [{ url: blob.url }],
         playback_policy: ['public'],
         passthrough: tagFor(job.artist, job.n, true),
+        meta: { external_id: job.masterId },
         static_renditions: [{ resolution: 'highest' }],
       }),
     });
@@ -323,6 +351,8 @@ export async function finishVerticals(redis, slug, auth, assets) {
         if (info.n !== job.n && !(info.n === null && lastOfMaster)) continue;
         if (master && Number(other.created_at) < Number(master.created_at)) continue;
         if (originals.has(other.id)) continue;
+        // Only versions of this recording's clip (never another session's clips or their watermarked copies)
+        if (clipOwner(other, byId, artistMasters(assets, job.artist)) !== job.master) continue;
         await muxReq(auth, `/video/v1/assets/${encodeURIComponent(other.id)}`, { method: 'DELETE' }).catch(() => {});
       }
       await muxReq(auth, `/video/v1/assets/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify({ passthrough: tagFor(job.artist, job.n) }) });

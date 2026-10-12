@@ -5,7 +5,7 @@ import { createClient } from 'redis';
 import { getWebSessionAuth } from './_venues.js';
 import { resolveWatermark } from './_watermark.js';
 import { renderWatermarkPng, VERTICAL, HORIZONTAL } from './_watermark-render.js';
-import { muxReq, SUB, socialInfo, tagFor, clipTimes, listAllAssets, sessionClips, videoSize, finishVerticals, originalsKey } from './_verticals.js';
+import { muxReq, SUB, socialInfo, tagFor, clipTimes, listAllAssets, sessionClips, videoSize, finishVerticals, originalsKey, clipOwner, artistMasters } from './_verticals.js';
 
 // Puts the Brand Kit watermark on a session's vertical clips, and takes it off again.
 // The vertical originals are cut once from the full recording (api/_verticals.js). Applying makes a
@@ -157,7 +157,7 @@ export default async function handler(req, res) {
     const assets = await listAllAssets(auth);
     const byId = new Map(assets.map(a => [a.id, a]));
     const isClean = cleanCheck(assets, await markedSet(redis, slug));
-    const { hidden } = sessionClips(assets, artist, String(body.date || ''));
+    const { hidden, master: sessionMaster } = sessionClips(assets, artist, String(body.date || ''));
     const pendingOld = new Set(Object.values(await redis.hGetAll(swapsKey(slug))).map(v => parseSwap(v).old));
     let started = 0;
     const errors = [];
@@ -171,6 +171,8 @@ export default async function handler(req, res) {
         // Clips in older tag formats are numbered by their place in the session
         const info = socialInfo(clip);
         if (!info || info.artist !== artist) { errors.push(`One clip isn't a clip of ${artist}`); continue; }
+        // Only clips of this session (never another session's clips)
+        if (sessionMaster && clipOwner(clip, byId, artistMasters(assets, artist)) !== sessionMaster.id) { errors.push(`One clip belongs to another session of ${artist}`); continue; }
         const n = info.n || (ids.indexOf(id) + 1);
         // Always from the clean vertical original: this clip, or the original kept hidden behind it
         let input, size;
@@ -185,6 +187,7 @@ export default async function handler(req, res) {
             input: [input, { url: overlayUrl, overlay_settings: { vertical_align: 'top', horizontal_align: 'left', width: '100%', opacity: '100%' } }],
             playback_policy: ['public'],
             passthrough: tagFor(artist, n),
+            ...(sessionMaster ? { meta: { external_id: sessionMaster.id } } : {}),
             static_renditions: [{ resolution: 'highest' }],
           }),
         });

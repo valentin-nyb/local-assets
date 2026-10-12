@@ -251,7 +251,7 @@
             background-color:var(--la-chip); background-image:linear-gradient(45deg, rgba(128,128,128,.12) 25%, transparent 25%), linear-gradient(-45deg, rgba(128,128,128,.12) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(128,128,128,.12) 75%), linear-gradient(-45deg, transparent 75%, rgba(128,128,128,.12) 75%);
             background-size:16px 16px; background-position:0 0, 0 8px, 8px -8px, -8px 0; }
         .bk-wm-preview img.logo { position:absolute; object-fit:contain; transition:all .15s; }
-        .bk-wm-preview .text { position:absolute; color:#fff; white-space:nowrap; line-height:1; text-shadow:0 1px 3px rgba(0,0,0,.35); transition:all .15s; }
+        .bk-wm-preview .text { position:absolute; color:#fff; white-space:nowrap; line-height:1; transition:all .15s; }
         .bk-wm-textrow { display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; min-width:0; }
         .bk-wm-textrow input { height:36px; flex:1 1 200px; max-width:260px; min-width:0; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 10px; font-size:13px; outline:none; }
         .bk-wm-textrow input:focus { border-color:var(--la-accent); }
@@ -618,7 +618,7 @@
                     txt.textContent = wmTextValue();
                     var blackText = _wm.text.color === 'black';
                     txt.style.color = blackText ? '#000' : '#fff';
-                    txt.style.textShadow = blackText ? '0 1px 3px rgba(255,255,255,.25)' : '0 1px 3px rgba(0,0,0,.35)';
+                    txt.style.textShadow = 'none';
                     loadBrandFont(tf.url).then(function(family) { if (txt.dataset.family !== family) { txt.dataset.family = family; txt.style.fontFamily = family; positionPreview(); } }).catch(function() {});
                     var tp = _wm.text.position;
                     // Same corner as the logo: text sits next to it, further from the edge
@@ -702,7 +702,7 @@
                     var shift = !logo ? 0 : tp === p ? lh + 24 : tp[0] === p[0] ? (lh - th) / 2 : 0;
                     var top = tp[0] === 't' ? L.top + shift : H - L.bottom - shift - th;
                     var blackText = _wm.text.color === 'black';
-                    g.shadowColor = blackText ? 'rgba(255,255,255,.25)' : 'rgba(0,0,0,.35)'; g.shadowBlur = 8; g.shadowOffsetY = 2;
+                    g.shadowColor = 'transparent'; g.shadowBlur = 0; g.shadowOffsetY = 0;
                     g.fillStyle = blackText ? '#000' : '#fff';
                     var left = tp[1] === 'l' ? L.mx + pad : W - L.mx - pad - tw;
                     g.fillText(tv, left + m.actualBoundingBoxLeft, top + pad + m.actualBoundingBoxAscent);

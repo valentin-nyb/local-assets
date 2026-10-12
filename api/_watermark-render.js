@@ -46,8 +46,6 @@ async function textLayer(text, size, maxWidth, s = 1) {
   const d = font.getPath(text.value, pad - bb.x1, pad - bb.y1, px).toPathData(2);
   const black = text.color === 'black';
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">` +
-    `<filter id="s" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="${4 * s}"/></filter>` +
-    `<path d="${d}" fill="${black ? '#fff' : '#000'}" fill-opacity="${black ? '.25' : '.35'}" filter="url(#s)" transform="translate(0 ${2 * s})"/>` +
     `<path d="${d}" fill="${black ? '#000' : '#fff'}"/></svg>`;
   return { input: await sharp(Buffer.from(svg)).png().toBuffer(), w, h };
 }
