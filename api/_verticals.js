@@ -40,6 +40,7 @@ export const tagFor = (artist, n, hidden) => `${artist} // ${hidden ? 'SOCIALRAW
 export const originalsKey = slug => `v_orig:${slug}`;       // set: vertical originals
 const jobsKey = slug => `v_jobs:${slug}`;                    // hash: new original → JSON { artist, n, blob, master }
 const doneKey = masterId => `v_done:${masterId}`;           // hash: n → original's id (cut once)
+const failKey = masterId => `v_fail:${masterId}`;           // hash: n → failed attempts (no endless retries)
 
 // The times the clips are cut at (same as the upload pipeline always used)
 export function clipTimes(duration) {
@@ -122,7 +123,9 @@ export async function startVerticals(redis, slug, master, artist, origin) {
   const pid = (master.playback_ids || [])[0]?.id;
   if (!pid) throw new Error('The full recording has no playback ID yet');
   const done = await redis.hGetAll(doneKey(master.id));
-  const todo = clipTimes(Number(master.duration)).filter(t => !done[t.n]);
+  const fails = await redis.hGetAll(failKey(master.id));
+  // A clip that failed twice isn't retried automatically
+  const todo = clipTimes(Number(master.duration)).filter(t => !done[t.n] && Number(fails[t.n] || 0) < 2);
   await Promise.all(todo.map(t => fetch(`${origin}/api/vertical-clips`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -174,6 +177,9 @@ export async function cutVertical(redis, auth, job) {
     await redis.sAdd(originalsKey(job.slug), asset.id);
     await redis.hSet(jobsKey(job.slug), asset.id, JSON.stringify({ artist: job.artist, n: job.n, blob: blob.url, master: job.masterId, at: Date.now() }));
     return { id: asset.id };
+  } catch (e) {
+    await redis.hIncrBy(failKey(job.masterId), String(job.n), 1).catch(() => {});
+    throw e;
   } finally {
     fs.rm(out, { force: true }, () => {});
     await redis.del(lock).catch(() => {});
@@ -208,8 +214,11 @@ export async function finishVerticals(redis, slug, auth, assets) {
       await muxReq(auth, `/video/v1/assets/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify({ passthrough: tagFor(job.artist, job.n) }) });
       done++;
     } else {
-      // Failed or gone: allow it to be cut again
+      // Failed or gone: drop it (it only takes up room), allow one more try
+      console.error('[verticals] processing failed', slug, job.artist, job.n, id, JSON.stringify(a?.errors || 'not found'));
+      if (a) await muxReq(auth, `/video/v1/assets/${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => {});
       await redis.hDel(doneKey(job.master), String(job.n));
+      await redis.hIncrBy(failKey(job.master), String(job.n), 1);
       await redis.sRem(originalsKey(slug), id);
     }
     if (job.blob) await delBlob(job.blob).catch(() => {});
