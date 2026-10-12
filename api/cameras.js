@@ -144,7 +144,7 @@ export default async function handler(req, res) {
       const url = cleanCalendarUrl(body.url);
       if (!url) return res.status(400).json({ error: 'Paste the calendar\'s iCal link (it starts with https:// or webcal://).' });
       try { await fetchEvents(url, Date.now(), Date.now() + 86400e3); }
-      catch (e) { return res.status(400).json({ error: (/web page/.test(e.message) ? 'That link opens a web page, not the calendar file. ' : 'That link could not be read as a calendar. ') + 'Use the secret iCal address from Google Calendar, or a public link from Apple Calendar.' }); }
+      catch (e) { return res.status(400).json({ error: (/web page|calendar page|Google Calendar|answered/.test(e.message) ? e.message : 'That link could not be read as a calendar. Use the secret iCal address from Google Calendar, or a public link from Apple Calendar.') }); }
       await withRedis(r => r.set(calendarKey(slug), url));
       return res.status(200).json({ calendar: { connected: true, host: new URL(url).hostname } });
     }

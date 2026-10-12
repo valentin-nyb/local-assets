@@ -6,6 +6,18 @@ import ical from 'node-ical';
 
 export const calendarKey = slug => `calendar_url:${slug}`;
 
+// Google Calendar share/embed links (…?cid=… or …/embed?src=…) → the calendar's iCal address
+function googleIcal(u) {
+  if (u.hostname !== 'calendar.google.com' || /\.ics$/i.test(u.pathname)) return null;
+  let id = u.searchParams.get('src');
+  const cid = u.searchParams.get('cid');
+  if (!id && cid) {
+    try { const d = Buffer.from(cid.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8'); id = /^[\w.+-]+@[\w.-]+$/.test(d) ? d : cid; } catch { id = cid; }
+  }
+  if (!id || !/@/.test(id)) return null;
+  return `https://calendar.google.com/calendar/ical/${encodeURIComponent(id)}/public/basic.ics`;
+}
+
 // Accepts webcal:// and https:// iCal links; returns the https URL or null
 export function cleanCalendarUrl(input) {
   let s = String(input || '').trim();
@@ -14,7 +26,7 @@ export function cleanCalendarUrl(input) {
   try {
     const u = new URL(s);
     if (u.protocol !== 'https:') return null;
-    return u.toString();
+    return googleIcal(u) || u.toString();
   } catch { return null; }
 }
 
@@ -32,10 +44,19 @@ export async function venueEvents(redis, slug, fromMs, toMs) {
 
 // Downloads and parses the calendar; throws when the link isn't a calendar
 export async function readCalendar(url) {
+  url = cleanCalendarUrl(url) || url;   // links saved before Google share links were converted
   const r = await fetch(url, { headers: { Accept: 'text/calendar, */*' }, cache: 'no-store', signal: AbortSignal.timeout(15000) });
-  if (!r.ok) throw new Error(`Calendar link answered ${r.status}`);
+  if (!r.ok) {
+    if (/calendar\.google\.com/.test(url) && (r.status === 404 || r.status === 403))
+      throw new Error('Google Calendar won\'t share this calendar from that link (it isn\'t public). In Google Calendar open Settings, choose the calendar, and copy "Secret address in iCal format".');
+    throw new Error(`The calendar link answered ${r.status}. Check the link is still shared.`);
+  }
   const text = await r.text();
-  if (!/BEGIN:VCALENDAR/i.test(text)) throw new Error('The link is a web page, not an iCal calendar');
+  if (!/BEGIN:VCALENDAR/i.test(text)) {
+    if (/calendar\.google\.com/.test(url)) throw new Error('This Google Calendar link opens the calendar page, not its iCal file. In Google Calendar open Settings, choose the calendar, and copy "Secret address in iCal format".');
+    if (/icloud\.com/.test(url)) throw new Error('This iCloud link opens the calendar page. In the Calendar app, share the calendar as Public Calendar and copy the webcal:// link.');
+    throw new Error('This link opens a web page, not an iCal calendar file (.ics).');
+  }
   return ical.sync.parseICS(text);
 }
 
