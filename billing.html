@@ -133,6 +133,7 @@
                 <section class="bl-section hidden" id="bl-send-box">
                     <div class="bl-section-head"><h3>Send an invoice</h3><span class="bl-msg">Plan price, plus usage above what the plan includes</span></div>
                     <form id="bl-send-form" class="bl-admin">
+                        <label>Venue<select name="venue" id="bl-venue"></select></label>
                         <label>Bill to<select name="target" id="bl-target"></select></label>
                         <label>Email<input name="email" type="email" placeholder="accounts@venue.com"></label>
                         <label>Plan<select name="plan" id="bl-plan-select"></select></label>
@@ -140,6 +141,7 @@
                     </form>
                     <div class="bl-admin-actions">
                         <label class="bl-check"><input type="checkbox" id="bl-monthly"> Bill monthly on the 1st</label>
+                        <button type="button" class="cam-btn ghost" id="bl-save-assign">Save</button>
                         <button type="button" class="cam-btn ghost" id="bl-preview">Preview</button>
                         <button type="button" class="cam-btn primary" id="bl-send">Send invoice</button>
                         <span class="bl-msg" id="bl-send-msg"></span>
@@ -192,11 +194,11 @@
                 document.getElementById('venue-breadcrumb').textContent = v; document.getElementById('venue-avatar').textContent = (v || '?').charAt(0); } catch (_) {}
         })();
 
-        var _data = null, _target = 'venue', _planOverride;
+        var _data = null, _target = 'venue', _planOverride, _venue = '';
         async function load() {
             var err = document.getElementById('bl-error');
             try {
-                var q = '?target=' + encodeURIComponent(_target) + (_planOverride !== undefined ? '&plan=' + encodeURIComponent(_planOverride) : '') + '&period=' + (document.querySelector('#bl-send-form [name=period]') || {}).value;
+                var q = '?venue=' + encodeURIComponent(_venue) + '&target=' + encodeURIComponent(_target) + (_planOverride !== undefined ? '&plan=' + encodeURIComponent(_planOverride) : '') + '&period=' + (document.querySelector('#bl-send-form [name=period]') || {}).value;
                 var r = await laFetch('/api/billing' + q);
                 var d = await r.json();
                 if (!r.ok) throw new Error(d.error || r.status);
@@ -250,7 +252,9 @@
             var f = document.getElementById('bl-rates');
             ['videoStorage', 'videoDelivery', 'videoEncoding', 'fileStorage'].forEach(function(k) { if (document.activeElement !== f[k]) f[k].value = d.rates[k]; });
             if (document.activeElement !== f.marginPct) f.marginPct.value = Math.round((d.rates.margin || 0) * 1000) / 10;
-            // Bill to: the venue, its artists and its record labels
+            // Venue to bill (admin), then the venue itself, its artists or its record labels
+            _venue = d.venueSlug || _venue;
+            document.getElementById('bl-venue').innerHTML = (d.venues || []).map(function(v) { return '<option value="' + esc(v.slug) + '"' + (v.slug === d.venueSlug ? ' selected' : '') + '>' + esc(v.name) + '</option>'; }).join('');
             var tsel = document.getElementById('bl-target');
             var opts = [['venue', (d.venue || 'This venue') + ' (venue)']]
                 .concat((d.artists || []).map(function(a) { return ['artist:' + a, a + ' (artist)']; }))
@@ -289,6 +293,7 @@
             this.disabled = false;
         });
         function post(body) {
+            if (_venue) body = Object.assign({ venue: _venue }, body);
             return laFetch('/api/billing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
                 .then(function(r) { return r.json().then(function(d) { if (!r.ok) throw new Error(d.error || r.status); return d; }); });
         }
@@ -302,6 +307,7 @@
             this.disabled = false;
         });
         // Changing who is billed, the plan or the period updates the preview
+        document.getElementById('bl-venue').addEventListener('change', function() { _venue = this.value; _target = 'venue'; _planOverride = undefined; document.getElementById('bl-plans').dataset.editing = ''; load(); });
         document.getElementById('bl-target').addEventListener('change', function() { _target = this.value; _planOverride = undefined; load(); });
         document.getElementById('bl-plan-select').addEventListener('change', function() { _planOverride = this.value; load(); });
         document.querySelector('#bl-send-form [name=period]').addEventListener('change', function() { load(); });
@@ -318,6 +324,16 @@
                 var d = await post({ action: 'invoiceNow', target: target, plan: plan, email: email, period: period });
                 msg.textContent = d.skipped ? (d.reason || 'Nothing to invoice') : 'Invoice sent to ' + email; await load();
             } catch (e) { msg.textContent = 'Could not send: ' + e.message; }
+            this.disabled = false;
+        });
+        // Saves who pays which plan, their email and monthly billing; the venue then sees this plan on its own Billing page
+        document.getElementById('bl-save-assign').addEventListener('click', async function() {
+            var msg = document.getElementById('bl-send-msg'), sf = document.getElementById('bl-send-form');
+            this.disabled = true; msg.textContent = 'Saving…';
+            try {
+                await post({ action: 'assign', target: sf.target.value, plan: sf.plan.value, email: sf.email.value.trim(), monthly: document.getElementById('bl-monthly').checked });
+                _planOverride = undefined; msg.textContent = 'Saved for ' + sf.target.options[sf.target.selectedIndex].text; await load();
+            } catch (e) { msg.textContent = 'Could not save: ' + e.message; }
             this.disabled = false;
         });
         document.getElementById('bl-monthly').addEventListener('change', async function() {

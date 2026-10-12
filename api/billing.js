@@ -1,6 +1,7 @@
 import { unpaidKey, readUnpaid } from './_suspend.js';
 import { createClient } from 'redis';
-import { getWebSessionAuth } from './_venues.js';
+import { getWebSessionAuth, getVenuesConfig } from './_venues.js';
+import { venueAuth } from './_verticals.js';
 import {
   readRates, readPlans, cleanPlans, readAssignments, assignKey, venueUsage, venueArtists, priceUsage,
   monthRange, stripeClient, invoiceVenue, venueEntries, DEFAULT_RATES,
@@ -54,17 +55,34 @@ export default async function handler(req, res) {
 
   const session = getWebSessionAuth(req);
   if (!session?.email) return res.status(401).json({ error: 'Not authenticated' });
-  const slug = session.venueSlug;
-  if (!slug) return res.status(403).json({ error: 'No venue for this account' });
-  const isAdmin = admins().includes(session.email);
+  if (!session.venueSlug) return res.status(403).json({ error: 'No venue for this account' });
 
-  try {
-    // Lightweight check for the banner on every page
-    if (req.method === 'GET' && req.query.status) {
-      const unpaid = await withRedis(redis => readUnpaid(redis, slug));
+  // Lightweight check for the banner on every page (the signed-in venue)
+  if (req.method === 'GET' && req.query.status) {
+    try {
+      const unpaid = await withRedis(redis => readUnpaid(redis, session.venueSlug));
       const venue = unpaid.find(i => i.target === 'venue');
       return res.status(200).json({ paused: !!venue, payUrl: venue?.url || null, number: venue?.number || null, others: unpaid.filter(i => i.target !== 'venue').map(i => ({ target: i.target, number: i.number, url: i.url })) });
-    }
+    } catch (e) { return res.status(200).json({ paused: false }); }
+  }
+
+  // Billing admin = a local / assets admin signed in to the local / assets venue. They pick the venue to bill;
+  // everyone else only sees their own venue.
+  const ADMIN_VENUE = process.env.BILLING_ADMIN_VENUE || 'local-assets-admin';
+  const isAdmin = admins().includes(session.email) && session.venueSlug === ADMIN_VENUE;
+  const cfg = getVenuesConfig();
+  const billable = Object.keys(cfg).filter(k => k !== ADMIN_VENUE);
+  let slug = session.venueSlug, auth = session.muxAuth, venueName = session.venue?.name || session.venueSlug;
+  if (isAdmin) {
+    let bodyVenue = '';
+    try { bodyVenue = (typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {})).venue || ''; } catch {}
+    const want = String(req.query.venue || bodyVenue || '');
+    slug = billable.includes(want) ? want : (billable[0] || slug);
+    auth = venueAuth(slug);
+    venueName = cfg[slug]?.name || slug;
+  }
+
+  try {
     if (req.method === 'GET') {
       const target = isAdmin ? cleanTarget(req.query.target) : 'venue';
       const base = req.query.period === 'previous' ? previousMonth() : monthRange();
@@ -75,8 +93,8 @@ export default async function handler(req, res) {
           readRates(redis), readPlans(redis), readAssignments(redis, slug),
           redis.get(`billing_customer:${target === 'venue' ? slug : `${slug}:${target}`}`),
         ]);
-        const usage = await venueUsage(slug, session.muxAuth, base, artist, label);
-        const artists = isAdmin ? await venueArtists(session.muxAuth).catch(() => []) : [];
+        const usage = await venueUsage(slug, auth, base, artist, label);
+        const artists = isAdmin ? await venueArtists(auth).catch(() => []) : [];
         // Record labels from the Brand Kit
         const names = isAdmin ? await redis.hGetAll(`brand_owner_names:${slug}`) : {};
         const labels = Object.entries(names || {}).filter(([k]) => k.startsWith('label-')).map(([, v]) => v).sort();
@@ -101,16 +119,16 @@ export default async function handler(req, res) {
           return {
             id: i.id, number: i.number, status: own || fromStripe, total: i.total / 100, currency: i.currency,
             created: i.created * 1000, url: i.hosted_invoice_url, pdf: i.invoice_pdf,
-            billedTo: i.customer_name || (t === 'venue' ? session.venue?.name || slug : t.replace(/^(artist|label):/, '')),
+            billedTo: i.customer_name || (t === 'venue' ? venueName : t.replace(/^(artist|label):/, '')),
             kind: t === 'venue' ? 'Venue' : t.startsWith('label:') ? 'Record label' : 'Artist',
           };
         });
       }
       const elapsed = Math.min(1, Math.max(0, (Date.now() - base.start) / (base.end - base.start)));
       return res.status(200).json({
-        venue: session.venue?.name || slug, target, period: { label: base.label, start: base.start, end: base.end, elapsed },
+        venue: venueName, target, period: { label: base.label, start: base.start, end: base.end, elapsed },
         usage: data.usage, ...priced, invoices, stripe: !!stripe, isAdmin,
-        ...(isAdmin ? { rates: data.rates, plans: data.plans, assignments: data.assignments, artists: data.artists, labels: data.labels, assignment: a } : {}),
+        ...(isAdmin ? { venueSlug: slug, venues: billable.map(k => ({ slug: k, name: cfg[k]?.name || k })), rates: data.rates, plans: data.plans, assignments: data.assignments, artists: data.artists, labels: data.labels, assignment: a } : {}),
       });
     }
 
@@ -172,8 +190,8 @@ export default async function handler(req, res) {
       const base = body.period === 'previous' ? previousMonth() : monthRange();
       // A manual invoice never blocks the monthly one
       const period = { ...base, key: `${base.key}-manual-${Date.now()}` };
-      const name = cleanText(body.name, 80) || (target === 'venue' ? (session.venue?.name || slug) : target.replace(/^(artist|label):/, ''));
-      const out = await withRedis(redis => invoiceVenue(redis, stripe, { slug, auth: session.muxAuth, email, name, target, planId: cleanText(body.plan, 40) || null }, period));
+      const name = cleanText(body.name, 80) || (target === 'venue' ? (venueName) : target.replace(/^(artist|label):/, ''));
+      const out = await withRedis(redis => invoiceVenue(redis, stripe, { slug, auth: auth, email, name, target, planId: cleanText(body.plan, 40) || null }, period));
       return res.status(200).json(out);
     }
 
