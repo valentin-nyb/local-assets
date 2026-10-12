@@ -454,13 +454,14 @@
                 _venueLogos = {}; _venueLogosByName = {};
                 var names = (d && d.ownerNames) || {};
                 ((d && d.files) || []).forEach(function(f) {
-                    if (f.owner.indexOf('venue-') !== 0 || !/\.(png|jpe?g|svg|webp|gif)$/i.test(f.name)) return;
+                    // Added venues ("venue-…") and the account's own brand kit ("venue", named in Brand Kit)
+                    if ((f.owner !== 'venue' && f.owner.indexOf('venue-') !== 0) || !/\.(png|jpe?g|svg|webp|gif)$/i.test(f.name)) return;
                     // logos first; any other image of the venue as a fallback
                     var better = f.category === 'logos';
                     if (!_venueLogos[f.owner] || (better && !_venueLogos[f.owner + '#logo'])) {
                         _venueLogos[f.owner] = f.url;
                         if (better) _venueLogos[f.owner + '#logo'] = true;
-                        _venueLogosByName[nameKey(names[f.owner] || f.owner.slice(6))] = f.url;
+                        _venueLogosByName[nameKey(f.owner === 'venue' ? (d.orgName || getVenueName()) : (names[f.owner] || f.owner.slice(6)))] = f.url;
                     }
                 });
                 _brandPhotosAt = Date.now(); paint();
@@ -1283,8 +1284,10 @@
                     html += '<div>';
                     html += '<div onclick="toggleDateSection(\'' + dateId + '\')" class="p-4 pl-10 flex items-center justify-between hover:bg-white/[0.02] transition-colors cursor-pointer group">';
                     html += '<div class="flex items-center gap-3">';
-                    var sVenueKey = sessionMeta(artist.name, dateStr).venue ? 'venue-' + brandSlug(sessionMeta(artist.name, dateStr).venue) : '';
-                    html += '<div class="w-8 h-8 bg-[#050505] border border-border/50 flex items-center justify-center rounded-lg overflow-hidden"' + (sVenueKey ? ' data-venue-logo="' + sVenueKey + '" data-venue-name="' + escHtml(sessionMeta(artist.name, dateStr).venue) + '"' : '') + '>';
+                    // A session without a venue of its own was at the account's venue
+                    var sVenueName = sessionMeta(artist.name, dateStr).venue || '';
+                    var sVenueKey = sVenueName ? 'venue-' + brandSlug(sVenueName) : 'venue';
+                    html += '<div class="w-8 h-8 bg-[#050505] border border-border/50 flex items-center justify-center rounded-lg overflow-hidden" data-venue-logo="' + sVenueKey + '" data-venue-name="' + escHtml(sVenueName || getVenueName()) + '">';
                     html += '';
                     html += '</div>';
                     html += '<div>';
