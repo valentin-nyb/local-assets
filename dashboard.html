@@ -794,9 +794,10 @@
                 var ids = (btn.dataset.wmClips || '').split(',').filter(Boolean);
                 var horizontal = ids.some(function(id) { return _wmState.horizontal.indexOf(id) >= 0; });
                 var cutting = isCutting(btn);
-                btn.classList.toggle('hidden', !(horizontal || Number(btn.dataset.missing) > 0) && !cutting);
+                var silent = btn.dataset.silent === '1';
+                btn.classList.toggle('hidden', !(horizontal || silent || Number(btn.dataset.missing) > 0) && !cutting);
                 btn.disabled = cutting;
-                btn.textContent = cutting ? 'Making vertical clips…' : !ids.length ? 'Make vertical clips' : horizontal ? 'Make vertical (9:16)' : 'Cut missing clips';
+                btn.textContent = cutting ? 'Making vertical clips…' : !ids.length ? 'Make vertical clips' : horizontal ? 'Make vertical (9:16)' : silent ? 'Re-cut with sound' : 'Cut missing clips';
             });
         }
         document.addEventListener('click', async function(e) {
@@ -1288,7 +1289,10 @@
                 var expected = mAsset ? Math.min(Math.floor(Number(mAsset.duration) / 30), 5) : 0;
                 html += '<div class="flex items-center gap-2">';
                 var missing = Math.max(0, expected - clips.length);
-                html += '<button type="button" class="wm-restore' + (missing ? '' : ' hidden') + '" data-missing="' + missing + '" data-wm-artist="' + escHtml(name) + '" data-wm-date="' + escHtml(sessionDate) + '" data-wm-clips="' + escHtml(clips.map(function(c) { return c.id; }).join(',')) + '" title="Cut the vertical clips once from the full recording">Make vertical clips</button>';
+                // Clips cut without the recording's sound are cut again
+                var hasSound = function(a) { return (a.tracks || []).some(function(t) { return t.type === 'audio'; }); };
+                var silent = mAsset && hasSound(mAsset) && clips.some(function(c) { return c.status === 'ready' && c.tracks && !hasSound(c); }) ? 1 : 0;
+                html += '<button type="button" class="wm-restore' + (missing || silent ? '' : ' hidden') + '" data-silent="' + silent + '" data-missing="' + missing + '" data-wm-artist="' + escHtml(name) + '" data-wm-date="' + escHtml(sessionDate) + '" data-wm-clips="' + escHtml(clips.map(function(c) { return c.id; }).join(',')) + '" title="Cut the vertical clips once from the full recording">Make vertical clips</button>';
                 html += '<button type="button" class="wm-apply" data-wm-artist="' + escHtml(name) + '" data-wm-date="' + escHtml(sessionDate) + '" data-wm-clips="' + escHtml(clips.map(function(c) { return c.id; }).join(',')) + '" title="Put the Brand Kit watermark on these clips">Apply watermark</button>';
                 html += '</div>';
                 html += '</div>';
