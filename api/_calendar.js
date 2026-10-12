@@ -82,7 +82,10 @@ export function eventsBetween(data, fromMs, toMs) {
       let end = it.end ? new Date(it.end).getTime() : start + 3600e3;
       if (!(end > start)) end = start + 3600e3;
       if (end <= fromMs || start >= toMs) continue;
-      out.push({ artist: artistFromTitle(textOf(it.summary)) || artist, title: String(textOf(it.summary)), location: String(textOf(ev.location)) || null, start, end, allDay: !!it.isFullDay });
+      // Where the set is: the event's location (first part, before the street address), else what follows "@" in the title
+      const loc = String(textOf(ev.location) || '').split(',')[0].trim();
+      const at = (String(textOf(it.summary) || '').split(/\s+@\s+/)[1] || '').trim();
+      out.push({ artist: artistFromTitle(textOf(it.summary)) || artist, title: String(textOf(it.summary)), location: String(textOf(ev.location)) || null, venue: (loc || at).slice(0, 60) || null, start, end, allDay: !!it.isFullDay });
     }
   }
   return out.sort((a, b) => a.start - b.start);

@@ -91,8 +91,8 @@ export default async function handler(req, res) {
           const now = Date.now();
           const events = await fetchEvents(calUrl, now - 12 * 3600e3, now + 60 * 86400e3);
           const cur = events.find(e => e.start <= now && e.end > now);
-          calendar.current = cur ? { artist: cur.artist, start: cur.start, end: cur.end } : null;
-          calendar.upcoming = events.filter(e => e.start > now).slice(0, 6).map(e => ({ artist: e.artist, start: e.start, end: e.end }));
+          calendar.current = cur ? { artist: cur.artist, venue: cur.venue, start: cur.start, end: cur.end } : null;
+          calendar.upcoming = events.filter(e => e.start > now).slice(0, 6).map(e => ({ artist: e.artist, venue: e.venue, start: e.start, end: e.end }));
         } catch (e) { console.error('[cameras] calendar', slug, e.message); calendar.error = e.message || 'The calendar could not be read'; }
       }
       return res.status(200).json({ cameras, calendar });
