@@ -7,7 +7,8 @@ const SETS = ['LOCAL_ASSETS_ADMIN', 'assets', 'PROD', ''];
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   const session = getWebSessionAuth(req);
-  if (!session?.email || session.venueSlug !== 'local-assets-admin') return res.status(403).json({ error: 'Admin only' });
+  const admins = (process.env.BILLING_ADMINS || 'info@local-assets.com').split(/[\s,]+/).map(x => x.toLowerCase());
+  if (!session?.email || !admins.includes(session.email)) return res.status(403).json({ error: 'Admin only' });
   const out = [];
   for (const s of SETS) {
     const id = (process.env[s ? `${s}_MUX_TOKEN_ID` : 'MUX_TOKEN_ID'] || '').trim();

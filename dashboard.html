@@ -733,7 +733,7 @@
         }
         setTimeout(sweepWatermarks, 4000);
         // Admin: one-off check of the configured Mux accounts (logged on the server)
-        try { if ((JSON.parse(localStorage.getItem('la_admin') || '{}').venueSlug) === 'local-assets-admin' && !sessionStorage.getItem('la_muxchk')) { sessionStorage.setItem('la_muxchk', '1'); laFetch('/api/mux-accounts').catch(function() {}); } } catch (_) {}
+        try { if (!sessionStorage.getItem('la_muxchk2')) { sessionStorage.setItem('la_muxchk2', '1'); laFetch('/api/mux-accounts').catch(function() {}); } } catch (_) {}
 
         // While new clips are processing, the list refreshes itself so they appear when ready
         var _clipsProcessing = false, _clipsPollT;
