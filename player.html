@@ -233,6 +233,7 @@
         </div>
         <div class="flex items-center gap-3 shrink-0">
             <span id="asset-title-mobile" style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#71717a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px;" class="md:hidden"></span>
+            <button id="share-btn" type="button" style="display:none;height:30px;padding:0 14px;border-radius:999px;border:0;background:#39FF14;color:#000;font:700 11px Inter,system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer">Share</button>
             <a id="download-link" href="#" download class="hidden items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#39FF14]/30 transition-colors">
                 
                 <span style="font-size:8px;letter-spacing:.18em;text-transform:uppercase;color:#39FF14;">DOWNLOAD</span>
@@ -469,5 +470,23 @@
             }).catch(() => window.open(url, '_blank'));
         }
     </script>
+<script>
+    // Share to Instagram (Story or Reel), TikTok, WhatsApp… from a phone: the share sheet gets the video file itself.
+    // iPhones only allow sharing straight after a tap, so the file is fetched first.
+    (function () {
+        var v = new URLSearchParams(location.search).get('v');
+        var btn = document.getElementById('share-btn');
+        if (!v || !btn) return;
+        try { if (!(navigator.canShare && navigator.canShare({ files: [new File([''], 'x.mp4', { type: 'video/mp4' })] }))) return; } catch (_) { return; }
+        var t = (new URLSearchParams(location.search).get('title') || 'clip').replace(/[^a-z0-9 _-]/gi, '').trim().replace(/\s+/g, '_') || 'clip';
+        var file = null;
+        btn.style.display = '';
+        btn.disabled = true; btn.textContent = 'Preparing…';
+        fetch('https://stream.mux.com/' + v + '/highest.mp4').then(function (r) { if (!r.ok) throw new Error(r.status); return r.blob(); })
+            .then(function (b) { file = new File([b], t + '.mp4', { type: b.type || 'video/mp4' }); btn.disabled = false; btn.textContent = 'Share'; })
+            .catch(function () { btn.style.display = 'none'; });
+        btn.addEventListener('click', function () { if (file) navigator.share({ files: [file] }).catch(function () {}); });
+    })();
+</script>
 </body>
 </html>
