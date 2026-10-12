@@ -4,27 +4,16 @@ import { createClient } from 'redis';
 import { getWebSessionAuth } from './_venues.js';
 import { resolveWatermark } from './_watermark.js';
 import { renderWatermarkPng, VERTICAL, HORIZONTAL } from './_watermark-render.js';
+import { muxReq, SUB, tagFor, clipTimes, listAllAssets, sessionClips, videoSize, finishVerticals, originalsKey } from './_verticals.js';
 
 // Puts the Brand Kit watermark on a session's vertical clips, and takes it off again.
-// A clip is clean when Mux cut it straight from the full recording; a watermarked clip is a copy of
-// another clip with the watermark on top (Mux's source_asset_id tells them apart).
-// Applying always starts from a clean clip, so a watermark is never stamped twice: the clean clip is kept
-// hidden (tag "… // SOCIALRAW // NN") while the watermarked copy takes its place.
-// Removing brings the clean clips back; when a clean clip no longer exists it is cut again from the
-// full recording at the same times the upload pipeline used.
+// The vertical originals are cut once from the full recording (api/_verticals.js). Applying makes a
+// watermarked copy of each original, shown in its place while the original is kept hidden
+// ("… // SOCIALRAW // NN"). Removing deletes the copies and shows the originals again. Nothing is re-cut here.
 //   POST { action: 'apply', artist, date, clipIds: [...] }
-//   POST { action: 'remove', artist, date }   (also 'restore')
-//   POST { action: 'sweep' }   finishes pending swaps and reports which clips carry a watermark
+//   POST { action: 'remove', artist, date }
+//   POST { action: 'sweep' }   finishes pending work and reports which clips are watermarked or not vertical yet
 
-const muxReq = (auth, path, init = {}) => fetch('https://api.mux.com' + path, {
-  ...init,
-  headers: { Authorization: auth, 'Content-Type': 'application/json', ...(init.headers || {}) },
-  signal: AbortSignal.timeout(15000),
-}).then(async r => {
-  const body = await r.json().catch(() => ({}));
-  if (!r.ok) { const e = new Error(body?.error?.messages?.[0] || `Mux ${r.status}`); e.status = r.status; throw e; }
-  return body.data;
-});
 const del = (auth, id) => muxReq(auth, `/video/v1/assets/${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(e => { if (e.status !== 404) throw e; });
 const setTag = (auth, id, passthrough) => muxReq(auth, `/video/v1/assets/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify({ passthrough }) });
 
@@ -33,28 +22,6 @@ const markedKey = slug => `wm_marked:${slug}`;   // set of the watermarked copie
 // Copies made by the earlier version were listed in wm_raw (watermarked clip → its original)
 const markedSet = async (redis, slug) => new Set([...await redis.sMembers(markedKey(slug)), ...await redis.hKeys(`wm_raw:${slug}`)]);
 const parseSwap = v => { try { const o = JSON.parse(v); if (o && o.old) return o; } catch {} return { old: v }; };
-const SUB = /^(.+?) \/\/ (SOCIAL|SOCIALRAW) \/\/ (\d+)$/i;
-const tagFor = (artist, n, hidden) => `${artist} // ${hidden ? 'SOCIALRAW' : 'SOCIAL'} // ${String(n).padStart(2, '0')}`;
-
-// The vertical clips the upload pipeline cuts from a full recording (same times as api/mux-webhook.js)
-function clipTimes(duration) {
-  const count = Math.min(Math.floor(duration / 30), 5);
-  if (count < 1) return [];
-  const seg = Math.min(45, duration / count);
-  const gap = (duration - seg * count) / (count + 1);
-  return Array.from({ length: count }, (_, i) => { const start = gap * (i + 1) + seg * i; return { n: i + 1, start, end: Math.min(start + seg, duration) }; });
-}
-
-async function listAllAssets(auth) {
-  const out = [];
-  for (let page = 1; page <= 20; page++) {
-    const batch = await muxReq(auth, `/video/v1/assets?limit=100&page=${page}`);
-    out.push(...(batch || []));
-    if (!batch || batch.length < 100) break;
-  }
-  return out;
-}
-
 // Clean = cut straight from a recording (or uploaded), not copied from another clip
 function cleanCheck(assets, marked = new Set()) {
   const byId = new Map(assets.map(a => [a.id, a]));
@@ -68,66 +35,36 @@ function cleanCheck(assets, marked = new Set()) {
   };
 }
 
-// The session's full recording and its clips by number: { master, shown: Map(n → asset), hidden: Map(n → [assets]) }
-function sessionClips(assets, artist, date) {
-  const masterOf = a => {
-    const pt = String(a.passthrough || '').trim();
-    if (pt.toUpperCase() === artist) return true;
-    try { const o = JSON.parse(pt); return o && String(o.artist || '').toUpperCase().trim() === artist && !['AUDIO', 'SOCIAL', 'THUMB'].includes(String(o.camera || '').toUpperCase()); } catch { return false; }
-  };
-  const day = a => new Date(Number(a.created_at) * 1000).toISOString().slice(0, 10);
-  const masters = assets.filter(a => a.status === 'ready' && masterOf(a) && Number(a.duration) > 10)
-    .sort((a, b) => Number(b.created_at) - Number(a.created_at));
-  const master = masters.find(a => day(a) === date) || masters[0] || null;
-  const shown = new Map(), hidden = new Map();
-  if (!master) return { master, shown, hidden };
-  // Clips of this session: made after this recording and before the artist's next one
-  const next = masters.filter(a => Number(a.created_at) > Number(master.created_at)).pop();
-  for (const a of assets) {
-    const m = SUB.exec(String(a.passthrough || '').trim());
-    if (!m || m[1].toUpperCase() !== artist) continue;
-    if (Number(a.created_at) < Number(master.created_at) || (next && Number(a.created_at) >= Number(next.created_at))) continue;
-    const n = Number(m[3]);
-    if (m[2].toUpperCase() === 'SOCIAL') shown.set(n, a);
-    else hidden.set(n, [...(hidden.get(n) || []), a]);
-  }
-  return { master, shown, hidden };
-}
-
 // Takes the watermark off a session: every clip back to a clean one, missing clips cut again
 async function removeWatermark(redis, slug, auth, artist, date) {
   const assets = await listAllAssets(auth);
   const isClean = cleanCheck(assets, await markedSet(redis, slug));
+  const originals = new Set(await redis.sMembers(originalsKey(slug)));
+  const vertical = a => { const [w, h] = videoSize(a); return h > w; };
   const { master, shown, hidden } = sessionClips(assets, artist, date);
   if (!master) return { restored: 0, recreated: 0, error: 'The full recording of this session is not in Cloud Storage, so the clean clips cannot be made again.' };
   const pendingOld = new Set(Object.values(await redis.hGetAll(swapsKey(slug))).map(v => parseSwap(v).old));
-  let restored = 0, recreated = 0;
+  let restored = 0, recreated = 0, missing = 0;
   const numbers = new Set([...clipTimes(Number(master.duration)).map(t => t.n), ...shown.keys()]);
-  const times = new Map(clipTimes(Number(master.duration)).map(t => [t.n, t]));
   for (const n of [...numbers].sort((a, b) => a - b)) {
     const cur = shown.get(n);
     if (cur && (isClean(cur) || pendingOld.has(cur.id))) continue;
     const spare = hidden.get(n) || [];
-    const clean = spare.find(a => isClean(a) && a.status === 'ready');
+    // The kept vertical original (cut once from the full recording)
+    const clean = spare.find(a => isClean(a) && a.status === 'ready' && vertical(a));
     if (clean) {
       await setTag(auth, clean.id, tagFor(artist, n));
       restored++;
-    } else if (times.has(n)) {
-      const t = times.get(n);
-      await muxReq(auth, '/video/v1/assets', {
-        method: 'POST',
-        body: JSON.stringify({
-          input: [{ url: `mux://assets/${master.id}`, start_time: t.start, end_time: t.end }],
-          playback_policy: ['public'], passthrough: tagFor(artist, n), static_renditions: [{ resolution: 'highest' }],
-        }),
-      });
-      recreated++;
-    } else continue;
+    } else {
+      // No original kept for this clip: it comes from the vertical originals cut (never re-cut here)
+      missing++;
+      continue;
+    }
     // The watermarked clip and any other leftover versions of this clip go
     if (cur) { await del(auth, cur.id); await redis.sRem(markedKey(slug), cur.id); }
-    for (const a of spare) if (a !== clean) { await del(auth, a.id); await redis.sRem(markedKey(slug), a.id); }
+    for (const a of spare) if (a !== clean && !originals.has(a.id)) { await del(auth, a.id); await redis.sRem(markedKey(slug), a.id); }
   }
-  return { restored, recreated };
+  return { restored, recreated, missing };
 }
 
 export default async function handler(req, res) {
@@ -166,12 +103,16 @@ export default async function handler(req, res) {
           await redis.hDel(swapsKey(slug), newId);
         } else pending++;
       }
-      // Which shown clips carry a watermark
-      const assets = await listAllAssets(auth);
+      // Which shown clips carry a watermark, and which aren't vertical yet
+      let assets = await listAllAssets(auth);
+      const v = await finishVerticals(redis, slug, auth, assets);
+      if (v.done) assets = await listAllAssets(auth);
       const isClean = cleanCheck(assets, await markedSet(redis, slug));
       const watermarked = assets.filter(a => /^.+ \/\/ SOCIAL \/\/ \d+$/i.test(String(a.passthrough || '').trim()) && !isClean(a)).map(a => a.id);
       const pendingIds = Object.values(await redis.hGetAll(swapsKey(slug))).map(v => parseSwap(v).old);
-      return res.status(200).json({ done, pending, watermarked, pendingIds });
+      const shownClips = assets.filter(a => /^.+ \/\/ SOCIAL \/\/ \d+$/i.test(String(a.passthrough || '').trim()));
+      const horizontal = shownClips.filter(a => { const [w, h] = videoSize(a); return w > h; }).map(a => a.id);
+      return res.status(200).json({ done: done + v.done, pending: pending + v.pending, verticalsPending: v.pending, watermarked, horizontal, pendingIds });
     }
 
     if (body.action === 'remove' || body.action === 'restore') {
@@ -205,13 +146,11 @@ export default async function handler(req, res) {
       }
       return overlays.get(key);
     };
-    const videoSize = a => { const t = (a.tracks || []).find(x => x.type === 'video'); return t ? [Number(t.max_width) || 0, Number(t.max_height) || 0] : [0, 0]; };
 
     const assets = await listAllAssets(auth);
     const byId = new Map(assets.map(a => [a.id, a]));
     const isClean = cleanCheck(assets, await markedSet(redis, slug));
-    const { master, hidden } = sessionClips(assets, artist, String(body.date || ''));
-    const times = master ? new Map(clipTimes(Number(master.duration)).map(t => [t.n, t])) : new Map();
+    const { hidden } = sessionClips(assets, artist, String(body.date || ''));
     const pendingOld = new Set(Object.values(await redis.hGetAll(swapsKey(slug))).map(v => parseSwap(v).old));
     let started = 0;
     const errors = [];
@@ -224,13 +163,14 @@ export default async function handler(req, res) {
         // Only this session's vertical clips, from this venue's own Cloud Storage
         if (!m || m[1].toUpperCase() !== artist) { errors.push(`One clip isn't a vertical clip of ${artist}`); continue; }
         const n = Number(m[3]);
-        // Always from a clean clip: this one, its kept original, or a fresh cut of the full recording
+        // Always from the clean vertical original: this clip, or the original kept hidden behind it
         let input, size;
-        const kept = (hidden.get(n) || []).find(a => isClean(a) && a.status === 'ready');
+        const kept = (hidden.get(n) || []).find(a => isClean(a) && a.status === 'ready' && videoSize(a)[1] > videoSize(a)[0]);
         if (isClean(clip)) { input = { url: `mux://assets/${clip.id}` }; size = videoSize(clip); }
         else if (kept) { input = { url: `mux://assets/${kept.id}` }; size = videoSize(kept); }
-        else if (times.has(n)) { const t = times.get(n); input = { url: `mux://assets/${master.id}`, start_time: t.start, end_time: t.end }; size = videoSize(master); }
-        else { errors.push(`Clip ${String(n).padStart(2, '0')} has no clean version to start from`); continue; }
+        else { errors.push(`Clip ${String(n).padStart(2, '0')} has no vertical original yet. Make the vertical originals first.`); continue; }
+        // Watermarks go on vertical originals only
+        if (size[0] > size[1]) { errors.push(`Clip ${String(n).padStart(2, '0')} isn't vertical yet. Make the vertical originals first.`); continue; }
         const overlayUrl = await overlayFor(size[0] || 1080, size[1] || 1920);
         const copy = await muxReq(auth, '/video/v1/assets', {
           method: 'POST',

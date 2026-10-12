@@ -1,6 +1,8 @@
 import Mux from '@mux/mux-node';
 import { put } from '@vercel/blob';
 import { processCameraRecording } from './_camera-recording.js';
+import { createClient } from 'redis';
+import { startVerticals, venueForAsset } from './_verticals.js';
 
 const mux = new Mux({ 
   tokenId: (process.env.PROD_MUX_TOKEN_ID || process.env.MUX_TOKEN_ID || '').trim(), 
@@ -60,34 +62,17 @@ async function createSocialClips(assetId, artistName, duration) {
         console.log('[Social] AI track skipped:', e.message);
     }
 
-    // Create evenly-spaced ~45s clips immediately
-    const segDuration = Math.min(45, duration / clipCount);
-    const gap = (duration - segDuration * clipCount) / (clipCount + 1);
-
-    for (let i = 0; i < clipCount; i++) {
-        const startTime = gap * (i + 1) + segDuration * i;
-        const tag = artistName + ' // SOCIAL // ' + String(i + 1).padStart(2, '0');
-        console.log(`[Social] Clip ${i + 1}/${clipCount}: ${tag} @ ${startTime.toFixed(1)}s`);
-        try {
-            const result = await fetch('https://api.mux.com/video/v1/assets', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Basic ${AUTH}` },
-                body: JSON.stringify({
-                    input: [{
-                        url: `mux://assets/${assetId}`,
-                        start_time: startTime,
-                        end_time: Math.min(startTime + segDuration, duration)
-                    }],
-                    playback_policy: ['public'],
-                    passthrough: tag,
-                    static_renditions: [{ resolution: 'highest' }]
-                })
-            });
-            const data = await result.json();
-            console.log(`[Social] Created: ${data.data?.id || 'error'}`);
-        } catch (e) {
-            console.error(`[Social] Clip ${i + 1} error:`, e.message);
-        }
+    // Vertical originals (9:16, 1080×1920), cut once from the full recording by api/vertical-clips.js.
+    // They are kept as the originals; a Brand Kit watermark only ever goes on copies of them.
+    const found = await venueForAsset(assetId);
+    if (!found) { console.error('[Social] No venue Cloud Storage holds', assetId); return; }
+    const redis = createClient({ url: process.env.REDIS_URL });
+    await redis.connect();
+    try {
+        const n = await startVerticals(redis, found.slug, found.asset, artistName, 'https://local-assets.com');
+        console.log(`[Social] Cutting ${n} vertical clips for ${artistName} (${found.slug})`);
+    } finally {
+        await redis.quit().catch(() => {});
     }
 }
 
