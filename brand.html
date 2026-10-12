@@ -755,7 +755,7 @@
                 '<form id="bk-thumb-form" class="cam-form">' +
                 (list.length
                     ? '<label>Session<select name="session">' + opts + '</select><small>Added to this session\'s thumbnails in Distribution History.</small></label>'
-                    : '<p class="cam-dialog-text">There are no sessions yet. Thumbnails can be set once a set has been recorded or uploaded.</p>') +
+                    : '<p class="cam-dialog-text">This account has no sessions in Cloud Storage yet, so there is nothing to attach it to. You can download the thumbnails now, with your watermark, and set them on a session once a set has been recorded or uploaded.</p>') +
                 '<div class="bk-thumb-previews">' +
                     '<label class="bk-thumb-opt"><input type="checkbox" name="horizontal" checked><span class="bk-thumb-frame h"><canvas id="bk-thumb-h"></canvas></span><span class="bk-thumb-cap">Horizontal · 1920 × 1080<small>YouTube</small></span></label>' +
                     '<label class="bk-thumb-opt"><input type="checkbox" name="vertical" checked><span class="bk-thumb-frame v"><canvas id="bk-thumb-v"></canvas></span><span class="bk-thumb-cap">Vertical · 1080 × 1920<small>Reels, TikTok, Shorts</small></span></label>' +
@@ -763,7 +763,7 @@
                 '<p id="bk-thumb-error" class="cam-form-error"></p>' +
                 '<div class="cam-form-actions"><span class="bk-thumb-note">' + (_wm && _wm.enabled ? 'Your watermark is applied exactly as on the clips.' : 'The watermark is off, so the image is used as it is.') + '</span>' +
                     '<button type="button" class="cam-btn ghost" onclick="closeCamDialog()">Cancel</button>' +
-                    '<button type="submit" class="cam-btn primary"' + (list.length ? '' : ' disabled') + '>Set as thumbnail</button></div>' +
+                    '<button type="submit" class="cam-btn primary">' + (list.length ? 'Set as thumbnail' : 'Download') + '</button></div>' +
                 '</form>');
             document.querySelector('#cam-dialog .cam-dialog-panel').classList.add('wide');
             var form = document.getElementById('bk-thumb-form'), err = document.getElementById('bk-thumb-error');
@@ -786,7 +786,22 @@
                 e.preventDefault();
                 var sess = list[Number(form.session && form.session.value)];
                 var kinds = ['horizontal', 'vertical'].filter(function(k) { return form[k].checked; });
-                if (!sess || !kinds.length) { err.textContent = kinds.length ? '' : 'Choose at least one format.'; return; }
+                if (!kinds.length) { err.textContent = 'Choose at least one format.'; return; }
+                if (!sess) {
+                    // No session to attach to: save the watermarked thumbnails as files
+                    var dl = form.querySelector('[type=submit]'); dl.disabled = true; dl.textContent = 'Preparing…';
+                    try {
+                        var im = await imgP, base = f.name.replace(/\.[^.]+$/, '');
+                        for (var j = 0; j < kinds.length; j++) {
+                            var LL = THUMB_LAYOUT[kinds[j]], cov = Math.min(im.naturalWidth / LL.W, im.naturalHeight / LL.H);
+                            var c2 = await renderThumb(im, LL, cov >= 2 ? 2 : cov >= 1.33 ? 1.5 : 1);
+                            var b2 = await new Promise(function(r) { c2.toBlob(r, 'image/jpeg', 0.95); });
+                            saveBlob(b2, base + '-' + kinds[j] + '.jpg');
+                        }
+                        closeCamDialog();
+                    } catch (er) { err.textContent = 'Could not prepare the files: ' + er.message; dl.disabled = false; dl.textContent = 'Download'; }
+                    return;
+                }
                 var btn = form.querySelector('[type=submit]'); btn.disabled = true; btn.textContent = 'Saving…'; err.textContent = '';
                 try {
                     var img = await imgP;
