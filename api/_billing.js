@@ -22,13 +22,21 @@ export async function readRates(redis) {
 
 // Plans: a monthly price with usage included; usage above it is billed as overage
 export const DEFAULT_PLANS = [
-  { id: 'starter-distribution', name: 'Distribution · Starter', price: 2750, included: { storedMinutes: 3000, deliveredMinutes: 25000, fileGB: 25 }, maxClips: 5 },
-  { id: 'liveset-distribution', name: 'Distribution · Pro', price: 3500, included: { storedMinutes: 6000, deliveredMinutes: 50000, fileGB: 50 }, maxClips: 10 },
-  { id: 'starter-creative', name: 'Creative & Production · Starter', price: 5500, included: { storedMinutes: 6000, deliveredMinutes: 50000, fileGB: 50 }, maxClips: 10 },
-  { id: 'liveset-creative', name: 'Creative & Production · Live-Set', price: 7500, included: { storedMinutes: 12000, deliveredMinutes: 100000, fileGB: 100 }, maxClips: 20 },
+  { id: 'starter-distribution', name: 'Distribution · Starter', price: 2750, maxClips: 6, cameras: 0,
+    included: { storedMinutes: 3000, deliveredMinutes: 25000, fileGB: 250 },
+    features: ['Content intake & quality control', 'Up to 8 events processed / month', '6 vertical social clips', 'Basic multi-platform distribution', '250 GB cloud storage'] },
+  { id: 'liveset-distribution', name: 'Distribution · Pro', price: 3500, maxClips: 12, cameras: 0,
+    included: { storedMinutes: 6000, deliveredMinutes: 50000, fileGB: 500 },
+    features: ['Content intake & quality control', 'Up to 8 events processed / month', '12+ vertical social clips', 'Marketing thumbnails', 'Multi-platform distribution', 'YouTube & SoundCloud SEO', 'Priority 48-hour turnaround', '500 GB cloud storage'] },
+  { id: 'starter-creative', name: 'Creative & Production · Starter', price: 5500, maxClips: 12, cameras: 1,
+    included: { storedMinutes: 12000, deliveredMinutes: 100000, fileGB: 2000 },
+    features: ['1 camera included', 'Up to 4 event nights / month', '4K master recordings', 'HQ audio capture', '12 vertical social clips', 'Marketing thumbnails', 'Basic distribution', '2 TB cloud storage'] },
+  { id: 'liveset-creative', name: 'Creative & Production · Live-Set', price: 7500, maxClips: 0, cameras: 1,
+    included: { storedMinutes: 60000, deliveredMinutes: 500000, fileGB: 20000 },
+    features: ['1 camera included', 'Up to 8 event nights / month', '4K master recordings', 'HQ audio capture', 'Unlimited vertical social clips', 'Marketing thumbnails & watermark', 'Multi-platform distribution & SEO', 'Quarterly performance reports', 'Priority 48-hour turnaround', '20 TB cloud storage'] },
 ];
 export async function readPlans(redis) {
-  try { const p = JSON.parse(await redis.get('billing_plans') || 'null'); return Array.isArray(p) && p.length ? p.map(x => x.maxClips ? x : { ...x, maxClips: DEFAULT_PLANS.find(d => d.id === x.id)?.maxClips || 5 }) : DEFAULT_PLANS; }
+  try { const p = JSON.parse(await redis.get('billing_plans') || 'null'); return Array.isArray(p) && p.length ? p.map(x => { const d = DEFAULT_PLANS.find(z => z.id === x.id) || {}; return { features: d.features, cameras: d.cameras || 0, ...x, maxClips: x.maxClips != null ? x.maxClips : (d.maxClips != null ? d.maxClips : 5) }; }) : DEFAULT_PLANS; }
   catch { return DEFAULT_PLANS; }
 }
 export function cleanPlans(list) {
@@ -36,7 +44,7 @@ export function cleanPlans(list) {
     const name = String(p?.name || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 60);
     const num = v => { const n = Number(v); return Number.isFinite(n) && n >= 0 ? n : 0; };
     const id = String(p?.id || '').replace(/[^a-z0-9-]/g, '').slice(0, 40) || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `plan-${i + 1}`;
-    return name ? { id, name, price: num(p.price), maxClips: Math.min(50, Math.max(1, Math.round(num(p.maxClips) || 5))), included: { storedMinutes: num(p.included?.storedMinutes), deliveredMinutes: num(p.included?.deliveredMinutes), fileGB: num(p.included?.fileGB) } } : null;
+    return name ? { id, name, price: num(p.price), maxClips: Math.min(60, Math.max(0, Math.round(num(p.maxClips)))), cameras: Math.round(num(p.cameras)), features: Array.isArray(p.features) ? p.features.map(f => String(f).replace(/[<>]/g, '').slice(0, 80)).filter(Boolean).slice(0, 14) : undefined, included: { storedMinutes: num(p.included?.storedMinutes), deliveredMinutes: num(p.included?.deliveredMinutes), fileGB: num(p.included?.fileGB) } } : null;
   }).filter(Boolean);
 }
 
@@ -51,8 +59,9 @@ export async function readAssignments(redis, slug) {
 // How many vertical clips a session of this account may have (its plan's limit, 5 without a plan)
 export async function planMaxClips(redis, slug) {
   const plan = await readPlan(redis, slug, 'venue').catch(() => null);
-  const n = Number(plan?.maxClips) || DEFAULT_PLANS.find(d => d.id === plan?.id)?.maxClips || 5;
-  return Math.min(50, Math.max(1, n));
+  const def = DEFAULT_PLANS.find(d => d.id === plan?.id);
+  const n = plan && plan.maxClips != null ? Number(plan.maxClips) : def ? def.maxClips : 5;
+  return n === 0 ? 60 : Math.min(60, Math.max(1, n || 5));   // 0 = unlimited (up to 60 a session)
 }
 export async function readPlan(redis, slug, target = 'venue') {
   const a = (await readAssignments(redis, slug))[target];

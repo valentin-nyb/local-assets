@@ -91,6 +91,9 @@
         .bl-plan-name { font:900 20px/1.15 "Helvetica Neue", Helvetica, Arial, sans-serif; text-transform:uppercase; color:var(--la-text); margin-top:6px; min-height:23px; }
         .bl-plan-price { font:700 30px/1 "Helvetica Neue", Helvetica, Arial, sans-serif; letter-spacing:-.01em; color:var(--la-text); margin-top:18px; padding-bottom:18px; border-bottom:1px solid var(--la-line-soft); }
         .bl-plan-price span { font-size:12px; font-weight:400; color:var(--la-dim); margin-left:6px; letter-spacing:0; }
+        .bl-plan-feats { list-style:none; margin:16px 0 20px; padding:0; display:flex; flex-direction:column; gap:9px; font-size:12.5px; line-height:1.4; color:var(--la-text-2, #d4d4d8); flex:1; }
+        .bl-plan-feats li { position:relative; padding-left:18px; }
+        .bl-plan-feats li::before { content:''; position:absolute; left:2px; top:.45em; width:8px; height:5px; border-left:1.5px solid var(--la-accent); border-bottom:1.5px solid var(--la-accent); transform:rotate(-45deg); }
         .bl-plan-spec { display:grid; grid-template-columns:1fr auto; gap:10px 12px; margin:16px 0 20px; font-size:12px; flex:1; align-content:start; }
         .bl-plan-spec dt { color:var(--la-sub); }
         .bl-plan-spec dd { margin:0; color:var(--la-text); font-weight:600; font-variant-numeric:tabular-nums; text-align:right; }
@@ -289,13 +292,13 @@
                     var cur = p.id === d.currentPlan, parts = String(p.name).split(/\s*·\s*/);
                     var cat = parts.length > 1 ? parts[0] : 'Plan', tier = parts.length > 1 ? parts.slice(1).join(' · ') : p.name;
                     var inc = p.included || {};
-                    var rows = [['Vertical clips per session', p.maxClips], ['Video storage', fmt(inc.storedMinutes / 60) + ' h'], ['Streaming', fmt(inc.deliveredMinutes / 60) + ' h'], ['Files', fmt(inc.fileGB) + ' GB']];
+                    var feats = (p.features && p.features.length) ? p.features : [(p.maxClips ? p.maxClips : 'Unlimited') + ' vertical clips per session', fmt(inc.fileGB) + ' GB cloud storage'];
                     var featured = !cur && i === nextUp;
                     return '<div class="bl-plan' + (cur ? ' current' : '') + (featured ? ' featured' : '') + '">' +
                         (cur ? '<span class="bl-plan-badge">Current</span>' : featured ? '<span class="bl-plan-badge alt">Recommended</span>' : '') +
                         '<p class="bl-plan-cat">' + esc(cat) + '</p><p class="bl-plan-name">' + esc(tier) + '</p>' +
                         '<p class="bl-plan-price">£' + fmt(p.price) + '<span>/ month</span></p>' +
-                        '<dl class="bl-plan-spec">' + rows.map(function(r) { return '<dt>' + r[0] + '</dt><dd>' + r[1] + '</dd>'; }).join('') + '</dl>' +
+                        '<ul class="bl-plan-feats">' + feats.map(function(f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul>' +
                         (cur ? '<button type="button" class="cam-btn ghost" disabled>Your plan</button>'
                              : '<button type="button" class="cam-btn ' + (featured || curIdx < 0 && i === 0 ? 'primary' : 'ghost') + '" data-plan="' + esc(p.id) + '">' + (curIdx < 0 ? 'Choose ' + esc(tier) : i > curIdx ? 'Upgrade' : 'Switch') + '</button>') +
                     '</div>';
@@ -337,13 +340,13 @@
         function renderPlans(plans) {
             var t = document.getElementById('bl-plans');
             if (t.dataset.editing === '1') return;
-            t.innerHTML = '<thead><tr><th>Plan</th><th class="num">£ per month</th><th class="num">Storage incl., min</th><th class="num">Streaming incl., min</th><th class="num">Files incl., GB</th><th class="num">Clips / session</th><th></th></tr></thead><tbody>' +
+            t.innerHTML = '<thead><tr><th>Plan</th><th class="num">£ per month</th><th class="num">Storage incl., min</th><th class="num">Streaming incl., min</th><th class="num">Files incl., GB</th><th class="num">Clips / session (0 = unlimited)</th><th></th></tr></thead><tbody>' +
                 plans.map(function(p) { return planRow(p); }).join('') + '</tbody>';
         }
         function planRow(p) {
             p = p || { id: '', name: '', price: 0, maxClips: 5, included: { storedMinutes: 0, deliveredMinutes: 0, fileGB: 0 } };
             var inp = function(k, v, num) { return '<input class="bl-plan-in" data-k="' + k + '"' + (num ? ' inputmode="decimal"' : '') + ' value="' + esc(v) + '">'; };
-            return '<tr data-id="' + esc(p.id) + '"><td>' + inp('name', p.name) + '</td><td>' + inp('price', p.price, 1) + '</td><td>' + inp('storedMinutes', p.included.storedMinutes, 1) + '</td><td>' + inp('deliveredMinutes', p.included.deliveredMinutes, 1) + '</td><td>' + inp('fileGB', p.included.fileGB, 1) + '</td><td>' + inp('maxClips', p.maxClips || 5, 1) + '</td><td><button type="button" class="bl-x" title="Remove plan" data-del-plan>×</button></td></tr>';
+            return '<tr data-id="' + esc(p.id) + '"><td>' + inp('name', p.name) + '</td><td>' + inp('price', p.price, 1) + '</td><td>' + inp('storedMinutes', p.included.storedMinutes, 1) + '</td><td>' + inp('deliveredMinutes', p.included.deliveredMinutes, 1) + '</td><td>' + inp('fileGB', p.included.fileGB, 1) + '</td><td>' + inp('maxClips', p.maxClips == null ? 5 : p.maxClips, 1) + '</td><td><button type="button" class="bl-x" title="Remove plan" data-del-plan>×</button></td></tr>';
         }
         document.getElementById('bl-plans').addEventListener('input', function() { this.dataset.editing = '1'; });
         document.getElementById('bl-plans').addEventListener('click', function(e) { var b = e.target.closest('[data-del-plan]'); if (b) { this.dataset.editing = '1'; b.closest('tr').remove(); } });

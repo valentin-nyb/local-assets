@@ -45,7 +45,7 @@ export default async function handler(req, res) {
       const max = await planMaxClips(r0, session.venueSlug);
       const { master } = session.muxAuth ? sessionClips(await listAllAssets(session.muxAuth), String(body.artist || '').toUpperCase().trim(), String(body.date || '')) : {};
       const fits = master ? Math.max(1, Math.floor(Number(master.duration) / 30)) : max;
-      return res.status(200).json({ max: Math.min(max, fits), planMax: max });
+      return res.status(200).json({ max: Math.min(max, fits), planMax: max, unlimited: max >= 60 });
     } finally { await r0.quit().catch(() => {}); }
   }
   if (req.method !== 'GET' && session?.venueSlug) { const _p = await pausedBy(session.venueSlug); if (_p) return sendPaused(res, _p); }

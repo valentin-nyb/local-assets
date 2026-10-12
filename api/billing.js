@@ -146,7 +146,7 @@ export default async function handler(req, res) {
         venue: venueName, target, period: { label: base.label, start: base.start, end: base.end, elapsed },
         usage: data.usage, ...priced, invoices, stripe: !!stripe, isAdmin,
         // Plans a client can move to (name, price, what's included)
-        plansOffered: data.plans.map(p => ({ id: p.id, name: p.name, price: p.price, maxClips: p.maxClips || 5, included: p.included })),
+        plansOffered: data.plans.map(p => ({ id: p.id, name: p.name, price: p.price, maxClips: p.maxClips, cameras: p.cameras || 0, features: p.features || [], included: p.included })),
         currentPlan: (data.assignments.venue || {}).plan || '',
         ...(isAdmin ? { stripeAccount, venueSlug: slug, venues: billable.map(k => ({ slug: k, name: cfg[k]?.name || k })), rates: data.rates, plans: data.plans, assignments: data.assignments, artists: data.artists, labels: data.labels, assignment: a } : {}),
       });
