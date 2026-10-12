@@ -35,7 +35,22 @@ function repairJson(raw) {
     // a value or closing bracket at the end of a line, followed by a new key or object: add the comma
     .replace(/("|'|\d|true|false|null|\}|\])([ \t]*\r?\n\s*)(?=[^\s}\],:\/])/g, '$1,$2')
     // a comma right before a closing bracket: remove it
-    .replace(/,(\s*[}\]])/g, '$1');
+    .replace(/,(\s*[}\]])/g, '$1')
+    // closing brackets missing at the end (value cut short when pasted)
+    .replace(/[\s\S]*/, closeBrackets);
+}
+
+function closeBrackets(text) {
+  const stack = [];
+  let quote = null;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (quote) { if (c === '\\') i++; else if (c === quote) quote = null; continue; }
+    if (c === '"' || c === "'") quote = c;
+    else if (c === '{' || c === '[') stack.push(c === '{' ? '}' : ']');
+    else if (c === '}' || c === ']') stack.pop();
+  }
+  return text.replace(/[\s,]*$/, '') + (quote || '') + stack.reverse().join('');
 }
 
 // Env-var key for a venue slug, e.g. "the-nest" → "THE_NEST"
