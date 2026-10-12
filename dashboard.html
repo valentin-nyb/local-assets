@@ -635,7 +635,7 @@
                 var ids = (btn.dataset.wmClips || '').split(',').filter(Boolean);
                 var marked = ids.some(function(id) { return _wmState.watermarked.indexOf(id) >= 0; });
                 var pending = ids.some(function(id) { return _wmState.pendingIds.indexOf(id) >= 0; });
-                btn.classList.toggle('hidden', !(Number(btn.dataset.missing) > 0 || marked) || pending);
+                btn.classList.toggle('hidden', !(Number(btn.dataset.missing) > 0) || marked || pending);
             });
         }
         document.addEventListener('click', async function(e) {
@@ -645,17 +645,17 @@
             var ids = (btn.dataset.wmClips || '').split(',').filter(Boolean);
             var removing = btn.classList.contains('is-remove');
             var ok = await laConfirm(removing
-                ? { title: 'Remove the watermark?', message: 'The watermarked versions of these ' + ids.length + ' clips are deleted and the originals come back, ready for a new watermark.', confirmText: 'Remove watermark', danger: true }
+                ? { title: 'Remove the watermark?', message: 'The watermarked clips are deleted and the originals come back without a watermark, ready for a new one.', confirmText: 'Remove watermark', danger: true }
                 : { title: 'Apply the watermark?', message: 'Your Brand Kit watermark is added to these ' + ids.length + ' vertical clips. The originals are kept, so you can remove it or change it later.', confirmText: 'Apply watermark' });
             if (!ok) return;
             btn.disabled = true; btn.textContent = removing ? 'Removing…' : 'Applying…';
             try {
-                var r = await laFetch('/api/watermark-clips', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(removing ? { action: 'remove', clipIds: ids, artist: btn.dataset.wmArtist, date: btn.dataset.wmDate } : { action: 'apply', artist: btn.dataset.wmArtist, clipIds: ids }) });
+                var r = await laFetch('/api/watermark-clips', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(removing ? { action: 'remove', clipIds: ids, artist: btn.dataset.wmArtist, date: btn.dataset.wmDate } : { action: 'apply', artist: btn.dataset.wmArtist, date: btn.dataset.wmDate, clipIds: ids }) });
                 var d = await r.json().catch(function() { return {}; });
                 if (!r.ok) throw new Error(d.error || r.status);
                 if (removing) {
-                    var back = (d.recreated || 0);
-                    laToast((d.removed ? 'Watermark removed from ' + d.removed + ' clip' + (d.removed !== 1 ? 's' : '') + '.' : 'No watermarked clips with saved originals.') + (back ? ' ' + back + ' deleted clip' + (back !== 1 ? 's are' : ' is') + ' being cut again from the full recording.' : ''));
+                    var n = (d.restored || 0) + (d.recreated || 0);
+                    laToast(n ? 'Watermark removed from ' + n + ' clip' + (n !== 1 ? 's' : '') + '.' + (d.recreated ? ' Clips cut again from the full recording take a few minutes to process.' : '') : 'These clips have no watermark.');
                     fetchRecentUploads();
                 } else {
                     laToast(d.started ? 'Watermarking ' + d.started + ' clip' + (d.started !== 1 ? 's' : '') + '. They update in a few minutes.' : 'These clips are already being watermarked.');
