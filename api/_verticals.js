@@ -6,6 +6,7 @@ import { spawn } from 'child_process';
 import ffmpegPath from 'ffmpeg-static';
 import { put, del as delBlob } from '@vercel/blob';
 import { getVenuesConfig, getMuxAuthForVenue } from './_venues.js';
+import { planMaxClips } from './_billing.js';
 
 // Vertical clips: cut once from a session's full recording, cropped to 9:16 at 1080×1920, and kept as
 // the originals ("ARTIST // SOCIAL // NN"). A watermark is put on copies of these, never on the
@@ -43,8 +44,8 @@ const doneKey = masterId => `v_done:${masterId}`;           // hash: n → origi
 const failKey = masterId => `v_fail:${masterId}`;           // hash: n → failed attempts (no endless retries)
 
 // The times the clips are cut at (same as the upload pipeline always used)
-export function clipTimes(duration) {
-  const count = Math.min(Math.floor(duration / 30), 5);
+export function clipTimes(duration, want = 5) {
+  const count = Math.min(Math.floor(duration / 30), Math.max(1, want));
   if (count < 1) return [];
   const seg = Math.min(45, duration / count);
   const gap = (duration - seg * count) / (count + 1);
@@ -119,7 +120,8 @@ export async function venueForAsset(assetId) {
 }
 
 // Starts one cutting job per clip that hasn't been cut yet; each runs in its own function
-export async function startVerticals(redis, slug, master, artist, origin, retry = false) {
+export async function startVerticals(redis, slug, master, artist, origin, retry = false, count = null) {
+  if (!count) count = await planMaxClips(redis, slug);
   if (retry) await redis.del(failKey(master.id));   // pressed by hand: try failed clips again
   const pid = (master.playback_ids || [])[0]?.id;
   if (!pid) throw new Error('The full recording has no playback ID yet');
@@ -134,7 +136,7 @@ export async function startVerticals(redis, slug, master, artist, origin, retry 
   const done = await redis.hGetAll(doneKey(master.id));
   const fails = await redis.hGetAll(failKey(master.id));
   // A clip that failed twice isn't retried automatically
-  const todo = clipTimes(Number(master.duration)).filter(t => !done[t.n] && Number(fails[t.n] || 0) < 2);
+  const todo = clipTimes(Number(master.duration), count).filter(t => !done[t.n] && Number(fails[t.n] || 0) < 2);
   await Promise.all(todo.map(t => fetch(`${origin}/api/vertical-clips`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

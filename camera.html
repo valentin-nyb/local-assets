@@ -472,7 +472,8 @@
         function fillIntroExample() {
             // The example clips always show the local / assets logo and a placeholder name
             document.querySelectorAll('.ci-wm').forEach(function(w) { w.classList.add('has-logo'); w.style.backgroundImage = 'url(/logos/a-white.png)'; w.innerHTML = '&#8203;'; });
-            document.querySelectorAll('.ci-name').forEach(function(n) { n.textContent = 'DJ NAME'; });
+            // Until the account's latest session loads: the account's name
+            (function() { try { var a = JSON.parse(localStorage.getItem('la_admin') || '{}'); var v = String(a.venue || '').replace(/\s+TEAM$/i, '').trim(); if (v) document.querySelectorAll('.ci-name').forEach(function(n) { n.textContent = v.toUpperCase(); }); } catch (_) {} })();
             laFetch('/api/list-assets').then(function(r) { return r.ok ? r.json() : []; }).then(function(list) {
                 list = Array.isArray(list) ? list : (list.data || list.assets || []);
                 var artistOf = function(a) {
@@ -488,6 +489,8 @@
                 var name = String(artistOf(m)).toUpperCase();
                 document.getElementById('ci-artist').textContent = name;
                 document.getElementById('ci-artist2').textContent = name;
+                // The account's own DJ on the example clips
+                document.querySelectorAll('.ci-name').forEach(function(n) { n.textContent = name; });
                 // Short silent loops from the session (animated WebP: plays like a GIF, smaller)
                 var loop = function(t, w) { var a = Math.round(t); return 'https://image.mux.com/' + pid + '/animated.webp?start=' + a + '&end=' + (a + 4) + '&width=' + w + '&fps=10'; };
                 document.getElementById('ci-stage').innerHTML = '<img alt="" class="ci-loop" src="' + loop(dur * 0.45, 480) + '">';

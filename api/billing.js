@@ -145,11 +145,51 @@ export default async function handler(req, res) {
       return res.status(200).json({
         venue: venueName, target, period: { label: base.label, start: base.start, end: base.end, elapsed },
         usage: data.usage, ...priced, invoices, stripe: !!stripe, isAdmin,
+        // Plans a client can move to (name, price, what's included)
+        plansOffered: data.plans.map(p => ({ id: p.id, name: p.name, price: p.price, maxClips: p.maxClips || 5, included: p.included })),
+        currentPlan: (data.assignments.venue || {}).plan || '',
         ...(isAdmin ? { stripeAccount, venueSlug: slug, venues: billable.map(k => ({ slug: k, name: cfg[k]?.name || k })), rates: data.rates, plans: data.plans, assignments: data.assignments, artists: data.artists, labels: data.labels, assignment: a } : {}),
       });
     }
 
     if (req.method !== 'POST') return res.status(405).end();
+    // A client changes its own plan: the Stripe subscription moves to the new price (prorated),
+    // or, without a subscription yet, a Stripe checkout starts one
+    if (!isAdmin) {
+      const body0 = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+      if (body0.action !== 'changePlan') return res.status(403).json({ error: 'Only local / assets can change billing' });
+      const stripe = stripeClient();
+      if (!stripe) return res.status(503).json({ error: 'Payments are not set up yet' });
+      const out = await withRedis(async redis => {
+        const plan = (await readPlans(redis)).find(p => p.id === String(body0.plan || ''));
+        if (!plan || !(plan.price > 0)) return { status: 400, error: 'Unknown plan' };
+        const a = (await readAssignments(redis, slug)).venue || {};
+        const subId = a.subscriptionId || getVenuesConfig()[slug]?.subscription || '';
+        const price = { currency: 'gbp', unit_amount: Math.round(plan.price * 100), recurring: { interval: 'month' } };
+        if (subId) {
+          const sub = await stripe.subscriptions.retrieve(subId).catch(() => null);
+          if (sub && sub.status !== 'canceled' && sub.items.data[0]) {
+            const p = await stripe.prices.create({ ...price, product_data: { name: `local / assets · ${plan.name}` } });
+            await stripe.subscriptions.update(subId, { items: [{ id: sub.items.data[0].id, price: p.id }], proration_behavior: 'create_prorations', metadata: { ...sub.metadata, tier: plan.id } });
+            await redis.hSet(assignKey(slug), 'venue', JSON.stringify({ ...a, plan: plan.id, subscription: true, subscriptionId: subId }));
+            console.log('[billing] plan changed', slug, plan.id);
+            return { status: 200, changed: true, plan: plan.name };
+          }
+        }
+        const customer = await redis.get(`billing_customer:${slug}`);
+        const checkout = await stripe.checkout.sessions.create({
+          mode: 'subscription',
+          ...(customer ? { customer } : { customer_email: session.email }),
+          line_items: [{ quantity: 1, price_data: { ...price, product_data: { name: `local / assets · ${plan.name}` } } }],
+          success_url: 'https://local-assets.com/billing?plan=updated', cancel_url: 'https://local-assets.com/billing',
+          metadata: { kind: 'upgrade', venueSlug: slug, tier: plan.id },
+          subscription_data: { metadata: { kind: 'upgrade', venueSlug: slug, tier: plan.id } },
+        });
+        return { status: 200, url: checkout.url };
+      });
+      const { status, ...rest } = out;
+      return res.status(status).json(rest);
+    }
     if (!isAdmin) return res.status(403).json({ error: 'Only local / assets can change billing' });
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
 

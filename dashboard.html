@@ -785,10 +785,14 @@
             var btn = e.target.closest('.wm-restore');
             if (!btn) return;
             e.stopPropagation();
-            if (!await laConfirm({ title: 'Make vertical clips?', message: 'Each clip is cut once from the 4K long form at 1080 × 1920 (9:16) and kept as the original. The current clips are replaced when the new ones are ready, in a few minutes.', confirmText: 'Make vertical clips' })) return;
+            // How many clips: up to the account's plan limit (and what the recording is long enough for)
+            var lim = { max: 5, planMax: 5 };
+            try { var lr = await laFetch('/api/vertical-clips', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'limits', artist: btn.dataset.wmArtist, date: btn.dataset.wmDate }) }); if (lr.ok) lim = await lr.json(); } catch (_) {}
+            var count = await askClipCount(lim);
+            if (!count) return;
             btn.disabled = true; btn.textContent = 'Starting…';
             try {
-                var r = await laFetch('/api/vertical-clips', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'start', artist: btn.dataset.wmArtist, date: btn.dataset.wmDate }) });
+                var r = await laFetch('/api/vertical-clips', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'start', artist: btn.dataset.wmArtist, date: btn.dataset.wmDate, count: count }) });
                 var d = await r.json().catch(function() { return {}; });
                 if (!r.ok) throw new Error(d.error || r.status);
                 _cutting[sessionKey(btn)] = Date.now();
@@ -801,6 +805,26 @@
                 laAlert('Could not make the vertical clips: ' + er.message, { tone: 'error' });
             }
         });
+        function askClipCount(lim) {
+            return new Promise(function(resolve) {
+                var m = document.createElement('div');
+                m.className = 'se-backdrop';
+                var max = Math.max(1, lim.max || 5), def = max;
+                m.innerHTML = '<form class="se-panel" role="dialog" aria-modal="true">' +
+                    '<p class="se-title">Make vertical clips</p>' +
+                    '<p style="font-size:13px;line-height:1.55;color:var(--la-sub)">Each clip is cut once from the 4K long form at 1080 × 1920 (9:16) and kept as the original. Your plan allows up to <b>' + lim.planMax + '</b> per session' + (max < lim.planMax ? '; this recording is long enough for ' + max : '') + '. <a href="/billing" style="color:var(--la-text);text-decoration:underline">Upgrade for more</a></p>' +
+                    '<label style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--la-dim)">How many clips' +
+                        '<div style="display:flex;align-items:center;gap:12px"><input type="range" name="n" min="1" max="' + max + '" value="' + def + '" style="flex:1;accent-color:var(--la-accent)"><b data-n style="min-width:28px;text-align:right;font:700 18px/1 \'Helvetica Neue\',Helvetica,Arial,sans-serif;color:var(--la-text)">' + def + '</b></div></label>' +
+                    '<div class="se-actions" style="display:flex;justify-content:flex-end;gap:8px"><button type="button" class="se-btn" data-cancel>Cancel</button><button type="submit" class="se-btn primary">Make clips</button></div>' +
+                '</form>';
+                document.body.appendChild(m);
+                var f = m.querySelector('form'), out = m.querySelector('[data-n]');
+                f.n.addEventListener('input', function() { out.textContent = f.n.value; });
+                var done = function(v) { m.remove(); resolve(v); };
+                m.addEventListener('click', function(e) { if (e.target === m || e.target.closest('[data-cancel]')) done(0); });
+                f.addEventListener('submit', function(e) { e.preventDefault(); done(Number(f.n.value)); });
+            });
+        }
         // Finishes swaps whose watermarked copy is ready and refreshes the buttons; checks again while any are pending
         var _wmSweepT;
         function sweepWatermarks() {

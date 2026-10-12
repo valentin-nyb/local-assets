@@ -81,6 +81,15 @@
         .bl-admin input:focus { border-color:var(--la-accent); }
         .bl-admin-actions { display:flex; flex-wrap:wrap; gap:8px; padding:0 20px 20px; align-items:center; }
         .bl-msg { font-size:12px; color:var(--la-sub); }
+        .bl-offer { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px; padding:20px; }
+        .bl-plan { border:1px solid var(--la-line); border-radius:14px; padding:16px; display:flex; flex-direction:column; gap:10px; }
+        .bl-plan.current { border-color:var(--la-accent); }
+        .bl-plan-name { font:700 13px/1.3 "Helvetica Neue", Helvetica, Arial, sans-serif; text-transform:uppercase; color:var(--la-text); }
+        .bl-plan-price { font:700 24px/1 "Helvetica Neue", Helvetica, Arial, sans-serif; color:var(--la-text); }
+        .bl-plan-price span { font-size:12px; font-weight:400; color:var(--la-dim); margin-left:4px; }
+        .bl-plan ul { margin:0; padding-left:16px; font-size:12px; line-height:1.7; color:var(--la-sub); flex:1; }
+        .bl-plan .cam-btn { justify-content:center; }
+        .bl-plan-tag { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--la-accent); text-align:center; padding:9px 0; }
         .bl-setup-item { padding:18px 20px; border-bottom:1px solid var(--la-line-soft); display:flex; flex-direction:column; gap:10px; }
         .bl-setup-item:last-child { border-bottom:0; }
         .bl-setup-name { font:700 15px/1.2 "Helvetica Neue", Helvetica, Arial, sans-serif; color:var(--la-text); text-transform:uppercase; }
@@ -152,6 +161,10 @@
                 <section class="bl-section">
                     <div class="bl-section-head"><h3>Usage this month</h3><span class="bl-msg" id="bl-usage-head"></span></div>
                     <div class="bl-scroll"><table class="bl-table" id="bl-lines"></table></div>
+                </section>
+                <section class="bl-section hidden" id="bl-plans-offer">
+                    <div class="bl-section-head"><h3>Your plan</h3><span class="bl-msg">Upgrade for more clips, storage and streaming. Changes apply straight away, prorated.</span></div>
+                    <div class="bl-offer" id="bl-offer"></div>
                 </section>
                 <section class="bl-section">
                     <div class="bl-section-head"><h3>Invoices</h3></div>
@@ -259,6 +272,32 @@
             });
             var sa = d.stripeAccount, saEl = document.getElementById('bl-stripe-acct');
             if (saEl) saEl.textContent = !sa ? '' : sa.error ? 'Stripe account: ' + sa.error : 'Stripe account ' + sa.id + ' · ' + (sa.publicName || sa.name || 'no public name') + ' · ' + (sa.country || '') + ' · logo ' + (sa.logo ? 'set' : 'not set') + ' · icon ' + (sa.icon ? 'set' : 'not set');
+            // Clients: plans they can move to
+            var offer = document.getElementById('bl-plans-offer');
+            offer.classList.toggle('hidden', admin || !(d.plansOffered || []).length);
+            if (!admin && d.plansOffered) {
+                var curIdx = d.plansOffered.findIndex(function(p) { return p.id === d.currentPlan; });
+                document.getElementById('bl-offer').innerHTML = d.plansOffered.map(function(p, i) {
+                    var cur = p.id === d.currentPlan;
+                    return '<div class="bl-plan' + (cur ? ' current' : '') + '"><p class="bl-plan-name">' + esc(p.name) + '</p>' +
+                        '<p class="bl-plan-price">' + money(p.price, 'gbp') + '<span>/month</span></p>' +
+                        '<ul><li>' + p.maxClips + ' vertical clips per session</li><li>' + Math.round((p.included || {}).storedMinutes / 60).toLocaleString('en-GB') + ' hours of video stored</li><li>' + Math.round((p.included || {}).deliveredMinutes / 60).toLocaleString('en-GB') + ' hours streamed</li><li>' + qty((p.included || {}).fileGB) + ' GB of files</li></ul>' +
+                        (cur ? '<span class="bl-plan-tag">Current plan</span>' : '<button type="button" class="cam-btn ' + (curIdx < 0 || i > curIdx ? 'primary' : 'ghost') + '" data-plan="' + esc(p.id) + '">' + (curIdx < 0 ? 'Choose' : i > curIdx ? 'Upgrade' : 'Switch') + '</button>') + '</div>';
+                }).join('');
+                document.querySelectorAll('[data-plan]').forEach(function(b) {
+                    b.addEventListener('click', async function() {
+                        var p = d.plansOffered.filter(function(x) { return x.id === b.dataset.plan; })[0];
+                        if (!(await laConfirm({ title: 'Move to ' + p.name + '?', message: 'Your plan becomes ' + money(p.price, 'gbp') + ' a month. The change applies straight away; this month is prorated on your next invoice.', confirmText: 'Confirm' }))) return;
+                        b.disabled = true; b.textContent = 'Updating…';
+                        try {
+                            var r = await laFetch('/api/billing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'changePlan', plan: p.id }) });
+                            var out = await r.json(); if (!r.ok) throw new Error(out.error || r.status);
+                            if (out.url) { location.href = out.url; return; }
+                            laToast('Plan changed to ' + out.plan); load();
+                        } catch (e) { b.disabled = false; b.textContent = 'Upgrade'; laAlert('Could not change the plan: ' + e.message, { tone: 'error' }); }
+                    });
+                });
+            }
             ['bl-admin', 'bl-send-box', 'bl-plans-box'].forEach(function(id) { document.getElementById(id).classList.toggle('hidden', !admin); });
             if (!admin) return;
             var f = document.getElementById('bl-rates');
@@ -282,13 +321,13 @@
         function renderPlans(plans) {
             var t = document.getElementById('bl-plans');
             if (t.dataset.editing === '1') return;
-            t.innerHTML = '<thead><tr><th>Plan</th><th class="num">£ per month</th><th class="num">Storage incl., min</th><th class="num">Streaming incl., min</th><th class="num">Files incl., GB</th><th></th></tr></thead><tbody>' +
+            t.innerHTML = '<thead><tr><th>Plan</th><th class="num">£ per month</th><th class="num">Storage incl., min</th><th class="num">Streaming incl., min</th><th class="num">Files incl., GB</th><th class="num">Clips / session</th><th></th></tr></thead><tbody>' +
                 plans.map(function(p) { return planRow(p); }).join('') + '</tbody>';
         }
         function planRow(p) {
-            p = p || { id: '', name: '', price: 0, included: { storedMinutes: 0, deliveredMinutes: 0, fileGB: 0 } };
+            p = p || { id: '', name: '', price: 0, maxClips: 5, included: { storedMinutes: 0, deliveredMinutes: 0, fileGB: 0 } };
             var inp = function(k, v, num) { return '<input class="bl-plan-in" data-k="' + k + '"' + (num ? ' inputmode="decimal"' : '') + ' value="' + esc(v) + '">'; };
-            return '<tr data-id="' + esc(p.id) + '"><td>' + inp('name', p.name) + '</td><td>' + inp('price', p.price, 1) + '</td><td>' + inp('storedMinutes', p.included.storedMinutes, 1) + '</td><td>' + inp('deliveredMinutes', p.included.deliveredMinutes, 1) + '</td><td>' + inp('fileGB', p.included.fileGB, 1) + '</td><td><button type="button" class="bl-x" title="Remove plan" data-del-plan>×</button></td></tr>';
+            return '<tr data-id="' + esc(p.id) + '"><td>' + inp('name', p.name) + '</td><td>' + inp('price', p.price, 1) + '</td><td>' + inp('storedMinutes', p.included.storedMinutes, 1) + '</td><td>' + inp('deliveredMinutes', p.included.deliveredMinutes, 1) + '</td><td>' + inp('fileGB', p.included.fileGB, 1) + '</td><td>' + inp('maxClips', p.maxClips || 5, 1) + '</td><td><button type="button" class="bl-x" title="Remove plan" data-del-plan>×</button></td></tr>';
         }
         document.getElementById('bl-plans').addEventListener('input', function() { this.dataset.editing = '1'; });
         document.getElementById('bl-plans').addEventListener('click', function(e) { var b = e.target.closest('[data-del-plan]'); if (b) { this.dataset.editing = '1'; b.closest('tr').remove(); } });
@@ -297,7 +336,7 @@
             var msg = document.getElementById('bl-plans-msg'), t = document.getElementById('bl-plans');
             var plans = Array.prototype.map.call(t.querySelectorAll('tbody tr'), function(tr) {
                 var v = function(k) { return tr.querySelector('[data-k=' + k + ']').value; };
-                return { id: tr.dataset.id, name: v('name'), price: Number(v('price')), included: { storedMinutes: Number(v('storedMinutes')), deliveredMinutes: Number(v('deliveredMinutes')), fileGB: Number(v('fileGB')) } };
+                return { id: tr.dataset.id, name: v('name'), price: Number(v('price')), maxClips: Number(v('maxClips')), included: { storedMinutes: Number(v('storedMinutes')), deliveredMinutes: Number(v('deliveredMinutes')), fileGB: Number(v('fileGB')) } };
             });
             this.disabled = true; msg.textContent = 'Saving…';
             try { await post({ action: 'setPlans', plans: plans }); t.dataset.editing = ''; msg.textContent = 'Saved'; await load(); }
@@ -380,6 +419,7 @@
                 });
             }).catch(function() {});
         }
+        if (new URLSearchParams(location.search).get('plan') === 'updated') { history.replaceState({}, '', '/billing'); setTimeout(function() { laToast('Your plan is active'); }, 800); }
         load().then(function() { if (_data && _data.isAdmin) loadSetup(); });
     </script>
 </body>

@@ -22,13 +22,13 @@ export async function readRates(redis) {
 
 // Plans: a monthly price with usage included; usage above it is billed as overage
 export const DEFAULT_PLANS = [
-  { id: 'starter-distribution', name: 'Distribution · Starter', price: 2750, included: { storedMinutes: 3000, deliveredMinutes: 25000, fileGB: 25 } },
-  { id: 'liveset-distribution', name: 'Distribution · Pro', price: 3500, included: { storedMinutes: 6000, deliveredMinutes: 50000, fileGB: 50 } },
-  { id: 'starter-creative', name: 'Creative & Production · Starter', price: 5500, included: { storedMinutes: 6000, deliveredMinutes: 50000, fileGB: 50 } },
-  { id: 'liveset-creative', name: 'Creative & Production · Live-Set', price: 7500, included: { storedMinutes: 12000, deliveredMinutes: 100000, fileGB: 100 } },
+  { id: 'starter-distribution', name: 'Distribution · Starter', price: 2750, included: { storedMinutes: 3000, deliveredMinutes: 25000, fileGB: 25 }, maxClips: 5 },
+  { id: 'liveset-distribution', name: 'Distribution · Pro', price: 3500, included: { storedMinutes: 6000, deliveredMinutes: 50000, fileGB: 50 }, maxClips: 10 },
+  { id: 'starter-creative', name: 'Creative & Production · Starter', price: 5500, included: { storedMinutes: 6000, deliveredMinutes: 50000, fileGB: 50 }, maxClips: 10 },
+  { id: 'liveset-creative', name: 'Creative & Production · Live-Set', price: 7500, included: { storedMinutes: 12000, deliveredMinutes: 100000, fileGB: 100 }, maxClips: 20 },
 ];
 export async function readPlans(redis) {
-  try { const p = JSON.parse(await redis.get('billing_plans') || 'null'); return Array.isArray(p) && p.length ? p : DEFAULT_PLANS; }
+  try { const p = JSON.parse(await redis.get('billing_plans') || 'null'); return Array.isArray(p) && p.length ? p.map(x => x.maxClips ? x : { ...x, maxClips: DEFAULT_PLANS.find(d => d.id === x.id)?.maxClips || 5 }) : DEFAULT_PLANS; }
   catch { return DEFAULT_PLANS; }
 }
 export function cleanPlans(list) {
@@ -36,7 +36,7 @@ export function cleanPlans(list) {
     const name = String(p?.name || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 60);
     const num = v => { const n = Number(v); return Number.isFinite(n) && n >= 0 ? n : 0; };
     const id = String(p?.id || '').replace(/[^a-z0-9-]/g, '').slice(0, 40) || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `plan-${i + 1}`;
-    return name ? { id, name, price: num(p.price), included: { storedMinutes: num(p.included?.storedMinutes), deliveredMinutes: num(p.included?.deliveredMinutes), fileGB: num(p.included?.fileGB) } } : null;
+    return name ? { id, name, price: num(p.price), maxClips: Math.min(50, Math.max(1, Math.round(num(p.maxClips) || 5))), included: { storedMinutes: num(p.included?.storedMinutes), deliveredMinutes: num(p.included?.deliveredMinutes), fileGB: num(p.included?.fileGB) } } : null;
   }).filter(Boolean);
 }
 
@@ -47,6 +47,12 @@ export async function readAssignments(redis, slug) {
   const out = {};
   for (const [k, v] of Object.entries(raw || {})) { try { out[k] = JSON.parse(v); } catch {} }
   return out;
+}
+// How many vertical clips a session of this account may have (its plan's limit, 5 without a plan)
+export async function planMaxClips(redis, slug) {
+  const plan = await readPlan(redis, slug, 'venue').catch(() => null);
+  const n = Number(plan?.maxClips) || DEFAULT_PLANS.find(d => d.id === plan?.id)?.maxClips || 5;
+  return Math.min(50, Math.max(1, n));
 }
 export async function readPlan(redis, slug, target = 'venue') {
   const a = (await readAssignments(redis, slug))[target];

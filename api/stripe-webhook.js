@@ -53,6 +53,21 @@ export default async function handler(req, res) {
     return res.status(200).json({ received: true });
   }
 
+  // ── PLAN CHOSEN FROM THE BILLING PAGE (no subscription before) ─────
+  if (event.type === 'checkout.session.completed' && event.data.object.metadata?.kind === 'upgrade') {
+    const cs = event.data.object, slug = cs.metadata.venueSlug;
+    const redis = createClient({ url: process.env.REDIS_URL });
+    try {
+      await redis.connect();
+      const prev = JSON.parse(await redis.hGet(`billing_assign:${slug}`, 'venue') || '{}');
+      await redis.hSet(`billing_assign:${slug}`, 'venue', JSON.stringify({ ...prev, plan: cs.metadata.tier, email: prev.email || cs.customer_details?.email || '', monthly: true, subscription: true, subscriptionId: cs.subscription }));
+      if (cs.customer) await redis.set(`billing_customer:${slug}`, cs.customer);
+      console.log('[Stripe Webhook] plan started', slug, cs.metadata.tier);
+    } catch (e) { console.error('[Stripe Webhook] upgrade', e.message); }
+    finally { await redis.quit().catch(() => {}); }
+    return res.status(200).json({ received: true });
+  }
+
   // ── SIGN-UP FROM THE HOME PAGE → NEW CLIENT ACCOUNT ────────────────
   if (event.type === 'checkout.session.completed' && event.data.object.metadata?.kind === 'signup') {
     try { await createClientAccount(event.data.object); }
@@ -212,7 +227,7 @@ async function createClientAccount(session) {
       await redis.set(`brand_org_type:${slug}`, type);
       await redis.set(`brand_org_name:${slug}`, name);
       // Usage above the plan is invoiced monthly; the plan itself is the Stripe subscription
-      await redis.hSet(`billing_assign:${slug}`, 'venue', JSON.stringify({ plan: m.tier || '', email, name, monthly: true, subscription: true }));
+      await redis.hSet(`billing_assign:${slug}`, 'venue', JSON.stringify({ plan: m.tier || '', email, name, monthly: true, subscription: true, subscriptionId: session.subscription || '' }));
       if (session.customer) await redis.set(`billing_customer:${slug}`, session.customer);
     }
     console.log('[Stripe Webhook] client account', same ? 'exists' : 'created', slug, type, email);
