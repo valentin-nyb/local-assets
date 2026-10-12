@@ -22,6 +22,20 @@ export const muxReq = (auth, p, init = {}) => fetch('https://api.mux.com' + p, {
 });
 
 export const SUB = /^(.+?) \/\/ (SOCIAL|SOCIALRAW) \/\/ (\d+)$/i;
+// Any vertical-clip tag: "ARTIST // SOCIAL // NN", the older "ARTIST // SOCIAL", or JSON { artist, camera: 'SOCIAL' }
+export function socialInfo(a) {
+  const pt = String(a?.passthrough || '').trim();
+  const m = SUB.exec(pt);
+  if (m) return { artist: m[1].toUpperCase().trim(), n: Number(m[3]), hidden: m[2].toUpperCase() === 'SOCIALRAW' };
+  const u = /^(.+?) \/\/ (SOCIAL|SOCIALRAW)$/i.exec(pt);
+  if (u) return { artist: u[1].toUpperCase().trim(), n: null, hidden: u[2].toUpperCase() === 'SOCIALRAW' };
+  try {
+    const o = JSON.parse(pt);
+    const cam = String(o?.camera || '').toUpperCase();
+    if (o?.artist && (cam === 'SOCIAL' || cam === 'SOCIALRAW')) return { artist: String(o.artist).toUpperCase().trim(), n: Number(o.clip || o.n) || null, hidden: cam === 'SOCIALRAW' };
+  } catch {}
+  return null;
+}
 export const tagFor = (artist, n, hidden) => `${artist} // ${hidden ? 'SOCIALRAW' : 'SOCIAL'} // ${String(n).padStart(2, '0')}`;
 export const originalsKey = slug => `v_orig:${slug}`;       // set: vertical originals
 const jobsKey = slug => `v_jobs:${slug}`;                    // hash: new original → JSON { artist, n, blob, master }
@@ -158,7 +172,7 @@ export async function cutVertical(redis, auth, job) {
     });
     await redis.hSet(doneKey(job.masterId), String(job.n), asset.id);
     await redis.sAdd(originalsKey(job.slug), asset.id);
-    await redis.hSet(jobsKey(job.slug), asset.id, JSON.stringify({ artist: job.artist, n: job.n, blob: blob.url, master: job.masterId }));
+    await redis.hSet(jobsKey(job.slug), asset.id, JSON.stringify({ artist: job.artist, n: job.n, blob: blob.url, master: job.masterId, at: Date.now() }));
     return { id: asset.id };
   } finally {
     fs.rm(out, { force: true }, () => {});
@@ -177,12 +191,16 @@ export async function finishVerticals(redis, slug, auth, assets) {
   for (const [id, raw] of Object.entries(jobs)) {
     let job; try { job = JSON.parse(raw); } catch { await redis.hDel(jobsKey(slug), id); continue; }
     const a = byId.get(id);
-    if (a && a.status !== 'ready' && a.status !== 'errored') { pending++; continue; }
+    // Not listed yet, or still processing
+    if ((!a && Date.now() - (job.at || 0) < 3600e3) || (a && a.status !== 'ready' && a.status !== 'errored')) { pending++; continue; }
     if (a?.status === 'ready') {
       const master = byId.get(job.master);
+      // The last original of this recording to finish also clears out clips in the older tag formats
+      const lastOfMaster = !Object.entries(jobs).some(([oid, r]) => oid !== id && String(r).includes(`"master":"${job.master}"`));
       for (const other of assets) {
-        const m = SUB.exec(String(other.passthrough || '').trim());
-        if (!m || other.id === id || m[1].toUpperCase() !== job.artist || Number(m[3]) !== job.n) continue;
+        const info = socialInfo(other);
+        if (!info || other.id === id || info.artist !== job.artist) continue;
+        if (info.n !== job.n && !(info.n === null && lastOfMaster)) continue;
         if (master && Number(other.created_at) < Number(master.created_at)) continue;
         if (originals.has(other.id)) continue;
         await muxReq(auth, `/video/v1/assets/${encodeURIComponent(other.id)}`, { method: 'DELETE' }).catch(() => {});

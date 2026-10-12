@@ -4,7 +4,7 @@ import { createClient } from 'redis';
 import { getWebSessionAuth } from './_venues.js';
 import { resolveWatermark } from './_watermark.js';
 import { renderWatermarkPng, VERTICAL, HORIZONTAL } from './_watermark-render.js';
-import { muxReq, SUB, tagFor, clipTimes, listAllAssets, sessionClips, videoSize, finishVerticals, originalsKey } from './_verticals.js';
+import { muxReq, SUB, socialInfo, tagFor, clipTimes, listAllAssets, sessionClips, videoSize, finishVerticals, originalsKey } from './_verticals.js';
 
 // Puts the Brand Kit watermark on a session's vertical clips, and takes it off again.
 // The vertical originals are cut once from the full recording (api/_verticals.js). Applying makes a
@@ -110,8 +110,13 @@ export default async function handler(req, res) {
       const isClean = cleanCheck(assets, await markedSet(redis, slug));
       const watermarked = assets.filter(a => /^.+ \/\/ SOCIAL \/\/ \d+$/i.test(String(a.passthrough || '').trim()) && !isClean(a)).map(a => a.id);
       const pendingIds = Object.values(await redis.hGetAll(swapsKey(slug))).map(v => parseSwap(v).old);
-      const shownClips = assets.filter(a => /^.+ \/\/ SOCIAL \/\/ \d+$/i.test(String(a.passthrough || '').trim()));
-      const horizontal = shownClips.filter(a => { const [w, h] = videoSize(a); return w > h; }).map(a => a.id);
+      // Shown clips that aren't vertical originals yet (or watermarked copies of them): these get cut once
+      const originals = new Set(await redis.sMembers(originalsKey(slug)));
+      const horizontal = assets.filter(a => {
+        const info = socialInfo(a);
+        if (!info || info.hidden) return false;
+        return !originals.has(a.id) && !originals.has(a.source_asset_id);
+      }).map(a => a.id);
       return res.status(200).json({ done: done + v.done, pending: pending + v.pending, verticalsPending: v.pending, watermarked, horizontal, pendingIds });
     }
 
@@ -161,7 +166,10 @@ export default async function handler(req, res) {
         const pt = String(clip.passthrough || '').trim();
         const m = SUB.exec(pt);
         // Only this session's vertical clips, from this venue's own Cloud Storage
-        if (!m || m[1].toUpperCase() !== artist) { errors.push(`One clip isn't a vertical clip of ${artist}`); continue; }
+        if (!m || m[1].toUpperCase() !== artist) {
+          errors.push(socialInfo(clip)?.artist === artist ? 'These clips are being made vertical first. Apply the watermark once the vertical clips are in, in a few minutes.' : `One clip isn't a vertical clip of ${artist}`);
+          continue;
+        }
         const n = Number(m[3]);
         // Always from the clean vertical original: this clip, or the original kept hidden behind it
         let input, size;
