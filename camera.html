@@ -201,7 +201,7 @@
         @media (max-width:640px) { .ci-flow { grid-template-columns:repeat(2,minmax(0,1fr)); } }
         .ci-branded { grid-template-columns:repeat(4,1fr); gap:8px; }
         .ci-branded i { position:relative; }
-        .ci-wm { position:absolute; bottom:6.25%; left:5.6%; width:34%; height:5.7%; border-radius:4px; background:rgba(0,0,0,.45) left center/contain no-repeat; -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; color:#fff; font:600 7px/1 'JetBrains Mono',monospace; letter-spacing:.12em; }
+        .ci-wm { position:absolute; bottom:6.25%; left:5.6%; width:12%; height:6.5%; border-radius:4px; background:rgba(0,0,0,.45) left center/contain no-repeat; -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; color:#fff; font:600 7px/1 'JetBrains Mono',monospace; letter-spacing:.12em; }
         .ci-wm:empty::after { content:'LOGO'; }
         .ci-name { position:absolute; z-index:1; bottom:8%; right:6.5%; max-width:60%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font:900 7px/1 "Helvetica Neue", Helvetica, Arial, sans-serif; letter-spacing:.02em; color:#fff; text-transform:uppercase; text-shadow:0 1px 2px rgba(0,0,0,.5); }
         .ci-wm.has-logo { background-color:transparent; -webkit-backdrop-filter:none; backdrop-filter:none; }
@@ -472,7 +472,7 @@
         // The intro's example card uses this venue's latest session, when there is one
         function fillIntroExample() {
             // The example clips always show the local / assets logo and a placeholder name
-            document.querySelectorAll('.ci-wm').forEach(function(w) { w.classList.add('has-logo'); w.style.backgroundImage = 'url(/logos/White@2x.png)'; w.innerHTML = '&#8203;'; });
+            document.querySelectorAll('.ci-wm').forEach(function(w) { w.classList.add('has-logo'); w.style.backgroundImage = 'url(/logos/a-white.png)'; w.innerHTML = '&#8203;'; });
             document.querySelectorAll('.ci-name').forEach(function(n) { n.textContent = 'DJ NAME'; });
             laFetch('/api/list-assets').then(function(r) { return r.ok ? r.json() : []; }).then(function(list) {
                 list = Array.isArray(list) ? list : (list.data || list.assets || []);
