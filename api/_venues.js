@@ -92,7 +92,10 @@ export function findVenueByEmail(email, preferredSlug) {
 
 // Public list of the venues an email can open, for the venue switcher.
 export function venueChoices(email) {
-  return findVenuesByEmail(email).map(v => ({ slug: v.slug, name: v.name || v.slug }));
+  // The local / assets admin account first, then the clients A–Z
+  const isAdmin = v => v.slug === (process.env.BILLING_ADMIN_VENUE || 'local-assets-admin') || /^local\s*[\/-]?\s*assets\b/i.test(String(v.name || '').trim());
+  return findVenuesByEmail(email).map(v => ({ slug: v.slug, name: v.name || v.slug }))
+    .sort((a, b) => (isAdmin(b) - isAdmin(a)) || a.name.localeCompare(b.name));
 }
 
 // Returns a Basic auth string using ONLY venue-specific credentials.
