@@ -1191,18 +1191,29 @@
             function buildSocialStrip(sessionName, sessionDate) {
                 var name = sessionName.toUpperCase().trim();
 
-                // Collect all social clips (numbered: // SOCIAL // 01 … 99)
+                // Collect all social clips (numbered: // SOCIAL // 01 … 99). A clip belongs to the
+                // full recording it was cut after (the newest one uploaded before it), so a new
+                // session never shows another session's clips.
+                var masters = (muxByKey[name] || []).filter(function (a) {
+                    return !(typeof a.passthrough === 'string' && a.passthrough.indexOf(' // ') >= 0 && !/^\s*\{/.test(a.passthrough));
+                }).sort(function (a, b) { return Number(a.created_at) - Number(b.created_at); });
+                var ownMaster = findLinked(name, sessionDate);
+                function cutFrom(c) {
+                    var m = null;
+                    for (var mi = 0; mi < masters.length; mi++) if (Number(masters[mi].created_at) <= Number(c.created_at)) m = masters[mi];
+                    return m;
+                }
                 var clips = [];
                 for (var n = 1; n <= 99; n++) {
                     var key = name + ' // SOCIAL // ' + String(n).padStart(2, '0');
-                    var bucket = muxByKey[key] || [];
-                    // Prefer exact date match, fall back to any asset in that bucket
+                    var bucket = (muxByKey[key] || []).slice().sort(function (a, b) { return Number(b.created_at) - Number(a.created_at); });
                     var match = null;
                     for (var ci = 0; ci < bucket.length; ci++) {
-                        var d = new Date(bucket[ci].created_at * 1000).toISOString().slice(0, 10);
-                        if (d === sessionDate) { match = bucket[ci]; break; }
+                        var src = cutFrom(bucket[ci]);
+                        var mine = ownMaster && src ? src.id === ownMaster.id
+                            : new Date(bucket[ci].created_at * 1000).toISOString().slice(0, 10) === sessionDate;
+                        if (mine) { match = bucket[ci]; break; }
                     }
-                    if (!match && bucket.length) match = bucket[0];
                     if (match) clips.push(match);
                 }
                 // Also include un-numbered // SOCIAL assets for this date
@@ -2767,6 +2778,17 @@
 
         startPipelinePolling();
 
+        // New uploads start their vertical clips once Mux has the recording ready
+        async function checkIntakes() {
+            try {
+                var r = await laFetch('/api/vertical-clips', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'intake' }) });
+                var j = await r.json().catch(function () { return {}; });
+                if (j.started) setTimeout(function () { fetchRecentUploads(); }, 4000);
+            } catch (e) {}
+        }
+        checkIntakes();
+        setInterval(checkIntakes, 30000);
+
         async function fetchNextEvent() {
             const titleEl = document.getElementById('next-event-title');
             const timeEl = document.getElementById('next-event-time');
@@ -2992,6 +3014,8 @@
                         xhr.onload = () => {
                             completed++;
                             uploadedAssets[uid + '_' + idx] = { id: data.id, name: file.name, size: file.size };
+                            // A new 4K long form cuts its vertical clips once it's ready
+                            if (assetType === 'MASTER' && data.id) laFetch('/api/pipeline-trigger', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ uploadId: data.id, artistName: sessionName }) }).catch(function () {});
                             resolve();
                         };
                         xhr.onerror = () => reject(new Error('Upload failed: ' + file.name));

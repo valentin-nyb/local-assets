@@ -1,8 +1,7 @@
 import { getWebSessionAuth } from './_venues.js';
-import { getPipelineDb } from './_pipeline-db.js';
 import crypto from 'crypto';
 import { createClient } from 'redis';
-import { resolveWatermark } from './_watermark.js';
+import { intakeKey } from './_verticals.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', 'https://local-assets.com');
@@ -23,26 +22,20 @@ export default async function handler(req, res) {
   const jobId  = crypto.randomBytes(8).toString('hex');
   const artist = artistName.toUpperCase().trim();
 
+  // Vertical clips are cut by api/vertical-clips.js with this account's own Mux keys, once the
+  // recording is ready (the old worker, which used shared keys, is retired).
+  const venueSlug = session.venueSlug || '';
+  if (!venueSlug) return res.status(403).json({ error: 'No Cloud Storage for this account' });
+  const redis = createClient({ url: process.env.REDIS_URL });
   try {
-    const venueSlug = session.venueSlug || '';
-    // Brand Kit watermark for this artist's clips (null when off or no logo uploaded)
-    let watermark = null;
-    if (venueSlug) {
-      const redis = createClient({ url: process.env.REDIS_URL });
-      try { await redis.connect(); watermark = await resolveWatermark(redis, venueSlug, artist); }
-      catch (e) { console.error('[pipeline-trigger] watermark skipped:', e.message); }
-      finally { await redis.quit().catch(() => {}); }
-    }
-    const db = getPipelineDb();
-    await db.query(
-      `INSERT INTO pipeline_jobs (id, upload_id, artist_name, venue_slug, watermark)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [jobId, uploadId, artist, venueSlug, watermark && JSON.stringify(watermark)]
-    );
-    console.log(`[pipeline-trigger] Queued job ${jobId} for "${artist}" venue=${venueSlug}`);
-    return res.status(200).json({ jobId });
+    await redis.connect();
+    await redis.hSet(intakeKey(venueSlug), String(uploadId), JSON.stringify({ artist, at: Date.now() }));
+    console.log(`[pipeline-trigger] Intake ${uploadId} for "${artist}" venue=${venueSlug}`);
+    return res.status(200).json({ jobId, intake: true });
   } catch (e) {
-    console.error('[pipeline-trigger] Database error:', e.message);
-    return res.status(500).json({ error: 'Failed to queue pipeline job' });
+    console.error('[pipeline-trigger]', e.message);
+    return res.status(500).json({ error: 'Failed to queue clip generation' });
+  } finally {
+    await redis.quit().catch(() => {});
   }
 }

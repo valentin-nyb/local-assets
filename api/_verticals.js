@@ -122,6 +122,8 @@ export async function venueForAsset(assetId) {
 // Starts one cutting job per clip that hasn't been cut yet; each runs in its own function
 export async function startVerticals(redis, slug, master, artist, origin, retry = false, count = null) {
   if (!count) count = await planMaxClips(redis, slug);
+  // Automatic starts (Mux webhook or the upload's intake) happen once per recording
+  if (!retry && !(await redis.set(`v_auto:${master.id}`, '1', { NX: true, EX: 90 * 86400 }))) return 0;
   if (retry) await redis.del(failKey(master.id));   // pressed by hand: try failed clips again
   const pid = (master.playback_ids || [])[0]?.id;
   if (!pid) throw new Error('The full recording has no playback ID yet');
@@ -248,4 +250,23 @@ export async function finishVerticals(redis, slug, auth, assets) {
     await redis.hDel(jobsKey(slug), id);
   }
   return { pending, done };
+}
+
+// Uploads waiting for their recording to be ready; each starts its vertical clips once (from api/pipeline-trigger.js)
+export const intakeKey = slug => `v_intake:${slug}`;
+export async function processIntakes(redis, slug, auth, origin) {
+  const pending = await redis.hGetAll(intakeKey(slug));
+  let started = 0;
+  for (const [uploadId, raw] of Object.entries(pending)) {
+    let it = {}; try { it = JSON.parse(raw); } catch {}
+    if (Date.now() - Number(it.at || 0) > 2 * 86400e3) { await redis.hDel(intakeKey(slug), uploadId); continue; }
+    const up = await muxReq(auth, `/video/v1/uploads/${encodeURIComponent(uploadId)}`).catch(() => null);
+    if (!up?.asset_id) { if (up?.status === 'errored' || up?.status === 'cancelled') await redis.hDel(intakeKey(slug), uploadId); continue; }
+    const a = await muxReq(auth, `/video/v1/assets/${encodeURIComponent(up.asset_id)}`).catch(() => null);
+    if (!a || a.status === 'errored') { await redis.hDel(intakeKey(slug), uploadId); continue; }
+    if (a.status !== 'ready' || !(a.playback_ids || [])[0]?.id || !(Number(a.duration) > 10)) continue;
+    await redis.hDel(intakeKey(slug), uploadId);
+    started += await startVerticals(redis, slug, a, String(it.artist || '').toUpperCase().trim(), origin);
+  }
+  return started;
 }

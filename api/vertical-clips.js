@@ -2,7 +2,7 @@ import { pausedBy, sendPaused } from './_suspend.js';
 import { createClient } from 'redis';
 import { waitUntil } from '@vercel/functions';
 import { getWebSessionAuth } from './_venues.js';
-import { listAllAssets, sessionClips, startVerticals, cutVertical, verifyJob, venueAuth, finishVerticals } from './_verticals.js';
+import { listAllAssets, sessionClips, startVerticals, cutVertical, verifyJob, venueAuth, finishVerticals, processIntakes } from './_verticals.js';
 import { planMaxClips } from './_billing.js';
 
 // Vertical originals for a session, cut once from its full recording.
@@ -35,7 +35,7 @@ export default async function handler(req, res) {
     return res.status(202).json({ started: true });
   }
 
-  if (body.action !== 'start' && body.action !== 'limits') return res.status(400).json({ error: 'Unknown action' });
+  if (body.action !== 'start' && body.action !== 'limits' && body.action !== 'intake') return res.status(400).json({ error: 'Unknown action' });
   const session = getWebSessionAuth(req);
   if (!session?.email) return res.status(401).json({ error: 'Not authenticated' });
   if (body.action === 'limits') {
@@ -47,6 +47,17 @@ export default async function handler(req, res) {
       const fits = master ? Math.max(1, Math.floor(Number(master.duration) / 30)) : max;
       return res.status(200).json({ max: Math.min(max, fits), planMax: max, unlimited: max >= 60 });
     } finally { await r0.quit().catch(() => {}); }
+  }
+  if (body.action === 'intake') {
+    // New uploads whose recording is now ready start their vertical clips (once)
+    if (!session.venueSlug || !session.muxAuth) return res.status(200).json({ started: 0 });
+    const r1 = createClient({ url: process.env.REDIS_URL }); await r1.connect();
+    try {
+      const started = await processIntakes(r1, session.venueSlug, session.muxAuth, `https://${req.headers.host}`);
+      if (started) console.log('[vertical-clips] intake', session.venueSlug, 'started', started);
+      return res.status(200).json({ started });
+    } catch (e) { console.error('[vertical-clips] intake', e.message); return res.status(200).json({ started: 0 }); }
+    finally { await r1.quit().catch(() => {}); }
   }
   if (req.method !== 'GET' && session?.venueSlug) { const _p = await pausedBy(session.venueSlug); if (_p) return sendPaused(res, _p); }
   if (!session.venueSlug || !session.muxAuth) return res.status(403).json({ error: 'No Cloud Storage for this account' });

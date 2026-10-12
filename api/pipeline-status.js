@@ -11,6 +11,8 @@ export default async function handler(req, res) {
   const session = getWebSessionAuth(req);
   if (!session?.email) return res.status(401).json({ error: 'Not authenticated' });
 
+  // The old clip worker is retired (vertical clips are cut by api/vertical-clips.js), so its jobs aren't shown
+  if (!req.query.jobId) return res.status(200).json([]);
   const venueSlug = session.venueSlug;
   if (!venueSlug) return res.status(200).json([]);
 
