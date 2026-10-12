@@ -1,17 +1,10 @@
-import Mux from '@mux/mux-node';
 import { put } from '@vercel/blob';
 import { processCameraRecording } from './_camera-recording.js';
 import { createClient } from 'redis';
 import { startVerticals, venueForAsset } from './_verticals.js';
 
-const mux = new Mux({ 
-  tokenId: (process.env.PROD_MUX_TOKEN_ID || process.env.MUX_TOKEN_ID || '').trim(), 
-  tokenSecret: (process.env.PROD_MUX_TOKEN_SECRET || process.env.MUX_TOKEN_SECRET || '').trim()
-});
-
-const TOKEN_ID = (process.env.PROD_MUX_TOKEN_ID || process.env.MUX_TOKEN_ID || '').trim();
-const TOKEN_SECRET = (process.env.PROD_MUX_TOKEN_SECRET || process.env.MUX_TOKEN_SECRET || '').trim();
-const AUTH = Buffer.from(`${TOKEN_ID}:${TOKEN_SECRET}`).toString('base64');
+// Every venue has its own Mux environment: each event is handled with the keys of the venue
+// whose Cloud Storage holds the asset (found by asking each venue's environment).
 
 // MASTER uploads have no " // " in passthrough (e.g. "DRAKE")
 // Sub-assets have " // " (e.g. "DRAKE // AUDIO", "DRAKE // SOCIAL // 01")
@@ -22,12 +15,12 @@ function isMasterAsset(passthrough) {
 }
 
 // ── 1. AUDIO EXTRACTION ──────────────────────────────────────────────
-async function createAudioAsset(assetId, artistName) {
+async function createAudioAsset(auth, assetId, artistName) {
     const tag = artistName + ' // AUDIO';
     console.log(`[Audio] Creating: ${tag}`);
     const result = await fetch('https://api.mux.com/video/v1/assets', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Basic ${AUTH}` },
+        headers: { 'Content-Type': 'application/json', Authorization: auth },
         body: JSON.stringify({
             input: [{ url: `mux://assets/${assetId}` }],
             playback_policy: ['public'],
@@ -41,7 +34,7 @@ async function createAudioAsset(assetId, artistName) {
 }
 
 // ── 2. SOCIAL VERTICAL CLIPS ─────────────────────────────────────────
-async function createSocialClips(assetId, artistName, duration) {
+async function createSocialClips(auth, found, assetId, artistName, duration) {
     const clipCount = Math.min(Math.floor(duration / 30), 5);
     if (clipCount < 1) {
         console.log('[Social] Video too short for clips');
@@ -50,12 +43,10 @@ async function createSocialClips(assetId, artistName, duration) {
 
     // Request AI subtitles so highlights can supplement later
     try {
-        await mux.video.assets.createTrack(assetId, {
-            type: 'text',
-            text_type: 'generated_subtitles',
-            language_code: 'en',
-            name: 'Internal_AI',
-            passthrough: 'AI_Tracker'
+        await fetch(`https://api.mux.com/video/v1/assets/${assetId}/tracks`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: auth },
+            body: JSON.stringify({ type: 'text', text_type: 'generated_subtitles', language_code: 'en', name: 'Internal_AI', passthrough: 'AI_Tracker' }),
         });
         console.log('[Social] Requested AI track for future highlights');
     } catch (e) {
@@ -64,8 +55,6 @@ async function createSocialClips(assetId, artistName, duration) {
 
     // Vertical originals (9:16, 1080×1920), cut once from the full recording by api/vertical-clips.js.
     // They are kept as the originals; a Brand Kit watermark only ever goes on copies of them.
-    const found = await venueForAsset(assetId);
-    if (!found) { console.error('[Social] No venue Cloud Storage holds', assetId); return; }
     const redis = createClient({ url: process.env.REDIS_URL });
     await redis.connect();
     try {
@@ -77,7 +66,7 @@ async function createSocialClips(assetId, artistName, duration) {
 }
 
 // ── 3. THUMBNAIL GENERATION ──────────────────────────────────────────
-async function createThumbnails(assetId, artistName, playbackId, duration) {
+async function createThumbnails(auth, assetId, artistName, playbackId, duration) {
     const count = Math.min(5, Math.max(3, Math.floor(duration / 60)));
     const interval = duration / (count + 1);
 
@@ -102,7 +91,7 @@ async function createThumbnails(assetId, artistName, playbackId, duration) {
             // Create Mux asset from the thumbnail
             const muxRes = await fetch('https://api.mux.com/video/v1/assets', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Basic ${AUTH}` },
+                headers: { 'Content-Type': 'application/json', Authorization: auth },
                 body: JSON.stringify({
                     input: [{ url: blob.url }],
                     playback_policy: ['public'],
@@ -130,6 +119,9 @@ export default async function handler(req, res) {
         const passthrough = (data.passthrough || '').toUpperCase().trim();
         const duration = data.duration || 0;
         const playbackId = data.playback_ids?.[0]?.id;
+        const found = await venueForAsset(assetId);
+        if (!found) { console.error('[Webhook] No venue Cloud Storage holds', assetId); return res.status(200).send('Unknown asset'); }
+        const auth = found.auth;
 
         console.log(`[Webhook] asset.ready — id:${assetId} pt:"${passthrough}" dur:${duration}s`);
 
@@ -138,7 +130,7 @@ export default async function handler(req, res) {
             if (passthrough && !data.live_stream_id) {
                 const d = new Date((data.created_at || Date.now() / 1000) * 1000);
                 const dateStr = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
-                await mux.video.assets.update(assetId, { name: passthrough + ' — ' + dateStr });
+                await fetch(`https://api.mux.com/video/v1/assets/${assetId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: auth }, body: JSON.stringify({ meta: { title: passthrough + ' — ' + dateStr } }) });
             }
         } catch (e) {
             console.log('Title update failed:', e.message);
@@ -150,9 +142,9 @@ export default async function handler(req, res) {
             console.log(`[Pipeline] MASTER "${passthrough}" (${Math.round(duration)}s) — generating audio + clips + thumbs...`);
 
             const results = await Promise.allSettled([
-                createAudioAsset(assetId, passthrough),
-                createSocialClips(assetId, passthrough, duration),
-                createThumbnails(assetId, passthrough, playbackId, duration),
+                createAudioAsset(auth, assetId, passthrough),
+                createSocialClips(auth, found, assetId, passthrough, duration),
+                createThumbnails(auth, assetId, passthrough, playbackId, duration),
             ]);
 
             for (const r of results) {
@@ -168,63 +160,7 @@ export default async function handler(req, res) {
         catch (e) { console.error('[camera-rec] failed:', e.message); }
     }
 
-    // ── AI TRACK READY → supplement with highlight clips ─────────────
-    if (type === 'video.asset.track.ready' && data.type === 'text') {
-        const assetId = data.asset_id;
-        console.log(`[AI] Track ready for: ${assetId}`);
-
-        try {
-            const asset = await mux.video.assets.retrieve(assetId);
-            const passthrough = (asset.passthrough || '').toUpperCase().trim();
-
-            if (!isMasterAsset(passthrough)) {
-                return res.status(200).send('OK');
-            }
-
-            await new Promise(r => setTimeout(r, 3000));
-
-            let highlights = [];
-            try { highlights = await mux.video.assets.getHighlights(assetId); } catch (_) {}
-
-            if (highlights?.length) {
-                // Count existing SOCIAL clips
-                const allAssets = await mux.video.assets.list({ limit: 100 });
-                const list = Array.isArray(allAssets) ? allAssets : (allAssets.data || []);
-                const existingCount = list.filter(a =>
-                    (a.passthrough || '').toUpperCase().startsWith(passthrough + ' // SOCIAL // ')
-                ).length;
-
-                const toCreate = highlights.slice(0, Math.max(0, 5 - existingCount));
-                console.log(`[AI] Creating ${toCreate.length} highlight clips (${existingCount} exist)`);
-
-                for (const [i, clip] of toCreate.entries()) {
-                    const num = existingCount + i + 1;
-                    const tag = passthrough + ' // SOCIAL // ' + String(num).padStart(2, '0');
-                    try {
-                        await fetch('https://api.mux.com/video/v1/assets', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', Authorization: `Basic ${AUTH}` },
-                            body: JSON.stringify({
-                                input: [{
-                                    url: `mux://assets/${assetId}`,
-                                    start_time: clip.start_time,
-                                    end_time: clip.start_time + Math.min(clip.duration || 45, 50),
-                                }],
-                                playback_policy: ['public'],
-                                passthrough: tag,
-                                static_renditions: [{ resolution: 'highest' }]
-                            })
-                        });
-                        console.log(`[AI] Created: ${tag}`);
-                    } catch (e) {
-                        console.error(`[AI] Clip error:`, e.message);
-                    }
-                }
-            }
-        } catch (e) {
-            console.error('[AI] Error:', e.message);
-        }
-    }
+    // AI captions finishing no longer cut extra clips: vertical originals are cut once (api/_verticals.js)
 
     res.status(200).send('Webhook handled');
 }
