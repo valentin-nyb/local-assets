@@ -141,10 +141,18 @@ export default async function handler(req, res) {
           console.log('[billing] stripe account', JSON.stringify(stripeAccount));
         } catch (e) { stripeAccount = { error: e.message }; }
       }
+      // The client's subscription: whether it's set to end, and when
+      let subscription = null;
+      const subId = (data.assignments.venue || {}).subscriptionId || getVenuesConfig()[slug]?.subscription || '';
+      if (stripe && subId && target === 'venue') {
+        const sub = await stripe.subscriptions.retrieve(subId).catch(() => null);
+        const end = sub && (sub.current_period_end || sub.items?.data?.[0]?.current_period_end);
+        if (sub) subscription = { status: sub.status, cancelAtPeriodEnd: !!sub.cancel_at_period_end, periodEnd: end ? end * 1000 : null };
+      }
       const elapsed = Math.min(1, Math.max(0, (Date.now() - base.start) / (base.end - base.start)));
       return res.status(200).json({
         venue: venueName, target, period: { label: base.label, start: base.start, end: base.end, elapsed },
-        usage: data.usage, ...priced, invoices, stripe: !!stripe, isAdmin,
+        usage: data.usage, ...priced, invoices, stripe: !!stripe, isAdmin, subscription,
         // Plans a client can move to (name, price, what's included)
         plansOffered: data.plans.map(p => ({ id: p.id, name: p.name, price: p.price, maxClips: p.maxClips, cameras: p.cameras || 0, features: p.features || [], included: p.included })),
         currentPlan: (data.assignments.venue || {}).plan || '',
@@ -157,6 +165,30 @@ export default async function handler(req, res) {
     // or, without a subscription yet, a Stripe checkout starts one
     if (!isAdmin) {
       const body0 = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+      if (body0.action === 'cancelPlan' || body0.action === 'resumePlan') {
+        const out = await withRedis(async redis => {
+          const a = (await readAssignments(redis, slug)).venue || {};
+          const subId = a.subscriptionId || getVenuesConfig()[slug]?.subscription || '';
+          const stripe = stripeClient();
+          if (stripe && subId) {
+            const sub = await stripe.subscriptions.update(subId, { cancel_at_period_end: body0.action === 'cancelPlan' });
+            const end = sub.current_period_end || sub.items?.data?.[0]?.current_period_end;
+            console.log('[billing]', body0.action, slug, subId);
+            return { ok: true, cancelAtPeriodEnd: !!sub.cancel_at_period_end, periodEnd: end ? end * 1000 : null };
+          }
+          // No subscription (account set up by hand): local / assets is told and closes it
+          if (body0.action === 'cancelPlan') {
+            await redis.hSet(`billing_cancel_requests`, slug, JSON.stringify({ email: session.email, at: new Date().toISOString(), reason: String(body0.reason || '').slice(0, 500) }));
+            if (process.env.RESEND_API_KEY) {
+              const { Resend } = await import('resend');
+              await new Resend(process.env.RESEND_API_KEY).emails.send({ from: 'local / assets <noreply@local-assets.com>', to: process.env.ORDERS_EMAIL || 'info@local-assets.com', subject: `Cancellation request: ${venueName}`, html: `<p>${venueName} (${session.email}) asked to cancel their account.</p><p>${String(body0.reason || '').replace(/[<>]/g, '')}</p>` }).catch(() => {});
+            }
+            return { ok: true, requested: true };
+          }
+          return { ok: true };
+        });
+        return res.status(200).json(out);
+      }
       if (body0.action !== 'changePlan') return res.status(403).json({ error: 'Only local / assets can change billing' });
       const stripe = stripeClient();
       if (!stripe) return res.status(503).json({ error: 'Payments are not set up yet' });

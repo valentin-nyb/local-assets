@@ -81,6 +81,9 @@
         .bl-admin input:focus { border-color:var(--la-accent); }
         .bl-admin-actions { display:flex; flex-wrap:wrap; gap:8px; padding:0 20px 20px; align-items:center; }
         .bl-msg { font-size:12px; color:var(--la-sub); }
+        .bl-cancel-body { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:18px 20px; flex-wrap:wrap; }
+        .bl-cancel-body .bl-msg { max-width:620px; line-height:1.55; }
+        .bl-danger { background:transparent; color:var(--la-bad, #ef4444); border-color:color-mix(in srgb, var(--la-bad, #ef4444) 45%, transparent); }
         .bl-offer { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; padding:20px; }
         .bl-plan { position:relative; border:1px solid var(--la-line); border-radius:16px; padding:22px 20px 20px; display:flex; flex-direction:column; background:var(--la-surface); }
         .bl-plan.current { border-color:color-mix(in srgb, var(--la-accent) 55%, var(--la-line)); }
@@ -202,6 +205,13 @@
                         <span class="bl-msg" id="bl-admin-msg"></span>
                     </div>
                 </section>
+                <section class="bl-section hidden" id="bl-cancel">
+                    <div class="bl-section-head"><h3>Cancel account</h3></div>
+                    <div class="bl-cancel-body">
+                        <p class="bl-msg" id="bl-cancel-text">Your plan stays active until the end of the current billing month. Your recordings, clips and Brand Kit stay downloadable until then.</p>
+                        <button type="button" class="cam-btn bl-danger" id="bl-cancel-btn">Cancel account</button>
+                    </div>
+                </section>
             </div>
         </div>
     </main>
@@ -316,6 +326,17 @@
                         } catch (e) { b.disabled = false; b.textContent = 'Upgrade'; laAlert('Could not change the plan: ' + e.message, { tone: 'error' }); }
                     });
                 });
+            }
+            // Cancel account (clients)
+            var cbox = document.getElementById('bl-cancel'), cbtn = document.getElementById('bl-cancel-btn'), ctext = document.getElementById('bl-cancel-text');
+            cbox.classList.toggle('hidden', admin);
+            var sub = d.subscription, endTxt = sub && sub.periodEnd ? new Date(sub.periodEnd).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+            if (sub && sub.cancelAtPeriodEnd) {
+                ctext.innerHTML = 'Your account is set to close on <b>' + esc(endTxt) + '</b>. Until then everything keeps working, and your files stay downloadable.';
+                cbtn.textContent = 'Keep my plan'; cbtn.classList.remove('bl-danger'); cbtn.classList.add('primary'); cbtn.dataset.mode = 'resume';
+            } else {
+                ctext.textContent = 'Your plan stays active until the end of the current billing month' + (endTxt ? ' (' + endTxt + ')' : '') + '. Your recordings, clips and Brand Kit stay downloadable until then.';
+                cbtn.textContent = 'Cancel account'; cbtn.classList.add('bl-danger'); cbtn.classList.remove('primary'); cbtn.dataset.mode = 'cancel';
             }
             ['bl-admin', 'bl-send-box', 'bl-plans-box'].forEach(function(id) { document.getElementById(id).classList.toggle('hidden', !admin); });
             if (!admin) return;
@@ -486,6 +507,18 @@
             }).catch(function() {});
         }
         if (new URLSearchParams(location.search).get('plan') === 'updated') { history.replaceState({}, '', '/billing'); setTimeout(function() { laToast('Your plan is active'); }, 800); }
+        document.getElementById('bl-cancel-btn').addEventListener('click', async function() {
+            var b = this, resume = b.dataset.mode === 'resume';
+            if (!resume && !(await laConfirm({ title: 'Cancel your account?', message: 'Your plan ends at the end of the current billing month. Download anything you want to keep before then. You can change your mind until that date.', confirmText: 'Cancel account', danger: true }))) return;
+            b.disabled = true;
+            try {
+                var r = await laFetch('/api/billing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: resume ? 'resumePlan' : 'cancelPlan' }) });
+                var out = await r.json(); if (!r.ok) throw new Error(out.error || r.status);
+                laToast(resume ? 'Your plan continues' : out.requested ? 'Cancellation requested. We\'ll confirm by email.' : 'Your account closes at the end of the billing month');
+                await load();
+            } catch (e) { laAlert('Could not update: ' + e.message, { tone: 'error' }); }
+            b.disabled = false;
+        });
         load().then(function() { if (_data && _data.isAdmin) loadSetup(); });
     </script>
 </body>
