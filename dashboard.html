@@ -714,27 +714,6 @@
                 laAlert('Could not make the vertical clips: ' + er.message, { tone: 'error' });
             }
         });
-        // Sessions whose clips aren't vertical originals yet get them cut automatically, once
-        // (the server only ever cuts each clip once, so a second request changes nothing)
-        var _autoStarted = {};
-        function autoStartVerticals() {
-            document.querySelectorAll('.wm-restore').forEach(function(btn) {
-                var ids = (btn.dataset.wmClips || '').split(',').filter(Boolean);
-                var needs = ids.some(function(id) { return _wmState.horizontal.indexOf(id) >= 0; }) || Number(btn.dataset.missing) > 0;
-                var key = sessionKey(btn);
-                if (!needs || _autoStarted[key] || isCutting(btn)) return;
-                _autoStarted[key] = true;
-                laFetch('/api/vertical-clips', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'start', artist: btn.dataset.wmArtist, date: btn.dataset.wmDate }) })
-                    .then(function(r) { return r.ok ? r.json() : null; })
-                    .then(function(d) {
-                        if (!d || !d.started) return;
-                        _cutting[key] = Date.now();
-                        try { sessionStorage.setItem('la_cutting', JSON.stringify(_cutting)); } catch (_) {}
-                        paintWatermarkButtons();
-                        clearTimeout(_wmSweepT); _wmSweepT = setTimeout(sweepWatermarks, 60000);
-                    }).catch(function() {});
-            });
-        }
         // Finishes swaps whose watermarked copy is ready and refreshes the buttons; checks again while any are pending
         var _wmSweepT;
         function sweepWatermarks() {
@@ -748,7 +727,6 @@
                     var cuttingAny = Object.keys(_cutting).some(function(k) { return Date.now() - _cutting[k] < 15 * 60e3; });
                     if (cuttingAny && !_wmState.horizontal.length && !d.verticalsPending) { _cutting = {}; try { sessionStorage.removeItem('la_cutting'); } catch (_) {} cuttingAny = false; }
                     if (d.done) fetchRecentUploads(); else paintWatermarkButtons();
-                    autoStartVerticals();
                     if (d.pending || cuttingAny) _wmSweepT = setTimeout(sweepWatermarks, 30000);
                 }).catch(function() {});
         }
