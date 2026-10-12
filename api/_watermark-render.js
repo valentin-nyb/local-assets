@@ -23,7 +23,10 @@ async function logoLayer(wm, s = 1) {
   // SVG and PDF logos are drawn from their vectors at a high density, so they stay sharp at any size
   const src = await download(wm.url);
   const vector = /\.(svg|pdf)(\?|$)/i.test(wm.url) || /^\s*(<\?xml|<svg)/.test(src.subarray(0, 200).toString());
-  const { data, info } = await sharp(src, { density: vector ? Math.min(2400, Math.round(300 * s * 2)) : 72 })
+  // The empty margin around the logo is cut off first, so the logo itself fills the size's box
+  let trimmed = await sharp(src, { density: vector ? Math.min(2400, Math.round(300 * s * 2)) : 72 }).trim({ threshold: 10 }).png().toBuffer().catch(() => null);
+  if (!trimmed) trimmed = await sharp(src, { density: vector ? Math.min(2400, Math.round(300 * s * 2)) : 72 }).png().toBuffer();
+  const { data, info } = await sharp(trimmed)
     .resize({ width: Math.round(box[0] * s), height: Math.round(box[1] * s), fit: 'inside', withoutEnlargement: false, kernel: 'lanczos3' })
     .png().toBuffer({ resolveWithObject: true });
   return { input: data, w: info.width, h: info.height };

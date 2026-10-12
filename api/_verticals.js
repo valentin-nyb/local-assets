@@ -159,6 +159,7 @@ async function streamParts(url) {
   const r = await fetch(url, { signal: AbortSignal.timeout(15000) });
   if (!r.ok) throw new Error('playlist ' + r.status);
   const text = await r.text();
+  console.log('[verticals] playlist', text.split(/\r?\n/).filter(l => /^#EXT-X-(MEDIA|STREAM-INF)/.test(l)).slice(0, 6).join(' | ').slice(0, 900));
   const abs = u => new URL(u, url).href;
   const lines = text.split(/\r?\n/);
   const audioLine = lines.find(l => /^#EXT-X-MEDIA:.*TYPE=AUDIO/.test(l) && /URI="/.test(l));
@@ -171,6 +172,17 @@ async function streamParts(url) {
     if (u && b > bw) { bw = b; best = abs(u); }
   });
   return { video: best, audio };
+}
+
+// Whether a file has a sound stream
+function hasAudio(file) {
+  return new Promise(resolve => {
+    const ff = spawn(ffmpegPath, ['-hide_banner', '-i', file], { stdio: ['ignore', 'ignore', 'pipe'] });
+    let err = '';
+    ff.stderr.on('data', d => { err += d; });
+    ff.on('error', () => resolve(false));
+    ff.on('close', () => resolve(/Stream #\S+.*Audio:/.test(err)));
+  });
 }
 
 function run(args) {
@@ -206,10 +218,19 @@ export async function cutVertical(redis, auth, job) {
     const maps = video && audio ? ['-map', '0:v:0', '-map', '1:a:0'] : ['-map', '0:v:0', '-map', '0:a:0?'];
     await run(['-hide_banner', '-loglevel', 'warning', '-y', ...inputs, '-t', String(len), ...maps, ...tail])
       .catch(e => console.error('[verticals] instant clip', e.message));
-    if (sizeOf() < 200 * 1024) {
+    // Empty, or cut without the sound: cut again from the downloadable MP4, which carries picture and sound together
+    const silent = sizeOf() >= 200 * 1024 && !(await hasAudio(out));
+    if (silent) console.error('[verticals] no sound in the stream cut', job.n, 'video', video || clipUrl, 'audio', audio || 'none');
+    if (sizeOf() < 200 * 1024 || silent) {
+      const keep = out + '.silent.mp4';
+      if (silent) fs.renameSync(out, keep);
       await run(['-hide_banner', '-loglevel', 'warning', '-y',
         '-ss', String(job.start), '-t', String(len), '-i', `https://stream.mux.com/${job.pid}/highest.mp4`, ...encode])
         .catch(e => console.error('[verticals] mp4 fallback', e.message));
+      const ok = sizeOf() >= 200 * 1024 && await hasAudio(out);
+      console.log('[verticals] mp4 fallback', job.n, ok ? 'with sound' : 'failed');
+      if (silent && !ok) fs.renameSync(keep, out);   // keep the stream cut rather than nothing
+      else fs.rm(keep, { force: true }, () => {});
     }
     // A cut that came out empty (stream not readable) is an error, not a clip
     const size = fs.existsSync(out) ? fs.statSync(out).size : 0;

@@ -469,11 +469,39 @@
         // The clip worker draws watermark text from these font files (not WOFF2)
         var WM_TEXT_FONT = /\.(ttf|otf|woff)$/i;
         function wmLogos() { return _files.filter(function(f) { return f.category === 'logos' && /\.(png|svg|webp|jpe?g)$/i.test(f.name); }); }
-        function wmPreviewLogo() {
+        function wmPreviewLogoRaw() {
             var logos = wmLogos();
             if (/^https:/.test(_wm.logo)) { var m = logos.filter(function(f) { return f.url === _wm.logo; })[0]; if (m) return m.url; }
             var own = logos.filter(function(f) { return f.owner === 'venue'; })[0];
             return (own || logos[0] || {}).url || '';
+        }
+        // The logo with the empty margin around it cut off (as on the clips), so its size fills the box
+        var _trimmed = {};
+        function wmPreviewLogo() {
+            var url = wmPreviewLogoRaw();
+            if (!url) return url;
+            if (_trimmed[url]) return _trimmed[url] === 'none' ? url : _trimmed[url];
+            _trimmed[url] = 'none';
+            loadImage(url).then(function(im) {
+                // SVG logos are drawn large first so the trimmed preview stays sharp
+                var sc = /\.svg(\?|$)/i.test(url) ? Math.max(1, 1600 / (im.naturalWidth || 1600)) : 1;
+                var c = document.createElement('canvas'), w = Math.round(im.naturalWidth * sc), h = Math.round(im.naturalHeight * sc);
+                c.width = w; c.height = h;
+                var g = c.getContext('2d'); g.drawImage(im, 0, 0, w, h);
+                var d = g.getImageData(0, 0, w, h).data, x0 = w, y0 = h, x1 = -1, y1 = -1;
+                var bg = [d[0], d[1], d[2], d[3]];
+                for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) {
+                    var i = (y * w + x) * 4;
+                    var empty = bg[3] < 10 ? d[i + 3] < 10 : Math.abs(d[i] - bg[0]) + Math.abs(d[i + 1] - bg[1]) + Math.abs(d[i + 2] - bg[2]) < 30 && d[i + 3] > 245;
+                    if (!empty) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+                }
+                if (x1 < 0 || (x0 === 0 && y0 === 0 && x1 === w - 1 && y1 === h - 1)) return;
+                var o = document.createElement('canvas'); o.width = x1 - x0 + 1; o.height = y1 - y0 + 1;
+                o.getContext('2d').drawImage(c, x0, y0, o.width, o.height, 0, 0, o.width, o.height);
+                _trimmed[url] = o.toDataURL('image/png');
+                positionPreview();
+            }).catch(function() {});
+            return url;
         }
         // The watermark text, while its font is still in the brand kit
         // The text shown in previews: the latest session's artist when the text is "Artist name"
@@ -500,7 +528,7 @@
                 }).join('') + '</div>';
             };
             // Only the saved logos, by name. Older settings ("auto"/"account") show the logo they resolve to.
-            var current = wmPreviewLogo();
+            var current = wmPreviewLogoRaw();
             var perOwner = {};
             logos.forEach(function(f) { perOwner[f.owner] = (perOwner[f.owner] || 0) + 1; });
             var logoOpts = logos.map(function(f) {
@@ -568,7 +596,7 @@
                         var sw = box.querySelector('[data-wm="enabled"]'); if (sw) sw.setAttribute('aria-checked', v);
                         var lbl = box.querySelector('.bk-wm-foot span'); if (lbl) lbl.textContent = v ? 'Watermark on' : 'Watermark off';
                         var rows = box.querySelector('.bk-wm-rows'); if (rows) rows.classList.toggle('off', !v);
-                        document.querySelectorAll('[data-use-wm]').forEach(function(b) { var on = v && wmPreviewLogo() === b.dataset.useWm; b.classList.toggle('is-on', on); b.textContent = on ? 'Watermark' : 'Use as watermark'; });
+                        document.querySelectorAll('[data-use-wm]').forEach(function(b) { var on = v && wmPreviewLogoRaw() === b.dataset.useWm; b.classList.toggle('is-on', on); b.textContent = on ? 'Watermark' : 'Use as watermark'; });
                     } else { box.querySelectorAll('[data-wm="' + key + '"][data-v]').forEach(function(b) { b.setAttribute('aria-pressed', b.dataset.v === v); }); positionPreview(); } saveWatermark(); };
                 if (el.tagName === 'SELECT') el.addEventListener('change', function() { apply(el.value); });
                 else if (el.type === 'range') { el.addEventListener('input', function() { _wm.opacity = el.value / 100; positionPreview(); }); el.addEventListener('change', function() { saveWatermark(); }); }
@@ -832,7 +860,7 @@
         function saveWatermark() {
             // Keep the logo cards' "Use as watermark" buttons in step with the panel
             document.querySelectorAll('[data-use-wm]').forEach(function(b) {
-                var on = _wm.enabled && wmPreviewLogo() === b.dataset.useWm;
+                var on = _wm.enabled && wmPreviewLogoRaw() === b.dataset.useWm;
                 b.classList.toggle('is-on', on);
                 b.textContent = on ? 'Watermark' : 'Use as watermark';
             });
@@ -1022,7 +1050,7 @@
         function thumbFile(f) { return f.category !== 'logos' && /\.(png|jpe?g|webp)$/i.test(f.name); }
         // Logos the clip worker can stamp on clips
         function wmLogoFile(f) { return f.category === 'logos' && /\.(png|svg|webp|jpe?g)$/i.test(f.name); }
-        function wmUsesLogo(f) { return !!_wm && _wm.enabled && wmPreviewLogo() === f.url; }
+        function wmUsesLogo(f) { return !!_wm && _wm.enabled && wmPreviewLogoRaw() === f.url; }
         // From a logo card or its popup: this logo becomes the watermark, bottom left
         function useLogoAsWatermark(url) {
             if (!_wm) return;
