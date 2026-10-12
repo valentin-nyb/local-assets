@@ -141,7 +141,7 @@ function run(args) {
     let err = '';
     ff.stderr.on('data', d => { err = (err + d).slice(-2000); });
     ff.on('error', reject);
-    ff.on('close', code => code === 0 ? resolve() : reject(new Error('ffmpeg: ' + err.trim().split('\n').pop())));
+    ff.on('close', code => { if (err.trim()) console.log('[verticals] ffmpeg said:', err.trim().slice(-600)); code === 0 ? resolve() : reject(new Error('ffmpeg: ' + err.trim().split('\n').pop())); });
   });
 }
 
@@ -153,7 +153,7 @@ export async function cutVertical(redis, auth, job) {
   const out = path.join(os.tmpdir(), `v-${job.masterId}-${job.n}-${Date.now()}.mp4`);
   try {
     await run([
-      '-hide_banner', '-loglevel', 'error', '-y',
+      '-hide_banner', '-loglevel', 'warning', '-y',
       '-ss', String(job.start), '-t', String(job.end - job.start),
       '-i', `https://stream.mux.com/${job.pid}.m3u8?rendition_order=desc`,
       '-map', '0:v:0', '-map', '0:a:0?',
@@ -161,8 +161,12 @@ export async function cutVertical(redis, auth, job) {
       '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p',
       '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', out,
     ]);
-    const blob = await put(`watermarks/${job.slug}/vertical-${crypto.randomBytes(6).toString('hex')}.mp4`, fs.createReadStream(out),
-      { access: 'public', contentType: 'video/mp4', addRandomSuffix: false, multipart: true });
+    // A cut that came out empty (stream not readable) is an error, not a clip
+    const size = fs.existsSync(out) ? fs.statSync(out).size : 0;
+    console.log('[verticals] cut', job.slug, job.artist, job.n, Math.round(size / 1024) + ' KB');
+    if (size < 200 * 1024) throw new Error(`The cut came out empty (${size} bytes): the 4K long form couldn't be read`);
+    const blob = await put(`watermarks/${job.slug}/vertical-${crypto.randomBytes(6).toString('hex')}.mp4`, fs.readFileSync(out),
+      { access: 'public', contentType: 'video/mp4', addRandomSuffix: false, multipart: size > 50 * 1024 * 1024 });
     // Hidden until it's ready; then it takes the clip's place (finishVerticals)
     const asset = await muxReq(auth, '/video/v1/assets', {
       method: 'POST',
