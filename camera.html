@@ -745,6 +745,7 @@
             var o = new URLSearchParams(location.search).get('order');
             if (!o) return;
             history.replaceState({}, '', '/camera');
+            if (o === 'new') return openOrderCameras();
             if (o === 'success') openCamDialog('Order received', '<p class="cam-dialog-text">Thank you, your cameras are ordered. We\'ll email you the delivery details. Once they arrive, add each one here with <b>Add camera</b>.</p>');
         })();
 

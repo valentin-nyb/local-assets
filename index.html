@@ -77,6 +77,54 @@
         #hero-title span.word-hovered { color: #39FF14; }
     </style>
     <style>
+        /* Venue Command Center: how the cameras work */
+        .vc-cams { margin-top:96px; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,400px); gap:48px; align-items:start; border:1px solid #27272a; background:#0a0a0a; border-radius:20px; padding:32px; }
+        .vc-eyebrow { font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.3em; text-transform:uppercase; color:#39FF14; }
+        .vc-title { font:900 28px/1.15 "Helvetica Neue", Helvetica, Arial, sans-serif; text-transform:uppercase; letter-spacing:-.01em; color:#fff; margin:12px 0; }
+        .vc-text { font-size:15px; line-height:1.65; color:#a1a1aa; max-width:540px; }
+        .vc-order { display:inline-flex; align-items:center; height:44px; padding:0 20px; margin-top:22px; border-radius:10px; background:#39FF14; color:#000; font:700 14px/1 "Helvetica Neue", Helvetica, Arial, sans-serif; text-decoration:none; transition:background .2s; }
+        .vc-order:hover { background:#fff; }
+        .vc-note { font-size:12px; color:#71717a; margin-top:12px; }
+        .vc-steps { list-style:none; margin:28px 0 0; padding:24px 0 0; border-top:1px solid #1f1f22; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px 28px; }
+        .vc-steps li { display:flex; gap:12px; }
+        .vc-steps li > b { flex-shrink:0; width:24px; height:24px; border-radius:999px; background:rgba(57,255,20,.1); color:#39FF14; font-size:12px; display:flex; align-items:center; justify-content:center; }
+        .vc-steps strong { display:block; font:700 14px/1.35 "Helvetica Neue", Helvetica, Arial, sans-serif; color:#fff; margin-bottom:4px; }
+        .vc-steps span { font-size:13px; line-height:1.55; color:#a1a1aa; }
+        .vc-ex { position:relative; }
+        .vc-tag { position:absolute; top:-10px; left:16px; z-index:2; font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.2em; padding:3px 8px; border-radius:999px; background:#111; border:1px solid #27272a; color:#a1a1aa; }
+        .vc-card { border:1px solid #27272a; border-radius:16px; background:#0e0e10; overflow:hidden; }
+        .vc-stage { position:relative; aspect-ratio:16/9; background:#000; }
+        .vc-stage img, .vc-clips img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
+        .vc-meta { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:14px 14px 0; }
+        .vc-label { font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.15em; color:#e4e4e7; }
+        .vc-live { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.15em; padding:4px 10px; border-radius:999px; background:#ef4444; color:#fff; }
+        .vc-chips { display:flex; gap:6px; flex-wrap:wrap; padding:10px 14px 0; }
+        .vc-chip { font-family:'JetBrains Mono',monospace; font-size:10px; padding:4px 8px; border-radius:6px; background:#18181b; color:#a1a1aa; }
+        .vc-chip.ndi { color:#39FF14; background:rgba(57,255,20,.08); }
+        .vc-onstage { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:12px 14px 14px; padding:12px; border-radius:10px; background:#18181b; }
+        .vc-onstage .lbl { font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.2em; color:#71717a; margin-right:8px; }
+        .vc-onstage .val { font:700 14px/1 "Helvetica Neue", Helvetica, Arial, sans-serif; color:#fff; }
+        .vc-onstage .go { font-size:11px; color:#a1a1aa; white-space:nowrap; }
+        .vc-arrow { text-align:center; padding:12px 0; font-size:11px; color:#71717a; }
+        .vc-result { border:1px solid #27272a; border-radius:16px; padding:14px; background:#0a0a0a; }
+        .vc-result-head { font-size:12px; color:#a1a1aa; }
+        .vc-result-head b { color:#fff; font-weight:600; }
+        .vc-flow { list-style:none; margin:12px 0 0; padding:0; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; counter-reset:flow; }
+        .vc-flow li { counter-increment:flow; font:700 12px/1.3 "Helvetica Neue", Helvetica, Arial, sans-serif; color:#fff; padding:8px 10px; border-radius:10px; background:#18181b; }
+        .vc-flow li::before { content:counter(flow, decimal-leading-zero); display:block; font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.12em; color:#39FF14; margin-bottom:3px; }
+        .vc-clips { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:12px; }
+        .vc-clips i { position:relative; overflow:hidden; aspect-ratio:9/16; border-radius:6px; background:#18181b; border:1px solid #27272a; }
+        .vc-wm { position:absolute; z-index:1; bottom:6%; left:7%; width:30%; height:6%; background:url(/logos/White@2x.png) left center/contain no-repeat; }
+        .vc-name { position:absolute; z-index:1; bottom:6.5%; right:7%; max-width:55%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font:900 7px/1 "Helvetica Neue", Helvetica, Arial, sans-serif; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.5); }
+        .vc-foot { font-size:11px; color:#71717a; margin-top:10px; }
+        @media (max-width:900px) {
+            .vc-cams { grid-template-columns:minmax(0,1fr); padding:22px 18px; gap:32px; margin-top:64px; }
+            .vc-title { font-size:22px; }
+            .vc-steps { grid-template-columns:minmax(0,1fr); }
+        }
+        @media (max-width:480px) { .vc-flow { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    </style>
+    <style>
         /* Titles: Helvetica Neue Black, all caps (same rule as styles/theme.css) */
         h1:not(header h1), h2, h3 { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif !important; font-weight: 900 !important; text-transform: uppercase !important; letter-spacing: 0 !important; font-style: normal !important; }
     </style>
@@ -319,6 +367,43 @@
                         <div class="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-black to-transparent pointer-events-none z-20"></div>
                     </div>
 
+                </div>
+            </div>
+            <div class="max-w-6xl mx-auto px-4 md:px-8">
+                <div class="vc-cams reveal">
+                    <div>
+                        <span class="vc-eyebrow">// Cameras</span>
+                        <h3 class="vc-title">Record every set. Get the clips automatically.</h3>
+                        <p class="vc-text">Each OBSBOT Tail 2 streams over the venue's Wi-Fi or network straight to your cloud. When the set ends, the recording is a session for the artist on stage, with vertical clips ready for social media.</p>
+                        <a class="vc-order" href="/login.html?next=%2Fcamera%3Forder%3Dnew">Order cameras · £1,299</a>
+                        <p class="vc-note">Setup and integration included with every camera ordered from us.</p>
+                        <ol class="vc-steps">
+                            <li><b>1</b><div><strong>Plug in</strong><span>Power the OBSBOT Tail 2 and connect it to the venue's Wi-Fi or an Ethernet cable.</span></div></li>
+                            <li><b>2</b><div><strong>Connect it</strong><span>Add the camera in your dashboard and give it a name. It gets its own stream address and key.</span></div></li>
+                            <li><b>3</b><div><strong>Connect your calendar</strong><span>Paste your calendar's iCal link. Each event is a set: the title is the DJ, the start and end are the exact times.</span></div></li>
+                            <li><b>4</b><div><strong>Stream the night</strong><span>Start the camera before the first set and stop it after the last. Each set is cut at its exact times and saved for its DJ.</span></div></li>
+                            <li><b>5</b><div><strong>Add your Brand Kit</strong><span>Upload logos and fonts for your venue and each artist.</span></div></li>
+                            <li><b>6</b><div><strong>Set the watermark</strong><span>Pick the logo, position and size, and add the artist's name in one of your fonts. Every clip gets it.</span></div></li>
+                            <li><b>7</b><div><strong>Choose thumbnails</strong><span>Use any artwork or photo as a session thumbnail, horizontal and vertical, watermarked.</span></div></li>
+                            <li><b>8</b><div><strong>Post</strong><span>Download the clips, or send them to YouTube and SoundCloud.</span></div></li>
+                        </ol>
+                    </div>
+                    <div class="vc-ex" aria-label="Example of a connected camera">
+                        <span class="vc-tag">EXAMPLE</span>
+                        <div class="vc-card">
+                            <div class="vc-stage"><img alt="" loading="lazy" src="https://image.mux.com/skiXvIFodBRdAbRtC7hJZsAaOZSeadnjQ52AyNue6Ds/animated.webp?start=1&amp;end=5&amp;width=640&amp;fps=10"></div>
+                            <div class="vc-meta"><span class="vc-label">CAM 01 // MAIN FLOOR</span><span class="vc-live">LIVE · REC</span></div>
+                            <div class="vc-chips"><span class="vc-chip">OBSBOT Tail 2</span><span class="vc-chip ndi">NDI · MAIN FLOOR</span></div>
+                            <div class="vc-onstage"><span><span class="lbl">ON STAGE</span><span class="val">BELTRAN</span></span><span class="go">From calendar</span></div>
+                        </div>
+                        <div class="vc-arrow">When the stream stops</div>
+                        <div class="vc-result">
+                            <div class="vc-result-head"><b>BELTRAN</b> · new session in your library</div>
+                            <ol class="vc-flow" aria-label="What happens to the recording"><li>Reframe</li><li>Highlights</li><li>Watermark</li><li>HD export</li></ol>
+                            <div class="vc-clips"><i><img alt="" loading="lazy" src="https://image.mux.com/skiXvIFodBRdAbRtC7hJZsAaOZSeadnjQ52AyNue6Ds/animated.webp?start=0&amp;end=4&amp;width=240&amp;fps=10"><span class="vc-wm"></span><span class="vc-name">BELTRAN</span></i><i><img alt="" loading="lazy" src="https://image.mux.com/skiXvIFodBRdAbRtC7hJZsAaOZSeadnjQ52AyNue6Ds/animated.webp?start=2&amp;end=6&amp;width=240&amp;fps=10"><span class="vc-wm"></span><span class="vc-name">BELTRAN</span></i><i><img alt="" loading="lazy" src="https://image.mux.com/skiXvIFodBRdAbRtC7hJZsAaOZSeadnjQ52AyNue6Ds/animated.webp?start=4&amp;end=8&amp;width=240&amp;fps=10"><span class="vc-wm"></span><span class="vc-name">BELTRAN</span></i><i><img alt="" loading="lazy" src="https://image.mux.com/skiXvIFodBRdAbRtC7hJZsAaOZSeadnjQ52AyNue6Ds/animated.webp?start=5&amp;end=9&amp;width=240&amp;fps=10"><span class="vc-wm"></span><span class="vc-name">BELTRAN</span></i></div>
+                            <p class="vc-foot">Vertical clips at 1080 × 1920, ready to post. The full recording is kept too.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
