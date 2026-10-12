@@ -535,6 +535,11 @@
             if (_brandPhotos && Date.now() - _brandPhotosAt < 300000) return paint();
             laFetch('/api/brand').then(function(r) { return r.ok ? r.json() : null; }).then(function(d) {
                 _brandPhotos = (d && d.ownerPhotos) || {};
+                // An artist account's own Brand Kit photo is that artist's photo
+                if (d && d.orgType === 'artist' && _brandPhotos.venue) {
+                    var own = 'artist-' + brandSlug(d.orgName || getVenueName());
+                    if (!_brandPhotos[own]) _brandPhotos[own] = _brandPhotos.venue;
+                }
                 _venueLogos = {}; _venueLogosByName = {};
                 var names = (d && d.ownerNames) || {};
                 ((d && d.files) || []).forEach(function(f) {
@@ -1866,7 +1871,7 @@
                 var since = s.liveSince ? s.liveSince * 1000 : null;
                 var tick = function() { v1.textContent = since ? fmtDuration((Date.now() - since) / 1000) : '—'; };
                 tick(); _heroTimer = setInterval(tick, 1000);
-                setImg(s.playbackId ? 'https://image.mux.com/' + s.playbackId + '/thumbnail.jpg?width=960&_=' + Math.floor(Date.now() / 30000) : '');
+                setImg(s.playbackId ? 'https://image.mux.com/' + s.playbackId + '/thumbnail.jpg?width=1600&height=280&fit_mode=smartcrop&_=' + Math.floor(Date.now() / 30000) : '');
                 stopHeroLoop();
                 return;
             }
@@ -2005,7 +2010,16 @@
             var dur = Number(a.duration) || 0, t = _peaks[a.id] != null ? _peaks[a.id] : dur / 2;
             var time = Math.max(0, Math.min(Math.round(t), Math.floor(dur - 1)));
             var aspect = hero.clientWidth / Math.max(1, hero.clientHeight);
-            heroFocus(a.playback_ids[0].id, time, aspect).then(function(p) {
+            // The DJ, not the lights: look at several moments of the loop, take the middle answer,
+            // and keep it to the band where a DJ stands behind the decks (head and body, not ceiling or floor)
+            var pid = a.playback_ids[0].id;
+            Promise.all([-3, 0, 3].map(function(dt) { return heroFocus(pid, Math.max(0, Math.min(time + dt, Math.floor(dur - 1))), aspect).catch(function() { return null; }); })).then(function(list) {
+                list = list.filter(Boolean);
+                if (!list.length) throw new Error('no focus');
+                var med = function(k) { var v = list.map(function(x) { return x[k]; }).sort(function(m, n) { return m - n; }); return v[Math.floor(v.length / 2)]; };
+                var wideBanner = aspect > 16 / 9;
+                return { x: wideBanner ? 50 : med('x'), y: wideBanner ? Math.min(55, Math.max(28, med('y'))) : 50 };
+            }).then(function(p) {
                 var pos = p.x + '% ' + p.y + '%';
                 var wrap = document.getElementById('live-feed-player-wrap');
                 if (wrap) { wrap.dataset.pos = pos; if (_heroLoop) _heroLoop.el.style.setProperty('--media-object-position', pos); }
