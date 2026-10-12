@@ -322,7 +322,9 @@
             try {
                 await post({ action: 'assign', target: target, plan: plan, email: email, monthly: document.getElementById('bl-monthly').checked });
                 var d = await post({ action: 'invoiceNow', target: target, plan: plan, email: email, period: period });
-                msg.textContent = d.skipped ? (d.reason || 'Nothing to invoice') : 'Invoice sent to ' + email; await load();
+                if (d.skipped) msg.textContent = d.reason || 'Nothing to invoice';
+                else msg.innerHTML = 'Invoice ' + (d.livemode ? 'sent to ' + esc(email) : 'created (test mode: Stripe doesn\'t email test invoices)') + (d.url ? ' · <a class="bl-link" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open payment page</a>' : '');
+                await load();
             } catch (e) { msg.textContent = 'Could not send: ' + e.message; }
             this.disabled = false;
         });

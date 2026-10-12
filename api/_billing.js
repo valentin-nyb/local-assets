@@ -198,5 +198,5 @@ export async function invoiceVenue(redis, stripe, { slug, auth, email, name, tar
   const sent = await stripe.invoices.finalizeInvoice(invoice.id);
   await stripe.invoices.sendInvoice(sent.id).catch(() => {});
   await redis.set(doneKey, sent.id);
-  return { invoice: sent.id, total: priced.total };
+  return { invoice: sent.id, total: priced.total, url: sent.hosted_invoice_url || null, livemode: !!sent.livemode };
 }
