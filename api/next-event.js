@@ -1,42 +1,39 @@
-import ical from 'node-ical';
+import { createClient } from 'redis';
+import { getWebSessionAuth } from './_venues.js';
+import { calendarKey, fetchEvents } from './_calendar.js';
 
-function toDate(d) {
-  if (d instanceof Date) return d;
-  if (typeof d === 'string') return new Date(d);
-  if (d && d.toISOString) return new Date(d.toISOString());
-  return new Date(d);
-}
-
+// The dashboard's Next event card: the next sets from the venue's own calendar (connected on the Camera page).
+// Accounts without one fall back to the shared ICAL_URL calendar.
 export default async function handler(req, res) {
-  const calUrl = process.env.ICAL_URL;
-  if (!calUrl) {
-    return res.status(500).json({ error: 'ICAL_URL env variable not set' });
+  res.setHeader('Cache-Control', 'no-store');
+  const session = getWebSessionAuth(req);
+  let calUrl = null;
+  if (session?.venueSlug) {
+    const redis = createClient({ url: process.env.REDIS_URL });
+    try { await redis.connect(); calUrl = await redis.get(calendarKey(session.venueSlug)); }
+    catch (e) { console.error('[next-event] redis', e.message); }
+    finally { await redis.quit().catch(() => {}); }
   }
+  const source = calUrl ? 'venue' : 'shared';
+  calUrl = calUrl || process.env.ICAL_URL;
+  if (!calUrl) return res.status(200).json({ events: [], connected: false });
 
   try {
-    const data = await ical.async.fromURL(calUrl);
-    const now = new Date();
-
-    const events = Object.values(data).filter(ev => ev.type === 'VEVENT');
-
-    const upcoming = events
-      .map(ev => ({
-        title: ev.summary || 'Untitled',
-        location: ev.location || null,
-        start: toDate(ev.start),
-        end: ev.end ? toDate(ev.end) : null,
-      }))
-      .filter(ev => ev.start >= now)
-      .sort((a, b) => a.start - b.start)
+    const now = Date.now();
+    const events = (await fetchEvents(calUrl, now, now + 60 * 86400e3))
+      .filter(ev => ev.end > now)
       .slice(0, 3)
       .map(ev => ({
-        ...ev,
-        start: ev.start.toISOString(),
-        end: ev.end ? ev.end.toISOString() : null,
+        title: ev.title || ev.artist,
+        artist: ev.artist,
+        location: ev.location || null,
+        start: new Date(ev.start).toISOString(),
+        end: new Date(ev.end).toISOString(),
+        onNow: ev.start <= now,
       }));
-
-    return res.status(200).json({ events: upcoming });
+    return res.status(200).json({ events, connected: true, source });
   } catch (e) {
-    return res.status(500).json({ error: e.message });
+    console.error('[next-event]', source, e.message);
+    return res.status(200).json({ events: [], connected: true, source, error: e.message });
   }
 }

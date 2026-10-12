@@ -2525,14 +2525,26 @@
             const titleEl = document.getElementById('next-event-title');
             const timeEl = document.getElementById('next-event-time');
             try {
-                const res = await fetch('/api/next-event');
+                const res = await laFetch('/api/next-event?t=' + Date.now());
                 const data = await res.json();
-                if (data.error || !data.events?.length) {
+                if (data.error) {
+                    titleEl.textContent = 'Calendar unavailable';
+                    timeEl.textContent = 'Check the calendar link on the Camera page';
+                    return;
+                }
+                if (!data.events?.length) {
                     titleEl.textContent = 'Nothing scheduled';
-                    timeEl.textContent = 'Events from your calendar appear here';
+                    timeEl.textContent = data.connected ? 'No sets in the next two months' : 'Connect your calendar on the Camera page';
                     return;
                 }
                 const ev = data.events[0];
+                if (ev.onNow) {
+                    titleEl.textContent = ev.artist || ev.title;
+                    const until = new Date(ev.end).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                    timeEl.innerHTML = '<span class="kpi-today">On now</span>, until ' + until + (ev.location ? ' · ' + ev.location.replace(/&/g, '&amp;').replace(/</g, '&lt;') : '');
+                    titleEl.title = ev.title; timeEl.title = timeEl.textContent;
+                    return;
+                }
                 const start = new Date(ev.start);
                 const now = new Date();
                 const diffMs = start - now;
@@ -2540,7 +2552,7 @@
                 const isTomorrow = start.toDateString() === new Date(now.getTime() + 86400000).toDateString();
                 const time = start.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
-                titleEl.textContent = ev.title;
+                titleEl.textContent = ev.artist || ev.title;
 
                 if (isToday) {
                     timeEl.textContent = 'Today, ' + time;

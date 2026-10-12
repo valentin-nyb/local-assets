@@ -58,7 +58,7 @@ export function eventsBetween(data, fromMs, toMs) {
       let end = it.end ? new Date(it.end).getTime() : start + 3600e3;
       if (!(end > start)) end = start + 3600e3;
       if (end <= fromMs || start >= toMs) continue;
-      out.push({ artist: artistFromTitle(textOf(it.summary)) || artist, title: String(textOf(it.summary)), start, end, allDay: !!it.isFullDay });
+      out.push({ artist: artistFromTitle(textOf(it.summary)) || artist, title: String(textOf(it.summary)), location: String(textOf(ev.location)) || null, start, end, allDay: !!it.isFullDay });
     }
   }
   return out.sort((a, b) => a.start - b.start);
