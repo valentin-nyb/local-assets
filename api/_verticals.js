@@ -119,7 +119,8 @@ export async function venueForAsset(assetId) {
 }
 
 // Starts one cutting job per clip that hasn't been cut yet; each runs in its own function
-export async function startVerticals(redis, slug, master, artist, origin) {
+export async function startVerticals(redis, slug, master, artist, origin, retry = false) {
+  if (retry) await redis.del(failKey(master.id));   // pressed by hand: try failed clips again
   const pid = (master.playback_ids || [])[0]?.id;
   if (!pid) throw new Error('The full recording has no playback ID yet');
   const done = await redis.hGetAll(doneKey(master.id));

@@ -48,7 +48,7 @@ export default async function handler(req, res) {
   try {
     const { master } = sessionClips(await listAllAssets(session.muxAuth), artist, String(body.date || ''));
     if (!master) return res.status(400).json({ error: 'The full recording of this session is not in Cloud Storage.' });
-    const started = await startVerticals(redis, session.venueSlug, master, artist, `https://${req.headers.host}`);
+    const started = await startVerticals(redis, session.venueSlug, master, artist, `https://${req.headers.host}`, true);
     return res.status(200).json({ started });
   } catch (e) {
     console.error('[vertical-clips]', e.message);
