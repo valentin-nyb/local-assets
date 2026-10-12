@@ -63,11 +63,16 @@ export default async function handler(req, res) {
         cursor = page.hasMore ? page.cursor : undefined;
       } while (cursor);
       files.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
-      const [orgType, orgName, ownerNames, pinned, watermark, labelArtists] = await withRedis(r => Promise.all([
+      const [orgType, orgName, ownerNames, pinned, watermark, labelArtists, fileLabels] = await withRedis(r => Promise.all([
         r.get(`brand_org_type:${slug}`), r.get(`brand_org_name:${slug}`),
         r.hGetAll(`brand_owner_names:${slug}`), r.hGetAll(`brand_owner_photo:${slug}`),
-        readWatermark(r, slug), r.hGetAll(`brand_label_artist:${slug}`),
-      ])).catch(() => [null, null, {}, {}, cleanWatermark(), {}]);
+        readWatermark(r, slug), r.hGetAll(`brand_label_artist:${slug}`), r.hGetAll(`brand_file_label:${slug}`),
+      ])).catch(() => [null, null, {}, {}, cleanWatermark(), {}, {}]);
+      // "Other" files carry what they are, as typed when uploading ("Press kit", "Tech rider")
+      for (const f of files) {
+        const key = decodeURIComponent(new URL(f.url).pathname.slice(1));
+        if (fileLabels?.[key]) f.label = fileLabels[key];
+      }
       // Profile photo per owner: the one picked with "Use as artist photo", else the newest photo
       const ownerPhotos = {};
       for (const f of files) {
@@ -153,6 +158,16 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
+    if (body.action === 'setFileLabel') {
+      const url = String(body.url || '');
+      let pathname = '';
+      try { pathname = decodeURIComponent(new URL(url).pathname.slice(1)); } catch {}
+      if (!pathname.startsWith(prefixFor(slug)) || !parsePath(pathname, slug)) return res.status(403).json({ error: 'Not your file' });
+      const label = String(body.label ?? '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 40);
+      await withRedis(r => label ? r.hSet(`brand_file_label:${slug}`, pathname, label) : r.hDel(`brand_file_label:${slug}`, pathname));
+      return res.status(200).json({ label });
+    }
+
     if (body.action === 'delete') {
       const url = String(body.url || '');
       let pathname;
@@ -162,6 +177,7 @@ export default async function handler(req, res) {
         return res.status(403).json({ error: 'Not your file' });
       }
       await del(url);
+      await withRedis(r => r.hDel(`brand_file_label:${slug}`, pathname)).catch(() => {});
       return res.status(200).json({ ok: true });
     }
 

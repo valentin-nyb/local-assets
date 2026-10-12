@@ -419,7 +419,7 @@
             { key: 'photos',     label: 'Photos',     icon: 'solar:camera-linear', tag: 'Photo' },
             { key: 'guidelines', label: 'Guidelines', icon: 'solar:document-text-linear', tag: 'Guidelines' },
             { key: 'fonts',      label: 'Fonts',      icon: 'solar:text-field-linear', tag: 'Font' },
-            { key: 'other',      label: 'Other',      icon: 'solar:folder-linear', tag: 'Other' },
+            { key: 'other',      label: 'Other…',     icon: 'solar:folder-linear', tag: 'Other' },
         ];
         var IMG_EXT = /\.(png|jpe?g|svg|webp|gif)$/i;
         var FONT_EXT = /\.(otf|ttf|woff2?)$/i;
@@ -1069,7 +1069,7 @@
         function fileCard(f) {
             var ext = (f.name.split('.').pop() || 'file').slice(0, 5);
             var cat = CATS.filter(function(c) { return c.key === f.category; })[0] || CATS[CATS.length - 1];
-            var tagText = cat.key === 'photos' && f.owner.indexOf('artist-') === 0 ? (_ownerPhotos[f.owner] === f.url ? 'Artist photo' : 'Photo') : cat.tag;
+            var tagText = cat.key === 'photos' && f.owner.indexOf('artist-') === 0 ? (_ownerPhotos[f.owner] === f.url ? 'Artist photo' : 'Photo') : f.category === 'other' && f.label ? esc(f.label) : cat.tag;
             var tag = '<button type="button" class="bk-tag' + (_ownerPhotos[f.owner] === f.url ? ' is-profile' : '') + '" data-move="' + esc(f.url) + '" title="Change type">' + tagText + '</button>';
             // Photos fill the card; JPGs filed as logos are photos too (no transparency). Transparent logos stay whole.
             var isPhoto = f.category === 'covers' || f.category === 'artwork' || f.category === 'photos' || /\.jpe?g$/i.test(f.name);
@@ -1109,6 +1109,7 @@
                 '<div class="bk-row2"><label>For<select name="owner">' + opts + '</select></label>' +
                 '<label>Type<select name="category">' + CATS.map(function(c) { return '<option value="' + c.key + '">' + c.label + '</option>'; }).join('') + '</select></label></div>' +
                 '<label id="bk-new-wrap" class="hidden"><span id="bk-new-label">Name</span><input name="newName" maxlength="60"></label>' +
+                '<label id="bk-other-wrap" class="hidden">What is it?<input name="otherLabel" maxlength="40" placeholder="e.g. Press kit, Tech rider, Stage plot"><small>Shown on the file instead of "Other".</small></label>' +
                 '<label id="bk-label-artist-wrap" class="hidden">Artist<select name="labelArtist">' + artistOpts + '</select><small>The record label\'s brand kit is kept under this artist.</small></label>' +
                 '<div id="bk-drop" class="bk-drop" tabindex="0">Drop files here or <b>browse</b>' +
                     '<small>Logos, covers, artwork, photos, PDFs, AI/EPS, fonts or ZIP · up to 200 MB each</small></div>' +
@@ -1119,7 +1120,12 @@
                 '<button type="submit" class="cam-btn primary" disabled>Upload</button></div></form>');
             var form = document.getElementById('bk-form'), drop = document.getElementById('bk-drop'), input = document.getElementById('bk-input');
             var picked = [], catTouched = false;
-            form.category.addEventListener('change', function() { catTouched = true; });
+            var syncOther = function() {
+                var other = form.category.value === 'other';
+                document.getElementById('bk-other-wrap').classList.toggle('hidden', !other);
+                if (other && catTouched) setTimeout(function() { form.otherLabel.focus(); }, 0);
+            };
+            form.category.addEventListener('change', function() { catTouched = true; syncOther(); });
             var setPicked = function(list) {
                 picked = Array.prototype.slice.call(list).filter(function(f) { return f.size > 0; });
                 document.getElementById('bk-queue').innerHTML = picked.map(function(f, i) {
@@ -1173,13 +1179,16 @@
                     var f = picked[i], row = document.getElementById('bkq-' + i);
                     var safe = f.name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^-+/, '').slice(-120) || 'file';
                     try {
-                        await window.blobUpload('brand/' + slug + '/' + owner + '/' + form.category.value + '/' + safe, f, {
+                        var up = await window.blobUpload('brand/' + slug + '/' + owner + '/' + form.category.value + '/' + safe, f, {
                             access: 'public',
                             handleUploadUrl: '/api/brand',
                             headers: { Authorization: 'Bearer ' + session().webToken },
                             multipart: f.size > 50 * 1024 * 1024,
                             onUploadProgress: function(p) { row.querySelector('i').style.width = p.percentage + '%'; row.querySelector('.st').textContent = Math.round(p.percentage) + '%'; },
                         });
+                        if (form.category.value === 'other' && form.otherLabel.value.trim() && up && up.url) {
+                            await laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setFileLabel', url: up.url, label: form.otherLabel.value.trim() }) }).catch(function() {});
+                        }
                         row.querySelector('i').style.width = '100%'; row.querySelector('.st').textContent = 'Done';
                     } catch (er) {
                         failed++;
