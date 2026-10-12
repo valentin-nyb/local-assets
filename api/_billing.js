@@ -103,7 +103,8 @@ export async function venueUsage(slug, auth, { start, end }, artist = null, labe
       if ((b.data || []).length < 100) break;
     }
     // Streaming: Mux delivery usage for the period (up to the last full hour)
-    const to = Math.min(end, Math.floor(Date.now() / 3600e3) * 3600e3);
+    // Mux reports streaming up to 12 hours ago
+    const to = Math.min(end, Math.floor((Date.now() - 12.5 * 3600e3) / 3600e3) * 3600e3);
     if (to > start) {
       try {
         for (let page = 1; page <= 30; page++) {

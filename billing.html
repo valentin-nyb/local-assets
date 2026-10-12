@@ -85,7 +85,7 @@
         .bl-plan-in { height:34px; }
         #bl-plans td:first-child { min-width:240px; } #bl-plans td { min-width:110px; }
         .bl-check { display:inline-flex; align-items:center; gap:8px; font-size:12px; color:var(--la-sub); margin-right:6px; }
-        .bl-status { height:28px; border-radius:99px; border:1px solid var(--la-line); background:var(--la-chip); color:var(--la-sub); font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; padding:0 8px; cursor:pointer; }
+        .bl-status { min-width:190px; height:28px; border-radius:99px; border:1px solid var(--la-line); background:var(--la-chip); color:var(--la-sub); font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; padding:0 8px; cursor:pointer; }
         .bl-status.paid { background:var(--la-accent-soft); color:var(--la-accent); border-color:transparent; }
         .bl-status.unpaid { background:rgba(239,68,68,.12); color:#ef4444; border-color:transparent; }
         .bl-status.waiting { background:rgba(245,158,11,.12); color:#f59e0b; border-color:transparent; }
@@ -117,21 +117,8 @@
                     <p class="bl-sub">Everything local / assets runs for you, billed in one place: your plan, plus what you use of video storage, streaming and file storage. An itemised invoice is sent on the 1st of each month.</p>
                 </div>
                 <p id="bl-error" class="bl-msg hidden" style="color:var(--la-bad)"></p>
-                <div class="bl-grid">
-                    <div class="bl-card"><p class="lbl">Estimated invoice</p><p class="val" id="bl-total">—</p><p class="note" id="bl-total-note">Loading usage…</p><div class="bl-bar"><i id="bl-bar" style="width:0"></i></div></div>
-                    <div class="bl-card"><p class="lbl">Plan</p><p class="val" id="bl-plan">—</p><p class="note" id="bl-plan-note"></p></div>
-                    <div class="bl-card"><p class="lbl">Usage so far</p><p class="val" id="bl-usage">—</p><p class="note" id="bl-usage-note"></p></div>
-                </div>
-                <section class="bl-section">
-                    <div class="bl-section-head"><h3>Usage this month</h3><span class="bl-msg" id="bl-usage-head"></span></div>
-                    <div class="bl-scroll"><table class="bl-table" id="bl-lines"></table></div>
-                </section>
-                <section class="bl-section">
-                    <div class="bl-section-head"><h3>Invoices</h3></div>
-                    <div class="bl-scroll" id="bl-invoices"><p class="bl-empty">Loading…</p></div>
-                </section>
                 <section class="bl-section hidden" id="bl-send-box">
-                    <div class="bl-section-head"><h3>Send an invoice</h3><span class="bl-msg">Plan price, plus usage above what the plan includes</span></div>
+                    <div class="bl-section-head"><h3>Bill to</h3><span class="bl-msg">Choose who to see and invoice: plan price, plus usage above what the plan includes</span></div>
                     <form id="bl-send-form" class="bl-admin">
                         <label>Venue<select name="venue" id="bl-venue"></select></label>
                         <label>Bill to<select name="target" id="bl-target"></select></label>
@@ -146,6 +133,19 @@
                         <button type="button" class="cam-btn primary" id="bl-send">Send invoice</button>
                         <span class="bl-msg" id="bl-send-msg"></span>
                     </div>
+                </section>
+                <div class="bl-grid">
+                    <div class="bl-card"><p class="lbl">Estimated invoice</p><p class="val" id="bl-total">—</p><p class="note" id="bl-total-note">Loading usage…</p><div class="bl-bar"><i id="bl-bar" style="width:0"></i></div></div>
+                    <div class="bl-card"><p class="lbl">Plan</p><p class="val" id="bl-plan">—</p><p class="note" id="bl-plan-note"></p></div>
+                    <div class="bl-card"><p class="lbl">Usage so far</p><p class="val" id="bl-usage">—</p><p class="note" id="bl-usage-note"></p></div>
+                </div>
+                <section class="bl-section">
+                    <div class="bl-section-head"><h3>Usage this month</h3><span class="bl-msg" id="bl-usage-head"></span></div>
+                    <div class="bl-scroll"><table class="bl-table" id="bl-lines"></table></div>
+                </section>
+                <section class="bl-section">
+                    <div class="bl-section-head"><h3>Invoices</h3></div>
+                    <div class="bl-scroll" id="bl-invoices"><p class="bl-empty">Loading…</p></div>
                 </section>
                 <section class="bl-section hidden" id="bl-plans-box">
                     <div class="bl-section-head"><h3>Plans</h3><span class="bl-msg">Monthly price and the usage each plan includes</span></div>
