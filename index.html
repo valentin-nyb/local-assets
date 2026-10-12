@@ -771,13 +771,13 @@
                             return '<label class="su-type"><input type="radio" name="type" value="' + t[0] + '"' + (i ? '' : ' checked') + '><b>' + t[1] + '</b><span>' + t[2] + '</span></label>';
                         }).join('') +
                     '</div>' +
-                    '<label class="su-field"><span id="su-name-label">Venue name</span><input name="name" maxlength="60" required placeholder="e.g. Fabric"></label>' +
+                    '<label class="su-field"><span id="su-name-label">Venue name</span><input name="name" maxlength="60" required placeholder="e.g. VENUE NAME"></label>' +
                     '<button type="submit" class="ord-go" style="flex:none;height:46px">Continue to payment</button>' +
                     '<p id="su-error" class="ord-error"></p>' +
                     '<p class="ord-fine">Billed monthly. Usage above your plan is invoiced at the end of each month. Cancel anytime.</p>' +
                 '</form>');
             var form = document.getElementById('su-form');
-            var syncLabel = function() { var t = form.type.value; document.getElementById('su-name-label').textContent = t === 'label' ? 'Record label name' : t === 'artist' ? 'Artist name' : 'Venue name'; form.name.placeholder = t === 'label' ? 'e.g. Life and Death' : t === 'artist' ? 'e.g. DJ Tennis' : 'e.g. Fabric'; };
+            var syncLabel = function() { var t = form.type.value; document.getElementById('su-name-label').textContent = t === 'label' ? 'Record label name' : t === 'artist' ? 'Artist name' : 'Venue name'; form.name.placeholder = t === 'label' ? 'e.g. LABEL NAME' : t === 'artist' ? 'e.g. DJ NAME' : 'e.g. VENUE NAME'; };
             form.addEventListener('change', syncLabel);
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
