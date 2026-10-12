@@ -26,7 +26,7 @@ const ALLOWED_TYPES = [
 
 const prefixFor = slug => `brand/${slug}/`;
 // What kind of organisation the account is; only changes the label of its own brand kit.
-const ORG_TYPES = ['venue', 'label', 'management'];
+const ORG_TYPES = ['venue', 'artist', 'label', 'management'];
 
 async function withRedis(fn) {
   const redis = createClient({ url: process.env.REDIS_URL });
@@ -116,7 +116,7 @@ export default async function handler(req, res) {
       await withRedis(r => Promise.all([
         r.hSet(`brand_owner_names:${slug}`, owner, name),
         r.sRem(`brand_hidden_owners:${slug}`, owner),
-        owner.startsWith('label-') && /^artist-[a-z0-9-]+$/.test(artist) ? r.hSet(`brand_label_artist:${slug}`, owner, artist) : null,
+        owner.startsWith('label-') && /^(venue|artist-[a-z0-9-]+)$/.test(artist) ? r.hSet(`brand_label_artist:${slug}`, owner, artist) : null,
       ]));
       return res.status(200).json({ owner, name });
     }

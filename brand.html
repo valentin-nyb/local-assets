@@ -428,7 +428,7 @@
         var IMG_EXT = /\.(png|jpe?g|svg|webp|gif)$/i;
         var FONT_EXT = /\.(otf|ttf|woff2?)$/i;
         var _files = [], _owners = [], _uploading = false, _orgType = 'venue', _orgName = '', _ownerPhotos = {}, _labelArtists = {};
-        var ORG_LABELS = { venue: 'Venue', label: 'Record label', management: 'Management' };
+        var ORG_LABELS = { venue: 'Venue', artist: 'Artist', label: 'Record label', management: 'Management' };
 
         function slugify(name) {
             return String(name).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
@@ -878,7 +878,10 @@
                         artists.push({ key: l.key, name: l.name, kind: 'Record label · ' + a.name, group: 'Artists', label: true, parent: a.key });
                     });
                 });
-                var loose = labels.filter(function(l) { return !artists.some(function(x) { return x.key === l.key; }); })
+                // An artist account's own labels sit under its own brand kit
+                var ownLabels = _orgType === 'artist' ? labels.filter(function(l) { return _labelArtists[l.key] === 'venue'; }).map(function(l) { return { key: l.key, name: l.name, kind: 'Record label · ' + (_orgName || venueName()), group: ORG_LABELS[_orgType], label: true, parent: 'venue' }; }) : [];
+                artists = artists.concat([]);
+                var loose = labels.filter(function(l) { return !artists.some(function(x) { return x.key === l.key; }) && !ownLabels.some(function(x) { return x.key === l.key; }); })
                     .map(function(l) { l.label = true; return l; });
                 var org = { key: 'venue', name: _orgName || venueName(), kind: ORG_LABELS[_orgType] + ' brand kit', org: true, group: ORG_LABELS[_orgType] };
                 if (_orgType === 'label' && artists.length) {
@@ -891,7 +894,7 @@
                     artists.splice(at, 0, org);
                     _owners = group('venue-', 'Venue brand kit', 'Venues').concat(artists, loose);
                 } else {
-                    _owners = [org].concat(group('venue-', 'Venue brand kit', 'Venues'), artists, loose);
+                    _owners = [org].concat(ownLabels, group('venue-', 'Venue brand kit', 'Venues'), artists, loose);
                 }
                 err.classList.add('hidden');
                 render();
@@ -930,7 +933,7 @@
                         ' · <button type="button" class="bk-org-edit" ' + (o.org ? 'data-org' : 'data-edit-owner="' + esc(o.key) + '"') + '>Edit</button></p></div>' +
                     '<div class="bk-owner-actions">' +
                         (files.length ? '<button type="button" class="cam-btn ghost" data-zip="' + esc(o.key) + '"><span>Download all</span></button>' : '') +
-                        (o.key.indexOf('artist-') === 0 ? '<button type="button" class="cam-btn ghost" data-up="__newLabel:' + esc(o.key) + '"><span>Add record label</span></button>' : '') +
+                        (o.key.indexOf('artist-') === 0 || (o.org && _orgType === 'artist') ? '<button type="button" class="cam-btn ghost" data-up="__newLabel:' + esc(o.key) + '"><span>Add record label</span></button>' : '') +
                         '<button type="button" class="cam-btn ghost" data-up="' + esc(o.key) + '"><span>Upload</span></button>' +
                         (!o.org ? '<button type="button" class="cam-btn ghost bk-del-owner" data-del-owner="' + esc(o.key) + '" title="Delete"><iconify-icon icon="solar:trash-bin-minimalistic-linear"></iconify-icon></button>' : '') +
                     '</div></div>' +
@@ -1139,7 +1142,7 @@
             // "__newLabel:artist-x" opens it for a new record label under that artist
             var labelFor = /^__newLabel:/.test(ownerKey || '') ? ownerKey.slice(11) : '';
             if (labelFor) ownerKey = '__newLabel';
-            var artistOpts = _owners.filter(function(o) { return o.key.indexOf('artist-') === 0; })
+            var artistOpts = _owners.filter(function(o) { return o.key.indexOf('artist-') === 0 || (o.org && _orgType === 'artist'); })
                 .map(function(o) { return '<option value="' + esc(o.key) + '"' + (o.key === labelFor ? ' selected' : '') + '>' + esc(o.name) + '</option>'; }).join('');
             var opts = _owners.map(function(o) { return '<option value="' + esc(o.key) + '"' + (o.key === ownerKey ? ' selected' : '') + '>' + esc(o.name) + (o.key === 'venue' ? ' (' + ORG_LABELS[_orgType].toLowerCase() + ')' : '') + '</option>'; }).join('') +
                 '<option value="__newVenue"' + (ownerKey === '__newVenue' ? ' selected' : '') + '>+ New venue…</option>' +
@@ -1246,7 +1249,7 @@
         }
 
         function openOrgType() {
-            var DESC = { venue: 'A club, bar or event space', label: 'Releases music for its artists', management: 'Manages one or more artists' };
+            var DESC = { venue: 'A club, bar or event space', artist: 'A DJ or artist account', label: 'Releases music for its artists', management: 'Manages one or more artists' };
             openCamDialog('Your brand kit',
                 '<form id="bk-org-form" class="cam-form">' +
                 '<label>Name<input name="orgName" maxlength="60" placeholder="' + esc(venueName()) + '" value="' + esc(_orgName) + '"><small>Shown on your brand kit, e.g. the label or venue name.</small></label>' +
