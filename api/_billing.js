@@ -187,7 +187,11 @@ export async function invoiceVenue(redis, stripe, { slug, auth, email, name, tar
   if (priced.total < 0.3) { await redis.set(doneKey, 'none'); return { skipped: true, reason: 'Nothing to bill' }; }
   const customer = await venueCustomer(stripe, redis, target === 'venue' ? slug : `${slug}:${target}`, { email, name });
   const currency = priced.currency;
-  if (priced.planAmount) {
+  // Accounts from a sign-up pay the plan through their Stripe subscription: invoice the usage above it only
+  const viaSubscription = !!(await readAssignments(redis, slug))[target]?.subscription;
+  if (viaSubscription) priced.total = priced.usageTotal;
+  if (priced.total < 0.3) { await redis.set(doneKey, 'none'); return { skipped: true, reason: 'Nothing above the plan to bill' }; }
+  if (priced.planAmount && !viaSubscription) {
     await stripe.invoiceItems.create({ customer, currency, amount: Math.round(priced.planAmount * 100), description: `${plan.name || 'Plan'} · ${period.label}` });
   }
   for (const l of priced.lines) {

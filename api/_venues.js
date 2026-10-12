@@ -1,9 +1,65 @@
 import crypto from 'crypto';
 import JSON5 from 'json5';
+import { createClient } from 'redis';
+
+// ── Client accounts created by sign-ups (Redis "la_venues"), alongside VENUES_CONFIG ──
+// Each entry: { name, emails, type, plan, status: 'pending'|'active', mux: <encrypted "id:secret"> }.
+// Read into a cache when a function starts and refreshed in the background, so lookups stay synchronous.
+const REGISTRY_KEY = 'la_venues';
+let _registry = {}, _registryAt = 0, _registryLoading = null;
+const encKey = () => crypto.createHash('sha256').update(process.env.LOCAL_ASSETS_API_KEY || 'dev-secret-change-me').digest();
+export function sealSecret(text) {
+  const iv = crypto.randomBytes(12), c = crypto.createCipheriv('aes-256-gcm', encKey(), iv);
+  const data = Buffer.concat([c.update(String(text), 'utf8'), c.final()]);
+  return [iv, c.getAuthTag(), data].map(b => b.toString('base64url')).join('.');
+}
+function openSecret(sealed) {
+  try {
+    const [iv, tag, data] = String(sealed).split('.').map(x => Buffer.from(x, 'base64url'));
+    const d = crypto.createDecipheriv('aes-256-gcm', encKey(), iv); d.setAuthTag(tag);
+    return Buffer.concat([d.update(data), d.final()]).toString('utf8');
+  } catch { return ''; }
+}
+export async function refreshRegistry(redis = null) {
+  const own = !redis;
+  try {
+    if (own) { redis = createClient({ url: process.env.REDIS_URL }); await redis.connect(); }
+    const raw = await redis.hGetAll(REGISTRY_KEY);
+    const out = {};
+    for (const [slug, v] of Object.entries(raw || {})) {
+      try {
+        const o = JSON.parse(v);
+        const [id, secret] = o.mux ? openSecret(o.mux).split(':') : [];
+        out[slug] = { ...o, mux: undefined, mux_token_id: id || '', mux_token_secret: secret || '' };
+      } catch {}
+    }
+    _registry = out; _registryAt = Date.now();
+  } catch (e) { console.error('[_venues] registry:', e.message); }
+  finally { if (own && redis) await redis.quit().catch(() => {}); }
+  return _registry;
+}
+export async function readRegistryRaw(redis) {
+  const raw = await redis.hGetAll(REGISTRY_KEY);
+  return Object.fromEntries(Object.entries(raw || {}).map(([k, v]) => { try { return [k, JSON.parse(v)]; } catch { return [k, null]; } }).filter(([, v]) => v));
+}
+export async function saveRegistryEntry(redis, slug, entry) {
+  await redis.hSet(REGISTRY_KEY, slug, JSON.stringify(entry));
+  await refreshRegistry(redis);
+}
+if (process.env.REDIS_URL) await refreshRegistry();
+
 
 // ── VENUES_CONFIG helpers ─────────────────────────────────────────────────────
 
 export function getVenuesConfig() {
+  if (Date.now() - _registryAt > 60_000 && !_registryLoading && process.env.REDIS_URL) {
+    _registryLoading = refreshRegistry().finally(() => { _registryLoading = null; });
+  }
+  // Configured venues win over sign-ups with the same slug
+  return { ..._registry, ...readEnvConfig() };
+}
+
+function readEnvConfig() {
   const raw = process.env.VENUES_CONFIG || '{}';
 
   // 1. Direct parse

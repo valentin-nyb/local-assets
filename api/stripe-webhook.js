@@ -3,6 +3,7 @@ import { kv } from '@vercel/kv';
 import { Resend } from 'resend';
 import crypto from 'crypto';
 import { createClient } from 'redis';
+import { readRegistryRaw, saveRegistryEntry, getVenuesConfig } from './_venues.js';
 
 // Vercel: disable body parsing so we get raw bytes for signature verification
 export const config = { api: { bodyParser: false } };
@@ -49,6 +50,13 @@ export default async function handler(req, res) {
   // ── CAMERA ORDER (not a subscription — never creates a client profile) ─
   if (event.type === 'checkout.session.completed' && event.data.object.metadata?.kind === 'camera_order') {
     await recordCameraOrder(event.data.object, stripe);
+    return res.status(200).json({ received: true });
+  }
+
+  // ── SIGN-UP FROM THE HOME PAGE → NEW CLIENT ACCOUNT ────────────────
+  if (event.type === 'checkout.session.completed' && event.data.object.metadata?.kind === 'signup') {
+    try { await createClientAccount(event.data.object); }
+    catch (e) { console.error('[Stripe Webhook] signup failed:', e.message); }
     return res.status(200).json({ received: true });
   }
 
@@ -179,6 +187,51 @@ async function recordCameraOrder(session, stripe) {
 }
 
 // ── CLIENT LOGIN INSTRUCTIONS ────────────────────────────────────────
+// A paid sign-up becomes a client account: login for the paying email, account type and name,
+// its plan for usage billing, and a "finish setup" task for local / assets (its Mux environment).
+async function createClientAccount(session) {
+  const m = session.metadata || {};
+  const email = (session.customer_details?.email || session.customer_email || '').toLowerCase().trim();
+  const name = String(m.accountName || '').trim() || email;
+  const type = ['venue', 'label', 'artist'].includes(m.accountType) ? m.accountType : 'venue';
+  const base = name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'client';
+  const redis = createClient({ url: process.env.REDIS_URL });
+  await redis.connect();
+  try {
+    const existing = { ...getVenuesConfig(), ...(await readRegistryRaw(redis)) };
+    // Same email and name paying again (e.g. a second checkout): keep the one account
+    const same = Object.entries(existing).find(([, v]) => (v.emails || []).map(String).includes(email) && String(v.name || '').toLowerCase() === name.toLowerCase());
+    let slug = same ? same[0] : base;
+    for (let i = 2; !same && existing[slug]; i++) slug = `${base}-${i}`;
+    if (!same) {
+      await saveRegistryEntry(redis, slug, {
+        name: name.toUpperCase(), emails: [email], type, plan: m.tier || '', status: 'pending',
+        stripeCustomer: session.customer || '', subscription: session.subscription || '', createdAt: new Date().toISOString(),
+      });
+      // The Brand Kit starts as this account's type and name
+      await redis.set(`brand_org_type:${slug}`, type);
+      await redis.set(`brand_org_name:${slug}`, name);
+      // Usage above the plan is invoiced monthly; the plan itself is the Stripe subscription
+      await redis.hSet(`billing_assign:${slug}`, 'venue', JSON.stringify({ plan: m.tier || '', email, name, monthly: true, subscription: true }));
+      if (session.customer) await redis.set(`billing_customer:${slug}`, session.customer);
+    }
+    console.log('[Stripe Webhook] client account', same ? 'exists' : 'created', slug, type, email);
+    if (process.env.RESEND_API_KEY && !same) {
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      await resend.emails.send({
+        from: 'local / assets <noreply@local-assets.com>', to: process.env.ORDERS_EMAIL || 'info@local-assets.com',
+        subject: `New client: ${name} (${type}) · finish setup`,
+        html: `<p><b>${name}</b> (${type}) signed up for ${m.tierName || m.tier} with ${email}.</p><p>Create their Mux environment, then paste its access token in <a href="https://local-assets.com/billing">Billing → Finish setup</a> (signed in to local / assets).</p>`,
+      }).catch(e => console.error('[Stripe Webhook] admin email', e.message));
+      await resend.emails.send({
+        from: 'local / assets <noreply@local-assets.com>', to: email,
+        subject: 'Welcome to local / assets',
+        html: `<div style="font-family:Helvetica,Arial,sans-serif;background:#050505;color:#fff;padding:40px;max-width:520px"><p style="color:#39FF14;font-size:11px;letter-spacing:.3em;text-transform:uppercase">local / assets</p><h2>Welcome, ${name}</h2><p style="color:#aaa;line-height:1.6">Your account is ready. Sign in with Google using this email (${email}) to set up your Brand Kit. We're preparing your private video storage and will let you know as soon as recordings can be uploaded.</p><a href="https://local-assets.com/login.html" style="display:inline-block;background:#39FF14;color:#000;padding:12px 28px;text-decoration:none;font-weight:bold">Sign in</a></div>`,
+      }).catch(e => console.error('[Stripe Webhook] welcome email', e.message));
+    }
+  } finally { await redis.quit().catch(() => {}); }
+}
+
 async function sendGoogleLoginNotice(email) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) throw new Error('RESEND_API_KEY not set');

@@ -304,6 +304,17 @@ document.addEventListener("DOMContentLoaded", () => {
         fetch('/api/billing?status=1', { headers: { 'Authorization': 'Bearer ' + session.webToken } })
             .then(function(r) { return r.ok ? r.json() : null; })
             .then(function(d) {
+                if (d && d.setupPending && !d.paused) {
+                    var mn = document.querySelector('main');
+                    if (mn && !document.getElementById('la-setup')) {
+                        var sb = document.createElement('div');
+                        sb.id = 'la-setup';
+                        sb.style.cssText = 'padding:12px 20px;background:#14532d;color:#fff;font:500 13px/1.4 Inter,system-ui,sans-serif;flex-shrink:0;z-index:45;';
+                        sb.innerHTML = '<b style="font-weight:700">Welcome to local / assets.</b> We\'re setting up your private video storage. You can set up your Brand Kit now; uploads and recordings open as soon as it\'s ready, and we\'ll email you.';
+                        mn.insertBefore(sb, mn.firstChild);
+                    }
+                    return;
+                }
                 if (!d || !d.paused) return;
                 var main = document.querySelector('main');
                 if (!main || document.getElementById('la-paused')) return;

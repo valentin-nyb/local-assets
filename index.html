@@ -149,6 +149,16 @@
         .ord-go:disabled { opacity:.6; cursor:default; }
         .ord-error { font-size:12px; color:#f87171; margin-top:10px; } .ord-error:empty { display:none; } .ord-error a { color:#fff; text-decoration:underline; }
         .ord-fine { font-size:11px; line-height:1.5; color:#71717a; margin-top:10px; }
+        .su-types { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+        .su-type { display:flex; flex-direction:column; gap:4px; padding:12px; border:1px solid #27272a; border-radius:12px; cursor:pointer; }
+        .su-type input { position:absolute; opacity:0; pointer-events:none; }
+        .su-type b { font:700 13px/1.2 "Helvetica Neue", Helvetica, Arial, sans-serif; color:#fff; }
+        .su-type span { font-size:11px; line-height:1.4; color:#71717a; }
+        .su-type:has(input:checked) { border-color:#39FF14; background:rgba(57,255,20,.06); }
+        .su-field { display:flex; flex-direction:column; gap:6px; font-size:12px; color:#a1a1aa; }
+        .su-field input { height:44px; border-radius:10px; border:1px solid #27272a; background:#050505; color:#fff; padding:0 12px; font-size:14px; outline:none; }
+        .su-field input:focus { border-color:#39FF14; }
+        @media (max-width:480px) { .su-types { grid-template-columns:1fr; } }
         .ord-done { font-size:14px; line-height:1.6; color:#a1a1aa; margin-top:10px; }
         @media (max-width:480px) { .ord-feats { grid-template-columns:1fr; } .ord-panel { padding:18px; } .ord-hero { height:170px; } }
         @media (max-width:900px) {
@@ -746,16 +756,46 @@
     </script>
 
     <script>
+        // Sign up: choose the account type and name, then pay the monthly plan through Stripe
+        var TIER_NAMES = { 'starter-distribution': 'Distribution · Starter', 'liveset-distribution': 'Distribution · Pro', 'starter-creative': 'Creative & Production · Starter', 'liveset-creative': 'Creative & Production · Live-Set' };
         function selectTier(tierId) {
-            var btn = event.target;
-            var originalText = btn.textContent;
-            btn.textContent = 'COMING SOON';
-            btn.disabled = true;
-            setTimeout(function() {
-                btn.textContent = originalText;
-                btn.disabled = false;
-            }, 2000);
+            var esc = function(v) { return String(v).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+            showCameraOrder(
+                '<p class="ord-eyebrow">Sign up · ' + esc(TIER_NAMES[tierId] || tierId) + '</p>' +
+                '<h3 class="ord-title" id="ord-title">Create your account</h3>' +
+                '<p class="ord-sub">Tell us who the account is for. After payment we set up your private video storage and email you how to sign in.</p>' +
+                '<form id="su-form" style="margin-top:18px;display:flex;flex-direction:column;gap:14px">' +
+                    '<div class="su-types">' +
+                        [['venue', 'Venue', 'Club, bar or event space'], ['label', 'Record label', 'Releases music for its artists'], ['artist', 'Artist', 'DJ or live act']].map(function(t, i) {
+                            return '<label class="su-type"><input type="radio" name="type" value="' + t[0] + '"' + (i ? '' : ' checked') + '><b>' + t[1] + '</b><span>' + t[2] + '</span></label>';
+                        }).join('') +
+                    '</div>' +
+                    '<label class="su-field"><span id="su-name-label">Venue name</span><input name="name" maxlength="60" required placeholder="e.g. Fabric"></label>' +
+                    '<button type="submit" class="ord-go" style="flex:none;height:46px">Continue to payment</button>' +
+                    '<p id="su-error" class="ord-error"></p>' +
+                    '<p class="ord-fine">Billed monthly. Usage above your plan is invoiced at the end of each month. Cancel anytime.</p>' +
+                '</form>');
+            var form = document.getElementById('su-form');
+            var syncLabel = function() { var t = form.type.value; document.getElementById('su-name-label').textContent = t === 'label' ? 'Record label name' : t === 'artist' ? 'Artist name' : 'Venue name'; form.name.placeholder = t === 'label' ? 'e.g. Life and Death' : t === 'artist' ? 'e.g. DJ Tennis' : 'e.g. Fabric'; };
+            form.addEventListener('change', syncLabel);
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                var btn = form.querySelector('button'), err = document.getElementById('su-error');
+                btn.disabled = true; btn.textContent = 'Opening checkout…'; err.textContent = '';
+                fetch('/api/create-checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tier: tierId, accountType: form.type.value, accountName: form.name.value.trim() }) })
+                    .then(function(r) { return r.json().then(function(d) { if (!r.ok) throw new Error(d.error || r.status); return d; }); })
+                    .then(function(d) { location.href = d.url; })
+                    .catch(function(er) { btn.disabled = false; btn.textContent = 'Continue to payment'; err.innerHTML = er.message === 'payments_not_configured' ? 'Online sign-up isn\'t open yet. Email <a href="mailto:info@local-assets.com">info@local-assets.com</a>.' : 'Could not open checkout: ' + esc(er.message); });
+            });
         }
+        (function() {
+            var su = new URLSearchParams(location.search).get('signup');
+            if (su !== 'success') return;
+            history.replaceState({}, '', '/');
+            document.addEventListener('DOMContentLoaded', function() {
+                showCameraOrder('<p class="ord-eyebrow">Welcome to local / assets</p><h3 class="ord-title" id="ord-title">You\'re in</h3><p class="ord-done">Payment received. We\'re setting up your private video storage now and will email you as soon as it\'s ready. You can already sign in with the email you used at checkout to set up your Brand Kit.</p><a href="/login.html" class="ord-go" style="display:flex;align-items:center;justify-content:center;margin-top:16px;text-decoration:none">Sign in</a>');
+            });
+        })();
 
         (function() {
             var params = new URLSearchParams(window.location.search);

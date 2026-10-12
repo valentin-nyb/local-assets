@@ -1,6 +1,6 @@
 import { unpaidKey, readUnpaid } from './_suspend.js';
 import { createClient } from 'redis';
-import { getWebSessionAuth, getVenuesConfig } from './_venues.js';
+import { getWebSessionAuth, getVenuesConfig, readRegistryRaw, saveRegistryEntry, sealSecret } from './_venues.js';
 import { venueAuth } from './_verticals.js';
 import {
   readRates, readPlans, cleanPlans, readAssignments, assignKey, venueUsage, venueArtists, priceUsage,
@@ -62,7 +62,8 @@ export default async function handler(req, res) {
     try {
       const unpaid = await withRedis(redis => readUnpaid(redis, session.venueSlug));
       const venue = unpaid.find(i => i.target === 'venue');
-      return res.status(200).json({ paused: !!venue, payUrl: venue?.url || null, number: venue?.number || null, others: unpaid.filter(i => i.target !== 'venue').map(i => ({ target: i.target, number: i.number, url: i.url })) });
+      const setupPending = getVenuesConfig()[session.venueSlug]?.status === 'pending';
+      return res.status(200).json({ setupPending, paused: !!venue, payUrl: venue?.url || null, number: venue?.number || null, others: unpaid.filter(i => i.target !== 'venue').map(i => ({ target: i.target, number: i.number, url: i.url })) });
     } catch (e) { return res.status(200).json({ paused: false }); }
   }
 
@@ -151,6 +152,27 @@ export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).end();
     if (!isAdmin) return res.status(403).json({ error: 'Only local / assets can change billing' });
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+
+    // Sign-ups waiting for their video storage (a Mux environment created by local / assets)
+    if (body.action === 'pendingClients') {
+      const reg = await withRedis(r => readRegistryRaw(r));
+      return res.status(200).json({ clients: Object.entries(reg).filter(([, v]) => v.status === 'pending').map(([slug, v]) => ({ slug, name: v.name, type: v.type, plan: v.plan, email: (v.emails || [])[0] || '', createdAt: v.createdAt })) });
+    }
+    if (body.action === 'finishSetup') {
+      const slug = String(body.slug || ''), id = String(body.tokenId || '').trim(), secret = String(body.tokenSecret || '').trim();
+      if (!id || !secret) return res.status(400).json({ error: 'Paste the access token ID and secret' });
+      const check = await fetch('https://api.mux.com/video/v1/assets?limit=1', { headers: { Authorization: 'Basic ' + Buffer.from(`${id}:${secret}`).toString('base64') }, signal: AbortSignal.timeout(15000) });
+      if (!check.ok) return res.status(400).json({ error: check.status === 401 ? 'Mux rejected these keys. Copy them again from the environment\'s Access Tokens.' : `Mux answered ${check.status}` });
+      const out = await withRedis(async r => {
+        const reg = await readRegistryRaw(r);
+        if (!reg[slug]) return null;
+        await saveRegistryEntry(r, slug, { ...reg[slug], mux: sealSecret(`${id}:${secret}`), status: 'active', activatedAt: new Date().toISOString() });
+        return reg[slug];
+      });
+      if (!out) return res.status(404).json({ error: 'Unknown client' });
+      console.log('[billing] client activated', slug);
+      return res.status(200).json({ ok: true });
+    }
 
     if (body.action === 'setRates') {
       const r = body.rates || {};

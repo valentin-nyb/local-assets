@@ -81,6 +81,12 @@
         .bl-admin input:focus { border-color:var(--la-accent); }
         .bl-admin-actions { display:flex; flex-wrap:wrap; gap:8px; padding:0 20px 20px; align-items:center; }
         .bl-msg { font-size:12px; color:var(--la-sub); }
+        .bl-setup-item { padding:18px 20px; border-bottom:1px solid var(--la-line-soft); display:flex; flex-direction:column; gap:10px; }
+        .bl-setup-item:last-child { border-bottom:0; }
+        .bl-setup-name { font:700 15px/1.2 "Helvetica Neue", Helvetica, Arial, sans-serif; color:var(--la-text); text-transform:uppercase; }
+        .bl-setup-steps { margin:0; padding-left:18px; font-size:12px; line-height:1.7; color:var(--la-sub); }
+        .bl-setup-steps code { font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--la-text); }
+        @media (max-width:640px) { .bl-setup-item .bl-admin { grid-template-columns:1fr !important; } }
         .bl-admin select, .bl-plan-in { height:38px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 10px; font-size:13px; outline:none; width:100%; min-width:0; }
         .bl-plan-in { height:34px; }
         #bl-plans td:first-child { min-width:240px; } #bl-plans td { min-width:110px; }
@@ -117,6 +123,10 @@
                     <p class="bl-sub">Everything local / assets runs for you, billed in one place: your plan, plus what you use of video storage, streaming and file storage. An itemised invoice is sent on the 1st of each month.</p>
                 </div>
                 <p id="bl-error" class="bl-msg hidden" style="color:var(--la-bad)"></p>
+                <section class="bl-section hidden" id="bl-setup">
+                    <div class="bl-section-head"><h3>Finish setup</h3><span class="bl-msg">New sign-ups waiting for their video storage</span></div>
+                    <div id="bl-setup-list"></div>
+                </section>
                 <section class="bl-section hidden" id="bl-send-box">
                     <div class="bl-section-head"><h3>Bill to</h3><span class="bl-msg" id="bl-stripe-acct">Choose who to see and invoice: plan price, plus usage above what the plan includes</span></div>
                     <form id="bl-send-form" class="bl-admin">
@@ -345,7 +355,32 @@
             try { await post({ action: 'assign', target: sf.target.value, plan: sf.plan.value, email: sf.email.value.trim(), monthly: this.checked }); laToast(this.checked ? 'Billed monthly on the 1st' : 'Monthly billing off'); }
             catch (e) { laAlert(e.message, { tone: 'error' }); this.checked = !this.checked; }
         });
-        load();
+        // New clients: create their Mux environment, then paste its access token here
+        function loadSetup() {
+            post({ action: 'pendingClients' }).then(function(d) {
+                var box = document.getElementById('bl-setup'), list = document.getElementById('bl-setup-list');
+                box.classList.toggle('hidden', !d.clients.length);
+                list.innerHTML = d.clients.map(function(c) {
+                    return '<div class="bl-setup-item" data-slug="' + esc(c.slug) + '">' +
+                        '<p class="bl-setup-name">' + esc(c.name) + ' <span class="bl-pill">' + esc(c.type === 'label' ? 'Record label' : c.type) + '</span></p>' +
+                        '<p class="bl-msg">' + esc(c.email) + ' · ' + esc(c.plan) + ' · signed up ' + new Date(c.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + '</p>' +
+                        '<ol class="bl-setup-steps"><li>In Mux, <b>Create environment</b> named <b>' + esc(c.name) + '</b> (Production).</li>' +
+                        '<li>In that environment: <b>Settings → Access Tokens → Generate new token</b> with Mux Video read and write. Paste the ID and secret below.</li>' +
+                        '<li><b>Settings → Webhooks</b>: add <code>https://local-assets.com/api/mux-webhook</code>.</li></ol>' +
+                        '<div class="bl-admin" style="padding:0;grid-template-columns:1fr 1fr auto;align-items:end"><label>Access token ID<input data-k="id" autocomplete="off"></label><label>Secret key<input data-k="secret" type="password" autocomplete="off"></label><button type="button" class="cam-btn primary" data-activate>Activate</button></div>' +
+                        '<p class="bl-msg" data-msg></p></div>';
+                }).join('');
+                list.querySelectorAll('[data-activate]').forEach(function(b) {
+                    b.addEventListener('click', async function() {
+                        var item = b.closest('.bl-setup-item'), msg = item.querySelector('[data-msg]');
+                        b.disabled = true; msg.textContent = 'Checking the keys with Mux…';
+                        try { await post({ action: 'finishSetup', slug: item.dataset.slug, tokenId: item.querySelector('[data-k=id]').value, tokenSecret: item.querySelector('[data-k=secret]').value }); laToast('Client is live'); loadSetup(); load(); }
+                        catch (e) { msg.textContent = e.message; b.disabled = false; }
+                    });
+                });
+            }).catch(function() {});
+        }
+        load().then(function() { if (_data && _data.isAdmin) loadSetup(); });
     </script>
 </body>
 </html>
