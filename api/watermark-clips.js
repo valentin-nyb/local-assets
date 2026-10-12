@@ -11,6 +11,7 @@ import { renderWatermarkPng } from './_watermark-render.js';
 // watermark later always starts from the clean clip, never stamps twice. Failed copies change nothing.
 //   POST { action: 'apply', artist, clipIds: [...] }
 //   POST { action: 'remove', clipIds: [...] }   deletes the watermarked copies and brings back the originals
+//   POST { action: 'restore', artist, date }   shows hidden originals again and remakes deleted clips
 //   POST { action: 'sweep' }   finishes pending swaps and reports which clips carry a watermark
 
 const muxReq = (auth, path, init = {}) => fetch('https://api.mux.com' + path, {
@@ -27,6 +28,80 @@ const swapsKey = slug => `wm_swaps:${slug}`;   // hash newId → JSON { old: sho
 const rawKey   = slug => `wm_raw:${slug}`;     // hash watermarked clip → its clean original
 const hideTag  = pt => pt.replace(/ \/\/ SOCIAL(?= \/\/|$)/i, ' // SOCIALRAW');
 const parseSwap = v => { try { const o = JSON.parse(v); if (o && o.old) return o; } catch {} return { old: v, raw: v }; };
+
+// The vertical clips the upload pipeline cuts from a full recording (same times as api/mux-webhook.js)
+function clipTimes(duration) {
+  const count = Math.min(Math.floor(duration / 30), 5);
+  if (count < 1) return [];
+  const seg = Math.min(45, duration / count);
+  const gap = (duration - seg * count) / (count + 1);
+  return Array.from({ length: count }, (_, i) => { const start = gap * (i + 1) + seg * i; return { n: i + 1, start, end: Math.min(start + seg, duration) }; });
+}
+
+async function listAllAssets(auth) {
+  const out = [];
+  for (let page = 1; page <= 20; page++) {
+    const batch = await muxReq(auth, `/video/v1/assets?limit=100&page=${page}`);
+    out.push(...(batch || []));
+    if (!batch || batch.length < 100) break;
+  }
+  return out;
+}
+
+const SUB = /^(.+?) \/\/ (SOCIAL|SOCIALRAW) \/\/ (\d+)$/i;
+
+// Brings a session's vertical clips back to clean originals: hidden originals are shown again,
+// and clips that no longer exist are cut again from the full recording at their original times.
+async function restoreClips(redis, slug, auth, artist, date) {
+  const assets = await listAllAssets(auth);
+  const masterOf = a => {
+    const pt = String(a.passthrough || '').trim();
+    if (pt.toUpperCase() === artist) return true;
+    try { const o = JSON.parse(pt); return o && String(o.artist || '').toUpperCase().trim() === artist && !['AUDIO', 'SOCIAL', 'THUMB'].includes(String(o.camera || '').toUpperCase()); } catch { return false; }
+  };
+  const day = a => new Date(Number(a.created_at) * 1000).toISOString().slice(0, 10);
+  const masters = assets.filter(a => a.status === 'ready' && masterOf(a) && Number(a.duration) > 10)
+    .sort((a, b) => Number(b.created_at) - Number(a.created_at));
+  const master = masters.find(a => day(a) === date) || masters[0];
+  if (!master) return { restored: 0, recreated: 0 };
+  // Clips of this session: made after this recording and before the artist's next one
+  const next = masters.filter(a => Number(a.created_at) > Number(master.created_at)).pop();
+  const shown = new Map(), hidden = new Map();
+  for (const a of assets) {
+    const m = SUB.exec(String(a.passthrough || '').trim());
+    if (!m || m[1].toUpperCase() !== artist) continue;
+    if (Number(a.created_at) < Number(master.created_at) || (next && Number(a.created_at) >= Number(next.created_at))) continue;
+    (m[2].toUpperCase() === 'SOCIAL' ? shown : hidden).set(Number(m[3]), a);
+  }
+  const pendingOld = new Set(Object.values(await redis.hGetAll(swapsKey(slug))).map(v => parseSwap(v).old));
+  let restored = 0, recreated = 0;
+  for (const t of clipTimes(Number(master.duration))) {
+    if (shown.has(t.n)) continue;
+    const raw = hidden.get(t.n);
+    const tag = `${artist} // SOCIAL // ${String(t.n).padStart(2, '0')}`;
+    if (raw) {
+      if (pendingOld.has(raw.id)) continue;
+      await muxReq(auth, `/video/v1/assets/${encodeURIComponent(raw.id)}`, { method: 'PATCH', body: JSON.stringify({ passthrough: tag }) });
+      restored++;
+    } else {
+      await muxReq(auth, '/video/v1/assets', {
+        method: 'POST',
+        body: JSON.stringify({
+          input: [{ url: `mux://assets/${master.id}`, start_time: t.start, end_time: t.end }],
+          playback_policy: ['public'],
+          passthrough: tag,
+          static_renditions: [{ resolution: 'highest' }],
+        }),
+      });
+      recreated++;
+    }
+  }
+  // Forget watermarked clips that were deleted
+  const raws = await redis.hGetAll(rawKey(slug));
+  const ids = new Set(assets.map(a => a.id));
+  for (const id of Object.keys(raws)) if (!ids.has(id)) await redis.hDel(rawKey(slug), id);
+  return { restored, recreated };
+}
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
@@ -86,7 +161,16 @@ export default async function handler(req, res) {
         await redis.hDel(rawKey(slug), id);
         removed++;
       }
-      return res.status(200).json({ removed });
+      // Clips deleted along the way come back too
+      const artist = String(body.artist || '').toUpperCase().trim();
+      const back = artist ? await restoreClips(redis, slug, auth, artist, String(body.date || '')).catch(e => { console.error('[watermark-clips] restore', e.message); return { restored: 0, recreated: 0 }; }) : { restored: 0, recreated: 0 };
+      return res.status(200).json({ removed, ...back });
+    }
+
+    if (body.action === 'restore') {
+      const artist = String(body.artist || '').toUpperCase().trim();
+      if (!artist) return res.status(400).json({ error: 'Choose a session' });
+      return res.status(200).json(await restoreClips(redis, slug, auth, artist, String(body.date || '')));
     }
 
     if (body.action !== 'apply') return res.status(400).json({ error: 'Unknown action' });
