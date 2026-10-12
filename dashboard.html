@@ -76,6 +76,8 @@
         }
         /* Boxes that used to hold an icon: hidden until something (a logo or photo) fills them */
         div.w-8.h-8:empty, div.w-10.h-10:empty, div.w-12.h-12:empty { display:none; }
+        .mm-share { height:30px; padding:0 14px; border-radius:999px; border:0; background:var(--la-accent); color:var(--la-accent-ink, #000); font:600 12px Inter,ui-sans-serif,system-ui,sans-serif; cursor:pointer; margin-right:4px; }
+        .mm-share:disabled { opacity:.6; cursor:default; }
         .wm-apply { height:28px; padding:0 12px; border-radius:999px; border:1px solid var(--la-line); background:transparent; color:var(--la-text); font:500 11px Inter,ui-sans-serif,system-ui,sans-serif; cursor:pointer; white-space:nowrap; }
         .wm-apply:disabled { opacity:.6; cursor:default; }
         .wm-restore { height:28px; padding:0 12px; border-radius:999px; border:1px solid var(--la-line); background:transparent; color:var(--la-sub); font:500 11px Inter,ui-sans-serif,system-ui,sans-serif; cursor:pointer; white-space:nowrap; }
@@ -312,6 +314,7 @@
                             '<div class="flex items-center justify-between gap-4">' +
                                 '<p class="text-[10px] font-mono uppercase tracking-widest text-zinc-400 min-w-0 flex" style="gap:.6em"><span id="media-modal-title" class="truncate"></span><span id="media-modal-count" class="shrink-0 text-zinc-500"></span></p>' +
                                 '<div class="flex items-center gap-2 shrink-0">' +
+                                    '<button id="media-share" class="mm-share" title="Share to Instagram, TikTok and more" onclick="shareMediaModal()">Share</button>' +
                                     '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 text-primary transition-colors" title="Download" onclick="downloadMediaModal()"><iconify-icon icon="solar:download-bold"></iconify-icon></button>' +
                                     '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-zinc-300 transition-colors" title="Close (Esc)" onclick="closeMediaModal()"><iconify-icon icon="solar:close-circle-linear" class="text-lg"></iconify-icon></button>' +
                                 '</div>' +
@@ -351,6 +354,7 @@
                 stage.innerHTML = '';
                 stage.appendChild(img);
             }
+            prepareShare(item);
             document.getElementById('media-modal-title').textContent = _mediaModal.title;
             document.getElementById('media-modal-count').textContent =
                 String(_mediaModal.idx + 1).padStart(2, '0') + ' / ' + String(n).padStart(2, '0');
@@ -368,6 +372,46 @@
             document.getElementById('media-modal-stage').innerHTML = '';  // stops playback
             modal.classList.add('hidden');
             document.body.style.overflow = '';
+        }
+        // Share: on phones the share sheet sends the clip itself to Instagram (Story or Reel), TikTok, WhatsApp…
+        // iPhones only allow sharing straight after a tap, so the file is fetched as soon as the clip is shown.
+        var _shareFiles = {};
+        function shareItemName(item, num) {
+            return item.kind === 'video'
+                ? _mediaModal.title.replace(/[^a-z0-9 _-]/gi, '').trim().replace(/\s+/g, '_') + '_' + String(num).padStart(2, '0') + '.mp4'
+                : thumbFileName(item.url, num);
+        }
+        function shareKey(item) { return item.kind === 'video' ? item.pid : item.url; }
+        function canShareFiles() { try { return !!(navigator.canShare && navigator.canShare({ files: [new File([''], 'x.mp4', { type: 'video/mp4' })] })); } catch (_) { return false; } }
+        function prepareShare(item) {
+            var btn = document.getElementById('media-share');
+            if (!btn) return;
+            btn.style.display = canShareFiles() ? '' : 'none';
+            if (!canShareFiles()) return;
+            var key = shareKey(item), num = _mediaModal.idx + 1;
+            paintShare();
+            if (_shareFiles[key]) return;
+            var url = item.kind === 'video' ? 'https://stream.mux.com/' + item.pid + '/highest.mp4' : item.url;
+            _shareFiles[key] = { state: 'loading' };
+            fetch(url).then(function(r) { if (!r.ok) throw new Error(r.status); return r.blob(); }).then(function(blob) {
+                _shareFiles[key] = { state: 'ready', file: new File([blob], shareItemName(item, num), { type: blob.type || (item.kind === 'video' ? 'video/mp4' : 'image/jpeg') }) };
+                paintShare();
+            }).catch(function() { _shareFiles[key] = { state: 'error' }; paintShare(); });
+        }
+        function paintShare() {
+            var btn = document.getElementById('media-share');
+            if (!btn || !_mediaModal) return;
+            var s = _shareFiles[shareKey(_mediaModal.items[_mediaModal.idx])] || {};
+            btn.disabled = s.state === 'loading';
+            btn.textContent = s.state === 'loading' ? 'Preparing…' : s.state === 'error' ? 'Share' : 'Share';
+        }
+        function shareMediaModal() {
+            var item = _mediaModal.items[_mediaModal.idx];
+            var s = _shareFiles[shareKey(item)] || {};
+            if (s.state !== 'ready') { if (s.state === 'error') downloadMediaModal(); return; }
+            navigator.share({ files: [s.file], title: _mediaModal.title }).catch(function(e) {
+                if (e && e.name !== 'AbortError') downloadMediaModal();
+            });
         }
         function downloadMediaModal() {
             var item = _mediaModal.items[_mediaModal.idx];
