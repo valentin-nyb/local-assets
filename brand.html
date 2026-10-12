@@ -158,8 +158,8 @@
             background-size:16px 16px; background-position:0 0, 0 8px, 8px -8px, -8px 0; }
         .bk-preview img { max-width:85%; max-height:85%; object-fit:contain; }
         .bk-preview.doc { background-image:none; }
-        html:not(.dark) .bk-preview[data-tone=light], html:not(.dark) .bk-avatar[data-tone=light], html:not(.dark) .bk-wm-preview[data-tone=light] { background-color:#141416; background-image:linear-gradient(45deg, rgba(255,255,255,.07) 25%, transparent 25%), linear-gradient(-45deg, rgba(255,255,255,.07) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(255,255,255,.07) 75%), linear-gradient(-45deg, transparent 75%, rgba(255,255,255,.07) 75%); background-size:16px 16px; background-position:0 0, 0 8px, 8px -8px, -8px 0; }
-        html.dark .bk-preview[data-tone=dark], html.dark .bk-avatar[data-tone=dark], html.dark .bk-wm-preview[data-tone=dark] { background-color:#f4f4f5; background-image:linear-gradient(45deg, rgba(0,0,0,.06) 25%, transparent 25%), linear-gradient(-45deg, rgba(0,0,0,.06) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(0,0,0,.06) 75%), linear-gradient(-45deg, transparent 75%, rgba(0,0,0,.06) 75%); background-size:16px 16px; background-position:0 0, 0 8px, 8px -8px, -8px 0; }
+        html:not(.dark) .bk-preview[data-tone=light], html:not(.dark) .bk-avatar[data-tone=light] { background-color:#141416; background-image:linear-gradient(45deg, rgba(255,255,255,.07) 25%, transparent 25%), linear-gradient(-45deg, rgba(255,255,255,.07) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(255,255,255,.07) 75%), linear-gradient(-45deg, transparent 75%, rgba(255,255,255,.07) 75%); background-size:16px 16px; background-position:0 0, 0 8px, 8px -8px, -8px 0; }
+        html.dark .bk-preview[data-tone=dark], html.dark .bk-avatar[data-tone=dark] { background-color:#f4f4f5; background-image:linear-gradient(45deg, rgba(0,0,0,.06) 25%, transparent 25%), linear-gradient(-45deg, rgba(0,0,0,.06) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(0,0,0,.06) 75%), linear-gradient(-45deg, transparent 75%, rgba(0,0,0,.06) 75%); background-size:16px 16px; background-position:0 0, 0 8px, 8px -8px, -8px 0; }
         .bk-preview.photo[data-tone] { background:var(--la-chip) !important; }
         .bk-preview.photo { background:var(--la-chip); }
         .bk-avatar img.bk-avatar-photo { object-fit:cover; padding:0; }
@@ -541,7 +541,7 @@
             var img = document.getElementById('bk-wm-logo');
             img.crossOrigin = 'anonymous';
             img.addEventListener('error', function() { if (img.crossOrigin) { img.removeAttribute('crossorigin'); var u = img.src; img.removeAttribute('src'); img.src = u; } });
-            img.addEventListener('load', function() { fitPreviewBg(img); positionPreview(); });
+            img.addEventListener('load', positionPreview);   // the preview always follows the theme
             document.getElementById('bk-wm-export').addEventListener('click', exportWatermarkPng);
             positionPreview();
             var addArtist = document.getElementById('bk-wm-text-artist');
