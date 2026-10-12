@@ -1,28 +1,35 @@
+import { unpaidKey, readUnpaid } from './_suspend.js';
 import { createClient } from 'redis';
 import { getWebSessionAuth } from './_venues.js';
-import { readRates, readPlan, venueUsage, priceUsage, monthRange, stripeClient, invoiceVenue, venueEntries, DEFAULT_RATES } from './_billing.js';
+import {
+  readRates, readPlans, cleanPlans, readAssignments, assignKey, venueUsage, venueArtists, priceUsage,
+  monthRange, stripeClient, invoiceVenue, venueEntries, DEFAULT_RATES,
+} from './_billing.js';
 
 // Billing page data and actions.
-//   GET                       this month's usage and estimate for the signed-in venue, plus past invoices
-//   GET ?cron=1               (Vercel cron, 1st of the month) invoices every venue for last month
-//   POST { action: 'setRates', rates }            admin: costs and margin
-//   POST { action: 'setPlan', name, price }        admin: this venue's monthly plan
-//   POST { action: 'invoiceNow', period }          admin: send this venue's invoice now ('current' | 'previous')
+//   GET ?target=venue|artist:NAME&plan=ID&period=current|previous   usage, plan and price for one bill-to
+//   GET ?cron=1                            (Vercel cron, the 1st) invoices last month for every monthly bill-to
+//   POST { action: 'setRates', rates }                           admin
+//   POST { action: 'setPlans', plans }                           admin
+//   POST { action: 'assign', target, plan, email, name, monthly } admin: who pays which plan
+//   POST { action: 'invoiceNow', target, plan, email, name, period } admin: send an invoice now
 
 const admins = () => (process.env.BILLING_ADMINS || 'info@local-assets.com').split(/[\s,]+/).map(s => s.toLowerCase()).filter(Boolean);
+const cleanTarget = t => (t === 'venue' || /^(artist|label):[^<>]{1,60}$/.test(String(t || ''))) ? String(t) : 'venue';
+const STATUSES = ['paid', 'unpaid', 'waiting'];
+const cleanText = (v, n) => String(v ?? '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, n);
 
 async function withRedis(fn) {
   const redis = createClient({ url: process.env.REDIS_URL });
   await redis.connect();
   try { return await fn(redis); } finally { await redis.quit().catch(() => {}); }
 }
-
 function previousMonth() { const d = new Date(); return monthRange(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - 1, 15))); }
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
 
-  // Monthly run
+  // Monthly run: every bill-to marked monthly, for last month
   if (req.method === 'GET' && req.query.cron) {
     const secret = process.env.CRON_SECRET;
     const ok = secret ? req.headers.authorization === `Bearer ${secret}` : /vercel-cron/i.test(req.headers['user-agent'] || '');
@@ -33,9 +40,11 @@ export default async function handler(req, res) {
     const results = await withRedis(async redis => {
       const out = [];
       for (const v of venueEntries()) {
-        const email = (Array.isArray(v.cfg.emails) ? v.cfg.emails[0] : String(v.cfg.emails || '').split(/[\s,;]+/)[0]) || '';
-        try { out.push({ slug: v.slug, ...(await invoiceVenue(redis, stripe, { slug: v.slug, auth: v.auth, email, name: v.cfg.name || v.slug }, period)) }); }
-        catch (e) { console.error('[billing] invoice', v.slug, e.message); out.push({ slug: v.slug, error: e.message }); }
+        const assigned = Object.entries(await readAssignments(redis, v.slug)).filter(([, a]) => a.monthly);
+        for (const [target, a] of assigned) {
+          try { out.push({ slug: v.slug, target, ...(await invoiceVenue(redis, stripe, { slug: v.slug, auth: v.auth, email: a.email, name: a.name || v.cfg.name || v.slug, target, planId: a.plan || null }, period)) }); }
+          catch (e) { console.error('[billing] invoice', v.slug, target, e.message); out.push({ slug: v.slug, target, error: e.message }); }
+        }
       }
       return out;
     });
@@ -50,29 +59,58 @@ export default async function handler(req, res) {
   const isAdmin = admins().includes(session.email);
 
   try {
+    // Lightweight check for the banner on every page
+    if (req.method === 'GET' && req.query.status) {
+      const unpaid = await withRedis(redis => readUnpaid(redis, slug));
+      const venue = unpaid.find(i => i.target === 'venue');
+      return res.status(200).json({ paused: !!venue, payUrl: venue?.url || null, number: venue?.number || null, others: unpaid.filter(i => i.target !== 'venue').map(i => ({ target: i.target, number: i.number, url: i.url })) });
+    }
     if (req.method === 'GET') {
-      const period = monthRange();
+      const target = isAdmin ? cleanTarget(req.query.target) : 'venue';
+      const base = req.query.period === 'previous' ? previousMonth() : monthRange();
+      const artist = target.startsWith('artist:') ? target.slice(7) : null;
+      const label = target.startsWith('label:') ? target.slice(6) : null;
       const data = await withRedis(async redis => {
-        const [rates, plan, customer] = await Promise.all([readRates(redis), readPlan(redis, slug), redis.get(`billing_customer:${slug}`)]);
-        const usage = await venueUsage(slug, session.muxAuth, period);
-        return { rates, plan, customer, usage };
+        const [rates, plans, assignments, customer] = await Promise.all([
+          readRates(redis), readPlans(redis), readAssignments(redis, slug),
+          redis.get(`billing_customer:${target === 'venue' ? slug : `${slug}:${target}`}`),
+        ]);
+        const usage = await venueUsage(slug, session.muxAuth, base, artist, label);
+        const artists = isAdmin ? await venueArtists(session.muxAuth).catch(() => []) : [];
+        // Record labels from the Brand Kit
+        const names = isAdmin ? await redis.hGetAll(`brand_owner_names:${slug}`) : {};
+        const labels = Object.entries(names || {}).filter(([k]) => k.startsWith('label-')).map(([, v]) => v).sort();
+        const statuses = await redis.hGetAll(`billing_status:${slug}`);
+        return { rates, plans, assignments, customer, usage, artists, labels, statuses };
       });
-      const priced = priceUsage(data.usage, data.rates, data.plan);
+      const a = data.assignments[target] || {};
+      const planId = req.query.plan !== undefined && isAdmin ? String(req.query.plan) : (a.plan || '');
+      const plan = data.plans.find(p => p.id === planId) || null;
+      const priced = priceUsage(data.usage, data.rates, plan);
       let invoices = [];
       const stripe = stripeClient();
-      if (stripe && data.customer) {
-        const list = await stripe.invoices.list({ customer: data.customer, limit: 24 });
-        invoices = list.data.map(i => ({
-          id: i.id, number: i.number, status: i.status, total: i.total / 100, currency: i.currency,
-          created: i.created * 1000, due: i.due_date ? i.due_date * 1000 : null, period: i.metadata?.period || null,
-          url: i.hosted_invoice_url, pdf: i.invoice_pdf,
-        }));
+      if (stripe) {
+        // Admin: every invoice of this venue (venue, artists, labels); a venue: its own
+        let list = [];
+        if (isAdmin) list = (await stripe.invoices.search({ query: `metadata['venueSlug']:'${slug.replace(/'/g, '')}'`, limit: 50 }).catch(() => ({ data: [] }))).data;
+        else if (data.customer) list = (await stripe.invoices.list({ customer: data.customer, limit: 24 })).data;
+        invoices = list.sort((x, y) => y.created - x.created).map(i => {
+          const t = i.metadata?.target || 'venue';
+          const own = data.statuses?.[i.id];
+          const fromStripe = i.status === 'paid' ? 'paid' : i.status === 'uncollectible' || i.status === 'void' ? 'unpaid' : 'waiting';
+          return {
+            id: i.id, number: i.number, status: own || fromStripe, total: i.total / 100, currency: i.currency,
+            created: i.created * 1000, url: i.hosted_invoice_url, pdf: i.invoice_pdf,
+            billedTo: i.customer_name || (t === 'venue' ? session.venue?.name || slug : t.replace(/^(artist|label):/, '')),
+            kind: t === 'venue' ? 'Venue' : t.startsWith('label:') ? 'Record label' : 'Artist',
+          };
+        });
       }
-      const elapsed = Math.min(1, (Date.now() - period.start) / (period.end - period.start));
+      const elapsed = Math.min(1, Math.max(0, (Date.now() - base.start) / (base.end - base.start)));
       return res.status(200).json({
-        venue: session.venue?.name || slug, period: { label: period.label, start: period.start, end: period.end, elapsed },
-        usage: data.usage, ...priced, rates: isAdmin ? data.rates : undefined,
-        invoices, stripe: !!stripe, isAdmin,
+        venue: session.venue?.name || slug, target, period: { label: base.label, start: base.start, end: base.end, elapsed },
+        usage: data.usage, ...priced, invoices, stripe: !!stripe, isAdmin,
+        ...(isAdmin ? { rates: data.rates, plans: data.plans, assignments: data.assignments, artists: data.artists, labels: data.labels, assignment: a } : {}),
       });
     }
 
@@ -91,21 +129,51 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
-    if (body.action === 'setPlan') {
-      const name = String(body.name || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 60);
-      const price = Number(body.price);
-      if (!name || !Number.isFinite(price) || price < 0) return res.status(400).json({ error: 'Enter the plan name and monthly price' });
-      await withRedis(redis => redis.set(`billing_plan:${slug}`, JSON.stringify({ name, price })));
+    if (body.action === 'setPlans') {
+      const plans = cleanPlans(body.plans);
+      if (!plans.length) return res.status(400).json({ error: 'Add at least one plan' });
+      await withRedis(redis => redis.set('billing_plans', JSON.stringify(plans)));
+      return res.status(200).json({ plans });
+    }
+
+    if (body.action === 'assign') {
+      const target = cleanTarget(body.target);
+      const rec = { plan: cleanText(body.plan, 40), email: cleanText(body.email, 120), name: cleanText(body.name, 80), monthly: !!body.monthly };
+      if (rec.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rec.email)) return res.status(400).json({ error: 'Enter a valid email' });
+      await withRedis(redis => redis.hSet(assignKey(slug), target, JSON.stringify(rec)));
       return res.status(200).json({ ok: true });
+    }
+
+    if (body.action === 'setStatus') {
+      const id = String(body.invoice || '');
+      const status = STATUSES.includes(body.status) ? body.status : null;
+      if (!/^in_[A-Za-z0-9]+$/.test(id) || !status) return res.status(400).json({ error: 'Unknown invoice or status' });
+      const stripe = stripeClient();
+      const inv = stripe ? await stripe.invoices.retrieve(id).catch(() => null) : null;
+      if (!inv || inv.metadata?.venueSlug !== slug) return res.status(404).json({ error: 'Invoice not found' });
+      // Stripe follows where it can: paid outside Stripe, or written off; it can't reopen a paid invoice
+      if (status === 'paid' && inv.status === 'open') await stripe.invoices.pay(id, { paid_out_of_band: true }).catch(() => {});
+      if (status === 'unpaid' && inv.status === 'open') await stripe.invoices.markUncollectible(id).catch(() => {});
+      await withRedis(async redis => {
+        await redis.hSet(`billing_status:${slug}`, id, status);
+        // Not paid pauses the account it was for; paid or waiting lifts that
+        if (status === 'unpaid') await redis.hSet(unpaidKey(slug), id, JSON.stringify({ target: inv.metadata?.target || 'venue', number: inv.number || '', url: inv.hosted_invoice_url || '' }));
+        else await redis.hDel(unpaidKey(slug), id);
+      });
+      return res.status(200).json({ ok: true, status });
     }
 
     if (body.action === 'invoiceNow') {
       const stripe = stripeClient();
       if (!stripe) return res.status(503).json({ error: 'Stripe is not connected' });
+      const target = cleanTarget(body.target);
+      const email = cleanText(body.email, 120);
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Enter the email the invoice goes to' });
       const base = body.period === 'previous' ? previousMonth() : monthRange();
       // A manual invoice never blocks the monthly one
       const period = { ...base, key: `${base.key}-manual-${Date.now()}` };
-      const out = await withRedis(redis => invoiceVenue(redis, stripe, { slug, auth: session.muxAuth, email: session.email, name: session.venue?.name || slug }, period));
+      const name = cleanText(body.name, 80) || (target === 'venue' ? (session.venue?.name || slug) : target.replace(/^(artist|label):/, ''));
+      const out = await withRedis(redis => invoiceVenue(redis, stripe, { slug, auth: session.muxAuth, email, name, target, planId: cleanText(body.plan, 40) || null }, period));
       return res.status(200).json(out);
     }
 

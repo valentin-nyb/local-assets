@@ -81,6 +81,16 @@
         .bl-admin input:focus { border-color:var(--la-accent); }
         .bl-admin-actions { display:flex; flex-wrap:wrap; gap:8px; padding:0 20px 20px; align-items:center; }
         .bl-msg { font-size:12px; color:var(--la-sub); }
+        .bl-admin select, .bl-plan-in { height:38px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 10px; font-size:13px; outline:none; width:100%; min-width:0; }
+        .bl-plan-in { height:34px; }
+        #bl-plans td:first-child { min-width:240px; } #bl-plans td { min-width:110px; }
+        .bl-check { display:inline-flex; align-items:center; gap:8px; font-size:12px; color:var(--la-sub); margin-right:6px; }
+        .bl-status { height:28px; border-radius:99px; border:1px solid var(--la-line); background:var(--la-chip); color:var(--la-sub); font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; padding:0 8px; cursor:pointer; }
+        .bl-status.paid { background:var(--la-accent-soft); color:var(--la-accent); border-color:transparent; }
+        .bl-status.unpaid { background:rgba(239,68,68,.12); color:#ef4444; border-color:transparent; }
+        .bl-status.waiting { background:rgba(245,158,11,.12); color:#f59e0b; border-color:transparent; }
+        .bl-who { display:block; font-size:11px; color:var(--la-dim); margin-top:2px; font-weight:400; }
+        .bl-x { background:none; border:0; color:var(--la-dim); cursor:pointer; font-size:16px; }
         .bl-scroll { overflow-x:auto; }
         @media (max-width:640px) { .bl-table .rate { display:none; } .bl-link { margin-right:8px; } }
         @media (max-width:900px) { .bl-grid { grid-template-columns:minmax(0,1fr); } .bl-h { font-size:22px; } .bl-table th, .bl-table td { padding:12px 14px; } }
@@ -120,8 +130,32 @@
                     <div class="bl-section-head"><h3>Invoices</h3></div>
                     <div class="bl-scroll" id="bl-invoices"><p class="bl-empty">Loading…</p></div>
                 </section>
+                <section class="bl-section hidden" id="bl-send-box">
+                    <div class="bl-section-head"><h3>Send an invoice</h3><span class="bl-msg">Plan price, plus usage above what the plan includes</span></div>
+                    <form id="bl-send-form" class="bl-admin">
+                        <label>Bill to<select name="target" id="bl-target"></select></label>
+                        <label>Email<input name="email" type="email" placeholder="accounts@venue.com"></label>
+                        <label>Plan<select name="plan" id="bl-plan-select"></select></label>
+                        <label>Period<select name="period"><option value="current">This month so far</option><option value="previous">Last month</option></select></label>
+                    </form>
+                    <div class="bl-admin-actions">
+                        <label class="bl-check"><input type="checkbox" id="bl-monthly"> Bill monthly on the 1st</label>
+                        <button type="button" class="cam-btn ghost" id="bl-preview">Preview</button>
+                        <button type="button" class="cam-btn primary" id="bl-send">Send invoice</button>
+                        <span class="bl-msg" id="bl-send-msg"></span>
+                    </div>
+                </section>
+                <section class="bl-section hidden" id="bl-plans-box">
+                    <div class="bl-section-head"><h3>Plans</h3><span class="bl-msg">Monthly price and the usage each plan includes</span></div>
+                    <div class="bl-scroll"><table class="bl-table" id="bl-plans"></table></div>
+                    <div class="bl-admin-actions" style="padding-top:16px">
+                        <button type="button" class="cam-btn ghost" id="bl-add-plan">Add plan</button>
+                        <button type="button" class="cam-btn primary" id="bl-save-plans">Save plans</button>
+                        <span class="bl-msg" id="bl-plans-msg"></span>
+                    </div>
+                </section>
                 <section class="bl-section hidden" id="bl-admin">
-                    <div class="bl-section-head"><h3>Pricing (local / assets only)</h3><span class="bl-msg">Your costs per unit, in £, and the margin added on top</span></div>
+                    <div class="bl-section-head"><h3>Usage rates</h3><span class="bl-msg">Your cost per unit, in £, and the margin added on top</span></div>
                     <form id="bl-rates" class="bl-admin">
                         <label>Video storage, per minute per month<input name="videoStorage" inputmode="decimal"></label>
                         <label>Streaming, per minute<input name="videoDelivery" inputmode="decimal"></label>
@@ -129,13 +163,8 @@
                         <label>File storage, per GB per month<input name="fileStorage" inputmode="decimal"></label>
                         <label>Margin, %<input name="marginPct" inputmode="decimal"></label>
                     </form>
-                    <form id="bl-plan-form" class="bl-admin" style="padding-top:0">
-                        <label>This venue's plan<input name="name" placeholder="e.g. Infrastructure"></label>
-                        <label>Monthly price, £<input name="price" inputmode="decimal" placeholder="e.g. 299"></label>
-                    </form>
                     <div class="bl-admin-actions">
-                        <button type="button" class="cam-btn primary" id="bl-save">Save pricing</button>
-                        <button type="button" class="cam-btn ghost" id="bl-send">Send this month's invoice now</button>
+                        <button type="button" class="cam-btn primary" id="bl-save">Save rates</button>
                         <span class="bl-msg" id="bl-admin-msg"></span>
                     </div>
                 </section>
@@ -163,79 +192,138 @@
                 document.getElementById('venue-breadcrumb').textContent = v; document.getElementById('venue-avatar').textContent = (v || '?').charAt(0); } catch (_) {}
         })();
 
-        var _data = null;
+        var _data = null, _target = 'venue', _planOverride;
         async function load() {
             var err = document.getElementById('bl-error');
             try {
-                var r = await laFetch('/api/billing');
+                var q = '?target=' + encodeURIComponent(_target) + (_planOverride !== undefined ? '&plan=' + encodeURIComponent(_planOverride) : '') + '&period=' + (document.querySelector('#bl-send-form [name=period]') || {}).value;
+                var r = await laFetch('/api/billing' + q);
                 var d = await r.json();
                 if (!r.ok) throw new Error(d.error || r.status);
                 _data = d; render(d); err.classList.add('hidden');
             } catch (e) { err.textContent = 'Could not load billing: ' + e.message; err.classList.remove('hidden'); }
         }
+        function targetName(t, d) { return t === 'venue' ? (d.venue || 'This venue') : t.replace(/^(artist|label):/, ''); }
         function render(d) {
-            var cur = d.currency;
-            document.getElementById('bl-period').textContent = d.period.label;
+            var cur = d.currency, admin = d.isAdmin;
+            document.getElementById('bl-period').textContent = d.period.label + (admin ? ' · ' + targetName(d.target, d) : '');
             document.getElementById('bl-total').textContent = money(d.total, cur);
-            document.getElementById('bl-total-note').textContent = 'So far this month · sent on the 1st';
+            document.getElementById('bl-total-note').textContent = d.period.elapsed < 1 ? 'So far this month · sent on the 1st' : 'For ' + d.period.label;
             document.getElementById('bl-bar').style.width = Math.round(d.period.elapsed * 100) + '%';
             document.getElementById('bl-plan').textContent = d.plan ? money(d.planAmount, cur) : 'None';
             document.getElementById('bl-plan-note').textContent = d.plan ? d.plan.name + ' · monthly' : 'Usage only';
             document.getElementById('bl-usage').textContent = money(d.usageTotal, cur);
-            document.getElementById('bl-usage-note').textContent = qty(d.usage.videos) + ' videos · ' + qty(d.usage.fileBytes / 1e9) + ' GB of files';
+            document.getElementById('bl-usage-note').textContent = d.plan ? 'Above what the plan includes' : qty(d.usage.videos) + ' videos · ' + qty(d.usage.fileBytes / 1e9) + ' GB of files';
             document.getElementById('bl-usage-head').textContent = (d.usage.notes || []).join(' ');
-            var admin = d.isAdmin;
             var rows = d.lines.map(function(l) {
-                return '<tr><td class="svc">' + esc(l.label) + '</td><td class="num">' + qty(l.quantity) + '<span class="unit">' + esc(l.unit) + '</span></td>' +
+                var inc = l.included ? '<span class="unit">' + qty(l.included) + ' included · ' + qty(l.billable) + ' over</span>' : '<span class="unit">' + esc(l.unit) + '</span>';
+                return '<tr><td class="svc">' + esc(l.label) + '</td><td class="num">' + qty(l.quantity) + inc + '</td>' +
                     (admin ? '<td class="num rate">' + rate(l.rate) + '<span class="unit">cost ' + money(l.cost, cur) + '</span></td>' : '') +
-                    '<td class="num">' + (l.rate ? money(l.amount, cur) : 'Included') + '</td></tr>';
+                    '<td class="num">' + (l.amount ? money(l.amount, cur) : (l.included && l.quantity <= l.included ? 'Included' : l.rate ? money(0, cur) : 'Included')) + '</td></tr>';
             }).join('');
             if (d.plan) rows = '<tr><td class="svc">' + esc(d.plan.name) + '<span class="unit">Monthly plan</span></td><td class="num">1</td>' + (admin ? '<td class="num rate"></td>' : '') + '<td class="num">' + money(d.planAmount, cur) + '</td></tr>' + rows;
             document.getElementById('bl-lines').innerHTML =
                 '<thead><tr><th>Service</th><th class="num">Usage</th>' + (admin ? '<th class="num rate">Rate</th>' : '') + '<th class="num">Amount</th></tr></thead>' +
-                '<tbody>' + rows + '</tbody><tfoot><tr><td>Total so far</td><td></td>' + (admin ? '<td class="rate"></td>' : '') + '<td class="num">' + money(d.total, cur) + '</td></tr></tfoot>';
+                '<tbody>' + rows + '</tbody><tfoot><tr><td>Total</td><td></td>' + (admin ? '<td class="rate"></td>' : '') + '<td class="num">' + money(d.total, cur) + '</td></tr></tfoot>';
             var inv = document.getElementById('bl-invoices');
-            if (!d.invoices.length) inv.innerHTML = '<p class="bl-empty">' + (d.stripe ? 'No invoices yet. Your first invoice is sent on the 1st.' : 'Invoices appear here once billing is set up.') + '</p>';
-            else inv.innerHTML = '<table class="bl-table"><thead><tr><th>Invoice</th><th>Date</th><th>Status</th><th class="num">Amount</th><th></th></tr></thead><tbody>' +
+            var LABEL = { paid: 'Paid', unpaid: 'Not paid', waiting: 'Waiting for payment' };
+            if (!d.invoices.length) inv.innerHTML = '<p class="bl-empty">' + (d.stripe ? 'No invoices yet.' : 'Invoices appear here once billing is set up.') + '</p>';
+            else inv.innerHTML = '<table class="bl-table"><thead><tr><th>Invoice</th><th>Billed to</th><th>Date</th><th>Status</th><th class="num">Amount</th><th></th></tr></thead><tbody>' +
                 d.invoices.map(function(i) {
-                    var st = i.status === 'paid' ? 'paid' : i.status === 'open' ? 'open' : '';
-                    return '<tr><td class="svc">' + esc(i.number || i.id) + '</td><td style="white-space:nowrap">' + new Date(i.created).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + '</td>' +
-                        '<td><span class="bl-pill ' + st + '">' + esc(i.status === 'open' ? 'Due' : i.status) + '</span></td><td class="num">' + money(i.total, i.currency) + '</td>' +
-                        '<td class="num">' + (i.url ? '<a class="bl-link" href="' + esc(i.url) + '" target="_blank" rel="noopener">' + (i.status === 'open' ? 'Pay' : 'View') + '</a>' : '') + (i.pdf ? '<a class="bl-link" href="' + esc(i.pdf) + '" target="_blank" rel="noopener">PDF</a>' : '') + '</td></tr>';
+                    var status = admin
+                        ? '<select class="bl-status ' + i.status + '" data-invoice="' + esc(i.id) + '">' + ['paid', 'waiting', 'unpaid'].map(function(k) { return '<option value="' + k + '"' + (k === i.status ? ' selected' : '') + '>' + LABEL[k] + '</option>'; }).join('') + '</select>'
+                        : '<span class="bl-pill ' + (i.status === 'paid' ? 'paid' : 'open') + '">' + LABEL[i.status] + '</span>';
+                    return '<tr><td class="svc">' + esc(i.number || i.id) + '</td><td>' + esc(i.billedTo) + '<span class="bl-who">' + esc(i.kind) + '</span></td><td style="white-space:nowrap">' + new Date(i.created).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + '</td>' +
+                        '<td>' + status + '</td><td class="num">' + money(i.total, i.currency) + '</td>' +
+                        '<td class="num">' + (i.url ? '<a class="bl-link" href="' + esc(i.url) + '" target="_blank" rel="noopener">' + (i.status !== 'paid' ? 'Pay' : 'View') + '</a>' : '') + (i.pdf ? '<a class="bl-link" href="' + esc(i.pdf) + '" target="_blank" rel="noopener">PDF</a>' : '') + '</td></tr>';
                 }).join('') + '</tbody></table>';
-            var box = document.getElementById('bl-admin');
-            box.classList.toggle('hidden', !admin);
-            if (admin && d.rates) {
-                var f = document.getElementById('bl-rates');
-                ['videoStorage', 'videoDelivery', 'videoEncoding', 'fileStorage'].forEach(function(k) { if (document.activeElement !== f[k]) f[k].value = d.rates[k]; });
-                if (document.activeElement !== f.marginPct) f.marginPct.value = Math.round((d.rates.margin || 0) * 1000) / 10;
-                var pf = document.getElementById('bl-plan-form');
-                if (d.plan && document.activeElement !== pf.name) { pf.name.value = d.plan.name; pf.price.value = d.plan.price; }
-            }
+            inv.querySelectorAll('[data-invoice]').forEach(function(sel) {
+                sel.addEventListener('change', async function() {
+                    var v = sel.value;
+                    if (v === 'unpaid' && !(await laConfirm({ title: 'Mark as not paid?', message: 'The account this invoice is for is paused until it is paid: no uploads, clips, watermarks or publishing.', confirmText: 'Mark not paid', danger: true }))) { load(); return; }
+                    try { await post({ action: 'setStatus', invoice: sel.dataset.invoice, status: v }); sel.className = 'bl-status ' + v; laToast('Marked ' + LABEL[v].toLowerCase()); }
+                    catch (e) { laAlert('Could not change the status: ' + e.message, { tone: 'error' }); load(); }
+                });
+            });
+            ['bl-admin', 'bl-send-box', 'bl-plans-box'].forEach(function(id) { document.getElementById(id).classList.toggle('hidden', !admin); });
+            if (!admin) return;
+            var f = document.getElementById('bl-rates');
+            ['videoStorage', 'videoDelivery', 'videoEncoding', 'fileStorage'].forEach(function(k) { if (document.activeElement !== f[k]) f[k].value = d.rates[k]; });
+            if (document.activeElement !== f.marginPct) f.marginPct.value = Math.round((d.rates.margin || 0) * 1000) / 10;
+            // Bill to: the venue, its artists and its record labels
+            var tsel = document.getElementById('bl-target');
+            var opts = [['venue', (d.venue || 'This venue') + ' (venue)']]
+                .concat((d.artists || []).map(function(a) { return ['artist:' + a, a + ' (artist)']; }))
+                .concat((d.labels || []).map(function(l) { return ['label:' + l, l + ' (record label)']; }));
+            tsel.innerHTML = opts.map(function(o) { return '<option value="' + esc(o[0]) + '"' + (o[0] === d.target ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('');
+            var psel = document.getElementById('bl-plan-select'), cur = d.plan ? d.plan.id : '';
+            psel.innerHTML = '<option value="">No plan · usage only</option>' + d.plans.map(function(p) { return '<option value="' + esc(p.id) + '"' + (p.id === cur ? ' selected' : '') + '>' + esc(p.name) + ' · ' + money(p.price, 'gbp') + '/mo</option>'; }).join('');
+            var sf = document.getElementById('bl-send-form');
+            if (document.activeElement !== sf.email) sf.email.value = (d.assignment && d.assignment.email) || '';
+            document.getElementById('bl-monthly').checked = !!(d.assignment && d.assignment.monthly);
+            renderPlans(d.plans);
         }
+        function renderPlans(plans) {
+            var t = document.getElementById('bl-plans');
+            if (t.dataset.editing === '1') return;
+            t.innerHTML = '<thead><tr><th>Plan</th><th class="num">£ per month</th><th class="num">Storage incl., min</th><th class="num">Streaming incl., min</th><th class="num">Files incl., GB</th><th></th></tr></thead><tbody>' +
+                plans.map(function(p) { return planRow(p); }).join('') + '</tbody>';
+        }
+        function planRow(p) {
+            p = p || { id: '', name: '', price: 0, included: { storedMinutes: 0, deliveredMinutes: 0, fileGB: 0 } };
+            var inp = function(k, v, num) { return '<input class="bl-plan-in" data-k="' + k + '"' + (num ? ' inputmode="decimal"' : '') + ' value="' + esc(v) + '">'; };
+            return '<tr data-id="' + esc(p.id) + '"><td>' + inp('name', p.name) + '</td><td>' + inp('price', p.price, 1) + '</td><td>' + inp('storedMinutes', p.included.storedMinutes, 1) + '</td><td>' + inp('deliveredMinutes', p.included.deliveredMinutes, 1) + '</td><td>' + inp('fileGB', p.included.fileGB, 1) + '</td><td><button type="button" class="bl-x" title="Remove plan" data-del-plan>×</button></td></tr>';
+        }
+        document.getElementById('bl-plans').addEventListener('input', function() { this.dataset.editing = '1'; });
+        document.getElementById('bl-plans').addEventListener('click', function(e) { var b = e.target.closest('[data-del-plan]'); if (b) { this.dataset.editing = '1'; b.closest('tr').remove(); } });
+        document.getElementById('bl-add-plan').addEventListener('click', function() { var t = document.getElementById('bl-plans'); t.dataset.editing = '1'; t.querySelector('tbody').insertAdjacentHTML('beforeend', planRow()); });
+        document.getElementById('bl-save-plans').addEventListener('click', async function() {
+            var msg = document.getElementById('bl-plans-msg'), t = document.getElementById('bl-plans');
+            var plans = Array.prototype.map.call(t.querySelectorAll('tbody tr'), function(tr) {
+                var v = function(k) { return tr.querySelector('[data-k=' + k + ']').value; };
+                return { id: tr.dataset.id, name: v('name'), price: Number(v('price')), included: { storedMinutes: Number(v('storedMinutes')), deliveredMinutes: Number(v('deliveredMinutes')), fileGB: Number(v('fileGB')) } };
+            });
+            this.disabled = true; msg.textContent = 'Saving…';
+            try { await post({ action: 'setPlans', plans: plans }); t.dataset.editing = ''; msg.textContent = 'Saved'; await load(); }
+            catch (e) { msg.textContent = 'Could not save: ' + e.message; }
+            this.disabled = false;
+        });
         function post(body) {
             return laFetch('/api/billing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
                 .then(function(r) { return r.json().then(function(d) { if (!r.ok) throw new Error(d.error || r.status); return d; }); });
         }
         document.getElementById('bl-save').addEventListener('click', async function() {
-            var msg = document.getElementById('bl-admin-msg'), f = document.getElementById('bl-rates'), pf = document.getElementById('bl-plan-form');
+            var msg = document.getElementById('bl-admin-msg'), f = document.getElementById('bl-rates');
             this.disabled = true; msg.textContent = 'Saving…';
             try {
                 await post({ action: 'setRates', rates: { videoStorage: f.videoStorage.value, videoDelivery: f.videoDelivery.value, videoEncoding: f.videoEncoding.value, fileStorage: f.fileStorage.value, margin: Number(f.marginPct.value) / 100 } });
-                if (pf.name.value.trim() && pf.price.value !== '') await post({ action: 'setPlan', name: pf.name.value, price: pf.price.value });
                 msg.textContent = 'Saved'; await load();
             } catch (e) { msg.textContent = 'Could not save: ' + e.message; }
             this.disabled = false;
         });
+        // Changing who is billed, the plan or the period updates the preview
+        document.getElementById('bl-target').addEventListener('change', function() { _target = this.value; _planOverride = undefined; load(); });
+        document.getElementById('bl-plan-select').addEventListener('change', function() { _planOverride = this.value; load(); });
+        document.querySelector('#bl-send-form [name=period]').addEventListener('change', function() { load(); });
+        document.getElementById('bl-preview').addEventListener('click', function() { _planOverride = document.getElementById('bl-plan-select').value; load().then(function() { document.getElementById('bl-lines').scrollIntoView({ behavior: 'smooth', block: 'center' }); }); });
         document.getElementById('bl-send').addEventListener('click', async function() {
-            var msg = document.getElementById('bl-admin-msg');
-            if (!(await laConfirm({ title: 'Send the invoice now?', message: 'An itemised invoice for this month so far is created in Stripe and emailed to this venue.', confirmText: 'Send invoice' }))) return;
+            var msg = document.getElementById('bl-send-msg'), sf = document.getElementById('bl-send-form');
+            var target = sf.target.value, plan = sf.plan.value, email = sf.email.value.trim(), period = sf.period.value;
+            if (!email) { msg.textContent = 'Enter the email the invoice goes to'; sf.email.focus(); return; }
+            var who = sf.target.options[sf.target.selectedIndex].text;
+            if (!(await laConfirm({ title: 'Send the invoice?', message: 'An itemised invoice for ' + who + ' is created in Stripe and emailed to ' + email + '.', confirmText: 'Send invoice' }))) return;
             this.disabled = true; msg.textContent = 'Creating the invoice…';
             try {
-                var d = await post({ action: 'invoiceNow', period: 'current' });
-                msg.textContent = d.skipped ? (d.reason || 'Nothing to invoice') : 'Invoice sent'; await load();
+                await post({ action: 'assign', target: target, plan: plan, email: email, monthly: document.getElementById('bl-monthly').checked });
+                var d = await post({ action: 'invoiceNow', target: target, plan: plan, email: email, period: period });
+                msg.textContent = d.skipped ? (d.reason || 'Nothing to invoice') : 'Invoice sent to ' + email; await load();
             } catch (e) { msg.textContent = 'Could not send: ' + e.message; }
             this.disabled = false;
+        });
+        document.getElementById('bl-monthly').addEventListener('change', async function() {
+            var sf = document.getElementById('bl-send-form');
+            try { await post({ action: 'assign', target: sf.target.value, plan: sf.plan.value, email: sf.email.value.trim(), monthly: this.checked }); laToast(this.checked ? 'Billed monthly on the 1st' : 'Monthly billing off'); }
+            catch (e) { laAlert(e.message, { tone: 'error' }); this.checked = !this.checked; }
         });
         load();
     </script>

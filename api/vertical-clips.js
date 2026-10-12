@@ -1,3 +1,4 @@
+import { pausedBy, sendPaused } from './_suspend.js';
 import { createClient } from 'redis';
 import { waitUntil } from '@vercel/functions';
 import { getWebSessionAuth } from './_venues.js';
@@ -36,9 +37,11 @@ export default async function handler(req, res) {
   if (body.action !== 'start') return res.status(400).json({ error: 'Unknown action' });
   const session = getWebSessionAuth(req);
   if (!session?.email) return res.status(401).json({ error: 'Not authenticated' });
+  if (req.method !== 'GET' && session?.venueSlug) { const _p = await pausedBy(session.venueSlug); if (_p) return sendPaused(res, _p); }
   if (!session.venueSlug || !session.muxAuth) return res.status(403).json({ error: 'No Cloud Storage for this account' });
   const artist = String(body.artist || '').toUpperCase().trim();
   if (!artist) return res.status(400).json({ error: 'Choose a session' });
+  { const _p = await pausedBy(session.venueSlug, `artist:${artist}`); if (_p) return sendPaused(res, _p); }
 
   const redis = createClient({ url: process.env.REDIS_URL });
   await redis.connect();

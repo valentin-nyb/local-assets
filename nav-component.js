@@ -289,6 +289,25 @@ document.addEventListener("DOMContentLoaded", () => {
             if (res.ok && data.webToken && cur) { cur.webToken = data.webToken; cur.ts = Date.now(); localStorage.setItem('la_admin', JSON.stringify(cur)); }
         } catch (e) {} finally { _refreshing = false; }
     }
+    // An unpaid invoice pauses the account: a banner on every page with the way to pay
+    (function _billingBanner() {
+        var session = _getAdminSession();
+        if (!session || !session.webToken || _isClient) return;
+        fetch('/api/billing?status=1', { headers: { 'Authorization': 'Bearer ' + session.webToken } })
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(d) {
+                if (!d || !d.paused) return;
+                var main = document.querySelector('main');
+                if (!main || document.getElementById('la-paused')) return;
+                var b = document.createElement('div');
+                b.id = 'la-paused';
+                b.setAttribute('role', 'alert');
+                b.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 20px;background:#7f1d1d;color:#fff;font:500 13px/1.4 Inter,system-ui,sans-serif;flex-shrink:0;z-index:45;';
+                b.innerHTML = '<span><b style="font-weight:700">Account paused.</b> Invoice ' + _esc(d.number || '') + ' is unpaid, so uploads, clips, watermarks and publishing are stopped until it is paid.</span>' +
+                    (d.payUrl ? '<a href="' + _esc(d.payUrl) + '" target="_blank" rel="noopener" style="background:#fff;color:#7f1d1d;font-weight:700;padding:7px 14px;border-radius:8px;text-decoration:none;white-space:nowrap">Pay now</a>' : '<a href="/billing" style="color:#fff;text-decoration:underline">Billing</a>');
+                main.insertBefore(b, main.firstChild);
+            }).catch(function() {});
+    })();
     setInterval(_refreshToken, 5 * 60 * 1000);
     document.addEventListener('visibilitychange', function() { if (document.visibilityState === 'visible') _refreshToken(); });
     _refreshToken();

@@ -1,3 +1,4 @@
+import { pausedBy, sendPaused } from './_suspend.js';
 import { getWebSessionAuth } from './_venues.js';
 
 export default async function handler(req, res) {
@@ -17,6 +18,7 @@ export default async function handler(req, res) {
   if (!session?.muxAuth) {
     return res.status(401).json({ error: 'Not authenticated — no Cloud Storage access for this account' });
   }
+  if (req.method !== 'GET' && session?.venueSlug) { const _p = await pausedBy(session.venueSlug); if (_p) return sendPaused(res, _p); }
 
   let body = req.body;
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch(e) {} }

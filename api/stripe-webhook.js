@@ -28,6 +28,24 @@ export default async function handler(req, res) {
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
+  // ── USAGE INVOICES: paid lifts a pause; written off as uncollectible pauses the account ─
+  if ((event.type === 'invoice.paid' || event.type === 'invoice.marked_uncollectible') && event.data.object.metadata?.venueSlug) {
+    const inv = event.data.object, slug = inv.metadata.venueSlug;
+    const redis = createClient({ url: process.env.REDIS_URL });
+    try {
+      await redis.connect();
+      if (event.type === 'invoice.paid') {
+        await redis.hDel(`billing_unpaid:${slug}`, inv.id);
+        await redis.hSet(`billing_status:${slug}`, inv.id, 'paid');
+      } else {
+        await redis.hSet(`billing_unpaid:${slug}`, inv.id, JSON.stringify({ target: inv.metadata.target || 'venue', number: inv.number || '', url: inv.hosted_invoice_url || '' }));
+        await redis.hSet(`billing_status:${slug}`, inv.id, 'unpaid');
+      }
+    } catch (e) { console.error('[Stripe Webhook] invoice status', e.message); }
+    finally { await redis.quit().catch(() => {}); }
+    return res.status(200).json({ received: true });
+  }
+
   // ── CAMERA ORDER (not a subscription — never creates a client profile) ─
   if (event.type === 'checkout.session.completed' && event.data.object.metadata?.kind === 'camera_order') {
     await recordCameraOrder(event.data.object, stripe);

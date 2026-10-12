@@ -1,3 +1,4 @@
+import { pausedBy, sendPaused } from './_suspend.js';
 import crypto from 'crypto';
 import { put } from '@vercel/blob';
 import { createClient } from 'redis';
@@ -75,6 +76,7 @@ export default async function handler(req, res) {
   if (!session.venueSlug || !session.muxAuth) return res.status(403).json({ error: 'No Cloud Storage for this account' });
   const slug = session.venueSlug, auth = session.muxAuth;
   const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+  if (body.action === 'apply') { const _p = await pausedBy(slug, body.artist ? `artist:${String(body.artist).toUpperCase()}` : null); if (_p) return sendPaused(res, _p); }
 
   const redis = createClient({ url: process.env.REDIS_URL });
   await redis.connect();

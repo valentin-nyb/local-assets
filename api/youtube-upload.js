@@ -1,3 +1,4 @@
+import { pausedBy, sendPaused } from './_suspend.js';
 import crypto from 'crypto';
 import { createClient } from 'redis';
 import { getWebSessionAuth } from './_venues.js';
@@ -151,6 +152,7 @@ export default async function handler(req, res) {
   } else if (!session?.email) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
+  if (req.method !== 'GET' && session?.venueSlug) { const _p = await pausedBy(session.venueSlug); if (_p) return sendPaused(res, _p); }
   const venueSlug = upload ? upload.venueSlug : session.venueSlug;
   if (!venueSlug) return res.status(403).json({ error: 'No venue associated with this account' });
   if (isThumbnail && (!upload || upload.videoId !== videoId)) return res.status(403).json({ error: 'Cover can only be set right after uploading' });

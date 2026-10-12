@@ -1,3 +1,4 @@
+import { pausedBy, sendPaused } from './_suspend.js';
 import { list, del, copy } from '@vercel/blob';
 import { createClient } from 'redis';
 import { handleUpload } from '@vercel/blob/client';
@@ -47,6 +48,7 @@ export default async function handler(req, res) {
 
   const session = getWebSessionAuth(req);
   if (!session?.email) return res.status(401).json({ error: 'Not authenticated' });
+  if (req.method !== 'GET' && session?.venueSlug) { const _p = await pausedBy(session.venueSlug); if (_p) return sendPaused(res, _p); }
   const slug = session.venueSlug;
   if (!slug) return res.status(403).json({ error: 'No venue for this account' });
 

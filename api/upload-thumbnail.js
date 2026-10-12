@@ -1,3 +1,4 @@
+import { pausedBy, sendPaused } from './_suspend.js';
 import { put } from '@vercel/blob';
 import { getWebSessionAuth } from './_venues.js';
 import { thumbnailPrefix, encodeThumbPassthrough } from './_thumbnails.js';
@@ -27,6 +28,7 @@ export default async function handler(req, res) {
   if (!session?.muxAuth || !session.venueSlug) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
+  if (req.method !== 'GET' && session?.venueSlug) { const _p = await pausedBy(session.venueSlug); if (_p) return sendPaused(res, _p); }
 
   const passthrough = (req.headers['x-passthrough'] || req.query.passthrough || 'THUMB').toUpperCase();
 

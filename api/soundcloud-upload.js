@@ -1,3 +1,4 @@
+import { pausedBy, sendPaused } from './_suspend.js';
 import { createClient } from 'redis';
 import { getWebSessionAuth, getVenuesConfig } from './_venues.js';
 import { refreshScToken } from './_soundcloud.js';
@@ -37,6 +38,7 @@ export default async function handler(req, res) {
 
   const session = getWebSessionAuth(req);
   if (!session?.email) return res.status(401).json({ error: 'Not authenticated' });
+  if (req.method !== 'GET' && session?.venueSlug) { const _p = await pausedBy(session.venueSlug); if (_p) return sendPaused(res, _p); }
 
   const venueSlug = session.venueSlug;
   if (!venueSlug) return res.status(403).json({ error: 'No venue associated with this account' });

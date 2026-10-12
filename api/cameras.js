@@ -1,3 +1,4 @@
+import { pausedBy, sendPaused } from './_suspend.js';
 import { createClient } from 'redis';
 import { getWebSessionAuth } from './_venues.js';
 import { calendarKey, cleanCalendarUrl, fetchEvents } from './_calendar.js';
@@ -58,6 +59,7 @@ export default async function handler(req, res) {
 
   const session = getWebSessionAuth(req);
   if (!session?.email) return res.status(401).json({ error: 'Not authenticated' });
+  if (req.method !== 'GET' && session?.venueSlug) { const _p = await pausedBy(session.venueSlug); if (_p) return sendPaused(res, _p); }
   const slug = session.venueSlug;
   if (!slug || !session.muxAuth) return res.status(200).json({ cameras: [] });
 
