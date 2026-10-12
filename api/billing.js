@@ -71,7 +71,8 @@ export default async function handler(req, res) {
   const ADMIN_VENUE = process.env.BILLING_ADMIN_VENUE || 'local-assets-admin';
   const isAdmin = admins().includes(session.email) && session.venueSlug === ADMIN_VENUE;
   const cfg = getVenuesConfig();
-  const billable = Object.keys(cfg).filter(k => k !== ADMIN_VENUE);
+  // Every venue can be billed, the local / assets one too (its own artists); other venues come first
+  const billable = [...Object.keys(cfg).filter(k => k !== ADMIN_VENUE), ...Object.keys(cfg).filter(k => k === ADMIN_VENUE)];
   let slug = session.venueSlug, auth = session.muxAuth, venueName = session.venue?.name || session.venueSlug;
   if (isAdmin) {
     let bodyVenue = '';
@@ -94,12 +95,14 @@ export default async function handler(req, res) {
           redis.get(`billing_customer:${target === 'venue' ? slug : `${slug}:${target}`}`),
         ]);
         const usage = await venueUsage(slug, auth, base, artist, label);
-        const artists = isAdmin ? await venueArtists(auth).catch(() => []) : [];
+        let artists = isAdmin ? await venueArtists(auth).catch(() => []) : [];
         // Record labels from the Brand Kit
         const names = isAdmin ? await redis.hGetAll(`brand_owner_names:${slug}`) : {};
         const labels = Object.entries(names || {}).filter(([k]) => k.startsWith('label-')).map(([, v]) => v).sort();
+        // Artists from the Brand Kit too, not only those with sessions
+        for (const [k, v] of Object.entries(names || {})) if (k.startsWith('artist-') && v) artists.push(String(v).toUpperCase().trim());
         const statuses = await redis.hGetAll(`billing_status:${slug}`);
-        return { rates, plans, assignments, customer, usage, artists, labels, statuses };
+        return { rates, plans, assignments, customer, usage, artists: [...new Set(artists)].sort(), labels, statuses };
       });
       const a = data.assignments[target] || {};
       const planId = req.query.plan !== undefined && isAdmin ? String(req.query.plan) : (a.plan || '');
@@ -128,7 +131,7 @@ export default async function handler(req, res) {
       return res.status(200).json({
         venue: venueName, target, period: { label: base.label, start: base.start, end: base.end, elapsed },
         usage: data.usage, ...priced, invoices, stripe: !!stripe, isAdmin,
-        ...(isAdmin ? { venueSlug: slug, venues: billable.map(k => ({ slug: k, name: cfg[k]?.name || k })), rates: data.rates, plans: data.plans, assignments: data.assignments, artists: data.artists, labels: data.labels, assignment: a } : {}),
+        ...(isAdmin ? { venueSlug: slug, venues: billable.map(k => ({ slug: k, name: k === ADMIN_VENUE ? 'local / assets (own artists)' : (cfg[k]?.name || k) })), rates: data.rates, plans: data.plans, assignments: data.assignments, artists: data.artists, labels: data.labels, assignment: a } : {}),
       });
     }
 
