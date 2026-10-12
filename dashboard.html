@@ -700,7 +700,14 @@
         }
         setTimeout(sweepWatermarks, 4000);
 
+        // While new clips are processing, the list refreshes itself so they appear when ready
+        var _clipsProcessing = false, _clipsPollT;
+        function pollProcessingClips() {
+            clearTimeout(_clipsPollT);
+            if (_clipsProcessing) _clipsPollT = setTimeout(function() { fetchRecentUploads(); }, 30000);
+        }
         async function fetchRecentUploads(autoExpandArtist) {
+            _clipsProcessing = false;
             await _sessionMetaReady;
             const container = document.getElementById('recent-sets-list');
             if (!container) return;
@@ -1017,14 +1024,14 @@
                 // Check if clips are still processing (no playback IDs)
                 var readyCount = 0;
                 for (var pi = 0; pi < clips.length; pi++) {
-                    if (clips[pi].playback_ids && clips[pi].playback_ids[0]) readyCount++;
+                    if (clips[pi].status === 'ready' && clips[pi].playback_ids && clips[pi].playback_ids[0]) readyCount++;
                 }
                 var statusText = readyCount === clips.length ? clips.length + ' CLIPS — IN VAULT' : clips.length + ' CLIPS — ' + readyCount + ' READY, ' + (clips.length - readyCount) + ' PROCESSING';
 
                 // Build comma-separated PID list for gallery URL
                 var allPids = [];
                 for (var pc = 0; pc < clips.length; pc++) {
-                    var cpid = clips[pc].playback_ids && clips[pc].playback_ids[0] ? clips[pc].playback_ids[0].id : null;
+                    var cpid = clips[pc].status === 'ready' && clips[pc].playback_ids && clips[pc].playback_ids[0] ? clips[pc].playback_ids[0].id : null;
                     if (cpid) allPids.push(cpid);
                 }
                 var pidsAttr  = allPids.join(',');
@@ -1068,7 +1075,8 @@
 
                 for (var i = 0; i < clips.length; i++) {
                     var clip = clips[i];
-                    var pid = clip.playback_ids && clip.playback_ids[0] ? clip.playback_ids[0].id : null;
+                    // Mux gives a playback ID straight away, but there is no picture until the clip is ready
+                    var pid = clip.status === 'ready' && clip.playback_ids && clip.playback_ids[0] ? clip.playback_ids[0].id : null;
                     var num = String(i + 1).padStart(2, '0');
                     var staticSrc = pid ? 'https://image.mux.com/' + pid + '/thumbnail.png?width=180&height=320&fit_mode=smartcrop&time=5' : '';
                     var animSrc   = pid ? 'https://image.mux.com/' + pid + '/animated.gif?width=180&height=320&fit_mode=smartcrop&fps=10&start=5&duration=3' : '';
@@ -1085,7 +1093,8 @@
                     if (staticSrc) {
                         html += '<img id="' + imgId + '" src="' + staticSrc + '" class="w-full h-full object-cover" loading="lazy" style="opacity:.9;">';
                     } else {
-                        html += '<div class="w-full h-full flex items-center justify-center"></div>';
+                        html += '<div class="w-full h-full flex items-center justify-center" style="font:500 8px/1.3 \'JetBrains Mono\',monospace;letter-spacing:.12em;color:var(--la-dim);text-align:center">' + (clip.status === 'errored' ? 'FAILED' : 'PROCESSING') + '</div>';
+                        _clipsProcessing = true;
                     }
 
                     if (pid) {
@@ -1357,6 +1366,7 @@
             renderDistFooter(artists.length, artists.reduce(function(n, a) { return n + a.dates.length; }, 0), muxAssets.length);
             updateDistributionButtons();
             paintWatermarkButtons();
+            pollProcessingClips();
 
             // Restore previously open folders
             _savedOpen.forEach(function(id) {
