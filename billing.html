@@ -118,7 +118,7 @@
                 </div>
                 <p id="bl-error" class="bl-msg hidden" style="color:var(--la-bad)"></p>
                 <section class="bl-section hidden" id="bl-send-box">
-                    <div class="bl-section-head"><h3>Bill to</h3><span class="bl-msg">Choose who to see and invoice: plan price, plus usage above what the plan includes</span></div>
+                    <div class="bl-section-head"><h3>Bill to</h3><span class="bl-msg" id="bl-stripe-acct">Choose who to see and invoice: plan price, plus usage above what the plan includes</span></div>
                     <form id="bl-send-form" class="bl-admin">
                         <label>Venue<select name="venue" id="bl-venue"></select></label>
                         <label>Bill to<select name="target" id="bl-target"></select></label>
@@ -247,6 +247,8 @@
                     catch (e) { laAlert('Could not change the status: ' + e.message, { tone: 'error' }); load(); }
                 });
             });
+            var sa = d.stripeAccount, saEl = document.getElementById('bl-stripe-acct');
+            if (saEl) saEl.textContent = !sa ? '' : sa.error ? 'Stripe account: ' + sa.error : 'Stripe account ' + sa.id + ' · ' + (sa.publicName || sa.name || 'no public name') + ' · ' + (sa.country || '') + ' · logo ' + (sa.logo ? 'set' : 'not set') + ' · icon ' + (sa.icon ? 'set' : 'not set');
             ['bl-admin', 'bl-send-box', 'bl-plans-box'].forEach(function(id) { document.getElementById(id).classList.toggle('hidden', !admin); });
             if (!admin) return;
             var f = document.getElementById('bl-rates');

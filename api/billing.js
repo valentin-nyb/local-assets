@@ -127,11 +127,20 @@ export default async function handler(req, res) {
           };
         });
       }
+      // Which Stripe account the app uses, and whether its invoices carry a name and logo (admin)
+      let stripeAccount = null;
+      if (isAdmin && stripe) {
+        try {
+          const acct = await stripe.accounts.retrieve();
+          stripeAccount = { id: acct.id, name: acct.settings?.dashboard?.display_name || acct.business_profile?.name || '', publicName: acct.business_profile?.name || '', logo: !!acct.settings?.branding?.logo, icon: !!acct.settings?.branding?.icon, country: acct.country || '' };
+          console.log('[billing] stripe account', JSON.stringify(stripeAccount));
+        } catch (e) { stripeAccount = { error: e.message }; }
+      }
       const elapsed = Math.min(1, Math.max(0, (Date.now() - base.start) / (base.end - base.start)));
       return res.status(200).json({
         venue: venueName, target, period: { label: base.label, start: base.start, end: base.end, elapsed },
         usage: data.usage, ...priced, invoices, stripe: !!stripe, isAdmin,
-        ...(isAdmin ? { venueSlug: slug, venues: billable.map(k => ({ slug: k, name: k === ADMIN_VENUE ? 'local / assets (own artists)' : (cfg[k]?.name || k) })), rates: data.rates, plans: data.plans, assignments: data.assignments, artists: data.artists, labels: data.labels, assignment: a } : {}),
+        ...(isAdmin ? { stripeAccount, venueSlug: slug, venues: billable.map(k => ({ slug: k, name: k === ADMIN_VENUE ? 'local / assets (own artists)' : (cfg[k]?.name || k) })), rates: data.rates, plans: data.plans, assignments: data.assignments, artists: data.artists, labels: data.labels, assignment: a } : {}),
       });
     }
 
