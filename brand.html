@@ -139,6 +139,8 @@
         /* ── Brand kit ── */
         .bk-owners { display:flex; flex-direction:column; gap:16px; }
         .bk-owner { background:var(--la-surface); border:1px solid var(--la-line); border-radius:16px; overflow:hidden; }
+        .bk-owner.bk-sub { margin-left:28px; border-left:2px solid var(--la-accent); }
+        @media (max-width:640px) { .bk-owner.bk-sub { margin-left:12px; } }
         .bk-owner-head { display:flex; align-items:center; gap:14px; padding:16px 18px; }
         .bk-avatar { width:44px; height:44px; border-radius:12px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; color:var(--la-sub); background:var(--la-chip); border:1px solid var(--la-line); overflow:hidden; }
         .bk-avatar img { width:100%; height:100%; object-fit:contain; padding:6px; }
@@ -421,7 +423,7 @@
         ];
         var IMG_EXT = /\.(png|jpe?g|svg|webp|gif)$/i;
         var FONT_EXT = /\.(otf|ttf|woff2?)$/i;
-        var _files = [], _owners = [], _uploading = false, _orgType = 'venue', _orgName = '', _ownerPhotos = {};
+        var _files = [], _owners = [], _uploading = false, _orgType = 'venue', _orgName = '', _ownerPhotos = {}, _labelArtists = {};
         var ORG_LABELS = { venue: 'Venue', label: 'Record label', management: 'Management' };
 
         function slugify(name) {
@@ -827,6 +829,7 @@
                 _orgType = res[0].orgType || 'venue';
                 _orgName = res[0].orgName || '';
                 _ownerPhotos = res[0].ownerPhotos || {};
+                _labelArtists = res[0].labelArtists || {};
                 _wm = res[0].watermark || { enabled: true, logo: 'auto', position: 'bl', size: 'm', opacity: 0.9 };
                 // One-time move to the current layout: logo bottom left, name bottom right
                 // (settings saved before it had the logo bottom right and the text bottom left)
@@ -842,7 +845,7 @@
                 var names = {};
                 assets.forEach(function(a) { var n = artistFromAsset(a); if (n) names['artist-' + slugify(n)] = n.toUpperCase(); });
                 _files.forEach(function(f) {
-                    if (f.owner !== 'venue' && !names[f.owner]) names[f.owner] = f.owner.replace(/^(artist|venue)-/, '').replace(/-/g, ' ').toUpperCase();
+                    if (f.owner !== 'venue' && !names[f.owner]) names[f.owner] = f.owner.replace(/^(artist|venue|label)-/, '').replace(/-/g, ' ').toUpperCase();
                 });
                 var saved = res[0].ownerNames || {};
                 Object.keys(saved).forEach(function(k) { names[k] = saved[k]; });
@@ -851,8 +854,19 @@
                         .sort(function(a, b) { return names[a].localeCompare(names[b]); })
                         .map(function(k) { return { key: k, name: names[k], kind: kind, group: label }; });
                 };
+                // Each artist is followed by the record labels linked to it
+                var labels = group('label-', 'Record label brand kit', 'Record labels');
+                var artists = [];
+                group('artist-', 'Artist brand kit', 'Artists').forEach(function(a) {
+                    artists.push(a);
+                    labels.filter(function(l) { return _labelArtists[l.key] === a.key; }).forEach(function(l) {
+                        artists.push({ key: l.key, name: l.name, kind: 'Record label · ' + a.name, group: 'Artists', label: true, parent: a.key });
+                    });
+                });
+                var loose = labels.filter(function(l) { return !artists.some(function(x) { return x.key === l.key; }); })
+                    .map(function(l) { l.label = true; return l; });
                 _owners = [{ key: 'venue', name: _orgName || venueName(), kind: ORG_LABELS[_orgType] + ' brand kit', org: true, group: ORG_LABELS[_orgType] }]
-                    .concat(group('venue-', 'Venue brand kit', 'Venues'), group('artist-', 'Artist brand kit', 'Artists'));
+                    .concat(group('venue-', 'Venue brand kit', 'Venues'), artists, loose);
                 err.classList.add('hidden');
                 render();
                 renderWatermark();
@@ -884,14 +898,15 @@
                     CATS.forEach(function(c) { files.forEach(function(f) { if (f.category === c.key) ordered.push(f); }); });
                     body = '<div class="bk-files">' + ordered.map(fileCard).join('') + '</div>';
                 }
-                return heading + '<section class="bk-owner">' +
+                return heading + '<section class="bk-owner' + (o.parent ? ' bk-sub' : '') + '">' +
                     '<div class="bk-owner-head"><div class="bk-avatar">' + avatar + '</div>' +
                     '<div class="min-w-0"><p class="bk-owner-name">' + esc(o.name) + '</p><p class="bk-owner-meta">' + esc(o.kind) + ' · ' + files.length + ' file' + (files.length !== 1 ? 's' : '') +
                         ' · <button type="button" class="bk-org-edit" ' + (o.org ? 'data-org' : 'data-edit-owner="' + esc(o.key) + '"') + '>Edit</button></p></div>' +
                     '<div class="bk-owner-actions">' +
                         (files.length ? '<button type="button" class="cam-btn ghost" data-zip="' + esc(o.key) + '"><span>Download all</span></button>' : '') +
+                        (o.key.indexOf('artist-') === 0 ? '<button type="button" class="cam-btn ghost" data-up="__newLabel:' + esc(o.key) + '"><span>Add record label</span></button>' : '') +
                         '<button type="button" class="cam-btn ghost" data-up="' + esc(o.key) + '"><span>Upload</span></button>' +
-                        (o.key.indexOf('venue-') === 0 ? '<button type="button" class="cam-btn ghost bk-del-owner" data-del-owner="' + esc(o.key) + '" title="Delete venue"><iconify-icon icon="solar:trash-bin-minimalistic-linear"></iconify-icon></button>' : '') +
+                        (o.key.indexOf('venue-') === 0 || o.label ? '<button type="button" class="cam-btn ghost bk-del-owner" data-del-owner="' + esc(o.key) + '" title="Delete"><iconify-icon icon="solar:trash-bin-minimalistic-linear"></iconify-icon></button>' : '') +
                     '</div></div>' +
                     '<div class="bk-body">' + body + '</div></section>';
             }).join('');
@@ -1080,14 +1095,21 @@
         }
 
         function openUpload(ownerKey) {
+            // "__newLabel:artist-x" opens it for a new record label under that artist
+            var labelFor = /^__newLabel:/.test(ownerKey || '') ? ownerKey.slice(11) : '';
+            if (labelFor) ownerKey = '__newLabel';
+            var artistOpts = _owners.filter(function(o) { return o.key.indexOf('artist-') === 0; })
+                .map(function(o) { return '<option value="' + esc(o.key) + '"' + (o.key === labelFor ? ' selected' : '') + '>' + esc(o.name) + '</option>'; }).join('');
             var opts = _owners.map(function(o) { return '<option value="' + esc(o.key) + '"' + (o.key === ownerKey ? ' selected' : '') + '>' + esc(o.name) + (o.key === 'venue' ? ' (' + ORG_LABELS[_orgType].toLowerCase() + ')' : '') + '</option>'; }).join('') +
                 '<option value="__newVenue"' + (ownerKey === '__newVenue' ? ' selected' : '') + '>+ New venue…</option>' +
-                '<option value="__newArtist"' + (ownerKey === '__newArtist' ? ' selected' : '') + '>+ New artist…</option>';
+                '<option value="__newArtist"' + (ownerKey === '__newArtist' ? ' selected' : '') + '>+ New artist…</option>' +
+                (artistOpts ? '<option value="__newLabel"' + (ownerKey === '__newLabel' ? ' selected' : '') + '>+ New record label…</option>' : '');
             openCamDialog('Upload brand files',
                 '<form id="bk-form" class="cam-form">' +
                 '<div class="bk-row2"><label>For<select name="owner">' + opts + '</select></label>' +
                 '<label>Type<select name="category">' + CATS.map(function(c) { return '<option value="' + c.key + '">' + c.label + '</option>'; }).join('') + '</select></label></div>' +
                 '<label id="bk-new-wrap" class="hidden"><span id="bk-new-label">Name</span><input name="newName" maxlength="60"></label>' +
+                '<label id="bk-label-artist-wrap" class="hidden">Artist<select name="labelArtist">' + artistOpts + '</select><small>The record label\'s brand kit is kept under this artist.</small></label>' +
                 '<div id="bk-drop" class="bk-drop" tabindex="0">Drop files here or <b>browse</b>' +
                     '<small>Logos, covers, artwork, photos, PDFs, AI/EPS, fonts or ZIP · up to 200 MB each</small></div>' +
                 '<input id="bk-input" type="file" multiple class="hidden" accept=".png,.jpg,.jpeg,.svg,.webp,.gif,.pdf,.ai,.eps,.psd,.zip,.ttf,.otf,.woff,.woff2,.txt">' +
@@ -1116,10 +1138,11 @@
                 }
             };
             var syncNew = function() {
-                var v = form.owner.value, isNew = v === '__newVenue' || v === '__newArtist';
+                var v = form.owner.value, isNew = v === '__newVenue' || v === '__newArtist' || v === '__newLabel';
                 document.getElementById('bk-new-wrap').classList.toggle('hidden', !isNew);
-                document.getElementById('bk-new-label').textContent = v === '__newVenue' ? 'Venue name' : 'Artist name';
-                form.newName.placeholder = v === '__newVenue' ? 'e.g. Café 1001' : 'e.g. DJ TENNIS';
+                document.getElementById('bk-label-artist-wrap').classList.toggle('hidden', v !== '__newLabel');
+                document.getElementById('bk-new-label').textContent = v === '__newVenue' ? 'Venue name' : v === '__newLabel' ? 'Record label name' : 'Artist name';
+                form.newName.placeholder = v === '__newVenue' ? 'e.g. Café 1001' : v === '__newLabel' ? 'e.g. Life and Death' : 'e.g. DJ TENNIS';
                 if (isNew) setTimeout(function() { form.newName.focus(); }, 0);
             };
             form.owner.addEventListener('change', syncNew);
@@ -1134,12 +1157,12 @@
                 e.preventDefault();
                 var errEl = document.getElementById('bk-form-error'); errEl.textContent = '';
                 var owner = form.owner.value;
-                if (owner === '__newVenue' || owner === '__newArtist') {
-                    var nm = form.newName.value.trim(), isVenue = owner === '__newVenue';
-                    if (!slugify(nm)) { errEl.textContent = 'Enter the ' + (isVenue ? 'venue' : 'artist') + ' name'; return; }
-                    owner = (isVenue ? 'venue-' : 'artist-') + slugify(nm);
+                if (owner === '__newVenue' || owner === '__newArtist' || owner === '__newLabel') {
+                    var nm = form.newName.value.trim(), kindNew = owner === '__newVenue' ? 'venue' : owner === '__newLabel' ? 'label' : 'artist';
+                    if (!slugify(nm)) { errEl.textContent = 'Enter the ' + (kindNew === 'label' ? 'record label' : kindNew) + ' name'; return; }
+                    owner = kindNew + '-' + slugify(nm);
                     // Save the name as typed, so the brand kit shows "Café 1001" rather than "CAFE 1001"
-                    await laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setOwnerName', owner: owner, name: nm }) }).catch(function() {});
+                    await laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setOwnerName', owner: owner, name: nm, artist: kindNew === 'label' ? form.labelArtist.value : undefined }) }).catch(function() {});
                 }
                 var slug = session().venueSlug;
                 if (!slug) { errEl.textContent = 'Sign in again to upload'; return; }
@@ -1213,13 +1236,13 @@
         function openOwnerEdit(key) {
             var o = _owners.filter(function(x) { return x.key === key; })[0];
             if (!o) return;
-            var isVenue = key.indexOf('venue-') === 0;
-            openCamDialog(isVenue ? 'Edit venue' : 'Edit artist',
+            var isVenue = key.indexOf('venue-') === 0, isLabel = key.indexOf('label-') === 0;
+            openCamDialog(isVenue ? 'Edit venue' : isLabel ? 'Edit record label' : 'Edit artist',
                 '<form id="bk-owner-form" class="cam-form">' +
                 '<label>Name<input name="ownerName" maxlength="60" required value="' + esc(o.name) + '"><small>Shown on the brand kit, exactly as typed.</small></label>' +
                 '<p id="bk-owner-error" class="cam-form-error"></p>' +
                 '<div class="cam-form-actions">' +
-                    (isVenue ? '<button type="button" class="cam-btn ghost bk-owner-del" style="margin-right:auto">Delete venue</button>' : '') +
+                    (isVenue || isLabel ? '<button type="button" class="cam-btn ghost bk-owner-del" style="margin-right:auto">Delete ' + (isLabel ? 'record label' : 'venue') + '</button>' : '') +
                     '<button type="button" class="cam-btn ghost" onclick="closeCamDialog()">Cancel</button><button type="submit" class="cam-btn primary">Save</button></div>' +
                 '</form>');
             var form = document.getElementById('bk-owner-form');
@@ -1280,16 +1303,17 @@
         async function deleteOwner(key, btn) {
             var o = _owners.filter(function(x) { return x.key === key; })[0];
             var n = _files.filter(function(f) { return f.owner === key; }).length;
-            if (!(await laConfirm({ title: 'Delete ' + (o ? o.name : 'this venue') + '?',
-                message: 'The venue and ' + (n ? 'its ' + n + ' file' + (n !== 1 ? 's' : '') : 'its brand kit') + ' will be removed, and links to them will stop working. Sessions keep the venue name as text. This can\'t be undone.',
-                confirmText: 'Delete venue', danger: true }))) return;
+            var what = key.indexOf('label-') === 0 ? 'record label' : 'venue';
+            if (!(await laConfirm({ title: 'Delete ' + (o ? o.name : 'this ' + what) + '?',
+                message: 'The ' + what + ' and ' + (n ? 'its ' + n + ' file' + (n !== 1 ? 's' : '') : 'its brand kit') + ' will be removed, and links to them will stop working.' + (what === 'venue' ? ' Sessions keep the venue name as text.' : '') + ' This can\'t be undone.',
+                confirmText: 'Delete ' + what, danger: true }))) return;
             btn.disabled = true;
             try {
                 var r = await laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'deleteOwner', owner: key }) });
                 var d = await r.json(); if (!r.ok) throw new Error(d.error || r.status);
                 await loadBrand();
-                laToast('Venue deleted');
-            } catch (e) { btn.disabled = false; alert('Could not delete the venue: ' + e.message); }
+                laToast(what === 'venue' ? 'Venue deleted' : 'Record label deleted');
+            } catch (e) { btn.disabled = false; alert('Could not delete the ' + what + ': ' + e.message); }
         }
 
         async function removeFile(url, btn) {

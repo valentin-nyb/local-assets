@@ -6,14 +6,14 @@ import { cleanWatermark, readWatermark, watermarkKey } from './_watermark.js';
 
 // Brand kit: logos, guidelines, fonts and other brand files for a venue and its artists.
 // Files live in Vercel Blob under brand/<venueSlug>/<owner>/<category>/<file>, where
-// <owner> is "venue" or "artist-<slug>". The browser uploads straight to Blob
+// <owner> is "venue", "venue-<slug>", "artist-<slug>" or "label-<slug>" (a record label linked to an artist). The browser uploads straight to Blob
 // (large PDFs and font packs exceed the 4.5 MB function body limit); this route
 // only hands out upload tokens for the signed-in venue's own folder.
 
 const CATEGORIES = ['logos', 'covers', 'artwork', 'photos', 'guidelines', 'fonts', 'other'];
 const MAX_BYTES  = 200 * 1024 * 1024;
 // "venue" is the account itself; artist-<slug> and venue-<slug> are artists and venues it works with
-const OWNER      = /^(venue|(?:artist|venue)-[a-z0-9]+(?:-[a-z0-9]+)*)$/;
+const OWNER      = /^(venue|(?:artist|venue|label)-[a-z0-9]+(?:-[a-z0-9]+)*)$/;
 const ALLOWED_TYPES = [
   'image/png', 'image/jpeg', 'image/svg+xml', 'image/webp', 'image/gif',
   'image/vnd.adobe.photoshop', 'application/pdf', 'application/zip', 'application/x-zip-compressed',
@@ -63,11 +63,11 @@ export default async function handler(req, res) {
         cursor = page.hasMore ? page.cursor : undefined;
       } while (cursor);
       files.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
-      const [orgType, orgName, ownerNames, pinned, watermark] = await withRedis(r => Promise.all([
+      const [orgType, orgName, ownerNames, pinned, watermark, labelArtists] = await withRedis(r => Promise.all([
         r.get(`brand_org_type:${slug}`), r.get(`brand_org_name:${slug}`),
         r.hGetAll(`brand_owner_names:${slug}`), r.hGetAll(`brand_owner_photo:${slug}`),
-        readWatermark(r, slug),
-      ])).catch(() => [null, null, {}, {}, cleanWatermark()]);
+        readWatermark(r, slug), r.hGetAll(`brand_label_artist:${slug}`),
+      ])).catch(() => [null, null, {}, {}, cleanWatermark(), {}]);
       // Profile photo per owner: the one picked with "Use as artist photo", else the newest photo
       const ownerPhotos = {};
       for (const f of files) {
@@ -76,7 +76,7 @@ export default async function handler(req, res) {
       for (const [owner, url] of Object.entries(pinned || {})) {
         if (files.some(f => f.url === url)) ownerPhotos[owner] = url;
       }
-      return res.status(200).json({ files, orgType: ORG_TYPES.includes(orgType) ? orgType : 'venue', orgName: orgName || '', ownerNames: ownerNames || {}, ownerPhotos, watermark });
+      return res.status(200).json({ files, orgType: ORG_TYPES.includes(orgType) ? orgType : 'venue', orgName: orgName || '', ownerNames: ownerNames || {}, ownerPhotos, watermark, labelArtists: labelArtists || {} });
     }
 
     if (req.method !== 'POST') return res.status(405).end();
@@ -103,7 +103,12 @@ export default async function handler(req, res) {
       const owner = String(body.owner || '');
       const name  = String(body.name ?? '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 60);
       if (owner === 'venue' || !OWNER.test(owner) || !name) return res.status(400).json({ error: 'Invalid name' });
-      await withRedis(r => r.hSet(`brand_owner_names:${slug}`, owner, name));
+      // A record label's brand kit sits under the artist it belongs to
+      const artist = String(body.artist || '');
+      await withRedis(r => Promise.all([
+        r.hSet(`brand_owner_names:${slug}`, owner, name),
+        owner.startsWith('label-') && /^artist-[a-z0-9-]+$/.test(artist) ? r.hSet(`brand_label_artist:${slug}`, owner, artist) : null,
+      ]));
       return res.status(200).json({ owner, name });
     }
 
@@ -118,7 +123,7 @@ export default async function handler(req, res) {
         if (page.blobs.length) { await del(page.blobs.map(b => b.url)); removed += page.blobs.length; }
         cursor = page.hasMore ? page.cursor : undefined;
       } while (cursor);
-      await withRedis(r => Promise.all([r.hDel(`brand_owner_names:${slug}`, owner), r.hDel(`brand_owner_photo:${slug}`, owner)]));
+      await withRedis(r => Promise.all([r.hDel(`brand_owner_names:${slug}`, owner), r.hDel(`brand_owner_photo:${slug}`, owner), r.hDel(`brand_label_artist:${slug}`, owner)]));
       return res.status(200).json({ ok: true, removed });
     }
 
