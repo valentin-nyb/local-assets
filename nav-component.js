@@ -39,6 +39,8 @@ document.addEventListener("DOMContentLoaded", () => {
     })();
     const _isClient = _navRole === 'client';
 
+    // The local / assets admin account has no Brand Kit (that's for clients)
+    var _isAdminAcct = (function() { try { var a = JSON.parse(localStorage.getItem('la_admin') || '{}'); return a.venueSlug === 'local-assets-admin' || /^local\s*[\/-]?\s*assets\b/i.test(String(a.venue || '').trim()); } catch (_) { return false; } })();
     sidebar.innerHTML = `
         <div class="h-20 flex items-center px-8 border-b border-[#27272a] justify-between shrink-0">
             <a href="/dashboard" class="h-5 w-24 flex">
@@ -55,7 +57,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <a href="/camera" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('/camera')}">
                 Camera Control
             </a>
-            <a href="/brand" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('/brand')}">
+            <a href="/brand" style="${_isAdminAcct ? 'display:none' : ''}" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('/brand')}">
                 Brand Kit
             </a>
             <a href="/assets" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('/assets')}">

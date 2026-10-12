@@ -2,6 +2,7 @@
 <!DOCTYPE html>
 <html lang="en" class="dark scroll-smooth">
 <head>
+    <script>try { var _la = JSON.parse(localStorage.getItem('la_admin') || '{}'); if (_la.venueSlug === 'local-assets-admin' || /^local\s*[\/-]?\s*assets\b/i.test(String(_la.venue || '').trim())) location.replace('/dashboard'); } catch (_) {}</script>
     <script>
       (function(){
         var s = localStorage.getItem('la_admin');
@@ -879,8 +880,19 @@
                 });
                 var loose = labels.filter(function(l) { return !artists.some(function(x) { return x.key === l.key; }); })
                     .map(function(l) { l.label = true; return l; });
-                _owners = [{ key: 'venue', name: _orgName || venueName(), kind: ORG_LABELS[_orgType] + ' brand kit', org: true, group: ORG_LABELS[_orgType] }]
-                    .concat(group('venue-', 'Venue brand kit', 'Venues'), artists, loose);
+                var org = { key: 'venue', name: _orgName || venueName(), kind: ORG_LABELS[_orgType] + ' brand kit', org: true, group: ORG_LABELS[_orgType] };
+                if (_orgType === 'label' && artists.length) {
+                    // The account's own record label sits under its artist (the linked one, else the first)
+                    var parentKey = _labelArtists.venue && artists.some(function(a) { return a.key === _labelArtists.venue; }) ? _labelArtists.venue : artists.filter(function(a) { return !a.parent; })[0].key;
+                    var parent = artists.filter(function(a) { return a.key === parentKey; })[0];
+                    org.group = 'Artists'; org.parent = parentKey; org.label = true; org.kind = 'Record label · ' + parent.name;
+                    var at = artists.indexOf(parent) + 1;
+                    while (at < artists.length && artists[at].parent === parentKey) at++;
+                    artists.splice(at, 0, org);
+                    _owners = group('venue-', 'Venue brand kit', 'Venues').concat(artists, loose);
+                } else {
+                    _owners = [org].concat(group('venue-', 'Venue brand kit', 'Venues'), artists, loose);
+                }
                 err.classList.add('hidden');
                 render();
                 renderWatermark();
