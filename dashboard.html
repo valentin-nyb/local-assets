@@ -78,6 +78,10 @@
         div.w-8.h-8:empty, div.w-10.h-10:empty, div.w-12.h-12:empty { display:none; }
         .mm-share { height:30px; padding:0 14px; border-radius:999px; border:0; background:var(--la-accent); color:var(--la-accent-ink, #000); font:600 12px Inter,ui-sans-serif,system-ui,sans-serif; cursor:pointer; margin-right:4px; }
         .mm-share:disabled { opacity:.6; cursor:default; }
+        .mm-share.pulse { box-shadow:0 0 0 0 var(--la-accent); animation:mmPulse 1.2s ease-out 3; }
+        @keyframes mmPulse { to { box-shadow:0 0 0 10px transparent; } }
+        .clip-share { margin-top:2px; height:20px; padding:0 8px; border-radius:999px; border:1px solid var(--la-line); background:transparent; color:var(--la-text); font:600 9px Inter,ui-sans-serif,system-ui,sans-serif; letter-spacing:.04em; cursor:pointer; }
+        @media (hover:hover) { .clip-share:hover { border-color:var(--la-accent); color:var(--la-accent); } }
         .wm-apply { height:28px; padding:0 12px; border-radius:999px; border:1px solid var(--la-line); background:transparent; color:var(--la-text); font:500 11px Inter,ui-sans-serif,system-ui,sans-serif; cursor:pointer; white-space:nowrap; }
         .wm-apply:disabled { opacity:.6; cursor:default; }
         .wm-restore { height:28px; padding:0 12px; border-radius:999px; border:1px solid var(--la-line); background:transparent; color:var(--la-sub); font:500 11px Inter,ui-sans-serif,system-ui,sans-serif; cursor:pointer; white-space:nowrap; }
@@ -291,6 +295,12 @@
         function openClipModal(el) {
             var pids = el.dataset.pids.split(',').filter(Boolean);
             openMediaModal(pids.map(function(pid) { return { kind: 'video', pid: pid }; }), el.dataset.idx, el.dataset.title || 'Clip');
+        }
+        function shareClip(el) {
+            openClipModal(el);
+            // Phones: the clip is fetched now so the next tap on Share opens the share sheet. Computers: QR code straight away.
+            if (!canShareFiles()) setTimeout(function() { shareFromComputer(_mediaModal.items[_mediaModal.idx]); }, 50);
+            else { var b = document.getElementById('media-share'); if (b) b.classList.add('pulse'); }
         }
         function openThumbModal(el) {
             var urls = JSON.parse(el.dataset.urls || '[]');
@@ -1214,6 +1224,8 @@
 
                     html += '</div>';
                     html += '<span class="font-mono uppercase" style="font-size:8px;color:' + accent + '">' + num + '</span>';
+                    // Share each clip to Instagram Story, TikTok… (opens the clip, then the share sheet or QR code)
+                    if (pid) html += '<button type="button" class="clip-share" data-pids="' + pidsAttr + '" data-idx="' + readyIdx + '" data-title="' + titleAttr + '" onclick="event.stopPropagation(); shareClip(this)">Share</button>';
                     html += '</div>';
                 }
 
