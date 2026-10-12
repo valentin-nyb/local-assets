@@ -255,7 +255,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Accounts listed in several venues (VENUES_CONFIG) can switch between them.
     function _venueSwitcherHtml(session) {
-        var venues = Array.isArray(session.venues) ? session.venues : [];
+        var venues = (Array.isArray(session.venues) ? session.venues.slice() : [])
+            // local / assets (the admin account) first, then the clients A–Z
+            .sort(function(a, b) {
+                var aa = /^local\s*[\/-]?\s*assets\b/i.test(String(a.name || '').trim()) || a.slug === 'local-assets-admin';
+                var bb = /^local\s*[\/-]?\s*assets\b/i.test(String(b.name || '').trim()) || b.slug === 'local-assets-admin';
+                return (bb - aa) || String(a.name || '').localeCompare(String(b.name || ''));
+            });
         if (venues.length < 2) return '';
         var html = '<div style="padding:10px 16px;border-bottom:1px solid #27272a;">' +
             '<div style="font-size:8px;text-transform:uppercase;letter-spacing:.12em;color:#52525b;margin-bottom:6px;">Switch venue</div>';
