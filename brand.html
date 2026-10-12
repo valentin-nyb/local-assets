@@ -451,7 +451,7 @@
         var WM_POS = [['bl', 'Bottom left'], ['br', 'Bottom right'], ['tl', 'Top left'], ['tr', 'Top right']];
         var WM_SIZE = [['s', 'Small'], ['m', 'Medium'], ['l', 'Large']];
         // Largest logo box per size, in px on a 1080×1920 clip (same as the clip worker)
-        var WM_BOX = { s: [120, 80], m: [160, 110], l: [220, 150] };
+        var WM_BOX = { s: [180, 120], m: [260, 180], l: [380, 270] };
         var WM_MARGIN_X = 60;   // side margin in px on a 1080-wide clip, same as the clip worker
         var WM_FRAMES = [['vertical', 'Vertical'], ['horizontal', 'Horizontal']];
         var _wmFrame = 'vertical';
@@ -461,7 +461,7 @@
         var WM_TEXT_COLOR = [['white', 'White'], ['black', 'Black']];
         // The text has its own size; until one is chosen it follows the logo's
         function wmTextSize() { return (_wm.text && WM_TEXT_PX[_wm.text.size]) ? _wm.text.size : (_wm.size || 'm'); }
-        var WM_TEXT_PX = { s: 36, m: 46, l: 60 };
+        var WM_TEXT_PX = { s: 48, m: 66, l: 92 };
         // The clip worker draws watermark text from these font files (not WOFF2)
         var WM_TEXT_FONT = /\.(ttf|otf|woff)$/i;
         function wmLogos() { return _files.filter(function(f) { return f.category === 'logos' && /\.(png|svg|webp|jpe?g)$/i.test(f.name); }); }

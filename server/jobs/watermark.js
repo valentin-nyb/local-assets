@@ -8,8 +8,8 @@ import opentype from 'opentype.js';
 // The logo and the text are each turned into a PNG once per job, then laid over every clip by ffmpeg.
 
 // Largest logo box per size [width, height] in px on a 1080-wide frame; the logo keeps its proportions
-const BOX = { s: [120, 80], m: [160, 110], l: [220, 150] };
-const TEXT_PX = { s: 36, m: 46, l: 60 };     // text size in px
+const BOX = { s: [180, 120], m: [260, 180], l: [380, 270] };
+const TEXT_PX = { s: 48, m: 66, l: 92 };     // text size in px
 const TEXT_MAX_WIDTH = 760;
 // Side margin, close to the edge (same as the Brand Kit preview)
 const MARGIN_X = 60;
