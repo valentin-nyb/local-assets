@@ -265,6 +265,31 @@ document.addEventListener("DOMContentLoaded", () => {
         return html + '</div>';
     }
 
+    // Keeps the sign-in fresh while a page is open (tokens last an hour); an expired one goes to sign-in
+    var _refreshing = false;
+    async function _refreshToken() {
+        var session = _getAdminSession();
+        if (!session || !session.webToken || _refreshing) return;
+        _refreshing = true;
+        try {
+            var res = await fetch('/api/switch-venue', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.webToken },
+                body: JSON.stringify({ refresh: true }),
+            });
+            if (res.status === 401) {
+                window.location.replace('/login.html?next=' + encodeURIComponent(location.pathname + location.search));
+                return;
+            }
+            var data = await res.json().catch(function() { return {}; });
+            var cur = _getAdminSession();
+            if (res.ok && data.webToken && cur) { cur.webToken = data.webToken; localStorage.setItem('la_admin', JSON.stringify(cur)); }
+        } catch (e) {} finally { _refreshing = false; }
+    }
+    setInterval(_refreshToken, 5 * 60 * 1000);
+    document.addEventListener('visibilitychange', function() { if (document.visibilityState === 'visible') _refreshToken(); });
+    _refreshToken();
+
     window.LA_SWITCH_VENUE = async function(slug) {
         var session = _getAdminSession();
         if (!session) { window.LA_ADMIN_LOGOUT(); return; }

@@ -74,12 +74,12 @@ export function getMuxAuthForVenue(venue) {
   return 'Basic ' + Buffer.from(`${id}:${secret}`).toString('base64');
 }
 
-// ── Signed web-session token (HMAC-SHA256, 10-min TTL) ────────────────────────
+// ── Signed web-session token (HMAC-SHA256, 1-hour TTL, renewed by open pages) ────────────────────────
 
 const getSecret = () => process.env.LOCAL_ASSETS_API_KEY || 'dev-secret-change-me';
 
 export function signWebToken(email, venueSlug) {
-  const payload = { email, venueSlug, exp: Date.now() + 600_000 };
+  const payload = { email, venueSlug, exp: Date.now() + 3_600_000 };
   const data    = Buffer.from(JSON.stringify(payload)).toString('base64url');
   const sig     = crypto.createHmac('sha256', getSecret()).update(data).digest('base64url');
   return `${data}.${sig}`;

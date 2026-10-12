@@ -1,6 +1,7 @@
 import { getWebSessionAuth, findVenuesByEmail, signWebToken, venueChoices } from './_venues.js';
 
 // Switch the signed-in user to another venue they are listed in (VENUES_CONFIG).
+// { refresh: true } renews the token for the current venue.
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', 'https://local-assets.com');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
@@ -14,6 +15,8 @@ export default async function handler(req, res) {
 
   let body = req.body;
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch (_) {} }
+  // Keeps an open page signed in: a fresh token for the same venue
+  if (body?.refresh) return res.status(200).json({ webToken: signWebToken(session.email, session.venueSlug) });
   const slug = String(body?.venueSlug || '');
 
   const venue = findVenuesByEmail(session.email).find(v => v.slug === slug);

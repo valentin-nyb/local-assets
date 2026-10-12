@@ -3,7 +3,7 @@ import { put } from '@vercel/blob';
 import { createClient } from 'redis';
 import { getWebSessionAuth } from './_venues.js';
 import { resolveWatermark } from './_watermark.js';
-import { renderWatermarkPng } from './_watermark-render.js';
+import { renderWatermarkPng, VERTICAL, HORIZONTAL } from './_watermark-render.js';
 
 // Puts the Brand Kit watermark on a session's existing vertical clips.
 // Mux makes a watermarked copy of each clip (same tag, so it takes the clip's place). Once a copy is
@@ -191,9 +191,22 @@ export default async function handler(req, res) {
 
     const wm = await resolveWatermark(redis, slug, artist);
     if (!wm) return res.status(400).json({ error: 'The watermark is off, or there is no logo or text to apply. Set it up in Brand Kit.' });
-    const png = await renderWatermarkPng(wm);
-    if (!png) return res.status(400).json({ error: 'The watermark could not be drawn. Check the logo and font in Brand Kit.' });
-    const blob = await put(`watermarks/${slug}/${crypto.randomBytes(6).toString('hex')}.png`, png, { access: 'public', contentType: 'image/png', addRandomSuffix: false });
+    // One overlay per clip shape and size, drawn at the clip's own resolution so it stays sharp
+    const overlays = new Map();
+    const overlayFor = async (w, h) => {
+      const L = w > h ? HORIZONTAL : VERTICAL;
+      const width = Math.max(L.W, Math.round(w) || L.W);
+      const key = `${L.W}x${L.H}@${width}`;
+      if (!overlays.has(key)) {
+        overlays.set(key, (async () => {
+          const png = await renderWatermarkPng(wm, L, width);
+          if (!png) throw new Error('The watermark could not be drawn. Check the logo and font in Brand Kit.');
+          return (await put(`watermarks/${slug}/${crypto.randomBytes(6).toString('hex')}.png`, png, { access: 'public', contentType: 'image/png', addRandomSuffix: false })).url;
+        })());
+      }
+      return overlays.get(key);
+    };
+    const videoSize = a => { const t = (a.tracks || []).find(x => x.type === 'video'); return t ? [Number(t.max_width) || 0, Number(t.max_height) || 0] : [0, 0]; };
 
     // Clips already being replaced are skipped
     const pendingOld = new Set(Object.values(await redis.hGetAll(swapsKey(slug))).map(v => parseSwap(v).old));
@@ -209,12 +222,15 @@ export default async function handler(req, res) {
         const rawId = raws[id] || id;
         // Only this session's vertical clips, from this venue's own Cloud Storage
         if (!pt.toUpperCase().startsWith(artist + ' // SOCIAL')) { errors.push(`One clip isn't a vertical clip of ${artist}`); continue; }
+        const src = rawId === id ? clip : await muxReq(auth, `/video/v1/assets/${encodeURIComponent(rawId)}`).catch(() => clip);
+        const [vw, vh] = videoSize(src);
+        const overlayUrl = await overlayFor(vw || 1080, vh || 1920);
         const copy = await muxReq(auth, '/video/v1/assets', {
           method: 'POST',
           body: JSON.stringify({
             input: [
               { url: `mux://assets/${rawId}` },
-              { url: blob.url, overlay_settings: { vertical_align: 'top', horizontal_align: 'left', width: '100%', opacity: '100%' } },
+              { url: overlayUrl, overlay_settings: { vertical_align: 'top', horizontal_align: 'left', width: '100%', opacity: '100%' } },
             ],
             playback_policy: ['public'],
             passthrough: pt,

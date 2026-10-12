@@ -10,6 +10,7 @@ const TEXT_PX = { s: 36, m: 46, l: 60 };
 const TEXT_MAX_WIDTH = 760;
 const STACK_GAP = 24;
 export const VERTICAL = { W: 1080, H: 1920, mx: 60, top: 140, bottom: 120 };
+export const HORIZONTAL = { W: 1920, H: 1080, mx: 60, top: 52, bottom: 52 };
 
 async function download(url) {
   const r = await fetch(url, { signal: AbortSignal.timeout(20000) });
@@ -17,30 +18,33 @@ async function download(url) {
   return Buffer.from(await r.arrayBuffer());
 }
 
-async function logoLayer(wm) {
+async function logoLayer(wm, s = 1) {
   const box = BOX[wm.size] || BOX.m;
-  const { data, info } = await sharp(await download(wm.url), { density: 300 })
-    .resize({ width: box[0], height: box[1], fit: 'inside', withoutEnlargement: false })
+  // SVG and PDF logos are drawn from their vectors at a high density, so they stay sharp at any size
+  const src = await download(wm.url);
+  const vector = /\.(svg|pdf)(\?|$)/i.test(wm.url) || /^\s*(<\?xml|<svg)/.test(src.subarray(0, 200).toString());
+  const { data, info } = await sharp(src, { density: vector ? Math.min(2400, Math.round(300 * s * 2)) : 72 })
+    .resize({ width: Math.round(box[0] * s), height: Math.round(box[1] * s), fit: 'inside', withoutEnlargement: false, kernel: 'lanczos3' })
     .png().toBuffer({ resolveWithObject: true });
   return { input: data, w: info.width, h: info.height };
 }
 
-async function textLayer(text, size, maxWidth) {
+async function textLayer(text, size, maxWidth, s = 1) {
   const font = opentype.parse(new Uint8Array(await download(text.font)).buffer);
-  let px = TEXT_PX[size] || TEXT_PX.m;
+  let px = (TEXT_PX[size] || TEXT_PX.m) * s;
   let bb = font.getPath(text.value, 0, 0, px).getBoundingBox();
   if (bb.x2 - bb.x1 > maxWidth) {
     px = px * maxWidth / (bb.x2 - bb.x1);
     bb = font.getPath(text.value, 0, 0, px).getBoundingBox();
   }
   if (!(bb.x2 > bb.x1)) throw new Error('Text has no visible characters in this font');
-  const pad = 12;
+  const pad = Math.round(12 * s);
   const w = Math.ceil(bb.x2 - bb.x1) + pad * 2, h = Math.ceil(bb.y2 - bb.y1) + pad * 2;
   const d = font.getPath(text.value, pad - bb.x1, pad - bb.y1, px).toPathData(2);
   const black = text.color === 'black';
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">` +
-    `<filter id="s" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="4"/></filter>` +
-    `<path d="${d}" fill="${black ? '#fff' : '#000'}" fill-opacity="${black ? '.25' : '.35'}" filter="url(#s)" transform="translate(0 2)"/>` +
+    `<filter id="s" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="${4 * s}"/></filter>` +
+    `<path d="${d}" fill="${black ? '#fff' : '#000'}" fill-opacity="${black ? '.25' : '.35'}" filter="url(#s)" transform="translate(0 ${2 * s})"/>` +
     `<path d="${d}" fill="${black ? '#000' : '#fff'}"/></svg>`;
   return { input: await sharp(Buffer.from(svg)).png().toBuffer(), w, h };
 }
@@ -55,11 +59,15 @@ async function withOpacity(layer, opacity) {
   return { ...layer, input };
 }
 
-export async function renderWatermarkPng(wm, L = VERTICAL) {
+// width: the clip's real width in px. The layout is designed at L.W and scaled up, so on a 4K clip
+// the watermark is drawn at 4K instead of being stretched.
+export async function renderWatermarkPng(wm, L = VERTICAL, width = L.W) {
+  const s = Math.max(1, width / L.W);
+  if (s !== 1) L = { W: Math.round(L.W * s), H: Math.round(L.H * s), mx: L.mx * s, top: L.top * s, bottom: L.bottom * s };
   const position = wm.position || 'bl';
   const layers = [];
   let logo = null;
-  if (wm.url) logo = await logoLayer(wm).catch(e => { console.error('[watermark-render] logo:', e.message); return null; });
+  if (wm.url) logo = await logoLayer(wm, s).catch(e => { console.error('[watermark-render] logo:', e.message); return null; });
   const place = (pos, w, h, shift) => ({
     left: Math.round(pos[1] === 'l' ? L.mx : L.W - L.mx - w),
     top: Math.round(pos[0] === 't' ? L.top + shift : L.H - L.bottom - shift - h),
@@ -68,11 +76,11 @@ export async function renderWatermarkPng(wm, L = VERTICAL) {
   if (wm.text?.value && wm.text.font) {
     const tPos = wm.text.position || 'br';
     const sameRow = logo && tPos !== position && tPos[0] === position[0];
-    const room = sameRow ? Math.min(TEXT_MAX_WIDTH, L.W - 2 * L.mx - logo.w - 48) : TEXT_MAX_WIDTH;
-    const t = await textLayer(wm.text, wm.size, room).catch(e => { console.error('[watermark-render] text:', e.message); return null; });
+    const room = sameRow ? Math.min(TEXT_MAX_WIDTH * s, L.W - 2 * L.mx - logo.w - 48 * s) : TEXT_MAX_WIDTH * s;
+    const t = await textLayer(wm.text, wm.size, room, s).catch(e => { console.error('[watermark-render] text:', e.message); return null; });
     if (t) {
       // Same corner: next to the logo. Same row, other side: lined up with the middle of the logo.
-      const shift = !logo ? 0 : tPos === position ? logo.h + STACK_GAP : sameRow ? (logo.h - t.h) / 2 : 0;
+      const shift = !logo ? 0 : tPos === position ? logo.h + STACK_GAP * s : sameRow ? (logo.h - t.h) / 2 : 0;
       layers.push({ ...t, ...place(tPos, t.w, t.h, shift) });
     }
   }
