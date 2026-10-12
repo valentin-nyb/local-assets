@@ -81,15 +81,21 @@
         .bl-admin input:focus { border-color:var(--la-accent); }
         .bl-admin-actions { display:flex; flex-wrap:wrap; gap:8px; padding:0 20px 20px; align-items:center; }
         .bl-msg { font-size:12px; color:var(--la-sub); }
-        .bl-offer { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px; padding:20px; }
-        .bl-plan { border:1px solid var(--la-line); border-radius:14px; padding:16px; display:flex; flex-direction:column; gap:10px; }
-        .bl-plan.current { border-color:var(--la-accent); }
-        .bl-plan-name { font:700 13px/1.3 "Helvetica Neue", Helvetica, Arial, sans-serif; text-transform:uppercase; color:var(--la-text); }
-        .bl-plan-price { font:700 24px/1 "Helvetica Neue", Helvetica, Arial, sans-serif; color:var(--la-text); }
-        .bl-plan-price span { font-size:12px; font-weight:400; color:var(--la-dim); margin-left:4px; }
-        .bl-plan ul { margin:0; padding-left:16px; font-size:12px; line-height:1.7; color:var(--la-sub); flex:1; }
-        .bl-plan .cam-btn { justify-content:center; }
-        .bl-plan-tag { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--la-accent); text-align:center; padding:9px 0; }
+        .bl-offer { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; padding:20px; }
+        .bl-plan { position:relative; border:1px solid var(--la-line); border-radius:16px; padding:22px 20px 20px; display:flex; flex-direction:column; background:var(--la-surface); }
+        .bl-plan.current { border-color:color-mix(in srgb, var(--la-accent) 55%, var(--la-line)); }
+        .bl-plan.featured { border-color:var(--la-text-2, #d4d4d8); }
+        .bl-plan-badge { position:absolute; top:-9px; left:20px; font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.16em; text-transform:uppercase; padding:3px 8px; border-radius:999px; background:var(--la-accent); color:var(--la-accent-ink, #000); }
+        .bl-plan-badge.alt { background:var(--la-text); color:var(--la-surface); }
+        .bl-plan-cat { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--la-dim); }
+        .bl-plan-name { font:900 20px/1.15 "Helvetica Neue", Helvetica, Arial, sans-serif; text-transform:uppercase; color:var(--la-text); margin-top:6px; min-height:23px; }
+        .bl-plan-price { font:700 30px/1 "Helvetica Neue", Helvetica, Arial, sans-serif; letter-spacing:-.01em; color:var(--la-text); margin-top:18px; padding-bottom:18px; border-bottom:1px solid var(--la-line-soft); }
+        .bl-plan-price span { font-size:12px; font-weight:400; color:var(--la-dim); margin-left:6px; letter-spacing:0; }
+        .bl-plan-spec { display:grid; grid-template-columns:1fr auto; gap:10px 12px; margin:16px 0 20px; font-size:12px; flex:1; align-content:start; }
+        .bl-plan-spec dt { color:var(--la-sub); }
+        .bl-plan-spec dd { margin:0; color:var(--la-text); font-weight:600; font-variant-numeric:tabular-nums; text-align:right; }
+        .bl-plan .cam-btn { justify-content:center; height:40px; width:100%; }
+        .bl-plan .cam-btn:disabled { opacity:1; color:var(--la-dim); }
         .bl-setup-item { padding:18px 20px; border-bottom:1px solid var(--la-line-soft); display:flex; flex-direction:column; gap:10px; }
         .bl-setup-item:last-child { border-bottom:0; }
         .bl-setup-name { font:700 15px/1.2 "Helvetica Neue", Helvetica, Arial, sans-serif; color:var(--la-text); text-transform:uppercase; }
@@ -277,12 +283,22 @@
             offer.classList.toggle('hidden', admin || !(d.plansOffered || []).length);
             if (!admin && d.plansOffered) {
                 var curIdx = d.plansOffered.findIndex(function(p) { return p.id === d.currentPlan; });
+                var nextUp = curIdx + 1;   // the plan to suggest
+                var fmt = function(n) { return Math.round(n).toLocaleString('en-GB'); };
                 document.getElementById('bl-offer').innerHTML = d.plansOffered.map(function(p, i) {
-                    var cur = p.id === d.currentPlan;
-                    return '<div class="bl-plan' + (cur ? ' current' : '') + '"><p class="bl-plan-name">' + esc(p.name) + '</p>' +
-                        '<p class="bl-plan-price">' + money(p.price, 'gbp') + '<span>/month</span></p>' +
-                        '<ul><li>' + p.maxClips + ' vertical clips per session</li><li>' + Math.round((p.included || {}).storedMinutes / 60).toLocaleString('en-GB') + ' hours of video stored</li><li>' + Math.round((p.included || {}).deliveredMinutes / 60).toLocaleString('en-GB') + ' hours streamed</li><li>' + qty((p.included || {}).fileGB) + ' GB of files</li></ul>' +
-                        (cur ? '<span class="bl-plan-tag">Current plan</span>' : '<button type="button" class="cam-btn ' + (curIdx < 0 || i > curIdx ? 'primary' : 'ghost') + '" data-plan="' + esc(p.id) + '">' + (curIdx < 0 ? 'Choose' : i > curIdx ? 'Upgrade' : 'Switch') + '</button>') + '</div>';
+                    var cur = p.id === d.currentPlan, parts = String(p.name).split(/\s*·\s*/);
+                    var cat = parts.length > 1 ? parts[0] : 'Plan', tier = parts.length > 1 ? parts.slice(1).join(' · ') : p.name;
+                    var inc = p.included || {};
+                    var rows = [['Vertical clips per session', p.maxClips], ['Video storage', fmt(inc.storedMinutes / 60) + ' h'], ['Streaming', fmt(inc.deliveredMinutes / 60) + ' h'], ['Files', fmt(inc.fileGB) + ' GB']];
+                    var featured = !cur && i === nextUp;
+                    return '<div class="bl-plan' + (cur ? ' current' : '') + (featured ? ' featured' : '') + '">' +
+                        (cur ? '<span class="bl-plan-badge">Current</span>' : featured ? '<span class="bl-plan-badge alt">Recommended</span>' : '') +
+                        '<p class="bl-plan-cat">' + esc(cat) + '</p><p class="bl-plan-name">' + esc(tier) + '</p>' +
+                        '<p class="bl-plan-price">£' + fmt(p.price) + '<span>/ month</span></p>' +
+                        '<dl class="bl-plan-spec">' + rows.map(function(r) { return '<dt>' + r[0] + '</dt><dd>' + r[1] + '</dd>'; }).join('') + '</dl>' +
+                        (cur ? '<button type="button" class="cam-btn ghost" disabled>Your plan</button>'
+                             : '<button type="button" class="cam-btn ' + (featured || curIdx < 0 && i === 0 ? 'primary' : 'ghost') + '" data-plan="' + esc(p.id) + '">' + (curIdx < 0 ? 'Choose ' + esc(tier) : i > curIdx ? 'Upgrade' : 'Switch') + '</button>') +
+                    '</div>';
                 }).join('');
                 document.querySelectorAll('[data-plan]').forEach(function(b) {
                     b.addEventListener('click', async function() {
