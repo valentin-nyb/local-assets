@@ -45,7 +45,7 @@ export async function venueEvents(redis, slug, fromMs, toMs) {
 // Downloads and parses the calendar; throws when the link isn't a calendar
 export async function readCalendar(url) {
   url = cleanCalendarUrl(url) || url;   // links saved before Google share links were converted
-  const r = await fetch(url, { headers: { Accept: 'text/calendar, */*' }, cache: 'no-store', signal: AbortSignal.timeout(15000) });
+  const r = await fetch(url, { headers: { Accept: 'text/calendar, text/plain;q=0.9, */*;q=0.8', 'User-Agent': 'Mozilla/5.0 (compatible; local-assets-calendar/1.0; +https://local-assets.com)' }, redirect: 'follow', cache: 'no-store', signal: AbortSignal.timeout(15000) });
   if (!r.ok) {
     if (/calendar\.google\.com/.test(url) && (r.status === 404 || r.status === 403))
       throw new Error('Google Calendar won\'t share this calendar from that link (it isn\'t public). In Google Calendar open Settings, choose the calendar, and copy "Secret address in iCal format".');
@@ -53,6 +53,9 @@ export async function readCalendar(url) {
   }
   const text = await r.text();
   if (!/BEGIN:VCALENDAR/i.test(text)) {
+    // What came back instead, without the secret parts of the link
+    const shape = u => { try { const x = new URL(u); return x.hostname + x.pathname.replace(/[^/]{12,}/g, '…') + (x.search ? ' ?' + [...x.searchParams.keys()].join('&') : ''); } catch { return '?'; } };
+    console.error('[calendar] not iCal:', shape(url), '→', r.status, r.headers.get('content-type'), shape(r.url), JSON.stringify(text.slice(0, 160).replace(/\s+/g, ' ')));
     if (/calendar\.google\.com/.test(url)) throw new Error('This Google Calendar link opens the calendar page, not its iCal file. In Google Calendar open Settings, choose the calendar, and copy "Secret address in iCal format".');
     if (/icloud\.com/.test(url)) throw new Error('This iCloud link opens the calendar page. In the Calendar app, share the calendar as Public Calendar and copy the webcal:// link.');
     throw new Error('This link opens a web page, not an iCal calendar file (.ics).');
