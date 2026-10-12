@@ -63,11 +63,12 @@ export default async function handler(req, res) {
         cursor = page.hasMore ? page.cursor : undefined;
       } while (cursor);
       files.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
-      const [orgType, orgName, ownerNames, pinned, watermark, labelArtists, fileLabels] = await withRedis(r => Promise.all([
+      const [orgType, orgName, ownerNames, pinned, watermark, labelArtists, fileLabels, hiddenOwners] = await withRedis(r => Promise.all([
         r.get(`brand_org_type:${slug}`), r.get(`brand_org_name:${slug}`),
         r.hGetAll(`brand_owner_names:${slug}`), r.hGetAll(`brand_owner_photo:${slug}`),
         readWatermark(r, slug), r.hGetAll(`brand_label_artist:${slug}`), r.hGetAll(`brand_file_label:${slug}`),
-      ])).catch(() => [null, null, {}, {}, cleanWatermark(), {}, {}]);
+        r.sMembers(`brand_hidden_owners:${slug}`),
+      ])).catch(() => [null, null, {}, {}, cleanWatermark(), {}, {}, []]);
       // "Other" files carry what they are, as typed when uploading ("Press kit", "Tech rider")
       for (const f of files) {
         const key = decodeURIComponent(new URL(f.url).pathname.slice(1));
@@ -81,7 +82,7 @@ export default async function handler(req, res) {
       for (const [owner, url] of Object.entries(pinned || {})) {
         if (files.some(f => f.url === url)) ownerPhotos[owner] = url;
       }
-      return res.status(200).json({ files, orgType: ORG_TYPES.includes(orgType) ? orgType : 'venue', orgName: orgName || '', ownerNames: ownerNames || {}, ownerPhotos, watermark, labelArtists: labelArtists || {} });
+      return res.status(200).json({ files, orgType: ORG_TYPES.includes(orgType) ? orgType : 'venue', orgName: orgName || '', ownerNames: ownerNames || {}, ownerPhotos, watermark, labelArtists: labelArtists || {}, hiddenOwners: hiddenOwners || [] });
     }
 
     if (req.method !== 'POST') return res.status(405).end();
@@ -112,13 +113,14 @@ export default async function handler(req, res) {
       const artist = String(body.artist || '');
       await withRedis(r => Promise.all([
         r.hSet(`brand_owner_names:${slug}`, owner, name),
+        r.sRem(`brand_hidden_owners:${slug}`, owner),
         owner.startsWith('label-') && /^artist-[a-z0-9-]+$/.test(artist) ? r.hSet(`brand_label_artist:${slug}`, owner, artist) : null,
       ]));
       return res.status(200).json({ owner, name });
     }
 
     if (body.action === 'deleteOwner') {
-      // Remove a venue (or artist) brand kit: every file in its folder, its saved name and photo
+      // Remove an artist, venue or record label brand kit: every file in its folder, its saved name and photo
       const owner = String(body.owner || '');
       if (owner === 'venue' || !OWNER.test(owner)) return res.status(400).json({ error: 'This brand kit can\'t be deleted' });
       const prefix = `${prefixFor(slug)}${owner}/`;
@@ -128,7 +130,9 @@ export default async function handler(req, res) {
         if (page.blobs.length) { await del(page.blobs.map(b => b.url)); removed += page.blobs.length; }
         cursor = page.hasMore ? page.cursor : undefined;
       } while (cursor);
-      await withRedis(r => Promise.all([r.hDel(`brand_owner_names:${slug}`, owner), r.hDel(`brand_owner_photo:${slug}`, owner), r.hDel(`brand_label_artist:${slug}`, owner)]));
+      await withRedis(r => Promise.all([r.hDel(`brand_owner_names:${slug}`, owner), r.hDel(`brand_owner_photo:${slug}`, owner), r.hDel(`brand_label_artist:${slug}`, owner),
+        // Artists also come from sessions: keep a deleted one out of the brand kit until files are added again
+        r.sAdd(`brand_hidden_owners:${slug}`, owner)]));
       return res.status(200).json({ ok: true, removed });
     }
 

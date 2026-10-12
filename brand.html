@@ -158,6 +158,9 @@
             background-size:16px 16px; background-position:0 0, 0 8px, 8px -8px, -8px 0; }
         .bk-preview img { max-width:85%; max-height:85%; object-fit:contain; }
         .bk-preview.doc { background-image:none; }
+        html:not(.dark) .bk-preview[data-tone=light], html:not(.dark) .bk-avatar[data-tone=light], html:not(.dark) .bk-wm-preview[data-tone=light] { background-color:#141416; background-image:linear-gradient(45deg, rgba(255,255,255,.07) 25%, transparent 25%), linear-gradient(-45deg, rgba(255,255,255,.07) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(255,255,255,.07) 75%), linear-gradient(-45deg, transparent 75%, rgba(255,255,255,.07) 75%); background-size:16px 16px; background-position:0 0, 0 8px, 8px -8px, -8px 0; }
+        html.dark .bk-preview[data-tone=dark], html.dark .bk-avatar[data-tone=dark], html.dark .bk-wm-preview[data-tone=dark] { background-color:#f4f4f5; background-image:linear-gradient(45deg, rgba(0,0,0,.06) 25%, transparent 25%), linear-gradient(-45deg, rgba(0,0,0,.06) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(0,0,0,.06) 75%), linear-gradient(-45deg, transparent 75%, rgba(0,0,0,.06) 75%); background-size:16px 16px; background-position:0 0, 0 8px, 8px -8px, -8px 0; }
+        .bk-preview.photo[data-tone] { background:var(--la-chip) !important; }
         .bk-preview.photo { background:var(--la-chip); }
         .bk-avatar img.bk-avatar-photo { object-fit:cover; padding:0; }
         .bk-tag.is-profile { color:var(--la-accent); border-color:color-mix(in srgb, var(--la-accent) 45%, transparent); }
@@ -536,7 +539,9 @@
                     '<button type="button" class="cam-btn ghost bk-wm-export" id="bk-wm-export">Export PNG</button></div>' +
                 '<div class="bk-wm-foot"><span>' + (_wm.enabled ? 'Watermark on' : 'Watermark off') + '</span><button type="button" class="bk-switch" role="switch" aria-label="Watermark" aria-checked="' + _wm.enabled + '" data-wm="enabled"></button></div>';
             var img = document.getElementById('bk-wm-logo');
-            img.addEventListener('load', positionPreview);
+            img.crossOrigin = 'anonymous';
+            img.addEventListener('error', function() { if (img.crossOrigin) { img.removeAttribute('crossorigin'); var u = img.src; img.removeAttribute('src'); img.src = u; } });
+            img.addEventListener('load', function() { fitPreviewBg(img); positionPreview(); });
             document.getElementById('bk-wm-export').addEventListener('click', exportWatermarkPng);
             positionPreview();
             var addArtist = document.getElementById('bk-wm-text-artist');
@@ -830,6 +835,7 @@
                 _orgName = res[0].orgName || '';
                 _ownerPhotos = res[0].ownerPhotos || {};
                 _labelArtists = res[0].labelArtists || {};
+                var hidden = res[0].hiddenOwners || [];
                 _wm = res[0].watermark || { enabled: true, logo: 'auto', position: 'bl', size: 'm', opacity: 0.9 };
                 // One-time move to the current layout: logo bottom left, name bottom right
                 // (settings saved before it had the logo bottom right and the text bottom left)
@@ -849,6 +855,8 @@
                 });
                 var saved = res[0].ownerNames || {};
                 Object.keys(saved).forEach(function(k) { names[k] = saved[k]; });
+                // Deleted brand kits stay out unless files were added since
+                hidden.forEach(function(k) { if (!_files.some(function(f) { return f.owner === k; })) delete names[k]; });
                 var group = function(prefix, kind, label) {
                     return Object.keys(names).filter(function(k) { return k.indexOf(prefix) === 0; })
                         .sort(function(a, b) { return names[a].localeCompare(names[b]); })
@@ -906,7 +914,7 @@
                         (files.length ? '<button type="button" class="cam-btn ghost" data-zip="' + esc(o.key) + '"><span>Download all</span></button>' : '') +
                         (o.key.indexOf('artist-') === 0 ? '<button type="button" class="cam-btn ghost" data-up="__newLabel:' + esc(o.key) + '"><span>Add record label</span></button>' : '') +
                         '<button type="button" class="cam-btn ghost" data-up="' + esc(o.key) + '"><span>Upload</span></button>' +
-                        (o.key.indexOf('venue-') === 0 || o.label ? '<button type="button" class="cam-btn ghost bk-del-owner" data-del-owner="' + esc(o.key) + '" title="Delete"><iconify-icon icon="solar:trash-bin-minimalistic-linear"></iconify-icon></button>' : '') +
+                        (!o.org ? '<button type="button" class="cam-btn ghost bk-del-owner" data-del-owner="' + esc(o.key) + '" title="Delete"><iconify-icon icon="solar:trash-bin-minimalistic-linear"></iconify-icon></button>' : '') +
                     '</div></div>' +
                     '<div class="bk-body">' + body + '</div></section>';
             }).join('');
@@ -957,7 +965,22 @@
         // Logo previews: dark backdrop behind light logos, light backdrop behind dark ones.
         // Measures the average brightness of the logo's visible (non-transparent) pixels.
         // Logo backgrounds follow the light or dark theme (kept as a hook for the image onload)
-        function fitPreviewBg(img) {}
+        // White logos get a dark checkered background in light mode, black logos a light one in dark mode
+        // (tone measured from the logo's visible pixels; the theme picks which one applies)
+        function fitPreviewBg(img) {
+            var box = img.parentNode, tone = '';
+            try {
+                var c = document.createElement('canvas'), n = 32; c.width = n; c.height = n;
+                var ctx = c.getContext('2d', { willReadFrequently: true }); ctx.drawImage(img, 0, 0, n, n);
+                var d = ctx.getImageData(0, 0, n, n).data, sum = 0, cnt = 0;
+                for (var i = 0; i < d.length; i += 4) { if (d[i + 3] < 40) continue; sum += (0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]) / 255; cnt++; }
+                if (cnt && cnt / (n * n) < 0.97) tone = sum / cnt > 0.6 ? 'light' : sum / cnt < 0.4 ? 'dark' : '';
+            } catch (_) {
+                // Not readable: go by the file name
+                tone = /white|light|blanco/i.test(img.src) ? 'light' : /black|dark|negro/i.test(img.src) ? 'dark' : '';
+            }
+            if (tone) box.setAttribute('data-tone', tone); else box.removeAttribute('data-tone');
+        }
 
         // Pictures that can become a session thumbnail (covers, artwork, photos)
         function thumbFile(f) { return f.category !== 'logos' && /\.(png|jpe?g|webp)$/i.test(f.name); }
@@ -1245,13 +1268,13 @@
         function openOwnerEdit(key) {
             var o = _owners.filter(function(x) { return x.key === key; })[0];
             if (!o) return;
-            var isVenue = key.indexOf('venue-') === 0, isLabel = key.indexOf('label-') === 0;
+            var isVenue = key.indexOf('venue-') === 0, isLabel = key.indexOf('label-') === 0, kindName = isVenue ? 'venue' : isLabel ? 'record label' : 'artist';
             openCamDialog(isVenue ? 'Edit venue' : isLabel ? 'Edit record label' : 'Edit artist',
                 '<form id="bk-owner-form" class="cam-form">' +
                 '<label>Name<input name="ownerName" maxlength="60" required value="' + esc(o.name) + '"><small>Shown on the brand kit, exactly as typed.</small></label>' +
                 '<p id="bk-owner-error" class="cam-form-error"></p>' +
                 '<div class="cam-form-actions">' +
-                    (isVenue || isLabel ? '<button type="button" class="cam-btn ghost bk-owner-del" style="margin-right:auto">Delete ' + (isLabel ? 'record label' : 'venue') + '</button>' : '') +
+                    '<button type="button" class="cam-btn ghost bk-owner-del" style="margin-right:auto">Delete ' + kindName + '</button>' +
                     '<button type="button" class="cam-btn ghost" onclick="closeCamDialog()">Cancel</button><button type="submit" class="cam-btn primary">Save</button></div>' +
                 '</form>');
             var form = document.getElementById('bk-owner-form');
@@ -1312,16 +1335,16 @@
         async function deleteOwner(key, btn) {
             var o = _owners.filter(function(x) { return x.key === key; })[0];
             var n = _files.filter(function(f) { return f.owner === key; }).length;
-            var what = key.indexOf('label-') === 0 ? 'record label' : 'venue';
+            var what = key.indexOf('label-') === 0 ? 'record label' : key.indexOf('artist-') === 0 ? 'artist' : 'venue';
             if (!(await laConfirm({ title: 'Delete ' + (o ? o.name : 'this ' + what) + '?',
-                message: 'The ' + what + ' and ' + (n ? 'its ' + n + ' file' + (n !== 1 ? 's' : '') : 'its brand kit') + ' will be removed, and links to them will stop working.' + (what === 'venue' ? ' Sessions keep the venue name as text.' : '') + ' This can\'t be undone.',
+                message: 'The ' + what + ' and ' + (n ? 'its ' + n + ' file' + (n !== 1 ? 's' : '') : 'its brand kit') + ' will be removed, and links to them will stop working.' + (what === 'venue' ? ' Sessions keep the venue name as text.' : what === 'artist' ? ' Their sessions in Distribution History are not touched.' : '') + ' This can\'t be undone.',
                 confirmText: 'Delete ' + what, danger: true }))) return;
             btn.disabled = true;
             try {
                 var r = await laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'deleteOwner', owner: key }) });
                 var d = await r.json(); if (!r.ok) throw new Error(d.error || r.status);
                 await loadBrand();
-                laToast(what === 'venue' ? 'Venue deleted' : 'Record label deleted');
+                laToast(what.charAt(0).toUpperCase() + what.slice(1) + ' deleted');
             } catch (e) { btn.disabled = false; alert('Could not delete the ' + what + ': ' + e.message); }
         }
 
