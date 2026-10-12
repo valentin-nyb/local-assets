@@ -69,10 +69,13 @@ export default async function handler(req, res) {
   // Billing admin = a local / assets admin signed in to the local / assets venue. They pick the venue to bill;
   // everyone else only sees their own venue.
   const ADMIN_VENUE = process.env.BILLING_ADMIN_VENUE || 'local-assets-admin';
-  const isAdmin = admins().includes(session.email) && session.venueSlug === ADMIN_VENUE;
+  // The local / assets venue: its configured slug, or the venue named "local / assets"
+  const isAdminVenue = session.venueSlug === ADMIN_VENUE || /^local\s*[\/-]?\s*assets\b/i.test(String(session.venue?.name || '').trim());
+  const isAdmin = admins().includes(session.email) && isAdminVenue;
+  if (admins().includes(session.email)) console.log('[billing] venue', session.venueSlug, JSON.stringify(session.venue?.name || ''), 'admin view:', isAdmin, '| venues:', Object.keys(getVenuesConfig()).join(','));
   const cfg = getVenuesConfig();
   // Every venue can be billed, the local / assets one too (its own artists); other venues come first
-  const billable = [...Object.keys(cfg).filter(k => k !== ADMIN_VENUE), ...Object.keys(cfg).filter(k => k === ADMIN_VENUE)];
+  const billable = [...Object.keys(cfg).filter(k => k !== session.venueSlug), session.venueSlug].filter(k => cfg[k]);
   let slug = session.venueSlug, auth = session.muxAuth, venueName = session.venue?.name || session.venueSlug;
   if (isAdmin) {
     let bodyVenue = '';
@@ -140,7 +143,7 @@ export default async function handler(req, res) {
       return res.status(200).json({
         venue: venueName, target, period: { label: base.label, start: base.start, end: base.end, elapsed },
         usage: data.usage, ...priced, invoices, stripe: !!stripe, isAdmin,
-        ...(isAdmin ? { stripeAccount, venueSlug: slug, venues: billable.map(k => ({ slug: k, name: k === ADMIN_VENUE ? 'local / assets (own artists)' : (cfg[k]?.name || k) })), rates: data.rates, plans: data.plans, assignments: data.assignments, artists: data.artists, labels: data.labels, assignment: a } : {}),
+        ...(isAdmin ? { stripeAccount, venueSlug: slug, venues: billable.map(k => ({ slug: k, name: k === session.venueSlug ? 'local / assets (own artists)' : (cfg[k]?.name || k) })), rates: data.rates, plans: data.plans, assignments: data.assignments, artists: data.artists, labels: data.labels, assignment: a } : {}),
       });
     }
 
