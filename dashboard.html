@@ -228,12 +228,28 @@
     <script>
         // v2.0.1 - Cache bust for deployment
         // Wraps fetch() — injects Authorization (webToken) + X-User-Email for venue isolation
+        // Admin account: Distribution History shows every client. Which client an asset or artist belongs to,
+        // so actions on it are done in that client's own account (X-LA-Venue).
+        var _adminView = (function() { try { var a = JSON.parse(localStorage.getItem('la_admin') || '{}'); return a.venueSlug === 'local-assets-admin' || /^local\s*[\/-]?\s*assets\b/i.test(String(a.venue || '').trim()); } catch (_) { return false; } })();
+        var _venueOfAsset = {}, _venueOfArtist = {}, _adminVenues = {};
+        function venueForRequest(url, opts) {
+            if (!_adminView) return '';
+            var b = {}; try { b = typeof opts.body === 'string' ? JSON.parse(opts.body) : {}; } catch (_) {}
+            var q = {}; try { new URL(url, location.origin).searchParams.forEach(function(v, k) { q[k] = v; }); } catch (_) {}
+            if (b.venue && _adminVenues[b.venue]) return b.venue;
+            var id = b.id || b.assetId || (b.clipIds && b.clipIds[0]) || q.id || q.assetId;
+            if (id && _venueOfAsset[id]) return _venueOfAsset[id];
+            var art = String(b.artist || (q.passthrough || '').split(' // ')[0] || q.artist || '').toUpperCase().trim();
+            return art && _venueOfArtist[art] || '';
+        }
         function laFetch(url, opts = {}) {
             const session = (() => { try { return JSON.parse(localStorage.getItem('la_admin') || '{}'); } catch(_) { return {}; } })();
             opts = Object.assign({}, opts);
             opts.headers = Object.assign({}, opts.headers);
             if (session.webToken) opts.headers['Authorization'] = 'Bearer ' + session.webToken;
             if (session.email)    opts.headers['X-User-Email']  = session.email;
+            var v = venueForRequest(url, opts);
+            if (v && !opts.headers['X-LA-Venue']) opts.headers['X-LA-Venue'] = v;
             return fetch(url, opts);
         }
 
@@ -508,6 +524,27 @@
         }
         var _brandPhotos = null, _venueLogos = {}, _venueLogosByName = {}, _brandPhotosAt = 0, _venueRefetched = false;
         function nameKey(v) { return String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ''); }
+        // Brand Kit data: this account's, or on the admin account every client's merged
+        function brandForView() {
+            if (!_adminView) return laFetch('/api/brand').then(function(r) { return r.ok ? r.json() : null; });
+            var venues = Object.keys(_adminVenues);
+            return Promise.all(venues.map(function(v) {
+                return laFetch('/api/brand', { headers: { 'X-LA-Venue': v } }).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; });
+            })).then(function(list) {
+                var out = { files: [], ownerPhotos: {}, ownerNames: {}, orgType: 'venue', orgName: '' };
+                list.forEach(function(d) {
+                    if (!d) return;
+                    // Each client's own kit ("venue") is a venue of its own in the combined view
+                    var own = 'venue-' + brandSlug(d.orgName || '');
+                    (d.files || []).forEach(function(f) { out.files.push(f.owner === 'venue' && d.orgName ? Object.assign({}, f, { owner: own }) : f); });
+                    Object.keys(d.ownerPhotos || {}).forEach(function(k) { out.ownerPhotos[k === 'venue' ? own : k] = d.ownerPhotos[k]; });
+                    Object.assign(out.ownerNames, d.ownerNames || {});
+                    if (d.orgName) out.ownerNames[own] = d.orgName;
+                    if (d.orgType === 'artist' && d.orgName && d.ownerPhotos && d.ownerPhotos.venue) out.ownerPhotos['artist-' + brandSlug(d.orgName)] = d.ownerPhotos.venue;
+                });
+                return out;
+            });
+        }
         function applyArtistPhotos() {
             var paint = function() {
                 document.querySelectorAll('[data-artist-photo]').forEach(function(box) {
@@ -533,7 +570,7 @@
                 if (missing && !_venueRefetched && Date.now() - _brandPhotosAt > 5000) { _venueRefetched = true; _brandPhotosAt = 0; applyArtistPhotos(); }
             };
             if (_brandPhotos && Date.now() - _brandPhotosAt < 300000) return paint();
-            laFetch('/api/brand').then(function(r) { return r.ok ? r.json() : null; }).then(function(d) {
+            brandForView().then(function(d) {
                 _brandPhotos = (d && d.ownerPhotos) || {};
                 // An artist account's own Brand Kit photo is that artist's photo
                 if (d && d.orgType === 'artist' && _brandPhotos.venue) {
@@ -604,8 +641,16 @@
         // ── Session names and venues (editable from Distribution History) ──
         var _sessionMeta = {};
         function loadSessionMeta() {
-            return laFetch('/api/session-meta').then(function(r) { return r.ok ? r.json() : { sessions: {} }; })
+            if (!_adminView) return laFetch('/api/session-meta').then(function(r) { return r.ok ? r.json() : { sessions: {} }; })
                 .then(function(d) { _sessionMeta = d.sessions || {}; }).catch(function() {});
+            // Admin: every client's session names and venues
+            var venues = (function() { try { return (JSON.parse(localStorage.getItem('la_admin') || '{}').venues || []).map(function(v) { return v.slug; }); } catch (_) { return []; } })();
+            venues.forEach(function(v) { _adminVenues[v] = true; });
+            _sessionMeta = {};
+            return Promise.all(venues.map(function(v) {
+                return laFetch('/api/session-meta', { headers: { 'X-LA-Venue': v } }).then(function(r) { return r.ok ? r.json() : { sessions: {} }; })
+                    .then(function(d) { Object.assign(_sessionMeta, d.sessions || {}); }).catch(function() {});
+            }));
         }
         var _sessionMetaReady = loadSessionMeta();
         function sessionMeta(artistName, date) {
@@ -829,8 +874,18 @@
         var _wmSweepT;
         function sweepWatermarks() {
             clearTimeout(_wmSweepT);
-            laFetch('/api/watermark-clips', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'sweep' }) })
-                .then(function(r) { return r.ok ? r.json() : null; })
+            var sweepOne = function(v) {
+                return laFetch('/api/watermark-clips', { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, v ? { 'X-LA-Venue': v } : {}), body: JSON.stringify({ action: 'sweep' }) })
+                    .then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; });
+            };
+            // Admin view: every client's clips
+            (_adminView && Object.keys(_adminVenues).length
+                ? Promise.all(Object.keys(_adminVenues).map(sweepOne)).then(function(list) {
+                    var m = { done: 0, pending: 0, verticalsPending: 0, watermarked: [], pendingIds: [], horizontal: [] };
+                    list.forEach(function(d) { if (!d) return; m.done += d.done || 0; m.pending += d.pending || 0; m.verticalsPending += d.verticalsPending || 0; ['watermarked', 'pendingIds', 'horizontal'].forEach(function(k) { m[k] = m[k].concat(d[k] || []); }); });
+                    return m;
+                })
+                : sweepOne(''))
                 .then(function(d) {
                     if (!d) return;
                     _wmState = { watermarked: d.watermarked || [], pendingIds: d.pendingIds || [], horizontal: d.horizontal || [], verticalsPending: d.verticalsPending || 0 };
@@ -864,6 +919,14 @@
                 const data = await res.json();
                 if (res.ok) {
                     muxAssets = Array.isArray(data) ? data : (data.data || []);
+                    // Admin view: remember each asset's and artist's client account
+                    muxAssets.forEach(function(a) {
+                        if (!a._venue) return;
+                        _adminVenues[a._venue] = true;
+                        _venueOfAsset[a.id] = a._venue;
+                        var meta = parsePassthrough(a.passthrough, a.name, a.id);
+                        if (meta && meta.artist) _venueOfArtist[String(meta.artist).toUpperCase().trim()] = a._venue;
+                    });
                 }
                 // Non-ok (e.g. missing credentials for new venue) → treat as empty
             } catch (e) { /* network error → treat as empty */ }

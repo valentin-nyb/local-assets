@@ -205,6 +205,11 @@ export function verifyWebToken(token) {
 // Its venueSlug picks which of the user's venues is open; access is re-checked
 // against VENUES_CONFIG on every request. Mux credentials come only from that venue.
 
+// The local / assets admin account (not a client)
+export function isAdminVenue(v) {
+  return !!v && (v.slug === (process.env.BILLING_ADMIN_VENUE || 'local-assets-admin') || /^local\s*[\/-]?\s*assets\b/i.test(String(v.name || '').trim()));
+}
+
 export function getWebSessionAuth(req) {
   const raw   = (req.headers.authorization || req.headers['x-la-token'] || '').trim();
   const token = raw.startsWith('Bearer ') ? raw.slice(7).trim() : raw;
@@ -216,7 +221,14 @@ export function getWebSessionAuth(req) {
     return null;
   }
 
-  const venue   = findVenueByEmail(email, payload.venueSlug);
+  let venue = findVenueByEmail(email, payload.venueSlug);
+  // A local / assets admin on the admin account acts on one client's account for this request
+  // (X-LA-Venue), e.g. watermarking a clip shown in the combined Distribution History
+  const asVenue = String(req.headers['x-la-venue'] || '').trim();
+  if (asVenue && platformAdmins().includes(email) && isAdminVenue(venue)) {
+    const cfg = getVenuesConfig()[asVenue];
+    if (cfg) venue = { slug: asVenue, ...cfg, actingAdmin: true };
+  }
   const muxAuth = getMuxAuthForVenue(venue); // null if no venue-specific creds
 
   return { email, venueSlug: venue?.slug || '', venue, muxAuth };

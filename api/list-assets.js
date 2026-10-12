@@ -1,4 +1,4 @@
-import { getWebSessionAuth } from './_venues.js';
+import { getWebSessionAuth, getVenuesConfig, getMuxAuthForVenue, isAdminVenue, platformAdmins } from './_venues.js';
 import { listThumbnailAssets } from './_thumbnails.js';
 
 export default async function handler(req, res) {
@@ -24,6 +24,27 @@ export default async function handler(req, res) {
     hasMuxTokenId:  !!(session?.venue?.mux_token_id),
     hasMuxSecret:   !!(session?.venue?.mux_token_secret),
   }));
+
+  // Admin account: every client's Distribution History together, each asset marked with its account
+  if (session?.email && platformAdmins().includes(session.email) && isAdminVenue(session.venue) && !req.headers['x-la-venue']) {
+    const out = [];
+    for (const [slug, cfg] of Object.entries(getVenuesConfig())) {
+      if (isAdminVenue({ slug, ...cfg })) continue;
+      const auth = getMuxAuthForVenue({ slug, ...cfg });
+      if (!auth) continue;
+      try {
+        for (let page = 1; page <= 20; page++) {
+          const r = await fetch(`https://api.mux.com/video/v1/assets?limit=100&page=${page}`, { headers: { Authorization: auth }, signal: AbortSignal.timeout(20000) });
+          if (!r.ok) throw new Error('Mux ' + r.status);
+          const { data } = await r.json();
+          for (const a of data || []) out.push({ ...a, _venue: slug, _venueName: cfg.name || slug });
+          if (!data || data.length < 100) break;
+        }
+        for (const t of await listThumbnailAssets(slug).catch(() => [])) out.push({ ...t, _venue: slug, _venueName: cfg.name || slug });
+      } catch (e) { console.error('[list-assets] admin view', slug, e.message); }
+    }
+    return res.status(200).json(out);
+  }
 
   if (!session?.muxAuth) {
     console.error('[list-assets] no muxAuth — returning []');
