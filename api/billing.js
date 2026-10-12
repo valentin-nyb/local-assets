@@ -128,7 +128,16 @@ export default async function handler(req, res) {
             if (list.length >= 300) break;
           }
         }
-        else if (data.customer) list = (await stripe.invoices.list({ customer: data.customer, limit: 24 }).catch(() => ({ data: [] }))).data;
+        else {
+          // A client: every invoice sent for this account, whether billed to the account itself or to one of its artists or labels
+          try {
+            for await (const inv of stripe.invoices.list({ limit: 100 })) {
+              if (inv.metadata?.venueSlug === slug || (data.customer && inv.customer === data.customer)) list.push(inv);
+              if (list.length >= 100) break;
+            }
+          } catch (e) { console.error('[billing] client invoices', slug, e.message); }
+          list = list.filter(i => i.status !== 'draft');
+        }
         // Each account's type and name, and saved statuses, for the invoices of every account
         const acctTypes = {}, allStatuses = { ...(data.statuses || {}) };
         if (isAdmin) {
