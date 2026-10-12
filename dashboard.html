@@ -751,7 +751,7 @@
                 var cutting = isCutting(btn);
                 btn.classList.toggle('hidden', !(horizontal || Number(btn.dataset.missing) > 0) && !cutting);
                 btn.disabled = cutting;
-                btn.textContent = cutting ? 'Making vertical clips…' : horizontal ? 'Make vertical (9:16)' : 'Cut missing clips';
+                btn.textContent = cutting ? 'Making vertical clips…' : !ids.length ? 'Make vertical clips' : horizontal ? 'Make vertical (9:16)' : 'Cut missing clips';
             });
         }
         document.addEventListener('click', async function(e) {
@@ -1134,10 +1134,14 @@
                 // No clips yet — show the standard upload row
                 if (clips.length === 0) {
                     var uid0 = name.replace(/[^A-Z0-9]/g, '_') + '_' + sessionDate + '_SOCIAL';
-                    return buildAssetRow(
+                    var row = buildAssetRow(
                         { type: 'SOCIAL', label: 'Social Pack Verticals', ext: '.MP4', icon: 'solar:iphone-bold', color: 'text-primary' },
                         uid0, sessionName, sessionDate
                     );
+                    // No clips yet (e.g. Mux didn't notify us about the upload): cut them from the 4K long form
+                    var hasMaster = (muxByKey[name] || []).some(function(a) { return Number(a.duration) > 30; });
+                    if (hasMaster) row += '<div class="pl-16 pr-4 pb-4" style="margin-top:-6px"><button type="button" class="wm-restore" data-missing="5" data-wm-artist="' + escHtml(name) + '" data-wm-date="' + escHtml(sessionDate) + '" data-wm-clips="">Make vertical clips</button></div>';
+                    return row;
                 }
 
                 var accent = 'var(--la-accent)';  // follows the theme without a re-render
