@@ -174,6 +174,30 @@ async function streamParts(url) {
   return { video: best, audio };
 }
 
+// The session's HQ AUDIO ("ARTIST // AUDIO", or { artist, camera: 'AUDIO' }): the one dated like the recording,
+// else the one uploaded after this recording and before the artist's next one
+async function sessionAudio(auth, job) {
+  const assets = await listAllAssets(auth);
+  const master = assets.find(a => a.id === job.masterId);
+  if (!master) return null;
+  const info = a => {
+    const pt = String(a.passthrough || '').trim();
+    if (pt.toUpperCase() === `${job.artist} // AUDIO`) return {};
+    try { const o = JSON.parse(pt); if (String(o?.artist || '').toUpperCase().trim() === job.artist && String(o.camera || '').toUpperCase() === 'AUDIO') return o; } catch {}
+    return null;
+  };
+  const day = a => new Date(Number(a.created_at) * 1000).toISOString().slice(0, 10);
+  let mdate = day(master); try { const o = JSON.parse(master.passthrough); if (o?.date) mdate = o.date; } catch {}
+  const later = assets.filter(a => a.id !== master.id && Number(a.created_at) > Number(master.created_at) && Number(a.duration) > 10
+    && !String(a.passthrough || '').includes(' // ') && (() => { try { const o = JSON.parse(a.passthrough); return String(o?.artist || '').toUpperCase().trim() === job.artist && !['AUDIO', 'SOCIAL', 'SOCIALRAW', 'THUMB'].includes(String(o.camera || '').toUpperCase()); } catch { return String(a.passthrough || '').trim().toUpperCase() === job.artist; } })())
+    .sort((a, b) => Number(a.created_at) - Number(b.created_at))[0];
+  const audios = assets.filter(a => a.status === 'ready' && (a.playback_ids || [])[0]?.id && info(a))
+    .sort((a, b) => Number(b.created_at) - Number(a.created_at));
+  const pick = audios.find(a => info(a).date === mdate)
+    || audios.find(a => Number(a.created_at) >= Number(master.created_at) && (!later || Number(a.created_at) < Number(later.created_at)));
+  return pick ? { id: pick.id, pid: pick.playback_ids[0].id } : null;
+}
+
 // Whether a file has a sound stream
 function hasAudio(file) {
   return new Promise(resolve => {
@@ -218,9 +242,24 @@ export async function cutVertical(redis, auth, job) {
     const maps = video && audio ? ['-map', '0:v:0', '-map', '1:a:0'] : ['-map', '0:v:0', '-map', '0:a:0?'];
     await run(['-hide_banner', '-loglevel', 'warning', '-y', ...inputs, '-t', String(len), ...maps, ...tail])
       .catch(e => console.error('[verticals] instant clip', e.message));
-    // Empty, or cut without the sound: cut again from the downloadable MP4, which carries picture and sound together
-    const silent = sizeOf() >= 200 * 1024 && !(await hasAudio(out));
-    if (silent) console.error('[verticals] no sound in the stream cut', job.n, 'video', video || clipUrl, 'audio', audio || 'none');
+    // Cut without the sound: the sound comes from the session's HQ AUDIO (same stretch of the set).
+    // Empty, or no HQ AUDIO: cut again from the downloadable MP4, which carries picture and sound together.
+    let silent = sizeOf() >= 200 * 1024 && !(await hasAudio(out));
+    if (silent) {
+      console.error('[verticals] no sound in the stream cut', job.n, 'video', video || clipUrl, 'audio', audio || 'none');
+      const hq = await sessionAudio(auth, job).catch(e => { console.error('[verticals] hq audio lookup', e.message); return null; });
+      if (hq) {
+        const keep = out + '.silent.mp4';
+        fs.renameSync(out, keep);
+        await run(['-hide_banner', '-loglevel', 'warning', '-y', '-i', keep,
+          '-i', `https://stream.mux.com/${hq.pid}.m3u8?asset_start_time=${Math.floor(job.start)}&asset_end_time=${Math.ceil(job.end)}`,
+          '-t', String(len), '-map', '0:v:0', '-map', '1:a:0', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', out])
+          .catch(e => console.error('[verticals] hq audio', e.message));
+        const ok = sizeOf() >= 200 * 1024 && await hasAudio(out);
+        console.log('[verticals] hq audio', job.n, hq.id, ok ? 'added' : 'failed');
+        if (ok) { silent = false; fs.rm(keep, { force: true }, () => {}); } else fs.renameSync(keep, out);
+      }
+    }
     if (sizeOf() < 200 * 1024 || silent) {
       const keep = out + '.silent.mp4';
       if (silent) fs.renameSync(out, keep);
