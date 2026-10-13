@@ -98,6 +98,51 @@ export async function venueArtists(auth) {
   return [...names].sort();
 }
 
+// Usage day by day, for the usage chart: video minutes stored at the end of each day and minutes
+// streamed that day. Finished days are cached (Mux reports streaming up to about 12 hours ago).
+export async function usageByDay(redis, slug, auth, { from, to }, artist = null, label = null) {
+  const DAY = 86400e3;
+  const days = [];
+  for (let t = from; t < to; t += DAY) days.push({ start: t, stored: 0, delivered: 0 });
+  if (!auth || label) return { days, notes: [] };
+  const only = artist ? String(artist).toUpperCase().trim() : null;
+  const notes = [], vids = [], ids = new Set();
+  try {
+    for (let page = 1; page <= 30; page++) {
+      const b = await muxGet(auth, `/video/v1/assets?limit=100&page=${page}`);
+      for (const a of b.data || []) {
+        if (a.status !== 'ready') continue;
+        if (only && artistOfAsset(a) !== only) continue;
+        ids.add(a.id);
+        vids.push({ at: Number(a.created_at) * 1000, min: (Number(a.duration) || 0) / 60 });
+      }
+      if ((b.data || []).length < 100) break;
+    }
+  } catch (e) { notes.push('Video usage unavailable: ' + e.message); return { days, notes }; }
+  for (const d of days) d.stored = vids.reduce((s, v) => s + (v.at < d.start + DAY ? v.min : 0), 0);
+  const reported = Math.floor((Date.now() - 12.5 * 3600e3) / 3600e3) * 3600e3;
+  const key = d => `usage_day:${slug}:${only || '*'}:${new Date(d.start).toISOString().slice(0, 10)}`;
+  const queue = days.filter(d => d.start < reported);
+  const work = async () => {
+    while (queue.length) {
+      const d = queue.shift(), end = Math.min(d.start + DAY, reported), done = end === d.start + DAY;
+      if (done) { const c = await redis.get(key(d)); if (c !== null) { d.delivered = Number(c) || 0; continue; } }
+      try {
+        let sec = 0;
+        for (let page = 1; page <= 20; page++) {
+          const b = await muxGet(auth, `/video/v1/delivery-usage?limit=100&page=${page}&timeframe[]=${Math.floor(d.start / 1000)}&timeframe[]=${Math.floor(end / 1000)}`);
+          for (const r of b.data || []) if (!only || ids.has(r.asset_id)) sec += Number(r.delivered_seconds) || 0;
+          if ((b.data || []).length < 100) break;
+        }
+        d.delivered = sec / 60;
+        if (done) await redis.set(key(d), String(Math.round(d.delivered * 100) / 100), { EX: 400 * 86400 });
+      } catch (e) { if (!notes.length) notes.push('Some streaming figures are unavailable: ' + e.message); }
+    }
+  };
+  await Promise.all([work(), work(), work(), work()]);
+  return { days, notes };
+}
+
 export async function venueUsage(slug, auth, { start, end }, artist = null, label = null) {
   const only = artist ? String(artist).toUpperCase().trim() : null;
   if (label) auth = null;   // a record label is billed for its brand kit files only

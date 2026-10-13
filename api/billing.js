@@ -4,7 +4,7 @@ import { getWebSessionAuth, getVenuesConfig, readRegistryRaw, saveRegistryEntry,
 import { venueAuth } from './_verticals.js';
 import {
   readRates, readPlans, cleanPlans, readAssignments, assignKey, venueUsage, venueArtists, priceUsage,
-  monthRange, stripeClient, invoiceVenue, venueEntries, DEFAULT_RATES, applyDetails,
+  monthRange, stripeClient, invoiceVenue, venueEntries, DEFAULT_RATES, applyDetails, usageByDay,
 } from './_billing.js';
 
 // Billing page data and actions.
@@ -111,6 +111,28 @@ export default async function handler(req, res) {
       if (!r.ok) return res.status(502).json({ error: 'Stripe PDF ' + r.status });
       res.setHeader('Content-Type', 'application/pdf');
       return res.status(200).send(Buffer.from(await r.arrayBuffer()));
+    }
+    // The usage chart: day-by-day usage over a range, with the billing cycles (calendar months) it covers
+    if (req.method === 'GET' && req.query.usageDays) {
+      const target = isAdmin ? cleanTarget(req.query.target) : 'venue';
+      const artist = target.startsWith('artist:') ? target.slice(7) : null;
+      const label = target.startsWith('label:') ? target.slice(6) : null;
+      const now = new Date(), today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+      const range = String(req.query.range || 'cycle');
+      const m = /^(\d+)d$/.exec(range), inv = /^inv([1-3])$/.exec(range);
+      const from = m ? today - (Math.min(120, Number(m[1])) - 1) * 86400e3
+        : Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - (inv ? Number(inv[1]) : 0), 1);
+      const to = today + 86400e3;
+      const out = await withRedis(async redis => {
+        const rates = await readRates(redis);
+        const u = await usageByDay(redis, slug, auth, { from, to }, artist, label);
+        return { rates, ...u };
+      });
+      const cycles = [];
+      for (let y = new Date(from).getUTCFullYear(), mo = new Date(from).getUTCMonth(); Date.UTC(y, mo, 1) < to; mo++) cycles.push(Date.UTC(y, mo, 1));
+      return res.status(200).json({ range, from, to, today, cycles, currency: out.rates.currency || 'gbp',
+        rates: { videoStorage: out.rates.videoStorage, videoDelivery: out.rates.videoDelivery, margin: out.rates.margin || 0 },
+        days: out.days.map(d => ({ t: d.start, stored: Math.round(d.stored * 100) / 100, delivered: Math.round(d.delivered * 100) / 100 })), notes: out.notes });
     }
     if (req.method === 'GET') {
       const target = isAdmin ? cleanTarget(req.query.target) : 'venue';
