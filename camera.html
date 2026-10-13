@@ -117,6 +117,21 @@
         .cal-form { display:flex; gap:8px; margin-top:14px; }
         .cal-form input { flex:1; min-width:0; height:40px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 12px; font-size:13px; outline:none; }
         .cal-form input:focus { border-color:var(--la-accent); }
+        .cam-kind { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+        .cam-kind label { position:relative; display:block; cursor:pointer; }
+        .cam-kind input { position:absolute; opacity:0; pointer-events:none; }
+        .cam-kind span { display:flex; flex-direction:column; gap:3px; padding:12px 14px; border:1px solid var(--la-line); border-radius:10px; font-size:14px; font-weight:500; color:var(--la-text); transition:border-color .2s ease, background .2s ease; }
+        .cam-kind small { font-size:12px; font-weight:400; color:var(--la-dim); }
+        .cam-kind input:checked + span { border-color:var(--la-text); background:color-mix(in srgb, var(--la-text) 4%, transparent); }
+        .cam-form [hidden] { display:none !important; }
+        .cam-guides { margin-top:14px; border:1px solid var(--la-line); border-radius:10px; overflow:hidden; }
+        .cam-guide + .cam-guide { border-top:1px solid var(--la-line); }
+        .cam-guide summary { cursor:pointer; padding:12px 14px; font-size:14px; font-weight:500; color:var(--la-text); list-style:none; display:flex; justify-content:space-between; }
+        .cam-guide summary::-webkit-details-marker { display:none; }
+        .cam-guide summary::after { content:"+"; color:var(--la-dim); }
+        .cam-guide[open] summary::after { content:"–"; }
+        .cam-guide ol { margin:0; padding:0 14px 14px 34px; display:flex; flex-direction:column; gap:6px; font-size:13px; line-height:1.5; color:var(--la-sub); }
+        .cam-guide b { color:var(--la-text); font-weight:600; }
         .cal-form .cam-btn { height:40px; }
         .cal-find { margin-top:10px; }
         .cal-find summary { cursor:pointer; font-size:12px; color:var(--la-sub); list-style:none; }
@@ -769,7 +784,7 @@
             if (c.ndiName) chips += '<span class="cam-chip ndi" title="NDI source name">NDI · ' + esc(c.ndiName) + '</span>';
             if (c.ip) chips += '<span class="cam-chip">' + esc(c.ip) + '</span>';
             var actions = '';
-            if (!c.external) actions += '<button type="button" class="cam-link cam-ctl" data-act="control">Control</button>';
+            if (!c.external && c.kind !== 'other') actions += '<button type="button" class="cam-link cam-ctl" data-act="control">Control</button>';
             if (c.ip) actions += '<a class="cam-link" href="http://' + esc(c.ip) + '/" target="_blank" rel="noopener" title="The camera\'s own settings page. Works on the venue network.">Camera page</a>';
             if (!c.external) {
                 actions += '<button type="button" class="cam-link" data-act="setup">Stream setup</button>';
@@ -1006,21 +1021,29 @@
         function openCamForm(c) {
             openCamDialog(c ? 'Edit camera' : 'Add camera',
                 '<form id="cam-form" class="cam-form">' +
+                '<div class="cam-kind" role="radiogroup" aria-label="Camera">' +
+                    '<label><input type="radio" name="kind" value="obsbot"' + (!c || c.kind !== 'other' ? ' checked' : '') + '><span>OBSBOT Tail 2<small>Controlled from Camera Control</small></span></label>' +
+                    '<label><input type="radio" name="kind" value="other"' + (c && c.kind === 'other' ? ' checked' : '') + '><span>Other camera<small>DJI Osmo, Sony Alpha, a phone…</small></span></label>' +
+                '</div>' +
+                '<label class="cam-other-only">Which camera<select name="model">' + ['DJI Osmo', 'Sony Alpha', 'Phone', 'Other camera with RTMP'].map(function(m) { return '<option' + (c && c.model === m ? ' selected' : '') + '>' + m + '</option>'; }).join('') + '</select><small>Any camera that can stream to an RTMP address works. Stream setup shows how.</small></label>' +
                 '<label>Name<input name="name" maxlength="40" required placeholder="Main floor" value="' + esc(c && c.name) + '"></label>' +
-                '<label>NDI source name<input name="ndiName" maxlength="80" placeholder="OBSBOT-TAIL2 (MAIN FLOOR)" value="' + esc(c && c.ndiName) + '"><small>As shown in the OBSBOT app or NDI Studio Monitor.</small></label>' +
-                '<label>IP address<input name="ip" maxlength="70" placeholder="192.168.1.50" value="' + esc(c && c.ip) + '"><small>The camera\'s address on the venue network. Needed for Control.</small></label>' +
+                '<label class="cam-obsbot-only">NDI source name<input name="ndiName" maxlength="80" placeholder="OBSBOT-TAIL2 (MAIN FLOOR)" value="' + esc(c && c.ndiName) + '"><small>As shown in the OBSBOT app or NDI Studio Monitor.</small></label>' +
+                '<label class="cam-obsbot-only">IP address<input name="ip" maxlength="70" placeholder="192.168.1.50" value="' + esc(c && c.ip) + '"><small>The camera\'s address on the venue network. Needed for Control.</small></label>' +
                 '<label class="cam-check"><input type="checkbox" name="followCalendar"' + (!c || c.followCalendar !== false ? ' checked' : '') + '><span>Start and stop with the calendar<small>Records from 2 minutes before each set to 2 minutes after it. Leave the camera streaming all night.</small></span></label>' +
                 '<p id="cam-form-error" class="cam-form-error"></p>' +
                 '<div class="cam-form-actions"><button type="button" class="cam-btn ghost" onclick="closeCamDialog()">Cancel</button>' +
                 '<button type="submit" class="cam-btn primary">' + (c ? 'Save' : 'Add camera') + '</button></div>' +
                 '</form>');
             var form = document.getElementById('cam-form');
+            var syncKind = function() { var other = form.kind.value === 'other'; form.querySelectorAll('.cam-obsbot-only').forEach(function(el) { el.hidden = other; }); form.querySelectorAll('.cam-other-only').forEach(function(el) { el.hidden = !other; }); };
+            form.querySelectorAll('[name=kind]').forEach(function(r) { r.addEventListener('change', syncKind); });
+            syncKind();
             form.name.focus();
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
                 var btn = form.querySelector('[type=submit]');
                 btn.disabled = true; btn.textContent = c ? 'Saving…' : 'Adding…';
-                camApi({ action: c ? 'update' : 'add', id: c && c.id, name: form.name.value, ndiName: form.ndiName.value, ip: form.ip.value, followCalendar: form.followCalendar.checked })
+                camApi({ action: c ? 'update' : 'add', id: c && c.id, kind: form.kind.value, model: form.model.value, name: form.name.value, ndiName: form.ndiName.value, ip: form.ip.value, followCalendar: form.followCalendar.checked })
                     .then(function(d) { _camKey = ''; return loadCameras().then(function() { if (c) closeCamDialog(); else openStreamSetup(d.camera); }); })
                     .catch(function(err) { document.getElementById('cam-form-error').textContent = err.message; btn.disabled = false; btn.textContent = c ? 'Save' : 'Add camera'; });
             });
@@ -1033,12 +1056,21 @@
                     return '<div class="cam-field"><span>' + label + '</span><div><code' + (secret ? ' class="secret"' : '') + '>' + esc(value) + '</code>' +
                         '<button type="button" class="cam-icon-btn" data-copy="' + esc(value) + '" title="Copy"><iconify-icon icon="solar:copy-linear"></iconify-icon></button></div></div>';
                 }
+                var other = c.kind === 'other', full = d.rtmpUrl.replace(/\/$/, '') + '/' + d.streamKey;
+                var guide = function(key, title, steps) { return '<details class="cam-guide"' + (String(c.model || '').indexOf(key) === 0 ? ' open' : '') + '><summary>' + title + '</summary><ol>' + steps.map(function(x) { return '<li>' + x + '</li>'; }).join('') + '</ol></details>'; };
                 document.getElementById('cam-dialog-body').innerHTML =
-                    '<p class="cam-dialog-text">Paste these into the camera\'s RTMP live-streaming settings, or into OBS (Settings → Stream → Custom) on the venue computer that receives this camera over NDI.</p>' +
+                    '<p class="cam-dialog-text">' + (other ? 'Send the camera\'s video to these addresses. Then it records with the calendar, saves each set for the DJ and makes the clips, like any camera.' : 'Paste these into the camera\'s RTMP live-streaming settings, or into OBS (Settings → Stream → Custom) on the venue computer that receives this camera over NDI.') + '</p>' +
                     row('Server', d.rtmpsUrl) +
                     row('Server (if RTMPS isn\'t supported)', d.rtmpUrl) +
                     row('Stream key', d.streamKey, true) +
+                    (other ? row('Full address (server + key, for apps that ask for one address)', full, true) : '') +
                     (d.srtUrl ? row('SRT (alternative)', d.srtUrl, true) : '') +
+                    (other ? '<div class="cam-guides">' +
+                        guide('DJI', 'DJI Osmo (Pocket 3, Action)', ['Open the DJI Mimo app with the Osmo connected.', 'Choose <b>Live</b>, then <b>RTMP</b> (custom).', 'Paste the <b>full address</b> above. Pick the best quality your Wi-Fi allows.', 'Start the live stream before the first set.']) +
+                        guide('Sony', 'Sony Alpha', ['<b>With a laptop:</b> connect the camera by USB (it works as a webcam) or by HDMI with a capture adapter.', 'Open <b>OBS</b> (free): Settings → Stream → Service <b>Custom</b>. Paste the <b>Server</b> and the <b>Stream key</b>.', 'Add the camera as a video source and press <b>Start streaming</b>.', '<b>Newer models</b> can stream on their own through Sony\'s Creators\' App, if your model has it: use the full address.']) +
+                        guide('Phone', 'A phone', ['Install <b>Larix Broadcaster</b> (free, iPhone and Android).', 'Settings → Connections → New connection: paste the <b>full address</b>.', 'Turn the phone sideways and press the record button to go live.']) +
+                        guide('Other', 'Any other camera', ['Look for <b>RTMP</b>, <b>custom stream</b> or <b>live streaming</b> in its settings or app.', 'Paste the <b>Server</b> and <b>Stream key</b>, or the <b>full address</b> if it asks for one address.', 'No RTMP? Stream it through a laptop with OBS, like the Sony Alpha.']) +
+                      '</div><p class="cam-dialog-note">Pan, tilt, zoom and AI tracking from Camera Control are for OBSBOT cameras; everything else works the same.</p>' : '') +
                     '<p class="cam-dialog-note"> Keep the stream key private. Anyone with it can send video to this camera slot.</p>';
                 document.querySelectorAll('[data-copy]').forEach(function(b) {
                     b.addEventListener('click', function() {

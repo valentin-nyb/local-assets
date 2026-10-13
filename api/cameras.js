@@ -138,7 +138,11 @@ export default async function handler(req, res) {
     if (body.action === 'add' || body.action === 'update') {
       const name    = clean(body.name, 40);
       const ndiName = clean(body.ndiName, 80);
-      const ip      = clean(body.ip, 70);
+      // An OBSBOT (controllable over the venue network) or any other camera that streams RTMP:
+      // a DJI Osmo, a Sony Alpha through a laptop, a phone…
+      const kind    = body.kind === 'other' ? 'other' : 'obsbot';
+      const ip      = kind === 'other' ? '' : clean(body.ip, 70);
+      const model   = kind === 'other' ? (clean(body.model, 40) || 'Own camera') : 'OBSBOT Tail 2';
       if (!name) return res.status(400).json({ error: 'Give the camera a name' });
       if (!validHost(ip)) return res.status(400).json({ error: 'Camera address should look like 192.168.1.50' });
 
@@ -147,7 +151,7 @@ export default async function handler(req, res) {
         if (body.action === 'update') {
           const cam = cams.find(c => c.id === body.id);
           if (!cam) return res.status(404).json({ error: 'Camera not found' });
-          Object.assign(cam, { name, ndiName, ip });
+          Object.assign(cam, { name, ndiName: kind === 'other' ? '' : ndiName, ip, kind, model });
           if (typeof body.followCalendar === 'boolean') cam.followCalendar = body.followCalendar;
           await redis.set(key(slug), JSON.stringify(cams));
           return res.status(200).json({ camera: cam });
@@ -158,8 +162,9 @@ export default async function handler(req, res) {
           id: 'cam_' + stream.id.slice(0, 12),
           streamId: stream.id,
           name,
-          model: 'OBSBOT Tail 2',
-          ndiName,
+          model,
+          kind,
+          ndiName: kind === 'other' ? '' : ndiName,
           ip,
           artist: clean(body.artist, 60),
           autoClips: true,
