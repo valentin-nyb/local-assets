@@ -1,5 +1,6 @@
 import { getWebSessionAuth, getVenuesConfig, getMuxAuthForVenue, isAdminVenue, platformAdmins } from './_venues.js';
 import { listThumbnailAssets } from './_thumbnails.js';
+import crypto from 'crypto';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', 'https://local-assets.com');
@@ -43,6 +44,17 @@ export default async function handler(req, res) {
         for (const t of await listThumbnailAssets(slug).catch(() => [])) out.push({ ...t, _venue: slug, _venueName: cfg.name || slug });
       } catch (e) { console.error('[list-assets] admin view', slug, e.message); }
     }
+    // Isolation check: two clients whose keys reach the same Mux environment would see the same videos.
+    // Logs a short fingerprint of each key (never the key) and any clients that share videos.
+    const seen = {}, fp = {};
+    for (const [slug, cfg] of Object.entries(getVenuesConfig())) {
+      const auth = getMuxAuthForVenue({ slug, ...cfg });
+      if (auth && !isAdminVenue({ slug, ...cfg })) fp[slug] = crypto.createHash('sha256').update(auth).digest('hex').slice(0, 8);
+    }
+    for (const a of out) if (a.id && !a.source) (seen[a.id] = seen[a.id] || new Set()).add(a._venue);
+    const shared = {};
+    for (const set of Object.values(seen)) if (set.size > 1) { const k = [...set].sort().join(' + '); shared[k] = (shared[k] || 0) + 1; }
+    console.log('[list-assets] isolation', JSON.stringify({ keys: fp, videos: Object.fromEntries(Object.keys(fp).map(s => [s, out.filter(a => a._venue === s && !a.source).length])), shared }));
     return res.status(200).json(out);
   }
 
