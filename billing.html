@@ -32,7 +32,7 @@
     <link rel="manifest" href="favicon/site.webmanifest">
 
     <link rel="stylesheet" href="styles/tailwind.css">
-    <link rel="stylesheet" href="styles/theme.css?v=2">
+    <link rel="stylesheet" href="styles/theme.css?v=3">
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
@@ -86,7 +86,9 @@
         .bl-admin-actions { display:flex; flex-wrap:wrap; gap:8px; padding:0 20px 20px; align-items:center; }
         .bl-msg { font-size:12px; color:var(--la-sub); }
         .bl-inv-filter { height:34px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 10px; font-size:12px; max-width:280px; }
-        .bl-inv-filter.hidden { display:none; }
+        .bl-inv-filter.hidden, #bl-inv-zip.hidden { display:none; }
+        .bl-inv-tools { display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+        button.bl-del { color:var(--la-bad, #ef4444); }
         .bl-cancel-body { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:18px 20px; flex-wrap:wrap; }
         .bl-cancel-body .bl-msg { max-width:620px; line-height:1.55; }
         .bl-danger { background:transparent; color:var(--la-bad, #ef4444); border-color:color-mix(in srgb, var(--la-bad, #ef4444) 45%, transparent); }
@@ -202,7 +204,7 @@
                     <div class="bl-offer" id="bl-offer"></div>
                 </section>
                 <section class="bl-section">
-                    <div class="bl-section-head"><h3>Invoices</h3><select id="bl-inv-filter" class="bl-inv-filter hidden" aria-label="Show invoices for"></select></div>
+                    <div class="bl-section-head"><h3>Invoices</h3><div class="bl-inv-tools"><select id="bl-inv-filter" class="bl-inv-filter hidden" aria-label="Show invoices for"></select><button type="button" class="cam-btn ghost hidden" id="bl-inv-zip">Download all</button></div></div>
                     <div class="bl-scroll" id="bl-invoices"><p class="bl-empty">Loading…</p></div>
                 </section>
                 <section class="bl-section hidden" id="bl-plans-box">
@@ -317,8 +319,25 @@
                         : '<span class="bl-pill ' + (i.status === 'paid' ? 'paid' : 'open') + '">' + LABEL[i.status] + '</span>';
                     return '<tr><td class="svc">' + esc(i.number || i.id) + '</td><td>' + esc(i.billedTo) + '<span class="bl-who">' + esc(i.kind) + '</span></td>' + (admin ? '<td>' + esc(i.accountName || '') + '</td>' : '') + '<td style="white-space:nowrap">' + new Date(i.created).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + '</td>' +
                         '<td>' + status + '</td><td class="num">' + money(i.total, i.currency) + '</td>' +
-                        '<td class="num"><div class="bl-acts">' + '<button type="button" class="bl-link bl-view" data-view="' + esc(i.id) + '">View</button>' + (i.pdf ? '<a class="bl-link" href="' + esc(i.pdf) + '" target="_blank" rel="noopener">PDF</a>' : '') + (i.url && i.payable ? '<a class="bl-pay" href="' + esc(i.url) + '" target="_blank" rel="noopener">Pay</a>' : '') + '</div></td></tr>';
+                        '<td class="num"><div class="bl-acts">' + '<button type="button" class="bl-link bl-view" data-view="' + esc(i.id) + '">View</button>' + (i.pdf ? '<a class="bl-link" href="' + esc(i.pdf) + '" target="_blank" rel="noopener">PDF</a>' : '') + (i.url && i.payable ? '<a class="bl-pay" href="' + esc(i.url) + '" target="_blank" rel="noopener">Pay</a>' : '') + (admin ? '<button type="button" class="bl-link bl-del" data-del="' + esc(i.id) + '">Delete</button>' : '') + '</div></td></tr>';
                 }).join('') + '</tbody></table>';
+            var zipBtn = document.getElementById('bl-inv-zip');
+            zipBtn.classList.toggle('hidden', !admin || !shown.length);
+            zipBtn.textContent = 'Download all (' + shown.length + ')';
+            zipBtn.onclick = function() { downloadAllInvoices(shown, zipBtn); };
+            inv.querySelectorAll('[data-del]').forEach(function(b) {
+                b.addEventListener('click', async function() {
+                    var x = shown.find(function(i) { return i.id === b.dataset.del; });
+                    if (!x) return;
+                    var paid = x.status === 'paid';
+                    if (!(await laConfirm({ title: 'Delete invoice ' + (x.number || '') + '?', message: paid
+                        ? 'It is paid, so Stripe keeps it for your accounts. It is removed from every invoice list here, for you and the client.'
+                        : 'It is voided in Stripe so it can no longer be paid, and removed from every invoice list here, for you and the client.', confirmText: 'Delete invoice', danger: true }))) return;
+                    b.disabled = true;
+                    try { await post({ action: 'deleteInvoice', invoice: x.id }); laToast('Invoice deleted'); await load(); }
+                    catch (e) { b.disabled = false; laAlert('Could not delete: ' + e.message, { tone: 'error' }); }
+                });
+            });
             inv.querySelectorAll('[data-view]').forEach(function(b) {
                 b.addEventListener('click', function() { var x = shown.find(function(i) { return i.id === b.dataset.view; }); if (x) showInvoice(x); });
             });
@@ -434,6 +453,45 @@
             catch (e) { msg.textContent = 'Could not save: ' + e.message; }
             this.disabled = false;
         });
+        // Admin: every invoice shown, as one zip with a folder per artist, label or account billed
+        function loadJSZip() {
+            if (window.JSZip) return Promise.resolve(window.JSZip);
+            return new Promise(function(ok, bad) {
+                var sc = document.createElement('script');
+                sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+                sc.onload = function() { ok(window.JSZip); }; sc.onerror = function() { bad(new Error('Could not load the zip tool')); };
+                document.head.appendChild(sc);
+            });
+        }
+        async function downloadAllInvoices(list, btn) {
+            var label = btn.textContent, done = 0, failed = [];
+            var clean = function(t) { return String(t || '').replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, ' ').trim().slice(0, 80) || 'Invoice'; };
+            btn.disabled = true;
+            try {
+                var JSZip = await loadJSZip(), zip = new JSZip(), queue = list.slice();
+                var work = async function() {
+                    while (queue.length) {
+                        var i = queue.shift();
+                        btn.textContent = 'Preparing ' + (++done) + ' of ' + list.length + '…';
+                        try {
+                            var r = await laFetch('/api/billing?invoicePdf=' + encodeURIComponent(i.id) + '&venue=' + encodeURIComponent(i.account || ''));
+                            if (!r.ok) throw new Error(r.status);
+                            var day = new Date(i.created).toISOString().slice(0, 10);
+                            zip.folder(clean(i.billedTo)).file(day + ' ' + clean(i.number || i.id) + '.pdf', await r.arrayBuffer());
+                        } catch (e) { failed.push(i.number || i.id); }
+                    }
+                };
+                await Promise.all([work(), work(), work(), work()]);
+                var blob = await zip.generateAsync({ type: 'blob' });
+                var a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'local-assets invoices ' + new Date().toISOString().slice(0, 10) + '.zip';
+                document.body.appendChild(a); a.click(); a.remove();
+                setTimeout(function() { URL.revokeObjectURL(a.href); }, 5000);
+                if (failed.length) laAlert('Downloaded, but ' + failed.length + ' had no PDF: ' + failed.join(', '));
+            } catch (e) { laAlert('Could not download the invoices: ' + e.message, { tone: 'error' }); }
+            btn.disabled = false; btn.textContent = label;
+        }
         // The billing details typed in Bill to
         function detailsOf(sf) { return { legalName: sf.legalName.value.trim(), line1: sf.line1.value.trim(), line2: sf.line2.value.trim(), city: sf.city.value.trim(), postcode: sf.postcode.value.trim(), country: sf.country.value, vat: sf.vat.value.trim() }; }
         function detailsMissing(x) { return !x.legalName ? 'legalName' : !x.line1 ? 'line1' : !x.city ? 'city' : !x.postcode ? 'postcode' : ''; }

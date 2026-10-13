@@ -98,6 +98,19 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Admin: one invoice's PDF, passed through so the page can zip every invoice together
+    if (req.method === 'GET' && req.query.invoicePdf) {
+      if (!isAdmin) return res.status(403).json({ error: 'Admin only' });
+      const stripe = stripeClient();
+      const id = String(req.query.invoicePdf);
+      if (!stripe || !/^in_[A-Za-z0-9]+$/.test(id)) return res.status(400).json({ error: 'Unknown invoice' });
+      const inv = await stripe.invoices.retrieve(id).catch(() => null);
+      if (!inv?.metadata?.venueSlug || !inv.invoice_pdf) return res.status(404).json({ error: 'No PDF for this invoice' });
+      const r = await fetch(inv.invoice_pdf, { signal: AbortSignal.timeout(25000) });
+      if (!r.ok) return res.status(502).json({ error: 'Stripe PDF ' + r.status });
+      res.setHeader('Content-Type', 'application/pdf');
+      return res.status(200).send(Buffer.from(await r.arrayBuffer()));
+    }
     if (req.method === 'GET') {
       const target = isAdmin ? cleanTarget(req.query.target) : 'venue';
       const base = req.query.period === 'previous' ? previousMonth() : monthRange();
@@ -156,6 +169,9 @@ export default async function handler(req, res) {
             }
           });
         }
+        // Invoices the admin deleted stay in Stripe for the accounts but leave every list
+        const hidden = new Set(await withRedis(r => r.sMembers('billing_hidden')).catch(() => []));
+        list = list.filter(i => !hidden.has(i.id));
         invoices = list.sort((x, y) => y.created - x.created).map(i => {
           const t = i.metadata?.target || 'venue';
           const iv = i.metadata?.venueSlug || slug;
@@ -327,6 +343,23 @@ export default async function handler(req, res) {
       if (!TYPE_LABEL[t]) return res.status(400).json({ error: 'Unknown type' });
       await withRedis(r => r.set(`account_type:${slug}`, t));
       return res.status(200).json({ ok: true });
+    }
+
+    // Admin: delete an invoice. A draft is deleted, an unpaid one voided (it can no longer be paid);
+    // a paid one stays in Stripe for the accounts. All of them leave the invoice lists.
+    if (body.action === 'deleteInvoice') {
+      const stripe = stripeClient();
+      if (!stripe) return res.status(503).json({ error: 'Stripe is not connected' });
+      const id = String(body.invoice || '');
+      if (!/^in_[A-Za-z0-9]+$/.test(id)) return res.status(400).json({ error: 'Unknown invoice' });
+      const inv = await stripe.invoices.retrieve(id).catch(() => null);
+      if (!inv?.metadata?.venueSlug) return res.status(404).json({ error: 'Invoice not found' });
+      let done = 'hidden';
+      if (inv.status === 'draft') { await stripe.invoices.del(id); done = 'deleted'; }
+      else if (inv.status === 'open' || inv.status === 'uncollectible') { await stripe.invoices.voidInvoice(id); done = 'voided'; }
+      await withRedis(r => Promise.all([r.sAdd('billing_hidden', id), r.hDel(`billing_unpaid:${inv.metadata.venueSlug}`, id), r.hDel(`billing_status:${inv.metadata.venueSlug}`, id)]));
+      console.log('[billing] invoice', id, done, 'by', session.email);
+      return res.status(200).json({ ok: true, done });
     }
 
     if (body.action === 'setStatus') {

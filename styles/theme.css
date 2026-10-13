@@ -495,8 +495,20 @@ h1:not(header h1), h2, h3,
     color: var(--la-text);
     border: 1px solid color-mix(in srgb, var(--la-text) 24%, transparent);
 }
+/* Hover: an outline button fills with its own colour */
 @media (hover: hover) {
     :root body :is(.cam-btn.ghost, .se-btn:not(.primary):not(.danger), .vs-btn.ghost, .lad-btn.ghost):hover:not(:disabled) {
-        border-color: color-mix(in srgb, var(--la-text) 50%, transparent);
+        background: var(--la-text);
+        border-color: var(--la-text);
+        color: var(--la-bg);
+    }
+    :root body .cam-btn.bl-danger:hover:not(:disabled) {
+        background: var(--la-bad, #ef4444);
+        border-color: var(--la-bad, #ef4444);
+        color: #fff;
+    }
+    :root body :is(.cam-btn.primary, .se-btn.primary, .vs-btn.primary, .lad-btn.primary, .ing-btn, .bl-pay):hover:not(:disabled) {
+        opacity: 1;
+        filter: brightness(1.08);
     }
 }
