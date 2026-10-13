@@ -132,7 +132,7 @@ export async function usageByDay(redis, slug, auth, { from, to }, artist = null,
   } catch (e) { notes.push('Video usage unavailable: ' + e.message); return { days, notes, vids: [], files }; }
   for (const d of days) d.stored = vids.reduce((s, v) => s + (v.at < d.start + DAY ? v.min : 0), 0);
   const reported = Math.floor((Date.now() - 12.5 * 3600e3) / 3600e3) * 3600e3;
-  const key = d => `usage_day:${slug}:${only || '*'}:${new Date(d.start).toISOString().slice(0, 10)}`;
+  const key = d => `usage_day2:${slug}:${only || '*'}:${new Date(d.start).toISOString().slice(0, 10)}`;
   const queue = days.filter(d => d.start < reported);
   const work = async () => {
     while (queue.length) {
