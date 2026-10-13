@@ -83,16 +83,17 @@
         .clip-share { margin-top:2px; height:20px; padding:0 8px; border-radius:999px; border:1px solid var(--la-line); background:transparent; color:var(--la-text); font:600 9px Inter,ui-sans-serif,system-ui,sans-serif; letter-spacing:.04em; cursor:pointer; }
         @media (hover:hover) { .clip-share:hover { border-color:var(--la-accent); color:var(--la-accent); } }
         /* Distribution History actions in the platform style: quiet pills and icons, filled on hover */
-        #recent-sets-list [id^="zip-btn-"], #recent-sets-list .yt-dist-btn, #recent-sets-list .sc-dist-btn, #recent-sets-list .wm-apply, #recent-sets-list .wm-restore {
+        #recent-sets-list [id^="zip-btn-"], #recent-sets-list .wm-apply, #recent-sets-list .wm-restore {
             height:34px !important; padding:0 16px !important; gap:8px !important; border-radius:999px !important; border:1px solid color-mix(in srgb, var(--la-text) 26%, transparent) !important;
             background:transparent !important; color:var(--la-text) !important; font:500 13px/1 'Helvetica Neue', Helvetica, Arial, sans-serif !important; letter-spacing:0 !important; text-transform:none !important;
             display:inline-flex; align-items:center; justify-content:center; transition:background .25s ease, color .25s ease, border-color .25s ease !important; }
         #recent-sets-list [id^="zip-btn-"] span { font:inherit !important; color:inherit !important; letter-spacing:0 !important; text-transform:none !important; }
         #recent-sets-list [id^="zip-btn-"] iconify-icon { display:none; }
-        #recent-sets-list .yt-dist-btn::before, #recent-sets-list .sc-dist-btn::before { content:""; width:8px; height:8px; border-radius:50%; background:#FF0000; flex-shrink:0; }
-        #recent-sets-list .sc-dist-btn::before { background:#FF5500; }
+        /* Posted to YouTube / SoundCloud: the link is filled in the platform's colour */
+        #recent-sets-list a[id^="yt-dist-"], #recent-sets-list a[id^="sc-dist-"] { display:inline-flex !important; align-items:center; justify-content:center; gap:6px; height:34px; padding:0 16px !important; border-radius:999px !important; background:#FF0000 !important; border:1px solid #FF0000 !important; color:#fff !important; font:500 13px/1 'Helvetica Neue', Helvetica, Arial, sans-serif !important; letter-spacing:0 !important; text-transform:none !important; text-decoration:none !important; }
+        #recent-sets-list a[id^="sc-dist-"] { background:#FF5500 !important; border-color:#FF5500 !important; }
         @media (hover:hover) {
-            #recent-sets-list [id^="zip-btn-"]:hover, #recent-sets-list .yt-dist-btn:hover, #recent-sets-list .sc-dist-btn:hover, #recent-sets-list .wm-apply:hover:not(:disabled), #recent-sets-list .wm-restore:hover:not(:disabled) {
+            #recent-sets-list [id^="zip-btn-"]:hover, #recent-sets-list .wm-apply:hover:not(:disabled), #recent-sets-list .wm-restore:hover:not(:disabled) {
                 background:var(--la-text) !important; color:var(--la-bg) !important; border-color:var(--la-text) !important; }
         }
         #recent-sets-list button.w-8.h-8.rounded-full { width:34px !important; height:34px !important; border-radius:999px !important; border:1px solid color-mix(in srgb, var(--la-text) 18%, transparent); transition:background .2s ease, border-color .2s ease; }
@@ -1145,12 +1146,12 @@
                         html += '<iconify-icon icon="solar:play-linear" class="text-primary"></iconify-icon>';
                         html += '</button>';
                         if (isMasterAsset) {
-                            html += '<button id="yt-dist-' + uid + '" class="yt-dist-btn hidden" style="display:none;align-items:center;gap:4px;padding:3px 8px;border-radius:9999px;border:1px solid #FF0000;background:transparent;color:#FF0000;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;white-space:nowrap;" onclick="distributeYouTube(\'' + pid + '\', \'' + dlFile + '\', \'' + safeName + '\', \'' + uid + '\', \'' + jsq(sessionDate) + '\')" onmouseover="this.style.background=\'#FF0000\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'#FF0000\'">';
+                            html += '<button id="yt-dist-' + uid + '" class="yt-dist-btn hidden" style="display:none;align-items:center;justify-content:center;gap:6px;height:34px;padding:0 16px;border-radius:999px;border:1px solid #FF0000;background:transparent;color:#FF0000;font:500 13px/1 \'Helvetica Neue\',Helvetica,Arial,sans-serif;cursor:pointer;white-space:nowrap;transition:background .25s ease,color .25s ease;" onclick="distributeYouTube(\'' + pid + '\', \'' + dlFile + '\', \'' + safeName + '\', \'' + uid + '\', \'' + jsq(sessionDate) + '\')" onmouseover="this.style.background=\'#FF0000\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'#FF0000\'">';
                             html += 'YouTube';
                             html += '</button>';
                         }
                         if (isAudioAsset) {
-                            html += '<button id="sc-dist-' + uid + '" class="sc-dist-btn hidden" style="display:none;align-items:center;gap:4px;padding:3px 8px;border-radius:9999px;border:1px solid #FF5500;background:transparent;color:#FF5500;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;white-space:nowrap;" onclick="distributeSoundCloud(\'' + pid + '\', \'' + dlFile + '\', \'' + safeName + '\', \'' + uid + '\')" onmouseover="this.style.background=\'#FF5500\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'#FF5500\'">';
+                            html += '<button id="sc-dist-' + uid + '" class="sc-dist-btn hidden" style="display:none;align-items:center;justify-content:center;gap:6px;height:34px;padding:0 16px;border-radius:999px;border:1px solid #FF5500;background:transparent;color:#FF5500;font:500 13px/1 \'Helvetica Neue\',Helvetica,Arial,sans-serif;cursor:pointer;white-space:nowrap;transition:background .25s ease,color .25s ease;" onclick="distributeSoundCloud(\'' + pid + '\', \'' + dlFile + '\', \'' + safeName + '\', \'' + uid + '\')" onmouseover="this.style.background=\'#FF5500\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'#FF5500\'">';
                             html += 'SoundCloud';
                             html += '</button>';
                         }
@@ -2398,7 +2399,7 @@
             btn.onmouseover = null;
             btn.onmouseout = null;
             btn.style.color = '#fff';
-            btn.innerHTML = ' UPLOADING…';
+            btn.innerHTML = 'Uploading…';
 
             // Decelerate toward 90% — fills fast at first, slows as it approaches
             var pct = 0;
@@ -2413,7 +2414,7 @@
                 btn.style.color = '#FF5500';
                 btn.onmouseover = function(){ this.style.background='#FF5500'; this.style.color='#fff'; };
                 btn.onmouseout  = function(){ this.style.background='transparent'; this.style.color='#FF5500'; };
-                btn.innerHTML = ' SOUNDCLOUD';
+                btn.innerHTML = 'SoundCloud';
             }
 
             try {
@@ -2435,7 +2436,7 @@
                 btn.style.background = '#FF5500';
                 setTimeout(function() {
                     var row = document.getElementById('sc-dist-' + uid);
-                    if (row) row.outerHTML = '<a id="sc-dist-' + uid + '" href="' + (data.url || '#') + '" target="_blank" style="display:inline-flex;align-items:center;gap:4px;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#39FF14;text-decoration:none;">&#x2713; ON SOUNDCLOUD</a>';
+                    if (row) row.outerHTML = '<a id="sc-dist-' + uid + '" href="' + (data.url || '#') + '" target="_blank" style="display:inline-flex;align-items:center;gap:4px;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#39FF14;text-decoration:none;">&#x2713; On SoundCloud</a>';
                 }, 400);
             } catch(e) {
                 clearInterval(timer);
@@ -2501,7 +2502,7 @@
                 btn.style.color = '#FF0000';
                 btn.onmouseover = function(){ this.style.background='#FF0000'; this.style.color='#fff'; };
                 btn.onmouseout  = function(){ this.style.background='transparent'; this.style.color='#FF0000'; };
-                btn.innerHTML = ' YOUTUBE';
+                btn.innerHTML = 'YouTube';
             }
 
             // Large files upload in chunks over several calls; each reply says how far it got.
@@ -2522,7 +2523,7 @@
                     if (data.done) break;
                     uploadId = data.uploadId;
                     var pct = data.total ? Math.max(1, data.sent / data.total * 100) : 1;
-                    paint(pct, 'UPLOADING ' + Math.floor(pct) + '%');
+                    paint(pct, 'Uploading ' + Math.floor(pct) + '%');
                 }
                 if (!data || !data.done) { resetBtn(); alert('YouTube upload did not finish — please try again.'); return; }
 
@@ -2536,7 +2537,7 @@
                 btn.style.background = '#FF0000';
                 setTimeout(function() {
                     var row = document.getElementById('yt-dist-' + uid);
-                    if (row) row.outerHTML = '<a id="yt-dist-' + uid + '" href="' + (data.url || '#') + '" target="_blank" style="display:inline-flex;align-items:center;gap:4px;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#39FF14;text-decoration:none;">&#x2713; ON YOUTUBE</a>';
+                    if (row) row.outerHTML = '<a id="yt-dist-' + uid + '" href="' + (data.url || '#') + '" target="_blank" style="display:inline-flex;align-items:center;gap:4px;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#39FF14;text-decoration:none;">&#x2713; On YouTube</a>';
                 }, 400);
             } catch(e) {
                 resetBtn();
