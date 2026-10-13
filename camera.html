@@ -281,6 +281,15 @@
         .ctl-fine { margin:16px 0 0; font-size:11px; color:var(--la-dim); }
         @media (max-width: 760px) { .ctl-grid { grid-template-columns:repeat(2, minmax(0,1fr)); } }
         @media (max-width: 420px) { .ctl-grid { grid-template-columns:minmax(0,1fr); } }
+        .ci-ctl { margin-top:28px; padding-top:22px; border-top:1px solid var(--la-line-soft); }
+        .ci-ctl:empty { display:none; }
+        .ctl-inline .ctl-head { margin-bottom:12px; }
+        .ctl-inline .ctl-grid { grid-template-columns:repeat(2, minmax(0,1fr)); gap:20px 22px; }
+        .ctl-inline .ctl-pad { max-width:200px; }
+        @media (max-width: 520px) { .ctl-inline .ctl-grid { grid-template-columns:minmax(0,1fr); } }
+        .cam-admin-ex .ci-copy > .cam-eyebrow, .cam-admin-ex .ci-title, .cam-admin-ex .ci-text { display:none; }
+        .cam-admin-ex .ci-ctl { margin-top:0; padding-top:0; border-top:none; }
+        .ctl-relay.ex { height:20px; padding:0 8px; display:inline-flex; align-items:center; border:1px solid var(--la-line); border-radius:999px; font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.14em; }
 </style>
 </head>
 <body class="font-sans antialiased bg-background text-foreground overflow-hidden h-screen w-screen flex selection:bg-primary selection:text-black">
@@ -337,6 +346,7 @@
                             <button type="button" class="cam-btn ghost" onclick="openOrderCameras()">Order cameras · buy or hire</button>
                         </div>
                         <p class="ci-note">Setup and integration included with every camera ordered from us.</p>
+                        <div class="ci-ctl" id="ci-ctl"></div>
                     </div>
 
                     <div class="ci-example" aria-label="Example of a connected camera">
@@ -346,7 +356,7 @@
                             <div class="cam-meta"><span class="cam-label">CAM 01 // MAIN FLOOR</span><span class="cam-pill on">LIVE · REC</span></div>
                             <div class="cam-chips"><span class="cam-chip">OBSBOT Tail 2</span><span class="cam-chip ndi">NDI · MAIN FLOOR</span><span class="cam-chip">192.168.1.50</span></div>
                             <div class="cam-onstage" style="cursor:default"><span style="min-width:0"><span class="lbl">ON STAGE</span><span class="val" id="ci-artist">ARTIST NAME</span></span><span class="go">From calendar</span></div>
-                            <div class="cam-row-actions" aria-hidden="true"><span class="cam-link cam-ctl">Control</span><span class="cam-link">Camera page</span><span class="cam-link">Stream setup</span><span class="cam-link">Edit</span><span class="cam-link danger">Remove</span></div>
+                            <div class="cam-row-actions"><button type="button" class="cam-link cam-ctl" onclick="openControl(exampleCam())">Control</button><span class="cam-link">Camera page</span><span class="cam-link">Stream setup</span><span class="cam-link">Edit</span><span class="cam-link danger">Remove</span></div>
                         </div>
                         <div class="ci-arrow"><span>When the stream stops</span></div>
                         <div class="ci-result">
@@ -593,8 +603,19 @@
         }
         var _adminVenuesData = [];
 
+        // The example camera (the Control panel opened from the example card)
+        function exampleCam() {
+            var img = document.querySelector('#ci-stage img');
+            return { id: 'example', name: 'Main floor', demo: true, ip: '192.168.1.50', picture: img ? img.src : '' };
+        }
+        function paintExampleControls() {
+            var box = document.getElementById('ci-ctl');
+            if (box && !box.dataset.done) { box.dataset.done = '1'; openControl({ id: 'example', name: 'Main floor', demo: true, ip: '192.168.1.50' }, box); }
+        }
+
         // The intro's example card uses this venue's latest session, when there is one
         function fillIntroExample(venueSlug) {
+            paintExampleControls();
             // The example clips always show the local / assets logo and a placeholder name
             document.querySelectorAll('.ci-wm').forEach(function(w) { w.classList.add('has-logo'); w.style.backgroundImage = 'url(/logos/a-white.png)'; w.innerHTML = '&#8203;'; });
             // Until the account's latest session loads: the account's name
@@ -621,6 +642,8 @@
                 // Short silent loops from the session (animated WebP: plays like a GIF, smaller)
                 var loop = function(t, w) { var a = Math.round(t); return 'https://image.mux.com/' + pid + '/animated.webp?start=' + a + '&end=' + (a + 4) + '&width=' + w + '&fps=10'; };
                 document.getElementById('ci-stage').innerHTML = '<img alt="" class="ci-loop" src="' + loop(dur * 0.45, 480) + '">';
+                var cs = document.querySelector('#ci-ctl #ctl-stage');
+                if (cs) cs.innerHTML = '<img alt="" class="ci-loop" src="' + loop(dur * 0.3, 960) + '" style="width:100%;height:100%;object-fit:cover">';
                 document.querySelectorAll('#ci-branded i').forEach(function(t, i) {
                     var img = document.createElement('img');
                     img.alt = ''; img.className = 'ci-loop'; img.loading = 'lazy';
@@ -735,15 +758,20 @@
             });
         }
 
-        function openControl(c) {
-            openCamDialog('', '');
-            var panel = document.querySelector('#cam-dialog .cam-dialog-panel');
-            panel.classList.add('wide', 'ctl');
+        function openControl(c, inline) {
+            var demo = !!c.demo, panel;
+            if (inline) { panel = inline; panel.classList.add('ctl', 'ctl-inline'); }
+            else {
+                openCamDialog('', '');
+                panel = document.querySelector('#cam-dialog .cam-dialog-panel');
+                panel.classList.add('wide', 'ctl');
+            }
+            var body = inline || document.getElementById('cam-dialog-body');
             var isLive = c.status === 'active' && c.playbackId;
             var dirs = [['upleft', '↖'], ['up', '↑'], ['upright', '↗'], ['left', '←'], ['home', 'HOME'], ['right', '→'], ['downleft', '↙'], ['down', '↓'], ['downright', '↘']];
             var seg = function(name, opts) { return '<div class="ctl-seg" data-seg="' + name + '">' + opts.map(function(o) { return '<button type="button" data-v="' + o[0] + '">' + o[1] + '</button>'; }).join('') + '</div>'; };
-            document.getElementById('cam-dialog-body').innerHTML =
-                '<div class="ctl-head"><div><p class="cam-eyebrow">Control</p><h3 class="ctl-title">' + esc(c.name) + '</h3></div><span class="ctl-relay" id="ctl-relay"></span></div>' +
+            body.innerHTML =
+                '<div class="ctl-head"><div><p class="cam-eyebrow">' + 'Control' + '</p><h3 class="ctl-title">' + esc(c.name) + '</h3></div><span class="ctl-relay" id="ctl-relay"></span></div>' +
                 '<div class="ctl-stage" id="ctl-stage"></div>' +
                 '<p class="ctl-msg hidden" id="ctl-msg"></p>' +
                 '<div class="ctl-grid">' +
@@ -759,9 +787,11 @@
                         '<p class="ctl-label">Focus</p>' + seg('focus', [['auto', 'Auto'], ['push', 'Refocus']]) +
                         '<p class="ctl-label">Exposure</p>' + seg('exposure', [['down', '−'], ['reset', '0'], ['up', '+']]) + '</section>' +
                 '</div>' +
-                '<p class="ctl-fine">Commands go to the camera through the venue relay. Keyboard: arrow keys to move, + and − to zoom.</p>';
-            var stage = document.getElementById('ctl-stage');
-            if (isLive) {
+                '<p class="ctl-fine">' + (demo ? 'Example: nothing is sent. With a camera connected, each button moves or sets the real camera through the venue relay, from anywhere.' : 'Commands go to the camera through the venue relay. Keyboard: arrow keys to move, + and − to zoom.') + '</p>';
+            var stage = body.querySelector('#ctl-stage');
+            if (inline && !c.picture) stage.innerHTML = '<div class="cam-off"><span>Live picture</span></div>';
+            else if (c.picture) stage.innerHTML = '<img alt="" src="' + esc(c.picture) + '" style="width:100%;height:100%;object-fit:cover">';
+            else if (isLive) {
                 var mp = document.createElement('mux-player');
                 mp.setAttribute('stream-type', 'live'); mp.setAttribute('playback-id', c.playbackId);
                 mp.setAttribute('muted', ''); mp.setAttribute('autoplay', 'muted'); mp.setAttribute('accent-color', '#39FF14');
@@ -769,8 +799,9 @@
                 stage.appendChild(mp);
             } else stage.innerHTML = '<div class="cam-off"><span>The picture shows here while the camera streams</span></div>';
 
-            var msg = document.getElementById('ctl-msg'), relayEl = document.getElementById('ctl-relay');
+            var msg = body.querySelector('#ctl-msg'), relayEl = body.querySelector('#ctl-relay');
             function relayState(online) {
+                if (demo) { relayEl.textContent = 'Example'; relayEl.classList.add('ex'); return; }
                 relayEl.textContent = online ? 'Relay connected' : 'Relay not connected';
                 relayEl.classList.toggle('on', !!online);
                 panel.classList.toggle('ctl-off', !online);
@@ -778,15 +809,16 @@
                 if (!online) msg.innerHTML = 'Remote control needs the venue relay running at the venue. <button type="button" class="cam-link" onclick="openRelaySetup()">Set up the relay</button>';
             }
             relayState(_relay && _relay.online);
-            if (!c.ip) { msg.classList.remove('hidden'); msg.innerHTML = 'Add this camera\'s IP address on the venue network (like 192.168.1.50) with <em>Edit</em> to control it.'; panel.classList.add('ctl-off'); }
+            if (!c.ip && !demo) { msg.classList.remove('hidden'); msg.innerHTML = 'Add this camera\'s IP address on the venue network (like 192.168.1.50) with <em>Edit</em> to control it.'; panel.classList.add('ctl-off'); }
             var busy = false;
             function send(cmd) {
+                if (demo) return Promise.resolve();
                 return camApi({ action: 'control', id: c.id, cmd: cmd }).catch(function(e) {
                     if (/relay_offline/.test(e.message)) relayState(false);
                     else { msg.classList.remove('hidden'); msg.textContent = e.message; }
                 });
             }
-            var speed = function() { return Number(document.getElementById('ctl-speed').value) || 5; };
+            var speed = function() { return Number(body.querySelector('#ctl-speed').value) || 5; };
             // Hold to move: refreshed while held, stopped on release (the relay also stops it if refreshes stop)
             var holdT = null, holding = null;
             function startHold(cmd) {
@@ -809,7 +841,7 @@
                 ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function(ev) { b.addEventListener(ev, stopHold); });
             });
             panel.querySelector('[data-home]').addEventListener('click', function() { send({ type: 'home' }); });
-            var saving = false, saveBtn = document.getElementById('ctl-save');
+            var saving = false, saveBtn = body.querySelector('#ctl-save');
             saveBtn.addEventListener('click', function() { saving = !saving; saveBtn.classList.toggle('on', saving); saveBtn.textContent = saving ? 'Pick a number' : 'Save'; });
             panel.querySelectorAll('[data-preset]').forEach(function(b) {
                 b.addEventListener('click', function() {
@@ -837,6 +869,7 @@
                     });
                 });
             });
+            if (inline) return;
             // Keyboard while the panel is open
             var KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
             function kd(e) {
@@ -854,7 +887,7 @@
             var close = closeCamDialog;
             closeCamDialog = function() { cleanup(); panel.classList.remove('ctl', 'ctl-off'); closeCamDialog = close; close(); };
             // Check the relay now
-            camApi(Object.assign({ action: 'relayStatus' }, _camVenue[c.id] ? { venue: _camVenue[c.id] } : {})).then(function(d) { _relay = d.relay; paintRelay(); if (c.ip) relayState(d.relay && d.relay.online); }).catch(function() {});
+            if (!demo) camApi(Object.assign({ action: 'relayStatus' }, _camVenue[c.id] ? { venue: _camVenue[c.id] } : {})).then(function(d) { _relay = d.relay; paintRelay(); if (c.ip) relayState(d.relay && d.relay.online); }).catch(function() {});
         }
 
         function openCamDialog(title, html) {
