@@ -156,6 +156,8 @@ export default async function handler(req, res) {
           return {
             id: i.id, number: i.number, status: own || fromStripe, total: i.total / 100, currency: i.currency,
             created: i.created * 1000, url: i.hosted_invoice_url, pdf: i.invoice_pdf, payable: i.status === 'open' && i.amount_remaining > 0,
+            issued: (i.status_transitions?.finalized_at || i.created) * 1000, due: i.due_date ? i.due_date * 1000 : null, paidAt: i.status_transitions?.paid_at ? i.status_transitions.paid_at * 1000 : null,
+            amountDue: i.amount_remaining / 100, email: i.customer_email || '', lines: (i.lines?.data || []).slice(0, 30).map(l => ({ text: String(l.description || ''), amount: l.amount / 100 })),
             billedTo: i.customer_name || (t === 'venue' ? (cfg[iv]?.name || venueName) : t.replace(/^(artist|label):/, '')),
             kind: t === 'venue' ? TYPE_LABEL[acctTypes[iv] || data.accountType] || 'Account' : t.startsWith('label:') ? 'Record label' : 'Artist',
             account: iv, accountName: cfg[iv]?.name || iv,

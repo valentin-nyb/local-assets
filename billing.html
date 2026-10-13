@@ -36,7 +36,7 @@
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
-    <script src="nav-component.js?v=6"></script>
+    <script src="nav-component.js?v=7"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
         .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
@@ -127,6 +127,7 @@
         .bl-inv .bl-pill { vertical-align:middle; }
         .bl-acts { display:flex; align-items:center; justify-content:flex-end; gap:16px; white-space:nowrap; }
         .bl-acts .bl-link { margin-right:0; }
+        button.bl-link { background:none; border:0; padding:0; font:inherit; cursor:pointer; }
         .bl-pay { display:inline-flex; align-items:center; height:28px; padding:0 14px; border-radius:7px; background:var(--la-accent); color:var(--la-accent-ink); font:700 11px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.06em; text-transform:uppercase; text-decoration:none; }
         @media (hover:hover) { .bl-pay:hover { opacity:.85; } }
 </style>
@@ -303,8 +304,11 @@
                         : '<span class="bl-pill ' + (i.status === 'paid' ? 'paid' : 'open') + '">' + LABEL[i.status] + '</span>';
                     return '<tr><td class="svc">' + esc(i.number || i.id) + '</td><td>' + esc(i.billedTo) + '<span class="bl-who">' + esc(i.kind) + '</span></td>' + (admin ? '<td>' + esc(i.accountName || '') + '</td>' : '') + '<td style="white-space:nowrap">' + new Date(i.created).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + '</td>' +
                         '<td>' + status + '</td><td class="num">' + money(i.total, i.currency) + '</td>' +
-                        '<td class="num"><div class="bl-acts">' + (i.url ? '<a class="bl-link" href="' + esc(i.url) + '" target="_blank" rel="noopener">View</a>' : '') + (i.pdf ? '<a class="bl-link" href="' + esc(i.pdf) + '" target="_blank" rel="noopener">PDF</a>' : '') + (i.url && i.payable ? '<a class="bl-pay" href="' + esc(i.url) + '" target="_blank" rel="noopener">Pay</a>' : '') + '</div></td></tr>';
+                        '<td class="num"><div class="bl-acts">' + '<button type="button" class="bl-link bl-view" data-view="' + esc(i.id) + '">View</button>' + (i.pdf ? '<a class="bl-link" href="' + esc(i.pdf) + '" target="_blank" rel="noopener">PDF</a>' : '') + (i.url && i.payable ? '<a class="bl-pay" href="' + esc(i.url) + '" target="_blank" rel="noopener">Pay</a>' : '') + '</div></td></tr>';
                 }).join('') + '</tbody></table>';
+            inv.querySelectorAll('[data-view]').forEach(function(b) {
+                b.addEventListener('click', function() { var x = shown.find(function(i) { return i.id === b.dataset.view; }); if (x) showInvoice(x); });
+            });
             inv.querySelectorAll('[data-invoice]').forEach(function(sel) {
                 sel.addEventListener('change', async function() {
                     var v = sel.value;
@@ -454,6 +458,40 @@
                 '<p class="inv-muted" style="margin-top:24px">Pay online by card, Apple Pay or bank transfer from the link in the invoice email.</p></div>';
         }
         var INV_CSS = '.inv{background:#fff;color:#111;font:14px/1.45 "Helvetica Neue",Helvetica,Arial,sans-serif;padding:40px;border-radius:12px}.inv-top{display:flex;justify-content:space-between;align-items:flex-start}.inv-h{font-size:28px;font-weight:700}.inv-logo{height:22px}.inv-muted{color:#71717a;font-size:12px}.inv-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin:28px 0}.inv-k{color:#71717a;font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-top:8px}.inv-due{font-size:20px;font-weight:700;margin-bottom:16px}.inv-t{width:100%;border-collapse:collapse}.inv-t th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#71717a;border-bottom:1px solid #111;padding:8px 0}.inv-t td{padding:12px 0;border-bottom:1px solid #e4e4e7;vertical-align:top}.inv-t td span{display:block;color:#71717a;font-size:12px}.inv-t tfoot td{font-weight:700;border-bottom:0;font-size:16px}.inv-t .r{text-align:right;white-space:nowrap}@media(max-width:600px){.inv{padding:22px}.inv-meta{grid-template-columns:1fr}}';
+        var INV_MODAL_CSS = '.inv-backdrop{position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.7);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px}.inv-box{width:760px;max-width:100%;max-height:calc(100dvh - 32px);display:flex;flex-direction:column;gap:12px}.inv-scroll{overflow:auto;border-radius:12px}.inv-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}.inv-actions .cam-btn{height:40px;padding:0 18px;font-family:inherit;font-size:13px;line-height:1;box-sizing:border-box;justify-content:center}.inv-actions .cam-btn.ghost{background:var(--la-surface);color:var(--la-text);border-color:var(--la-line)}.inv-actions .cam-btn.ghost:hover{border-color:var(--la-sub)}.inv-paid{display:inline-block;margin-top:6px;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}.inv-paid.ok{background:#e7f6ec;color:#15803d}.inv-paid.open{background:#fdf3e1;color:#b45309}';
+        function invModal(html, actions) {
+            var m = document.createElement('div');
+            m.className = 'inv-backdrop';
+            m.innerHTML = '<style>' + INV_CSS + INV_MODAL_CSS + '</style><div class="inv-box" role="dialog" aria-modal="true"><div class="inv-scroll">' + html + '</div><div class="inv-actions">' + actions + '</div></div>';
+            document.body.appendChild(m);
+            var onKey = function(e) { if (e.key === 'Escape') close(); };
+            var close = function() { m.remove(); document.removeEventListener('keydown', onKey); };
+            document.addEventListener('keydown', onKey);
+            m.addEventListener('click', function(e) { if (e.target === m || e.target.closest('[data-close]')) close(); });
+            return m;
+        }
+        // A sent invoice, from Stripe, in a pop-up with PDF and Pay
+        function showInvoice(i) {
+            var cur = i.currency, fmtD = function(t) { return new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }); };
+            var LBL = { paid: 'Paid', unpaid: 'Not paid', waiting: 'Waiting for payment' };
+            var lines = (i.lines || []).map(function(l) {
+                var parts = l.text.split(' · ');
+                return '<tr><td><b>' + esc(parts[0]) + '</b>' + (parts.length > 1 ? '<span>' + esc(parts.slice(1).join(' · ')) + '</span>' : '') + '</td><td class="r">' + money(l.amount, cur) + '</td></tr>';
+            }).join('') || '<tr><td><b>Invoice</b></td><td class="r">' + money(i.total, cur) + '</td></tr>';
+            var paid = i.status === 'paid';
+            var html = '<div class="inv">' +
+                '<div class="inv-top"><div><p class="inv-h">Invoice</p><p class="inv-muted">' + esc(i.number || i.id) + '</p><span class="inv-paid ' + (paid ? 'ok' : 'open') + '">' + esc(LBL[i.status] || i.status) + '</span></div><img src="/logos/Black@2x.png" alt="local / assets" class="inv-logo"></div>' +
+                '<div class="inv-meta"><div><p class="inv-k">Date of issue</p><p>' + fmtD(i.issued || i.created) + '</p>' + (i.due ? '<p class="inv-k">Date due</p><p>' + fmtD(i.due) + '</p>' : '') + (i.paidAt ? '<p class="inv-k">Paid on</p><p>' + fmtD(i.paidAt) + '</p>' : '') + '</div>' +
+                '<div><p class="inv-k">From</p><p><b>local / assets</b><br>info@local-assets.com</p></div>' +
+                '<div><p class="inv-k">Bill to</p><p><b>' + esc(i.billedTo) + '</b><br>' + esc(i.email || '') + '</p></div></div>' +
+                '<p class="inv-due">' + (paid ? money(i.total, cur) + ' paid' : money(i.amountDue != null ? i.amountDue : i.total, cur) + (i.due ? ' due ' + fmtD(i.due) : ' due')) + '</p>' +
+                '<table class="inv-t"><thead><tr><th>Description</th><th class="r">Amount</th></tr></thead><tbody>' + lines +
+                '</tbody><tfoot><tr><td>Total</td><td class="r">' + money(i.total, cur) + '</td></tr></tfoot></table>' +
+                (i.payable ? '<p class="inv-muted" style="margin-top:24px">Pay online by card, Apple Pay or bank transfer with the Pay button.</p>' : '') + '</div>';
+            invModal(html, '<button type="button" class="cam-btn ghost" data-close>Close</button>' +
+                (i.pdf ? '<a class="cam-btn ghost" href="' + esc(i.pdf) + '" target="_blank" rel="noopener">Download PDF</a>' : '') +
+                (i.url && i.payable ? '<a class="cam-btn primary" href="' + esc(i.url) + '" target="_blank" rel="noopener">Pay ' + money(i.amountDue != null ? i.amountDue : i.total, cur) + '</a>' : ''));
+        }
         document.getElementById('bl-preview').addEventListener('click', async function() {
             var sf = document.getElementById('bl-send-form'), btn = this;
             _planOverride = sf.plan.value;
@@ -463,13 +501,7 @@
             if (!_data) return;
             var who = sf.target.options[sf.target.selectedIndex].text.replace(/\s*\((venue|artist|record label|management|account)\)$/i, '');
             var html = invoiceHtml(_data, who, sf.email.value.trim(), sf.period.value);
-            var m = document.createElement('div');
-            m.className = 'inv-backdrop';
-            m.innerHTML = '<style>' + INV_CSS + '.inv-backdrop{position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.7);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px}.inv-box{width:760px;max-width:100%;max-height:calc(100dvh - 32px);display:flex;flex-direction:column;gap:12px}.inv-scroll{overflow:auto;border-radius:12px}.inv-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}.inv-actions .cam-btn{height:40px;padding:0 18px}.inv-actions .cam-btn.ghost{background:var(--la-surface);color:var(--la-text);border-color:var(--la-line)}.inv-actions .cam-btn.ghost:hover{border-color:var(--la-sub)}</style>' +
-                '<div class="inv-box"><div class="inv-scroll">' + html + '</div>' +
-                '<div class="inv-actions"><button type="button" class="cam-btn ghost" data-close>Close</button><button type="button" class="cam-btn ghost" data-dl>Download PDF</button><button type="button" class="cam-btn primary" data-send>Send invoice</button></div></div>';
-            document.body.appendChild(m);
-            m.addEventListener('click', function(e) { if (e.target === m || e.target.closest('[data-close]')) m.remove(); });
+            var m = invModal(html, '<button type="button" class="cam-btn ghost" data-close>Close</button><button type="button" class="cam-btn ghost" data-dl>Download PDF</button><button type="button" class="cam-btn primary" data-send>Send invoice</button>');
             m.querySelector('[data-dl]').addEventListener('click', function() {
                 // The browser's print dialog saves it as a PDF
                 var w = window.open('', '_blank');
