@@ -41,7 +41,22 @@ export const tagFor = (artist, n, hidden) => `${artist} // ${hidden ? 'SOCIALRAW
 export const originalsKey = slug => `v_orig:${slug}`;       // set: vertical originals
 const jobsKey = slug => `v_jobs:${slug}`;                    // hash: new original → JSON { artist, n, blob, master }
 const doneKey = masterId => `v_done:${masterId}`;           // hash: n → original's id (cut once)
-const failKey = masterId => `v_fail:${masterId}`;           // hash: n → failed attempts (no endless retries)
+const failKey = masterId => `v_fail:${masterId}`;
+const failedKey = slug => `v_failed:${slug}`;               // hash: masterId:n → JSON { artist, n, at, error } (cleared when it's cut)
+const readyKey = slug => `v_ready:${slug}`;                 // sorted set: originals that finished, by time
+
+// Vertical clips health for System Health: cutting now, failed (last 24 h) and finished (last 24 h)
+export async function verticalsHealth(redis, slug) {
+  const since = Date.now() - 86400e3;
+  const [jobs, failed, done] = await Promise.all([
+    redis.hLen(jobsKey(slug)),
+    redis.hGetAll(failedKey(slug)),
+    redis.zCount(readyKey(slug), since, '+inf'),
+  ]);
+  const recent = Object.values(failed).map(v => { try { return JSON.parse(v); } catch { return null; } }).filter(f => f && f.at > since);
+  await redis.zRemRangeByScore(readyKey(slug), '-inf', since - 7 * 86400e3).catch(() => {});
+  return { processing: jobs, failed: recent.length, failedArtists: [...new Set(recent.map(f => f.artist))], done };
+}           // hash: n → failed attempts (no endless retries)
 
 // The times the clips are cut at (same as the upload pipeline always used)
 export function clipTimes(duration, want = 5) {
@@ -151,7 +166,11 @@ export async function startVerticals(redis, slug, master, artist, origin, retry 
   if (!count) count = await planMaxClips(redis, slug);
   // Automatic starts (Mux webhook or the upload's intake) happen once per recording
   if (!retry && !(await redis.set(`v_auto:${master.id}`, '1', { NX: true, EX: 90 * 86400 }))) return 0;
-  if (retry) await redis.del(failKey(master.id));   // pressed by hand: try failed clips again
+  if (retry) {   // pressed by hand: try failed clips again
+    await redis.del(failKey(master.id));
+    const f = await redis.hKeys(failedKey(slug));
+    for (const k of f) if (k.startsWith(master.id + ':')) await redis.hDel(failedKey(slug), k);
+  }
   const pid = (master.playback_ids || [])[0]?.id;
   if (!pid) throw new Error('The full recording has no playback ID yet');
   if (retry) {
@@ -316,11 +335,13 @@ export async function cutVertical(redis, auth, job) {
       }),
     });
     await redis.hSet(doneKey(job.masterId), String(job.n), asset.id);
+    await redis.hDel(failedKey(job.slug), `${job.masterId}:${job.n}`);
     await redis.sAdd(originalsKey(job.slug), asset.id);
     await redis.hSet(jobsKey(job.slug), asset.id, JSON.stringify({ artist: job.artist, n: job.n, blob: blob.url, master: job.masterId, at: Date.now() }));
     return { id: asset.id };
   } catch (e) {
     await redis.hIncrBy(failKey(job.masterId), String(job.n), 1).catch(() => {});
+    await redis.hSet(failedKey(job.slug), `${job.masterId}:${job.n}`, JSON.stringify({ artist: job.artist, n: job.n, at: Date.now(), error: e.message.slice(0, 200) })).catch(() => {});
     throw e;
   } finally {
     fs.rm(out, { force: true }, () => {});
@@ -356,6 +377,7 @@ export async function finishVerticals(redis, slug, auth, assets) {
         await muxReq(auth, `/video/v1/assets/${encodeURIComponent(other.id)}`, { method: 'DELETE' }).catch(() => {});
       }
       await muxReq(auth, `/video/v1/assets/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify({ passthrough: tagFor(job.artist, job.n) }) });
+      await redis.zAdd(readyKey(slug), { score: Date.now(), value: id }).catch(() => {});
       done++;
     } else {
       // Failed or gone: drop it (it only takes up room), allow one more try

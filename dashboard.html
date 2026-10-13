@@ -202,12 +202,15 @@
                 </div>
 
                 <div class="space-y-6">
-                    <div class="bg-card border border-border rounded-2xl p-6">
-                        <h3 class="text-xs font-bold uppercase tracking-widest mb-6">System Health</h3>
+                    <div class="bg-card border border-border rounded-2xl sh-card">
+                        <div class="sh-head">
+                            <h3 class="text-xs font-bold uppercase tracking-widest">System Health</h3>
+                            <span class="sh-summary" id="sh-summary" data-level=""><span class="sh-dot"></span><span id="sh-summary-text">Checking</span></span>
+                        </div>
                         <div class="sh-list">
-                            <div class="sh-row"><span class="sh-label">Cameras</span><span class="sh-val"><span id="sh-cam-dot" class="sh-dot"></span><span id="sh-cam">—</span></span><span id="sh-cam-detail" class="sh-detail"></span></div>
-                            <div class="sh-row"><span class="sh-label">Video processing</span><span class="sh-val"><span id="sh-video-dot" class="sh-dot"></span><span id="sh-video">—</span></span><span id="sh-video-detail" class="sh-detail"></span></div>
-                            <div class="sh-row"><span class="sh-label">Vertical clips</span><span class="sh-val"><span id="sh-clips-dot" class="sh-dot"></span><span id="sh-clips">—</span></span><span id="sh-clips-detail" class="sh-detail"></span></div>
+                            <div class="sh-row"><div class="sh-main"><span class="sh-ic"><iconify-icon icon="solar:videocamera-record-linear"></iconify-icon></span><span class="sh-name">Cameras</span><span class="sh-val"><span id="sh-cam-dot" class="sh-dot"></span><span id="sh-cam">—</span></span></div><span id="sh-cam-detail" class="sh-detail"></span></div>
+                            <div class="sh-row"><div class="sh-main"><span class="sh-ic"><iconify-icon icon="solar:cloud-storage-linear"></iconify-icon></span><span class="sh-name">Video processing</span><span class="sh-val"><span id="sh-video-dot" class="sh-dot"></span><span id="sh-video">—</span></span></div><span id="sh-video-detail" class="sh-detail"></span></div>
+                            <div class="sh-row"><div class="sh-main"><span class="sh-ic"><iconify-icon icon="solar:smartphone-2-linear"></iconify-icon></span><span class="sh-name">Vertical clips</span><span class="sh-val"><span id="sh-clips-dot" class="sh-dot"></span><span id="sh-clips">—</span></span></div><span id="sh-clips-detail" class="sh-detail"></span></div>
                         </div>
                     </div>
                 </div>
@@ -2172,9 +2175,15 @@
 
         function renderSystemStatus() {
             var problems = [];
-            if (_health.pipeline && (_health.pipeline.stalled || _health.pipeline.failed)) problems.push('clips');
+            if (_health.pipeline && _health.pipeline.failed) problems.push('clips');
             if (_health.video && _health.video.failed) problems.push('video');
             var known = _health.pipeline !== null || _health.video !== null;
+            var busy = document.querySelector('.sh-dot[data-level="busy"]:not(.sh-summary .sh-dot)');
+            var pill = document.getElementById('sh-summary'), pillText = document.getElementById('sh-summary-text');
+            if (pill) {
+                pill.dataset.level = !known ? '' : problems.length ? 'bad' : busy ? 'busy' : 'ok';
+                pillText.textContent = !known ? 'Checking' : problems.length ? 'Needs attention' : busy ? 'Working' : 'Operational';
+            }
             var text = !known ? 'Checking…' : problems.length ? 'Needs attention' : 'All systems OK';
             var color = !known ? 'var(--la-dim)' : problems.length ? 'var(--la-bad)' : 'var(--la-ok)';
             [['sys-badge', 'sys-badge-dot'], ['sys-foot', 'sys-foot-dot']].forEach(function(ids) {
@@ -2190,23 +2199,21 @@
                 if (!res.ok) return;
                 const data = await res.json();
                 _health.cameras = data.cameras;
-                _health.pipeline = data.pipeline;
 
                 const cams = data.cameras;
-                if (cams == null) setHealthRow('cam', 'bad', 'Could not check cameras');
-                else if (!cams.length) setHealthRow('cam', 'off', 'No cameras added yet');
+                if (cams == null) setHealthRow('cam', 'bad', 'Unavailable', 'Could not reach the cameras. Try again in a minute.');
+                else if (!cams.length) setHealthRow('cam', 'off', 'None added');
                 else {
                     const live = cams.filter(c => c.status === 'active').length;
-                    setHealthRow('cam', live ? 'ok' : 'off', live + ' of ' + cams.length + ' streaming');
+                    setHealthRow('cam', live ? 'ok' : 'off', live ? live + ' of ' + cams.length + ' live' : cams.length + ' offline');
                 }
 
-                const p = data.pipeline;
-                if (p == null) setHealthRow('clips', 'bad', 'Could not check clips');
-                else if (p.stalled) setHealthRow('clips', 'bad', p.queued + ' waiting', 'Nothing has picked these up for ' + p.oldestQueuedMin + ' min — the clip worker looks offline.');
-                else if (p.running) setHealthRow('clips', 'busy', 'Generating clips for ' + p.running + ' session' + (p.running !== 1 ? 's' : ''), p.queued ? p.queued + ' more waiting' : '');
-                else if (p.queued) setHealthRow('clips', 'busy', p.queued + ' waiting to start');
-                else if (p.failed) setHealthRow('clips', 'bad', p.failed + ' failed in the last 24 h', 'Open the session in Distribution History to restart it.');
-                else setHealthRow('clips', 'ok', p.done ? 'Up to date · ' + p.done + ' finished in the last 24 h' : 'Up to date');
+                const v = data.clips;
+                _health.pipeline = v ? { failed: v.failed } : null;
+                if (v == null) setHealthRow('clips', 'bad', 'Unavailable', 'Could not check the vertical clips.');
+                else if (v.processing) setHealthRow('clips', 'busy', v.processing + ' processing', 'New clips replace the current ones when they are ready.');
+                else if (v.failed) setHealthRow('clips', 'bad', v.failed + ' failed', (v.failedArtists.length ? v.failedArtists.join(', ') + ': ' : '') + 'press Make vertical clips on the session to try again.');
+                else setHealthRow('clips', 'ok', v.done ? v.done + ' made today' : 'Up to date');
             } catch (e) {}
             _health.loaded = true;
             renderHero();
@@ -3173,16 +3180,25 @@
         .se-btn.primary { background:var(--la-accent); color:var(--la-accent-ink); }
         .se-btn.ghost { background:none; color:var(--la-text); border-color:var(--la-line); }
         .se-btn:disabled { opacity:.6; }
-        .sh-list { display:flex; flex-direction:column; gap:18px; }
-        .sh-row { display:flex; flex-direction:column; gap:6px; min-width:0; }
-        .sh-label { font-family:'JetBrains Mono',monospace; font-size:9px; text-transform:uppercase; letter-spacing:.14em; color:var(--la-dim); }
-        .sh-val { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:500; color:var(--la-text); line-height:1.3; }
-        .sh-detail { font-size:11px; line-height:1.45; color:var(--la-dim); padding-left:14px; }
+        .sh-card { padding:0; overflow:hidden; }
+        .sh-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:20px 22px 16px; }
+        .sh-summary { display:inline-flex; align-items:center; gap:7px; height:24px; padding:0 10px; border-radius:999px; border:1px solid var(--la-line); font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:var(--la-dim); white-space:nowrap; }
+        .sh-summary[data-level="ok"] { color:var(--la-ok); border-color:color-mix(in srgb, var(--la-ok) 35%, transparent); background:color-mix(in srgb, var(--la-ok) 8%, transparent); }
+        .sh-summary[data-level="busy"] { color:var(--la-warn); border-color:color-mix(in srgb, var(--la-warn) 35%, transparent); background:color-mix(in srgb, var(--la-warn) 8%, transparent); }
+        .sh-summary[data-level="bad"] { color:var(--la-bad); border-color:color-mix(in srgb, var(--la-bad) 35%, transparent); background:color-mix(in srgb, var(--la-bad) 8%, transparent); }
+        .sh-list { display:flex; flex-direction:column; }
+        .sh-row { display:flex; flex-direction:column; gap:6px; min-width:0; padding:14px 22px; border-top:1px solid var(--la-line); }
+        .sh-main { display:flex; align-items:center; gap:12px; min-width:0; }
+        .sh-ic { width:30px; height:30px; border-radius:9px; display:inline-flex; align-items:center; justify-content:center; background:color-mix(in srgb, var(--la-text) 5%, transparent); color:var(--la-sub, var(--la-dim)); font-size:16px; flex-shrink:0; }
+        .sh-name { font-size:13px; font-weight:600; color:var(--la-text); flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .sh-val { display:inline-flex; align-items:center; gap:7px; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--la-sub, var(--la-dim)); white-space:nowrap; flex-shrink:0; }
+        .sh-detail { font-size:11px; line-height:1.5; color:var(--la-dim); padding-left:42px; }
         .sh-detail:empty { display:none; }
         .sh-dot { width:6px; height:6px; border-radius:50%; background:var(--la-dim); flex-shrink:0; }
-        .sh-dot[data-level="ok"] { background:var(--la-ok); box-shadow:0 0 8px var(--la-ok); }
-        .sh-dot[data-level="busy"] { background:var(--la-warn); box-shadow:0 0 8px var(--la-warn); }
-        .sh-dot[data-level="bad"] { background:var(--la-bad); box-shadow:0 0 8px var(--la-bad); }
+        .sh-dot[data-level="ok"], .sh-summary[data-level="ok"] .sh-dot { background:var(--la-ok); }
+        .sh-dot[data-level="busy"], .sh-summary[data-level="busy"] .sh-dot { background:var(--la-warn); animation:shPulse 1.6s ease-in-out infinite; }
+        .sh-dot[data-level="bad"], .sh-summary[data-level="bad"] .sh-dot { background:var(--la-bad); }
+        @keyframes shPulse { 50% { opacity:.35; } }
         /* Media popup: arrows sit beside the media on desktop, over it on phones */
         #media-modal { --mm-side:140px; }
         @media (max-width: 640px) {
