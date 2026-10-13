@@ -167,6 +167,7 @@ async function recordCameraOrder(session, stripe) {
     total: (session.amount_total || 0) / 100,
     currency: session.currency,
     paymentStatus: session.payment_status,
+    rental: session.metadata?.rental === 'yes' ? { startDate: session.metadata.startDate, endDate: session.metadata.endDate, days: Number(session.metadata.days) || 1 } : null,
     createdAt: new Date().toISOString(),
   };
   console.log('[Stripe Webhook] camera order', order.id, order.venueSlug, 'x' + quantity);
@@ -188,8 +189,11 @@ async function recordCameraOrder(session, stripe) {
       await new Resend(process.env.RESEND_API_KEY).emails.send({
         from: 'local/assets™ <noreply@local-assets.com>',
         to: process.env.ORDERS_EMAIL || 'info@local-assets.com',
-        subject: `Camera order: ${quantity} × OBSBOT Tail 2 (${order.venueSlug || order.email})`,
+        subject: order.rental
+          ? `Camera hire: ${quantity} × OBSBOT Tail 2, ${order.rental.days} day${order.rental.days > 1 ? 's' : ''} from ${order.rental.startDate} (${order.venueSlug || order.email})`
+          : `Camera order: ${quantity} × OBSBOT Tail 2 (${order.venueSlug || order.email})`,
         html: `<div style="font-family:monospace;font-size:13px;line-height:1.6">
+          ${order.rental ? `<p><b>HIRE</b>: ${esc(order.rental.startDate)} to ${esc(order.rental.endDate)} (${order.rental.days} day${order.rental.days > 1 ? 's' : ''}). Deliver the day before, collect the day after.</p>` : ''}
           <p><b>${quantity} × OBSBOT Tail 2</b> — ${esc(order.currency?.toUpperCase())} ${order.total.toFixed(2)} (${esc(order.paymentStatus)})</p>
           <p>Venue: ${esc(order.venueSlug)}<br>Email: ${esc(order.email)}<br>Phone: ${esc(order.phone)}</p>
           <p>Ship to:<br>${esc(order.name)}<br>${[a.line1, a.line2, a.city, a.postal_code, a.country].filter(Boolean).map(esc).join('<br>')}</p>

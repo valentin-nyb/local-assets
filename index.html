@@ -75,7 +75,17 @@
 
         /* Per-word glitch hover — only the span under the cursor turns green */
         #hero-title span.word-hovered { color: #39FF14; }
-    </style>
+    
+        .ord-mode { display:inline-flex; gap:4px; padding:4px; margin-top:16px; border:1px solid #27272a; border-radius:12px; }
+        .ord-mode button { height:32px; padding:0 14px; border-radius:8px; border:none; background:none; color:#a1a1aa; font-size:13px; font-weight:600; cursor:pointer; }
+        .ord-mode button.on { background:#fff; color:#000; }
+        .ord-rent { display:flex; flex-wrap:wrap; gap:12px; margin-top:16px; }
+        .ord-rent[hidden] { display:none; }
+        .ord-rent label { display:flex; flex-direction:column; gap:6px; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:#a1a1aa; }
+        .ord-rent input[type=date] { height:44px; padding:0 12px; border-radius:10px; border:1px solid #27272a; background:transparent; color:#fff; font-size:14px; color-scheme:dark light; }
+        .ord-days span { min-width:64px; }
+        .ord-note { font-size:12px; line-height:1.55; color:#a1a1aa; margin-top:8px; }
+</style>
     <style>
         /* Venue Command Center: how the cameras work */
         .vc-cams { margin-top:96px; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,400px); gap:48px; align-items:start; border:1px solid #27272a; background:#0a0a0a; border-radius:20px; padding:32px; }
@@ -418,7 +428,7 @@
                         <span class="vc-eyebrow">// Cameras</span>
                         <h3 class="vc-title">Record every set. Get the clips automatically.</h3>
                         <p class="vc-text">Each OBSBOT Tail 2 streams over the venue's Wi-Fi or network straight to your cloud. When the set ends, the recording is a session for the artist on stage, with vertical clips ready for social media.</p>
-                        <button type="button" class="vc-order" onclick="openCameraOrder()">Order cameras · £1,299</button>
+                        <button type="button" class="vc-order" onclick="openCameraOrder()">Order cameras · buy or hire</button>
                         <p class="vc-note">Setup and integration included with every camera ordered from us.</p>
                         <ol class="vc-steps">
                             <li><b>1</b><div><strong>Plug in</strong><span>Power the OBSBOT Tail 2 and connect it to the venue's Wi-Fi or an Ethernet cable.</span></div></li>
@@ -818,6 +828,51 @@
     // Camera order popup: product details and Stripe Checkout, no sign-in needed
     var CAMERA_PRICE = 1299;
     function gbp(n) { return '£' + n.toLocaleString('en-GB', { maximumFractionDigits: 0 }); }
+    // Buy, or hire by the day (per camera per day, cheaper from 3 days)
+    var RENT_DAY = 79, RENT_LONG = 59, RENT_LONG_FROM = 3;
+    function rentRate(days) { return days >= RENT_LONG_FROM ? RENT_LONG : RENT_DAY; }
+    function ordTomorrow() { var d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10); }
+    function ordModeHtml() {
+        return '<div class="ord-mode" role="tablist"><button type="button" class="on" data-mode="buy">Buy</button><button type="button" data-mode="rent">Hire by the day</button></div>' +
+            '<div id="ord-pricing"></div>' +
+            '<div id="ord-rent" class="ord-rent" hidden>' +
+                '<label>First day<input type="date" id="ord-start" min="' + ordTomorrow() + '" value="' + ordTomorrow() + '"></label>' +
+                '<label>Days<div class="ord-qty ord-days"><button type="button" aria-label="Fewer days" data-d="-1">−</button><span id="ord-days">1</span><button type="button" aria-label="More days" data-d="1">+</button></div></label>' +
+            '</div>';
+    }
+    function ordPricingHtml(mode, days) {
+        if (mode === 'rent') {
+            return '<div class="ord-price"><span class="ord-amount">' + gbp(rentRate(days)) + '</span><span class="ord-per">per camera per day, inc. VAT</span></div>' +
+                '<p class="ord-included">' + (days >= RENT_LONG_FROM ? 'Hire rate for 3 days or more' : gbp(RENT_LONG) + ' a day when you hire for 3 days or more') + '</p>' +
+                '<p class="ord-note">Delivered the day before and collected the day after, anywhere in the UK. Set up with your local / assets dashboard, so every set is recorded with vertical clips made automatically.</p>';
+        }
+        return '<div class="ord-price"><span class="ord-amount">' + gbp(CAMERA_PRICE) + '</span><span class="ord-per">per camera, inc. VAT</span></div>' +
+            '<p class="ord-included">Setup and integration with your local / assets dashboard included</p>' +
+            '<p class="ord-klarna"><b>Klarna.</b> Or pay in 3 interest-free payments of ' + gbp(Math.round(CAMERA_PRICE / 3)) + ', or spread the cost monthly.</p>';
+    }
+    // Wires the Buy / Hire switch, quantity and days; returns what to send to checkout
+    function ordWire(root) {
+        var st = { mode: 'buy', qty: 1, days: 1 };
+        function paint() {
+            root.querySelectorAll('[data-mode]').forEach(function(b) { b.classList.toggle('on', b.dataset.mode === st.mode); });
+            root.querySelector('#ord-pricing').innerHTML = ordPricingHtml(st.mode, st.days);
+            root.querySelector('#ord-rent').hidden = st.mode !== 'rent';
+            root.querySelector('#ord-qty').textContent = st.qty;
+            root.querySelector('#ord-days').textContent = st.days + (st.days > 1 ? ' days' : ' day');
+            var total = st.mode === 'rent' ? st.qty * st.days * rentRate(st.days) : st.qty * CAMERA_PRICE;
+            root.querySelector('#ord-total').textContent = gbp(total);
+        }
+        root.querySelectorAll('[data-mode]').forEach(function(b) { b.addEventListener('click', function() { st.mode = b.dataset.mode; paint(); }); });
+        root.querySelectorAll('[data-q]').forEach(function(b) { b.addEventListener('click', function() { st.qty = Math.min(10, Math.max(1, st.qty + Number(b.dataset.q))); paint(); }); });
+        root.querySelectorAll('[data-d]').forEach(function(b) { b.addEventListener('click', function() { st.days = Math.min(30, Math.max(1, st.days + Number(b.dataset.d))); paint(); }); });
+        paint();
+        return function() {
+            var body = { quantity: st.qty };
+            if (st.mode === 'rent') { body.mode = 'rent'; body.days = st.days; body.startDate = root.querySelector('#ord-start').value; }
+            return body;
+        };
+    }
+
     function closeCameraOrder() { document.getElementById('ord-wrap').classList.remove('open'); document.body.style.overflow = ''; }
     function showCameraOrder(html) { document.getElementById('ord-body').innerHTML = html; document.getElementById('ord-wrap').classList.add('open'); document.body.style.overflow = 'hidden'; }
     document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeCameraOrder(); });
@@ -832,12 +887,10 @@
         ].map(function(f) { return '<div><b>' + f[0] + '</b><span>' + f[1] + '</span></div>'; }).join('');
         showCameraOrder(
             '<div class="ord-hero"><img src="/img/obsbot-tail-2.png" alt="OBSBOT Tail 2 camera" width="720" height="720"></div>' +
-            '<p class="ord-eyebrow">Sold and supported by local / assets</p>' +
+            '<p class="ord-eyebrow">Buy or hire from local / assets</p>' +
             '<h3 class="ord-title" id="ord-title">OBSBOT Tail 2</h3>' +
             '<p class="ord-sub">AI-powered PTZR 4K live production camera with NDI HX3. Records every set straight to your local / assets cloud, with vertical clips made automatically.</p>' +
-            '<div class="ord-price"><span class="ord-amount">' + gbp(CAMERA_PRICE) + '</span><span class="ord-per">per camera, inc. VAT</span></div>' +
-            '<p class="ord-included">Setup and integration with your local / assets dashboard included</p>' +
-            '<p class="ord-klarna"><b>Klarna.</b> Or pay in 3 interest-free payments of ' + gbp(Math.round(CAMERA_PRICE / 3)) + ', or spread the cost monthly.</p>' +
+            '' + ordModeHtml() +
             '<div class="ord-feats">' + feats + '</div>' +
             '<details class="ord-specs"><summary>Full specifications</summary><dl>' +
                 '<dt>Video</dt><dd>4K 60fps, 1080p 120fps, HDR (4K/1080p at 30fps)</dd>' +
@@ -852,26 +905,19 @@
             '<button type="button" id="ord-go" class="ord-go">Checkout · <span id="ord-total">' + gbp(CAMERA_PRICE) + '</span></button></div>' +
             '<p id="ord-error" class="ord-error"></p>' +
             '<p class="ord-fine">Pay by card, Apple Pay, Google Pay or Klarna. Prices include VAT. Pay-later and monthly options depend on eligibility and are offered by the provider at checkout. UK delivery.</p>');
-        var qty = 1;
-        document.querySelectorAll('#ord-body [data-q]').forEach(function(b) {
-            b.addEventListener('click', function() {
-                qty = Math.min(10, Math.max(1, qty + Number(b.dataset.q)));
-                document.getElementById('ord-qty').textContent = qty;
-                document.getElementById('ord-total').textContent = gbp(qty * CAMERA_PRICE);
-            });
-        });
+        var orderBody = ordWire(document.getElementById('ord-body'));
         var go = document.getElementById('ord-go');
         go.addEventListener('click', function() {
             var label = go.innerHTML, err = document.getElementById('ord-error');
             go.disabled = true; go.textContent = 'Opening checkout…'; err.textContent = '';
             var headers = { 'Content-Type': 'application/json' };
             try { var s = JSON.parse(localStorage.getItem('la_admin') || 'null'); if (s && s.webToken) headers.Authorization = 'Bearer ' + s.webToken; } catch (_) {}
-            fetch('/api/order-camera', { method: 'POST', headers: headers, body: JSON.stringify({ quantity: qty, from: 'home' }) })
+            fetch('/api/order-camera', { method: 'POST', headers: headers, body: JSON.stringify(Object.assign(orderBody(), { from: 'home' })) })
                 .then(function(r) { return r.json().catch(function() { return {}; }).then(function(d) { if (!r.ok) throw new Error(d.error || r.status); return d; }); })
                 .then(function(d) { window.location.href = d.url; })
                 .catch(function(e) {
                     go.disabled = false; go.innerHTML = label;
-                    var mail = '<a href="mailto:info@local-assets.com?subject=' + encodeURIComponent('Camera order: ' + qty + ' × OBSBOT Tail 2') + '">info@local-assets.com</a>';
+                    var mail = '<a href="mailto:info@local-assets.com?subject=' + encodeURIComponent('Camera order: ' + orderBody().quantity + ' × OBSBOT Tail 2') + '">info@local-assets.com</a>';
                     err.innerHTML = e.message === 'payments_not_configured'
                         ? 'Online checkout isn\'t switched on yet. Email ' + mail + ' and we\'ll send you a payment link.'
                         : 'Could not open checkout. Try again, or email ' + mail + '.';

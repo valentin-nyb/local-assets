@@ -1,6 +1,6 @@
 import { pausedBy, sendPaused } from './_suspend.js';
 import { createClient } from 'redis';
-import { getWebSessionAuth } from './_venues.js';
+import { getWebSessionAuth, getVenuesConfig, getMuxAuthForVenue, platformAdmins, isAdminVenue } from './_venues.js';
 import { calendarKey, cleanCalendarUrl, fetchEvents } from './_calendar.js';
 import { listLiveStreams } from './_live.js';
 
@@ -61,27 +61,46 @@ export default async function handler(req, res) {
   if (!session?.email) return res.status(401).json({ error: 'Not authenticated' });
   if (req.method !== 'GET' && session?.venueSlug) { const _p = await pausedBy(session.venueSlug); if (_p) return sendPaused(res, _p); }
   const slug = session.venueSlug;
-  if (!slug || !session.muxAuth) return res.status(200).json({ cameras: [] });
+  const adminAll = req.method === 'GET' && platformAdmins().includes(session.email) && isAdminVenue(session.venue) && !session.venue?.actingAdmin;
+  if (!adminAll && (!slug || !session.muxAuth)) return res.status(200).json({ cameras: [] });
+
+  // A venue's cameras with their live status from Mux
+  const venueCameras = async (vslug, auth) => {
+    const [saved, streams] = await Promise.all([
+      withRedis(r => readCameras(r, vslug)),
+      listLiveStreams(auth),
+    ]);
+    if (saved.length) {
+      await withRedis(r => r.hSet(STREAM_MAP, Object.fromEntries(saved.map(c => [c.streamId, vslug])))).catch(() => {});
+    }
+    const byId = new Map(streams.map(s => [s.id, s]));
+    const cameras = saved.map(c => {
+      const s = byId.get(c.streamId);
+      byId.delete(c.streamId);
+      return { ...c, status: s ? s.status : 'missing', playbackId: s?.playbackId || null, liveSince: s?.liveSince || null, recording: s ? s.recording : true };
+    });
+    // Streams created directly in Mux still show up, without camera details.
+    for (const s of byId.values()) {
+      cameras.push({ id: s.id, streamId: s.id, name: s.name || 'Camera', model: '', ndiName: '', ip: '', status: s.status, playbackId: s.playbackId, liveSince: s.liveSince || null, recording: s.recording, external: true });
+    }
+    return cameras;
+  };
 
   try {
+    // The local / assets admin account: every client's cameras, by account
+    if (req.method === 'GET' && platformAdmins().includes(session.email) && isAdminVenue(session.venue) && !session.venue?.actingAdmin) {
+      const cfg = getVenuesConfig();
+      const venues = await Promise.all(Object.entries(cfg).filter(([k, v]) => !isAdminVenue({ slug: k, ...v })).map(async ([k, v]) => {
+        const auth = getMuxAuthForVenue({ slug: k, ...v });
+        if (!auth) return { slug: k, name: v.name || k, cameras: [], error: 'No Cloud Storage keys' };
+        try { return { slug: k, name: v.name || k, cameras: await venueCameras(k, auth) }; }
+        catch (e) { return { slug: k, name: v.name || k, cameras: [], error: e.message }; }
+      }));
+      return res.status(200).json({ admin: true, venues, cameras: [], calendar: { connected: false } });
+    }
+
     if (req.method === 'GET') {
-      const [saved, streams] = await Promise.all([
-        withRedis(r => readCameras(r, slug)),
-        listLiveStreams(session.muxAuth),
-      ]);
-      if (saved.length) {
-        await withRedis(r => r.hSet(STREAM_MAP, Object.fromEntries(saved.map(c => [c.streamId, slug])))).catch(() => {});
-      }
-      const byId = new Map(streams.map(s => [s.id, s]));
-      const cameras = saved.map(c => {
-        const s = byId.get(c.streamId);
-        byId.delete(c.streamId);
-        return { ...c, status: s ? s.status : 'missing', playbackId: s?.playbackId || null, liveSince: s?.liveSince || null, recording: s ? s.recording : true };
-      });
-      // Streams created directly in Mux still show up, without camera details.
-      for (const s of byId.values()) {
-        cameras.push({ id: s.id, streamId: s.id, name: s.name || 'Camera', model: '', ndiName: '', ip: '', status: s.status, playbackId: s.playbackId, liveSince: s.liveSince || null, recording: s.recording, external: true });
-      }
+      const cameras = await venueCameras(slug, session.muxAuth);
       // The venue calendar: who is on now, and the next sets
       let calendar = { connected: false };
       const calUrl = await withRedis(r => r.get(calendarKey(slug))).catch(() => null);
