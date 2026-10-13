@@ -167,7 +167,6 @@
                     <div class="bl-section-head"><h3>Bill to</h3><span class="bl-msg" id="bl-stripe-acct">Choose who to see and invoice: plan price, plus usage above what the plan includes</span></div>
                     <form id="bl-send-form" class="bl-admin">
                         <label>Account<select name="venue" id="bl-venue"></select></label>
-                        <label>This account is a<select name="accountType" id="bl-acct-type"><option value="venue">Venue</option><option value="artist">Artist</option><option value="label">Record label</option><option value="management">Management</option></select></label>
                         <label>Bill to<select name="target" id="bl-target"></select></label>
                         <label class="bl-new hidden">New · type<select name="newType"><option value="venue">Venue</option><option value="artist">Artist</option><option value="label">Record label</option><option value="management">Management</option></select></label>
                         <label class="bl-new hidden">New · name<input name="newName" maxlength="60" placeholder="Who you are billing" autocomplete="off"></label>
@@ -408,7 +407,6 @@
             if (document.activeElement !== f.marginPct) f.marginPct.value = Math.round((d.rates.margin || 0) * 1000) / 10;
             // Venue to bill (admin), then the venue itself, its artists or its record labels
             _venue = d.venueSlug || _venue;
-            document.getElementById('bl-acct-type').value = d.accountType || 'venue';
             document.getElementById('bl-venue').innerHTML = (d.venues || []).map(function(v) { return '<option value="' + esc(v.slug) + '"' + (v.slug === d.venueSlug ? ' selected' : '') + '>' + esc(v.name) + '</option>'; }).join('');
             var tsel = document.getElementById('bl-target');
             // The account itself (as its type: venue, artist, record label or management), then its other artists
@@ -530,10 +528,6 @@
         });
         // Changing who is billed, the plan or the period updates the preview
         document.getElementById('bl-inv-filter').addEventListener('change', function() { if (_data) render(_data); });
-        document.getElementById('bl-acct-type').addEventListener('change', async function() {
-            try { await post({ action: 'setAccountType', accountType: this.value }); laToast('Account type saved'); load(); }
-            catch (e) { laAlert('Could not save: ' + e.message, { tone: 'error' }); }
-        });
         document.getElementById('bl-venue').addEventListener('change', function() { _venue = this.value; _target = 'venue'; _planOverride = undefined; document.getElementById('bl-plans').dataset.editing = ''; load(); });
         document.getElementById('bl-target').addEventListener('change', function() {
             var isNew = this.value === '__new', sf = document.getElementById('bl-send-form');
