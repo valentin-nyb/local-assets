@@ -4,7 +4,7 @@ import { getWebSessionAuth, getVenuesConfig, readRegistryRaw, saveRegistryEntry,
 import { venueAuth } from './_verticals.js';
 import {
   readRates, readPlans, cleanPlans, readAssignments, assignKey, venueUsage, venueArtists, priceUsage,
-  monthRange, stripeClient, invoiceVenue, venueEntries, DEFAULT_RATES,
+  monthRange, stripeClient, invoiceVenue, venueEntries, DEFAULT_RATES, applyDetails,
 } from './_billing.js';
 
 // Billing page data and actions.
@@ -308,8 +308,18 @@ export default async function handler(req, res) {
       const target = cleanTarget(body.target);
       const rec = { plan: cleanText(body.plan, 40), email: cleanText(body.email, 120), name: cleanText(body.name, 80), monthly: !!body.monthly, details: cleanDetails(body.details) };
       if (rec.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rec.email)) return res.status(400).json({ error: 'Enter a valid email' });
-      await withRedis(redis => redis.hSet(assignKey(slug), target, JSON.stringify(rec)));
-      return res.status(200).json({ ok: true });
+      const customerId = await withRedis(async redis => {
+        await redis.hSet(assignKey(slug), target, JSON.stringify(rec));
+        return redis.get(`billing_customer:${target === 'venue' ? slug : `${slug}:${target}`}`);
+      });
+      // The Stripe customer gets the details now, so the next invoice and Stripe's own records carry them
+      const stripe = stripeClient();
+      let stripeUpdated = false;
+      if (stripe && customerId && rec.details.legalName) {
+        try { await applyDetails(stripe, customerId, rec.details); if (rec.email) await stripe.customers.update(customerId, { email: rec.email }); stripeUpdated = true; }
+        catch (e) { console.error('[billing] customer details', slug, target, e.message); }
+      }
+      return res.status(200).json({ ok: true, stripeUpdated });
     }
 
     if (body.action === 'setAccountType') {

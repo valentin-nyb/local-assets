@@ -178,7 +178,7 @@ export function stripeClient() {
 // The venue's Stripe customer, made on first use
 const EU = new Set('AT BE BG CY CZ DE DK EE ES FI FR GR HR HU IE IT LT LU LV MT NL PL PT RO SE SI SK'.split(' '));
 // The billing details printed on the Stripe invoice: legal name, postal address and VAT number
-async function applyDetails(stripe, id, details) {
+export async function applyDetails(stripe, id, details) {
   if (!details?.legalName) return;
   await stripe.customers.update(id, {
     name: details.legalName,
