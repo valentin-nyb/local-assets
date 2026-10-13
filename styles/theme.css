@@ -495,6 +495,16 @@ h1:not(header h1), h2, h3,
     color: var(--la-text);
     border: 1px solid color-mix(in srgb, var(--la-text) 24%, transparent);
 }
+/* Hover: a filled button empties to its outline, the same sweep in reverse */
+:root body :is(.cam-btn.primary, .se-btn.primary, .vs-btn.primary, .lad-btn.primary, .ing-btn, .bl-pay, .se-btn.danger, .lad-btn.danger) {
+    background-image: linear-gradient(var(--la-surface), var(--la-surface));
+    background-repeat: no-repeat;
+    background-position: left center;
+    background-size: 0% 100%;
+    border: 1px solid var(--la-accent);
+    transition: background-size .35s cubic-bezier(.22, 1, .36, 1), color .25s ease, border-color .25s ease, transform .12s ease;
+}
+:root body :is(.se-btn.danger, .lad-btn.danger) { border-color: var(--la-bad, #ef4444); }
 /* Hover: an outline button fills with its own colour, sweeping in from the left */
 :root body :is(.cam-btn.ghost, .se-btn:not(.primary):not(.danger), .vs-btn.ghost, .lad-btn.ghost, .cam-btn.bl-danger) {
     background-image: linear-gradient(var(--la-btn-fill, var(--la-text)), var(--la-btn-fill, var(--la-text)));
@@ -516,13 +526,15 @@ h1:not(header h1), h2, h3,
         border-color: var(--la-bad, #ef4444);
         color: #fff;
     }
-    :root body :is(.cam-btn.primary, .se-btn.primary, .vs-btn.primary, .lad-btn.primary, .ing-btn, .bl-pay) {
-        transition: filter .25s ease, box-shadow .25s ease, transform .12s ease;
-    }
     :root body :is(.cam-btn.primary, .se-btn.primary, .vs-btn.primary, .lad-btn.primary, .ing-btn, .bl-pay):hover:not(:disabled) {
         opacity: 1;
-        filter: brightness(1.06);
-        box-shadow: 0 6px 18px -8px var(--la-accent);
+        background-size: 100% 100%;
+        color: color-mix(in srgb, var(--la-accent) 82%, var(--la-text));
+    }
+    :root body :is(.se-btn.danger, .lad-btn.danger):hover:not(:disabled) {
+        background-size: 100% 100%;
+        color: var(--la-bad, #ef4444);
+        filter: none;
     }
 }
 @media (prefers-reduced-motion: reduce) {

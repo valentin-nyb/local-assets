@@ -16,7 +16,8 @@ import {
 //   POST { action: 'invoiceNow', target, plan, email, name, period } admin: send an invoice now
 
 const admins = () => (process.env.BILLING_ADMINS || 'info@local-assets.com').split(/[\s,]+/).map(s => s.toLowerCase()).filter(Boolean);
-const cleanTarget = t => (t === 'venue' || /^(artist|label):[^<>]{1,60}$/.test(String(t || ''))) ? String(t) : 'venue';
+// Who is billed: the account itself ("venue"), or one of its artists, record labels, venues or managements by name
+const cleanTarget = t => (t === 'venue' || /^(artist|label|venue|management):[^<>]{1,60}$/.test(String(t || ''))) ? String(t).replace(/^(\w+):\s*/, '$1:').trim() : 'venue';
 const STATUSES = ['paid', 'unpaid', 'waiting'];
 const TYPE_LABEL = { venue: 'Venue', artist: 'Artist', label: 'Record label', management: 'Management' };
 const cleanText = (v, n) => String(v ?? '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, n);
@@ -126,12 +127,14 @@ export default async function handler(req, res) {
         // Record labels from the Brand Kit
         const names = isAdmin ? await redis.hGetAll(`brand_owner_names:${slug}`) : {};
         const labels = Object.entries(names || {}).filter(([k]) => k.startsWith('label-')).map(([, v]) => v).sort();
+        // Venues from the Brand Kit (where the artist plays)
+        const bkVenues = Object.entries(names || {}).filter(([k]) => k.startsWith('venue-')).map(([, v]) => v).filter(Boolean).sort();
         // Artists from the Brand Kit too, not only those with sessions
         for (const [k, v] of Object.entries(names || {})) if (k.startsWith('artist-') && v) artists.push(String(v).toUpperCase().trim());
         const statuses = await redis.hGetAll(`billing_status:${slug}`);
         // The account's own type from its Brand Kit (venue, artist, record label or management)
         const accountType = (await redis.get(`account_type:${slug}`)) || getVenuesConfig()[slug]?.type || (/team$/i.test(String(getVenuesConfig()[slug]?.name || '')) ? 'management' : 'venue');
-        return { rates, plans, assignments, customer, usage, artists: [...new Set(artists)].sort(), labels, statuses, accountType };
+        return { rates, plans, assignments, customer, usage, artists: [...new Set(artists)].sort(), labels, bkVenues, statuses, accountType };
       });
       const a = data.assignments[target] || {};
       const planId = req.query.plan !== undefined && isAdmin ? String(req.query.plan) : (a.plan || '');
@@ -182,8 +185,8 @@ export default async function handler(req, res) {
             created: i.created * 1000, url: i.hosted_invoice_url, pdf: i.invoice_pdf, payable: i.status === 'open' && i.amount_remaining > 0,
             issued: (i.status_transitions?.finalized_at || i.created) * 1000, due: i.due_date ? i.due_date * 1000 : null, paidAt: i.status_transitions?.paid_at ? i.status_transitions.paid_at * 1000 : null,
             amountDue: i.amount_remaining / 100, email: i.customer_email || '', address: i.customer_address ? [i.customer_address.line1, i.customer_address.line2, [i.customer_address.city, i.customer_address.postal_code].filter(Boolean).join(' '), i.customer_address.country].filter(Boolean) : [], vat: (i.customer_tax_ids || []).map(t => t.value).filter(Boolean), lines: (i.lines?.data || []).slice(0, 30).map(l => ({ text: String(l.description || ''), amount: l.amount / 100 })),
-            billedTo: i.customer_name || (t === 'venue' ? (cfg[iv]?.name || venueName) : t.replace(/^(artist|label):/, '')),
-            kind: t === 'venue' ? TYPE_LABEL[acctTypes[iv] || data.accountType] || 'Account' : t.startsWith('label:') ? 'Record label' : 'Artist',
+            billedTo: i.customer_name || (t === 'venue' ? (cfg[iv]?.name || venueName) : t.replace(/^(artist|label|venue|management):/, '')),
+            kind: t === 'venue' ? TYPE_LABEL[acctTypes[iv] || data.accountType] || 'Account' : TYPE_LABEL[t.split(':')[0]] || 'Artist',
             account: iv, accountName: cfg[iv]?.name || iv,
           };
         });
@@ -212,7 +215,7 @@ export default async function handler(req, res) {
         // Plans a client can move to (name, price, what's included)
         plansOffered: data.plans.map(p => ({ id: p.id, name: p.name, price: p.price, maxClips: p.maxClips, cameras: p.cameras || 0, features: p.features || [], included: p.included })),
         currentPlan: (data.assignments.venue || {}).plan || '',
-        ...(isAdmin ? { stripeAccount, venueSlug: slug, venues: billable.map(k => ({ slug: k, name: cfg[k]?.name || k })), rates: data.rates, plans: data.plans, assignments: data.assignments, artists: data.artists, labels: data.labels, assignment: a } : {}),
+        ...(isAdmin ? { stripeAccount, venueSlug: slug, venues: billable.map(k => ({ slug: k, name: cfg[k]?.name || k })), rates: data.rates, plans: data.plans, assignments: data.assignments, artists: data.artists, labels: data.labels, bkVenues: data.bkVenues, assignment: a } : {}),
       });
     }
 
@@ -391,7 +394,7 @@ export default async function handler(req, res) {
       const base = body.period === 'previous' ? previousMonth() : monthRange();
       // A manual invoice never blocks the monthly one
       const period = { ...base, key: `${base.key}-manual-${Date.now()}` };
-      const name = cleanText(body.name, 80) || (target === 'venue' ? (venueName) : target.replace(/^(artist|label):/, ''));
+      const name = cleanText(body.name, 80) || (target === 'venue' ? (venueName) : target.replace(/^(artist|label|venue|management):/, ''));
       const det = cleanDetails(body.details);
       if (!det.legalName || !det.line1 || !det.city || !det.postcode) return res.status(400).json({ error: 'Add the billing details first: legal name, address, city and postcode' });
       const out = await withRedis(redis => invoiceVenue(redis, stripe, { slug, auth: auth, email, name, target, planId: cleanText(body.plan, 40) || null }, period));

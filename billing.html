@@ -32,7 +32,7 @@
     <link rel="manifest" href="favicon/site.webmanifest">
 
     <link rel="stylesheet" href="styles/tailwind.css">
-    <link rel="stylesheet" href="styles/theme.css?v=4">
+    <link rel="stylesheet" href="styles/theme.css?v=5">
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
@@ -71,8 +71,8 @@
         .bl-table .unit { display:block; font-size:11px; color:var(--la-dim); margin-top:2px; font-weight:400; }
         .bl-table tfoot td { color:var(--la-text); font-weight:700; border-top:1px solid var(--la-line); }
         .bl-pill { display:inline-block; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.1em; text-transform:uppercase; padding:3px 8px; border-radius:99px; background:var(--la-chip); color:var(--la-sub); }
-        .bl-pill.paid { background:var(--la-accent-soft); color:var(--la-accent); }
-        .bl-pill.open { background:rgba(245,158,11,.12); color:#f59e0b; }
+        .bl-pill.paid { background:color-mix(in srgb, var(--la-ok) 14%, transparent); color:color-mix(in srgb, var(--la-ok) 72%, var(--la-text)); font-weight:700; }
+        .bl-pill.open { background:color-mix(in srgb, var(--la-warn) 16%, transparent); color:color-mix(in srgb, var(--la-warn) 68%, var(--la-text)); font-weight:700; }
         .bl-link { color:var(--la-text); text-decoration:underline; text-underline-offset:2px; margin-right:12px; }
         .bl-empty { padding:28px 20px; font-size:13px; color:var(--la-dim); }
         .bl-admin { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:12px; padding:20px; }
@@ -86,7 +86,7 @@
         .bl-admin-actions { display:flex; flex-wrap:wrap; gap:8px; padding:0 20px 20px; align-items:center; }
         .bl-msg { font-size:12px; color:var(--la-sub); }
         .bl-inv-filter { height:34px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 10px; font-size:12px; max-width:280px; }
-        .bl-inv-filter.hidden, #bl-inv-zip.hidden { display:none; }
+        .bl-inv-filter.hidden, #bl-inv-zip.hidden, .bl-admin .bl-new.hidden { display:none; }
         .bl-inv-tools { display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
         button.bl-del { color:var(--la-bad, #ef4444); }
         .bl-cancel-body { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:18px 20px; flex-wrap:wrap; }
@@ -121,9 +121,9 @@
         #bl-plans td:first-child { min-width:240px; } #bl-plans td { min-width:110px; }
         .bl-check { display:inline-flex; align-items:center; gap:8px; font-size:12px; color:var(--la-sub); margin-right:6px; }
         .bl-status { min-width:190px; height:28px; border-radius:99px; border:1px solid var(--la-line); background:var(--la-chip); color:var(--la-sub); font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; padding:0 8px; cursor:pointer; }
-        .bl-status.paid { background:var(--la-accent-soft); color:var(--la-accent); border-color:transparent; }
-        .bl-status.unpaid { background:rgba(239,68,68,.12); color:#ef4444; border-color:transparent; }
-        .bl-status.waiting { background:rgba(245,158,11,.12); color:#f59e0b; border-color:transparent; }
+        .bl-status.paid { background:color-mix(in srgb, var(--la-ok) 14%, transparent); color:color-mix(in srgb, var(--la-ok) 72%, var(--la-text)); border-color:transparent; font-weight:700; }
+        .bl-status.unpaid { background:color-mix(in srgb, var(--la-bad) 13%, transparent); color:color-mix(in srgb, var(--la-bad) 78%, var(--la-text)); border-color:transparent; font-weight:700; }
+        .bl-status.waiting { background:color-mix(in srgb, var(--la-warn) 16%, transparent); color:color-mix(in srgb, var(--la-warn) 68%, var(--la-text)); border-color:transparent; font-weight:700; }
         .bl-who { display:block; font-size:11px; color:var(--la-dim); margin-top:2px; font-weight:400; }
         .bl-x { background:none; border:0; color:var(--la-dim); cursor:pointer; font-size:16px; }
         .bl-scroll { overflow-x:auto; }
@@ -169,6 +169,8 @@
                         <label>Account<select name="venue" id="bl-venue"></select></label>
                         <label>Account type<select name="accountType" id="bl-acct-type"><option value="venue">Venue</option><option value="artist">Artist</option><option value="label">Record label</option><option value="management">Management</option></select></label>
                         <label>Bill to<select name="target" id="bl-target"></select></label>
+                        <label class="bl-new hidden">New · type<select name="newType"><option value="venue">Venue</option><option value="artist">Artist</option><option value="label">Record label</option><option value="management">Management</option></select></label>
+                        <label class="bl-new hidden">New · name<input name="newName" maxlength="60" placeholder="Who you are billing" autocomplete="off"></label>
                         <label>Email<input name="email" type="email" placeholder="accounts@venue.com"></label>
                         <label>Plan<select name="plan" id="bl-plan-select"></select></label>
                         <label>Period<select name="period"><option value="current">This month so far</option><option value="previous">Last month</option></select></label>
@@ -272,7 +274,7 @@
                 _data = d; render(d); err.classList.add('hidden');
             } catch (e) { err.textContent = 'Could not load billing: ' + e.message; err.classList.remove('hidden'); }
         }
-        function targetName(t, d) { return t === 'venue' ? (d.venue || 'This venue') : t.replace(/^(artist|label):/, ''); }
+        function targetName(t, d) { return t === 'venue' ? (d.venue || 'This venue') : t.replace(/^(artist|label|venue|management):/, ''); }
         function render(d) {
             var cur = d.currency, admin = d.isAdmin;
             document.getElementById('bl-period').textContent = d.period.label + (admin ? ' · ' + targetName(d.target, d) : '');
@@ -412,11 +414,25 @@
             // The account itself (as its type: venue, artist, record label or management), then its other artists
             // and record labels. An artist account isn't listed again as one of its own artists.
             var selfName = String(d.venue || '').toUpperCase().trim();
-            var opts = [['venue', (d.venue || 'This account') + ' (' + String(d.accountTypeLabel || 'account').toLowerCase() + ')']]
-                .concat((d.artists || []).filter(function(a) { return String(a).toUpperCase().trim() !== selfName; }).map(function(a) { return ['artist:' + a, a + ' (artist)']; }))
-                .concat((d.labels || []).map(function(l) { return ['label:' + l, l + ' (record label)']; }));
+            var groups = { venue: [], artist: [], label: [], management: [] };
+            var add = function(type, name) { name = String(name || '').trim(); if (name && groups[type].indexOf(name) < 0 && !(type === 'artist' && name.toUpperCase() === selfName)) groups[type].push(name); };
+            (d.bkVenues || []).forEach(function(n) { add('venue', n); });
+            (d.artists || []).forEach(function(n) { add('artist', n); });
+            (d.labels || []).forEach(function(n) { add('label', n); });
+            // People billed before (added with "Someone new")
+            Object.keys(d.assignments || {}).forEach(function(k) { var m = /^(venue|artist|label|management):(.+)$/.exec(k); if (m) add(m[1], m[2]); });
+            var GROUP = { venue: 'Venues', artist: 'Artists', label: 'Record labels', management: 'Management' };
+            var KIND = { venue: 'venue', artist: 'artist', label: 'record label', management: 'management' };
+            var opts = [['venue', (d.venue || 'This account') + ' (' + String(d.accountTypeLabel || 'account').toLowerCase() + ')']];
+            Object.keys(groups).forEach(function(g) { groups[g].sort().forEach(function(n) { opts.push([g + ':' + n, n + ' (' + KIND[g] + ')', GROUP[g]]); }); });
             var tgt = opts.some(function(o) { return o[0] === d.target; }) ? d.target : 'venue';
-            tsel.innerHTML = opts.map(function(o) { return '<option value="' + esc(o[0]) + '"' + (o[0] === tgt ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('');
+            var html = '<option value="venue"' + (tgt === 'venue' ? ' selected' : '') + '>' + esc(opts[0][1]) + '</option>', open = '';
+            opts.slice(1).forEach(function(o) {
+                if (o[2] !== open) { html += (open ? '</optgroup>' : '') + '<optgroup label="' + esc(o[2]) + '">'; open = o[2]; }
+                html += '<option value="' + esc(o[0]) + '"' + (o[0] === tgt ? ' selected' : '') + '>' + esc(o[1]) + '</option>';
+            });
+            tsel.innerHTML = html + (open ? '</optgroup>' : '') + '<option value="__new">+ Someone new…</option>';
+            document.querySelectorAll('#bl-send-form .bl-new').forEach(function(el) { el.classList.add('hidden'); });
             if (tgt !== d.target && _target !== tgt) { _target = tgt; setTimeout(load, 0); }
             var psel = document.getElementById('bl-plan-select'), cur = d.plan ? d.plan.id : '';
             psel.innerHTML = '<option value="">No plan · usage only</option>' + d.plans.map(function(p) { return '<option value="' + esc(p.id) + '"' + (p.id === cur ? ' selected' : '') + '>' + esc(p.name) + ' · ' + money(p.price, 'gbp') + '/mo</option>'; }).join('');
@@ -492,6 +508,9 @@
             } catch (e) { laAlert('Could not download the invoices: ' + e.message, { tone: 'error' }); }
             btn.disabled = false; btn.textContent = label;
         }
+        // Who is billed: the chosen entry, or the new one typed in
+        function targetOf(sf) { return sf.target.value === '__new' ? (sf.newName.value.trim() ? sf.newType.value + ':' + sf.newName.value.trim() : '') : sf.target.value; }
+        function whoOf(sf) { return sf.target.value === '__new' ? sf.newName.value.trim() : sf.target.options[sf.target.selectedIndex].text.replace(/\s*\((venue|artist|record label|management|account)\)$/i, ''); }
         // The billing details typed in Bill to
         function detailsOf(sf) { return { legalName: sf.legalName.value.trim(), line1: sf.line1.value.trim(), line2: sf.line2.value.trim(), city: sf.city.value.trim(), postcode: sf.postcode.value.trim(), country: sf.country.value, vat: sf.vat.value.trim() }; }
         function detailsMissing(x) { return !x.legalName ? 'legalName' : !x.line1 ? 'line1' : !x.city ? 'city' : !x.postcode ? 'postcode' : ''; }
@@ -516,7 +535,17 @@
             catch (e) { laAlert('Could not save: ' + e.message, { tone: 'error' }); }
         });
         document.getElementById('bl-venue').addEventListener('change', function() { _venue = this.value; _target = 'venue'; _planOverride = undefined; document.getElementById('bl-plans').dataset.editing = ''; load(); });
-        document.getElementById('bl-target').addEventListener('change', function() { _target = this.value; _planOverride = undefined; load(); });
+        document.getElementById('bl-target').addEventListener('change', function() {
+            var isNew = this.value === '__new', sf = document.getElementById('bl-send-form');
+            document.querySelectorAll('#bl-send-form .bl-new').forEach(function(el) { el.classList.toggle('hidden', !isNew); });
+            if (isNew) {
+                // A blank form for someone new
+                ['email', 'legalName', 'line1', 'line2', 'city', 'postcode', 'vat', 'newName'].forEach(function(k) { sf[k].value = ''; });
+                sf.country.value = 'GB'; sf.newName.focus();
+                return;
+            }
+            _target = this.value; _planOverride = undefined; load();
+        });
         document.getElementById('bl-plan-select').addEventListener('change', function() { _planOverride = this.value; load(); });
         document.querySelector('#bl-send-form [name=period]').addEventListener('change', function() { load(); });
         // Invoice preview: the invoice as it will be sent, with Download (PDF) and Send
@@ -590,7 +619,7 @@
             await load();
             btn.disabled = false; btn.textContent = 'Preview';
             if (!_data) return;
-            var who = sf.target.options[sf.target.selectedIndex].text.replace(/\s*\((venue|artist|record label|management|account)\)$/i, '');
+            var who = whoOf(sf);
             var html = invoiceHtml(_data, who, sf.email.value.trim(), sf.period.value, detailsOf(sf));
             var m = invModal(html, '<button type="button" class="cam-btn ghost" data-close>Close</button><button type="button" class="cam-btn ghost" data-dl>Download PDF</button><button type="button" class="cam-btn primary" data-send>Send invoice</button>');
             m.querySelector('[data-dl]').addEventListener('click', function() {
@@ -627,11 +656,12 @@
         });
         document.getElementById('bl-send').addEventListener('click', async function() {
             var msg = document.getElementById('bl-send-msg'), sf = document.getElementById('bl-send-form');
-            var target = sf.target.value, plan = sf.plan.value, email = sf.email.value.trim(), period = sf.period.value;
+            var target = targetOf(sf), plan = sf.plan.value, email = sf.email.value.trim(), period = sf.period.value;
+            if (!target) { msg.textContent = 'Type the name of who you are billing'; sf.newName.focus(); return; }
             if (!email) { msg.textContent = 'Enter the email the invoice goes to'; sf.email.focus(); return; }
             var miss = detailsMissing(detailsOf(sf));
             if (miss) { msg.textContent = 'Add the billing details first: legal name, address, city and postcode'; sf[miss].focus(); return; }
-            var who = sf.target.options[sf.target.selectedIndex].text;
+            var who = whoOf(sf);
             if (!(await laConfirm({ title: 'Send the invoice?', message: 'An itemised invoice for ' + who + ' is created in Stripe and emailed to ' + email + '.', confirmText: 'Send invoice' }))) return;
             this.disabled = true; msg.textContent = 'Creating the invoice…';
             try {
@@ -648,14 +678,15 @@
             var msg = document.getElementById('bl-send-msg'), sf = document.getElementById('bl-send-form');
             this.disabled = true; msg.textContent = 'Saving…';
             try {
-                await post({ action: 'assign', target: sf.target.value, plan: sf.plan.value, email: sf.email.value.trim(), monthly: document.getElementById('bl-monthly').checked, details: detailsOf(sf) });
-                _planOverride = undefined; msg.textContent = 'Saved for ' + sf.target.options[sf.target.selectedIndex].text; await load();
+                var tg = targetOf(sf); if (!tg) { msg.textContent = 'Type the name of who you are billing'; sf.newName.focus(); this.disabled = false; return; }
+                await post({ action: 'assign', target: tg, plan: sf.plan.value, email: sf.email.value.trim(), monthly: document.getElementById('bl-monthly').checked, details: detailsOf(sf) });
+                _planOverride = undefined; _target = tg; msg.textContent = 'Saved for ' + whoOf(sf); await load();
             } catch (e) { msg.textContent = 'Could not save: ' + e.message; }
             this.disabled = false;
         });
         document.getElementById('bl-monthly').addEventListener('change', async function() {
             var sf = document.getElementById('bl-send-form');
-            try { await post({ action: 'assign', target: sf.target.value, plan: sf.plan.value, email: sf.email.value.trim(), monthly: this.checked, details: detailsOf(sf) }); laToast(this.checked ? 'Billed monthly on the 1st' : 'Monthly billing off'); }
+            try { if (!targetOf(sf)) throw new Error('Type the name of who you are billing'); await post({ action: 'assign', target: targetOf(sf), plan: sf.plan.value, email: sf.email.value.trim(), monthly: this.checked, details: detailsOf(sf) }); laToast(this.checked ? 'Billed monthly on the 1st' : 'Monthly billing off'); }
             catch (e) { laAlert(e.message, { tone: 'error' }); this.checked = !this.checked; }
         });
         // New clients: create their Mux environment, then paste its access token here
