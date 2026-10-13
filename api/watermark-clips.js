@@ -107,6 +107,13 @@ export default async function handler(req, res) {
       }
       // Which shown clips carry a watermark, and which aren't vertical yet
       let assets = await listAllAssets(auth);
+      // Clean-up after a webhook bug (13 Oct 2026): an HQ audio upload was taken for a full recording, so
+      // files were made with the whole JSON label as the artist ('{"ARTIST":…} // AUDIO' / '// THUMB'),
+      // and its vertical cuts failed. Those labels are never made otherwise.
+      const junk = assets.filter(a => /^\{.*\} \/\/ (AUDIO|THUMB|SOCIAL|SOCIALRAW)\b/i.test(String(a.passthrough || '').trim()));
+      for (const a of junk) await del(auth, a.id).catch(() => {});
+      if (junk.length) { console.log('[watermark-clips] removed', junk.length, 'files with a broken label', slug); assets = await listAllAssets(auth); }
+      for (const [k, v] of Object.entries(await redis.hGetAll(`v_failed:${slug}`))) { try { if (String(JSON.parse(v).artist || '').startsWith('{')) await redis.hDel(`v_failed:${slug}`, k); } catch {} }
       const v = await finishVerticals(redis, slug, auth, assets);
       if (v.done) assets = await listAllAssets(auth);
       const isClean = cleanCheck(assets, await markedSet(redis, slug));

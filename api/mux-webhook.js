@@ -39,6 +39,22 @@ function isMasterAsset(passthrough) {
     const pt = passthrough.toUpperCase().trim();
     return pt.length > 0 && !pt.includes(' // ');
 }
+// The artist of a full recording (4K long form), or null for anything else: HQ audio, clips, thumbnails,
+// or uploads without a video track. Labels are "ARTIST" or JSON { artist, date, camera }.
+function masterArtist(rawPassthrough, tracks) {
+    if (Array.isArray(tracks) && tracks.length && !tracks.some(t => t.type === 'video')) return null;
+    const pt = String(rawPassthrough || '').trim();
+    if (!pt) return null;
+    if (pt.startsWith('{')) {
+        try {
+            const o = JSON.parse(pt);
+            const cam = String(o?.camera || 'MASTER').toUpperCase().trim();
+            const artist = String(o?.artist || '').toUpperCase().trim();
+            return artist && cam === 'MASTER' ? artist : null;
+        } catch { return null; }
+    }
+    return isMasterAsset(pt) ? pt.toUpperCase() : null;
+}
 
 // ── 1. AUDIO EXTRACTION ──────────────────────────────────────────────
 async function createAudioAsset(auth, assetId, artistName) {
@@ -171,19 +187,20 @@ export default async function handler(req, res) {
 
         // ── AUTO-PIPELINE: only for MASTER assets ────────────────────
         // Camera recordings are handled when the broadcast ends (video.asset.live_stream_completed)
-        if (!data.live_stream_id && isMasterAsset(passthrough) && duration > 10 && playbackId) {
-            console.log(`[Pipeline] MASTER "${passthrough}" (${Math.round(duration)}s) — generating audio + clips + thumbs...`);
+        const artist = masterArtist(data.passthrough, data.tracks);
+        if (!data.live_stream_id && artist && duration > 10 && playbackId) {
+            console.log(`[Pipeline] MASTER "${artist}" (${Math.round(duration)}s) — generating audio + clips + thumbs...`);
 
             const results = await Promise.allSettled([
-                createAudioAsset(auth, assetId, passthrough),
-                createSocialClips(auth, found, assetId, passthrough, duration),
-                createThumbnails(auth, assetId, passthrough, playbackId, duration),
+                createAudioAsset(auth, assetId, artist),
+                createSocialClips(auth, found, assetId, artist, duration),
+                createThumbnails(auth, assetId, artist, playbackId, duration),
             ]);
 
             for (const r of results) {
                 if (r.status === 'rejected') console.error('[Pipeline] Failed:', r.reason?.message);
             }
-            console.log(`[Pipeline] Done for "${passthrough}"`);
+            console.log(`[Pipeline] Done for "${artist}"`);
         }
     }
 
