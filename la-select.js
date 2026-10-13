@@ -18,7 +18,7 @@
     '.las-opt.act{background:color-mix(in srgb,var(--la-text,#fafafa) 6%,transparent)}' +
     '.las-opt.dis{opacity:.4;cursor:default}' +
     // The closed box: square-ish, thin border, a divider and up/down chevrons; a dark outline while open
-    ':root body select:not([multiple]):not([size]):not(.bl-status):not([data-native]){-webkit-appearance:none;appearance:none;padding-right:50px !important;padding-left:16px !important;border-radius:4px !important;' +
+    ':root body select:not([multiple]):not([size]):not(.bl-status):not([data-native]):not(.flatpickr-monthDropdown-months){-webkit-appearance:none;appearance:none;padding-right:50px !important;padding-left:16px !important;border-radius:4px !important;' +
       'border:1px solid color-mix(in srgb,var(--la-text,#fafafa) 26%,transparent) !important;background-color:var(--la-surface,#0e0e10) !important;color:var(--la-text,#fafafa) !important;' +
       'background-image:url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2738%27 height=%2726%27 viewBox=%270 0 38 26%27%3E%3Cpath d=%27M1 2v22%27 stroke=%27%238a8a93%27 stroke-width=%271.2%27/%3E%3Cpath d=%27M19 10.5l5-5 5 5M19 15.5l5 5 5-5%27 fill=%27none%27 stroke=%27%238a8a93%27 stroke-width=%271.5%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27/%3E%3C/svg%3E") !important;' +
       'background-repeat:no-repeat !important;background-position:right 6px center !important;background-size:38px 26px !important;outline:none}' +
@@ -132,7 +132,7 @@
     }
   }
 
-  function usable(t) { return t && t.tagName === 'SELECT' && !t.multiple && !(t.size > 1) && !t.disabled && !t.hasAttribute('data-native'); }
+  function usable(t) { return t && t.tagName === 'SELECT' && !t.multiple && !(t.size > 1) && !t.disabled && !t.hasAttribute('data-native') && !t.closest('.flatpickr-calendar'); }
 
   // Mouse: open our menu instead of the browser's
   document.addEventListener('mousedown', function (e) {

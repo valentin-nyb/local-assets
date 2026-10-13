@@ -35,7 +35,7 @@
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
-    <script src="/nav-component.js?v=11"></script>
+    <script src="/nav-component.js?v=12"></script>
     <style>
         /* Standardized sidebar styles used by the JS component */
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
@@ -69,7 +69,8 @@
         .ing-eyebrow { margin:0; font:500 10px/1 'JetBrains Mono', monospace; letter-spacing:.2em; text-transform:uppercase; color:var(--la-dim); }
         .ing-title { margin:8px 0 0; font:700 22px/1.15 'Helvetica Neue', Helvetica, Arial, sans-serif; text-transform:uppercase; color:var(--la-text); letter-spacing:.005em; }
         .ing-sub { margin:8px 0 0; max-width:620px; font:400 13px/1.55 'Helvetica Neue', Helvetica, Arial, sans-serif; color:var(--la-sub); }
-        .ing-fields { display:grid; grid-template-columns:1.4fr 1fr 1fr; gap:14px; }
+        .ing-fields { display:grid; grid-template-columns:1.1fr 1.4fr 1fr 1fr; gap:14px; }
+        @media (max-width:1180px) { .ing-fields { grid-template-columns:repeat(2, minmax(0,1fr)); } }
         .ing-field { display:flex; flex-direction:column; gap:7px; min-width:0; }
         .ing-field span { font:700 10px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.08em; text-transform:uppercase; color:var(--la-sub); }
         .ing-field input, .ing-field select { height:46px; width:100%; border-radius:12px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 14px; font:500 14px 'Helvetica Neue', Helvetica, Arial, sans-serif; outline:none; transition:border-color .15s; }
@@ -121,6 +122,36 @@
 
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
         <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+        <style>
+            /* Date picker in the site's style (light and dark) */
+            .flatpickr-calendar { width:312px; padding:14px 14px 12px; background:var(--la-raised); border:1px solid var(--la-line); border-radius:16px; box-shadow:0 22px 50px -18px rgba(0,0,0,.5); font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; }
+            .flatpickr-calendar.arrowTop:before, .flatpickr-calendar.arrowTop:after, .flatpickr-calendar.arrowBottom:before, .flatpickr-calendar.arrowBottom:after { display:none; }
+            .flatpickr-calendar.open { animation:laPickIn .16s cubic-bezier(.22,1,.36,1); }
+            @keyframes laPickIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:none; } }
+            .flatpickr-months { align-items:center; margin-bottom:8px; }
+            .flatpickr-months .flatpickr-month { height:36px; color:var(--la-text); fill:var(--la-text); }
+            .flatpickr-current-month { position:static; width:auto; height:36px; padding:0; display:flex; align-items:center; justify-content:center; gap:6px; font:700 14px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; text-transform:uppercase; letter-spacing:.04em; }
+            .flatpickr-current-month span.cur-month { font-weight:700; margin:0; color:var(--la-text); }
+            .flatpickr-current-month span.cur-month:hover { background:none; }
+            .flatpickr-current-month .numInputWrapper { width:5ch; }
+            .flatpickr-current-month input.cur-year { font-weight:700; color:var(--la-text); padding:0; }
+            .flatpickr-current-month .numInputWrapper span { display:none; }
+            .flatpickr-current-month .numInputWrapper:hover { background:none; }
+            .flatpickr-months .flatpickr-prev-month, .flatpickr-months .flatpickr-next-month { position:static; height:36px; width:36px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:999px; color:var(--la-sub); fill:var(--la-sub); transition:background .15s, color .15s; }
+            .flatpickr-months .flatpickr-prev-month:hover, .flatpickr-months .flatpickr-next-month:hover { background:var(--la-chip); }
+            .flatpickr-months .flatpickr-prev-month:hover svg, .flatpickr-months .flatpickr-next-month:hover svg { fill:var(--la-text); }
+            .flatpickr-months .flatpickr-prev-month svg, .flatpickr-months .flatpickr-next-month svg { width:12px; height:12px; }
+            .flatpickr-innerContainer, .flatpickr-rContainer, .flatpickr-days, .dayContainer { width:282px; min-width:282px; max-width:282px; }
+            span.flatpickr-weekday { color:var(--la-dim); font:500 10px/1 'JetBrains Mono', ui-monospace, monospace; letter-spacing:.12em; text-transform:uppercase; }
+            .flatpickr-weekdays { height:30px; }
+            .flatpickr-day { max-width:38px; height:38px; line-height:38px; margin:1px 1px; border:1px solid transparent; border-radius:999px; color:var(--la-text); font-size:13px; transition:background .12s, color .12s, border-color .12s; }
+            .flatpickr-day:hover, .flatpickr-day:focus { background:var(--la-chip); border-color:transparent; color:var(--la-text); }
+            .flatpickr-day.today { border-color:var(--la-line); }
+            .flatpickr-day.today:hover { background:var(--la-chip); color:var(--la-text); border-color:var(--la-line); }
+            .flatpickr-day.selected, .flatpickr-day.selected:hover, .flatpickr-day.selected:focus { background:var(--la-accent); border-color:var(--la-accent); color:var(--la-accent-ink); font-weight:700; }
+            .flatpickr-day.prevMonthDay, .flatpickr-day.nextMonthDay { color:var(--la-dim); opacity:.45; }
+            .flatpickr-day.flatpickr-disabled, .flatpickr-day.flatpickr-disabled:hover { color:var(--la-dim); opacity:.3; background:none; }
+        </style>
         <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
     
 </head>
@@ -139,6 +170,7 @@
                     </div>
                     <div class="ing-fields">
                         <label class="ing-field"><span>Artist</span><input type="text" id="ingest-name" placeholder="e.g. DJ Name" autocomplete="off"></label>
+                        <label class="ing-field"><span>Session name</span><input type="text" id="ingest-title" maxlength="80" placeholder="e.g. Boiler Room Puglia" autocomplete="off"></label>
                         <label class="ing-field"><span>Date of the set</span><input type="text" id="ingest-date" placeholder="Choose a date"></label>
                         <label class="ing-field"><span>Camera</span><select id="ingest-shot">
                             <option value="MASTER">Main camera</option>
@@ -228,7 +260,9 @@
         const _date   = _qp.get('date');
         const _camera = _qp.get('camera');
 
-        flatpickr("#ingest-date", { defaultDate: _date || "today" });
+        // Shown as "13 October 2026"; the upload still gets 2026-10-13
+        window.LA_DATE_PICK = { monthSelectorType: 'static', altInput: true, altFormat: 'j F Y', dateFormat: 'Y-m-d', disableMobile: true };
+        flatpickr("#ingest-date", Object.assign({ defaultDate: _date || "today" }, window.LA_DATE_PICK));
         loadVault(); // Load the real Mux data immediately
 
         if (_artist) document.getElementById('ingest-name').value = _artist;
@@ -251,6 +285,9 @@
 
             uploadBtn.disabled = true;
             uploadBtn.textContent = 'Connecting…';
+            // The session's name, saved like "Edit session" does, so it shows as soon as the upload is in
+            const title = document.getElementById('ingest-title').value.trim();
+            if (title) laFetch('/api/session-meta', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ artist, date: dateVal, title }) }).catch(() => {});
 
             try {
                 const response = await laFetch('/api/get-upload-url', {
@@ -449,13 +486,14 @@
         m.innerHTML = `<form class="vs-panel" role="dialog" aria-modal="true">
             <p class="vs-title">Edit session</p><p class="vs-sub">${e(artist)}</p>
             <label>Session name<input name="title" maxlength="80" placeholder="e.g. Boiler Room Puglia" value="${e(saved.title)}"><small>Leave empty to show the artist and date.</small></label>
-            <label>Date<input name="date" type="date" value="${e(saved.date || date)}"><small>When the set happened.</small></label>
+            <label>Date<input name="date" type="text" value="${e(saved.date || date)}"><small>When the set happened.</small></label>
             <label>Venue<input name="venue" maxlength="60" placeholder="e.g. Fabric London" value="${e(saved.venue)}"></label>
             <p class="vs-error"></p>
             <div class="vs-actions"><button type="button" class="vs-btn ghost" data-cancel>Cancel</button><button type="submit" class="vs-btn primary">Save</button></div>
         </form>`;
         document.body.appendChild(m);
         const f = m.querySelector('form');
+        if (window.flatpickr) flatpickr(f.date, Object.assign({}, window.LA_DATE_PICK || {}, { altInputClass: 'vs-date' }));
         const close = () => m.remove();
         m.addEventListener('click', ev => { if (ev.target === m) close(); });
         m.querySelector('[data-cancel]').onclick = close;
