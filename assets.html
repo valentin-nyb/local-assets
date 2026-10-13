@@ -247,23 +247,27 @@
             return;
         }
 
-        // Handle both direct arrays and Mux's data wrapper — MASTER 4K only
-        const NON_MASTER = new Set(['AUDIO', 'SOCIAL', 'THUMB', 'BOOTH', 'PTZ01', 'PTZ02', 'PTZ03']);
-        const assets = (Array.isArray(data) ? data : (data.data || [])).filter(a => {
-            // Exclude audio-only assets (skip check if tracks not yet populated — still processing)
-            if (a.tracks && a.tracks.length > 0 && !a.tracks.some(t => t.type === 'video')) return false;
-            const pt = a.passthrough;
-            if (!pt) return true;
-            // Legacy string passthrough: exclude anything with ' // ' (e.g. "NAME // SOCIAL // 01")
-            if (typeof pt === 'string' && pt.includes(' // ')) return false;
-            // JSON passthrough: exclude if camera is a non-master type
-            try {
-                const meta = JSON.parse(pt);
-                if (meta && meta.camera && NON_MASTER.has(meta.camera.toUpperCase().trim())) return false;
-            } catch(e) {}
-            return true;
-        });
-
+        // One card per session, found the same way as Distribution History: every asset labelled with an
+        // artist (and its date) belongs to that artist's session on that day; the card shows its 4K long form.
+        const SUB = new Set(['AUDIO', 'SOCIAL', 'SOCIALRAW', 'THUMB', 'BOOTH', 'PTZ01', 'PTZ02', 'PTZ03']);
+        const all = (Array.isArray(data) ? data : (data.data || [])).filter(a => !a.source);
+        const sessions = new Map();
+        for (const a of all) {
+            const pt = typeof a.passthrough === 'string' ? a.passthrough.trim() : '';
+            let o = null; try { o = JSON.parse(pt); } catch (e) {}
+            if (!o && pt.includes(' // ')) continue;   // older clip / audio / thumbnail labels: part of a session, not one
+            const artist = String((o && o.artist) || pt || '').toUpperCase().trim();
+            if (!artist || artist === 'SESSION_ARCHIVE') continue;
+            const date = (o && o.date) || new Date(Number(a.created_at) * 1000).toISOString().slice(0, 10);
+            const key = artist + '|' + date;
+            if (!sessions.has(key)) sessions.set(key, { artist, date, master: null, at: Number(a.created_at) });
+            const cam = String((o && o.camera) || 'MASTER').toUpperCase();
+            const hasVideo = !(a.tracks && a.tracks.length) || a.tracks.some(t => t.type === 'video');
+            const sess = sessions.get(key);
+            if (!SUB.has(cam) && hasVideo && (!sess.master || Number(a.created_at) > Number(sess.master.created_at))) sess.master = a;
+            sess.at = Math.max(sess.at, Number(a.created_at));
+        }
+        const assets = [...sessions.values()].sort((x, y) => y.at - x.at).map(s => Object.assign({}, s.master || { id: s.artist + s.date, status: 'no-master' }, { _artist: s.artist, _date: s.date }));
         if (assets.length === 0) {
             list.innerHTML = `<p class="text-zinc-500 font-mono text-[10px] uppercase">VAULT EMPTY // NO ASSETS FOUND</p>`;
             return;
@@ -294,8 +298,8 @@
             const pid     = asset.playback_ids?.[0]?.id;
             const status  = asset.status;
             const isReady = status === 'ready';
-            const meta    = parsePT(asset.passthrough, asset.name);
-            const title   = meta ? esc(meta.artist) : esc(asset.id.slice(-6).toUpperCase());
+            const meta    = { artist: asset._artist, date: asset._date, camera: asset.status === 'no-master' ? 'NO 4K LONG FORM YET' : '4K LONG FORM' };
+            const title   = esc(meta.artist);
             const sub     = meta && (meta.date || meta.camera)
                 ? esc([meta.date, meta.camera].filter(Boolean).join(' // '))
                 : esc(new Date(asset.created_at * 1000).toLocaleDateString());
@@ -307,7 +311,7 @@
                         <h4 class="text-2xl font-black italic uppercase">${title}</h4>
                         <p class="text-[8px] font-mono text-zinc-500 uppercase mt-0.5">${sub}</p>
                         <span class="text-[8px] font-mono ${isReady ? 'text-primary' : 'text-zinc-500'} uppercase">
-                            ${esc(status.toUpperCase())}
+                            ${esc(status === 'no-master' ? 'AUDIO / CLIPS ONLY' : status.toUpperCase())}
                         </span>
                     </div>
                     ${isReady ? `

@@ -94,8 +94,6 @@ export default async function handler(req, res) {
       }
     }
     console.error('[list-assets] total assets returned:', allAssets.length);
-    // Temporary: what each long video is labelled as (to see why a session is missing on Upload Asset)
-    console.log('[list-assets] vault', session.venueSlug, JSON.stringify(allAssets.filter(a => !a.source && Number(a.duration) > 60).map(a => [String(a.id).slice(-6), String(a.passthrough || '').slice(0, 80), Math.round(Number(a.duration)), a.status, (a.tracks || []).map(t => t.type).join('+')])));
     return res.status(200).json(allAssets);
   } catch (e) {
     console.error('[list-assets] exception:', e.message);

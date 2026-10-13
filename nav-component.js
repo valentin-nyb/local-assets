@@ -380,8 +380,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         drop.innerHTML =
             '<div style="padding:14px 16px;border-bottom:1px solid #27272a;">' +
-                '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#fff;margin-bottom:4px;">' + venue + '</div>' +
-                '<div style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#52525b;">' + (session.email || '') + '</div>' +
+                '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#fff;margin-bottom:4px;">' + _esc(venue) + '</div>' +
+                '<div style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#52525b;">' + _esc(session.email || '') + '</div>' +
             '</div>' +
             _venueSwitcherHtml(session) +
             '<div style="padding:10px 16px;border-bottom:1px solid #27272a;display:flex;align-items:center;justify-content:space-between;gap:12px;">' +

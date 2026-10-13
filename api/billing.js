@@ -155,7 +155,7 @@ export default async function handler(req, res) {
           const fromStripe = i.status === 'paid' ? 'paid' : i.status === 'uncollectible' || i.status === 'void' ? 'unpaid' : 'waiting';
           return {
             id: i.id, number: i.number, status: own || fromStripe, total: i.total / 100, currency: i.currency,
-            created: i.created * 1000, url: i.hosted_invoice_url, pdf: i.invoice_pdf,
+            created: i.created * 1000, url: i.hosted_invoice_url, pdf: i.invoice_pdf, payable: i.status === 'open' && i.amount_remaining > 0,
             billedTo: i.customer_name || (t === 'venue' ? (cfg[iv]?.name || venueName) : t.replace(/^(artist|label):/, '')),
             kind: t === 'venue' ? TYPE_LABEL[acctTypes[iv] || data.accountType] || 'Account' : t.startsWith('label:') ? 'Record label' : 'Artist',
             account: iv, accountName: cfg[iv]?.name || iv,
