@@ -54,6 +54,7 @@ export default async function handler(req, res) {
     for (const a of out) if (a.id && !a.source) (seen[a.id] = seen[a.id] || new Set()).add(a._venue);
     const shared = {};
     for (const set of Object.values(seen)) if (set.size > 1) { const k = [...set].sort().join(' + '); shared[k] = (shared[k] || 0) + 1; }
+    console.log('[labels] admin', JSON.stringify(out.filter(a => !a.source && Number(a.duration) > 60).map(a => [a._venue, String(a.id).slice(-6), String(a.passthrough || '').slice(0, 90), Math.round(Number(a.duration)), new Date(Number(a.created_at) * 1000).toISOString().slice(0, 10)])));
     console.log('[list-assets] isolation', JSON.stringify({ keys: fp, videos: Object.fromEntries(Object.keys(fp).map(s => [s, out.filter(a => a._venue === s && !a.source).length])), shared }));
     return res.status(200).json(out);
   }
@@ -94,6 +95,8 @@ export default async function handler(req, res) {
       }
     }
     console.error('[list-assets] total assets returned:', allAssets.length);
+    // Temporary: labels of the long videos (to see why Upload Asset lists fewer sessions)
+    console.log('[labels]', session.venueSlug, JSON.stringify(allAssets.filter(a => !a.source && Number(a.duration) > 60).map(a => [String(a.id).slice(-6), String(a.passthrough || '').slice(0, 90), Math.round(Number(a.duration)), a.status, new Date(Number(a.created_at) * 1000).toISOString().slice(0, 10), (a.tracks || []).map(t => t.type).join('+')])));
     return res.status(200).json(allAssets);
   } catch (e) {
     console.error('[list-assets] exception:', e.message);
