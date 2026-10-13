@@ -220,12 +220,6 @@
         }
         .cam-empty-title { font-size:14px; font-weight:600; color:var(--la-text); }
         .cam-empty-text { font-size:12px; line-height:1.6; color:var(--la-dim); max-width:380px; }
-            .cam-grid.cam-admin { display:flex; flex-direction:column; gap:28px; }
-        .cam-venue-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding-bottom:12px; margin-bottom:14px; border-bottom:1px solid var(--la-line); }
-        .cam-venue-head h3 { margin:0; font:700 15px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif; text-transform:uppercase; letter-spacing:.02em; color:var(--la-text); }
-        .cam-venue-count { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--la-dim); white-space:nowrap; }
-        .cam-venue-count.on { color:var(--la-ok); }
-        .cam-venue-empty { margin:0; font-size:13px; color:var(--la-dim); }
 
         .ord-mode { display:inline-flex; gap:4px; padding:4px; margin-top:16px; border:1px solid var(--la-line); border-radius:12px; }
         .ord-mode button { height:32px; padding:0 14px; border-radius:8px; border:none; background:none; color:var(--la-dim); font-size:13px; font-weight:600; cursor:pointer; }
@@ -236,6 +230,11 @@
         .ord-rent input[type=date] { height:44px; padding:0 12px; border-radius:10px; border:1px solid var(--la-line); background:transparent; color:var(--la-text); font-size:14px; color-scheme:dark light; }
         .ord-days span { min-width:64px; }
         .ord-note { font-size:12px; line-height:1.55; color:var(--la-dim); margin-top:8px; }
+        .cam-acct { display:flex; flex-direction:column; gap:6px; margin-left:auto; }
+        .cam-acct span { font:700 10px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.08em; text-transform:uppercase; color:var(--la-dim); }
+        .cam-acct select { height:38px; min-width:220px; max-width:100%; padding:0 34px 0 12px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); font:700 12px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.04em; text-transform:uppercase; cursor:pointer; }
+        .cam-admin-ex .ci-actions, .cam-admin-ex .ci-note, .cam-admin-ex .ci-steps { display:none; }
+        @media (max-width:640px) { .cam-acct { margin-left:0; width:100%; } .cam-acct select { width:100%; } }
 </style>
 </head>
 <body class="font-sans antialiased bg-background text-foreground overflow-hidden h-screen w-screen flex selection:bg-primary selection:text-black">
@@ -490,49 +489,69 @@
             }
         }
 
-        // Admin account: every client's cameras, grouped by account
+        // Admin account: one client's cameras at a time, picked at the top right. A client with no
+        // cameras shows how it looks once one is connected.
+        var _adminVenueSel = (function() { try { return localStorage.getItem('la_cam_acct') || ''; } catch (_) { return ''; } })();
         function renderAdminCameras(venues) {
-            var grid = document.getElementById('cam-grid');
-            document.getElementById('cam-empty').classList.add('hidden');
+            var grid = document.getElementById('cam-grid'), intro = document.getElementById('cam-empty');
             document.getElementById('cal-panel').classList.add('hidden');
             document.getElementById('cam-head-actions').style.display = 'none';
             document.getElementById('cam-error').classList.add('hidden');
-            var eb = document.querySelector('.cam-eyebrow'); if (eb) eb.textContent = 'All accounts';
-            _cams = [];
-            venues.forEach(function(v) { v.cameras.forEach(function(c) { _camVenue[c.id] = v.slug; _cams.push(c); }); });
+            if (!venues.length) { camStatus('No client accounts', 'var(--la-dim)'); return; }
+            if (!venues.some(function(v) { return v.slug === _adminVenueSel; })) _adminVenueSel = venues[0].slug;
+            var v = venues.filter(function(x) { return x.slug === _adminVenueSel; })[0];
+            _camVenue = {};
+            venues.forEach(function(x) { x.cameras.forEach(function(c) { _camVenue[c.id] = x.slug; }); });
+            // Account switch, top right
+            var sel = document.getElementById('cam-acct');
+            if (!sel) {
+                var wrap = document.createElement('label');
+                wrap.className = 'cam-acct';
+                wrap.innerHTML = '<span>Client account</span><select id="cam-acct" aria-label="Client account"></select>';
+                document.querySelector('.cam-toolbar').appendChild(wrap);
+                sel = document.getElementById('cam-acct');
+                sel.addEventListener('change', function() {
+                    _adminVenueSel = sel.value;
+                    try { localStorage.setItem('la_cam_acct', sel.value); } catch (_) {}
+                    _camKey = ''; renderAdminCameras(_adminVenuesData);
+                });
+            }
+            _adminVenuesData = venues;
+            sel.innerHTML = venues.map(function(x) {
+                var l = x.cameras.filter(function(c) { return c.status === 'active'; }).length;
+                return '<option value="' + esc(x.slug) + '"' + (x.slug === v.slug ? ' selected' : '') + '>' + esc(x.name) + (x.cameras.length ? ' · ' + (l ? l + ' live' : x.cameras.length + ' offline') : '') + '</option>';
+            }).join('');
+            var eb = document.querySelector('.cam-eyebrow'); if (eb) eb.textContent = v.name;
+            _cams = v.cameras;
             var live = _cams.filter(function(c) { return c.status === 'active'; }).length;
-            camStatus(_cams.length ? live + ' of ' + _cams.length + ' live' : 'No cameras', live ? 'var(--la-ok)' : 'var(--la-dim)');
-            var key = JSON.stringify(venues.map(function(v) { return [v.slug, v.error || ''].concat(v.cameras.map(function(c) { return [c.id, c.status, c.name, c.ndiName, c.ip, c.artist, c.autoClips, c.recording]; })); }));
+            camStatus(v.error ? 'Unavailable' : _cams.length ? live + ' of ' + _cams.length + ' live' : 'No cameras', live ? 'var(--la-ok)' : v.error ? 'var(--la-bad)' : 'var(--la-dim)');
+            var key = v.slug + JSON.stringify([v.error || ''].concat(_cams.map(function(c) { return [c.id, c.status, c.name, c.ndiName, c.ip, c.artist, c.autoClips, c.recording]; })));
             if (key === _camKey) return;
             _camKey = key;
             grid.innerHTML = '';
-            grid.classList.add('cam-admin');
-            venues.forEach(function(v) {
-                var sec = document.createElement('section');
-                sec.className = 'cam-venue';
-                var vl = v.cameras.filter(function(c) { return c.status === 'active'; }).length;
-                sec.innerHTML = '<div class="cam-venue-head"><h3>' + esc(v.name) + '</h3><span class="cam-venue-count' + (vl ? ' on' : '') + '">' + (v.error ? 'Unavailable' : v.cameras.length ? vl + ' of ' + v.cameras.length + ' live' : 'No cameras') + '</span></div>';
-                if (v.cameras.length) {
-                    var g = document.createElement('div'); g.className = 'cam-grid';
-                    v.cameras.forEach(function(c, i) { g.appendChild(cameraCard(c, i)); });
-                    sec.appendChild(g);
-                } else {
-                    var p = document.createElement('p'); p.className = 'cam-venue-empty';
-                    p.textContent = v.error ? 'Could not load this account\'s cameras: ' + v.error : 'No cameras connected to this account yet.';
-                    sec.appendChild(p);
-                }
-                grid.appendChild(sec);
-            });
+            // No cameras on this account: the example of a connected camera, with this client's latest session
+            intro.classList.toggle('hidden', _cams.length > 0);
+            intro.classList.add('cam-admin-ex');
+            if (!_cams.length) {
+                document.querySelector('.ci-title').textContent = v.error ? 'This account\'s cameras could not be loaded' : 'No cameras connected to ' + v.name + ' yet';
+                document.querySelector('.ci-text').textContent = v.error ? v.error : 'This is how it looks once a camera is connected: live on this page while it streams, and each set saved for its artist in Distribution History with vertical clips ready to post.';
+                fillIntroExample(v.slug);
+                return;
+            }
+            _cams.forEach(function(c, i) { grid.appendChild(cameraCard(c, i)); });
         }
+        var _adminVenuesData = [];
 
         // The intro's example card uses this venue's latest session, when there is one
-        function fillIntroExample() {
+        function fillIntroExample(venueSlug) {
             // The example clips always show the local / assets logo and a placeholder name
             document.querySelectorAll('.ci-wm').forEach(function(w) { w.classList.add('has-logo'); w.style.backgroundImage = 'url(/logos/a-white.png)'; w.innerHTML = '&#8203;'; });
             // Until the account's latest session loads: the account's name
             (function() { try { var a = JSON.parse(localStorage.getItem('la_admin') || '{}'); var v = String(a.venue || '').replace(/\s+TEAM$/i, '').trim(); if (v) document.querySelectorAll('.ci-name').forEach(function(n) { n.textContent = v.toUpperCase(); }); } catch (_) {} })();
             laFetch('/api/list-assets').then(function(r) { return r.ok ? r.json() : []; }).then(function(list) {
                 list = Array.isArray(list) ? list : (list.data || list.assets || []);
+                if (venueSlug) list = list.filter(function(a) { return !a._venue || a._venue === venueSlug; });
+                document.querySelectorAll('#ci-branded .ci-loop').forEach(function(x) { x.remove(); });
                 var artistOf = function(a) {
                     var pt = a.passthrough || '';
                     try { var o = JSON.parse(pt); if (o && o.artist) return ['AUDIO','SOCIAL','THUMB'].indexOf(String(o.camera || '').toUpperCase()) >= 0 ? '' : o.artist; } catch (_) {}
@@ -541,7 +560,7 @@
                 var masters = list.filter(function(a) { return a.status === 'ready' && (a.playback_ids || []).length && artistOf(a) && Number(a.duration) > 120; })
                     .sort(function(a, b) { return Number(b.created_at) - Number(a.created_at); });
                 var m = masters[0];
-                if (!m) return;
+                if (!m) { document.getElementById('ci-stage').innerHTML = '<div class="ci-stage-fallback"></div>'; ['ci-artist', 'ci-artist2'].forEach(function(id) { document.getElementById(id).textContent = 'ARTIST NAME'; }); return; }
                 var pid = m.playback_ids[0].id, dur = Number(m.duration);
                 var name = String(artistOf(m)).toUpperCase();
                 document.getElementById('ci-artist').textContent = name;
