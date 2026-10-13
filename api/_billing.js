@@ -24,16 +24,16 @@ export async function readRates(redis) {
 export const DEFAULT_PLANS = [
   { id: 'starter-distribution', name: 'Distribution · Starter', price: 2750, maxClips: 6, cameras: 0,
     included: { storedMinutes: 3000, deliveredMinutes: 25000, fileGB: 250 },
-    features: ['Content intake & quality control', 'Up to 8 events processed / month', '6 vertical social clips', 'Basic multi-platform distribution', '250 GB cloud storage'] },
+    features: ['Content intake & quality control', 'Up to 8 events processed / month', '6 vertical social clips', '250 GB cloud storage'] },
   { id: 'liveset-distribution', name: 'Distribution · Pro', price: 3500, maxClips: 12, cameras: 0,
     included: { storedMinutes: 6000, deliveredMinutes: 50000, fileGB: 500 },
-    features: ['Content intake & quality control', 'Up to 8 events processed / month', '12+ vertical social clips', 'Marketing thumbnails', 'Multi-platform distribution', 'YouTube & SoundCloud SEO', 'Priority 48-hour turnaround', '500 GB cloud storage'] },
+    features: ['Content intake & quality control', 'Up to 8 events processed / month', '12+ vertical social clips', 'Marketing thumbnails', '500 GB cloud storage'] },
   { id: 'starter-creative', name: 'Creative & Production · Starter', price: 5500, maxClips: 12, cameras: 1,
     included: { storedMinutes: 12000, deliveredMinutes: 100000, fileGB: 2000 },
-    features: ['1 camera included', 'Starlink Mini: the camera streams straight to the app, anywhere', 'Up to 4 event nights / month', '4K master recordings', 'HQ audio capture', '12 vertical social clips', 'Marketing thumbnails', 'Basic distribution', '2 TB cloud storage'] },
+    features: ['1 camera included', 'Starlink Mini: the camera streams straight to the app, anywhere', '4K master recordings', 'HQ audio capture', '12 vertical social clips', 'Marketing thumbnails', 'Brand Kit watermark', '2 TB cloud storage'] },
   { id: 'liveset-creative', name: 'Creative & Production · Live-Set', price: 7500, maxClips: 0, cameras: 1,
     included: { storedMinutes: 60000, deliveredMinutes: 500000, fileGB: 20000 },
-    features: ['1 camera included', 'Starlink Mini + Mac mini: a private network that streams from anywhere', 'Up to 8 event nights / month', '4K master recordings', 'HQ audio capture', 'Unlimited vertical social clips', 'Marketing thumbnails & watermark', 'Multi-platform distribution & SEO', 'Quarterly performance reports', 'Priority 48-hour turnaround', '20 TB cloud storage'] },
+    features: ['1 camera included', 'Starlink Mini + Mac mini: a private network that streams from anywhere', '4K master recordings', 'HQ audio capture', 'Multi-camera auto edit, cut to the music', 'Unlimited vertical social clips', 'Marketing thumbnails & watermark', 'Quarterly performance reports', '20 TB cloud storage'] },
 ];
 export async function readPlans(redis) {
   try { const p = JSON.parse(await redis.get('billing_plans') || 'null'); return Array.isArray(p) && p.length ? p.map(x => { const d = DEFAULT_PLANS.find(z => z.id === x.id) || {}; return { ...x, features: (x.features && x.features.length ? x.features : d.features), cameras: x.cameras || d.cameras || 0, maxClips: x.maxClips != null ? x.maxClips : (d.maxClips != null ? d.maxClips : 5) }; }) : DEFAULT_PLANS; }
