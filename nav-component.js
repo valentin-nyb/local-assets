@@ -270,17 +270,25 @@ document.addEventListener("DOMContentLoaded", () => {
         _acs.textContent =
             '#la-auth-drop{font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;animation:laAcctIn .16s cubic-bezier(.22,1,.36,1)}' +
             '@keyframes laAcctIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}' +
-            '.la-acct-head{padding:20px 22px 18px;border-bottom:1px solid var(--la-line,#3a3b40)}' +
-            '.la-acct-name{font-size:17px;font-weight:700;color:var(--la-text,#fafafa);line-height:1.25;word-break:break-word}' +
-            '.la-acct-mail{margin-top:6px;font-size:14px;color:var(--la-sub,#a1a1aa);word-break:break-all}' +
-            '.la-acct-group{padding:6px 0}' +
+            '.la-acct-head{padding:16px 18px 14px;border-bottom:1px solid var(--la-line,#3a3b40)}' +
+            '.la-acct-name{font-size:15px;font-weight:600;color:var(--la-text,#fafafa);line-height:1.25;word-break:break-word}' +
+            '.la-acct-mail{margin-top:4px;font-size:13px;color:var(--la-sub,#a1a1aa);word-break:break-all}' +
+            '.la-acct-group{padding:4px 0}' +
             '.la-acct-group + .la-acct-group{border-top:1px solid var(--la-line,#3a3b40)}' +
-            '.la-acct-row{display:flex;align-items:center;gap:14px;width:100%;padding:12px 22px;background:none;border:0;color:var(--la-text,#fafafa);font:400 15px/1.2 "Helvetica Neue",Helvetica,Arial,sans-serif;text-align:left;cursor:pointer;transition:background .12s ease}' +
+            '.la-acct-row{display:flex;align-items:center;gap:12px;width:100%;padding:10px 18px;background:none;border:0;color:var(--la-text,#fafafa);font:400 14px/1.2 "Helvetica Neue",Helvetica,Arial,sans-serif;text-align:left;cursor:pointer;transition:background .12s ease}' +
+            '.la-acct-row svg{width:17px;height:17px}' +
             '.la-acct-row svg{flex-shrink:0;color:var(--la-sub,#a1a1aa)}' +
             '.la-acct-row:hover:not(:disabled){background:color-mix(in srgb,var(--la-text,#fafafa) 6%,transparent)}' +
-            '.la-acct-row.cur{cursor:default;font-weight:600}' +
+            '.la-acct-row.cur{cursor:default}' +
             '.la-acct-row.cur svg{color:var(--la-accent,#39FF14)}';
         document.head.appendChild(_acs);
+    }
+    // Names in normal case: "AMONGST FEW" → "Amongst Few", the local / assets account as its wordmark
+    function _niceName(n) {
+        n = String(n || '').trim();
+        if (/^local\s*[\/-]?\s*assets\b/i.test(n)) return 'local / assets';
+        if (n !== n.toUpperCase()) return n;
+        return n.toLowerCase().replace(/(^|[\s\-\/(&.])([a-z])/g, function(m, a, b) { return a + b.toUpperCase(); });
     }
     function _venueSwitcherHtml(session) {
         var venues = (Array.isArray(session.venues) ? session.venues.slice() : [])
@@ -295,7 +303,7 @@ document.addEventListener("DOMContentLoaded", () => {
         venues.forEach(function(v) {
             var current = v.slug === session.venueSlug;
             html += '<button type="button" class="la-acct-row' + (current ? ' cur' : '') + '" data-venue-slug="' + _esc(v.slug) + '" onclick="window.LA_SWITCH_VENUE(this.dataset.venueSlug)"' + (current ? ' disabled aria-current="true"' : '') + '>' +
-                (current ? _LA_ICON.check : _LA_ICON.swap) + '<span>' + _esc(v.name) + '</span></button>';
+                (current ? _LA_ICON.check : _LA_ICON.swap) + '<span>' + _esc(_niceName(v.name)) + '</span></button>';
         });
         return html + '</div>';
     }
@@ -405,7 +413,7 @@ document.addEventListener("DOMContentLoaded", () => {
             'right:' + (window.innerWidth - rect.right) + 'px',
             'background:var(--la-raised, #0a0a0a)',
             'border:1px solid var(--la-line, #27272a)',
-            'min-width:260px',
+            'min-width:230px',
             'max-width:min(340px, calc(100vw - 24px))',
             'z-index:99999',
             'box-shadow:0 18px 44px -16px rgba(0,0,0,.55)',
@@ -414,7 +422,7 @@ document.addEventListener("DOMContentLoaded", () => {
         var venue = session.venue || localStorage.getItem('la_venue_name') || 'local / assets';
 
         drop.innerHTML =
-            '<div class="la-acct-head"><div class="la-acct-name">' + _esc(venue) + '</div><div class="la-acct-mail">' + _esc(session.email || '') + '</div></div>' +
+            '<div class="la-acct-head"><div class="la-acct-name">' + _esc(_niceName(venue)) + '</div><div class="la-acct-mail">' + _esc(session.email || '') + '</div></div>' +
             _venueSwitcherHtml(session) +
             '<div class="la-acct-group"><button type="button" class="la-acct-row" onclick="window.LA_ADMIN_LOGOUT()">' + _LA_ICON.out + '<span>Log out</span></button></div>';
 
