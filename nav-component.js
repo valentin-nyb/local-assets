@@ -1,5 +1,5 @@
 // Dropdown menus in the site's style (la-select.js), on every page that has the nav
-(function () { if (document.querySelector('script[data-la-select]')) return; var sc = document.createElement('script'); sc.src = '/la-select.js?v=4'; sc.defer = true; sc.setAttribute('data-la-select', ''); document.head.appendChild(sc); })();
+(function () { if (document.querySelector('script[data-la-select]')) return; var sc = document.createElement('script'); sc.src = '/la-select.js?v=5'; sc.defer = true; sc.setAttribute('data-la-select', ''); document.head.appendChild(sc); })();
 document.addEventListener("DOMContentLoaded", () => {
     // Inject theme switcher CSS if not already present
     if (!document.getElementById('la-theme-switcher-css')) {
@@ -260,7 +260,11 @@ document.addEventListener("DOMContentLoaded", () => {
     // Accounts listed in several venues (VENUES_CONFIG) can switch between them.
     // Account menu (avatar): name and email, the accounts to switch to, log out
     var _LA_ICON = {
-        swap: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V9l8-5 8 5v12"/><path d="M9 21v-6h6v6"/></svg>',
+        venue: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V9l8-5 8 5v12"/><path d="M9 21v-6h6v6"/></svg>',
+        artist: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20.5c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/></svg>',
+        label: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.5"/><path d="M12 6.5a5.5 5.5 0 0 0-5.5 5.5"/></svg>',
+        management: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="7.5" width="17" height="12" rx="2"/><path d="M9 7.5V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v1.5"/><path d="M3.5 12.5h17"/></svg>',
+        admin: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4L9 20"/></svg>',
         check: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
         out: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4H5v16h5"/><path d="M14 8l4 4-4 4"/><path d="M18 12H9"/></svg>'
     };
@@ -280,7 +284,9 @@ document.addEventListener("DOMContentLoaded", () => {
             '.la-acct-row svg{flex-shrink:0;color:var(--la-sub,#a1a1aa)}' +
             '.la-acct-row:hover:not(:disabled){background:color-mix(in srgb,var(--la-text,#fafafa) 6%,transparent)}' +
             '.la-acct-row.cur{cursor:default}' +
-            '.la-acct-row.cur svg{color:var(--la-accent,#39FF14)}';
+            '.la-acct-row span{flex:1;min-width:0}' +
+            '.la-acct-check{display:flex;margin-left:auto}' +
+            '.la-acct-check svg{width:15px;height:15px;color:var(--la-accent,#39FF14)}';
         document.head.appendChild(_acs);
     }
     // Names in normal case: "AMONGST FEW" → "Amongst Few", the local / assets account as its wordmark
@@ -302,8 +308,10 @@ document.addEventListener("DOMContentLoaded", () => {
         var html = '<div data-la-switcher class="la-acct-group">';
         venues.forEach(function(v) {
             var current = v.slug === session.venueSlug;
+            // Icon by what the account is: an artist, a venue, a record label, management, or local / assets itself
+            var kind = v.type || (/^local\s*[\/-]?\s*assets\b/i.test(String(v.name || '')) || v.slug === 'local-assets-admin' ? 'admin' : 'venue');
             html += '<button type="button" class="la-acct-row' + (current ? ' cur' : '') + '" data-venue-slug="' + _esc(v.slug) + '" onclick="window.LA_SWITCH_VENUE(this.dataset.venueSlug)"' + (current ? ' disabled aria-current="true"' : '') + '>' +
-                (current ? _LA_ICON.check : _LA_ICON.swap) + '<span>' + _esc(_niceName(v.name)) + '</span></button>';
+                (_LA_ICON[kind] || _LA_ICON.venue) + '<span>' + _esc(_niceName(v.name)) + '</span>' + (current ? '<i class="la-acct-check">' + _LA_ICON.check + '</i>' : '') + '</button>';
         });
         return html + '</div>';
     }

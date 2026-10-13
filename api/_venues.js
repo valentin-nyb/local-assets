@@ -155,6 +155,22 @@ export function findVenueByEmail(email, preferredSlug) {
 }
 
 // Public list of the venues an email can open, for the venue switcher.
+// The same list with each account's type (artist, venue, record label, management, or the admin account),
+// from its Brand Kit, so the account menu can show the right icon
+export async function venueChoicesTyped(email) {
+  const list = venueChoices(email);
+  if (!process.env.REDIS_URL || !list.length) return list;
+  const isAdmin = v => v.slug === (process.env.BILLING_ADMIN_VENUE || 'local-assets-admin') || /^local\s*[\/-]?\s*assets\b/i.test(String(v.name || '').trim());
+  const redis = createClient({ url: process.env.REDIS_URL });
+  try {
+    await redis.connect();
+    const brand = await redis.mGet(list.map(v => `brand_org_type:${v.slug}`));
+    const acct = await redis.mGet(list.map(v => `account_type:${v.slug}`));
+    const cfg = getVenuesConfig();
+    return list.map((v, i) => ({ ...v, type: isAdmin(v) ? 'admin' : (brand[i] || acct[i] || cfg[v.slug]?.type || 'venue') }));
+  } catch { return list; }
+  finally { await redis.quit().catch(() => {}); }
+}
 export function venueChoices(email) {
   // The local / assets admin account first, then the clients A–Z
   const isAdmin = v => v.slug === (process.env.BILLING_ADMIN_VENUE || 'local-assets-admin') || /^local\s*[\/-]?\s*assets\b/i.test(String(v.name || '').trim());

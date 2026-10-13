@@ -10,11 +10,11 @@
   css.textContent =
     '.las-menu{position:fixed;z-index:2147483600;max-height:min(440px,calc(100vh - 24px));overflow:auto;padding:0;' +
       'background:var(--la-surface,#0e0e10);color:var(--la-text,#fafafa);border:1px solid color-mix(in srgb,var(--la-text,#fafafa) 26%,transparent);border-radius:4px;' +
-      'box-shadow:0 8px 24px -16px rgba(0,0,0,.35);font:400 15px/1.3 "Helvetica Neue",Helvetica,Arial,sans-serif;' +
+      'box-shadow:0 8px 24px -16px rgba(0,0,0,.35);font:400 13px/1.3 "Helvetica Neue",Helvetica,Arial,sans-serif;' +
       'opacity:0;transition:opacity .12s ease;outline:none}' +
     '.las-menu.on{opacity:1}' +
     '.las-sep{height:1px;background:color-mix(in srgb,var(--la-text,#fafafa) 20%,transparent)}' +
-    '.las-opt{padding:15px 20px;cursor:pointer;white-space:nowrap}' +
+    '.las-opt{padding:9px 14px;cursor:pointer;white-space:nowrap}' +
     '.las-opt.act{background:color-mix(in srgb,var(--la-text,#fafafa) 6%,transparent)}' +
     '.las-opt.dis{opacity:.4;cursor:default}' +
     // The closed box: square-ish, thin border, a divider and up/down chevrons; a dark outline while open
@@ -95,6 +95,8 @@
     // Place it under the select (or above when there's no room), at least as wide as the select
     var r = s.getBoundingClientRect(), vw = window.innerWidth, vh = window.innerHeight;
     menu.style.minWidth = r.width + 'px';
+    // Same text size as the box it opens from
+    menu.style.fontSize = Math.min(14, parseFloat(getComputedStyle(s).fontSize) || 13) + 'px';
     s.classList.add('las-open');
     var mh = menu.offsetHeight, mw = menu.offsetWidth;
     var below = vh - r.bottom - 12, above = r.top - 12, up = mh > below && above > below;

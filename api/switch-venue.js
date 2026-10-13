@@ -1,4 +1,4 @@
-import { getWebSessionAuth, findVenuesByEmail, signWebToken, venueChoices, freshVenues } from './_venues.js';
+import { getWebSessionAuth, findVenuesByEmail, signWebToken, venueChoicesTyped, freshVenues } from './_venues.js';
 
 // Switch the signed-in user to another venue they are listed in (VENUES_CONFIG).
 // { refresh: true } renews the token for the current venue.
@@ -18,7 +18,7 @@ export default async function handler(req, res) {
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch (_) {} }
   // Keeps an open page signed in: a fresh token for the same venue
   // and the current list of accounts, so the switcher drops a deleted one
-  if (body?.refresh) return res.status(200).json({ webToken: signWebToken(session.email, session.venueSlug), venueSlug: session.venueSlug, venues: venueChoices(session.email) });
+  if (body?.refresh) return res.status(200).json({ webToken: signWebToken(session.email, session.venueSlug), venueSlug: session.venueSlug, venues: await venueChoicesTyped(session.email) });
   const slug = String(body?.venueSlug || '');
 
   const venue = findVenuesByEmail(session.email).find(v => v.slug === slug);
@@ -29,6 +29,6 @@ export default async function handler(req, res) {
     webToken:  signWebToken(session.email, venue.slug),
     venue:     venue.name || venue.slug,
     venueSlug: venue.slug,
-    venues:    venueChoices(session.email),
+    venues:    await venueChoicesTyped(session.email),
   });
 }
