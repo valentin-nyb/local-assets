@@ -123,8 +123,11 @@
         .bl-scroll { overflow-x:auto; }
         @media (max-width:640px) { .bl-table .rate { display:none; } .bl-link { margin-right:8px; } }
         @media (max-width:900px) { .bl-grid { grid-template-columns:minmax(0,1fr); } .bl-h { font-size:22px; } .bl-table th, .bl-table td { padding:12px 14px; } }
-            .bl-acts { white-space:nowrap; }
-        .bl-pay { display:inline-flex; align-items:center; height:26px; padding:0 12px; margin-right:6px; border-radius:7px; background:var(--la-accent); color:var(--la-accent-ink); font:700 11px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.06em; text-transform:uppercase; text-decoration:none; }
+            .bl-inv td { vertical-align:middle; }
+        .bl-inv .bl-pill { vertical-align:middle; }
+        .bl-acts { display:flex; align-items:center; justify-content:flex-end; gap:16px; white-space:nowrap; }
+        .bl-acts .bl-link { margin-right:0; }
+        .bl-pay { display:inline-flex; align-items:center; height:28px; padding:0 14px; border-radius:7px; background:var(--la-accent); color:var(--la-accent-ink); font:700 11px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.06em; text-transform:uppercase; text-decoration:none; }
         @media (hover:hover) { .bl-pay:hover { opacity:.85; } }
 </style>
 </head>
@@ -293,14 +296,14 @@
                 var f = admin ? filt.value : '';
                 return !f || (f.indexOf('a:') === 0 ? i.account === f.slice(2) : (i.billedTo + '|' + i.kind) === f.slice(2));
             });
-            if (d.invoices.length) inv.innerHTML = '<table class="bl-table"><thead><tr><th>Invoice</th><th>Billed to</th>' + (admin ? '<th>Account</th>' : '') + '<th>Date</th><th>Status</th><th class="num">Amount</th><th></th></tr></thead><tbody>' +
+            if (d.invoices.length) inv.innerHTML = '<table class="bl-table bl-inv"><thead><tr><th>Invoice</th><th>Billed to</th>' + (admin ? '<th>Account</th>' : '') + '<th>Date</th><th>Status</th><th class="num">Amount</th><th></th></tr></thead><tbody>' +
                 shown.map(function(i) {
                     var status = admin
                         ? '<select class="bl-status ' + i.status + '" data-invoice="' + esc(i.id) + '">' + ['paid', 'waiting', 'unpaid'].map(function(k) { return '<option value="' + k + '"' + (k === i.status ? ' selected' : '') + '>' + LABEL[k] + '</option>'; }).join('') + '</select>'
                         : '<span class="bl-pill ' + (i.status === 'paid' ? 'paid' : 'open') + '">' + LABEL[i.status] + '</span>';
                     return '<tr><td class="svc">' + esc(i.number || i.id) + '</td><td>' + esc(i.billedTo) + '<span class="bl-who">' + esc(i.kind) + '</span></td>' + (admin ? '<td>' + esc(i.accountName || '') + '</td>' : '') + '<td style="white-space:nowrap">' + new Date(i.created).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + '</td>' +
                         '<td>' + status + '</td><td class="num">' + money(i.total, i.currency) + '</td>' +
-                        '<td class="num bl-acts">' + (i.url && i.payable ? '<a class="bl-pay" href="' + esc(i.url) + '" target="_blank" rel="noopener">Pay</a>' : '') + (i.url ? '<a class="bl-link" href="' + esc(i.url) + '" target="_blank" rel="noopener">View</a>' : '') + (i.pdf ? '<a class="bl-link" href="' + esc(i.pdf) + '" target="_blank" rel="noopener">PDF</a>' : '') + '</td></tr>';
+                        '<td class="num"><div class="bl-acts">' + (i.url ? '<a class="bl-link" href="' + esc(i.url) + '" target="_blank" rel="noopener">View</a>' : '') + (i.pdf ? '<a class="bl-link" href="' + esc(i.pdf) + '" target="_blank" rel="noopener">PDF</a>' : '') + (i.url && i.payable ? '<a class="bl-pay" href="' + esc(i.url) + '" target="_blank" rel="noopener">Pay</a>' : '') + '</div></td></tr>';
                 }).join('') + '</tbody></table>';
             inv.querySelectorAll('[data-invoice]').forEach(function(sel) {
                 sel.addEventListener('change', async function() {
