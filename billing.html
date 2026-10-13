@@ -378,10 +378,15 @@
             document.getElementById('bl-acct-type').value = d.accountType || 'venue';
             document.getElementById('bl-venue').innerHTML = (d.venues || []).map(function(v) { return '<option value="' + esc(v.slug) + '"' + (v.slug === d.venueSlug ? ' selected' : '') + '>' + esc(v.name) + '</option>'; }).join('');
             var tsel = document.getElementById('bl-target');
+            // The account itself (as its type: venue, artist, record label or management), then its other artists
+            // and record labels. An artist account isn't listed again as one of its own artists.
+            var selfName = String(d.venue || '').toUpperCase().trim();
             var opts = [['venue', (d.venue || 'This account') + ' (' + String(d.accountTypeLabel || 'account').toLowerCase() + ')']]
-                .concat((d.artists || []).map(function(a) { return ['artist:' + a, a + ' (artist)']; }))
+                .concat((d.artists || []).filter(function(a) { return String(a).toUpperCase().trim() !== selfName; }).map(function(a) { return ['artist:' + a, a + ' (artist)']; }))
                 .concat((d.labels || []).map(function(l) { return ['label:' + l, l + ' (record label)']; }));
-            tsel.innerHTML = opts.map(function(o) { return '<option value="' + esc(o[0]) + '"' + (o[0] === d.target ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('');
+            var tgt = opts.some(function(o) { return o[0] === d.target; }) ? d.target : 'venue';
+            tsel.innerHTML = opts.map(function(o) { return '<option value="' + esc(o[0]) + '"' + (o[0] === tgt ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('');
+            if (tgt !== d.target && _target !== tgt) { _target = tgt; setTimeout(load, 0); }
             var psel = document.getElementById('bl-plan-select'), cur = d.plan ? d.plan.id : '';
             psel.innerHTML = '<option value="">No plan · usage only</option>' + d.plans.map(function(p) { return '<option value="' + esc(p.id) + '"' + (p.id === cur ? ' selected' : '') + '>' + esc(p.name) + ' · ' + money(p.price, 'gbp') + '/mo</option>'; }).join('');
             var sf = document.getElementById('bl-send-form');
