@@ -475,3 +475,28 @@ h1:not(header h1), h2, h3,
     letter-spacing: 0 !important;
     font-style: normal !important;
 }
+
+/* ── Buttons, site-wide: rounded pill, regular weight, quiet outline ──
+   Outline buttons sit on the surface colour with a soft border; filled ones keep their colour. */
+:root body :is(.cam-btn, .se-btn, .vs-btn, .lad-btn, .ing-btn, .bl-pay) {
+    border-radius: 999px;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+    justify-content: center;
+    transition: background .15s, border-color .15s, opacity .15s, filter .15s;
+}
+:root body :is(.cam-btn, .se-btn, .vs-btn, .lad-btn) { min-height: 40px; padding: 0 20px; font-size: 13px; }
+:root body .ing-btn { font-size: 14px; padding: 0 30px; }
+:root body .bl-pay { height: 30px; padding: 0 16px; font-size: 12px; }
+:root body :is(.cam-btn.ghost, .se-btn:not(.primary):not(.danger), .vs-btn.ghost, .lad-btn.ghost) {
+    background: var(--la-surface);
+    color: var(--la-text);
+    border: 1px solid color-mix(in srgb, var(--la-text) 24%, transparent);
+}
+@media (hover: hover) {
+    :root body :is(.cam-btn.ghost, .se-btn:not(.primary):not(.danger), .vs-btn.ghost, .lad-btn.ghost):hover:not(:disabled) {
+        border-color: color-mix(in srgb, var(--la-text) 50%, transparent);
+    }
+}
