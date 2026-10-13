@@ -495,48 +495,50 @@ h1:not(header h1), h2, h3,
     color: var(--la-text);
     border: 1px solid color-mix(in srgb, var(--la-text) 24%, transparent);
 }
-/* Hover: a filled button empties to its outline, the same sweep in reverse */
-:root body :is(.cam-btn.primary, .se-btn.primary, .vs-btn.primary, .lad-btn.primary, .ing-btn, .bl-pay, .se-btn.danger, .lad-btn.danger) {
-    background-image: linear-gradient(var(--la-surface), var(--la-surface));
-    background-repeat: no-repeat;
-    background-position: left center;
-    background-size: 0% 100%;
-    border: 1px solid var(--la-accent);
-    transition: background-size .35s cubic-bezier(.22, 1, .36, 1), color .25s ease, border-color .25s ease, transform .12s ease;
+/* Hover: outline buttons fill with their colour, filled buttons empty to their outline.
+   The fill is its own layer: it slides in from the left and leaves to the right, so moving quickly
+   across several buttons reads as one smooth wave, not a flicker. */
+:root body :is(.cam-btn, .se-btn, .vs-btn, .lad-btn, .ing-btn, .bl-pay) {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    transition: color .3s cubic-bezier(.65, 0, .35, 1), border-color .3s cubic-bezier(.65, 0, .35, 1), transform .15s ease;
 }
-:root body :is(.se-btn.danger, .lad-btn.danger) { border-color: var(--la-bad, #ef4444); }
-/* Hover: an outline button fills with its own colour, sweeping in from the left */
-:root body :is(.cam-btn.ghost, .se-btn:not(.primary):not(.danger), .vs-btn.ghost, .lad-btn.ghost, .cam-btn.bl-danger) {
-    background-image: linear-gradient(var(--la-btn-fill, var(--la-text)), var(--la-btn-fill, var(--la-text)));
-    background-repeat: no-repeat;
-    background-position: left center;
-    background-size: 0% 100%;
-    transition: background-size .35s cubic-bezier(.22, 1, .36, 1), color .25s ease, border-color .25s ease, transform .12s ease;
+:root body :is(.cam-btn, .se-btn, .vs-btn, .lad-btn, .ing-btn, .bl-pay)::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    z-index: -1;
+    border-radius: inherit;
+    background: var(--la-btn-fill, var(--la-text));
+    transform: scaleX(0);
+    transform-origin: right center;
+    transition: transform .42s cubic-bezier(.65, 0, .35, 1);
+    pointer-events: none;
 }
-:root body .cam-btn.bl-danger { --la-btn-fill: var(--la-bad, #ef4444); }
+:root body .cam-btn.bl-danger { --la-btn-fill: var(--la-bad, #ef4444); border: 1px solid color-mix(in srgb, var(--la-bad, #ef4444) 45%, transparent); }
+:root body :is(.cam-btn.primary, .se-btn.primary, .vs-btn.primary, .lad-btn.primary, .ing-btn, .bl-pay) { --la-btn-fill: var(--la-surface); border: 1px solid var(--la-accent); }
+:root body :is(.se-btn.danger, .lad-btn.danger) { --la-btn-fill: var(--la-surface); border: 1px solid var(--la-bad, #ef4444); }
 :root body :is(.cam-btn, .se-btn, .vs-btn, .lad-btn, .ing-btn, .bl-pay):active:not(:disabled) { transform: scale(.97); }
 @media (hover: hover) {
+    :root body :is(.cam-btn, .se-btn, .vs-btn, .lad-btn, .ing-btn, .bl-pay):hover:not(:disabled)::before {
+        transform: scaleX(1);
+        transform-origin: left center;
+    }
     :root body :is(.cam-btn.ghost, .se-btn:not(.primary):not(.danger), .vs-btn.ghost, .lad-btn.ghost):hover:not(:disabled) {
-        background-size: 100% 100%;
         border-color: var(--la-text);
         color: var(--la-bg);
     }
-    :root body .cam-btn.bl-danger:hover:not(:disabled) {
-        background-size: 100% 100%;
-        border-color: var(--la-bad, #ef4444);
-        color: #fff;
-    }
+    :root body .cam-btn.bl-danger:hover:not(:disabled) { border-color: var(--la-bad, #ef4444); color: #fff; }
     :root body :is(.cam-btn.primary, .se-btn.primary, .vs-btn.primary, .lad-btn.primary, .ing-btn, .bl-pay):hover:not(:disabled) {
         opacity: 1;
-        background-size: 100% 100%;
         color: color-mix(in srgb, var(--la-accent) 82%, var(--la-text));
     }
-    :root body :is(.se-btn.danger, .lad-btn.danger):hover:not(:disabled) {
-        background-size: 100% 100%;
-        color: var(--la-bad, #ef4444);
-        filter: none;
-    }
+    :root body :is(.se-btn.danger, .lad-btn.danger):hover:not(:disabled) { color: var(--la-bad, #ef4444); filter: none; }
 }
+/* Buttons without an outline or fill of their own (icon buttons inside them stay as they are) */
+:root body :is(.cam-btn, .se-btn, .vs-btn, .lad-btn):not(.ghost):not(.primary):not(.danger):not(.bl-danger)::before { --la-btn-fill: var(--la-text); }
 @media (prefers-reduced-motion: reduce) {
-    :root body :is(.cam-btn, .se-btn, .vs-btn, .lad-btn, .ing-btn, .bl-pay) { transition: none; }
+    :root body :is(.cam-btn, .se-btn, .vs-btn, .lad-btn, .ing-btn, .bl-pay), :root body :is(.cam-btn, .se-btn, .vs-btn, .lad-btn, .ing-btn, .bl-pay)::before { transition: none; }
 }
+
