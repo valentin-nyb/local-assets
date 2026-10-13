@@ -79,6 +79,7 @@
         .ing-sub { margin:8px 0 0; max-width:620px; font:400 13px/1.55 'Helvetica Neue', Helvetica, Arial, sans-serif; color:var(--la-sub); }
         .ing-fields { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:14px; }
         .ing-field.hidden { display:none; }
+        .ing-field input.ing-locked { color:var(--la-sub); cursor:default; }
         @media (max-width:1100px) { .ing-fields { grid-template-columns:repeat(2, minmax(0,1fr)); } }
         .ing-field { display:flex; flex-direction:column; gap:7px; min-width:0; }
         .ing-field span { font:700 10px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.08em; text-transform:uppercase; color:var(--la-sub); }
@@ -288,7 +289,21 @@
                 const r = await laFetch('/api/brand'), d = await r.json();
                 const names = Object.entries(d.ownerNames || {}).filter(([k]) => k.startsWith('venue-')).map(([, v]) => v).filter(Boolean).sort((a, b) => a.localeCompare(b));
                 const sel = document.getElementById('ingest-venue');
-                sel.innerHTML = '<option value="">No venue</option>' + names.map(n => '<option>' + String(n).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]) + '</option>').join('') + '<option value="__new">+ New venue…</option>';
+                const h = n => String(n).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+                sel.innerHTML = '<option value="">No venue</option>' + names.map(n => '<option>' + h(n) + '</option>').join('') + '<option value="__new">+ New venue…</option>';
+                // An artist account uploads its own sets: the artist is the account. A venue or record label
+                // has many DJs: type one, with the Brand Kit's artists suggested.
+                const nameIn = document.getElementById('ingest-name');
+                if (d.orgType === 'artist') {
+                    let me = d.orgName; try { me = me || JSON.parse(localStorage.getItem('la_admin') || '{}').venue; } catch (_) {}
+                    if (me) { nameIn.value = String(me).toUpperCase(); nameIn.readOnly = true; nameIn.classList.add('ing-locked'); nameIn.title = 'Uploads on this account are for ' + me; }
+                } else {
+                    const artists = Object.entries(d.ownerNames || {}).filter(([k]) => k.startsWith('artist-')).map(([, v]) => v).filter(Boolean).sort((a, b) => a.localeCompare(b));
+                    const dl = document.createElement('datalist'); dl.id = 'ingest-artists';
+                    dl.innerHTML = artists.map(n => '<option value="' + h(String(n).toUpperCase()) + '">').join('');
+                    document.body.appendChild(dl); nameIn.setAttribute('list', 'ingest-artists');
+                    nameIn.placeholder = d.orgType === 'label' ? 'Which artist? e.g. DJ Name' : 'Who played? e.g. DJ Name';
+                }
             } catch (_) {}
         })();
         document.getElementById('ingest-venue').addEventListener('change', function() {
