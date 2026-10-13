@@ -273,6 +273,7 @@
                 .nt-txt { padding:18px 20px 20px; }
                 .nt-time { font:700 12px 'JetBrains Mono', monospace; color:#39FF14; letter-spacing:.06em; }
                 .nt-txt h3 { font:700 18px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif !important; text-transform:none !important; color:#fff; margin:8px 0 6px; }
+                .nt-spec { margin-top:10px !important; padding-top:10px; border-top:1px solid #1f1f22; font:400 11px/1.5 'JetBrains Mono', monospace !important; color:#71717a !important; letter-spacing:.02em; }
                 .nt-txt p { font:400 14px/1.45 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#a1a1aa; margin:0; }
                 /* 1 calendar → camera on */
                 .nt-cal { width:120px; border:1px solid #2a2a2e; border-radius:12px; background:#141416; overflow:hidden; font:500 11px 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#d4d4d8; }
@@ -282,15 +283,24 @@
                 .nt-camera { position:relative; width:64px; height:64px; color:#e4e4e7; }
                 .nt-camera svg { width:64px; height:64px; }
                 .nt-rec { position:absolute; top:-14px; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:5px; font:700 9px 'JetBrains Mono', monospace; letter-spacing:.12em; color:#ef4444; }
-                /* 2 phone control */
-                .nt-phone { width:104px; height:168px; border:2px solid #3f3f46; border-radius:20px; padding:8px; background:#000; display:flex; flex-direction:column; gap:8px; }
-                .nt-feed { height:64px; border-radius:10px; background:url(https://image.mux.com/skiXvIFodBRdAbRtC7hJZsAaOZSeadnjQ52AyNue6Ds/animated.webp?start=2&end=6&width=240&fps=10) center/cover; }
-                .nt-pad { position:relative; flex:1; border-radius:50%; margin:0 12px; border:1px solid #2a2a2e; background:radial-gradient(circle, #1c1c1f 30%, #111 31%); }
-                .nt-pad i { position:absolute; left:50%; top:50%; width:22px; height:22px; margin:-11px 0 0 -11px; border-radius:50%; background:#39FF14; animation:ntPad 3.2s ease-in-out infinite; }
-                @keyframes ntPad { 0%,100% { transform:translate(0,0); } 25% { transform:translate(14px,-6px); } 50% { transform:translate(-12px,8px); } 75% { transform:translate(6px,12px); } }
+                /* 2 phone control: a landscape phone running Camera Control */
+                .nt-phone { position:relative; width:262px; height:132px; padding:7px; border-radius:26px; background:linear-gradient(145deg,#2a2a2e,#111113); box-shadow:0 0 0 1px #3f3f46, 0 18px 40px -16px rgba(0,0,0,.8); }
+                .nt-screen { position:relative; width:100%; height:100%; border-radius:20px; overflow:hidden; background:#000 url(/img/af/feed.webp) center/cover; }
+                .nt-island { position:absolute; left:6px; top:50%; width:9px; height:34px; margin-top:-17px; border-radius:6px; background:#000; }
+                .nt-recb { position:absolute; left:22px; top:8px; display:flex; align-items:center; gap:5px; padding:3px 7px; border-radius:6px; background:rgba(0,0,0,.55); font:700 8px 'JetBrains Mono', monospace; letter-spacing:.1em; color:#fff; }
+                .nt-recb i { width:6px; height:6px; border-radius:50%; background:#ef4444; animation:ntPulse 1.4s ease-in-out infinite; }
+                .nt-track { position:absolute; left:38%; top:30%; width:46px; height:58px; border:1.5px solid #39FF14; border-radius:6px; animation:ntTrack 4s ease-in-out infinite; }
+                .nt-track::after { content:"AI TRACKING"; position:absolute; bottom:-13px; left:-1px; white-space:nowrap; padding:0 4px; border-radius:3px; background:#39FF14; color:#000; font:800 7px/11px 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+                @keyframes ntTrack { 0%,100% { transform:translate(0,0); } 50% { transform:translate(14px,4px); } }
+                .nt-joy { position:absolute; right:12px; bottom:12px; width:44px; height:44px; border-radius:50%; border:1px solid rgba(255,255,255,.35); background:rgba(0,0,0,.35); backdrop-filter:blur(4px); }
+                .nt-joy i { position:absolute; left:50%; top:50%; width:18px; height:18px; margin:-9px 0 0 -9px; border-radius:50%; background:#fff; animation:ntPad 3.2s ease-in-out infinite; }
+                @keyframes ntPad { 0%,100% { transform:translate(0,0); } 25% { transform:translate(8px,-4px); } 50% { transform:translate(-7px,5px); } 75% { transform:translate(4px,7px); } }
+                .nt-zoom { position:absolute; left:22px; bottom:10px; display:flex; gap:2px; padding:2px; border-radius:999px; background:rgba(0,0,0,.55); }
+                .nt-zoom b { padding:2px 6px; border-radius:999px; font:700 8px 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#d4d4d8; }
+                .nt-zoom b.on { background:#fff; color:#000; }
                 /* 3 saved session */
                 .nt-sess { width:210px; border:1px solid #2a2a2e; border-radius:12px; background:#141416; padding:8px; display:flex; gap:10px; align-items:center; }
-                .nt-sess div:first-child { width:76px; height:48px; border-radius:7px; background:url(https://image.mux.com/skiXvIFodBRdAbRtC7hJZsAaOZSeadnjQ52AyNue6Ds/thumbnail.jpg?time=4&width=240) center/cover; flex-shrink:0; }
+                .nt-sess div:first-child { width:76px; height:48px; border-radius:7px; background:url(/img/af/session.jpg) center/cover; flex-shrink:0; }
                 .nt-sess b { display:block; font:800 13px 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#fff; }
                 .nt-sess span { display:block; margin-top:3px; font:500 10px 'JetBrains Mono', monospace; color:#71717a; letter-spacing:.06em; }
                 .nt-stack { position:relative; }
@@ -300,9 +310,9 @@
                 .nt-mc { width:230px; }
                 .nt-tiles { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:12px; }
                 .nt-tiles div { aspect-ratio:16/10; border-radius:6px; background-size:cover; background-position:center; border:2px solid transparent; opacity:.45; animation:ntTile 4.5s infinite; }
-                .nt-tiles div:nth-child(1) { background-image:url(https://image.mux.com/skiXvIFodBRdAbRtC7hJZsAaOZSeadnjQ52AyNue6Ds/thumbnail.jpg?time=1&width=200); }
-                .nt-tiles div:nth-child(2) { background-image:url(https://image.mux.com/skiXvIFodBRdAbRtC7hJZsAaOZSeadnjQ52AyNue6Ds/thumbnail.jpg?time=5.5&width=200); animation-delay:1.5s; }
-                .nt-tiles div:nth-child(3) { background-image:url(https://image.mux.com/skiXvIFodBRdAbRtC7hJZsAaOZSeadnjQ52AyNue6Ds/thumbnail.jpg?time=8.5&width=200); animation-delay:3s; }
+                .nt-tiles div:nth-child(1) { background-image:url(/img/af/tile900.jpg); }
+                .nt-tiles div:nth-child(2) { background-image:url(/img/af/tile3900.jpg); animation-delay:1.5s; }
+                .nt-tiles div:nth-child(3) { background-image:url(/img/af/tile6300.jpg); animation-delay:3s; }
                 @keyframes ntTile { 0%,30% { opacity:1; border-color:#39FF14; } 34%,100% { opacity:.45; border-color:transparent; } }
                 .nt-wave { position:relative; display:flex; align-items:center; gap:2px; height:40px; }
                 .nt-wave span { flex:1; border-radius:2px; background:#3f3f46; }
@@ -311,7 +321,7 @@
                 /* 5 vertical clips */
                 .nt-clips { display:flex; gap:8px; }
                 .nt-clips div { position:relative; width:58px; height:104px; border-radius:9px; background-size:cover; background-position:center; border:1px solid #2a2a2e; overflow:hidden; }
-                .nt-clips div::after { content:"DJ NAME"; position:absolute; left:0; right:0; bottom:7px; text-align:center; font:900 8px 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#fff; letter-spacing:.04em; }
+                .nt-clips div::after { content:"AMONGST FEW"; position:absolute; left:0; right:0; bottom:7px; text-align:center; font:900 8px 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#fff; letter-spacing:.04em; }
                 .nt-clips div:nth-child(2) { transform:translateY(-8px); }
                 /* 6 posted */
                 .nt-posts { display:grid; grid-template-columns:repeat(2,auto); gap:10px; }
@@ -331,28 +341,28 @@
                 </div>
                 <ol class="nt-grid">
                     <li class="nt-card reveal delay-100">
-                        <div class="nt-vis"><div class="nt-cal"><b>SAT 23:00</b><span>DJ NAME</span></div><span class="nt-arrow">→</span><div class="nt-camera"><span class="nt-rec"><i></i>REC</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3"/></svg></div></div>
-                        <div class="nt-txt"><span class="nt-time">22:00</span><h3>Cameras start themselves</h3><p>Your calendar switches them on for every set.</p></div>
+                        <div class="nt-vis"><div class="nt-cal"><b>SAT 23:00</b><span>AMONGST FEW</span></div><span class="nt-arrow">→</span><div class="nt-camera"><span class="nt-rec"><i></i>REC</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3"/></svg></div></div>
+                        <div class="nt-txt"><span class="nt-time">22:00</span><h3>Cameras start themselves</h3><p>Your calendar switches them on for every set.</p><p class="nt-spec">iCal sync · opens 2 min early · RTMP to the cloud</p></div>
                     </li>
                     <li class="nt-card reveal delay-200">
-                        <div class="nt-vis"><div class="nt-phone"><div class="nt-feed"></div><div class="nt-pad"><i></i></div></div></div>
-                        <div class="nt-txt"><span class="nt-time">23:00</span><h3>Every angle, on your phone</h3><p>Move, zoom and follow the DJ.</p></div>
+                        <div class="nt-vis"><div class="nt-phone"><div class="nt-screen"><span class="nt-island"></span><span class="nt-recb"><i></i>REC · CAM 01</span><span class="nt-track"></span><span class="nt-zoom"><b>1×</b><b class="on">2×</b><b>4×</b></span><span class="nt-joy"><i></i></span></div></div></div>
+                        <div class="nt-txt"><span class="nt-time">23:00</span><h3>Every angle, on your phone</h3><p>Move, zoom and follow the DJ.</p><p class="nt-spec">VISCA over IP · presets · AI tracking</p></div>
                     </li>
                     <li class="nt-card reveal delay-300">
-                        <div class="nt-vis"><div class="nt-stack"><div class="nt-sess"><div></div><div><b>DJ NAME</b><span>SAT · 2H 07M</span></div></div></div></div>
-                        <div class="nt-txt"><span class="nt-time">02:00</span><h3>Saved for the DJ</h3><p>Every set, filed by artist and date.</p></div>
+                        <div class="nt-vis"><div class="nt-stack"><div class="nt-sess"><div></div><div><b>AMONGST FEW</b><span>SAT · 2H 07M</span></div></div></div></div>
+                        <div class="nt-txt"><span class="nt-time">02:00</span><h3>Saved for the DJ</h3><p>Every set, filed by artist and date.</p><p class="nt-spec">Cut at the calendar times · 4K master</p></div>
                     </li>
                     <li class="nt-card reveal delay-100">
                         <div class="nt-vis"><div class="nt-mc"><div class="nt-tiles"><div></div><div></div><div></div></div><div class="nt-wave"><span style="height:30%"></span><span style="height:55%"></span><span style="height:80%"></span><span style="height:45%"></span><span style="height:95%"></span><span style="height:60%"></span><span style="height:35%"></span><span style="height:70%"></span><span style="height:90%"></span><span style="height:50%"></span><span style="height:25%"></span><span style="height:65%"></span><span style="height:85%"></span><span style="height:40%"></span><span style="height:75%"></span><span style="height:55%"></span><span style="height:30%"></span><span style="height:60%"></span><span style="height:95%"></span><span style="height:45%"></span><span style="height:70%"></span><span style="height:35%"></span><span style="height:80%"></span><span style="height:50%"></span></div></div></div>
-                        <div class="nt-txt"><span class="nt-time">02:15</span><h3>Cut to the music</h3><p>Every camera, edited into one full set.</p></div>
+                        <div class="nt-txt"><span class="nt-time">02:15</span><h3>Cut to the music</h3><p>Every camera, edited into one full set.</p><p class="nt-spec">Synced to the console audio · cuts every 4–16 bars · rendered on the Mac mini</p></div>
                     </li>
                     <li class="nt-card reveal delay-200">
-                        <div class="nt-vis"><div class="nt-clips"><div style="background-image:url(https://image.mux.com/skiXvIFodBRdAbRtC7hJZsAaOZSeadnjQ52AyNue6Ds/animated.webp?start=0&end=4&width=200&fps=10)"></div><div style="background-image:url(https://image.mux.com/skiXvIFodBRdAbRtC7hJZsAaOZSeadnjQ52AyNue6Ds/animated.webp?start=4&end=8&width=200&fps=10)"></div><div style="background-image:url(https://image.mux.com/skiXvIFodBRdAbRtC7hJZsAaOZSeadnjQ52AyNue6Ds/animated.webp?start=5&end=9&width=200&fps=10)"></div></div></div>
-                        <div class="nt-txt"><span class="nt-time">03:00</span><h3>Clips, ready to post</h3><p>Vertical and branded with your logo.</p></div>
+                        <div class="nt-vis"><div class="nt-clips"><div style="background-image:url(/img/af/v1.webp)"></div><div style="background-image:url(/img/af/v2.webp)"></div><div style="background-image:url(/img/af/v3.webp)"></div></div></div>
+                        <div class="nt-txt"><span class="nt-time">03:00</span><h3>Clips, ready to post</h3><p>Vertical and branded with your logo.</p><p class="nt-spec">1080 × 1920 · reframed on the DJ · watermark in your fonts</p></div>
                     </li>
                     <li class="nt-card reveal delay-300">
                         <div class="nt-vis"><div class="nt-posts"><span><i>✓</i>YouTube</span><span><i>✓</i>SoundCloud</span><span><i>✓</i>Instagram</span><span><i>✓</i>TikTok</span></div></div>
-                        <div class="nt-txt"><span class="nt-time">10:00</span><h3>Out by morning</h3><p>Posted everywhere your fans are.</p></div>
+                        <div class="nt-txt"><span class="nt-time">10:00</span><h3>Out by morning</h3><p>Posted everywhere your fans are.</p><p class="nt-spec">Direct to YouTube &amp; SoundCloud · streaming and downloads</p></div>
                     </li>
                 </ol>
             </div>
@@ -439,7 +449,7 @@
 
                             <div class="bg-[#111] border border-[#222] p-4 rounded-xl shrink-0">
                                 <div class="relative aspect-video rounded overflow-hidden mb-4 bg-zinc-900 border border-white/5">
-                                    <img src="https://image.mux.com/skiXvIFodBRdAbRtC7hJZsAaOZSeadnjQ52AyNue6Ds/animated.gif?width=320" class="w-full h-full object-cover" alt="Live Feed">
+                                    <img src="/img/af/live.webp" class="w-full h-full object-cover" alt="Live Feed">
                                 </div>
                                 <div class="space-y-2.5 font-mono text-[9px] uppercase tracking-widest">
                                     <p class="text-primary leading-relaxed">Live Feed Room 1 // Main Floor</p>
@@ -490,7 +500,7 @@
                     <div class="vc-ex" aria-label="Example of a connected camera">
                         <span class="vc-tag">EXAMPLE</span>
                         <div class="vc-card">
-                            <div class="vc-stage"><img alt="" loading="lazy" src="https://image.mux.com/skiXvIFodBRdAbRtC7hJZsAaOZSeadnjQ52AyNue6Ds/animated.webp?start=1&amp;end=5&amp;width=640&amp;fps=10"></div>
+                            <div class="vc-stage"><img alt="" loading="lazy" src="/img/af/stage.webp"></div>
                             <div class="vc-meta"><span class="vc-label">CAM 01 // MAIN FLOOR</span><span class="vc-live">LIVE · REC</span></div>
                             <div class="vc-chips"><span class="vc-chip">OBSBOT Tail 2</span><span class="vc-chip ndi">NDI · MAIN FLOOR</span></div>
                             <div class="vc-onstage"><span><span class="lbl">ON STAGE</span><span class="val">DJ NAME</span></span><span class="go">From calendar</span></div>
@@ -499,7 +509,7 @@
                         <div class="vc-result">
                             <div class="vc-result-head"><b>DJ NAME</b> · new session in your library</div>
                             <ol class="vc-flow" aria-label="What happens to the recording"><li>Reframe</li><li>Highlights</li><li>Watermark</li><li>HD export</li></ol>
-                            <div class="vc-clips"><i><img alt="" loading="lazy" src="https://image.mux.com/skiXvIFodBRdAbRtC7hJZsAaOZSeadnjQ52AyNue6Ds/animated.webp?start=0&amp;end=4&amp;width=240&amp;fps=10"><span class="vc-wm"></span><span class="vc-name">DJ NAME</span></i><i><img alt="" loading="lazy" src="https://image.mux.com/skiXvIFodBRdAbRtC7hJZsAaOZSeadnjQ52AyNue6Ds/animated.webp?start=2&amp;end=6&amp;width=240&amp;fps=10"><span class="vc-wm"></span><span class="vc-name">DJ NAME</span></i><i><img alt="" loading="lazy" src="https://image.mux.com/skiXvIFodBRdAbRtC7hJZsAaOZSeadnjQ52AyNue6Ds/animated.webp?start=4&amp;end=8&amp;width=240&amp;fps=10"><span class="vc-wm"></span><span class="vc-name">DJ NAME</span></i><i><img alt="" loading="lazy" src="https://image.mux.com/skiXvIFodBRdAbRtC7hJZsAaOZSeadnjQ52AyNue6Ds/animated.webp?start=5&amp;end=9&amp;width=240&amp;fps=10"><span class="vc-wm"></span><span class="vc-name">DJ NAME</span></i></div>
+                            <div class="vc-clips"><i><img alt="" loading="lazy" src="/img/af/v1.webp"><span class="vc-wm"></span><span class="vc-name">DJ NAME</span></i><i><img alt="" loading="lazy" src="/img/af/v2.webp"><span class="vc-wm"></span><span class="vc-name">DJ NAME</span></i><i><img alt="" loading="lazy" src="/img/af/v3.webp"><span class="vc-wm"></span><span class="vc-name">DJ NAME</span></i><i><img alt="" loading="lazy" src="/img/af/v4.webp"><span class="vc-wm"></span><span class="vc-name">DJ NAME</span></i></div>
                             <p class="vc-foot">Vertical clips at 1080 × 1920, ready to post. The full recording is kept too.</p>
                         </div>
                     </div>
