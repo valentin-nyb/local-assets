@@ -20,6 +20,13 @@ const cleanTarget = t => (t === 'venue' || /^(artist|label):[^<>]{1,60}$/.test(S
 const STATUSES = ['paid', 'unpaid', 'waiting'];
 const TYPE_LABEL = { venue: 'Venue', artist: 'Artist', label: 'Record label', management: 'Management' };
 const cleanText = (v, n) => String(v ?? '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, n);
+// Who the invoice is legally addressed to: name or company, postal address, VAT number
+const cleanDetails = d => {
+  d = d && typeof d === 'object' ? d : {};
+  const out = { legalName: cleanText(d.legalName, 100), line1: cleanText(d.line1, 100), line2: cleanText(d.line2, 100), city: cleanText(d.city, 60),
+    postcode: cleanText(d.postcode, 20).toUpperCase(), country: /^[A-Z]{2}$/.test(String(d.country || '').toUpperCase()) ? String(d.country).toUpperCase() : 'GB', vat: cleanText(d.vat, 30).toUpperCase().replace(/\s+/g, '') };
+  return out;
+};
 
 async function withRedis(fn) {
   const redis = createClient({ url: process.env.REDIS_URL });
@@ -158,7 +165,7 @@ export default async function handler(req, res) {
             id: i.id, number: i.number, status: own || fromStripe, total: i.total / 100, currency: i.currency,
             created: i.created * 1000, url: i.hosted_invoice_url, pdf: i.invoice_pdf, payable: i.status === 'open' && i.amount_remaining > 0,
             issued: (i.status_transitions?.finalized_at || i.created) * 1000, due: i.due_date ? i.due_date * 1000 : null, paidAt: i.status_transitions?.paid_at ? i.status_transitions.paid_at * 1000 : null,
-            amountDue: i.amount_remaining / 100, email: i.customer_email || '', lines: (i.lines?.data || []).slice(0, 30).map(l => ({ text: String(l.description || ''), amount: l.amount / 100 })),
+            amountDue: i.amount_remaining / 100, email: i.customer_email || '', address: i.customer_address ? [i.customer_address.line1, i.customer_address.line2, [i.customer_address.city, i.customer_address.postal_code].filter(Boolean).join(' '), i.customer_address.country].filter(Boolean) : [], vat: (i.customer_tax_ids || []).map(t => t.value).filter(Boolean), lines: (i.lines?.data || []).slice(0, 30).map(l => ({ text: String(l.description || ''), amount: l.amount / 100 })),
             billedTo: i.customer_name || (t === 'venue' ? (cfg[iv]?.name || venueName) : t.replace(/^(artist|label):/, '')),
             kind: t === 'venue' ? TYPE_LABEL[acctTypes[iv] || data.accountType] || 'Account' : t.startsWith('label:') ? 'Record label' : 'Artist',
             account: iv, accountName: cfg[iv]?.name || iv,
@@ -299,7 +306,7 @@ export default async function handler(req, res) {
 
     if (body.action === 'assign') {
       const target = cleanTarget(body.target);
-      const rec = { plan: cleanText(body.plan, 40), email: cleanText(body.email, 120), name: cleanText(body.name, 80), monthly: !!body.monthly };
+      const rec = { plan: cleanText(body.plan, 40), email: cleanText(body.email, 120), name: cleanText(body.name, 80), monthly: !!body.monthly, details: cleanDetails(body.details) };
       if (rec.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rec.email)) return res.status(400).json({ error: 'Enter a valid email' });
       await withRedis(redis => redis.hSet(assignKey(slug), target, JSON.stringify(rec)));
       return res.status(200).json({ ok: true });
@@ -342,6 +349,8 @@ export default async function handler(req, res) {
       // A manual invoice never blocks the monthly one
       const period = { ...base, key: `${base.key}-manual-${Date.now()}` };
       const name = cleanText(body.name, 80) || (target === 'venue' ? (venueName) : target.replace(/^(artist|label):/, ''));
+      const det = cleanDetails(body.details);
+      if (!det.legalName || !det.line1 || !det.city || !det.postcode) return res.status(400).json({ error: 'Add the billing details first: legal name, address, city and postcode' });
       const out = await withRedis(redis => invoiceVenue(redis, stripe, { slug, auth: auth, email, name, target, planId: cleanText(body.plan, 40) || null }, period));
       return res.status(200).json(out);
     }

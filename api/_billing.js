@@ -176,15 +176,37 @@ export function stripeClient() {
 }
 
 // The venue's Stripe customer, made on first use
-export async function venueCustomer(stripe, redis, slug, { email, name }) {
+const EU = new Set('AT BE BG CY CZ DE DK EE ES FI FR GR HR HU IE IT LT LU LV MT NL PL PT RO SE SI SK'.split(' '));
+// The billing details printed on the Stripe invoice: legal name, postal address and VAT number
+async function applyDetails(stripe, id, details) {
+  if (!details?.legalName) return;
+  await stripe.customers.update(id, {
+    name: details.legalName,
+    address: { line1: details.line1 || undefined, line2: details.line2 || undefined, city: details.city || undefined, postal_code: details.postcode || undefined, country: details.country || 'GB' },
+  });
+  if (details.vat) {
+    const type = details.country === 'GB' ? 'gb_vat' : EU.has(details.country) ? 'eu_vat' : null;
+    if (!type) return;
+    const have = await stripe.customers.listTaxIds(id, { limit: 20 }).catch(() => ({ data: [] }));
+    if (have.data.some(t => t.value.replace(/\s+/g, '').toUpperCase() === details.vat)) return;
+    for (const t of have.data) await stripe.customers.deleteTaxId(id, t.id).catch(() => {});
+    await stripe.customers.createTaxId(id, { type, value: details.vat }).catch(e => console.error('[billing] VAT number', id, e.message));
+  }
+}
+export async function venueCustomer(stripe, redis, slug, { email, name, details }) {
   const saved = await redis.get(`billing_customer:${slug}`);
   if (saved) {
     // A customer saved from another Stripe account (after switching accounts) is made again here
     const ok = await stripe.customers.retrieve(saved).then(c => !c.deleted).catch(() => false);
-    if (ok) { if (email) await stripe.customers.update(saved, { email, name: name || undefined }).catch(() => {}); return saved; }
+    if (ok) {
+      if (email) await stripe.customers.update(saved, { email, name: name || undefined }).catch(() => {});
+      await applyDetails(stripe, saved, details);
+      return saved;
+    }
   }
   const c = await stripe.customers.create({ email: email || undefined, name: name || slug, metadata: { venueSlug: slug } });
   await redis.set(`billing_customer:${slug}`, c.id);
+  await applyDetails(stripe, c.id, details);
   return c.id;
 }
 
@@ -205,7 +227,9 @@ export async function invoiceVenue(redis, stripe, { slug, auth, email, name, tar
   const usage = await venueUsage(slug, auth, period, artist, label);
   const priced = priceUsage(usage, rates, plan);
   if (priced.total < 0.3) { await redis.set(doneKey, 'none'); return { skipped: true, reason: 'Nothing to bill' }; }
-  const customer = await venueCustomer(stripe, redis, target === 'venue' ? slug : `${slug}:${target}`, { email, name });
+  const details = (await readAssignments(redis, slug))[target]?.details || null;
+  if (!details?.legalName || !details?.line1) { await redis.del(doneKey); return { skipped: true, reason: 'Billing details missing: add the legal name and address in Bill to' }; }
+  const customer = await venueCustomer(stripe, redis, target === 'venue' ? slug : `${slug}:${target}`, { email, name, details });
   const currency = priced.currency;
   // Accounts from a sign-up pay the plan through their Stripe subscription: invoice the usage above it only
   const viaSubscription = !!(await readAssignments(redis, slug))[target]?.subscription;

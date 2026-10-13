@@ -79,6 +79,10 @@
         .bl-admin label { display:flex; flex-direction:column; gap:6px; font-size:11px; color:var(--la-dim); }
         .bl-admin input { height:38px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 12px; font-size:13px; outline:none; }
         .bl-admin input:focus { border-color:var(--la-accent); }
+        .bl-det-head { grid-column:1/-1; margin:8px 0 -4px; padding-top:16px; border-top:1px solid var(--la-line); font-size:12px; font-weight:700; color:var(--la-text); text-transform:uppercase; letter-spacing:.06em; }
+        .bl-det-head span { margin-left:8px; font-weight:400; text-transform:none; letter-spacing:0; color:var(--la-dim); }
+        .bl-admin .bl-wide { grid-column:span 2; }
+        @media (max-width:640px) { .bl-admin .bl-wide { grid-column:auto; } }
         .bl-admin-actions { display:flex; flex-wrap:wrap; gap:8px; padding:0 20px 20px; align-items:center; }
         .bl-msg { font-size:12px; color:var(--la-sub); }
         .bl-inv-filter { height:34px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 10px; font-size:12px; max-width:280px; }
@@ -166,6 +170,14 @@
                         <label>Email<input name="email" type="email" placeholder="accounts@venue.com"></label>
                         <label>Plan<select name="plan" id="bl-plan-select"></select></label>
                         <label>Period<select name="period"><option value="current">This month so far</option><option value="previous">Last month</option></select></label>
+                        <p class="bl-det-head">Billing details <span>Printed on the invoice. Needed before it can be sent.</span></p>
+                        <label class="bl-wide">Legal name or company<input name="legalName" maxlength="100" placeholder="Company or full legal name" autocomplete="off"></label>
+                        <label class="bl-wide">Address<input name="line1" maxlength="100" placeholder="Street and number" autocomplete="off"></label>
+                        <label>Address line 2<input name="line2" maxlength="100" placeholder="Flat, unit (optional)" autocomplete="off"></label>
+                        <label>City<input name="city" maxlength="60" autocomplete="off"></label>
+                        <label>Postcode<input name="postcode" maxlength="20" autocomplete="off"></label>
+                        <label>Country<select name="country"><option value="GB">United Kingdom</option><option value="IE">Ireland</option><option value="US">United States</option><option value="ES">Spain</option><option value="FR">France</option><option value="DE">Germany</option><option value="NL">Netherlands</option><option value="BE">Belgium</option><option value="PT">Portugal</option><option value="IT">Italy</option><option value="CH">Switzerland</option><option value="SE">Sweden</option><option value="DK">Denmark</option><option value="NO">Norway</option><option value="AU">Australia</option><option value="CA">Canada</option><option value="AE">United Arab Emirates</option></select></label>
+                        <label>VAT number<input name="vat" maxlength="30" placeholder="Optional" autocomplete="off"></label>
                     </form>
                     <div class="bl-admin-actions">
                         <label class="bl-check"><input type="checkbox" id="bl-monthly"> Bill monthly on the 1st</label>
@@ -391,6 +403,9 @@
             psel.innerHTML = '<option value="">No plan · usage only</option>' + d.plans.map(function(p) { return '<option value="' + esc(p.id) + '"' + (p.id === cur ? ' selected' : '') + '>' + esc(p.name) + ' · ' + money(p.price, 'gbp') + '/mo</option>'; }).join('');
             var sf = document.getElementById('bl-send-form');
             if (document.activeElement !== sf.email) sf.email.value = (d.assignment && d.assignment.email) || '';
+            var det = (d.assignment && d.assignment.details) || {};
+            ['legalName', 'line1', 'line2', 'city', 'postcode', 'vat'].forEach(function(k) { if (document.activeElement !== sf[k]) sf[k].value = det[k] || ''; });
+            sf.country.value = det.country || 'GB';
             document.getElementById('bl-monthly').checked = !!(d.assignment && d.assignment.monthly);
             renderPlans(d.plans);
         }
@@ -419,6 +434,9 @@
             catch (e) { msg.textContent = 'Could not save: ' + e.message; }
             this.disabled = false;
         });
+        // The billing details typed in Bill to
+        function detailsOf(sf) { return { legalName: sf.legalName.value.trim(), line1: sf.line1.value.trim(), line2: sf.line2.value.trim(), city: sf.city.value.trim(), postcode: sf.postcode.value.trim(), country: sf.country.value, vat: sf.vat.value.trim() }; }
+        function detailsMissing(x) { return !x.legalName ? 'legalName' : !x.line1 ? 'line1' : !x.city ? 'city' : !x.postcode ? 'postcode' : ''; }
         function post(body) {
             if (_venue) body = Object.assign({ venue: _venue }, body);
             return laFetch('/api/billing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -444,7 +462,14 @@
         document.getElementById('bl-plan-select').addEventListener('change', function() { _planOverride = this.value; load(); });
         document.querySelector('#bl-send-form [name=period]').addEventListener('change', function() { load(); });
         // Invoice preview: the invoice as it will be sent, with Download (PDF) and Send
-        function invoiceHtml(d, who, email, period) {
+        // The "Bill to" block: legal name, address, VAT number and email
+        function billToHtml(name, lines, vat, email) {
+            return '<p><b>' + esc(name) + '</b>' + (lines || []).filter(Boolean).map(function(l) { return '<br>' + esc(l); }).join('') +
+                ((vat || []).length ? '<br>VAT ' + vat.map(esc).join(', ') : '') + (email ? '<br>' + esc(email) : '') + '</p>';
+        }
+        var COUNTRY_NAMES = {};
+        document.querySelectorAll('#bl-send-form [name=country] option').forEach(function(o) { COUNTRY_NAMES[o.value] = o.text; });
+        function invoiceHtml(d, who, email, period, det) {
             var cur = d.currency, today = new Date();
             var due = new Date(today.getTime() + 14 * 86400e3);
             var lines = [];
@@ -456,7 +481,9 @@
                 '<div class="inv-top"><div><p class="inv-h">Invoice</p><p class="inv-muted">Preview · not sent yet</p></div><img src="/logos/Black@2x.png" alt="local / assets" class="inv-logo"></div>' +
                 '<div class="inv-meta"><div><p class="inv-k">Date of issue</p><p>' + fmtD(today) + '</p><p class="inv-k">Date due</p><p>' + fmtD(due) + '</p></div>' +
                 '<div><p class="inv-k">From</p><p><b>local / assets</b><br>info@local-assets.com</p></div>' +
-                '<div><p class="inv-k">Bill to</p><p><b>' + esc(who) + '</b><br>' + esc(email || '') + '</p></div></div>' +
+                '<div><p class="inv-k">Bill to</p>' + (det && det.legalName
+                    ? billToHtml(det.legalName, [det.line1, det.line2, [det.city, det.postcode].filter(Boolean).join(' '), COUNTRY_NAMES[det.country] || det.country], det.vat ? [det.vat] : [], email)
+                    : billToHtml(who, [], [], email) + '<p class="inv-muted" style="color:#b45309">Billing details missing</p>') + '</div></div>' +
                 '<p class="inv-due">' + money(d.total, cur) + ' due ' + fmtD(due) + '</p>' +
                 '<table class="inv-t"><thead><tr><th>Description</th><th class="r">Amount</th></tr></thead><tbody>' +
                 lines.map(function(l) { return '<tr><td><b>' + esc(l[0]) + '</b><span>' + esc(l[1]) + '</span></td><td class="r">' + money(l[2], cur) + '</td></tr>'; }).join('') +
@@ -489,7 +516,7 @@
                 '<div class="inv-top"><div><p class="inv-h">Invoice</p><p class="inv-muted">' + esc(i.number || i.id) + '</p><span class="inv-paid ' + (paid ? 'ok' : 'open') + '">' + esc(LBL[i.status] || i.status) + '</span></div><img src="/logos/Black@2x.png" alt="local / assets" class="inv-logo"></div>' +
                 '<div class="inv-meta"><div><p class="inv-k">Date of issue</p><p>' + fmtD(i.issued || i.created) + '</p>' + (i.due ? '<p class="inv-k">Date due</p><p>' + fmtD(i.due) + '</p>' : '') + (i.paidAt ? '<p class="inv-k">Paid on</p><p>' + fmtD(i.paidAt) + '</p>' : '') + '</div>' +
                 '<div><p class="inv-k">From</p><p><b>local / assets</b><br>info@local-assets.com</p></div>' +
-                '<div><p class="inv-k">Bill to</p><p><b>' + esc(i.billedTo) + '</b><br>' + esc(i.email || '') + '</p></div></div>' +
+                '<div><p class="inv-k">Bill to</p>' + billToHtml(i.billedTo, (i.address || []).map(function(l) { return COUNTRY_NAMES[l] || l; }), i.vat || [], i.email || '') + '</div></div>' +
                 '<p class="inv-due">' + (paid ? money(i.total, cur) + ' paid' : money(i.amountDue != null ? i.amountDue : i.total, cur) + (i.due ? ' due ' + fmtD(i.due) : ' due')) + '</p>' +
                 '<table class="inv-t"><thead><tr><th>Description</th><th class="r">Amount</th></tr></thead><tbody>' + lines +
                 '</tbody><tfoot><tr><td>Total</td><td class="r">' + money(i.total, cur) + '</td></tr></tfoot></table>' +
@@ -506,7 +533,7 @@
             btn.disabled = false; btn.textContent = 'Preview';
             if (!_data) return;
             var who = sf.target.options[sf.target.selectedIndex].text.replace(/\s*\((venue|artist|record label|management|account)\)$/i, '');
-            var html = invoiceHtml(_data, who, sf.email.value.trim(), sf.period.value);
+            var html = invoiceHtml(_data, who, sf.email.value.trim(), sf.period.value, detailsOf(sf));
             var m = invModal(html, '<button type="button" class="cam-btn ghost" data-close>Close</button><button type="button" class="cam-btn ghost" data-dl>Download PDF</button><button type="button" class="cam-btn primary" data-send>Send invoice</button>');
             m.querySelector('[data-dl]').addEventListener('click', function() {
                 // The browser's print dialog saves it as a PDF
@@ -544,12 +571,14 @@
             var msg = document.getElementById('bl-send-msg'), sf = document.getElementById('bl-send-form');
             var target = sf.target.value, plan = sf.plan.value, email = sf.email.value.trim(), period = sf.period.value;
             if (!email) { msg.textContent = 'Enter the email the invoice goes to'; sf.email.focus(); return; }
+            var miss = detailsMissing(detailsOf(sf));
+            if (miss) { msg.textContent = 'Add the billing details first: legal name, address, city and postcode'; sf[miss].focus(); return; }
             var who = sf.target.options[sf.target.selectedIndex].text;
             if (!(await laConfirm({ title: 'Send the invoice?', message: 'An itemised invoice for ' + who + ' is created in Stripe and emailed to ' + email + '.', confirmText: 'Send invoice' }))) return;
             this.disabled = true; msg.textContent = 'Creating the invoice…';
             try {
-                await post({ action: 'assign', target: target, plan: plan, email: email, monthly: document.getElementById('bl-monthly').checked });
-                var d = await post({ action: 'invoiceNow', target: target, plan: plan, email: email, period: period });
+                await post({ action: 'assign', target: target, plan: plan, email: email, monthly: document.getElementById('bl-monthly').checked, details: detailsOf(sf) });
+                var d = await post({ action: 'invoiceNow', target: target, plan: plan, email: email, period: period, details: detailsOf(sf) });
                 if (d.skipped) msg.textContent = d.reason || 'Nothing to invoice';
                 else msg.innerHTML = 'Invoice ' + (d.livemode ? 'sent to ' + esc(email) : 'created (test mode: Stripe doesn\'t email test invoices)') + (d.url ? ' · <a class="bl-link" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open payment page</a>' : '');
                 await load();
@@ -561,14 +590,14 @@
             var msg = document.getElementById('bl-send-msg'), sf = document.getElementById('bl-send-form');
             this.disabled = true; msg.textContent = 'Saving…';
             try {
-                await post({ action: 'assign', target: sf.target.value, plan: sf.plan.value, email: sf.email.value.trim(), monthly: document.getElementById('bl-monthly').checked });
+                await post({ action: 'assign', target: sf.target.value, plan: sf.plan.value, email: sf.email.value.trim(), monthly: document.getElementById('bl-monthly').checked, details: detailsOf(sf) });
                 _planOverride = undefined; msg.textContent = 'Saved for ' + sf.target.options[sf.target.selectedIndex].text; await load();
             } catch (e) { msg.textContent = 'Could not save: ' + e.message; }
             this.disabled = false;
         });
         document.getElementById('bl-monthly').addEventListener('change', async function() {
             var sf = document.getElementById('bl-send-form');
-            try { await post({ action: 'assign', target: sf.target.value, plan: sf.plan.value, email: sf.email.value.trim(), monthly: this.checked }); laToast(this.checked ? 'Billed monthly on the 1st' : 'Monthly billing off'); }
+            try { await post({ action: 'assign', target: sf.target.value, plan: sf.plan.value, email: sf.email.value.trim(), monthly: this.checked, details: detailsOf(sf) }); laToast(this.checked ? 'Billed monthly on the 1st' : 'Monthly billing off'); }
             catch (e) { laAlert(e.message, { tone: 'error' }); this.checked = !this.checked; }
         });
         // New clients: create their Mux environment, then paste its access token here
