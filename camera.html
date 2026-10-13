@@ -95,26 +95,66 @@
         .cam-link iconify-icon { font-size:15px; }
         .cam-link.danger { margin-left:auto; }
         @media (hover:hover) { .cam-link:hover { background:var(--la-chip); color:var(--la-text); } .cam-link.danger:hover { color:var(--la-bad); } }
-        .cal-panel { border:1px solid var(--la-line); border-radius:16px; padding:22px; background:var(--la-surface); margin-bottom:16px; }
+        .cal-panel { border:1px solid var(--la-line); border-radius:20px; padding:26px; background:var(--la-surface); margin-bottom:16px; }
+        .cal-panel[hidden], .cal-panel .hidden, .cal-panel [hidden] { display:none !important; }
         .cal-head { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; }
-        .cal-title { font-size:15px; color:var(--la-text); }
-        .cal-sub { font-size:13px; line-height:1.55; color:var(--la-sub); margin-top:4px; max-width:640px; }
-        .cal-state { flex-shrink:0; font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.15em; text-transform:uppercase; color:var(--la-dim); border:1px solid var(--la-line); border-radius:999px; padding:4px 10px; }
-        .cal-state.on { color:var(--la-accent); border-color:color-mix(in srgb, var(--la-accent) 45%, transparent); }
-        .cal-form { display:flex; gap:8px; margin-top:16px; }
-        .cal-form input { flex:1; min-width:0; height:38px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 12px; font-size:13px; outline:none; }
+        .cal-title { margin:6px 0 0; font:700 20px/1.1 'Helvetica Neue', Helvetica, Arial, sans-serif; text-transform:uppercase; letter-spacing:.01em; color:var(--la-text); }
+        .cal-state { flex-shrink:0; font:700 10px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.08em; text-transform:uppercase; color:var(--la-dim); border:1px solid var(--la-line); border-radius:6px; padding:6px 9px; }
+        .cal-state.on { color:var(--la-ok); border-color:color-mix(in srgb, var(--la-ok) 40%, transparent); }
+        .cal-state.bad { color:var(--la-bad); border-color:color-mix(in srgb, var(--la-bad) 40%, transparent); }
+        .cal-how { list-style:none; margin:20px 0 0; padding:0; display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); border:1px solid var(--la-line); border-radius:14px; overflow:hidden; }
+        .cal-how li { padding:16px 18px; display:flex; flex-direction:column; gap:6px; }
+        .cal-how li + li { border-left:1px solid var(--la-line); }
+        .cal-how span { font:500 10px/1 'JetBrains Mono', monospace; color:var(--la-accent); letter-spacing:.1em; }
+        .cal-how b { font:700 12px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.05em; text-transform:uppercase; color:var(--la-text); }
+        .cal-how p { margin:0; font-size:12px; line-height:1.55; color:var(--la-sub); }
+        .cal-source { display:flex; align-items:center; gap:12px; margin-top:18px; padding:12px 14px; border:1px solid var(--la-line); border-radius:12px; }
+        .cal-source-dot { width:8px; height:8px; border-radius:50%; background:var(--la-ok); flex-shrink:0; }
+        .cal-source.bad .cal-source-dot { background:var(--la-bad); }
+        .cal-source-text { flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
+        .cal-source-text b { font:700 12px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.05em; text-transform:uppercase; color:var(--la-text); }
+        .cal-source-text span { font-size:12px; color:var(--la-dim); }
+        .cal-form { display:flex; gap:8px; margin-top:14px; }
+        .cal-form input { flex:1; min-width:0; height:40px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 12px; font-size:13px; outline:none; }
         .cal-form input:focus { border-color:var(--la-accent); }
-        .cal-form .hidden { display:none; }
-        .cal-help { font-size:12px; color:var(--la-dim); margin-top:8px; line-height:1.5; }
+        .cal-form .cam-btn { height:40px; }
+        .cal-find { margin-top:10px; }
+        .cal-find summary { cursor:pointer; font-size:12px; color:var(--la-sub); list-style:none; }
+        .cal-find summary::-webkit-details-marker { display:none; }
+        .cal-find summary::before { content:'+'; display:inline-block; width:14px; color:var(--la-dim); }
+        .cal-find[open] summary::before { content:'−'; }
+        .cal-find-grid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:16px; margin-top:12px; }
+        .cal-find-grid b { font:700 11px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.06em; text-transform:uppercase; color:var(--la-text); }
+        .cal-find-grid ol { margin:8px 0 0; padding-left:18px; font-size:12px; line-height:1.6; color:var(--la-sub); }
+        .cal-help { font-size:12px; color:var(--la-dim); margin-top:14px; line-height:1.5; }
         .cal-err { color:var(--la-bad); }
         .cal-venue { font-weight:500; color:var(--la-sub); }
-        .cal-list { margin-top:14px; display:grid; gap:6px; }
-        .cal-list:empty { display:none; }
-        .cal-row { display:flex; align-items:baseline; gap:12px; padding:10px 12px; border-radius:10px; background:var(--la-chip); font-size:13px; }
-        .cal-row b { font:700 13px "Helvetica Neue", Helvetica, Arial, sans-serif; color:var(--la-text); text-transform:uppercase; }
-        .cal-row .when { margin-left:auto; color:var(--la-sub); font-size:12px; white-space:nowrap; }
-        .cal-row .now { font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.15em; color:var(--la-accent); }
-        @media (max-width:640px) { .cal-form { flex-wrap:wrap; } .cal-form input { flex-basis:100%; } .cal-head { flex-direction:column; } }
+        .cal-sched { margin-top:22px; }
+        .cal-sched-head, .cal-row { display:grid; grid-template-columns:72px minmax(0,1fr) 130px 130px; gap:16px; align-items:center; }
+        .cal-sched-head { padding:0 14px 8px; font:700 10px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.08em; text-transform:uppercase; color:var(--la-dim); }
+        .cal-sched-head span:first-child { grid-column:1 / 3; }
+        .cal-row { padding:12px 14px; border-top:1px solid var(--la-line); }
+        .cal-row.now { background:color-mix(in srgb, var(--la-ok) 7%, transparent); border-radius:10px; border-top-color:transparent; }
+        .cal-date { display:flex; flex-direction:column; gap:3px; }
+        .cal-date span { font:700 10px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.08em; text-transform:uppercase; color:var(--la-dim); }
+        .cal-date b { font:700 13px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; text-transform:uppercase; color:var(--la-text); }
+        .cal-dj { display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 10px; min-width:0; }
+        .cal-dj b { font:700 14px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif; text-transform:uppercase; color:var(--la-text); }
+        .cal-dj span { font:500 11px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.04em; text-transform:uppercase; color:var(--la-sub); }
+        .cal-tag { align-self:center; font:700 9px/1 'Helvetica Neue', Helvetica, Arial, sans-serif !important; letter-spacing:.08em !important; padding:4px 7px; border-radius:5px; border:1px solid var(--la-line); color:var(--la-dim) !important; }
+        .cal-tag.on { color:var(--la-ok) !important; border-color:color-mix(in srgb, var(--la-ok) 40%, transparent); }
+        .cal-time { font:500 12px/1 'JetBrains Mono', monospace; color:var(--la-text); white-space:nowrap; }
+        .cal-time.rec { color:var(--la-sub); }
+        @media (max-width:760px) {
+            .cal-panel { padding:18px; }
+            .cal-how { grid-template-columns:minmax(0,1fr); } .cal-how li + li { border-left:none; border-top:1px solid var(--la-line); }
+            .cal-find-grid { grid-template-columns:minmax(0,1fr); }
+            .cal-form { flex-wrap:wrap; } .cal-form input { flex-basis:100%; }
+            .cal-source { flex-wrap:wrap; } .cal-source-text { flex-basis:calc(100% - 20px); }
+            .cal-sched-head { display:none; }
+            .cal-row { grid-template-columns:56px minmax(0,1fr); gap:6px 12px; }
+            .cal-time { grid-column:2; } .cal-time.rec::before { content:'Records '; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; }
+        }
         .cam-guide { border:1px solid var(--la-line); border-radius:16px; padding:0 18px; background:var(--la-surface); }
         .cam-guide summary { cursor:pointer; padding:16px 0; font-size:13px; font-weight:600; color:var(--la-text); display:flex; align-items:center; gap:8px; list-style:none; }
         .cam-guide summary::-webkit-details-marker { display:none; }
@@ -390,18 +430,40 @@
 
                 <section class="cal-panel" id="cal-panel" aria-labelledby="cal-title">
                     <div class="cal-head">
-                        <div><h2 class="cal-title" id="cal-title">Calendar</h2>
-                        <p class="cal-sub">Every event in your calendar is a set. The title is the DJ. The cameras start recording 2 minutes before each set and stop 2 minutes after it, and each set is saved for its DJ in Distribution History.</p></div>
+                        <div>
+                            <p class="cam-eyebrow">Automatic recording</p>
+                            <h2 class="cal-title" id="cal-title">Calendar</h2>
+                        </div>
                         <span class="cal-state" id="cal-state">Not connected</span>
                     </div>
+                    <ol class="cal-how">
+                        <li><span>01</span><b>One event per set</b><p>Title it with the DJ's name. Add the venue as the location.</p></li>
+                        <li><span>02</span><b>Cameras start</b><p>Recording starts 2 minutes before the set.</p></li>
+                        <li><span>03</span><b>Saved for the DJ</b><p>Recording stops 2 minutes after the set. It's saved in Distribution History with vertical clips.</p></li>
+                    </ol>
+                    <div class="cal-source" id="cal-source" hidden>
+                        <span class="cal-source-dot"></span>
+                        <div class="cal-source-text"><b id="cal-source-name">Google Calendar</b><span id="cal-source-sub">Checked every minute</span></div>
+                        <button type="button" class="cam-btn ghost" id="cal-change">Change link</button>
+                        <button type="button" class="cam-btn ghost" id="cal-remove">Disconnect</button>
+                    </div>
                     <form class="cal-form" id="cal-form">
-                        <input name="url" id="cal-url" type="url" inputmode="url" autocomplete="off" placeholder="https://calendar.google.com/calendar/ical/…/basic.ics" aria-label="Calendar iCal link">
+                        <input name="url" id="cal-url" type="url" inputmode="url" autocomplete="off" placeholder="Paste your calendar's iCal link" aria-label="Calendar iCal link">
                         <button type="submit" class="cam-btn primary" id="cal-save">Connect</button>
-                        <button type="button" class="cam-btn ghost hidden" id="cal-remove">Disconnect</button>
                     </form>
-                    <p class="cal-help">Google Calendar: Settings, your calendar, Integrate calendar, <em>Secret address in iCal format</em>. Apple Calendar: share the calendar as Public and copy the link.</p>
+                    <details class="cal-find" id="cal-find">
+                        <summary>Where do I find the iCal link?</summary>
+                        <div class="cal-find-grid">
+                            <div><b>Google Calendar</b><ol><li>Open Google Calendar on a computer and go to Settings.</li><li>Under <em>Settings for my calendars</em>, pick the calendar.</li><li>Open <em>Integrate calendar</em> and copy the <em>Secret address in iCal format</em>.</li></ol></div>
+                            <div><b>Apple Calendar</b><ol><li>Right-click the calendar and choose <em>Share Calendar</em>.</li><li>Tick <em>Public Calendar</em>.</li><li>Copy the link (it starts with webcal://).</li></ol></div>
+                        </div>
+                    </details>
                     <p class="cam-form-error" id="cal-error"></p>
-                    <div class="cal-list" id="cal-list"></div>
+                    <div class="cal-sched" id="cal-sched" hidden>
+                        <div class="cal-sched-head"><span>Coming up</span><span>Set</span><span>Cameras record</span></div>
+                        <div id="cal-list"></div>
+                    </div>
+                    <p class="cal-help" id="cal-note" hidden></p>
                 </section>
 
                 <details class="cam-guide">
@@ -488,21 +550,49 @@
         // ── Venue calendar: who plays when ──
         function fmtTime(ms) { return new Date(ms).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' }); }
         function fmtDay(ms) { return new Date(ms).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/London' }); }
+        function calSourceName(host) {
+            host = String(host || '');
+            if (/google\./.test(host)) return 'Google Calendar';
+            if (/icloud\.com|apple\.com/.test(host)) return 'Apple Calendar';
+            if (/outlook|office|live\.com/.test(host)) return 'Outlook';
+            return host || 'Calendar';
+        }
         function renderCalendar(cal) {
             _calNow = cal.current || null;
+            var ok = !!cal.connected && !cal.error;
             var state = document.getElementById('cal-state');
-            state.textContent = cal.connected ? (cal.error ? 'Can\'t read calendar' : 'Connected') : 'Not connected';
-            state.classList.toggle('on', !!cal.connected && !cal.error);
-            document.getElementById('cal-save').textContent = cal.connected ? 'Change' : 'Connect';
-            document.getElementById('cal-remove').classList.toggle('hidden', !cal.connected);
-            var input = document.getElementById('cal-url');
-            if (cal.connected) input.placeholder = 'Connected to ' + cal.host + '. Paste a new link to change it.';
-            var rows = [];
-            if (cal.current) rows.push('<div class="cal-row"><span class="now">ON NOW</span><b>' + esc(cal.current.artist) + (cal.current.venue ? ' <span class="cal-venue">· ' + esc(cal.current.venue) + '</span>' : '') + '</b><span class="when">' + fmtTime(cal.current.start) + ' – ' + fmtTime(cal.current.end) + '</span></div>');
-            (cal.upcoming || []).forEach(function(e) { rows.push('<div class="cal-row"><b>' + esc(e.artist) + (e.venue ? ' <span class="cal-venue">· ' + esc(e.venue) + '</span>' : '') + '</b><span class="when">' + fmtDay(e.start) + ' · ' + fmtTime(e.start) + ' – ' + fmtTime(e.end) + '</span></div>'); });
-            if (cal.connected && cal.error) rows.push('<p class="cal-help cal-err">' + esc(cal.error) + ' Paste the right link above and press Change.</p>');
-            if (cal.connected && !cal.error && !rows.length) rows.push('<p class="cal-help">No sets in the next two months. Each event in the calendar should be one set, titled with the DJ\'s name.</p>');
+            state.textContent = cal.connected ? (cal.error ? 'Can\'t read' : 'Connected') : 'Not connected';
+            state.className = 'cal-state' + (ok ? ' on' : cal.connected ? ' bad' : '');
+            var src = document.getElementById('cal-source'), form = document.getElementById('cal-form');
+            src.hidden = !cal.connected;
+            src.classList.toggle('bad', !!cal.error);
+            document.getElementById('cal-source-name').textContent = calSourceName(cal.host);
+            document.getElementById('cal-source-sub').textContent = cal.error ? 'The link can\'t be read. Paste the right one.' : 'Connected · checked every minute';
+            // The link field shows when not connected, when it can't be read, or after Change link
+            form.hidden = cal.connected && !cal.error && !form.dataset.open;
+            document.getElementById('cal-save').textContent = cal.connected ? 'Save link' : 'Connect';
+            document.getElementById('cal-find').hidden = cal.connected && !cal.error && !form.dataset.open;
+            var sets = [];
+            if (cal.current) sets.push(Object.assign({ now: true }, cal.current));
+            (cal.upcoming || []).forEach(function(e) { sets.push(e); });
+            var rows = sets.map(function(e, i) {
+                var d = new Date(e.start);
+                var wd = d.toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'Europe/London' });
+                var dm = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'Europe/London' });
+                var tag = e.now ? '<span class="cal-tag on">On now</span>' : i === (cal.current ? 1 : 0) ? '<span class="cal-tag">Next</span>' : '';
+                return '<div class="cal-row' + (e.now ? ' now' : '') + '">' +
+                    '<div class="cal-date"><span>' + wd + '</span><b>' + dm + '</b></div>' +
+                    '<div class="cal-dj"><b>' + esc(e.artist) + '</b>' + (e.venue ? '<span>' + esc(e.venue) + '</span>' : '') + tag + '</div>' +
+                    '<div class="cal-time">' + fmtTime(e.start) + ' – ' + fmtTime(e.end) + '</div>' +
+                    '<div class="cal-time rec">' + fmtTime(e.start - 120e3) + ' – ' + fmtTime(e.end + 120e3) + '</div>' +
+                '</div>';
+            });
             document.getElementById('cal-list').innerHTML = rows.join('');
+            document.getElementById('cal-sched').hidden = !ok || !rows.length;
+            var note = document.getElementById('cal-note');
+            note.hidden = !(cal.connected && !cal.error && !rows.length);
+            note.textContent = 'No sets in the next two months. Add one event per set, titled with the DJ\'s name.';
+            if (cal.error) document.getElementById('cal-error').textContent = cal.error;
         }
         async function saveCalendar(url) {
             var err = document.getElementById('cal-error'), btn = document.getElementById('cal-save');
@@ -512,13 +602,21 @@
                 var d = await r.json().catch(function() { return {}; });
                 if (!r.ok) throw new Error(d.error || r.status);
                 document.getElementById('cal-url').value = '';
+                document.getElementById('cal-form').dataset.open = '';
                 _camKey = ''; await loadCameras();
             } catch (e) { err.textContent = e.message; }
             btn.disabled = false;
         }
+        document.getElementById('cal-change').addEventListener('click', function() {
+            var f = document.getElementById('cal-form');
+            f.dataset.open = f.dataset.open ? '' : '1';
+            f.hidden = !f.dataset.open;
+            document.getElementById('cal-find').hidden = !f.dataset.open;
+            if (f.dataset.open) document.getElementById('cal-url').focus();
+        });
         document.getElementById('cal-form').addEventListener('submit', function(e) { e.preventDefault(); var v = document.getElementById('cal-url').value.trim(); if (v) saveCalendar(v); });
         document.getElementById('cal-remove').addEventListener('click', async function() {
-            if (await laConfirm({ title: 'Disconnect the calendar?', message: 'Recordings will be split by the On stage name set on each camera instead.', confirmText: 'Disconnect', danger: true })) saveCalendar('');
+            if (await laConfirm({ title: 'Disconnect the calendar?', message: 'The cameras stop starting and stopping on their own. Recordings are split by the On stage name set on each camera instead.', confirmText: 'Disconnect', danger: true })) saveCalendar('');
         });
         async function loadCameras() {
             var grid = document.getElementById('cam-grid');
