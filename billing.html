@@ -36,7 +36,7 @@
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
-    <script src="nav-component.js?v=10"></script>
+    <script src="nav-component.js?v=11"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
         .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
@@ -138,7 +138,16 @@
         @media (max-width:640px) { .bl-setup-item .bl-admin { grid-template-columns:1fr !important; } }
         .bl-admin select, .bl-plan-in { height:38px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 10px; font-size:13px; outline:none; width:100%; min-width:0; }
         .bl-plan-in { height:34px; }
-        #bl-plans td:first-child { min-width:240px; } #bl-plans td { min-width:110px; }
+        /* Plans: one row of labelled fields per plan, wrapping to fit the screen (no sideways scroll) */
+        #bl-plans, #bl-plans tbody { display:block; width:100%; }
+        #bl-plans thead { display:none; }
+        #bl-plans tr { position:relative; display:grid; grid-template-columns:minmax(180px,2.2fr) repeat(5,minmax(0,1fr)); gap:12px; align-items:end; padding:16px 56px 16px 20px; border-top:1px solid var(--la-line); }
+        #bl-plans tr:first-child { border-top:0; }
+        #bl-plans td { display:block; min-width:0; padding:0 !important; border:0 !important; text-align:left; }
+        #bl-plans td[data-l]::before { content:attr(data-l); display:block; margin-bottom:6px; font-size:11px; color:var(--la-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        #bl-plans td:last-child { position:absolute; right:16px; bottom:20px; }
+        @media (max-width:1180px) { #bl-plans tr { grid-template-columns:repeat(3,minmax(0,1fr)); } #bl-plans td:first-child { grid-column:1 / -1; } #bl-plans td:last-child { top:38px; bottom:auto; } }
+        @media (max-width:640px) { #bl-plans tr { grid-template-columns:repeat(2,minmax(0,1fr)); padding:16px 48px 16px 16px; } #bl-plans td:last-child { right:10px; } }
         .bl-check { display:inline-flex; align-items:center; gap:8px; font-size:12px; color:var(--la-sub); margin-right:6px; }
         .bl-status { min-width:190px; height:28px; border-radius:99px; border:1px solid var(--la-line); background:var(--la-chip); color:var(--la-sub); font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; padding:0 8px; cursor:pointer; }
         .bl-status.paid { background:color-mix(in srgb, var(--la-ok) 14%, transparent); color:color-mix(in srgb, var(--la-ok) 72%, var(--la-text)); border-color:transparent; font-weight:700; }
@@ -242,7 +251,7 @@
                 </section>
                 <section class="bl-section hidden" id="bl-plans-box">
                     <div class="bl-section-head"><h3>Plans</h3><span class="bl-msg">Monthly price and the usage each plan includes</span></div>
-                    <div class="bl-scroll"><table class="bl-table" id="bl-plans"></table></div>
+                    <table class="bl-table" id="bl-plans"></table>
                     <div class="bl-admin-actions" style="padding-top:16px">
                         <button type="button" class="cam-btn ghost" id="bl-add-plan">Add plan</button>
                         <button type="button" class="cam-btn primary" id="bl-save-plans">Save plans</button>
@@ -556,7 +565,7 @@
         function planRow(p) {
             p = p || { id: '', name: '', price: 0, maxClips: 5, included: { storedMinutes: 0, deliveredMinutes: 0, fileGB: 0 } };
             var inp = function(k, v, num) { return '<input class="bl-plan-in" data-k="' + k + '"' + (num ? ' inputmode="decimal"' : '') + ' value="' + esc(v) + '">'; };
-            return '<tr data-id="' + esc(p.id) + '"><td>' + inp('name', p.name) + '</td><td>' + inp('price', p.price, 1) + '</td><td>' + inp('storedMinutes', p.included.storedMinutes, 1) + '</td><td>' + inp('deliveredMinutes', p.included.deliveredMinutes, 1) + '</td><td>' + inp('fileGB', p.included.fileGB, 1) + '</td><td>' + inp('maxClips', p.maxClips == null ? 5 : p.maxClips, 1) + '</td><td><button type="button" class="bl-x" title="Remove plan" data-del-plan>×</button></td></tr>';
+            return '<tr data-id="' + esc(p.id) + '"><td data-l="Plan">' + inp('name', p.name) + '</td><td data-l="£ per month">' + inp('price', p.price, 1) + '</td><td data-l="Storage incl., min">' + inp('storedMinutes', p.included.storedMinutes, 1) + '</td><td data-l="Streaming incl., min">' + inp('deliveredMinutes', p.included.deliveredMinutes, 1) + '</td><td data-l="Files incl., GB">' + inp('fileGB', p.included.fileGB, 1) + '</td><td data-l="Clips / session, 0 = unlimited">' + inp('maxClips', p.maxClips == null ? 5 : p.maxClips, 1) + '</td><td><button type="button" class="bl-x" title="Remove plan" data-del-plan>×</button></td></tr>';
         }
         document.getElementById('bl-plans').addEventListener('input', function() { this.dataset.editing = '1'; });
         document.getElementById('bl-plans').addEventListener('click', function(e) { var b = e.target.closest('[data-del-plan]'); if (b) { this.dataset.editing = '1'; b.closest('tr').remove(); } });
