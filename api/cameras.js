@@ -6,6 +6,7 @@ import { listLiveStreams } from './_live.js';
 import crypto from 'crypto';
 import { viscaFor, isContinuous, privateHost } from './_visca.js';
 import { relayKeyHash, cmdsKey, seenKey, tokenKey } from './camera-relay.js';
+import { scheduleWindow } from './camera-schedule.js';
 
 // The venue relay is online when it polled in the last 45 s
 async function relayStatus(redis, slug) {
@@ -122,6 +123,9 @@ export default async function handler(req, res) {
           const cur = events.find(e => e.start <= now && e.end > now);
           calendar.current = cur ? { artist: cur.artist, venue: cur.venue, start: cur.start, end: cur.end } : null;
           calendar.upcoming = events.filter(e => e.start > now).slice(0, 6).map(e => ({ artist: e.artist, venue: e.venue, start: e.start, end: e.end }));
+          // When the cameras that follow the calendar open and close
+          const w = scheduleWindow(events, now);
+          calendar.schedule = { open: w.open, closesAt: w.closesAt, opensAt: w.opensAt, nextArtist: w.next?.artist || null, currentArtist: w.current?.artist || null };
         } catch (e) { console.error('[cameras] calendar', slug, e.message); calendar.error = e.message || 'The calendar could not be read'; }
       }
       const relay = await withRedis(r => relayStatus(r, slug)).catch(() => null);
@@ -144,6 +148,7 @@ export default async function handler(req, res) {
           const cam = cams.find(c => c.id === body.id);
           if (!cam) return res.status(404).json({ error: 'Camera not found' });
           Object.assign(cam, { name, ndiName, ip });
+          if (typeof body.followCalendar === 'boolean') cam.followCalendar = body.followCalendar;
           await redis.set(key(slug), JSON.stringify(cams));
           return res.status(200).json({ camera: cam });
         }
@@ -158,6 +163,7 @@ export default async function handler(req, res) {
           ip,
           artist: clean(body.artist, 60),
           autoClips: true,
+          followCalendar: body.followCalendar !== false,
           createdAt: Date.now(),
         };
         cams.push(cam);

@@ -290,6 +290,17 @@
         .cam-admin-ex .ci-copy > .cam-eyebrow, .cam-admin-ex .ci-title, .cam-admin-ex .ci-text { display:none; }
         .cam-admin-ex .ci-ctl { margin-top:0; padding-top:0; border-top:none; }
         .ctl-relay.ex { height:20px; padding:0 8px; display:inline-flex; align-items:center; border:1px solid var(--la-line); border-radius:999px; font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.14em; }
+        .cam-grid > .ctl-full { grid-column:1 / -1; }
+        .ctl-full { border:1px solid var(--la-line); background:var(--la-surface); border-radius:20px; padding:24px; }
+        .ctl-full.ctl-inline .ctl-grid { grid-template-columns:repeat(4, minmax(0,1fr)); }
+        @media (max-width: 900px) { .ctl-full.ctl-inline .ctl-grid { grid-template-columns:repeat(2, minmax(0,1fr)); } .ctl-full { padding:16px; } }
+        @media (max-width: 520px) { .ctl-full.ctl-inline .ctl-grid { grid-template-columns:minmax(0,1fr); } }
+        .cam-sched { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:8px 12px 12px; padding:9px 12px; border-radius:10px; background:var(--la-chip); font:700 10px/1.3 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.06em; text-transform:uppercase; color:var(--la-sub); }
+        .cam-sched .lbl { color:var(--la-dim); font-weight:500; flex-shrink:0; }
+        .cam-sched.on { color:var(--la-ok); }
+        .cam-check { display:flex !important; flex-direction:row !important; align-items:flex-start; gap:10px; cursor:pointer; }
+        .cam-check input { width:16px; height:16px; margin-top:2px; accent-color:var(--la-accent); flex-shrink:0; }
+        .cam-check span { display:flex; flex-direction:column; gap:3px; }
 </style>
 </head>
 <body class="font-sans antialiased bg-background text-foreground overflow-hidden h-screen w-screen flex selection:bg-primary selection:text-black">
@@ -376,7 +387,7 @@
                         <li><b>1</b><div><strong>Plug in</strong><span>Power the camera and connect it to the venue's Wi-Fi or an Ethernet cable.</span></div></li>
                         <li><b>2</b><div><strong>Connect it here</strong><span>Press <em>Connect a camera</em> and give it a name. You get a stream address and key.</span></div></li>
                         <li><b>3</b><div><strong>Connect your calendar</strong><span>Paste your calendar's iCal link below. Each event is a set: the title is the DJ, the start and end are the exact times.</span></div></li>
-                        <li><b>4</b><div><strong>Stream the night</strong><span>Start the camera before the first set and stop it after the last. Each set is cut at its exact times and saved for its DJ in Distribution History.</span></div></li>
+                        <li><b>4</b><div><strong>Leave it streaming</strong><span>The calendar starts and stops the recording: from 2 minutes before each set to 2 minutes after it. Each set is saved for its DJ in Distribution History.</span></div></li>
                         <li><b>5</b><div><strong>Add your Brand Kit</strong><span>Upload logos and fonts for your venue and each artist in <a href="/brand" class="ci-link">Brand Kit</a>.</span></div></li>
                         <li><b>6</b><div><strong>Set the watermark</strong><span>Pick the logo, position and size, and add a line of text in one of your fonts. Every clip gets it.</span></div></li>
                         <li><b>7</b><div><strong>Choose thumbnails</strong><span>Use any artwork or photo as a session thumbnail, horizontal and vertical, watermarked.</span></div></li>
@@ -387,7 +398,7 @@
                 <section class="cal-panel" id="cal-panel" aria-labelledby="cal-title">
                     <div class="cal-head">
                         <div><h2 class="cal-title" id="cal-title">Calendar</h2>
-                        <p class="cal-sub">Every event in your calendar is a set. The title is the DJ, and the start and end are where the recording is cut. Sets are saved with their exact times in Distribution History.</p></div>
+                        <p class="cal-sub">Every event in your calendar is a set. The title is the DJ. The cameras start recording 2 minutes before each set and stop 2 minutes after it, and each set is saved for its DJ in Distribution History.</p></div>
                         <span class="cal-state" id="cal-state">Not connected</span>
                     </div>
                     <form class="cal-form" id="cal-form">
@@ -480,7 +491,7 @@
             });
         }
 
-        var _cams = [], _camKey = '', _calNow = null;
+        var _cams = [], _camKey = '', _calNow = null, _calSched = null;
         // ── Venue calendar: who plays when ──
         function fmtTime(ms) { return new Date(ms).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' }); }
         function fmtDay(ms) { return new Date(ms).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/London' }); }
@@ -527,6 +538,7 @@
                 if (data.admin) { renderAdminCameras(data.venues || []); return; }
                 _relay = data.relay || null; paintRelay();
                 _cams = data.cameras || [];
+                _calSched = data.calendar && data.calendar.connected && !data.calendar.error ? data.calendar.schedule || null : null;
                 renderCalendar(data.calendar || { connected: false });
                 err.classList.add('hidden');
                 empty.classList.toggle('hidden', _cams.length > 0);
@@ -536,7 +548,7 @@
                 camStatus(_cams.length ? live + ' of ' + _cams.length + ' live' : 'No cameras', live ? 'var(--la-ok)' : 'var(--la-dim)');
 
                 // Only rebuild when something changed, so playing video isn't interrupted
-                var key = JSON.stringify(_cams.map(function(c) { return [c.id, c.status, c.name, c.ndiName, c.ip, c.artist, c.autoClips, c.recording]; }).concat([_calNow && _calNow.artist]));
+                var key = JSON.stringify(_cams.map(function(c) { return [c.id, c.status, c.name, c.ndiName, c.ip, c.artist, c.autoClips, c.recording, c.followCalendar]; }).concat([_calNow && _calNow.artist, _calSched]));
                 if (key === _camKey) return;
                 _camKey = key;
                 grid.innerHTML = '';
@@ -591,18 +603,32 @@
             _camKey = key;
             grid.innerHTML = '';
             // No cameras on this account: the example of a connected camera, with this client's latest session
-            intro.classList.toggle('hidden', _cams.length > 0);
-            intro.classList.add('cam-admin-ex');
+            intro.classList.add('hidden');
             if (!_cams.length) {
-                document.querySelector('.ci-title').textContent = v.error ? 'This account\'s cameras could not be loaded' : 'No cameras connected to ' + v.name + ' yet';
-                document.querySelector('.ci-text').textContent = v.error ? v.error : 'This is how it looks once a camera is connected: live on this page while it streams, and each set saved for its artist in Distribution History with vertical clips ready to post.';
-                fillIntroExample(v.slug);
+                // The camera control screen as it is with a camera connected (controls answer once one is)
+                var full = document.createElement('div');
+                full.className = 'ctl-full';
+                grid.appendChild(full);
+                openControl({ id: 'preview', name: 'Cam 01 // Main floor', demo: true, placeholder: true, ip: '-' }, full);
+                latestLoop(v.slug, function(src) { var st = full.querySelector('#ctl-stage'); if (st) st.innerHTML = '<img alt="" src="' + src + '" style="width:100%;height:100%;object-fit:cover">'; });
                 return;
             }
             _cams.forEach(function(c, i) { grid.appendChild(cameraCard(c, i)); });
         }
         var _adminVenuesData = [];
 
+        function latestLoop(venueSlug, cb) {
+            laFetch('/api/list-assets').then(function(r) { return r.ok ? r.json() : []; }).then(function(list) {
+                list = Array.isArray(list) ? list : (list.data || list.assets || []);
+                var m = list.filter(function(a) {
+                    if (venueSlug && a._venue && a._venue !== venueSlug) return false;
+                    var pt = String(a.passthrough || ''), master = pt && pt.indexOf(' // ') < 0;
+                    try { var o = JSON.parse(pt); master = o && o.artist && ['AUDIO', 'SOCIAL', 'SOCIALRAW', 'THUMB'].indexOf(String(o.camera || '').toUpperCase()) < 0; } catch (_) {}
+                    return master && a.status === 'ready' && (a.playback_ids || []).length && Number(a.duration) > 120;
+                }).sort(function(a, b) { return Number(b.created_at) - Number(a.created_at); })[0];
+                if (m) { var t = Math.round(Number(m.duration) * 0.4); cb('https://image.mux.com/' + m.playback_ids[0].id + '/animated.webp?start=' + t + '&end=' + (t + 5) + '&width=640&fps=12'); }
+            }).catch(function() {});
+        }
         // The example camera (the Control panel opened from the example card)
         function exampleCam() {
             var img = document.querySelector('#ci-stage img');
@@ -643,7 +669,7 @@
                 var loop = function(t, w) { var a = Math.round(t); return 'https://image.mux.com/' + pid + '/animated.webp?start=' + a + '&end=' + (a + 4) + '&width=' + w + '&fps=10'; };
                 document.getElementById('ci-stage').innerHTML = '<img alt="" class="ci-loop" src="' + loop(dur * 0.45, 480) + '">';
                 var cs = document.querySelector('#ci-ctl #ctl-stage');
-                if (cs) cs.innerHTML = '<img alt="" class="ci-loop" src="' + loop(dur * 0.3, 960) + '" style="width:100%;height:100%;object-fit:cover">';
+                if (cs) cs.innerHTML = '<img alt="" class="ci-loop" src="' + loop(dur * 0.3, 640) + '" style="width:100%;height:100%;object-fit:cover">';
                 document.querySelectorAll('#ci-branded i').forEach(function(t, i) {
                     var img = document.createElement('img');
                     img.alt = ''; img.className = 'ci-loop'; img.loading = 'lazy';
@@ -681,6 +707,7 @@
                     // The calendar's current set wins over the name typed on the card
                     '<span style="min-width:0"><span class="lbl">ON STAGE</span><span class="val' + (_calNow || c.artist ? '' : ' empty') + '">' + esc(_calNow ? _calNow.artist : (c.artist || 'Set the artist')) + '</span></span>' +
                     '<span class="go">' + (_calNow ? 'From calendar' : c.autoClips === false ? 'Recording only' : 'Recording + clips') + '</span></button>' +
+                    (_calSched && c.followCalendar !== false ? '<div class="cam-sched' + (_calSched.open && isLive ? ' on' : '') + '"><span>' + (_calSched.open ? (isLive ? 'Recording ' : 'Waiting for the camera · ') + esc(_calSched.currentArtist || 'this set') + ' · stops ' + fmtTime(_calSched.closesAt) : _calSched.opensAt ? 'Starts ' + fmtDay(_calSched.opensAt) + ' ' + fmtTime(_calSched.opensAt) + (_calSched.nextArtist ? ' · ' + esc(_calSched.nextArtist) : '') : 'No sets coming up in the calendar') + '</span><span class="lbl">Calendar</span></div>' : '') +
                     (c.recording === false && c.status !== 'missing' ? '<div class="cam-recoff"><span>Recording is off for this camera</span><button type="button" data-act="rec">Turn on</button></div>' : '')) +
                 (actions ? '<div class="cam-row-actions">' + actions + '</div>' : '');
             var stage = card.querySelector('.cam-stage');
@@ -787,7 +814,7 @@
                         '<p class="ctl-label">Focus</p>' + seg('focus', [['auto', 'Auto'], ['push', 'Refocus']]) +
                         '<p class="ctl-label">Exposure</p>' + seg('exposure', [['down', '−'], ['reset', '0'], ['up', '+']]) + '</section>' +
                 '</div>' +
-                '<p class="ctl-fine">' + (demo ? 'Example: nothing is sent. With a camera connected, each button moves or sets the real camera through the venue relay, from anywhere.' : 'Commands go to the camera through the venue relay. Keyboard: arrow keys to move, + and − to zoom.') + '</p>';
+                (c.placeholder ? '' : '<p class="ctl-fine">' + (demo ? 'Example: nothing is sent. With a camera connected, each button moves or sets the real camera through the venue relay, from anywhere.' : 'Commands go to the camera through the venue relay. Keyboard: arrow keys to move, + and − to zoom.') + '</p>');
             var stage = body.querySelector('#ctl-stage');
             if (inline && !c.picture) stage.innerHTML = '<div class="cam-off"><span>Live picture</span></div>';
             else if (c.picture) stage.innerHTML = '<img alt="" src="' + esc(c.picture) + '" style="width:100%;height:100%;object-fit:cover">';
@@ -801,7 +828,7 @@
 
             var msg = body.querySelector('#ctl-msg'), relayEl = body.querySelector('#ctl-relay');
             function relayState(online) {
-                if (demo) { relayEl.textContent = 'Example'; relayEl.classList.add('ex'); return; }
+                if (demo) { relayEl.textContent = c.placeholder ? 'No camera connected' : 'Example'; relayEl.classList.add('ex'); return; }
                 relayEl.textContent = online ? 'Relay connected' : 'Relay not connected';
                 relayEl.classList.toggle('on', !!online);
                 panel.classList.toggle('ctl-off', !online);
@@ -903,7 +930,8 @@
                 '<form id="cam-form" class="cam-form">' +
                 '<label>Name<input name="name" maxlength="40" required placeholder="Main floor" value="' + esc(c && c.name) + '"></label>' +
                 '<label>NDI source name<input name="ndiName" maxlength="80" placeholder="OBSBOT-TAIL2 (MAIN FLOOR)" value="' + esc(c && c.ndiName) + '"><small>As shown in the OBSBOT app or NDI Studio Monitor.</small></label>' +
-                '<label>IP address<input name="ip" maxlength="70" placeholder="192.168.1.50" value="' + esc(c && c.ip) + '"><small>Optional. Used to open the camera\'s controls on the venue network.</small></label>' +
+                '<label>IP address<input name="ip" maxlength="70" placeholder="192.168.1.50" value="' + esc(c && c.ip) + '"><small>The camera\'s address on the venue network. Needed for Control.</small></label>' +
+                '<label class="cam-check"><input type="checkbox" name="followCalendar"' + (!c || c.followCalendar !== false ? ' checked' : '') + '><span>Start and stop with the calendar<small>Records from 2 minutes before each set to 2 minutes after it. Leave the camera streaming all night.</small></span></label>' +
                 '<p id="cam-form-error" class="cam-form-error"></p>' +
                 '<div class="cam-form-actions"><button type="button" class="cam-btn ghost" onclick="closeCamDialog()">Cancel</button>' +
                 '<button type="submit" class="cam-btn primary">' + (c ? 'Save' : 'Add camera') + '</button></div>' +
@@ -914,7 +942,7 @@
                 e.preventDefault();
                 var btn = form.querySelector('[type=submit]');
                 btn.disabled = true; btn.textContent = c ? 'Saving…' : 'Adding…';
-                camApi({ action: c ? 'update' : 'add', id: c && c.id, name: form.name.value, ndiName: form.ndiName.value, ip: form.ip.value })
+                camApi({ action: c ? 'update' : 'add', id: c && c.id, name: form.name.value, ndiName: form.ndiName.value, ip: form.ip.value, followCalendar: form.followCalendar.checked })
                     .then(function(d) { _camKey = ''; return loadCameras().then(function() { if (c) closeCamDialog(); else openStreamSetup(d.camera); }); })
                     .catch(function(err) { document.getElementById('cam-form-error').textContent = err.message; btn.disabled = false; btn.textContent = c ? 'Save' : 'Add camera'; });
             });
