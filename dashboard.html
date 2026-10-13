@@ -82,6 +82,25 @@
         @keyframes mmPulse { to { box-shadow:0 0 0 10px transparent; } }
         .clip-share { margin-top:2px; height:20px; padding:0 8px; border-radius:999px; border:1px solid var(--la-line); background:transparent; color:var(--la-text); font:600 9px Inter,ui-sans-serif,system-ui,sans-serif; letter-spacing:.04em; cursor:pointer; }
         @media (hover:hover) { .clip-share:hover { border-color:var(--la-accent); color:var(--la-accent); } }
+        /* Distribution History actions in the platform style: quiet pills and icons, filled on hover */
+        #recent-sets-list [id^="zip-btn-"], #recent-sets-list .yt-dist-btn, #recent-sets-list .sc-dist-btn, #recent-sets-list .wm-apply, #recent-sets-list .wm-restore {
+            height:34px !important; padding:0 16px !important; gap:8px !important; border-radius:999px !important; border:1px solid color-mix(in srgb, var(--la-text) 26%, transparent) !important;
+            background:transparent !important; color:var(--la-text) !important; font:500 13px/1 'Helvetica Neue', Helvetica, Arial, sans-serif !important; letter-spacing:0 !important; text-transform:none !important;
+            display:inline-flex; align-items:center; justify-content:center; transition:background .25s ease, color .25s ease, border-color .25s ease !important; }
+        #recent-sets-list [id^="zip-btn-"] span { font:inherit !important; color:inherit !important; letter-spacing:0 !important; text-transform:none !important; }
+        #recent-sets-list [id^="zip-btn-"] iconify-icon { display:none; }
+        #recent-sets-list .yt-dist-btn::before, #recent-sets-list .sc-dist-btn::before { content:""; width:8px; height:8px; border-radius:50%; background:#FF0000; flex-shrink:0; }
+        #recent-sets-list .sc-dist-btn::before { background:#FF5500; }
+        @media (hover:hover) {
+            #recent-sets-list [id^="zip-btn-"]:hover, #recent-sets-list .yt-dist-btn:hover, #recent-sets-list .sc-dist-btn:hover, #recent-sets-list .wm-apply:hover:not(:disabled), #recent-sets-list .wm-restore:hover:not(:disabled) {
+                background:var(--la-text) !important; color:var(--la-bg) !important; border-color:var(--la-text) !important; }
+        }
+        #recent-sets-list button[title="Download"], #recent-sets-list button[title="Play"] { width:34px !important; height:34px !important; border-radius:999px !important; border:1px solid color-mix(in srgb, var(--la-text) 18%, transparent); transition:background .2s ease, border-color .2s ease; }
+        #recent-sets-list button[title="Download"] iconify-icon, #recent-sets-list button[title="Play"] iconify-icon { color:var(--la-text) !important; font-size:15px; }
+        @media (hover:hover) { #recent-sets-list button[title="Download"]:hover, #recent-sets-list button[title="Play"]:hover { background:color-mix(in srgb, var(--la-text) 10%, transparent) !important; border-color:color-mix(in srgb, var(--la-text) 40%, transparent); } }
+        /* Status lines under each asset: quiet grey, sentence case */
+        #recent-sets-list p[id^="status-"], #recent-sets-list p.font-mono.text-primary.uppercase { color:var(--la-sub) !important; font:400 12px/1.4 'Helvetica Neue', Helvetica, Arial, sans-serif !important; letter-spacing:0 !important; text-transform:lowercase !important; margin-top:3px; }
+        #recent-sets-list p[id^="status-"]::first-letter, #recent-sets-list p.font-mono.text-primary.uppercase::first-letter { text-transform:uppercase; }
         .wm-apply { height:28px; padding:0 12px; border-radius:999px; border:1px solid var(--la-line); background:transparent; color:var(--la-text); font:500 11px Inter,ui-sans-serif,system-ui,sans-serif; cursor:pointer; white-space:nowrap; }
         .wm-apply:disabled { opacity:.6; cursor:default; }
         .wm-restore { height:28px; padding:0 12px; border-radius:999px; border:1px solid var(--la-line); background:transparent; color:var(--la-sub); font:500 11px Inter,ui-sans-serif,system-ui,sans-serif; cursor:pointer; white-space:nowrap; }
@@ -344,7 +363,7 @@
                                 '<p class="text-[10px] font-mono uppercase tracking-widest text-zinc-400 min-w-0 flex" style="gap:.6em"><span id="media-modal-title" class="truncate"></span><span id="media-modal-count" class="shrink-0 text-zinc-500"></span></p>' +
                                 '<div class="flex items-center gap-2 shrink-0">' +
                                     '<button id="media-share" class="mm-share" title="Share to Instagram, TikTok and more" onclick="shareMediaModal()">Share</button>' +
-                                    '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 text-primary transition-colors" title="Download" onclick="downloadMediaModal()"><iconify-icon icon="solar:download-bold"></iconify-icon></button>' +
+                                    '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 text-primary transition-colors" title="Download" onclick="downloadMediaModal()"><iconify-icon icon="solar:download-minimalistic-linear"></iconify-icon></button>' +
                                     '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-zinc-300 transition-colors" title="Close (Esc)" onclick="closeMediaModal()"><iconify-icon icon="solar:close-circle-linear" class="text-lg"></iconify-icon></button>' +
                                 '</div>' +
                             '</div>' +
@@ -1033,7 +1052,7 @@
             // Dynamically build sessions from Mux assets
             // passthrough "ARTIST NAME" = MASTER, "ARTIST NAME // TYPE" = sub-asset
             const assetTypes = [
-                { type: 'MASTER', label: '4K Long Form', ext: '.MKV/.MP4', icon: 'solar:play-bold', color: 'text-primary' },
+                { type: 'MASTER', label: '4K Long Form', ext: '.MKV/.MP4', icon: 'solar:play-linear', color: 'text-primary' },
                 { type: 'AUDIO', label: 'HQ Audio', ext: '.WAV/.MP3', icon: 'solar:music-note-bold', color: 'text-primary' },
                 { type: 'SOCIAL', label: 'Social Pack Verticals', ext: '.MP4', icon: 'solar:iphone-bold', color: 'text-primary' },
                 { type: 'THUMB', label: 'Marketing Thumbnails', ext: '.JPG / .PNG', icon: 'solar:gallery-minimalistic-bold', color: 'text-primary' },
@@ -1123,26 +1142,26 @@
                     html += '<div class="flex items-center gap-2 shrink-0">';
                     if (pid && dlFile) {
                         html += '<button id="dl-btn-' + uid + '" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download" onclick="singleZipDownload(\'' + pid + '\', \'' + dlFile + '\', \'' + dlExt + '\', \'' + safeLabel + '\', \'' + safeName + '\', \'' + jsq(sessionDate) + '\', this)">';
-                        html += '<iconify-icon icon="solar:download-bold" class="text-primary"></iconify-icon>';
+                        html += '<iconify-icon icon="solar:download-minimalistic-linear" class="text-primary"></iconify-icon>';
                         html += '</button>';
                         html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Play" onclick="' + (isAudioAsset ? 'toggleInlineAudio(\'aud-' + uid + '\')' : 'window.open(\'/player.html?v=' + pid + '&f=' + dlFile + '&title=\' + encodeURIComponent(\'' + safeLabel + '\'), \'_blank\')') + '">';
-                        html += '<iconify-icon icon="solar:play-bold" class="text-primary"></iconify-icon>';
+                        html += '<iconify-icon icon="solar:play-linear" class="text-primary"></iconify-icon>';
                         html += '</button>';
                         if (isMasterAsset) {
                             html += '<button id="yt-dist-' + uid + '" class="yt-dist-btn hidden" style="display:none;align-items:center;gap:4px;padding:3px 8px;border-radius:9999px;border:1px solid #FF0000;background:transparent;color:#FF0000;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;white-space:nowrap;" onclick="distributeYouTube(\'' + pid + '\', \'' + dlFile + '\', \'' + safeName + '\', \'' + uid + '\', \'' + jsq(sessionDate) + '\')" onmouseover="this.style.background=\'#FF0000\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'#FF0000\'">';
-                            html += ' YOUTUBE';
+                            html += 'YouTube';
                             html += '</button>';
                         }
                         if (isAudioAsset) {
                             html += '<button id="sc-dist-' + uid + '" class="sc-dist-btn hidden" style="display:none;align-items:center;gap:4px;padding:3px 8px;border-radius:9999px;border:1px solid #FF5500;background:transparent;color:#FF5500;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;white-space:nowrap;" onclick="distributeSoundCloud(\'' + pid + '\', \'' + dlFile + '\', \'' + safeName + '\', \'' + uid + '\')" onmouseover="this.style.background=\'#FF5500\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'#FF5500\'">';
-                            html += ' SOUNDCLOUD';
+                            html += 'SoundCloud';
                             html += '</button>';
                         }
                     } else if (pid) {
                         // Streamable now; the downloadable MP4 is still being generated by Mux
                         html += '<span class="text-[8px] font-mono text-yellow-500 uppercase" data-pending-asset>MP4 PREPARING</span>';
                         html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Play (stream)" onclick="' + (isAudioAsset ? 'toggleInlineAudio(\'aud-' + uid + '\')' : 'window.open(\'/player.html?v=' + pid + '&title=\' + encodeURIComponent(\'' + safeLabel + '\'), \'_blank\')') + '">';
-                        html += '<iconify-icon icon="solar:play-bold" class="text-primary"></iconify-icon>';
+                        html += '<iconify-icon icon="solar:play-linear" class="text-primary"></iconify-icon>';
                         html += '</button>';
                     } else {
                         html += '<span class="text-[8px] font-mono text-yellow-500 uppercase" data-pending-asset>PROCESSING</span>';
@@ -1186,7 +1205,7 @@
                     }
                     html += '<div class="flex items-center gap-2 shrink-0">';
                     html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors opacity-10" id="dl-' + uid + '" disabled title="No file yet">';
-                    html += '<iconify-icon icon="solar:download-bold" class="text-zinc-700"></iconify-icon>';
+                    html += '<iconify-icon icon="solar:download-minimalistic-linear" class="text-zinc-700"></iconify-icon>';
                     html += '</button>';
                     html += '</div>';
                     html += '</div>';
@@ -1415,19 +1434,19 @@
                 html += '<div class="flex items-center gap-2 shrink-0">';
                 if (readyUrls.length > 0) {
                     html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download" data-urls="' + urlsParam + '" data-title="' + escAttr(sessionName) + '" onclick="dlThumbs(this)">';
-                    html += '<iconify-icon icon="solar:download-bold" class="text-primary"></iconify-icon>';
+                    html += '<iconify-icon icon="solar:download-minimalistic-linear" class="text-primary"></iconify-icon>';
                     html += '</button>';
                     html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Preview" data-urls="' + urlsParam + '" data-idx="0" data-title="' + htmlTitle + '" onclick="openThumbModal(this)">';
-                    html += '<iconify-icon icon="solar:play-bold" class="text-primary"></iconify-icon>';
+                    html += '<iconify-icon icon="solar:play-linear" class="text-primary"></iconify-icon>';
                     html += '</button>';
                 } else {
                     var dim = hasAny ? 'opacity-30' : 'opacity-10';
                     var why = hasAny ? 'Processing' : 'No file yet';
                     html += '<button class="w-8 h-8 flex items-center justify-center rounded-full transition-colors ' + dim + '"' + (hasAny ? '' : ' id="dl-' + uid + '"') + ' disabled title="' + why + '">';
-                    html += '<iconify-icon icon="solar:download-bold" class="text-zinc-500"></iconify-icon>';
+                    html += '<iconify-icon icon="solar:download-minimalistic-linear" class="text-zinc-500"></iconify-icon>';
                     html += '</button>';
                     html += '<button class="w-8 h-8 flex items-center justify-center rounded-full transition-colors ' + dim + '" disabled title="' + why + '">';
-                    html += '<iconify-icon icon="solar:play-bold" class="text-zinc-500"></iconify-icon>';
+                    html += '<iconify-icon icon="solar:play-linear" class="text-zinc-500"></iconify-icon>';
                     html += '</button>';
                 }
                 html += '</div>';
@@ -1535,7 +1554,7 @@
                     if (hasAnyLinked) {
                         var safeName = jsq(artist.name);
                         html += '<button onclick="event.stopPropagation(); bulkDownload(\'' + safeName + '\', \'' + jsq(dateStr) + '\', this)" id="zip-btn-' + dateId + '" class="flex items-center gap-1.5 px-3 py-1 rounded-full border border-primary/30 hover:bg-primary/10 transition-colors" title="Download All">';
-                        html += '<span class="text-[8px] font-mono text-primary uppercase tracking-widest">DOWNLOAD</span>';
+                        html += '<span>Download</span>';
                         html += '</button>';
                     }
                     html += '';
