@@ -258,6 +258,30 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Accounts listed in several venues (VENUES_CONFIG) can switch between them.
+    // Account menu (avatar): name and email, the accounts to switch to, log out
+    var _LA_ICON = {
+        swap: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V9l8-5 8 5v12"/><path d="M9 21v-6h6v6"/></svg>',
+        check: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+        out: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4H5v16h5"/><path d="M14 8l4 4-4 4"/><path d="M18 12H9"/></svg>'
+    };
+    if (!document.getElementById('la-acct-css')) {
+        var _acs = document.createElement('style');
+        _acs.id = 'la-acct-css';
+        _acs.textContent =
+            '#la-auth-drop{font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;animation:laAcctIn .16s cubic-bezier(.22,1,.36,1)}' +
+            '@keyframes laAcctIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}' +
+            '.la-acct-head{padding:20px 22px 18px;border-bottom:1px solid var(--la-line,#3a3b40)}' +
+            '.la-acct-name{font-size:17px;font-weight:700;color:var(--la-text,#fafafa);line-height:1.25;word-break:break-word}' +
+            '.la-acct-mail{margin-top:6px;font-size:14px;color:var(--la-sub,#a1a1aa);word-break:break-all}' +
+            '.la-acct-group{padding:6px 0}' +
+            '.la-acct-group + .la-acct-group{border-top:1px solid var(--la-line,#3a3b40)}' +
+            '.la-acct-row{display:flex;align-items:center;gap:14px;width:100%;padding:12px 22px;background:none;border:0;color:var(--la-text,#fafafa);font:400 15px/1.2 "Helvetica Neue",Helvetica,Arial,sans-serif;text-align:left;cursor:pointer;transition:background .12s ease}' +
+            '.la-acct-row svg{flex-shrink:0;color:var(--la-sub,#a1a1aa)}' +
+            '.la-acct-row:hover:not(:disabled){background:color-mix(in srgb,var(--la-text,#fafafa) 6%,transparent)}' +
+            '.la-acct-row.cur{cursor:default;font-weight:600}' +
+            '.la-acct-row.cur svg{color:var(--la-accent,#39FF14)}';
+        document.head.appendChild(_acs);
+    }
     function _venueSwitcherHtml(session) {
         var venues = (Array.isArray(session.venues) ? session.venues.slice() : [])
             // local / assets (the admin account) first, then the clients A–Z
@@ -267,13 +291,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 return (bb - aa) || String(a.name || '').localeCompare(String(b.name || ''));
             });
         if (venues.length < 2) return '';
-        var html = '<div data-la-switcher style="padding:10px 16px;border-bottom:1px solid var(--la-line, #27272a);">' +
-            '<div style="font-size:8px;text-transform:uppercase;letter-spacing:.12em;color:var(--la-dim, #52525b);margin-bottom:6px;">Switch venue</div>';
+        var html = '<div data-la-switcher class="la-acct-group">';
         venues.forEach(function(v) {
             var current = v.slug === session.venueSlug;
-            html += '<button data-venue-slug="' + _esc(v.slug) + '" onclick="window.LA_SWITCH_VENUE(this.dataset.venueSlug)"' + (current ? ' disabled' : '') +
-                ' style="display:flex;align-items:center;gap:8px;width:100%;padding:6px 0;background:none;border:none;font-family:inherit;font-size:10px;text-transform:uppercase;letter-spacing:.08em;text-align:left;cursor:' + (current ? 'default' : 'pointer') + ';color:' + (current ? 'var(--la-accent, #39FF14)' : 'var(--la-sub, #a1a1aa)') + ';">' +
-                '<span style="width:6px;height:6px;border-radius:50%;background:' + (current ? 'var(--la-accent, #39FF14)' : 'var(--la-line, #3f3f46)') + ';flex-shrink:0;"></span>' + _esc(v.name) + '</button>';
+            html += '<button type="button" class="la-acct-row' + (current ? ' cur' : '') + '" data-venue-slug="' + _esc(v.slug) + '" onclick="window.LA_SWITCH_VENUE(this.dataset.venueSlug)"' + (current ? ' disabled aria-current="true"' : '') + '>' +
+                (current ? _LA_ICON.check : _LA_ICON.swap) + '<span>' + _esc(v.name) + '</span></button>';
         });
         return html + '</div>';
     }
@@ -378,32 +400,23 @@ document.addEventListener("DOMContentLoaded", () => {
         drop.style.cssText = [
             'position:fixed',
             'top:' + (rect.bottom + 8) + 'px',
-            'border-radius:12px',
+            'border-radius:8px',
             'overflow:hidden',
             'right:' + (window.innerWidth - rect.right) + 'px',
             'background:var(--la-raised, #0a0a0a)',
             'border:1px solid var(--la-line, #27272a)',
-            'min-width:230px',
+            'min-width:260px',
+            'max-width:min(340px, calc(100vw - 24px))',
             'z-index:99999',
-            'box-shadow:var(--la-shadow, 0 8px 40px rgba(0,0,0,0.95))',
-            'font-family:ui-monospace,monospace',
+            'box-shadow:0 18px 44px -16px rgba(0,0,0,.55)',
         ].join(';');
 
-        var venue = (session.venue || localStorage.getItem('la_venue_name') || 'LOCAL / ASSETS').toUpperCase();
+        var venue = session.venue || localStorage.getItem('la_venue_name') || 'local / assets';
 
         drop.innerHTML =
-            '<div style="padding:14px 16px;border-bottom:1px solid var(--la-line, #27272a);">' +
-                '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--la-text, #fff);margin-bottom:4px;">' + _esc(venue) + '</div>' +
-                '<div style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--la-dim, #52525b);">' + _esc(session.email || '') + '</div>' +
-            '</div>' +
+            '<div class="la-acct-head"><div class="la-acct-name">' + _esc(venue) + '</div><div class="la-acct-mail">' + _esc(session.email || '') + '</div></div>' +
             _venueSwitcherHtml(session) +
-            '<div style="padding:10px 16px;border-bottom:1px solid var(--la-line, #27272a);display:flex;align-items:center;justify-content:space-between;gap:12px;">' +
-                '<span style="font-size:8px;text-transform:uppercase;letter-spacing:.12em;color:var(--la-dim, #52525b);">Session expires</span>' +
-                '<span id="la-drop-timer" style="font-size:9px;color:var(--la-accent, #39FF14);letter-spacing:.08em;font-weight:700;">' + _sessionTimeStr(session.ts) + '</span>' +
-            '</div>' +
-            '<div style="padding:10px 16px;">' +
-                '<button onclick="window.LA_ADMIN_LOGOUT()" style="display:block;width:100%;padding:9px 0;background:var(--la-bad, #ef4444);color:#fff;border-radius:8px;font-family:inherit;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.15em;border:none;cursor:pointer;">SIGN OUT</button>' +
-            '</div>';
+            '<div class="la-acct-group"><button type="button" class="la-acct-row" onclick="window.LA_ADMIN_LOGOUT()">' + _LA_ICON.out + '<span>Log out</span></button></div>';
 
         document.body.appendChild(drop);
 
