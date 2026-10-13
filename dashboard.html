@@ -89,6 +89,9 @@
             display:inline-flex; align-items:center; justify-content:center; transition:background .25s ease, color .25s ease, border-color .25s ease !important; }
         #recent-sets-list [id^="zip-btn-"] span { font:inherit !important; color:inherit !important; letter-spacing:0 !important; text-transform:none !important; }
         #recent-sets-list [id^="zip-btn-"] iconify-icon { display:none; }
+        /* Not connected: grey, so it reads as off */
+        #recent-sets-list .yt-dist-btn.is-off, #recent-sets-list .sc-dist-btn.is-off { color:var(--la-dim) !important; border-color:color-mix(in srgb, var(--la-text) 20%, transparent) !important; background:transparent !important; }
+        @media (hover:hover) { #recent-sets-list .yt-dist-btn.is-off:hover, #recent-sets-list .sc-dist-btn.is-off:hover { color:var(--la-sub) !important; border-color:color-mix(in srgb, var(--la-text) 40%, transparent) !important; } }
         /* Posted to YouTube / SoundCloud: the link is filled in the platform's colour */
         #recent-sets-list a[id^="yt-dist-"], #recent-sets-list a[id^="sc-dist-"] { display:inline-flex !important; align-items:center; justify-content:center; gap:6px; height:34px; padding:0 16px !important; border-radius:999px !important; background:#FF0000 !important; border:1px solid #FF0000 !important; color:#fff !important; font:500 13px/1 'Helvetica Neue', Helvetica, Arial, sans-serif !important; letter-spacing:0 !important; text-transform:none !important; text-decoration:none !important; }
         #recent-sets-list a[id^="sc-dist-"] { background:#FF5500 !important; border-color:#FF5500 !important; }
@@ -2311,15 +2314,9 @@
 
 
             // Show/hide SoundCloud distribute buttons in distribution history
-            document.querySelectorAll('.sc-dist-btn').forEach(function(btn) {
-                if (scConnected) { btn.style.display = 'inline-flex'; btn.classList.remove('hidden'); }
-                else             { btn.style.display = 'none';        btn.classList.add('hidden');    }
-            });
+            document.querySelectorAll('.sc-dist-btn').forEach(function(btn) { setDistState(btn, scConnected, 'SoundCloud'); });
             // Show/hide YouTube distribute buttons in distribution history
-            document.querySelectorAll('.yt-dist-btn').forEach(function(btn) {
-                if (ytConnected) { btn.style.display = 'inline-flex'; btn.classList.remove('hidden'); }
-                else             { btn.style.display = 'none';        btn.classList.add('hidden');    }
-            });
+            document.querySelectorAll('.yt-dist-btn').forEach(function(btn) { setDistState(btn, ytConnected, 'YouTube'); });
 
             // Modal state — exactly one button per platform
             if (ytModalBtn)        ytModalBtn.classList.toggle('hidden', !!ytConnected);
@@ -2391,9 +2388,21 @@
             setTimeout(() => el.classList.add('hidden'), 6000);
         }
 
+        // YouTube / SoundCloud buttons are always shown: in their colour when the account is connected,
+        // grey when it isn't (a click then offers to connect it)
+        function setDistState(btn, connected, name) {
+            btn.style.display = 'inline-flex'; btn.classList.remove('hidden');
+            btn.classList.toggle('is-off', !connected);
+            btn.title = connected ? 'Post to ' + name : name + ' isn\'t connected: click to connect it';
+        }
+        async function offerConnect(name) {
+            if (!(await laConfirm({ title: 'Connect ' + name + '?', message: 'Connect your ' + name + ' account once, then post any set to it from here.', confirmText: 'Connect ' + name }))) return;
+            if (name === 'YouTube') connectYouTube(); else connectSoundCloud();
+        }
         async function distributeSoundCloud(playbackId, dlFile, title, uid) {
             var btn = document.getElementById('sc-dist-' + uid);
             if (!btn) return;
+            if (btn.classList.contains('is-off')) { offerConnect('SoundCloud'); return; }
 
             btn.disabled = true;
             btn.onmouseover = null;
@@ -2484,6 +2493,7 @@
         async function distributeYouTube(playbackId, dlFile, title, uid, sessionDate) {
             var btn = document.getElementById('yt-dist-' + uid);
             if (!btn) return;
+            if (btn.classList.contains('is-off')) { offerConnect('YouTube'); return; }
 
             btn.disabled = true;
             btn.onmouseover = null;
@@ -2583,14 +2593,8 @@
         }
 
         function updateDistributionButtons() {
-            document.querySelectorAll('.sc-dist-btn').forEach(function(btn) {
-                if (window._scConnected) { btn.style.display = 'inline-flex'; btn.classList.remove('hidden'); }
-                else                     { btn.style.display = 'none';        btn.classList.add('hidden');    }
-            });
-            document.querySelectorAll('.yt-dist-btn').forEach(function(btn) {
-                if (window._ytConnected) { btn.style.display = 'inline-flex'; btn.classList.remove('hidden'); }
-                else                     { btn.style.display = 'none';        btn.classList.add('hidden');    }
-            });
+            document.querySelectorAll('.sc-dist-btn').forEach(function(btn) { setDistState(btn, !!window._scConnected, 'SoundCloud'); });
+            document.querySelectorAll('.yt-dist-btn').forEach(function(btn) { setDistState(btn, !!window._ytConnected, 'YouTube'); });
         }
 
         // Bust revenue cache if returning from an OAuth connect flow
