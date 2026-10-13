@@ -133,7 +133,7 @@ export default async function handler(req, res) {
         for (const [k, v] of Object.entries(names || {})) if (k.startsWith('artist-') && v) artists.push(String(v).toUpperCase().trim());
         const statuses = await redis.hGetAll(`billing_status:${slug}`);
         // The account's own type from its Brand Kit (venue, artist, record label or management)
-        const accountType = (await redis.get(`account_type:${slug}`)) || getVenuesConfig()[slug]?.type || (/team$/i.test(String(getVenuesConfig()[slug]?.name || '')) ? 'management' : 'venue');
+        const accountType = (await redis.get(`brand_org_type:${slug}`)) || (await redis.get(`account_type:${slug}`)) || getVenuesConfig()[slug]?.type || (/team$/i.test(String(getVenuesConfig()[slug]?.name || '')) ? 'management' : 'venue');
         return { rates, plans, assignments, customer, usage, artists: [...new Set(artists)].sort(), labels, bkVenues, statuses, accountType };
       });
       const a = data.assignments[target] || {};
@@ -167,7 +167,7 @@ export default async function handler(req, res) {
         if (isAdmin) {
           await withRedis(async r => {
             for (const v of [...new Set(list.map(i => i.metadata.venueSlug))]) {
-              acctTypes[v] = (await r.get(`account_type:${v}`)) || cfg[v]?.type || (/team$/i.test(String(cfg[v]?.name || '')) ? 'management' : 'venue');
+              acctTypes[v] = (await r.get(`brand_org_type:${v}`)) || (await r.get(`account_type:${v}`)) || cfg[v]?.type || (/team$/i.test(String(cfg[v]?.name || '')) ? 'management' : 'venue');
               Object.assign(allStatuses, await r.hGetAll(`billing_status:${v}`));
             }
           });
@@ -344,7 +344,8 @@ export default async function handler(req, res) {
     if (body.action === 'setAccountType') {
       const t = String(body.accountType || '');
       if (!TYPE_LABEL[t]) return res.status(400).json({ error: 'Unknown type' });
-      await withRedis(r => r.set(`account_type:${slug}`, t));
+      // One type for the account, shared with its Brand Kit
+      await withRedis(r => Promise.all([r.set(`account_type:${slug}`, t), r.set(`brand_org_type:${slug}`, t)]));
       return res.status(200).json({ ok: true });
     }
 
