@@ -30,10 +30,10 @@ export const DEFAULT_PLANS = [
     features: ['Content intake & quality control', 'Up to 8 events processed / month', '12+ vertical social clips', 'Marketing thumbnails', '500 GB cloud storage'] },
   { id: 'starter-creative', name: 'Creative & Production · Starter', price: 5500, maxClips: 12, cameras: 1,
     included: { storedMinutes: 12000, deliveredMinutes: 100000, fileGB: 2000 },
-    features: ['1 camera included', 'Starlink Mini: the camera streams straight to the app, anywhere', '4K master recordings', 'HQ audio capture', '12 vertical social clips', 'Marketing thumbnails', 'Brand Kit watermark', '2 TB cloud storage'] },
+    features: ['1 camera included', 'Starlink Mini', '4K master recordings', 'HQ audio capture', '12 vertical social clips', 'Marketing thumbnails', 'Brand Kit watermark', '2 TB cloud storage'] },
   { id: 'liveset-creative', name: 'Creative & Production · Live-Set', price: 7500, maxClips: 0, cameras: 2,
     included: { storedMinutes: 60000, deliveredMinutes: 500000, fileGB: 20000 },
-    features: ['2 cameras included', 'Starlink Mini + Mac mini: a private network that streams from anywhere', '4K master recordings', 'HQ audio capture', 'Multi-camera auto edit, cut to the music', 'Unlimited vertical social clips', 'Marketing thumbnails & watermark', 'Quarterly performance reports', '20 TB cloud storage'] },
+    features: ['2 cameras included', 'Starlink Mini + Mac mini', '4K master recordings', 'HQ audio capture', 'Multi-camera auto edit, cut to the music', 'Unlimited vertical social clips', 'Marketing thumbnails & watermark', 'Quarterly performance reports', '20 TB cloud storage'] },
 ];
 export async function readPlans(redis) {
   try { const p = JSON.parse(await redis.get('billing_plans') || 'null'); return Array.isArray(p) && p.length ? p.map(x => { const d = DEFAULT_PLANS.find(z => z.id === x.id) || {}; return { ...x, features: (x.features && x.features.length ? x.features : d.features), cameras: x.cameras || d.cameras || 0, maxClips: x.maxClips != null ? x.maxClips : (d.maxClips != null ? d.maxClips : 5) }; }) : DEFAULT_PLANS; }
