@@ -48,6 +48,11 @@ export async function saveRegistryEntry(redis, slug, entry) {
   await refreshRegistry(redis);
 }
 if (process.env.REDIS_URL) await refreshRegistry();
+// Re-reads sign-ups and deleted accounts when the cached copy is older than a few seconds, so an
+// account the admin deletes disappears from every list straight away, not after the 60 s refresh
+export async function freshVenues(maxAgeMs = 5000) {
+  if (process.env.REDIS_URL && Date.now() - _registryAt > maxAgeMs) await (_registryLoading || refreshRegistry());
+}
 
 
 // ── VENUES_CONFIG helpers ─────────────────────────────────────────────────────

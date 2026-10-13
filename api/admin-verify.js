@@ -1,7 +1,8 @@
-import { findVenueByEmail } from './_venues.js';
+import { findVenueByEmail, freshVenues } from './_venues.js';
 
 // Access is granted only to emails listed in a venue in VENUES_CONFIG.
 export default async function handler(req, res) {
+  await freshVenues();
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return res.status(405).end();
 

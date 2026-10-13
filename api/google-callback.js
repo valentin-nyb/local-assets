@@ -1,9 +1,10 @@
 import { createClient } from 'redis';
 import crypto from 'crypto';
-import { findVenueByEmail, venueChoices } from './_venues.js';
+import { findVenueByEmail, venueChoices, freshVenues } from './_venues.js';
 import { signWebToken } from './_venues.js';
 
 export default async function handler(req, res) {
+  await freshVenues();
   const oauthCookie = parseCookie(req.headers.cookie || '').la_google_state || '';
   const [expectedState, intent = 'admin'] = oauthCookie.split('.');
   const clearState = 'la_google_state=; Path=/api/google-callback; HttpOnly; Secure; SameSite=Lax; Max-Age=0';

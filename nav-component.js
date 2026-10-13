@@ -265,7 +265,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 return (bb - aa) || String(a.name || '').localeCompare(String(b.name || ''));
             });
         if (venues.length < 2) return '';
-        var html = '<div style="padding:10px 16px;border-bottom:1px solid var(--la-line, #27272a);">' +
+        var html = '<div data-la-switcher style="padding:10px 16px;border-bottom:1px solid var(--la-line, #27272a);">' +
             '<div style="font-size:8px;text-transform:uppercase;letter-spacing:.12em;color:var(--la-dim, #52525b);margin-bottom:6px;">Switch venue</div>';
         venues.forEach(function(v) {
             var current = v.slug === session.venueSlug;
@@ -294,7 +294,16 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             var data = await res.json().catch(function() { return {}; });
             var cur = _getAdminSession();
-            if (res.ok && data.webToken && cur) { cur.webToken = data.webToken; cur.ts = Date.now(); localStorage.setItem('la_admin', JSON.stringify(cur)); }
+            if (res.ok && data.webToken && cur) {
+                cur.webToken = data.webToken; cur.ts = Date.now();
+                // Keep the venue switcher in step with the accounts that still exist
+                if (Array.isArray(data.venues)) {
+                    var changed = JSON.stringify(data.venues) !== JSON.stringify(cur.venues || []);
+                    cur.venues = data.venues;
+                    localStorage.setItem('la_admin', JSON.stringify(cur));
+                    if (changed) { var sw = document.querySelector('[data-la-switcher]'); if (sw) sw.outerHTML = _venueSwitcherHtml(cur); }
+                } else localStorage.setItem('la_admin', JSON.stringify(cur));
+            }
         } catch (e) {} finally { _refreshing = false; }
     }
     // An unpaid invoice pauses the account: a banner on every page with the way to pay

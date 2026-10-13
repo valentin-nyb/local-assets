@@ -1,6 +1,6 @@
 import { unpaidKey, readUnpaid } from './_suspend.js';
 import { createClient } from 'redis';
-import { getWebSessionAuth, getVenuesConfig, readRegistryRaw, saveRegistryEntry, sealSecret } from './_venues.js';
+import { getWebSessionAuth, getVenuesConfig, readRegistryRaw, saveRegistryEntry, sealSecret, freshVenues } from './_venues.js';
 import { venueAuth } from './_verticals.js';
 import {
   readRates, readPlans, cleanPlans, readAssignments, assignKey, venueUsage, venueArtists, priceUsage,
@@ -29,6 +29,7 @@ async function withRedis(fn) {
 function previousMonth() { const d = new Date(); return monthRange(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - 1, 15))); }
 
 export default async function handler(req, res) {
+  await freshVenues();
   res.setHeader('Cache-Control', 'no-store');
 
   // Monthly run: every bill-to marked monthly, for last month
