@@ -50,7 +50,7 @@ function masterArtist(rawPassthrough, tracks) {
             const o = JSON.parse(pt);
             const cam = String(o?.camera || 'MASTER').toUpperCase().trim();
             const artist = String(o?.artist || '').toUpperCase().trim();
-            return artist && cam === 'MASTER' ? artist : null;
+            return artist && !['AUDIO', 'SOCIAL', 'SOCIALRAW', 'THUMB'].includes(cam) ? artist : null;   // any camera: Master, Booth, PTZ
         } catch { return null; }
     }
     return isMasterAsset(pt) ? pt.toUpperCase() : null;

@@ -54,7 +54,6 @@ export default async function handler(req, res) {
     for (const a of out) if (a.id && !a.source) (seen[a.id] = seen[a.id] || new Set()).add(a._venue);
     const shared = {};
     for (const set of Object.values(seen)) if (set.size > 1) { const k = [...set].sort().join(' + '); shared[k] = (shared[k] || 0) + 1; }
-    console.log('[labels] admin', JSON.stringify(out.filter(a => !a.source && Number(a.duration) > 60).map(a => [a._venue, String(a.id).slice(-6), String(a.passthrough || '').slice(0, 90), Math.round(Number(a.duration)), new Date(Number(a.created_at) * 1000).toISOString().slice(0, 10)])));
     console.log('[list-assets] isolation', JSON.stringify({ keys: fp, videos: Object.fromEntries(Object.keys(fp).map(s => [s, out.filter(a => a._venue === s && !a.source).length])), shared }));
     return res.status(200).json(out);
   }
@@ -80,7 +79,7 @@ export default async function handler(req, res) {
         return res.status(r.status).json({ error: txt });
       }
       const { data } = await r.json();
-      console.error('[list-assets] page', page, '— items:', data?.length ?? 0, '| labels', JSON.stringify((data || []).filter(a => Number(a.duration) > 60).map(a => [String(a.id).slice(-6), String(a.passthrough || '').slice(0, 90), Math.round(Number(a.duration)), new Date(Number(a.created_at) * 1000).toISOString().slice(0, 10), (a.tracks || []).map(t => t.type).join('+')])));
+      console.error('[list-assets] page', page, '— items:', data?.length ?? 0);
       if (!data || data.length === 0) break;
       allAssets.push(...data);
       if (data.length < 100) break;

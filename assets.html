@@ -46,8 +46,9 @@
         #preview-container { background: #050505 !important; border-radius: 8px; padding: 12px; }
         #active-asset-display { background: #050505 !important; }
         #active-asset-display iframe { background: #050505 !important; }
-            .vault-card-header { position:relative; }
-        .vault-edit { position:absolute; top:0; right:0; height:32px; padding:0 14px; border-radius:8px; border:1px solid #27272a; background:transparent; color:#fafafa; font:700 11px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.06em; text-transform:uppercase; cursor:pointer; }
+            .vault-card-header { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
+        .vault-card-header > div { min-width:0; }
+        .vault-edit { order:2; flex-shrink:0; height:32px; padding:0 14px; border-radius:8px; border:1px solid #27272a; background:transparent; color:#fafafa; font:700 11px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.06em; text-transform:uppercase; cursor:pointer; }
         .vault-edit:hover { border-color:#39FF14; color:#39FF14; }
         .vault-artist { display:block; margin-top:4px; font:500 11px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif; font-style:normal; letter-spacing:.06em; color:#a1a1aa; }
         .vs-backdrop { position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,.7); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; padding:16px; }
@@ -270,7 +271,7 @@
 
         // One card per session, found the same way as Distribution History: every asset labelled with an
         // artist (and its date) belongs to that artist's session on that day; the card shows its 4K long form.
-        const SUB = new Set(['AUDIO', 'SOCIAL', 'SOCIALRAW', 'THUMB', 'BOOTH', 'PTZ01', 'PTZ02', 'PTZ03']);
+        const SUB = new Set(['AUDIO', 'SOCIAL', 'SOCIALRAW', 'THUMB']);   // any camera (Master, Booth, PTZ) is a long form
         const all = (Array.isArray(data) ? data : (data.data || [])).filter(a => !a.source);
         const sessions = new Map();
         for (const a of all) {
@@ -345,7 +346,7 @@
                     <div class="flex gap-4 pt-4">
                         ${pid ? `<button class="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-[9px] font-black hover:border-primary" 
                             onclick="event.stopPropagation(); showPreview('${pid}')">PLAY SESSION</button>` : ''}
-                        <span class="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-[9px] font-black text-primary">4K MASTER .MOV</span>
+                        <span class="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-[9px] font-black text-primary">4K LONG FORM</span>
                     </div>
                 </div>
             </div>`;
