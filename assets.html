@@ -69,8 +69,9 @@
         .ing-eyebrow { margin:0; font:500 10px/1 'JetBrains Mono', monospace; letter-spacing:.2em; text-transform:uppercase; color:var(--la-dim); }
         .ing-title { margin:8px 0 0; font:700 22px/1.15 'Helvetica Neue', Helvetica, Arial, sans-serif; text-transform:uppercase; color:var(--la-text); letter-spacing:.005em; }
         .ing-sub { margin:8px 0 0; max-width:620px; font:400 13px/1.55 'Helvetica Neue', Helvetica, Arial, sans-serif; color:var(--la-sub); }
-        .ing-fields { display:grid; grid-template-columns:1.1fr 1.4fr 1fr 1fr; gap:14px; }
-        @media (max-width:1180px) { .ing-fields { grid-template-columns:repeat(2, minmax(0,1fr)); } }
+        .ing-fields { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:14px; }
+        .ing-field.hidden { display:none; }
+        @media (max-width:1100px) { .ing-fields { grid-template-columns:repeat(2, minmax(0,1fr)); } }
         .ing-field { display:flex; flex-direction:column; gap:7px; min-width:0; }
         .ing-field span { font:700 10px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.08em; text-transform:uppercase; color:var(--la-sub); }
         .ing-field input, .ing-field select { height:46px; width:100%; border-radius:12px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 14px; font:500 14px 'Helvetica Neue', Helvetica, Arial, sans-serif; outline:none; transition:border-color .15s; }
@@ -171,6 +172,8 @@
                     <div class="ing-fields">
                         <label class="ing-field"><span>Artist</span><input type="text" id="ingest-name" placeholder="e.g. DJ Name" autocomplete="off"></label>
                         <label class="ing-field"><span>Session name</span><input type="text" id="ingest-title" maxlength="80" placeholder="e.g. Boiler Room Puglia" autocomplete="off"></label>
+                        <label class="ing-field"><span>Venue</span><select id="ingest-venue"><option value="">No venue</option><option value="__new">+ New venue…</option></select></label>
+                        <label class="ing-field hidden" id="ingest-venue-new-wrap"><span>New venue</span><input type="text" id="ingest-venue-new" maxlength="60" placeholder="e.g. Fabric London" autocomplete="off"></label>
                         <label class="ing-field"><span>Date of the set</span><input type="text" id="ingest-date" placeholder="Choose a date"></label>
                         <label class="ing-field"><span>Camera</span><select id="ingest-shot">
                             <option value="MASTER">Main camera</option>
@@ -271,6 +274,20 @@
             updateNodeForCamera(_camera);
         }
 
+        // Venues from the Brand Kit, or a new one (saved to the Brand Kit on upload)
+        (async function loadVenues() {
+            try {
+                const r = await laFetch('/api/brand'), d = await r.json();
+                const names = Object.entries(d.ownerNames || {}).filter(([k]) => k.startsWith('venue-')).map(([, v]) => v).filter(Boolean).sort((a, b) => a.localeCompare(b));
+                const sel = document.getElementById('ingest-venue');
+                sel.innerHTML = '<option value="">No venue</option>' + names.map(n => '<option>' + String(n).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]) + '</option>').join('') + '<option value="__new">+ New venue…</option>';
+            } catch (_) {}
+        })();
+        document.getElementById('ingest-venue').addEventListener('change', function() {
+            const isNew = this.value === '__new';
+            document.getElementById('ingest-venue-new-wrap').classList.toggle('hidden', !isNew);
+            if (isNew) document.getElementById('ingest-venue-new').focus();
+        });
         document.getElementById('ingest-shot').addEventListener('change', function() {
             updateNodeForCamera(this.value);
         });
@@ -287,7 +304,14 @@
             uploadBtn.textContent = 'Connecting…';
             // The session's name, saved like "Edit session" does, so it shows as soon as the upload is in
             const title = document.getElementById('ingest-title').value.trim();
-            if (title) laFetch('/api/session-meta', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ artist, date: dateVal, title }) }).catch(() => {});
+            const vSel = document.getElementById('ingest-venue').value;
+            const venue = vSel === '__new' ? document.getElementById('ingest-venue-new').value.trim() : vSel;
+            if (title || venue) laFetch('/api/session-meta', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ artist, date: dateVal, title, venue }) }).catch(() => {});
+            // A new venue joins the Brand Kit's venues
+            if (vSel === '__new' && venue) {
+                const key = 'venue-' + venue.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50);
+                if (key !== 'venue-') laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setOwnerName', owner: key, name: venue }) }).catch(() => {});
+            }
 
             try {
                 const response = await laFetch('/api/get-upload-url', {
