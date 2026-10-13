@@ -1,12 +1,25 @@
 import { createClient } from 'redis';
 import crypto from 'crypto';
-import { findVenueByEmail } from './_venues.js';
+import { findVenueByEmail, getWebSessionAuth } from './_venues.js';
 
 const REDIRECT_URI = 'https://local-assets.com/api/soundcloud-callback';
 
 export default async function handler(req, res) {
-  const email = req.query.email || req.headers['x-user-email'] || '';
-  if (!email) return res.status(401).json({ error: 'Email required' });
+  // Who is connecting comes from a real sign-in only: the dashboard session token, or the client portal
+  // session cookie. An email in the link or a header is never trusted (anyone could type another's).
+  let email = getWebSessionAuth(req)?.email || '';
+  if (!email) {
+    const sid = /(?:^|;\s*)la_session=([^;]+)/.exec(req.headers.cookie || '')?.[1];
+    if (sid) {
+      const r = createClient({ url: process.env.REDIS_URL });
+      await r.connect();
+      try {
+        const clientId = await r.get(`session:${decodeURIComponent(sid)}`);
+        if (clientId) email = String(await r.hGet(`client:${clientId}`, 'email') || '');
+      } finally { await r.quit().catch(() => {}); }
+    }
+  }
+  if (!email) return res.status(401).json({ error: 'Sign in first, then connect SoundCloud.' });
 
   const venue = findVenueByEmail(email);
   if (!venue) return res.status(403).json({ error: 'No venue found for this email' });

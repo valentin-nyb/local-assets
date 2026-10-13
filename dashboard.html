@@ -662,6 +662,8 @@
             m.shownDate = m.date || date;   // the one date to show for this session
             return m;
         }
+        // A value inside a JS string in an inline handler: every quote and HTML character as a \u escape
+        function jsq(v) { return String(v == null ? '' : v).replace(/[\\'"<>&\r\n\u2028\u2029`]/g, function(c) { return '\\u' + ('000' + c.charCodeAt(0).toString(16)).slice(-4); }); }
         function escHtml(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 
         // Delete one clip or thumbnail (from Mux, or from storage for uploaded thumbnails),
@@ -1106,8 +1108,8 @@
                 var linkedLabel = isLinked && !pid ? 'IN VAULT — PROCESSING' : (srReady || srStatus === 'ready') ? 'IN VAULT — UPLOADED' : (srFiles.some(function(f){ return f.status === 'preparing'; }) || srStatus === 'preparing') ? 'IN VAULT — READY TO STREAM · MP4 PREPARING' : 'IN VAULT — UPLOADED';
                 var html = '';
                 if (isLinked) {
-                    var safeLabel = asset.label.replace(/'/g, "\\'");
-                    var safeName = sessionName.replace(/'/g, "\\'");
+                    var safeLabel = jsq(asset.label);
+                    var safeName = jsq(sessionName);
                     html += '<div class="p-4 pl-16 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-' + uid + '" style="border-left: 2px solid var(--la-accent);">';
                     html += '<div class="flex items-center gap-4 flex-1 min-w-0">';
                     html += '<div class="w-8 h-8 bg-zinc-900/50 flex items-center justify-center rounded-lg border border-primary/50 shrink-0">';
@@ -1120,14 +1122,14 @@
                     html += '</div>';
                     html += '<div class="flex items-center gap-2 shrink-0">';
                     if (pid && dlFile) {
-                        html += '<button id="dl-btn-' + uid + '" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download" onclick="singleZipDownload(\'' + pid + '\', \'' + dlFile + '\', \'' + dlExt + '\', \'' + safeLabel + '\', \'' + safeName + '\', \'' + sessionDate + '\', this)">';
+                        html += '<button id="dl-btn-' + uid + '" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Download" onclick="singleZipDownload(\'' + pid + '\', \'' + dlFile + '\', \'' + dlExt + '\', \'' + safeLabel + '\', \'' + safeName + '\', \'' + jsq(sessionDate) + '\', this)">';
                         html += '<iconify-icon icon="solar:download-bold" class="text-primary"></iconify-icon>';
                         html += '</button>';
                         html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Play" onclick="' + (isAudioAsset ? 'toggleInlineAudio(\'aud-' + uid + '\')' : 'window.open(\'/player.html?v=' + pid + '&f=' + dlFile + '&title=\' + encodeURIComponent(\'' + safeLabel + '\'), \'_blank\')') + '">';
                         html += '<iconify-icon icon="solar:play-bold" class="text-primary"></iconify-icon>';
                         html += '</button>';
                         if (isMasterAsset) {
-                            html += '<button id="yt-dist-' + uid + '" class="yt-dist-btn hidden" style="display:none;align-items:center;gap:4px;padding:3px 8px;border-radius:9999px;border:1px solid #FF0000;background:transparent;color:#FF0000;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;white-space:nowrap;" onclick="distributeYouTube(\'' + pid + '\', \'' + dlFile + '\', \'' + safeName + '\', \'' + uid + '\', \'' + sessionDate + '\')" onmouseover="this.style.background=\'#FF0000\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'#FF0000\'">';
+                            html += '<button id="yt-dist-' + uid + '" class="yt-dist-btn hidden" style="display:none;align-items:center;gap:4px;padding:3px 8px;border-radius:9999px;border:1px solid #FF0000;background:transparent;color:#FF0000;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;white-space:nowrap;" onclick="distributeYouTube(\'' + pid + '\', \'' + dlFile + '\', \'' + safeName + '\', \'' + uid + '\', \'' + jsq(sessionDate) + '\')" onmouseover="this.style.background=\'#FF0000\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'#FF0000\'">';
                             html += ' YOUTUBE';
                             html += '</button>';
                         }
@@ -1166,7 +1168,7 @@
                         html += '<p class="text-[10px] font-bold text-zinc-300 uppercase" id="label-' + uid + '">' + asset.label + '</p>';
                         html += '<p class="text-[8px] font-mono text-zinc-600 uppercase" id="status-' + uid + '">' + asset.ext + ' FORMAT — TAP TO UPLOAD</p>';
                         html += '</div>';
-                        html += '<input type="file" accept="' + accept + '" class="hidden" id="file-' + uid + '" onchange="handleAssetUpload(\'' + uid + '\', this, \'' + sessionName + '\', \'' + sessionDate + '\')">';
+                        html += '<input type="file" accept="' + accept + '" class="hidden" id="file-' + uid + '" onchange="handleAssetUpload(\'' + uid + '\', this, \'' + jsq(sessionName) + '\', \'' + jsq(sessionDate) + '\')">';
                         html += '</label>';
                     } else {
                         // All asset types: inline file picker for direct upload on dashboard
@@ -1179,7 +1181,7 @@
                         html += '<p class="text-[10px] font-bold text-zinc-300 uppercase" id="label-' + uid + '">' + asset.label + '</p>';
                         html += '<p class="text-[8px] font-mono text-zinc-600 uppercase" id="status-' + uid + '">' + asset.ext + ' FORMAT — TAP TO UPLOAD</p>';
                         html += '</div>';
-                        html += '<input type="file" accept="' + accept + '"' + (allowMultiple ? ' multiple' : '') + ' class="hidden" id="file-' + uid + '" onchange="handleAssetUpload(\'' + uid + '\', this, \'' + sessionName + '\', \'' + sessionDate + '\')">';
+                        html += '<input type="file" accept="' + accept + '"' + (allowMultiple ? ' multiple' : '') + ' class="hidden" id="file-' + uid + '" onchange="handleAssetUpload(\'' + uid + '\', this, \'' + jsq(sessionName) + '\', \'' + jsq(sessionDate) + '\')">';
                         html += '</label>';
                     }
                     html += '<div class="flex items-center gap-2 shrink-0">';
@@ -1385,7 +1387,7 @@
                     statusText = '.JPG / .PNG — TAP TO UPLOAD (MAX 20)';
                 }
                 var label = hasAny ? 'Marketing Thumbnails (' + thumbAssets.length + ')' : asset.label;
-                var safeName = sessionName.replace(/'/g, "\\'");
+                var safeName = jsq(sessionName);
                 var accent = 'var(--la-accent)';
                 var htmlTitle = escAttr(sessionName + ' MARKETING THUMBNAILS');
                 var urlsParam = escAttr(JSON.stringify(readyUrls));
@@ -1405,7 +1407,7 @@
                 html += '<p class="text-[8px] font-mono ' + (hasAny ? 'text-primary' : 'text-zinc-600') + ' uppercase" id="status-' + uid + '">' + statusText + '</p>';
                 html += '</div>';
                 if (canUploadMore) {
-                    html += '<input type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" class="hidden" id="file-' + uid + '" multiple onchange="handleAssetUpload(\'' + uid + '\', this, \'' + safeName + '\', \'' + sessionDate + '\')">';
+                    html += '<input type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" class="hidden" id="file-' + uid + '" multiple onchange="handleAssetUpload(\'' + uid + '\', this, \'' + safeName + '\', \'' + jsq(sessionDate) + '\')">';
                     html += '</label>';
                 } else {
                     html += '</div>';
@@ -1483,7 +1485,7 @@
                 html += '<span class="text-[11px] font-bold text-zinc-400">' + escHtml(String(artist.name).replace(/[^A-Za-z0-9 ]/g, '').split(/\s+/).map(function(w) { return w[0] || ''; }).join('').slice(0, 2).toUpperCase()) + '</span>';
                 html += '</div>';
                 html += '<div>';
-                html += '<p class="text-sm font-black text-white uppercase tracking-tight">' + artist.name + '</p>';
+                html += '<p class="text-sm font-black text-white uppercase tracking-tight">' + escHtml(artist.name) + '</p>';
                 html += '<p class="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">' + dateCount + ' SESSION' + (dateCount !== 1 ? 'S' : '') + '</p>';
                 html += '</div>';
                 html += '</div>';
@@ -1529,10 +1531,10 @@
                     html += '</div>';
                     html += '</div>';
                     html += '<div class="flex items-center gap-2">';
-                    html += '<button type="button" onclick="event.stopPropagation(); editSession(this)" data-artist="' + escHtml(artist.name) + '" data-date="' + dateStr + '" class="se-edit" title="Edit session name and venue"><iconify-icon icon="solar:pen-linear"></iconify-icon></button>';
+                    html += '<button type="button" onclick="event.stopPropagation(); editSession(this)" data-artist="' + escHtml(artist.name) + '" data-date="' + escHtml(dateStr) + '" class="se-edit" title="Edit session name and venue"><iconify-icon icon="solar:pen-linear"></iconify-icon></button>';
                     if (hasAnyLinked) {
-                        var safeName = artist.name.replace(/'/g, "\\'");
-                        html += '<button onclick="event.stopPropagation(); bulkDownload(\'' + safeName + '\', \'' + dateStr + '\', this)" id="zip-btn-' + dateId + '" class="flex items-center gap-1.5 px-3 py-1 rounded-full border border-primary/30 hover:bg-primary/10 transition-colors" title="Download All">';
+                        var safeName = jsq(artist.name);
+                        html += '<button onclick="event.stopPropagation(); bulkDownload(\'' + safeName + '\', \'' + jsq(dateStr) + '\', this)" id="zip-btn-' + dateId + '" class="flex items-center gap-1.5 px-3 py-1 rounded-full border border-primary/30 hover:bg-primary/10 transition-colors" title="Download All">';
                         html += '<span class="text-[8px] font-mono text-primary uppercase tracking-widest">DOWNLOAD</span>';
                         html += '</button>';
                     }
