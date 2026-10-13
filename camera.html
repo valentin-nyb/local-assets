@@ -233,7 +233,6 @@
         .cam-acct { display:flex; flex-direction:column; gap:6px; margin-left:auto; }
         .cam-acct span { font:700 10px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.08em; text-transform:uppercase; color:var(--la-dim); }
         .cam-acct select { height:38px; min-width:220px; max-width:100%; padding:0 34px 0 12px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); font:700 12px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.04em; text-transform:uppercase; cursor:pointer; }
-        .cam-admin-ex .ci-actions, .cam-admin-ex .ci-note, .cam-admin-ex .ci-steps { display:none; }
         @media (max-width:640px) { .cam-acct { margin-left:0; width:100%; } .cam-acct select { width:100%; } }
         .cam-ctl { color:var(--la-accent) !important; font-weight:600; }
         .cam-relay { display:flex; align-items:center; gap:10px; font:700 10px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.08em; text-transform:uppercase; color:var(--la-dim); margin-top:-8px; }
@@ -253,7 +252,7 @@
         .ctl-title { margin:4px 0 0; font:700 18px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif; text-transform:uppercase; color:var(--la-text); }
         .ctl-relay { font:700 10px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.08em; text-transform:uppercase; color:var(--la-dim); }
         .ctl-relay.on { color:var(--la-ok); }
-        .ctl-stage { aspect-ratio:16/9; background:#000; border-radius:12px; overflow:hidden; border:1px solid var(--la-line); }
+        .ctl-stage { position:relative; aspect-ratio:16/9; background:#000; border-radius:12px; overflow:hidden; border:1px solid var(--la-line); }
         .ctl-stage .cam-off { height:100%; }
         .ctl-msg { margin:12px 0 0; font-size:12px; line-height:1.5; color:var(--la-warn); }
         .ctl-msg.hidden { display:none; }
@@ -281,14 +280,10 @@
         .ctl-fine { margin:16px 0 0; font-size:11px; color:var(--la-dim); }
         @media (max-width: 760px) { .ctl-grid { grid-template-columns:repeat(2, minmax(0,1fr)); } }
         @media (max-width: 420px) { .ctl-grid { grid-template-columns:minmax(0,1fr); } }
-        .ci-ctl { margin-top:28px; padding-top:22px; border-top:1px solid var(--la-line-soft); }
-        .ci-ctl:empty { display:none; }
         .ctl-inline .ctl-head { margin-bottom:12px; }
         .ctl-inline .ctl-grid { grid-template-columns:repeat(2, minmax(0,1fr)); gap:20px 22px; }
         .ctl-inline .ctl-pad { max-width:200px; }
         @media (max-width: 520px) { .ctl-inline .ctl-grid { grid-template-columns:minmax(0,1fr); } }
-        .cam-admin-ex .ci-copy > .cam-eyebrow, .cam-admin-ex .ci-title, .cam-admin-ex .ci-text { display:none; }
-        .cam-admin-ex .ci-ctl { margin-top:0; padding-top:0; border-top:none; }
         .ctl-relay.ex { height:20px; padding:0 8px; display:inline-flex; align-items:center; border:1px solid var(--la-line); border-radius:999px; font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.14em; }
         .cam-grid > .ctl-full { grid-column:1 / -1; }
         .ctl-full { border:1px solid var(--la-line); background:var(--la-surface); border-radius:20px; padding:24px; }
@@ -357,7 +352,6 @@
                             <button type="button" class="cam-btn ghost" onclick="openOrderCameras()">Order cameras · buy or hire</button>
                         </div>
                         <p class="ci-note">Setup and integration included with every camera ordered from us.</p>
-                        <div class="ci-ctl" id="ci-ctl"></div>
                     </div>
 
                     <div class="ci-example" aria-label="Example of a connected camera">
@@ -365,9 +359,8 @@
                         <div class="cam-card">
                             <div class="cam-stage" id="ci-stage"><div class="ci-stage-fallback"></div></div>
                             <div class="cam-meta"><span class="cam-label">CAM 01 // MAIN FLOOR</span><span class="cam-pill on">LIVE · REC</span></div>
-                            <div class="cam-chips"><span class="cam-chip">OBSBOT Tail 2</span><span class="cam-chip ndi">NDI · MAIN FLOOR</span><span class="cam-chip">192.168.1.50</span></div>
-                            <div class="cam-onstage" style="cursor:default"><span style="min-width:0"><span class="lbl">ON STAGE</span><span class="val" id="ci-artist">ARTIST NAME</span></span><span class="go">From calendar</span></div>
-                            <div class="cam-row-actions"><button type="button" class="cam-link cam-ctl" onclick="openControl(exampleCam())">Control</button><span class="cam-link">Camera page</span><span class="cam-link">Stream setup</span><span class="cam-link">Edit</span><span class="cam-link danger">Remove</span></div>
+                            <div class="cam-chips"><span class="cam-chip">OBSBOT Tail 2</span><span class="cam-chip ndi">NDI · MAIN FLOOR</span></div>
+                            <div class="cam-onstage" style="cursor:default"><span style="min-width:0"><span class="lbl">ON STAGE</span><span class="val" id="ci-artist">ARTIST NAME</span></span><span class="go">Recording + clips</span></div>
                         </div>
                         <div class="ci-arrow"><span>When the stream stops</span></div>
                         <div class="ci-result">
@@ -629,19 +622,8 @@
                 if (m) { var t = Math.round(Number(m.duration) * 0.4); cb('https://image.mux.com/' + m.playback_ids[0].id + '/animated.webp?start=' + t + '&end=' + (t + 5) + '&width=640&fps=12'); }
             }).catch(function() {});
         }
-        // The example camera (the Control panel opened from the example card)
-        function exampleCam() {
-            var img = document.querySelector('#ci-stage img');
-            return { id: 'example', name: 'Main floor', demo: true, ip: '192.168.1.50', picture: img ? img.src : '' };
-        }
-        function paintExampleControls() {
-            var box = document.getElementById('ci-ctl');
-            if (box && !box.dataset.done) { box.dataset.done = '1'; openControl({ id: 'example', name: 'Main floor', demo: true, ip: '192.168.1.50' }, box); }
-        }
-
         // The intro's example card uses this venue's latest session, when there is one
         function fillIntroExample(venueSlug) {
-            paintExampleControls();
             // The example clips always show the local / assets logo and a placeholder name
             document.querySelectorAll('.ci-wm').forEach(function(w) { w.classList.add('has-logo'); w.style.backgroundImage = 'url(/logos/a-white.png)'; w.innerHTML = '&#8203;'; });
             // Until the account's latest session loads: the account's name
@@ -668,8 +650,6 @@
                 // Short silent loops from the session (animated WebP: plays like a GIF, smaller)
                 var loop = function(t, w) { var a = Math.round(t); return 'https://image.mux.com/' + pid + '/animated.webp?start=' + a + '&end=' + (a + 4) + '&width=' + w + '&fps=10'; };
                 document.getElementById('ci-stage').innerHTML = '<img alt="" class="ci-loop" src="' + loop(dur * 0.45, 480) + '">';
-                var cs = document.querySelector('#ci-ctl #ctl-stage');
-                if (cs) cs.innerHTML = '<img alt="" class="ci-loop" src="' + loop(dur * 0.3, 640) + '" style="width:100%;height:100%;object-fit:cover">';
                 document.querySelectorAll('#ci-branded i').forEach(function(t, i) {
                     var img = document.createElement('img');
                     img.alt = ''; img.className = 'ci-loop'; img.loading = 'lazy';
