@@ -538,122 +538,101 @@
         setInterval(update, 1000);
     });
     </script>
-    <div class="text-center mb-10 reveal active">
-        <p class="font-mono text-xs tracking-[0.3em] text-primary mb-4">[ SELECT YOUR TIER ]</p>
-        <h2 class="md:text-6xl text-foreground text-4xl font-semibold tracking-tight mb-8">INFRASTRUCTURE TIERS</h2>
-        
-        <div class="inline-flex bg-[#111] border border-border rounded-full p-1 gap-1 mb-8">
-            <button onclick="togglePricing('distribution')" id="toggle-distro" class="px-6 py-2 rounded-full text-xs font-mono font-semibold tracking-wider transition-all text-muted-foreground hover:text-white">DISTRIBUTION ONLY</button>
-            <button onclick="togglePricing('creative')" id="toggle-creative" class="px-6 py-2 rounded-full text-xs font-mono font-semibold tracking-wider transition-all bg-primary text-black">CREATIVE &amp; PRODUCTION</button>
+    <style>
+        .tr-top { text-align:center; margin-bottom:44px; }
+        .tr-top h2 { font:900 clamp(34px,6vw,64px)/1 'Helvetica Neue', Helvetica, Arial, sans-serif; text-transform:uppercase; color:#fff; margin:0 0 14px; }
+        .tr-top p { font:400 16px/1.5 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#a1a1aa; margin:0 0 26px; }
+        .tr-toggle { display:inline-flex; gap:2px; padding:4px; border:1px solid rgba(250,250,250,.24); border-radius:999px; }
+        .tr-toggle button { height:40px; padding:0 20px; border:0; border-radius:999px; background:none; color:#e4e4e7; font:500 14px 'Helvetica Neue', Helvetica, Arial, sans-serif; cursor:pointer; transition:background .25s ease, color .25s ease; }
+        .tr-toggle button.on { background:#fafafa; color:#000; }
+        .tr-toggle small { display:block; font-size:11px; font-weight:400; opacity:.65; margin-top:1px; }
+        .tr-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; align-items:stretch; }
+        .tr-card { position:relative; display:flex; flex-direction:column; padding:28px; border:1px solid #27272a; border-radius:18px; background:#0a0a0a; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; }
+        .tr-feat { border-color:#39FF14; box-shadow:0 0 0 1px rgba(57,255,20,.25), 0 30px 60px -30px rgba(57,255,20,.18); }
+        .tr-badge { position:absolute; top:-12px; left:28px; padding:4px 10px; border-radius:999px; background:#39FF14; color:#000; font:600 11px 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+        .tr-name { font-size:15px; font-weight:600; color:#e4e4e7; margin:0; }
+        .tr-price { display:flex; align-items:baseline; gap:8px; margin-top:10px; }
+        .tr-price b { font-size:44px; font-weight:800; letter-spacing:-.02em; color:#fff; line-height:1; }
+        .tr-price span { font-size:14px; color:#71717a; }
+        .tr-for { margin:12px 0 4px; font-size:14px; line-height:1.5; color:#a1a1aa; }
+        .tr-h { margin:20px 0 10px; padding-top:16px; border-top:1px solid #1f1f22; font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#71717a; }
+        .tr-card ul { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:9px; }
+        .tr-card li { display:flex; gap:10px; font-size:14px; line-height:1.4; color:#e4e4e7; }
+        .tr-card li svg { width:16px; height:16px; flex-shrink:0; margin-top:1px; color:#39FF14; }
+        .tr-stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+        .tr-stats div { padding:10px; border:1px solid #1f1f22; border-radius:10px; }
+        .tr-stats b { display:block; font-size:16px; font-weight:700; color:#fff; }
+        .tr-stats span { display:block; margin-top:3px; font-size:11px; line-height:1.3; color:#71717a; }
+        .tr-btn { position:relative; overflow:hidden; isolation:isolate; margin-top:26px; height:46px; display:flex; align-items:center; justify-content:center; border-radius:999px; border:1px solid rgba(250,250,250,.3); background:transparent; color:#fff; font:500 14px 'Helvetica Neue', Helvetica, Arial, sans-serif; cursor:pointer; text-decoration:none; transition:color .3s cubic-bezier(.65,0,.35,1), border-color .3s; }
+        .tr-card > .tr-btn { margin-top:auto; }
+        .tr-card .tr-btn { margin-top:26px; }
+        .tr-btn::before { content:""; position:absolute; inset:-1px; z-index:-1; border-radius:inherit; background:#fafafa; transform:scaleX(0); transform-origin:right center; transition:transform .42s cubic-bezier(.65,0,.35,1); }
+        .tr-btn-main { background:#39FF14; border-color:#39FF14; color:#000; }
+        .tr-btn-main::before { background:#0a0a0a; }
+        @media (hover:hover) { .tr-btn:hover { color:#000; border-color:#fafafa; } .tr-btn:hover::before { transform:scaleX(1); transform-origin:left center; } .tr-btn-main:hover { color:#39FF14; border-color:#39FF14; } }
+        .tr-spacer { flex:1; }
+        @media (max-width:1000px) { .tr-grid { grid-template-columns:minmax(0,1fr); max-width:520px; margin:0 auto; } }
+    </style>
+    <div class="tr-top reveal active">
+        <h2>Plans</h2>
+        <p>Already filming your sets? Choose Distribution. Want us to film them too? Choose Creative &amp; Production.</p>
+        <div class="tr-toggle" role="group" aria-label="Plan type">
+            <button type="button" onclick="togglePricing('distribution')" id="toggle-distro">Distribution<small>You film, we do the rest</small></button>
+            <button type="button" onclick="togglePricing('creative')" id="toggle-creative" class="on">Creative &amp; Production<small>We film it for you</small></button>
         </div>
     </div>
 
     <div class="max-w-7xl mx-auto reveal delay-200 active">
-        
-        <div id="pricing-distribution" class="hidden grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="relative flex flex-col p-6 md:p-8 border border-border bg-card">
-                <h3 class="text-muted-foreground text-sm tracking-wider font-mono mb-6 uppercase">Starter</h3>
-                <div class="mb-4">
-                    <span class="md:text-5xl text-foreground text-4xl font-semibold">£2,750</span>
-                    <span class="text-muted-foreground text-lg">/mo</span>
-                </div>
-                <ul class="space-y-3 text-sm text-muted-foreground font-mono mb-8">
-                    <li>Content intake & quality control</li>
-                    <li>Up to 8 events processed / month</li>
-                    <li>6 vertical social clips</li>
-                    <li>250 GB cloud storage</li>
-                </ul>
-                <button onclick="selectTier('starter-distribution')" class="mt-auto w-full py-4 font-mono text-sm border border-border text-foreground hover:border-primary hover:text-primary uppercase">Select Tier</button>
+        <div id="pricing-distribution" class="hidden tr-grid">
+            <div class="tr-card">
+                
+                <p class="tr-name">Starter</p>
+                <div class="tr-price"><b>£2,750</b><span>/ month</span></div>
+                <p class="tr-for">For venues and artists who already film their sets.</p>
+                <p class="tr-h">Every set gives you</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Your recording checked and kept safe in your vault</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>6 vertical clips, ready for Reels, TikTok and Shorts</span></li></ul><p class="tr-h">Each month</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Up to 8 sets processed</span></li></ul><p class="tr-h">Included every month</p><div class="tr-stats"><div><b>50 h</b><span>of sets stored</span></div><div><b>≈ 415 h</b><span>watched or downloaded</span></div><div><b>250 GB</b><span>of brand files</span></div></div>
+                <span class="tr-spacer"></span><button type="button" onclick="selectTier('starter-distribution')" class="tr-btn">Choose this plan</button>
             </div>
-
-            <div class="relative flex flex-col p-6 md:p-8 border border-border bg-card">
-                <h3 class="text-muted-foreground text-sm tracking-wider font-mono mb-6 uppercase">Pro</h3>
-                <div class="mb-4">
-                    <span class="md:text-5xl text-foreground text-4xl font-semibold">£3,500</span>
-                    <span class="text-muted-foreground text-lg">/mo</span>
-                </div>
-                <ul class="space-y-3 text-sm text-muted-foreground font-mono mb-8">
-                    <li>Content intake & quality control</li>
-                    <li>Up to 8 events processed / month</li>
-                    <li>12+ vertical social clips</li>
-                    <li>Marketing thumbnails</li>
-                    <li>500 GB cloud storage</li>
-                </ul>
-                <button onclick="selectTier('liveset-distribution')" class="mt-auto w-full py-4 font-mono text-sm border border-border text-foreground hover:border-primary hover:text-primary uppercase">Select Tier</button>
+            <div class="tr-card tr-feat">
+                <span class="tr-badge">Most popular</span>
+                <p class="tr-name">Pro</p>
+                <div class="tr-price"><b>£3,500</b><span>/ month</span></div>
+                <p class="tr-for">For venues and labels posting every week.</p>
+                <p class="tr-h">Every set gives you</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Your recording checked and kept safe in your vault</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>12 vertical clips per set</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Marketing thumbnails for every set</span></li></ul><p class="tr-h">Each month</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Up to 8 sets processed</span></li></ul><p class="tr-h">Included every month</p><div class="tr-stats"><div><b>100 h</b><span>of sets stored</span></div><div><b>≈ 830 h</b><span>watched or downloaded</span></div><div><b>500 GB</b><span>of brand files</span></div></div>
+                <span class="tr-spacer"></span><button type="button" onclick="selectTier('liveset-distribution')" class="tr-btn tr-btn-main">Choose this plan</button>
             </div>
-
-            <div class="relative flex flex-col p-6 md:p-8 border border-border bg-card">
-                <h3 class="text-muted-foreground text-sm tracking-wider font-mono mb-6 uppercase">Enterprise</h3>
-                <div class="mb-4"><span class="text-4xl md:text-5xl font-semibold text-foreground">Enquire</span></div>
-                <ul class="space-y-3 text-sm text-muted-foreground font-mono mb-8">
-                    <li>Dedicated account manager</li>
-                    <li>Unlimited events processed</li>
-                    <li>Custom content packages</li>
-                    <li>Priority 24-hour turnaround</li>
-                    <li>Unlimited cloud storage</li>
-                    <li>API access for marketing teams</li>
-                    <li>Quarterly performance reports</li>
-                </ul>
-                <a href="mailto:hello@local-assets.com?subject=Enterprise%20Distribution%20Enquiry" class="mt-auto w-full py-4 font-mono text-sm border border-border text-foreground hover:border-primary hover:text-primary uppercase text-center block no-underline">Contact Us</a>
+            <div class="tr-card">
+                
+                <p class="tr-name">Enterprise</p>
+                <div class="tr-price"><b>Enquire</b></div>
+                <p class="tr-for">For groups, festivals and brands with many venues.</p>
+                <p class="tr-h">Built around you</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>A dedicated account manager</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Unlimited sets processed</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Custom content packages</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Priority 24-hour turnaround</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Unlimited storage</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>API access for your marketing team</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Quarterly performance reports</span></li></ul>
+                <span class="tr-spacer"></span><a href="mailto:hello@local-assets.com?subject=Enterprise%20Distribution%20Enquiry" class="tr-btn">Talk to us</a>
             </div>
         </div>
-
-        <div id="pricing-creative" class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="relative flex flex-col p-6 md:p-8 border border-border bg-card">
-                <h3 class="text-muted-foreground text-sm tracking-wider font-mono mb-6 uppercase">Starter</h3>
-                <div class="mb-4">
-                    <span class="text-4xl md:text-5xl font-semibold text-foreground">£5,500</span>
-                    <span class="text-muted-foreground text-lg">/mo</span>
-                </div>
-                <ul class="space-y-3 text-sm text-muted-foreground font-mono mb-8">
-                    <li>1 camera included</li>
-                    <li>Starlink Mini: the camera streams straight to the app, anywhere</li>
-                    <li>4K master recordings</li>
-                    <li>HQ audio capture</li>
-                    <li>12 vertical social clips</li>
-                    <li>Marketing thumbnails</li>
-                    <li>Brand Kit watermark</li>
-                    <li>2 TB cloud storage</li>
-                </ul>
-                <button onclick="selectTier('starter-creative')" class="mt-auto w-full py-4 font-mono text-sm border border-border text-foreground hover:border-primary hover:text-primary uppercase">Select Tier</button>
+        <div id="pricing-creative" class="grid tr-grid">
+            <div class="tr-card">
+                
+                <p class="tr-name">Starter</p>
+                <div class="tr-price"><b>£5,500</b><span>/ month</span></div>
+                <p class="tr-for">For a venue or artist starting to film every set.</p>
+                <p class="tr-h">Filming</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>1 OBSBOT 4K camera, set up for you</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Starlink Mini: streams to the cloud from anywhere</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Starts and stops with your calendar</span></li></ul><p class="tr-h">Every set gives you</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>The full set in 4K, with HQ audio</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>12 vertical clips per set</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Marketing thumbnails</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Your logo and the artist's name on every clip</span></li></ul><p class="tr-h">Included every month</p><div class="tr-stats"><div><b>200 h</b><span>of sets stored</span></div><div><b>≈ 1,665 h</b><span>watched or downloaded</span></div><div><b>2 TB</b><span>of brand files</span></div></div>
+                <span class="tr-spacer"></span><button type="button" onclick="selectTier('starter-creative')" class="tr-btn">Choose this plan</button>
             </div>
-
-            <div class="relative flex flex-col p-6 md:p-8 border border-primary bg-card shadow-[0_0_20px_rgba(57,255,20,0.05)] md:transform md:scale-105 z-10">
-                <div class="absolute top-0 right-0 bg-primary text-black text-[10px] font-semibold px-3 py-1 font-mono uppercase">Most Popular</div>
-                <h3 class="text-muted-foreground text-sm tracking-wider font-mono mb-6 uppercase">Live-Set</h3>
-                <div class="mb-4">
-                    <span class="text-4xl md:text-5xl font-semibold text-foreground">£7,500</span>
-                    <span class="text-muted-foreground text-lg">/mo</span>
-                </div>
-                <ul class="space-y-3 text-sm text-muted-foreground font-mono mb-8">
-                    <li>1 camera included</li>
-                    <li>Starlink Mini + Mac mini: a private network that streams from anywhere</li>
-                    <li>4K master recordings</li>
-                    <li>HQ audio capture</li>
-                    <li>Multi-camera auto edit, cut to the music</li>
-                    <li>Unlimited vertical social clips</li>
-                    <li>Marketing thumbnails & watermark</li>
-                    <li>Quarterly performance reports</li>
-                    <li>20 TB cloud storage</li>
-                </ul>
-                <button onclick="selectTier('liveset-creative')" class="mt-auto w-full py-4 font-mono text-sm bg-primary text-black font-semibold hover:bg-white uppercase">Select Tier</button>
+            <div class="tr-card tr-feat">
+                <span class="tr-badge">Most popular</span>
+                <p class="tr-name">Live-Set</p>
+                <div class="tr-price"><b>£7,500</b><span>/ month</span></div>
+                <p class="tr-for">For venues filming every night, from every angle.</p>
+                <p class="tr-h">Filming</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>1 OBSBOT 4K camera, set up for you, plus more to buy or hire</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Starlink Mini + Mac mini: a private network that streams from anywhere</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Control every camera from your phone</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Starts and stops with your calendar</span></li></ul><p class="tr-h">Every set gives you</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>A multi-camera edit, cut to the music, the full length of the set</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>The full set in 4K, with HQ audio</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Unlimited vertical clips</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Thumbnails, with your logo and the artist's name on every clip</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Quarterly performance reports</span></li></ul><p class="tr-h">Included every month</p><div class="tr-stats"><div><b>1,000 h</b><span>of sets stored</span></div><div><b>≈ 8,330 h</b><span>watched or downloaded</span></div><div><b>20 TB</b><span>of brand files</span></div></div>
+                <span class="tr-spacer"></span><button type="button" onclick="selectTier('liveset-creative')" class="tr-btn tr-btn-main">Choose this plan</button>
             </div>
-
-            <div class="relative flex flex-col p-6 md:p-8 border border-border bg-card">
-                <h3 class="text-muted-foreground text-sm tracking-wider font-mono mb-6 uppercase">Enterprise</h3>
-                <div class="mb-4"><span class="text-4xl md:text-5xl font-semibold text-foreground">Enquire</span></div>
-                <ul class="space-y-3 text-sm text-muted-foreground font-mono mb-8">
-                    <li>Full camera infrastructure setup</li>
-                    <li>Dedicated on-site crew</li>
-                    <li>Unlimited event coverage</li>
-                    <li>Custom content packages</li>
-                    <li>Priority 24-hour turnaround</li>
-                    <li>Unlimited cloud storage</li>
-                    <li>PTZ camera control panel</li>
-                    <li>API access for marketing teams</li>
-                    <li>Live-streaming</li>
-                </ul>
-                <a href="mailto:hello@local-assets.com?subject=Enterprise%20Creative%20Enquiry" class="mt-auto w-full py-4 font-mono text-sm border border-border text-foreground hover:border-primary hover:text-primary uppercase text-center block no-underline">Contact Us</a>
+            <div class="tr-card">
+                
+                <p class="tr-name">Enterprise</p>
+                <div class="tr-price"><b>Enquire</b></div>
+                <p class="tr-for">For festivals and venues with several rooms.</p>
+                <p class="tr-h">Built around you</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Full camera setup in every room</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>A dedicated on-site crew</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Unlimited sets filmed</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Custom content packages</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Priority 24-hour turnaround</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Unlimited storage</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Camera control panel for your team</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>API access</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Live-streaming</span></li></ul>
+                <span class="tr-spacer"></span><a href="mailto:hello@local-assets.com?subject=Enterprise%20Creative%20Enquiry" class="tr-btn">Talk to us</a>
             </div>
         </div>
     </div>
@@ -675,22 +654,12 @@
 
     <script>
         function togglePricing(mode) {
-            const distroSection = document.getElementById('pricing-distribution');
-            const creativeSection = document.getElementById('pricing-creative');
-            const btnDistro = document.getElementById('toggle-distro');
-            const btnCreative = document.getElementById('toggle-creative');
-
-            if (mode === 'distribution') {
-                distroSection.classList.replace('hidden', 'grid');
-                creativeSection.classList.replace('grid', 'hidden');
-                btnDistro.className = "px-6 py-2 rounded-full text-xs font-mono font-semibold tracking-wider transition-all bg-primary text-black";
-                btnCreative.className = "px-6 py-2 rounded-full text-xs font-mono font-semibold tracking-wider transition-all text-muted-foreground hover:text-white";
-            } else {
-                creativeSection.classList.replace('hidden', 'grid');
-                distroSection.classList.replace('grid', 'hidden');
-                btnCreative.className = "px-6 py-2 rounded-full text-xs font-mono font-semibold tracking-wider transition-all bg-primary text-black";
-                btnDistro.className = "px-6 py-2 rounded-full text-xs font-mono font-semibold tracking-wider transition-all text-muted-foreground hover:text-white";
-            }
+            const distro = document.getElementById('pricing-distribution'), creative = document.getElementById('pricing-creative');
+            const showDistro = mode === 'distribution';
+            distro.classList.toggle('hidden', !showDistro); distro.classList.toggle('grid', showDistro);
+            creative.classList.toggle('hidden', showDistro); creative.classList.toggle('grid', !showDistro);
+            document.getElementById('toggle-distro').classList.toggle('on', showDistro);
+            document.getElementById('toggle-creative').classList.toggle('on', !showDistro);
         }
 
         document.addEventListener('DOMContentLoaded', () => {
