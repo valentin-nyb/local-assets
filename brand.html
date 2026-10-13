@@ -1110,7 +1110,7 @@
             var name = f.name.replace(/\.[^.]+$/, '');
             openCamDialog(name,
                 '<div class="bk-tester">' +
-                '<div class="bk-tester-bar"><input id="bk-tester-input" class="bk-tester-input" value="' + esc(name.replace(/[-_]+/g, ' ')) + '" maxlength="80" aria-label="Preview text">' +
+                '<div class="bk-tester-bar"><input id="bk-tester-input" class="bk-tester-input" value="" placeholder="Type any text to preview it" maxlength="80" aria-label="Preview text" autocomplete="off">' +
                     '<div class="bk-seg" role="group" id="bk-tester-color"><button type="button" data-c="white" aria-pressed="' + (!_wm || !_wm.text || _wm.text.color !== 'black') + '">White</button><button type="button" data-c="black" aria-pressed="' + (!!(_wm && _wm.text && _wm.text.color === 'black')) + '">Black</button></div></div>' +
                 '<div id="bk-tester-out" class="bk-tester-out">' +
                     [56, 36, 22, 15].map(function(px) { return '<p data-sample style="font-size:' + px + 'px"></p>'; }).join('') +
@@ -1123,8 +1123,12 @@
                 '</div>');
             document.querySelector('#cam-dialog .cam-dialog-panel').classList.add('wide');
             var input = document.getElementById('bk-tester-input'), out = document.getElementById('bk-tester-out');
-            var sync = function() { out.querySelectorAll('[data-sample]').forEach(function(p) { p.textContent = input.value || 'Type something'; }); };
+            // Empty field, ready to type; the font's name shows until something is typed
+            var sample = name.replace(/[-_]+/g, ' ');
+            var sync = function() { out.querySelectorAll('[data-sample]').forEach(function(p) { p.textContent = input.value || sample; }); };
             input.addEventListener('input', sync); sync();
+            // Ready to type straight away (on a computer; phones open the keyboard on tap)
+            if (window.matchMedia('(pointer: fine)').matches) setTimeout(function() { input.focus(); }, 50);
             // White or black text: the preview switches to the matching background
             var color = _wm && _wm.text && _wm.text.color === 'black' ? 'black' : 'white';
             var setColor = function(c) {
