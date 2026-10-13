@@ -124,17 +124,39 @@ export default async function handler(req, res) {
         : Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - (inv ? Number(inv[1]) : 0), 1);
       const to = today + 86400e3;
       const out = await withRedis(async redis => {
-        const rates = await readRates(redis);
+        const [rates, plans, assignments] = await Promise.all([readRates(redis), readPlans(redis), readAssignments(redis, slug)]);
+        const planId = req.query.plan !== undefined && isAdmin ? String(req.query.plan) : (assignments[target]?.plan || '');
+        const plan = plans.find(p => p.id === planId) || null;
         // From the start of the first cycle, so a range starting mid-cycle carries that cycle's running total
         const fd = new Date(from), cycleFrom = Date.UTC(fd.getUTCFullYear(), fd.getUTCMonth(), 1);
         const u = await usageByDay(redis, slug, auth, { from: cycleFrom, to }, artist, label);
-        return { rates, ...u };
+        return { rates, plan, ...u };
+      });
+      // Each day's point is what the invoice would say if the cycle ended that day: the same quantities
+      // (minutes stored, minutes streamed this cycle, minutes added this cycle, file storage) priced by the
+      // same priceUsage, plan allowance included, so today's point equals "Usage so far" exactly
+      const DAY = 86400e3, nowMs = Date.now();
+      let cyc = -1, streamed = 0;
+      const points = out.days.map(d => {
+        const dt = new Date(d.start), c = Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth(), 1);
+        if (c !== cyc) { cyc = c; streamed = 0; }
+        streamed += d.delivered;
+        const end = Math.min(d.start + DAY, nowMs);
+        const usage = {
+          storedMinutes: out.vids.reduce((s, v) => s + (v.at < end ? v.min : 0), 0),
+          newMinutes: out.vids.reduce((s, v) => s + (v.at >= c && v.at < end ? v.min : 0), 0),
+          deliveredMinutes: streamed,
+          fileBytes: out.files.reduce((s, f) => s + (f.at < end ? f.bytes : 0), 0),
+          videos: 0, notes: [],
+        };
+        const p = priceUsage(usage, out.rates, out.plan);
+        return { t: d.start, end, cycle: c, amount: p.usageTotal, mins: Math.round(streamed * 100) / 100,
+          lines: p.lines.map(l => ({ label: l.label, quantity: l.quantity, unit: l.unit, amount: l.amount })) };
       });
       const cycles = [];
       for (let y = new Date(from).getUTCFullYear(), mo = new Date(from).getUTCMonth(); Date.UTC(y, mo, 1) < to; mo++) cycles.push(Date.UTC(y, mo, 1));
       return res.status(200).json({ range, from, to, today, cycles, currency: out.rates.currency || 'gbp',
-        rates: { videoStorage: out.rates.videoStorage, videoDelivery: out.rates.videoDelivery, margin: out.rates.margin || 0 },
-        days: out.days.map(d => ({ t: d.start, stored: Math.round(d.stored * 100) / 100, delivered: Math.round(d.delivered * 100) / 100 })), notes: out.notes });
+        plan: out.plan ? out.plan.name : null, points, notes: out.notes });
     }
     if (req.method === 'GET') {
       const target = isAdmin ? cleanTarget(req.query.target) : 'venue';

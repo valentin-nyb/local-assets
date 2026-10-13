@@ -104,8 +104,19 @@ export async function usageByDay(redis, slug, auth, { from, to }, artist = null,
   const DAY = 86400e3;
   const days = [];
   for (let t = from; t < to; t += DAY) days.push({ start: t, stored: 0, delivered: 0 });
-  if (!auth || label) return { days, notes: [] };
   const only = artist ? String(artist).toUpperCase().trim() : null;
+  // Files (Brand Kit, thumbnails, watermarked clips), counted exactly as venueUsage does, with their upload times
+  const files = [];
+  const prefixes = label ? [`brand/${slug}/label-${slugify(label)}/`] : only ? [`brand/${slug}/artist-${slugify(only)}/`] : [`brand/${slug}/`, `thumbnails/${slug}/`, `watermarks/${slug}/`];
+  for (const prefix of prefixes) {
+    let cursor;
+    do {
+      const page = await list({ prefix, cursor, limit: 1000 });
+      for (const b of page.blobs) files.push({ at: new Date(b.uploadedAt).getTime() || 0, bytes: b.size || 0 });
+      cursor = page.hasMore ? page.cursor : undefined;
+    } while (cursor);
+  }
+  if (!auth || label) return { days, notes: [], vids: [], files };
   const notes = [], vids = [], ids = new Set();
   try {
     for (let page = 1; page <= 30; page++) {
@@ -118,7 +129,7 @@ export async function usageByDay(redis, slug, auth, { from, to }, artist = null,
       }
       if ((b.data || []).length < 100) break;
     }
-  } catch (e) { notes.push('Video usage unavailable: ' + e.message); return { days, notes }; }
+  } catch (e) { notes.push('Video usage unavailable: ' + e.message); return { days, notes, vids: [], files }; }
   for (const d of days) d.stored = vids.reduce((s, v) => s + (v.at < d.start + DAY ? v.min : 0), 0);
   const reported = Math.floor((Date.now() - 12.5 * 3600e3) / 3600e3) * 3600e3;
   const key = d => `usage_day:${slug}:${only || '*'}:${new Date(d.start).toISOString().slice(0, 10)}`;
@@ -135,12 +146,12 @@ export async function usageByDay(redis, slug, auth, { from, to }, artist = null,
           if ((b.data || []).length < 100) break;
         }
         d.delivered = sec / 60;
-        if (done) await redis.set(key(d), String(Math.round(d.delivered * 100) / 100), { EX: 400 * 86400 });
+        if (done) await redis.set(key(d), String(d.delivered), { EX: 400 * 86400 });
       } catch (e) { if (!notes.length) notes.push('Some streaming figures are unavailable: ' + e.message); }
     }
   };
   await Promise.all([work(), work(), work(), work()]);
-  return { days, notes };
+  return { days, notes, vids, files };
 }
 
 export async function venueUsage(slug, auth, { start, end }, artist = null, label = null) {

@@ -320,21 +320,16 @@
         async function loadChart() {
             var box = document.getElementById('bl-chart'), range = document.getElementById('bl-chart-range').value;
             try {
-                var r = await laFetch('/api/billing?usageDays=1&range=' + encodeURIComponent(range) + '&venue=' + encodeURIComponent(_venue) + '&target=' + encodeURIComponent(_target));
+                var r = await laFetch('/api/billing?usageDays=1&range=' + encodeURIComponent(range) + '&venue=' + encodeURIComponent(_venue) + '&target=' + encodeURIComponent(_target) + (_planOverride !== undefined ? '&plan=' + encodeURIComponent(_planOverride) : ''));
                 var d = await r.json();
                 if (!r.ok) throw new Error(d.error || r.status);
                 _chart = d; drawChart();
             } catch (e) { box.innerHTML = '<p class="bl-chart-empty">Usage chart unavailable: ' + esc(e.message) + '</p>'; }
         }
+        // Points come from the server, priced exactly like the invoice (today's point is "Usage so far")
         function chartSeries(d) {
-            var m = 1 + (Number(d.rates.margin) || 0), cyc = -1, acc = 0;
-            return d.days.map(function(x) {
-                var dt = new Date(x.t), c = Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth(), 1);
-                if (c !== cyc) { cyc = c; acc = 0; }
-                var dim = new Date(Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth() + 1, 0)).getUTCDate();
-                acc += _unit === 'money' ? (x.stored * d.rates.videoStorage / dim + x.delivered * d.rates.videoDelivery) * m : x.delivered;
-                // Each day's running total sits at the end of that day
-                return { t: x.t + 86400e3, v: acc, cycle: c, future: x.t > d.today };
+            return (d.points || []).map(function(x) {
+                return { t: x.t + 86400e3, v: _unit === 'money' ? x.amount : x.mins, cycle: x.cycle, future: x.t > d.today, lines: x.lines, day: x.t };
             });
         }
         function niceMax(v) { if (v <= 0) return _unit === 'money' ? 1 : 10; var p = Math.pow(10, Math.floor(Math.log10(v))), n = v / p; return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * p; }
@@ -376,7 +371,7 @@
             box.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" style="height:' + H + 'px">' + svg + '</svg><div class="bl-tip" id="bl-tip"></div>';
             // summary: this cycle so far
             var curPts = byC[cur] || [], last = curPts[curPts.length - 1];
-            document.getElementById('bl-chart-sum').textContent = (last ? fmtV(last.v) + (_unit === 'money' ? ' of usage' : ' streamed') + ' this cycle so far' : '') + (d.notes && d.notes.length ? ' · ' + d.notes.join(' ') : '') + (_unit === 'money' ? ' · before what the plan includes' : '');
+            document.getElementById('bl-chart-sum').textContent = (last ? fmtV(last.v) + (_unit === 'money' ? ' of usage this cycle so far' + (d.plan ? ', above what ' + d.plan + ' includes' : '') : ' streamed this cycle so far') : '') + (d.notes && d.notes.length ? ' · ' + d.notes.join(' ') : '');
             var svgEl = box.querySelector('svg'), tip = document.getElementById('bl-tip'), hl = document.getElementById('bl-hl'), hd = document.getElementById('bl-hd');
             svgEl.addEventListener('mousemove', function(e) {
                 var rc = svgEl.getBoundingClientRect(), mx = (e.clientX - rc.left) / rc.width * W, best = null;
@@ -384,7 +379,8 @@
                 if (!best) return;
                 var px = x(best.t), py = y(best.v);
                 hl.setAttribute('x1', px); hl.setAttribute('x2', px); hl.style.display = ''; hd.setAttribute('cx', px); hd.setAttribute('cy', py); hd.style.display = '';
-                tip.innerHTML = new Date(best.t - 1).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) + '<br><b>' + fmtV(best.v) + '</b>';
+                tip.innerHTML = new Date(best.t - 1).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) + '<br><b>' + fmtV(best.v) + '</b>' +
+                    (_unit === 'money' && best.lines ? best.lines.filter(function(l) { return l.amount > 0; }).map(function(l) { return '<br><span style="color:var(--la-sub)">' + esc(l.label) + ' · ' + money(l.amount, _chart.currency) + '</span>'; }).join('') : '');
                 tip.style.left = (20 + px / W * rc.width) + 'px'; tip.style.top = (12 + py) + 'px'; tip.style.opacity = '1';
             });
             svgEl.addEventListener('mouseleave', function() { tip.style.opacity = '0'; hl.style.display = 'none'; hd.style.display = 'none'; });
