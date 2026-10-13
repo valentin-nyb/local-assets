@@ -265,13 +265,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 return (bb - aa) || String(a.name || '').localeCompare(String(b.name || ''));
             });
         if (venues.length < 2) return '';
-        var html = '<div style="padding:10px 16px;border-bottom:1px solid #27272a;">' +
-            '<div style="font-size:8px;text-transform:uppercase;letter-spacing:.12em;color:#52525b;margin-bottom:6px;">Switch venue</div>';
+        var html = '<div style="padding:10px 16px;border-bottom:1px solid var(--la-line, #27272a);">' +
+            '<div style="font-size:8px;text-transform:uppercase;letter-spacing:.12em;color:var(--la-dim, #52525b);margin-bottom:6px;">Switch venue</div>';
         venues.forEach(function(v) {
             var current = v.slug === session.venueSlug;
             html += '<button data-venue-slug="' + _esc(v.slug) + '" onclick="window.LA_SWITCH_VENUE(this.dataset.venueSlug)"' + (current ? ' disabled' : '') +
-                ' style="display:flex;align-items:center;gap:8px;width:100%;padding:6px 0;background:none;border:none;font-family:inherit;font-size:10px;text-transform:uppercase;letter-spacing:.08em;text-align:left;cursor:' + (current ? 'default' : 'pointer') + ';color:' + (current ? '#39FF14' : '#a1a1aa') + ';">' +
-                '<span style="width:6px;height:6px;border-radius:50%;background:' + (current ? '#39FF14' : '#3f3f46') + ';flex-shrink:0;"></span>' + _esc(v.name) + '</button>';
+                ' style="display:flex;align-items:center;gap:8px;width:100%;padding:6px 0;background:none;border:none;font-family:inherit;font-size:10px;text-transform:uppercase;letter-spacing:.08em;text-align:left;cursor:' + (current ? 'default' : 'pointer') + ';color:' + (current ? 'var(--la-accent, #39FF14)' : 'var(--la-sub, #a1a1aa)') + ';">' +
+                '<span style="width:6px;height:6px;border-radius:50%;background:' + (current ? 'var(--la-accent, #39FF14)' : 'var(--la-line, #3f3f46)') + ';flex-shrink:0;"></span>' + _esc(v.name) + '</button>';
         });
         return html + '</div>';
     }
@@ -367,29 +367,31 @@ document.addEventListener("DOMContentLoaded", () => {
         drop.style.cssText = [
             'position:fixed',
             'top:' + (rect.bottom + 8) + 'px',
+            'border-radius:12px',
+            'overflow:hidden',
             'right:' + (window.innerWidth - rect.right) + 'px',
-            'background:#0a0a0a',
-            'border:1px solid #27272a',
+            'background:var(--la-raised, #0a0a0a)',
+            'border:1px solid var(--la-line, #27272a)',
             'min-width:230px',
             'z-index:99999',
-            'box-shadow:0 8px 40px rgba(0,0,0,0.95)',
+            'box-shadow:var(--la-shadow, 0 8px 40px rgba(0,0,0,0.95))',
             'font-family:ui-monospace,monospace',
         ].join(';');
 
         var venue = (session.venue || localStorage.getItem('la_venue_name') || 'LOCAL / ASSETS').toUpperCase();
 
         drop.innerHTML =
-            '<div style="padding:14px 16px;border-bottom:1px solid #27272a;">' +
-                '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#fff;margin-bottom:4px;">' + _esc(venue) + '</div>' +
-                '<div style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#52525b;">' + _esc(session.email || '') + '</div>' +
+            '<div style="padding:14px 16px;border-bottom:1px solid var(--la-line, #27272a);">' +
+                '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--la-text, #fff);margin-bottom:4px;">' + _esc(venue) + '</div>' +
+                '<div style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--la-dim, #52525b);">' + _esc(session.email || '') + '</div>' +
             '</div>' +
             _venueSwitcherHtml(session) +
-            '<div style="padding:10px 16px;border-bottom:1px solid #27272a;display:flex;align-items:center;justify-content:space-between;gap:12px;">' +
-                '<span style="font-size:8px;text-transform:uppercase;letter-spacing:.12em;color:#52525b;">Session expires</span>' +
-                '<span id="la-drop-timer" style="font-size:9px;color:#39FF14;letter-spacing:.08em;font-weight:700;">' + _sessionTimeStr(session.ts) + '</span>' +
+            '<div style="padding:10px 16px;border-bottom:1px solid var(--la-line, #27272a);display:flex;align-items:center;justify-content:space-between;gap:12px;">' +
+                '<span style="font-size:8px;text-transform:uppercase;letter-spacing:.12em;color:var(--la-dim, #52525b);">Session expires</span>' +
+                '<span id="la-drop-timer" style="font-size:9px;color:var(--la-accent, #39FF14);letter-spacing:.08em;font-weight:700;">' + _sessionTimeStr(session.ts) + '</span>' +
             '</div>' +
             '<div style="padding:10px 16px;">' +
-                '<button onclick="window.LA_ADMIN_LOGOUT()" style="display:block;width:100%;padding:9px 0;background:#ef4444;color:#fff;font-family:inherit;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.15em;border:none;cursor:pointer;">SIGN OUT</button>' +
+                '<button onclick="window.LA_ADMIN_LOGOUT()" style="display:block;width:100%;padding:9px 0;background:var(--la-bad, #ef4444);color:#fff;border-radius:8px;font-family:inherit;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.15em;border:none;cursor:pointer;">SIGN OUT</button>' +
             '</div>';
 
         document.body.appendChild(drop);
