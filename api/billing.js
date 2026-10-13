@@ -125,7 +125,9 @@ export default async function handler(req, res) {
       const to = today + 86400e3;
       const out = await withRedis(async redis => {
         const rates = await readRates(redis);
-        const u = await usageByDay(redis, slug, auth, { from, to }, artist, label);
+        // From the start of the first cycle, so a range starting mid-cycle carries that cycle's running total
+        const fd = new Date(from), cycleFrom = Date.UTC(fd.getUTCFullYear(), fd.getUTCMonth(), 1);
+        const u = await usageByDay(redis, slug, auth, { from: cycleFrom, to }, artist, label);
         return { rates, ...u };
       });
       const cycles = [];

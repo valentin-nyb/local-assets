@@ -333,7 +333,8 @@
                 if (c !== cyc) { cyc = c; acc = 0; }
                 var dim = new Date(Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth() + 1, 0)).getUTCDate();
                 acc += _unit === 'money' ? (x.stored * d.rates.videoStorage / dim + x.delivered * d.rates.videoDelivery) * m : x.delivered;
-                return { t: x.t, v: acc, cycle: c, future: x.t > d.today };
+                // Each day's running total sits at the end of that day
+                return { t: x.t + 86400e3, v: acc, cycle: c, future: x.t > d.today };
             });
         }
         function niceMax(v) { if (v <= 0) return _unit === 'money' ? 1 : 10; var p = Math.pow(10, Math.floor(Math.log10(v))), n = v / p; return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * p; }
@@ -342,9 +343,10 @@
         function drawChart() {
             var d = _chart, box = document.getElementById('bl-chart');
             if (!d) return;
-            var pts = chartSeries(d).filter(function(p) { return !p.future; });
+            var all = chartSeries(d).filter(function(p) { return !p.future; });
+            var pts = all.filter(function(p) { return p.t > d.from; });
             var W = Math.max(320, box.clientWidth - 40), H = 300, L = 8, Rt = 58, T = 26, B = 28, iw = W - L - Rt, ih = H - T - B;
-            var t0 = d.from, t1 = d.to - 86400e3, span = Math.max(1, t1 - t0);
+            var t0 = d.from, t1 = d.to, span = Math.max(1, t1 - t0);
             var x = function(t) { return L + (t - t0) / span * iw; };
             var max = niceMax(Math.max.apply(null, pts.map(function(p) { return p.v; }).concat([0])) * 1.08);
             var y = function(v) { return T + ih - v / max * ih; };
@@ -357,10 +359,15 @@
             svg += '<text class="cyc-lbl" x="' + lblX + '" y="' + (T - 10) + '" text-anchor="middle">Current cycle</text>';
             for (var i = 0; i <= 4; i++) { var v = max * i / 4, yy = y(v); svg += '<line class="grid" x1="' + L + '" x2="' + (L + iw) + '" y1="' + yy + '" y2="' + yy + '"/><text class="axis" x="' + (L + iw + 10) + '" y="' + (yy + 4) + '">' + fmtAxis(v) + '</text>'; }
             var nT = Math.min(6, Math.max(2, Math.round(iw / 140)));
-            for (var k = 0; k <= nT; k++) { var tt = t0 + span * k / nT, xx = x(tt); svg += '<line class="grid" x1="' + xx + '" x2="' + xx + '" y1="' + T + '" y2="' + (T + ih) + '"/><text class="axis" x="' + xx + '" y="' + (H - 8) + '" text-anchor="' + (k === 0 ? 'start' : k === nT ? 'end' : 'middle') + '">' + new Date(tt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }) + '</text>'; }
+            for (var k = 0; k <= nT; k++) { var tt = t0 + span * k / nT, xx = x(tt); svg += '<line class="grid" x1="' + xx + '" x2="' + xx + '" y1="' + T + '" y2="' + (T + ih) + '"/><text class="axis" x="' + xx + '" y="' + (H - 8) + '" text-anchor="' + (k === 0 ? 'start' : k === nT ? 'end' : 'middle') + '">' + new Date(Math.min(tt, d.to - 1)).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }) + '</text>'; }
             // one line per cycle (usage starts again at 0 each cycle)
             var byC = {};
             pts.forEach(function(p) { (byC[p.cycle] = byC[p.cycle] || []).push(p); });
+            // every cycle starts from 0 at its first moment, so the line reaches the boundary and carries on
+            Object.keys(byC).forEach(function(c) {
+                var c0 = Number(c), before = c0 < d.from ? all.filter(function(p) { return p.cycle === c0 && p.t <= d.from; }).pop() : null;
+                byC[c].unshift({ t: Math.max(c0, d.from), v: before ? before.v : 0, cycle: c0 });
+            });
             Object.keys(byC).forEach(function(c) {
                 var ps = byC[c], dl = ps.map(function(p, j) { return (j ? 'L' : 'M') + x(p.t).toFixed(1) + ' ' + y(p.v).toFixed(1); }).join(' ');
                 svg += '<path class="area" d="' + dl + ' L' + x(ps[ps.length - 1].t).toFixed(1) + ' ' + y(0) + ' L' + x(ps[0].t).toFixed(1) + ' ' + y(0) + 'Z"/><path class="line" d="' + dl + '"/>';
@@ -377,7 +384,7 @@
                 if (!best) return;
                 var px = x(best.t), py = y(best.v);
                 hl.setAttribute('x1', px); hl.setAttribute('x2', px); hl.style.display = ''; hd.setAttribute('cx', px); hd.setAttribute('cy', py); hd.style.display = '';
-                tip.innerHTML = new Date(best.t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) + '<br><b>' + fmtV(best.v) + '</b>';
+                tip.innerHTML = new Date(best.t - 1).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) + '<br><b>' + fmtV(best.v) + '</b>';
                 tip.style.left = (20 + px / W * rc.width) + 'px'; tip.style.top = (12 + py) + 'px'; tip.style.opacity = '1';
             });
             svgEl.addEventListener('mouseleave', function() { tip.style.opacity = '0'; hl.style.display = 'none'; hd.style.display = 'none'; });
