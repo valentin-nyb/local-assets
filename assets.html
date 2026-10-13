@@ -46,7 +46,24 @@
         #preview-container { background: #050505 !important; border-radius: 8px; padding: 12px; }
         #active-asset-display { background: #050505 !important; }
         #active-asset-display iframe { background: #050505 !important; }
-    </style>
+            .vault-card-header { position:relative; }
+        .vault-edit { position:absolute; top:0; right:0; height:32px; padding:0 14px; border-radius:8px; border:1px solid #27272a; background:transparent; color:#fafafa; font:700 11px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.06em; text-transform:uppercase; cursor:pointer; }
+        .vault-edit:hover { border-color:#39FF14; color:#39FF14; }
+        .vault-artist { display:block; margin-top:4px; font:500 11px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif; font-style:normal; letter-spacing:.06em; color:#a1a1aa; }
+        .vs-backdrop { position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,.7); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; padding:16px; }
+        .vs-panel { width:420px; max-width:100%; background:#0a0a0a; border:1px solid #27272a; border-radius:16px; padding:22px; display:flex; flex-direction:column; gap:14px; }
+        .vs-title { font:700 15px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif; text-transform:uppercase; color:#fff; margin:0; }
+        .vs-sub { font-size:12px; color:#a1a1aa; margin:-8px 0 0; }
+        .vs-panel label { display:flex; flex-direction:column; gap:6px; font:700 10px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.08em; text-transform:uppercase; color:#a1a1aa; }
+        .vs-panel input { height:40px; border-radius:10px; border:1px solid #27272a; background:#000; color:#fff; padding:0 12px; font:500 14px 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:0; text-transform:none; color-scheme:dark; }
+        .vs-panel input:focus { outline:none; border-color:#39FF14; }
+        .vs-panel small { font:400 11px/1.4 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:0; text-transform:none; color:#71717a; }
+        .vs-error { color:#ef4444; font-size:12px; margin:0; min-height:0; }
+        .vs-error:empty { display:none; }
+        .vs-actions { display:flex; justify-content:flex-end; gap:8px; }
+        .vs-btn { height:38px; padding:0 16px; border-radius:10px; font:700 12px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; cursor:pointer; border:1px solid transparent; }
+        .vs-btn.primary { background:#39FF14; color:#000; } .vs-btn.ghost { background:none; color:#fff; border-color:#27272a; }
+</style>
     <style>
         body { background-color: #050505; color: #ffffff; -webkit-font-smoothing: antialiased; }
         .nav-link.active { background-color: rgba(255, 255, 255, 0.05); border: 1px solid #27272a; color: white; }
@@ -238,8 +255,12 @@
     async function loadVault() {
     const list = document.getElementById('cloud-list');
     try {
-        const res = await laFetch('/api/list-assets?t=' + Date.now(), { credentials: 'include' });
+        const [res, metaRes] = await Promise.all([
+            laFetch('/api/list-assets?t=' + Date.now(), { credentials: 'include' }),
+            laFetch('/api/session-meta').catch(() => null),
+        ]);
         const data = await res.json();
+        window._sessMeta = (metaRes && metaRes.ok ? (await metaRes.json()).sessions : null) || {};
 
         // Safety Net: If the API sent an error instead of a list
         if (data.error) {
@@ -298,8 +319,10 @@
             const pid     = asset.playback_ids?.[0]?.id;
             const status  = asset.status;
             const isReady = status === 'ready';
-            const meta    = { artist: asset._artist, date: asset._date, camera: asset.status === 'no-master' ? 'NO 4K LONG FORM YET' : '4K LONG FORM' };
-            const title   = esc(meta.artist);
+            const saved   = (window._sessMeta || {})[asset._artist + '|' + asset._date] || {};
+            const meta    = { artist: asset._artist, date: saved.date || asset._date, camera: [saved.venue, asset.status === 'no-master' ? 'NO 4K LONG FORM YET' : '4K LONG FORM'].filter(Boolean).join(' // ') };
+            const title   = esc(saved.title ? saved.title.toUpperCase() : meta.artist) + (saved.title ? '<span class="vault-artist">' + esc(meta.artist) + '</span>' : '');
+            const editBtn = `<button type="button" class="vault-edit" data-artist="${esc(asset._artist)}" data-date="${esc(asset._date)}" onclick="event.stopPropagation(); editVaultSession(this)">Edit</button>`;
             const sub     = meta && (meta.date || meta.camera)
                 ? esc([meta.date, meta.camera].filter(Boolean).join(' // '))
                 : esc(new Date(asset.created_at * 1000).toLocaleDateString());
@@ -307,6 +330,7 @@
             return `
             <div class="vault-card ${isReady ? '' : 'opacity-50'}" id="vault-${i}">
                 <div class="vault-card-header" onclick="toggleVaultFolder(${i})">
+                    ${editBtn}
                     <div>
                         <h4 class="text-2xl font-black italic uppercase">${title}</h4>
                         <p class="text-[8px] font-mono text-zinc-500 uppercase mt-0.5">${sub}</p>
@@ -336,6 +360,39 @@
         document.getElementById('preview-container').classList.remove('hidden');
         display.innerHTML = `<iframe src="https://player.mux.com/${pid}" style="width:100%;border:none;aspect-ratio:16/9;" allowfullscreen></iframe>`;
         display.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    // Edit a session's name, date and venue (the same details as the pencil in Distribution History)
+    window.editVaultSession = (btn) => {
+        const artist = btn.dataset.artist, date = btn.dataset.date;
+        const saved = (window._sessMeta || {})[artist + '|' + date] || {};
+        const e = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        const m = document.createElement('div');
+        m.className = 'vs-backdrop';
+        m.innerHTML = `<form class="vs-panel" role="dialog" aria-modal="true">
+            <p class="vs-title">Edit session</p><p class="vs-sub">${e(artist)}</p>
+            <label>Session name<input name="title" maxlength="80" placeholder="e.g. Boiler Room Puglia" value="${e(saved.title)}"><small>Leave empty to show the artist and date.</small></label>
+            <label>Date<input name="date" type="date" value="${e(saved.date || date)}"><small>When the set happened.</small></label>
+            <label>Venue<input name="venue" maxlength="60" placeholder="e.g. Fabric London" value="${e(saved.venue)}"></label>
+            <p class="vs-error"></p>
+            <div class="vs-actions"><button type="button" class="vs-btn ghost" data-cancel>Cancel</button><button type="submit" class="vs-btn primary">Save</button></div>
+        </form>`;
+        document.body.appendChild(m);
+        const f = m.querySelector('form');
+        const close = () => m.remove();
+        m.addEventListener('click', ev => { if (ev.target === m) close(); });
+        m.querySelector('[data-cancel]').onclick = close;
+        f.title.focus();
+        f.addEventListener('submit', async ev => {
+            ev.preventDefault();
+            const btnS = f.querySelector('[type=submit]'); btnS.disabled = true;
+            try {
+                const r = await laFetch('/api/session-meta', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ artist, date, title: f.title.value, venue: f.venue.value, shownDate: f.date.value }) });
+                const d = await r.json().catch(() => ({}));
+                if (!r.ok) throw new Error(d.error || r.status);
+                close(); loadVault();
+            } catch (er) { f.querySelector('.vs-error').textContent = 'Could not save: ' + er.message; btnS.disabled = false; }
+        });
     };
 
     window.toggleVaultFolder = (i) => document.getElementById('vault-' + i).classList.toggle('expanded');
