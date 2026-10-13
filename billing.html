@@ -173,6 +173,7 @@
                         <button type="button" class="cam-btn ghost" id="bl-preview">Preview</button>
                         <button type="button" class="cam-btn primary" id="bl-send">Send invoice</button>
                         <span class="bl-msg" id="bl-send-msg"></span>
+                        <button type="button" class="cam-btn bl-danger" id="bl-delete-acct" style="margin-left:auto">Delete account</button>
                     </div>
                 </section>
                 <div class="bl-grid">
@@ -512,6 +513,27 @@
                 setTimeout(function() { try { w.focus(); w.print(); } catch (_) {} }, 600);
             });
             m.querySelector('[data-send]').addEventListener('click', function() { m.remove(); document.getElementById('bl-send').click(); });
+        });
+        // Admin: permanently delete the selected client account's data (preview first, then confirm)
+        document.getElementById('bl-delete-acct').addEventListener('click', async function() {
+            var sel = document.getElementById('bl-venue'), slug = sel.value, name = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].text : slug;
+            var btn = this, msg = document.getElementById('bl-send-msg');
+            if (!slug) return;
+            btn.disabled = true; msg.textContent = 'Checking ' + name + '…';
+            try {
+                var r = await laFetch('/api/delete-account?slug=' + encodeURIComponent(slug)), p = await r.json();
+                if (!r.ok) throw new Error(p.error || r.status);
+                msg.textContent = '';
+                if (!(await laConfirm({ title: 'Delete ' + name + '?', message: 'This permanently deletes ' + p.redisKeys.length + ' saved records (cameras, calendar, Brand Kit, watermark, clips, billing settings) and ' + p.files + ' files, and removes the account from every login and list. Stripe invoices are kept. This cannot be undone.', confirmText: 'Delete permanently', danger: true }))) { btn.disabled = false; return; }
+                msg.textContent = 'Deleting ' + name + '…';
+                r = await laFetch('/api/delete-account', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug: slug, confirm: slug }) });
+                var d = await r.json();
+                if (!r.ok) throw new Error(d.error || r.status);
+                _venue = ''; _target = 'venue';
+                msg.textContent = name + ' deleted: ' + d.redisKeys.length + ' records and ' + d.files + ' files removed.';
+                await load();
+            } catch (e) { msg.textContent = 'Could not delete: ' + e.message; }
+            btn.disabled = false;
         });
         document.getElementById('bl-send').addEventListener('click', async function() {
             var msg = document.getElementById('bl-send-msg'), sf = document.getElementById('bl-send-form');

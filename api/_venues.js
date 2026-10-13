@@ -6,7 +6,7 @@ import { createClient } from 'redis';
 // Each entry: { name, emails, type, plan, status: 'pending'|'active', mux: <encrypted "id:secret"> }.
 // Read into a cache when a function starts and refreshed in the background, so lookups stay synchronous.
 const REGISTRY_KEY = 'la_venues';
-let _registry = {}, _registryAt = 0, _registryLoading = null;
+let _registry = {}, _registryAt = 0, _registryLoading = null, _deleted = new Set();
 const encKey = () => crypto.createHash('sha256').update(process.env.LOCAL_ASSETS_API_KEY || 'dev-secret-change-me').digest();
 export function sealSecret(text) {
   const iv = crypto.randomBytes(12), c = crypto.createCipheriv('aes-256-gcm', encKey(), iv);
@@ -33,6 +33,7 @@ export async function refreshRegistry(redis = null) {
         out[slug] = { ...o, mux: undefined, mux_token_id: id || '', mux_token_secret: secret || '' };
       } catch {}
     }
+    _deleted = new Set(await redis.sMembers('la_deleted').catch(() => []));   // accounts deleted by the admin
     _registry = out; _registryAt = Date.now();
   } catch (e) { console.error('[_venues] registry:', e.message); }
   finally { if (own && redis) await redis.quit().catch(() => {}); }
@@ -56,7 +57,9 @@ export function getVenuesConfig() {
     _registryLoading = refreshRegistry().finally(() => { _registryLoading = null; });
   }
   // Configured venues win over sign-ups with the same slug
-  return { ..._registry, ...readEnvConfig() };
+  const all = { ..._registry, ...readEnvConfig() };
+  for (const slug of _deleted) delete all[slug];
+  return all;
 }
 
 function readEnvConfig() {
