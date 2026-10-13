@@ -80,7 +80,7 @@ export default async function handler(req, res) {
         return res.status(r.status).json({ error: txt });
       }
       const { data } = await r.json();
-      console.error('[list-assets] page', page, '— items:', data?.length ?? 0);
+      console.error('[list-assets] page', page, '— items:', data?.length ?? 0, '| labels', JSON.stringify((data || []).filter(a => Number(a.duration) > 60).map(a => [String(a.id).slice(-6), String(a.passthrough || '').slice(0, 90), Math.round(Number(a.duration)), new Date(Number(a.created_at) * 1000).toISOString().slice(0, 10), (a.tracks || []).map(t => t.type).join('+')])));
       if (!data || data.length === 0) break;
       allAssets.push(...data);
       if (data.length < 100) break;
@@ -95,8 +95,6 @@ export default async function handler(req, res) {
       }
     }
     console.error('[list-assets] total assets returned:', allAssets.length);
-    // Temporary: labels of the long videos (to see why Upload Asset lists fewer sessions)
-    console.log('[labels]', session.venueSlug, JSON.stringify(allAssets.filter(a => !a.source && Number(a.duration) > 60).map(a => [String(a.id).slice(-6), String(a.passthrough || '').slice(0, 90), Math.round(Number(a.duration)), a.status, new Date(Number(a.created_at) * 1000).toISOString().slice(0, 10), (a.tracks || []).map(t => t.type).join('+')])));
     return res.status(200).json(allAssets);
   } catch (e) {
     console.error('[list-assets] exception:', e.message);
