@@ -120,10 +120,13 @@
         .cam-kind { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
         .cam-kind label { position:relative; display:block; cursor:pointer; }
         .cam-kind input { position:absolute; opacity:0; pointer-events:none; }
-        .cam-kind span { display:flex; flex-direction:column; gap:3px; padding:12px 14px; border:1px solid var(--la-line); border-radius:10px; font-size:14px; font-weight:500; color:var(--la-text); transition:border-color .2s ease, background .2s ease; }
+        .cam-kind span { display:flex; flex-direction:column; gap:3px; padding:12px 14px; border:1px solid color-mix(in srgb, var(--la-text) 22%, transparent); border-radius:6px; font-size:14px; font-weight:500; color:var(--la-text); transition:border-color .2s ease, background .2s ease; }
         .cam-kind small { font-size:12px; font-weight:400; color:var(--la-dim); }
         .cam-kind input:checked + span { border-color:var(--la-text); background:color-mix(in srgb, var(--la-text) 4%, transparent); }
         .cam-form [hidden] { display:none !important; }
+        /* Every field in the form alike: same height, corners and line as the dropdowns */
+        :root body .cam-form input:not([type=checkbox]):not([type=radio]), :root body .cam-form select { height:44px !important; border-radius:6px !important; border:1px solid color-mix(in srgb, var(--la-text) 22%, transparent) !important; background-color:var(--la-input) !important; color:var(--la-text) !important; font-size:14px !important; padding-left:14px !important; box-sizing:border-box; width:100%; }
+        :root body .cam-form input:not([type=checkbox]):not([type=radio]):focus { border-color:transparent !important; box-shadow:0 0 0 2px var(--la-text); }
         .cam-guides { margin-top:14px; border:1px solid var(--la-line); border-radius:10px; overflow:hidden; }
         .cam-guide + .cam-guide { border-top:1px solid var(--la-line); }
         .cam-guide summary { cursor:pointer; padding:12px 14px; font-size:14px; font-weight:500; color:var(--la-text); list-style:none; display:flex; justify-content:space-between; }
@@ -1022,14 +1025,14 @@
             openCamDialog(c ? 'Edit camera' : 'Add camera',
                 '<form id="cam-form" class="cam-form">' +
                 '<div class="cam-kind" role="radiogroup" aria-label="Camera">' +
-                    '<label><input type="radio" name="kind" value="obsbot"' + (!c || c.kind !== 'other' ? ' checked' : '') + '><span>OBSBOT Tail 2<small>Controlled from Camera Control</small></span></label>' +
-                    '<label><input type="radio" name="kind" value="other"' + (c && c.kind === 'other' ? ' checked' : '') + '><span>Other camera<small>DJI Osmo, Sony Alpha, a phone…</small></span></label>' +
+                    '<label><input type="radio" name="kind" value="obsbot"' + (!c || c.kind !== 'other' ? ' checked' : '') + '><span>OBSBOT Tail 2<small>Steer it from here</small></span></label>' +
+                    '<label><input type="radio" name="kind" value="other"' + (c && c.kind === 'other' ? ' checked' : '') + '><span>Other camera<small>Osmo, Sony, phone…</small></span></label>' +
                 '</div>' +
-                '<label class="cam-other-only">Which camera<select name="model">' + ['DJI Osmo', 'Sony Alpha', 'Phone', 'Other camera with RTMP'].map(function(m) { return '<option' + (c && c.model === m ? ' selected' : '') + '>' + m + '</option>'; }).join('') + '</select><small>Any camera that can stream to an RTMP address works. Stream setup shows how.</small></label>' +
+                '<label class="cam-other-only">Which camera<select name="model">' + ['DJI Osmo', 'Sony Alpha', 'Phone', 'Other camera with RTMP'].map(function(m) { return '<option' + (c && c.model === m ? ' selected' : '') + '>' + m + '</option>'; }).join('') + '</select></label>' +
                 '<label>Name<input name="name" maxlength="40" required placeholder="Main floor" value="' + esc(c && c.name) + '"></label>' +
                 '<label class="cam-obsbot-only">NDI source name<input name="ndiName" maxlength="80" placeholder="OBSBOT-TAIL2 (MAIN FLOOR)" value="' + esc(c && c.ndiName) + '"><small>As shown in the OBSBOT app or NDI Studio Monitor.</small></label>' +
                 '<label class="cam-obsbot-only">IP address<input name="ip" maxlength="70" placeholder="192.168.1.50" value="' + esc(c && c.ip) + '"><small>The camera\'s address on the venue network. Needed for Control.</small></label>' +
-                '<label class="cam-check"><input type="checkbox" name="followCalendar"' + (!c || c.followCalendar !== false ? ' checked' : '') + '><span>Start and stop with the calendar<small>Records from 2 minutes before each set to 2 minutes after it. Leave the camera streaming all night.</small></span></label>' +
+                '<label class="cam-check"><input type="checkbox" name="followCalendar"' + (!c || c.followCalendar !== false ? ' checked' : '') + '><span>Start and stop with the calendar<small>Records each set, 2 minutes either side.</small></span></label>' +
                 '<p id="cam-form-error" class="cam-form-error"></p>' +
                 '<div class="cam-form-actions"><button type="button" class="cam-btn ghost" onclick="closeCamDialog()">Cancel</button>' +
                 '<button type="submit" class="cam-btn primary">' + (c ? 'Save' : 'Add camera') + '</button></div>' +

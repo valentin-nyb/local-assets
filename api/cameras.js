@@ -49,8 +49,10 @@ function newStreamBody(name) {
     playback_policy: ['public'],
     latency_mode: 'low',
     reconnect_window: 60,
-    passthrough: name,
-    new_asset_settings: { playback_policy: ['public'], passthrough: 'CAMERA // RECORDING' },
+    // Mux now takes one passthrough for the stream and its recordings; recordings keep this label until
+    // each set is saved for its DJ (api/_camera-recording.js), so they never show as sessions on their own
+    passthrough: 'CAMERA // RECORDING',
+    new_asset_settings: { playback_policy: ['public'] },
   });
 }
 
