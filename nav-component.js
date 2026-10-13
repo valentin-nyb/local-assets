@@ -1,5 +1,5 @@
 // Dropdown menus in the site's style (la-select.js), on every page that has the nav
-(function () { if (document.querySelector('script[data-la-select]')) return; var sc = document.createElement('script'); sc.src = '/la-select.js?v=1'; sc.defer = true; sc.setAttribute('data-la-select', ''); document.head.appendChild(sc); })();
+(function () { if (document.querySelector('script[data-la-select]')) return; var sc = document.createElement('script'); sc.src = '/la-select.js?v=2'; sc.defer = true; sc.setAttribute('data-la-select', ''); document.head.appendChild(sc); })();
 document.addEventListener("DOMContentLoaded", () => {
     // Inject theme switcher CSS if not already present
     if (!document.getElementById('la-theme-switcher-css')) {
