@@ -3,6 +3,16 @@ import { createClient } from 'redis';
 import { getWebSessionAuth, getVenuesConfig, getMuxAuthForVenue, platformAdmins, isAdminVenue } from './_venues.js';
 import { calendarKey, cleanCalendarUrl, fetchEvents } from './_calendar.js';
 import { listLiveStreams } from './_live.js';
+import crypto from 'crypto';
+import { viscaFor, isContinuous, privateHost } from './_visca.js';
+import { relayKeyHash, cmdsKey, seenKey, tokenKey } from './camera-relay.js';
+
+// The venue relay is online when it polled in the last 45 s
+async function relayStatus(redis, slug) {
+  const seen = JSON.parse(await redis.get(seenKey(slug)) || 'null');
+  const hasKey = !!(await redis.get(tokenKey(slug)));
+  return { set: hasKey, online: !!(seen && Date.now() - seen.at < 45000), lastSeen: seen?.at || null, version: seen?.version || '' };
+}
 
 // Venue cameras (OBSBOT Tail 2 with NDI HX3).
 // Each camera has a Mux live stream that its video is sent to, either by the camera's own
@@ -93,7 +103,7 @@ export default async function handler(req, res) {
       const venues = await Promise.all(Object.entries(cfg).filter(([k, v]) => !isAdminVenue({ slug: k, ...v })).map(async ([k, v]) => {
         const auth = getMuxAuthForVenue({ slug: k, ...v });
         if (!auth) return { slug: k, name: v.name || k, cameras: [], error: 'No Cloud Storage keys' };
-        try { return { slug: k, name: v.name || k, cameras: await venueCameras(k, auth) }; }
+        try { return { slug: k, name: v.name || k, cameras: await venueCameras(k, auth), relay: await withRedis(r => relayStatus(r, k)).catch(() => null) }; }
         catch (e) { return { slug: k, name: v.name || k, cameras: [], error: e.message }; }
       }));
       return res.status(200).json({ admin: true, venues, cameras: [], calendar: { connected: false } });
@@ -114,7 +124,8 @@ export default async function handler(req, res) {
           calendar.upcoming = events.filter(e => e.start > now).slice(0, 6).map(e => ({ artist: e.artist, venue: e.venue, start: e.start, end: e.end }));
         } catch (e) { console.error('[cameras] calendar', slug, e.message); calendar.error = e.message || 'The calendar could not be read'; }
       }
-      return res.status(200).json({ cameras, calendar });
+      const relay = await withRedis(r => relayStatus(r, slug)).catch(() => null);
+      return res.status(200).json({ cameras, calendar, relay });
     }
 
     if (req.method !== 'POST') return res.status(405).end();
@@ -223,6 +234,36 @@ export default async function handler(req, res) {
         streamKey: s.stream_key,
         srtUrl: s.srt_passphrase ? `${SRT_HOST}?streamid=${s.stream_key}&passphrase=${s.srt_passphrase}` : null,
       });
+    }
+
+    if (body.action === 'control') {
+      // Remote control: a VISCA command for one camera, passed on by the venue relay
+      const bytes = viscaFor(body.cmd || {});
+      if (!bytes) return res.status(400).json({ error: 'Unknown camera command' });
+      return await withRedis(async redis => {
+        const cams = await readCameras(redis, slug);
+        const cam = cams.find(c => c.id === body.id);
+        if (!cam) return res.status(404).json({ error: 'Camera not found' });
+        const host = String(cam.ip || '').split(':')[0];
+        if (!privateHost(host)) return res.status(400).json({ error: 'Add the camera\'s IP address on the venue network (like 192.168.1.50) in Edit first.' });
+        const relay = await relayStatus(redis, slug);
+        if (!relay.online) return res.status(409).json({ error: 'relay_offline', relay });
+        await redis.rPush(cmdsKey(slug), JSON.stringify({ ip: host, bytes, hold: isContinuous(body.cmd), at: Date.now() }));
+        await redis.lTrim(cmdsKey(slug), -50, -1);
+        await redis.expire(cmdsKey(slug), 60);
+        return res.status(200).json({ ok: true });
+      });
+    }
+
+    if (body.action === 'relayKey') {
+      // A new key for the venue relay (the old one stops working). Shown once.
+      const secret = crypto.randomBytes(24).toString('base64url');
+      await withRedis(r => r.set(tokenKey(slug), relayKeyHash(secret)));
+      return res.status(200).json({ key: `${slug}.${secret}` });
+    }
+
+    if (body.action === 'relayStatus') {
+      return res.status(200).json({ relay: await withRedis(r => relayStatus(r, slug)) });
     }
 
     if (body.action === 'remove') {

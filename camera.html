@@ -235,6 +235,52 @@
         .cam-acct select { height:38px; min-width:220px; max-width:100%; padding:0 34px 0 12px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); font:700 12px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.04em; text-transform:uppercase; cursor:pointer; }
         .cam-admin-ex .ci-actions, .cam-admin-ex .ci-note, .cam-admin-ex .ci-steps { display:none; }
         @media (max-width:640px) { .cam-acct { margin-left:0; width:100%; } .cam-acct select { width:100%; } }
+        .cam-ctl { color:var(--la-accent) !important; font-weight:600; }
+        .cam-relay { display:flex; align-items:center; gap:10px; font:700 10px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.08em; text-transform:uppercase; color:var(--la-dim); margin-top:-8px; }
+        .cam-relay.hidden { display:none; }
+        .cam-relay-dot { width:6px; height:6px; border-radius:50%; background:var(--la-dim); }
+        .cam-relay[data-on="1"] { color:var(--la-ok); } .cam-relay[data-on="1"] .cam-relay-dot { background:var(--la-ok); }
+        .cam-relay .cam-link { height:24px; font:inherit; letter-spacing:inherit; text-transform:inherit; color:var(--la-text); }
+        .rl-text { font-size:13px; line-height:1.6; color:var(--la-sub); margin:0 0 12px; }
+        .rl-state { font:700 11px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.06em; text-transform:uppercase; color:var(--la-dim); margin:0 0 14px; }
+        .rl-state.on { color:var(--la-ok); }
+        .rl-steps { margin:0 0 14px; padding-left:18px; display:flex; flex-direction:column; gap:8px; font-size:13px; line-height:1.55; color:var(--la-sub); }
+        .rl-steps b { color:var(--la-text); }
+        .rl-label { font-size:12px; color:var(--la-dim); margin:4px 0 6px; }
+        .rl-cmd { max-height:120px; overflow:auto; white-space:pre-wrap; word-break:break-all; font:11px/1.5 'JetBrains Mono', monospace; background:var(--la-input); border:1px solid var(--la-line); border-radius:10px; padding:10px; color:var(--la-text); margin:0 0 8px; }
+        .cam-dialog-panel.ctl { width:880px; }
+        .ctl-head { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin-bottom:12px; }
+        .ctl-title { margin:4px 0 0; font:700 18px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif; text-transform:uppercase; color:var(--la-text); }
+        .ctl-relay { font:700 10px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.08em; text-transform:uppercase; color:var(--la-dim); }
+        .ctl-relay.on { color:var(--la-ok); }
+        .ctl-stage { aspect-ratio:16/9; background:#000; border-radius:12px; overflow:hidden; border:1px solid var(--la-line); }
+        .ctl-stage .cam-off { height:100%; }
+        .ctl-msg { margin:12px 0 0; font-size:12px; line-height:1.5; color:var(--la-warn); }
+        .ctl-msg.hidden { display:none; }
+        .ctl-grid { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:18px; margin-top:16px; }
+        .ctl-off .ctl-grid { opacity:.4; pointer-events:none; }
+        .ctl-label { display:flex; align-items:center; justify-content:space-between; gap:8px; font:700 10px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.08em; text-transform:uppercase; color:var(--la-dim); margin:0 0 8px; }
+        .ctl-label:not(:first-child) { margin-top:14px; }
+        .ctl-grid button { font:700 11px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.04em; text-transform:uppercase; color:var(--la-text); background:var(--la-input); border:1px solid var(--la-line); border-radius:8px; cursor:pointer; touch-action:none; user-select:none; -webkit-user-select:none; }
+        .ctl-grid button:active, .ctl-grid button.on, .ctl-grid button.flash { background:var(--la-text); color:var(--la-bg); border-color:var(--la-text); }
+        .ctl-pad { display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; }
+        .ctl-pad button { aspect-ratio:1; font-size:16px; }
+        .ctl-pad button.home { font-size:9px; }
+        .ctl-speed { display:flex; flex-direction:column; gap:6px; margin-top:12px; font:700 10px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.08em; text-transform:uppercase; color:var(--la-dim); }
+        .ctl-speed input { accent-color:var(--la-accent); }
+        .ctl-zoom { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+        .ctl-zoom button { height:44px; font-size:20px; }
+        .ctl-presets { display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; }
+        .ctl-presets button { height:38px; }
+        .ctl-presets button.saved { background:var(--la-accent); color:var(--la-accent-ink); border-color:var(--la-accent); }
+        .ctl-grid .ctl-save { height:22px; padding:0 8px; font-size:9px; }
+        .ctl-grid .ctl-save.on { background:var(--la-accent); color:var(--la-accent-ink); border-color:var(--la-accent); }
+        .ctl-seg { display:flex; gap:4px; margin-bottom:6px; }
+        .ctl-seg button { flex:1; height:32px; padding:0 4px; font-size:10px; }
+        .ctl-seg[data-seg="framing"] { flex-wrap:wrap; } .ctl-seg[data-seg="framing"] button { flex:1 1 calc(33% - 4px); }
+        .ctl-fine { margin:16px 0 0; font-size:11px; color:var(--la-dim); }
+        @media (max-width: 760px) { .ctl-grid { grid-template-columns:repeat(2, minmax(0,1fr)); } }
+        @media (max-width: 420px) { .ctl-grid { grid-template-columns:minmax(0,1fr); } }
 </style>
 </head>
 <body class="font-sans antialiased bg-background text-foreground overflow-hidden h-screen w-screen flex selection:bg-primary selection:text-black">
@@ -279,6 +325,7 @@
                     </div>
                 </div>
 
+                <div id="cam-relay" class="cam-relay hidden"><span class="cam-relay-dot"></span><span id="cam-relay-text">Remote control</span><button type="button" class="cam-link" onclick="openRelaySetup()">Set up</button></div>
                 <div id="cam-grid" class="cam-grid"></div>
                 <div id="cam-empty" class="hidden cam-intro">
                     <div class="ci-copy">
@@ -299,7 +346,7 @@
                             <div class="cam-meta"><span class="cam-label">CAM 01 // MAIN FLOOR</span><span class="cam-pill on">LIVE · REC</span></div>
                             <div class="cam-chips"><span class="cam-chip">OBSBOT Tail 2</span><span class="cam-chip ndi">NDI · MAIN FLOOR</span><span class="cam-chip">192.168.1.50</span></div>
                             <div class="cam-onstage" style="cursor:default"><span style="min-width:0"><span class="lbl">ON STAGE</span><span class="val" id="ci-artist">ARTIST NAME</span></span><span class="go">From calendar</span></div>
-                            <div class="cam-row-actions" aria-hidden="true"><span class="cam-link">Controls</span><span class="cam-link">Stream setup</span><span class="cam-link">Edit</span><span class="cam-link danger">Remove</span></div>
+                            <div class="cam-row-actions" aria-hidden="true"><span class="cam-link cam-ctl">Control</span><span class="cam-link">Camera page</span><span class="cam-link">Stream setup</span><span class="cam-link">Edit</span><span class="cam-link danger">Remove</span></div>
                         </div>
                         <div class="ci-arrow"><span>When the stream stops</span></div>
                         <div class="ci-result">
@@ -410,6 +457,7 @@
         function camApi(body) {
             var h = { 'Content-Type': 'application/json' };
             if (body && body.id && _camVenue[body.id]) h['X-LA-Venue'] = _camVenue[body.id];
+            else if (body && body.venue) h['X-LA-Venue'] = body.venue;
             return laFetch('/api/cameras', { method: 'POST', headers: h, body: JSON.stringify(body) })
                 .then(function(r) { return r.json().then(function(d) { if (!r.ok) throw new Error(d.error || r.status); return d; }); });
         }
@@ -467,6 +515,7 @@
                 var data = await res.json();
                 if (!res.ok) throw new Error(data.error || res.status);
                 if (data.admin) { renderAdminCameras(data.venues || []); return; }
+                _relay = data.relay || null; paintRelay();
                 _cams = data.cameras || [];
                 renderCalendar(data.calendar || { connected: false });
                 err.classList.add('hidden');
@@ -523,6 +572,7 @@
                 return '<option value="' + esc(x.slug) + '"' + (x.slug === v.slug ? ' selected' : '') + '>' + esc(x.name) + (x.cameras.length ? ' · ' + (l ? l + ' live' : x.cameras.length + ' offline') : '') + '</option>';
             }).join('');
             var eb = document.querySelector('.cam-eyebrow'); if (eb) eb.textContent = v.name;
+            _relay = v.relay || null; paintRelay();
             _cams = v.cameras;
             var live = _cams.filter(function(c) { return c.status === 'active'; }).length;
             camStatus(v.error ? 'Unavailable' : _cams.length ? live + ' of ' + _cams.length + ' live' : 'No cameras', live ? 'var(--la-ok)' : v.error ? 'var(--la-bad)' : 'var(--la-dim)');
@@ -592,7 +642,8 @@
             if (c.ndiName) chips += '<span class="cam-chip ndi" title="NDI source name">NDI · ' + esc(c.ndiName) + '</span>';
             if (c.ip) chips += '<span class="cam-chip">' + esc(c.ip) + '</span>';
             var actions = '';
-            if (c.ip) actions += '<a class="cam-link" href="http://' + esc(c.ip) + '/" target="_blank" rel="noopener" title="Works on the venue network">Controls</a>';
+            if (!c.external) actions += '<button type="button" class="cam-link cam-ctl" data-act="control">Control</button>';
+            if (c.ip) actions += '<a class="cam-link" href="http://' + esc(c.ip) + '/" target="_blank" rel="noopener" title="The camera\'s own settings page. Works on the venue network.">Camera page</a>';
             if (!c.external) {
                 actions += '<button type="button" class="cam-link" data-act="setup">Stream setup</button>';
                 actions += '<button type="button" class="cam-link" data-act="edit">Edit</button>';
@@ -631,9 +682,179 @@
                     if (act === 'remove') removeCamera(c, b);
                     if (act === 'stage') openOnStage(c);
                     if (act === 'rec') enableRecording(c, b);
+                    if (act === 'control') openControl(c);
                 });
             });
             return card;
+        }
+
+        // ── Remote control (pan, tilt, zoom, presets, AI tracking) through the venue relay ──
+        var _relay = null;
+        function paintRelay() {
+            var box = document.getElementById('cam-relay');
+            if (!box) return;
+            box.classList.toggle('hidden', !_cams.length);
+            box.dataset.on = _relay && _relay.online ? '1' : '';
+            document.getElementById('cam-relay-text').textContent = _relay && _relay.online ? 'Remote control on · venue relay connected' : _relay && _relay.set ? 'Remote control off · venue relay not connected' : 'Remote control not set up';
+            box.querySelector('button').textContent = _relay && _relay.online ? 'Relay' : 'Set up';
+        }
+        function adminVenueArg() { return document.getElementById('cam-acct') ? { venue: _adminVenueSel } : {}; }
+        function openRelaySetup() {
+            if (window._ctlCleanup) window._ctlCleanup();
+            document.querySelector('#cam-dialog .cam-dialog-panel').classList.remove('ctl', 'ctl-off');
+            openCamDialog('Remote control', '');
+            document.querySelector('#cam-dialog .cam-dialog-panel').classList.add('wide');
+            var on = _relay && _relay.online;
+            document.getElementById('cam-dialog-body').innerHTML =
+                '<p class="rl-text">Pan, tilt, zoom, presets and AI tracking are sent to the cameras by a small relay app on a computer at the venue (the Mac mini). It only talks to the cameras on the venue network.</p>' +
+                '<p class="rl-state' + (on ? ' on' : '') + '">' + (on ? 'Relay connected' + (_relay.version ? ' · version ' + esc(_relay.version) : '') : _relay && _relay.lastSeen ? 'Relay last seen ' + new Date(_relay.lastSeen).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Relay not connected yet') + '</p>' +
+                '<ol class="rl-steps">' +
+                    '<li><b>On each camera</b> turn on <em>VISCA over IP</em> in the OBSBOT Start app, and add its IP address here with <em>Edit</em>.</li>' +
+                    '<li><b>On the venue computer</b> install Node.js from nodejs.org.</li>' +
+                    '<li><b>Make a relay key</b> and paste the command it gives you into Terminal on that computer. The relay starts now and every time the computer starts.</li>' +
+                '</ol>' +
+                '<div id="rl-key"></div>' +
+                '<p id="rl-error" class="cam-form-error"></p>' +
+                '<div class="se-actions" style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px"><button type="button" class="cam-btn ghost" onclick="closeCamDialog()">Close</button><button type="button" class="cam-btn primary" id="rl-make">' + (_relay && _relay.set ? 'Make a new relay key' : 'Make relay key') + '</button></div>';
+            document.getElementById('rl-make').addEventListener('click', async function() {
+                var b = this;
+                if (_relay && _relay.set && !(await laConfirm({ title: 'Make a new relay key?', message: 'The relay running now stops working until it uses the new key.', confirmText: 'Make new key' }))) return;
+                b.disabled = true;
+                try {
+                    var d = await camApi(Object.assign({ action: 'relayKey' }, adminVenueArg()));
+                    var cmd = 'mkdir -p ~/la-relay && curl -fsSL https://local-assets.com/relay/la-camera-relay.mjs -o ~/la-relay/la-camera-relay.mjs && cat > ~/Library/LaunchAgents/com.local-assets.relay.plist <<EOF\n' +
+                        '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>Label</key><string>com.local-assets.relay</string><key>ProgramArguments</key><array><string>$(which node)</string><string>$HOME/la-relay/la-camera-relay.mjs</string></array><key>EnvironmentVariables</key><dict><key>LA_RELAY_KEY</key><string>' + d.key + '</string></dict><key>RunAtLoad</key><true/><key>KeepAlive</key><true/><key>StandardOutPath</key><string>$HOME/la-relay/relay.log</string><key>StandardErrorPath</key><string>$HOME/la-relay/relay.log</string></dict></plist>\n' +
+                        'EOF\nlaunchctl unload ~/Library/LaunchAgents/com.local-assets.relay.plist 2>/dev/null; launchctl load ~/Library/LaunchAgents/com.local-assets.relay.plist';
+                    document.getElementById('rl-key').innerHTML = '<p class="rl-label">Paste into Terminal on the venue computer. The key is shown only once.</p><pre class="rl-cmd" id="rl-cmd"></pre><button type="button" class="cam-btn ghost" id="rl-copy">Copy command</button>';
+                    document.getElementById('rl-cmd').textContent = cmd;
+                    document.getElementById('rl-copy').addEventListener('click', function() { var t = this; navigator.clipboard.writeText(cmd).then(function() { t.textContent = 'Copied'; }); });
+                    b.textContent = 'Make a new relay key';
+                    _relay = Object.assign({}, _relay, { set: true }); paintRelay();
+                } catch (e) { document.getElementById('rl-error').textContent = 'Could not make the key: ' + e.message; }
+                b.disabled = false;
+            });
+        }
+
+        function openControl(c) {
+            openCamDialog('', '');
+            var panel = document.querySelector('#cam-dialog .cam-dialog-panel');
+            panel.classList.add('wide', 'ctl');
+            var isLive = c.status === 'active' && c.playbackId;
+            var dirs = [['upleft', '↖'], ['up', '↑'], ['upright', '↗'], ['left', '←'], ['home', 'HOME'], ['right', '→'], ['downleft', '↙'], ['down', '↓'], ['downright', '↘']];
+            var seg = function(name, opts) { return '<div class="ctl-seg" data-seg="' + name + '">' + opts.map(function(o) { return '<button type="button" data-v="' + o[0] + '">' + o[1] + '</button>'; }).join('') + '</div>'; };
+            document.getElementById('cam-dialog-body').innerHTML =
+                '<div class="ctl-head"><div><p class="cam-eyebrow">Control</p><h3 class="ctl-title">' + esc(c.name) + '</h3></div><span class="ctl-relay" id="ctl-relay"></span></div>' +
+                '<div class="ctl-stage" id="ctl-stage"></div>' +
+                '<p class="ctl-msg hidden" id="ctl-msg"></p>' +
+                '<div class="ctl-grid">' +
+                    '<section><p class="ctl-label">Pan · tilt</p><div class="ctl-pad">' + dirs.map(function(d) { return d[0] === 'home' ? '<button type="button" class="home" data-home>HOME</button>' : '<button type="button" data-dir="' + d[0] + '" aria-label="' + d[0] + '">' + d[1] + '</button>'; }).join('') + '</div>' +
+                        '<label class="ctl-speed">Speed<input type="range" id="ctl-speed" min="1" max="10" value="5"></label></section>' +
+                    '<section><p class="ctl-label">Zoom</p><div class="ctl-zoom"><button type="button" data-zoom="out">−</button><button type="button" data-zoom="in">+</button></div>' +
+                        '<p class="ctl-label">Presets <button type="button" class="ctl-save" id="ctl-save">Save</button></p><div class="ctl-presets">' + [1, 2, 3, 4, 5, 6].map(function(n) { return '<button type="button" data-preset="' + n + '">' + n + '</button>'; }).join('') + '</div></section>' +
+                    '<section><p class="ctl-label">AI tracking</p>' + seg('tracking', [['on', 'On'], ['off', 'Off']]) +
+                        seg('trackMode', [['single', 'One DJ'], ['multi', 'Group']]) +
+                        '<p class="ctl-label">Framing</p>' + seg('framing', [['closeup', 'Close'], ['halfbody', 'Half'], ['knees', 'Knees'], ['fullbody', 'Full'], ['none', 'Off']]) +
+                        '<p class="ctl-label">Only me</p>' + seg('onlyMe', [['on', 'On'], ['off', 'Off']]) + '</section>' +
+                    '<section><p class="ctl-label">Picture</p>' + seg('orientation', [['h', 'Horizontal'], ['v', 'Vertical']]) +
+                        '<p class="ctl-label">Focus</p>' + seg('focus', [['auto', 'Auto'], ['push', 'Refocus']]) +
+                        '<p class="ctl-label">Exposure</p>' + seg('exposure', [['down', '−'], ['reset', '0'], ['up', '+']]) + '</section>' +
+                '</div>' +
+                '<p class="ctl-fine">Commands go to the camera through the venue relay. Keyboard: arrow keys to move, + and − to zoom.</p>';
+            var stage = document.getElementById('ctl-stage');
+            if (isLive) {
+                var mp = document.createElement('mux-player');
+                mp.setAttribute('stream-type', 'live'); mp.setAttribute('playback-id', c.playbackId);
+                mp.setAttribute('muted', ''); mp.setAttribute('autoplay', 'muted'); mp.setAttribute('accent-color', '#39FF14');
+                mp.style.cssText = 'width:100%;height:100%;--media-object-fit:contain;--controls:none;';
+                stage.appendChild(mp);
+            } else stage.innerHTML = '<div class="cam-off"><span>The picture shows here while the camera streams</span></div>';
+
+            var msg = document.getElementById('ctl-msg'), relayEl = document.getElementById('ctl-relay');
+            function relayState(online) {
+                relayEl.textContent = online ? 'Relay connected' : 'Relay not connected';
+                relayEl.classList.toggle('on', !!online);
+                panel.classList.toggle('ctl-off', !online);
+                msg.classList.toggle('hidden', !!online);
+                if (!online) msg.innerHTML = 'Remote control needs the venue relay running at the venue. <button type="button" class="cam-link" onclick="openRelaySetup()">Set up the relay</button>';
+            }
+            relayState(_relay && _relay.online);
+            if (!c.ip) { msg.classList.remove('hidden'); msg.innerHTML = 'Add this camera\'s IP address on the venue network (like 192.168.1.50) with <em>Edit</em> to control it.'; panel.classList.add('ctl-off'); }
+            var busy = false;
+            function send(cmd) {
+                return camApi({ action: 'control', id: c.id, cmd: cmd }).catch(function(e) {
+                    if (/relay_offline/.test(e.message)) relayState(false);
+                    else { msg.classList.remove('hidden'); msg.textContent = e.message; }
+                });
+            }
+            var speed = function() { return Number(document.getElementById('ctl-speed').value) || 5; };
+            // Hold to move: refreshed while held, stopped on release (the relay also stops it if refreshes stop)
+            var holdT = null, holding = null;
+            function startHold(cmd) {
+                stopHold();
+                holding = cmd; send(cmd);
+                holdT = setInterval(function() { send(holding); }, 700);
+            }
+            function stopHold() {
+                if (!holding) return;
+                clearInterval(holdT); holdT = null;
+                send(holding.type === 'move' ? { type: 'move', dir: 'stop' } : { type: 'zoom', dir: 'stop' });
+                holding = null;
+            }
+            panel.querySelectorAll('[data-dir]').forEach(function(b) {
+                b.addEventListener('pointerdown', function(e) { e.preventDefault(); b.setPointerCapture(e.pointerId); startHold({ type: 'move', dir: b.dataset.dir, speed: speed() }); });
+                ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function(ev) { b.addEventListener(ev, stopHold); });
+            });
+            panel.querySelectorAll('[data-zoom]').forEach(function(b) {
+                b.addEventListener('pointerdown', function(e) { e.preventDefault(); b.setPointerCapture(e.pointerId); startHold({ type: 'zoom', dir: b.dataset.zoom, speed: Math.round(speed() * 0.7) }); });
+                ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function(ev) { b.addEventListener(ev, stopHold); });
+            });
+            panel.querySelector('[data-home]').addEventListener('click', function() { send({ type: 'home' }); });
+            var saving = false, saveBtn = document.getElementById('ctl-save');
+            saveBtn.addEventListener('click', function() { saving = !saving; saveBtn.classList.toggle('on', saving); saveBtn.textContent = saving ? 'Pick a number' : 'Save'; });
+            panel.querySelectorAll('[data-preset]').forEach(function(b) {
+                b.addEventListener('click', function() {
+                    send({ type: 'preset', op: saving ? 'set' : 'recall', n: Number(b.dataset.preset) });
+                    if (saving) { saving = false; saveBtn.classList.remove('on'); saveBtn.textContent = 'Save'; b.classList.add('saved'); setTimeout(function() { b.classList.remove('saved'); }, 900); }
+                });
+            });
+            var segCmd = {
+                tracking: function(v) { return { type: 'tracking', on: v === 'on' }; },
+                trackMode: function(v) { return { type: 'trackMode', mode: v }; },
+                framing: function(v) { return { type: 'framing', framing: v }; },
+                onlyMe: function(v) { return { type: 'onlyMe', on: v === 'on' }; },
+                orientation: function(v) { return { type: 'orientation', vertical: v === 'v' }; },
+                focus: function(v) { return { type: 'focus', mode: v }; },
+                exposure: function(v) { return { type: 'exposure', dir: v }; },
+            };
+            panel.querySelectorAll('[data-seg]').forEach(function(g) {
+                g.querySelectorAll('button').forEach(function(b) {
+                    b.addEventListener('click', function() {
+                        // One-off actions (refocus, exposure steps) flash; settings stay marked as last sent
+                        var once = g.dataset.seg === 'exposure' || (g.dataset.seg === 'focus' && b.dataset.v === 'push');
+                        if (!once) g.querySelectorAll('button').forEach(function(x) { x.classList.toggle('on', x === b); });
+                        else { b.classList.add('flash'); setTimeout(function() { b.classList.remove('flash'); }, 400); }
+                        send(segCmd[g.dataset.seg](b.dataset.v));
+                    });
+                });
+            });
+            // Keyboard while the panel is open
+            var KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
+            function kd(e) {
+                if (document.getElementById('cam-dialog').classList.contains('hidden')) return cleanup();
+                if (e.repeat) return;
+                if (KEYS[e.key]) { e.preventDefault(); startHold({ type: 'move', dir: KEYS[e.key], speed: speed() }); }
+                if (e.key === '+' || e.key === '=') startHold({ type: 'zoom', dir: 'in', speed: 3 });
+                if (e.key === '-') startHold({ type: 'zoom', dir: 'out', speed: 3 });
+            }
+            function ku(e) { if (KEYS[e.key] || e.key === '+' || e.key === '=' || e.key === '-') stopHold(); }
+            function cleanup() { stopHold(); document.removeEventListener('keydown', kd); document.removeEventListener('keyup', ku); window._ctlCleanup = null; }
+            window._ctlCleanup = cleanup;
+            document.addEventListener('keydown', kd); document.addEventListener('keyup', ku);
+            window.addEventListener('blur', stopHold, { once: true });
+            var close = closeCamDialog;
+            closeCamDialog = function() { cleanup(); panel.classList.remove('ctl', 'ctl-off'); closeCamDialog = close; close(); };
+            // Check the relay now
+            camApi(Object.assign({ action: 'relayStatus' }, _camVenue[c.id] ? { venue: _camVenue[c.id] } : {})).then(function(d) { _relay = d.relay; paintRelay(); if (c.ip) relayState(d.relay && d.relay.online); }).catch(function() {});
         }
 
         function openCamDialog(title, html) {
