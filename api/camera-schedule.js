@@ -1,6 +1,9 @@
 import { createClient } from 'redis';
 import { getVenuesConfig, getMuxAuthForVenue } from './_venues.js';
 import { calendarKey, fetchEvents } from './_calendar.js';
+import { pendingKey } from './_camera-recording.js';
+import { sessionSources, startMulticam } from './multicam.js';
+import { listAllAssets } from './_verticals.js';
 
 // Cameras start and stop with the venue calendar (Vercel cron, every minute).
 // A camera's Mux live stream is opened shortly before each set and closed shortly after it, so the
@@ -62,6 +65,29 @@ export default async function handler(req, res) {
           changes.push(`${slug}/${cam.name}: ${want}${win?.current ? ' (' + win.current.artist + ')' : ''}`);
         } catch (e) { console.error('[camera-schedule]', slug, cam.name, e.message); }
       }
+    }
+    // Sets filmed by several cameras: once every camera's recording is saved (from 15 min after the set,
+    // at the latest an hour after), queue the multi-camera edit on the venue's Mac mini
+    for (const [slug, cfg] of Object.entries(getVenuesConfig())) {
+      const pending = await redis.hGetAll(pendingKey(slug));
+      const due = Object.entries(pending || {}).map(([k, v]) => { try { return [k, JSON.parse(v)]; } catch { return null; } }).filter(x => x && now > x[1].end + 15 * 60e3);
+      if (!due.length) continue;
+      const auth = getMuxAuthForVenue({ slug, ...cfg });
+      if (!auth) continue;
+      try {
+        const assets = await listAllAssets(auth);
+        const expected = JSON.parse(await redis.get(`cameras:${slug}`) || '[]').filter(c => c.streamId).length;
+        for (const [key, p] of due) {
+          const [artist, date] = key.split('|');
+          const src = sessionSources(assets, artist, date);
+          const waiting = assets.some(a => a.status === 'preparing' && String(a.passthrough || '').includes(`"artist":"${artist}"`));
+          if ((src.cams.length < expected || waiting) && now < p.end + 60 * 60e3) continue;   // more recordings still on their way
+          await redis.hDel(pendingKey(slug), key);
+          if (src.cams.length < 2) { console.log('[multicam] only', src.cams.length, 'camera for', slug, key); continue; }
+          const started = await startMulticam(redis, slug, auth, artist, date, src, { auto: true });
+          changes.push(`${slug}/${artist}: multi-camera edit ${started.error ? 'not started (' + started.error + ')' : 'queued'}`);
+        }
+      } catch (e) { console.error('[camera-schedule] multicam', slug, e.message); }
     }
     if (changes.length) console.log('[camera-schedule]', changes.join(' | '));
     return res.status(200).json({ changes });

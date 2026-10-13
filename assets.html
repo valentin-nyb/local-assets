@@ -50,6 +50,14 @@
         .vault-card-header > div { min-width:0; }
         .vault-edit { order:2; flex-shrink:0; height:32px; padding:0 14px; border-radius:8px; border:1px solid var(--la-line); background:transparent; color:var(--la-text); font:700 11px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.06em; text-transform:uppercase; cursor:pointer; }
         .vault-edit:hover { border-color:var(--la-accent); color:var(--la-accent); }
+        .vault-mc { order:3; }
+        .mc-cams { margin:4px 0 2px; padding:0; list-style:none; border:1px solid var(--la-line); border-radius:10px; }
+        .mc-cams li { display:flex; justify-content:space-between; gap:12px; padding:9px 12px; font-size:13px; color:var(--la-text); border-top:1px solid var(--la-line); }
+        .mc-cams li:first-child { border-top:0; }
+        .mc-cams li span { color:var(--la-sub); }
+        .mc-bar { height:6px; border-radius:99px; background:var(--la-chip); overflow:hidden; margin-top:8px; }
+        .mc-bar i { display:block; height:100%; background:var(--la-accent); transition:width .4s ease; }
+        .mc-note { font-size:12px; line-height:1.5; color:var(--la-sub); }
         .vault-artist { display:block; margin-top:4px; font:500 11px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif; font-style:normal; letter-spacing:.06em; color:var(--la-sub); }
         .vs-backdrop { position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,.7); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; padding:16px; }
         .vs-panel { width:420px; max-width:100%; background:var(--la-raised); border:1px solid var(--la-line); border-radius:16px; padding:22px; display:flex; flex-direction:column; gap:14px; }
@@ -419,20 +427,22 @@
             if (!artist || artist === 'SESSION_ARCHIVE') continue;
             const date = (o && o.date) || new Date(Number(a.created_at) * 1000).toISOString().slice(0, 10);
             const key = artist + '|' + date;
-            if (!sessions.has(key)) sessions.set(key, { artist, date, master: null, at: Number(a.created_at) });
+            if (!sessions.has(key)) sessions.set(key, { artist, date, master: null, cams: 0, edit: null, at: Number(a.created_at) });
             const cam = String((o && o.camera) || 'MASTER').toUpperCase();
             const hasVideo = !(a.tracks && a.tracks.length) || a.tracks.some(t => t.type === 'video');
             const sess = sessions.get(key);
-            if (!SUB.has(cam) && hasVideo && (!sess.master || Number(a.created_at) > Number(sess.master.created_at))) sess.master = a;
+            if (cam === 'EDIT' && hasVideo) sess.edit = a;   // the multi-camera edit is the session's long form
+            else if (!SUB.has(cam) && hasVideo) { sess.cams++; if (!sess.master || Number(a.created_at) > Number(sess.master.created_at)) sess.master = a; }
             sess.at = Math.max(sess.at, Number(a.created_at));
         }
-        const assets = [...sessions.values()].sort((x, y) => y.at - x.at).map(s => Object.assign({}, s.master || { id: s.artist + s.date, status: 'no-master' }, { _artist: s.artist, _date: s.date }));
+        const assets = [...sessions.values()].sort((x, y) => y.at - x.at).map(s => Object.assign({}, s.edit || s.master || { id: s.artist + s.date, status: 'no-master' }, { _artist: s.artist, _date: s.date, _cams: s.cams, _edit: !!s.edit }));
         if (assets.length === 0) {
             list.innerHTML = `<p class="text-zinc-500 font-mono text-[10px] uppercase">VAULT EMPTY // NO ASSETS FOUND</p>`;
             return;
         }
 
         function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+        window.vaultEsc = esc;
         function parsePT(pt, assetName) {
             if (pt && typeof pt === 'object') {
                 if (pt.artist) return pt;
@@ -460,7 +470,8 @@
             const saved   = (window._sessMeta || {})[asset._artist + '|' + asset._date] || {};
             const meta    = { artist: asset._artist, date: saved.date || asset._date, camera: [saved.venue, asset.status === 'no-master' ? 'NO 4K LONG FORM YET' : '4K LONG FORM'].filter(Boolean).join(' // ') };
             const title   = esc(saved.title ? saved.title.toUpperCase() : meta.artist) + (saved.title ? '<span class="vault-artist">' + esc(meta.artist) + '</span>' : '');
-            const editBtn = `<button type="button" class="vault-edit" data-artist="${esc(asset._artist)}" data-date="${esc(asset._date)}" onclick="event.stopPropagation(); editVaultSession(this)">Edit</button>`;
+            const editBtn = `<button type="button" class="vault-edit" data-artist="${esc(asset._artist)}" data-date="${esc(asset._date)}" onclick="event.stopPropagation(); editVaultSession(this)">Edit</button>`
+                + (asset._cams >= 2 ? `<button type="button" class="vault-edit vault-mc" data-artist="${esc(asset._artist)}" data-date="${esc(asset._date)}" onclick="event.stopPropagation(); openMulticam(this)">${asset._edit ? 'Multi-cam ✓' : 'Multi-cam edit'}</button>` : '');
             const sub     = meta && (meta.date || meta.camera)
                 ? esc([meta.date, meta.camera].filter(Boolean).join(' // '))
                 : esc(new Date(asset.created_at * 1000).toLocaleDateString());
@@ -542,6 +553,57 @@
             navigator.serviceWorker.register('/sw.js')
                 .catch(err => console.warn('SW:', err));
         });
+    }
+</script>
+<script>
+    // Multi-camera edit: the session's cameras cut together on the HQ audio, rendered on the venue's Mac mini
+    async function openMulticam(btn) {
+        const artist = btn.dataset.artist, date = btn.dataset.date, e = window.vaultEsc;
+        const m = document.createElement('div');
+        m.className = 'vs-backdrop';
+        m.innerHTML = '<div class="vs-panel" role="dialog" aria-modal="true"><p class="vs-title">Multi-camera edit</p><p class="vs-sub">' + e(artist) + ' · ' + e(date) + '</p><div id="mc-body"><p class="mc-note">Checking the session…</p></div>' +
+            '<div class="vs-actions"><button type="button" class="vs-btn ghost" data-cancel>Close</button><button type="button" class="vs-btn primary" id="mc-start" hidden>Make the edit</button></div></div>';
+        document.body.appendChild(m);
+        let timer = null;
+        const close = () => { clearTimeout(timer); m.remove(); };
+        m.addEventListener('click', ev => { if (ev.target === m || ev.target.closest('[data-cancel]')) close(); });
+        const q = '?artist=' + encodeURIComponent(artist) + '&date=' + encodeURIComponent(date);
+        const show = d => {
+            const body = m.querySelector('#mc-body'), start = m.querySelector('#mc-start');
+            if (!body) return;
+            const mins = s => Math.round(s / 60) + ' min';
+            const cams = '<ul class="mc-cams">' + d.cameras.map(c => '<li>' + e(c.camera) + (c.main ? ' · main' : '') + '<span>' + mins(c.duration) + (c.hasAudio ? '' : ' · no sound') + '</span></li>').join('') +
+                '<li>HQ audio from the console<span>' + (d.audio ? 'Ready' : 'None: the main camera\'s sound is used') + '</span></li></ul>';
+            const mac = d.relay.online ? (d.relay.canRender ? 'The venue\'s Mac mini is online and ready.' : 'The Mac mini is online but needs ffmpeg: open Terminal on it and run <b>brew install ffmpeg</b>, then reinstall the relay from Camera Control.') : 'The venue\'s Mac mini is offline. The edit starts as soon as it is back online.';
+            const j = d.job;
+            let html = cams;
+            if (j && j.status !== 'failed') {
+                html += '<p class="mc-note" style="margin-top:12px">' + e(j.stage) + (j.status === 'done' ? '' : ' · ' + j.pct + '%') + '</p><div class="mc-bar"><i style="width:' + (j.status === 'done' ? 100 : j.pct) + '%"></i></div>' +
+                    (j.warnings && j.warnings.length ? '<p class="mc-note" style="margin-top:8px">' + j.warnings.map(e).join('<br>') + '</p>' : '') +
+                    (j.status === 'done' ? '<p class="mc-note" style="margin-top:8px">The edit appears as this session\'s long form when Mux has processed it; the vertical clips and thumbnails follow.</p>' : '');
+            } else {
+                html += '<p class="mc-note" style="margin-top:12px">Each camera is lined up with the ' + (d.audio ? 'HQ audio' : 'main camera\'s sound') + ', the shots change on the music\'s phrases, and the full set is rendered on the venue\'s Mac mini, then saved as this session\'s long form with its vertical clips.</p>' +
+                    (j && j.status === 'failed' ? '<p class="vs-error" style="display:block">Last try failed: ' + e(j.message || j.stage) + '</p>' : '') +
+                    '<p class="mc-note" style="margin-top:8px">' + mac + '</p>';
+            }
+            body.innerHTML = html;
+            start.hidden = !!(j && !['done', 'failed'].includes(j.status)) || d.cameras.length < 2;
+            start.textContent = j && j.status === 'done' ? 'Make it again' : 'Make the edit';
+            if (j && ['queued', 'running'].includes(j.status)) timer = setTimeout(refresh, 8000);
+        };
+        const refresh = async () => {
+            try { const r = await laFetch('/api/multicam' + q), d = await r.json(); if (!r.ok) throw new Error(d.error || r.status); show(d); }
+            catch (err) { const b = m.querySelector('#mc-body'); if (b) b.innerHTML = '<p class="vs-error" style="display:block">' + e(err.message) + '</p>'; }
+        };
+        m.querySelector('#mc-start').onclick = async function() {
+            this.disabled = true;
+            try {
+                const r = await laFetch('/api/multicam', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'start', artist, date }) });
+                const d = await r.json(); if (!r.ok) throw new Error(d.error || r.status); show(d);
+            } catch (err) { laAlert('Could not start the edit: ' + err.message, { tone: 'error' }); }
+            this.disabled = false;
+        };
+        refresh();
     }
 </script>
 </body>

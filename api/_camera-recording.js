@@ -1,8 +1,6 @@
 import crypto from 'crypto';
 import { createClient } from 'redis';
 import { getVenuesConfig, getMuxAuthForVenue } from './_venues.js';
-import { getPipelineDb } from './_pipeline-db.js';
-import { resolveWatermark } from './_watermark.js';
 import { venueEvents } from './_calendar.js';
 
 // When a camera's broadcast ends, Mux has saved it as an asset. This turns that recording
@@ -24,7 +22,12 @@ const muxReq = (auth, path, init = {}) => fetch('https://api.mux.com' + path, {
 const londonDate = ms => new Date(ms).toLocaleDateString('en-CA', { timeZone: 'Europe/London' }); // YYYY-MM-DD
 // start/end: the set's exact times from the venue calendar (UTC, to the minute)
 const minute = ms => new Date(ms).toISOString().slice(0, 16) + 'Z';
-const tag = (artist, date, set) => JSON.stringify(set ? { artist, date, camera: 'MASTER', start: minute(set.from), end: minute(set.to) } : { artist, date, camera: 'MASTER' });
+// camera: MASTER for the venue's main (first) camera, else the camera's own name, so a set filmed by several
+// cameras keeps them apart; multi: the set is filmed by several cameras and becomes one multi-camera edit
+const tag = (artist, date, set, camera = 'MASTER', multi = false) => JSON.stringify(set
+  ? { artist, date, camera, start: minute(set.from), end: minute(set.to), ...(multi ? { multi: true } : {}) }
+  : { artist, date, camera });
+export const pendingKey = slug => `mc_pending:${slug}`;   // hash "ARTIST|DATE" → { end }: sets waiting for every camera's recording
 
 // Splits the recording at each artist change. Times are seconds from the start of the recording.
 export function buildSets(defaultArtist, markers, startMs, duration) {
@@ -85,6 +88,9 @@ export async function processCameraRecording(event) {
     const cams = JSON.parse(await redis.get(`cameras:${slug}`) || '[]');
     const cam  = cams.find(c => c.streamId === streamId) || {};
     const camName = (cam.name || 'Camera').toUpperCase();
+    const recording = cams.filter(c => c.streamId);
+    const camLabel = recording[0]?.streamId === streamId ? 'MASTER' : camName.replace(/\s*\/\/\s*/g, ' - ').replace(/[^A-Z0-9 \-]/g, '').trim().slice(0, 30) || 'CAMERA';
+    const multi = recording.length >= 2;
     const startMs = Number(asset.created_at) * 1000;
     const date    = londonDate(startMs);
     const markers = (await redis.lRange(`cam_markers:${streamId}`, 0, -1)).map(m => { try { return JSON.parse(m); } catch { return null; } }).filter(Boolean);
@@ -116,7 +122,7 @@ export async function processCameraRecording(event) {
           body: JSON.stringify({
             input: [{ url: `mux://assets/${assetId}`, start_time: Math.floor(s.start), end_time: Math.ceil(s.end) }],
             playback_policy: ['public'],
-            passthrough: tag(s.artist, date, calSets.length ? s : null),
+            passthrough: tag(s.artist, date, calSets.length ? s : null, camLabel, multi && calSets.length > 0),
             static_renditions: [{ resolution: 'highest' }],
           }),
         });
@@ -129,15 +135,11 @@ export async function processCameraRecording(event) {
     // Markers up to the end of this recording are used up
     await redis.del(`cam_markers:${streamId}`);
 
-    if (cam.autoClips === false) return;
-    const db = getPipelineDb();
-    for (const s of sessions) {
-      const watermark = await resolveWatermark(redis, slug, s.artist).catch(() => null);
-      // "asset:<id>" tells the clip worker the asset already exists (uploads pass a Mux upload id)
-      await db.query(
-        `INSERT INTO pipeline_jobs (id, upload_id, artist_name, venue_slug, watermark) VALUES ($1, $2, $3, $4, $5)`,
-        [crypto.randomBytes(8).toString('hex'), 'asset:' + s.assetId, s.artist, slug, watermark && JSON.stringify(watermark)]
-      );
+    // Several cameras on the same calendar set: once every camera's recording is in, they become one
+    // multi-camera edit (api/camera-schedule.js starts it); its clips come from the edit. With one camera,
+    // each set's clip makes its own vertical clips when Mux has it ready (api/mux-webhook.js).
+    if (multi && calSets.length) {
+      for (const s of calSets) await redis.hSet(pendingKey(slug), `${s.artist.toUpperCase().trim()}|${date}`, JSON.stringify({ end: s.to, at: Date.now() }));
     }
   } finally {
     await redis.quit().catch(() => {});

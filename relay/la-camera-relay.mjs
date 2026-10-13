@@ -9,8 +9,14 @@
 // Needs Node.js 18 or newer. Nothing else to install.
 
 import dgram from 'node:dgram';
+import fs from 'node:fs';
 
-const VERSION = '1.0.0';
+// Multi-camera edits (la-multicam.mjs, next to this file): rendered on this Mac when the platform asks
+let multicam = null;
+try { if (fs.existsSync(new URL('./la-multicam.mjs', import.meta.url))) multicam = await import('./la-multicam.mjs'); } catch (e) { console.error('multi-camera edits unavailable:', e.message); }
+const canRender = !!(multicam && multicam.findFfmpeg());
+
+const VERSION = '1.1.0';
 const KEY = (process.env.LA_RELAY_KEY || process.argv[2] || '').trim();
 const BASE = (process.env.LA_URL || 'https://local-assets.com').replace(/\/$/, '');
 const PORT = 52381;           // VISCA over IP
@@ -75,8 +81,32 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 async function heartbeat() {
   try {
-    await fetch(BASE + '/api/camera-relay', { method: 'POST', headers, body: JSON.stringify({ version: VERSION, reachable: [...reachable] }), signal: AbortSignal.timeout(10000) });
+    await fetch(BASE + '/api/camera-relay', { method: 'POST', headers, body: JSON.stringify({ version: VERSION, reachable: [...reachable], render: canRender }), signal: AbortSignal.timeout(10000) });
   } catch (e) { /* the poll loop reports connection problems */ }
+}
+
+// One edit at a time; the camera commands keep flowing while it renders
+let editing = false;
+async function editLoop() {
+  if (!multicam || editing) return;
+  try {
+    const r = await fetch(BASE + '/api/camera-relay?job=1', { headers, signal: AbortSignal.timeout(15000) });
+    if (!r.ok) return;
+    const { job } = await r.json();
+    if (!job) return;
+    editing = true;
+    log('multi-camera edit', job.artist, job.date, '-', job.sources.length, 'cameras');
+    let lastSent = 0;
+    const report = body => {
+      const now = Date.now();
+      if (!body.status && now - lastSent < 10000) return;
+      lastSent = now;
+      return fetch(BASE + '/api/camera-relay?job=1', { method: 'POST', headers, body: JSON.stringify({ id: job.id, status: 'running', ...body }), signal: AbortSignal.timeout(15000) }).catch(() => {});
+    };
+    try { await multicam.runEdit(job, report); log('multi-camera edit uploaded'); }
+    catch (e) { log('multi-camera edit failed:', e.message); await report({ status: 'failed', stage: 'Failed', pct: 0, message: e.message }); }
+  } catch (e) { /* the poll loop reports connection problems */ }
+  finally { editing = false; }
 }
 
 async function loop() {
@@ -84,6 +114,7 @@ async function loop() {
   log('local / assets camera relay', VERSION, 'connecting to', BASE);
   heartbeat();
   setInterval(heartbeat, 30000);
+  if (multicam) { log(canRender ? 'multi-camera edits: ready' : 'multi-camera edits: install ffmpeg (brew install ffmpeg)'); setInterval(editLoop, 60000); editLoop(); }
   for (;;) {
     try {
       const r = await fetch(BASE + '/api/camera-relay?wait=1', { headers, signal: AbortSignal.timeout(28000) });

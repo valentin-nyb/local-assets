@@ -188,7 +188,10 @@ export default async function handler(req, res) {
         // ── AUTO-PIPELINE: only for MASTER assets ────────────────────
         // Camera recordings are handled when the broadcast ends (video.asset.live_stream_completed)
         const artist = masterArtist(data.passthrough, data.tracks);
-        if (!data.live_stream_id && artist && duration > 10 && playbackId) {
+        // One camera of a multi-camera set: the clips come from the multi-camera edit instead
+        let multiCam = false; try { multiCam = !!JSON.parse(String(data.passthrough || '')).multi; } catch {}
+        if (multiCam) console.log(`[Pipeline] "${artist}" is one camera of a multi-camera set: waiting for the edit`);
+        if (!data.live_stream_id && !multiCam && artist && duration > 10 && playbackId) {
             console.log(`[Pipeline] MASTER "${artist}" (${Math.round(duration)}s) — generating audio + clips + thumbs...`);
 
             const results = await Promise.allSettled([

@@ -28,10 +28,31 @@ export default async function handler(req, res) {
     if (!want || want.length !== got.length || !crypto.timingSafeEqual(Buffer.from(want), Buffer.from(got))) return res.status(401).json({ error: 'Relay key not valid. Make a new one in Camera Control.' });
 
     const now = Date.now();
+    // Multi-camera edits (api/multicam.js): the Mac mini takes the next job and reports its progress
+    if (req.method === 'GET' && req.query.job) {
+      const id = await redis.lPop(`mc_queue:${slug}`);
+      const job = id ? JSON.parse(await redis.hGet(`mc_jobs:${slug}`, id) || 'null') : null;
+      if (!job) return res.status(200).json({ job: null });
+      Object.assign(job, { status: 'running', stage: 'Starting on the Mac mini', pct: 0, updatedAt: now });
+      await redis.hSet(`mc_jobs:${slug}`, id, JSON.stringify(job));
+      return res.status(200).json({ job: { id: job.id, artist: job.artist, date: job.date, sources: job.sources, audio: job.audio, upload: job.upload, audioUpload: job.audioUpload || null } });
+    }
+    if (req.method === 'POST' && req.query.job) {
+      const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
+      const id = String(body.id || '');
+      const job = /^[a-f0-9]{16}$/.test(id) ? JSON.parse(await redis.hGet(`mc_jobs:${slug}`, id) || 'null') : null;
+      if (!job) return res.status(404).json({ error: 'No such job' });
+      const status = ['running', 'done', 'failed'].includes(body.status) ? body.status : job.status;
+      Object.assign(job, { status, stage: String(body.stage || job.stage).slice(0, 120), pct: Math.max(0, Math.min(100, Number(body.pct) || 0)),
+        message: String(body.message || '').slice(0, 400), updatedAt: now, warnings: Array.isArray(body.warnings) ? body.warnings.map(String).slice(0, 10) : (job.warnings || []) });
+      await redis.hSet(`mc_jobs:${slug}`, id, JSON.stringify(job));
+      if (status !== 'running') console.log('[multicam]', slug, id, status, job.message);
+      return res.status(200).json({ ok: true });
+    }
     if (req.method === 'POST') {
       const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
       const reach = Array.isArray(body.reachable) ? body.reachable.map(String).slice(0, 32) : [];
-      await redis.set(seenKey(slug), JSON.stringify({ at: now, version: String(body.version || '').slice(0, 20), reachable: reach }), { EX: 3600 });
+      await redis.set(seenKey(slug), JSON.stringify({ at: now, version: String(body.version || '').slice(0, 20), reachable: reach, render: !!body.render }), { EX: 3600 });
       return res.status(200).json({ ok: true });
     }
     if (req.method !== 'GET') return res.status(405).end();
