@@ -33,7 +33,7 @@ export const DEFAULT_PLANS = [
     features: ['1 camera included', 'Starlink Mini: the camera streams straight to the app, anywhere', 'Up to 4 event nights / month', '4K master recordings', 'HQ audio capture', '12 vertical social clips', 'Marketing thumbnails', 'Basic distribution', '2 TB cloud storage'] },
   { id: 'liveset-creative', name: 'Creative & Production · Live-Set', price: 7500, maxClips: 0, cameras: 1,
     included: { storedMinutes: 60000, deliveredMinutes: 500000, fileGB: 20000 },
-    features: ['1 camera included', 'Mac mini + Starlink private network included', 'Up to 8 event nights / month', '4K master recordings', 'HQ audio capture', 'Unlimited vertical social clips', 'Marketing thumbnails & watermark', 'Multi-platform distribution & SEO', 'Quarterly performance reports', 'Priority 48-hour turnaround', '20 TB cloud storage'] },
+    features: ['1 camera included', 'Starlink Mini + Mac mini: a private network that streams from anywhere', 'Up to 8 event nights / month', '4K master recordings', 'HQ audio capture', 'Unlimited vertical social clips', 'Marketing thumbnails & watermark', 'Multi-platform distribution & SEO', 'Quarterly performance reports', 'Priority 48-hour turnaround', '20 TB cloud storage'] },
 ];
 export async function readPlans(redis) {
   try { const p = JSON.parse(await redis.get('billing_plans') || 'null'); return Array.isArray(p) && p.length ? p.map(x => { const d = DEFAULT_PLANS.find(z => z.id === x.id) || {}; return { ...x, features: (x.features && x.features.length ? x.features : d.features), cameras: x.cameras || d.cameras || 0, maxClips: x.maxClips != null ? x.maxClips : (d.maxClips != null ? d.maxClips : 5) }; }) : DEFAULT_PLANS; }
