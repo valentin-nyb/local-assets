@@ -64,6 +64,35 @@
         .vs-actions { display:flex; justify-content:flex-end; gap:8px; }
         .vs-btn { height:38px; padding:0 16px; border-radius:10px; font:700 12px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; cursor:pointer; border:1px solid transparent; }
         .vs-btn.primary { background:#39FF14; color:#000; } .vs-btn.ghost { background:none; color:#fff; border-color:#27272a; }
+
+        .ing { border:1px solid #1f1f22; background:#0a0a0a; border-radius:20px; padding:28px; display:flex; flex-direction:column; gap:22px; }
+        .ing-eyebrow { margin:0; font:500 10px/1 'JetBrains Mono', monospace; letter-spacing:.2em; text-transform:uppercase; color:#71717a; }
+        .ing-title { margin:8px 0 0; font:700 22px/1.15 'Helvetica Neue', Helvetica, Arial, sans-serif; text-transform:uppercase; color:#fafafa; letter-spacing:.005em; }
+        .ing-sub { margin:8px 0 0; max-width:620px; font:400 13px/1.55 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#a1a1aa; }
+        .ing-fields { display:grid; grid-template-columns:1.4fr 1fr 1fr; gap:14px; }
+        .ing-field { display:flex; flex-direction:column; gap:7px; min-width:0; }
+        .ing-field span { font:700 10px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.08em; text-transform:uppercase; color:#a1a1aa; }
+        .ing-field input, .ing-field select { height:46px; width:100%; border-radius:12px; border:1px solid #27272a; background:#000; color:#fafafa; padding:0 14px; font:500 14px 'Helvetica Neue', Helvetica, Arial, sans-serif; outline:none; transition:border-color .15s; }
+        .ing-field select { appearance:none; -webkit-appearance:none; cursor:pointer; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23a1a1aa' stroke-width='1.6'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 14px center; padding-right:36px; }
+        .ing-field input:focus, .ing-field select:focus { border-color:#39FF14; }
+        .ing-field input::placeholder { color:#52525b; }
+        .ing-drop { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; min-height:170px; padding:24px; text-align:center; border:1.5px dashed #3f3f46; border-radius:16px; background:#050505; cursor:pointer; transition:border-color .15s, background .15s; }
+        .ing-drop iconify-icon { font-size:28px; color:#71717a; margin-bottom:4px; }
+        .ing-drop-label { font:500 10px/1 'JetBrains Mono', monospace; letter-spacing:.18em; text-transform:uppercase; color:#71717a; }
+        .ing-drop-main { font:700 15px/1.3 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#fafafa; word-break:break-all; }
+        .ing-drop-meta { font:400 12px/1.4 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#71717a; }
+        .ing-drop:hover, .ing-drop.over { border-color:#39FF14; background:rgba(57,255,20,.04); }
+        .ing-drop.active { border-style:solid; border-color:#39FF14; background:rgba(57,255,20,.06); }
+        .ing-drop.active iconify-icon { color:#39FF14; }
+        .ing-foot { display:flex; align-items:center; gap:16px; }
+        .ing-progress { flex:1; height:6px; border-radius:99px; background:#1f1f22; overflow:hidden; }
+        .ing-progress[hidden] { display:none; }
+        .ing-progress i { display:block; height:100%; width:0; background:#39FF14; transition:width .2s; }
+        .ing-btn { margin-left:auto; height:46px; padding:0 26px; border-radius:12px; border:none; background:#39FF14; color:#000; font:700 13px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.06em; text-transform:uppercase; cursor:pointer; transition:opacity .15s; }
+        .ing-btn:hover:not(:disabled) { opacity:.85; } .ing-btn:disabled { opacity:.7; cursor:default; }
+        .ing-btn.done { background:#fafafa; }
+        .ing-status { margin:0; font:500 10px/1.4 'JetBrains Mono', monospace; letter-spacing:.18em; text-transform:uppercase; color:#39FF14; text-align:right; }
+        @media (max-width:760px) { .ing { padding:18px; } .ing-fields { grid-template-columns:minmax(0,1fr); } .ing-foot { flex-direction:column; align-items:stretch; } .ing-btn { margin-left:0; width:100%; } }
 </style>
     <style>
         body { background-color: #050505; color: #ffffff; -webkit-font-smoothing: antialiased; }
@@ -103,7 +132,35 @@
     </aside>
 
     <main class="flex-1 flex flex-col overflow-hidden relative bg-background">
-         <header class="h-16 flex items-center px-4 md:px-8 border-b border-[#27272a] bg-[#050505] shrink-0 justify-between w-full z-40">             <div class="flex items-center gap-2 md:gap-3 min-w-0"><button type="button" onclick="toggleSidebar()" class="la-menu-btn" aria-label="Open menu"><iconify-icon icon="solar:hamburger-menu-linear"></iconify-icon></button>                 <span id="venue-breadcrumb" class="text-zinc-600 text-[10px] font-mono uppercase tracking-[0.3em] hidden md:inline"></span>                                  <h1 class="text-[10px] md:text-[10px] font-mono uppercase tracking-[0.2em] md:tracking-[0.3em] text-[#39FF14] font-bold m-0 truncate">4K INGEST</h1>             </div>             <div class="flex items-center gap-4 shrink-0">                                  <button id="venue-avatar" onclick="openVenueEditor()" class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center font-bold text-xs shrink-0 cursor-pointer hover:scale-105 transition-transform shadow-[0_0_10px_rgba(255,255,255,0.1)]" title="Change venue name"></button>             </div>         </header>          <div class="flex-1 p-8 overflow-y-auto">             <div class="max-w-[1200px] mx-auto space-y-12 pb-20">                                  <div class="ingest-card space-y-8">                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">                         <input type="text" id="ingest-name" placeholder="DJ / ARTIST NAME" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs font-bold text-white uppercase outline-none focus:border-primary">                         <input type="text" id="ingest-date" placeholder="SELECT DATE" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs font-bold text-white outline-none">                         <select id="ingest-shot" class="bg-black border border-zinc-800 rounded-xl p-4 text-xs text-zinc-400 font-bold uppercase outline-none">                             <option value="MASTER">MASTER CAM</option>                             <option value="BOOTH">BOOTH CAM</option>                             <option value="PTZ01">PTZ 01</option>                             <option value="PTZ02">PTZ 02</option>                             <option value="PTZ03">PTZ 03</option>                         </select>                     </div>                      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">                         <label class="upload-node p-6 flex flex-col items-center justify-center gap-2" id="node-video">                                                          <span class="text-[8px] font-mono uppercase text-zinc-500">4K Master (.MP4)</span>                             <input type="file" id="file-video" class="hidden" accept="video/*" onchange="markActive('video')">                         </label>                     </div>                      <button id="upload-btn" class="w-full bg-white text-black font-black py-5 rounded-2xl uppercase tracking-[0.2em] text-[11px] hover:bg-primary transition-all">                         INGEST - LOCAL/SESSION                     </button>                 <p id="pipeline-status" class="hidden text-center text-[9px] font-mono text-[#39FF14] uppercase tracking-[0.25em] animate-pulse"></p>                 </div>                  <div id="preview-container" class="hidden border-b border-zinc-800 pb-12">                     <h2 id="vault-dj-title" class="text-3xl font-black italic mb-6"></h2>                     <div id="active-asset-display" class="max-w-4xl mx-auto"></div>                 </div>                  <div class="space-y-4">                     <h3 class="text-[10px] font-mono text-zinc-600 uppercase tracking-[0.3em] border-b border-zinc-800 pb-2">Vault History</h3>                     <div id="cloud-list"></div>                 </div>             </div>         </div>     
+         <header class="h-16 flex items-center px-4 md:px-8 border-b border-[#27272a] bg-[#050505] shrink-0 justify-between w-full z-40">             <div class="flex items-center gap-2 md:gap-3 min-w-0"><button type="button" onclick="toggleSidebar()" class="la-menu-btn" aria-label="Open menu"><iconify-icon icon="solar:hamburger-menu-linear"></iconify-icon></button>                 <span id="venue-breadcrumb" class="text-zinc-600 text-[10px] font-mono uppercase tracking-[0.3em] hidden md:inline"></span>                                  <h1 class="text-[10px] md:text-[10px] font-mono uppercase tracking-[0.2em] md:tracking-[0.3em] text-[#39FF14] font-bold m-0 truncate">4K INGEST</h1>             </div>             <div class="flex items-center gap-4 shrink-0">                                  <button id="venue-avatar" onclick="openVenueEditor()" class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center font-bold text-xs shrink-0 cursor-pointer hover:scale-105 transition-transform shadow-[0_0_10px_rgba(255,255,255,0.1)]" title="Change venue name"></button>             </div>         </header>          <div class="flex-1 p-8 overflow-y-auto">             <div class="max-w-[1200px] mx-auto space-y-12 pb-20">                                  <section class="ing">
+                    <div class="ing-head">
+                        <div><p class="ing-eyebrow">New session</p><h2 class="ing-title">Upload a 4K long form</h2>
+                        <p class="ing-sub">The full recording of a set. Once it's in, the HQ audio, vertical clips and thumbnails are made from it automatically.</p></div>
+                    </div>
+                    <div class="ing-fields">
+                        <label class="ing-field"><span>Artist</span><input type="text" id="ingest-name" placeholder="e.g. DJ Name" autocomplete="off"></label>
+                        <label class="ing-field"><span>Date of the set</span><input type="text" id="ingest-date" placeholder="Choose a date"></label>
+                        <label class="ing-field"><span>Camera</span><select id="ingest-shot">
+                            <option value="MASTER">Main camera</option>
+                            <option value="BOOTH">Booth camera</option>
+                            <option value="PTZ01">PTZ 01</option>
+                            <option value="PTZ02">PTZ 02</option>
+                            <option value="PTZ03">PTZ 03</option>
+                        </select></label>
+                    </div>
+                    <label class="ing-drop" id="node-video">
+                        <iconify-icon icon="solar:videocamera-record-linear"></iconify-icon>
+                        <span class="ing-drop-label">4K Master (.MP4)</span>
+                        <b class="ing-drop-main" id="ing-file">Drop the recording here, or browse</b>
+                        <small class="ing-drop-meta" id="ing-meta">MP4 or MOV, up to 4K. Large files upload straight to your Cloud Storage.</small>
+                        <input type="file" id="file-video" class="hidden" accept="video/*" onchange="markActive('video')">
+                    </label>
+                    <div class="ing-foot">
+                        <div class="ing-progress" id="ing-progress" hidden><i id="ing-bar"></i></div>
+                        <button id="upload-btn" class="ing-btn" type="button">Upload session</button>
+                    </div>
+                    <p id="pipeline-status" class="hidden ing-status"></p>
+                </section>                  <div id="preview-container" class="hidden border-b border-zinc-800 pb-12">                     <h2 id="vault-dj-title" class="text-3xl font-black italic mb-6"></h2>                     <div id="active-asset-display" class="max-w-4xl mx-auto"></div>                 </div>                  <div class="space-y-4">                     <h3 class="text-[10px] font-mono text-zinc-600 uppercase tracking-[0.3em] border-b border-zinc-800 pb-2">Vault History</h3>                     <div id="cloud-list"></div>                 </div>             </div>         </div>     
         <div class="la-statusbar w-full h-10 bg-black border-t border-[#27272a] flex items-center justify-between px-4 md:px-6 shrink-0">
             <div class="flex items-center gap-2 md:gap-4 text-[7px] md:text-[9px] font-mono text-zinc-600 uppercase tracking-widest">
                 <span>LOCAL / ASSETS V2.4.0</span>
@@ -130,7 +187,24 @@
         setTimeout(() => ov.classList.toggle('opacity-0'), 10);
     };
 
-    window.markActive = (type) => document.getElementById('node-' + type)?.classList.add('active');
+    window.markActive = (type) => {
+        const node = document.getElementById('node-' + type);
+        node?.classList.add('active');
+        const f = document.getElementById('file-video').files[0];
+        if (f) {
+            const gb = f.size / 1e9;
+            document.getElementById('ing-file').textContent = f.name;
+            document.getElementById('ing-meta').textContent = (gb >= 1 ? gb.toFixed(2) + ' GB' : Math.max(1, Math.round(f.size / 1e6)) + ' MB') + ' · ready to upload';
+        }
+    };
+    // Drag a file onto the drop zone
+    document.addEventListener('DOMContentLoaded', () => {
+        const drop = document.getElementById('node-video'), input = document.getElementById('file-video');
+        if (!drop) return;
+        ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+        ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+        drop.addEventListener('drop', e => { if (e.dataTransfer.files.length) { input.files = e.dataTransfer.files; markActive('video'); } });
+    });
 
     function updateNodeForCamera(camera) {
         const fileInput = document.getElementById('file-video');
@@ -173,10 +247,10 @@
             const artist  = document.getElementById('ingest-name').value.trim();
             const dateVal = document.getElementById('ingest-date').value || new Date().toISOString().slice(0, 10);
             const camera  = document.getElementById('ingest-shot').value || 'MASTER';
-            if (!file || !artist) return alert("Artist and File are required.");
+            if (!file || !artist) return alert(!artist ? "Add the artist's name." : "Choose the recording to upload.");
 
             uploadBtn.disabled = true;
-            uploadBtn.innerHTML = "CONNECTING TO LOCAL/ASSETS™...";
+            uploadBtn.textContent = 'Connecting…';
 
             try {
                 const response = await laFetch('/api/get-upload-url', {
@@ -197,20 +271,22 @@
                 xhr.upload.onprogress = (e) => {
                     if (e.lengthComputable) {
                         const pct = Math.round((e.loaded / e.total) * 100);
-                        uploadBtn.innerHTML = 'UPLOADING: ' + pct + '%';
+                        uploadBtn.textContent = 'Uploading · ' + pct + '%';
+                        document.getElementById('ing-progress').hidden = false;
+                        document.getElementById('ing-bar').style.width = pct + '%';
                     }
                 };
                 xhr.onload = () => {
                     if (xhr.status >= 200 && xhr.status < 300) {
-                        uploadBtn.innerHTML = "SENT TO VAULT";
-                        uploadBtn.style.background = document.documentElement.classList.contains('dark') ? '#39FF14' : '#F97316';
+                        uploadBtn.textContent = 'Uploaded · processing';
+                        uploadBtn.classList.add('done');
                         setTimeout(loadVault, 5000);
 
                         // Auto-trigger social clip pipeline
                         triggerPipeline(data.id, artist);
                     } else {
                         alert('Upload failed: HTTP ' + xhr.status);
-                        uploadBtn.innerHTML = "INGEST";
+                        uploadBtn.textContent = 'Upload session';
                         uploadBtn.disabled = false;
                     }
                 };
@@ -230,7 +306,7 @@
 
     async function triggerPipeline(uploadId, artistName) {
         var pipelineStatus = document.getElementById('pipeline-status');
-        if (pipelineStatus) { pipelineStatus.textContent = 'GENERATING 30 CLIPS...'; pipelineStatus.classList.remove('hidden'); }
+        if (pipelineStatus) { pipelineStatus.textContent = 'Preparing the session…'; pipelineStatus.classList.remove('hidden'); }
         try {
             const r = await laFetch('/api/pipeline-trigger', {
                 method: 'POST',
@@ -240,7 +316,7 @@
             const j = await r.json();
             if (j.jobId) {
                 localStorage.setItem('la_pipeline_job', j.jobId);
-                if (pipelineStatus) pipelineStatus.textContent = 'CLIP GENERATION QUEUED — CHECK DASHBOARD';
+                if (pipelineStatus) pipelineStatus.textContent = 'Vertical clips are cut as soon as the recording is processed. Follow it in Distribution History.';
                 console.log('[Pipeline] Job queued:', j.jobId);
             } else {
                 if (pipelineStatus) pipelineStatus.textContent = 'PIPELINE: ' + (j.error || 'unknown error');
