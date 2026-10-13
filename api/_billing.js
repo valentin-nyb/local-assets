@@ -104,6 +104,11 @@ export async function venueUsage(slug, auth, { start, end }, artist = null, labe
   const ids = new Set();
   const usage = { storedMinutes: 0, newMinutes: 0, deliveredMinutes: 0, fileBytes: 0, videos: 0, notes: [] };
   if (auth) {
+    // Mux keys that no longer work (environment deleted or keys revoked): bill no video usage, say why
+    try { await muxGet(auth, '/video/v1/assets?limit=1&page=1'); }
+    catch (e) { usage.notes.push('Video usage unavailable: Mux refused this account\'s keys (' + e.message + ')'); auth = null; }
+  }
+  if (auth) {
     for (let page = 1; page <= 30; page++) {
       const b = await muxGet(auth, `/video/v1/assets?limit=100&page=${page}`);
       for (const a of b.data || []) {
