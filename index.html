@@ -162,17 +162,48 @@
         .ord-go:disabled { opacity:.6; cursor:default; }
         .ord-error { font-size:12px; color:#f87171; margin-top:10px; } .ord-error:empty { display:none; } .ord-error a { color:#fff; text-decoration:underline; }
         .ord-fine { font-size:11px; line-height:1.5; color:#71717a; margin-top:10px; }
-        .su-types { display:inline-flex; align-self:flex-start; gap:2px; padding:3px; border:1px solid rgba(250,250,250,.24); border-radius:999px; }
-        .su-type { position:relative; display:flex; align-items:center; height:34px; padding:0 16px; border-radius:999px; cursor:pointer; transition:background .25s ease, color .25s ease; }
-        .su-type input { position:absolute; opacity:0; pointer-events:none; }
-        .su-type b { font:500 13px/1 "Helvetica Neue", Helvetica, Arial, sans-serif; color:inherit; }
-        .su-type { color:#e4e4e7; } .su-desc { margin:-4px 0 0; font-size:13px; color:#71717a; }
-        .su-type span { display:none; }
-        .su-type:has(input:checked) { background:#fafafa; color:#000; }
+        /* Sign up: plan summary on the left, the form on the right */
+        .ord-panel.su-wide { max-width:860px; padding:0; overflow:hidden; }
+        .su-layout { display:grid; grid-template-columns:minmax(0,330px) minmax(0,1fr); min-height:480px; }
+        .su-plan { padding:32px 28px; background:#070708; border-right:1px solid rgba(250,250,250,.1); display:flex; flex-direction:column; }
+        .su-plan-group { font-size:13px; color:#71717a; margin:0; }
+        .su-plan-name { font:700 24px/1.15 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#fff; margin:4px 0 0; }
+        .su-plan-price { display:flex; align-items:baseline; gap:6px; margin:14px 0 0; }
+        .su-plan-price b { font:800 32px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:-.02em; color:#fff; }
+        .su-plan-price span { font-size:13px; color:#71717a; }
+        .su-plan-feats { list-style:none; margin:22px 0 0; padding:20px 0 0; border-top:1px solid rgba(250,250,250,.1); display:flex; flex-direction:column; gap:10px; }
+        .su-plan-feats li { display:flex; gap:10px; font-size:13.5px; line-height:1.4; color:#e4e4e7; }
+        .su-plan-feats svg { width:15px; height:15px; flex-shrink:0; margin-top:2px; color:#39FF14; }
+        .su-plan-h { margin:auto 0 12px; padding-top:26px; font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#71717a; }
+        .su-steps { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px; }
+        .su-steps li { display:flex; align-items:center; gap:10px; font-size:13px; color:#a1a1aa; }
+        .su-steps b { width:22px; height:22px; flex-shrink:0; border-radius:50%; border:1px solid rgba(250,250,250,.2); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; color:#e4e4e7; }
+        .su-main { padding:36px 34px 30px; display:flex; flex-direction:column; }
+        .su-title { font:700 26px/1.15 'Helvetica Neue', Helvetica, Arial, sans-serif !important; text-transform:none !important; letter-spacing:-.01em !important; color:#fff; margin:0; padding-right:36px; }
+        .su-lead { margin:8px 0 0; font-size:15px; color:#a1a1aa; }
+        .su-form { margin-top:22px; display:flex; flex-direction:column; gap:14px; }
+        .su-types { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+        .su-type { position:relative; display:flex; flex-direction:column; align-items:flex-start; gap:10px; padding:16px 14px; border:1px solid rgba(250,250,250,.16); border-radius:10px; cursor:pointer; color:#a1a1aa; transition:border-color .2s ease, background .2s ease, color .2s ease; }
+        .su-type:hover { border-color:rgba(250,250,250,.35); }
+        .su-types .su-type input[type=radio] { position:absolute !important; opacity:0 !important; width:0 !important; height:0 !important; margin:0 !important; pointer-events:none; -webkit-appearance:none; appearance:none; }
+                .su-ic svg { width:24px; height:24px; display:block; }
+        .su-type b { font:500 14px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#e4e4e7; }
+        .su-tick { position:absolute; top:10px; right:10px; width:18px; height:18px; border-radius:50%; background:#fafafa; color:#000; display:flex; align-items:center; justify-content:center; opacity:0; transform:scale(.6); transition:opacity .2s ease, transform .2s ease; }
+        .su-tick svg { width:11px; height:11px; }
+        .su-type:has(input:checked) { border-color:#fafafa; background:rgba(250,250,250,.04); color:#fff; }
+        .su-type:has(input:checked) .su-tick { opacity:1; transform:none; }
+        .su-type:has(input:focus-visible) { box-shadow:0 0 0 2px #39FF14; }
+        .su-desc { margin:-4px 0 0; font-size:13px; color:#71717a; }
+        .su-go { height:48px !important; flex:none !important; margin-top:6px; }
+        .su-secure { display:flex; align-items:center; justify-content:center; gap:7px; margin:2px 0 0; font-size:12px; color:#a1a1aa; }
+        .su-secure svg { width:14px; height:14px; }
+        .su-fine { margin:0; font-size:11.5px; line-height:1.5; color:#71717a; text-align:center; }
+        @media (max-width:760px) { .su-layout { grid-template-columns:minmax(0,1fr); } .su-plan { border-right:0; border-bottom:1px solid rgba(250,250,250,.1); padding:24px 22px; } .su-plan-h, .su-steps { display:none; } .su-main { padding:26px 22px; } }
+        @media (max-width:420px) { .su-types { grid-template-columns:minmax(0,1fr); } .su-type { flex-direction:row; align-items:center; } }
         .su-field { display:flex; flex-direction:column; gap:8px; font-size:13px; color:#a1a1aa; }
         .su-field input { height:46px; border-radius:4px; border:1px solid rgba(250,250,250,.26); background:#0e0e10; color:#fff; padding:0 16px; font-size:15px; outline:none; }
         .su-field input:focus { border-color:transparent; box-shadow:0 0 0 2px #fafafa; }
-        @media (max-width:420px) { .su-type { padding:0 11px; } }
+        
         .ord-done { font-size:14px; line-height:1.6; color:#a1a1aa; margin-top:10px; }
         @media (max-width:480px) { .ord-feats { grid-template-columns:1fr; } .ord-panel { padding:18px; } .ord-hero { height:170px; } }
         @media (max-width:900px) {
@@ -788,25 +819,50 @@
 
     <script>
         // Sign up: choose the account type and name, then pay the monthly plan through Stripe
+        var SIGNUP_TIERS = {
+            'starter-distribution': { group: 'Distribution', name: 'Starter', price: '£2,750', feats: ['6 vertical clips per set', 'Up to 8 sets a month', '50 hours of sets stored', 'Your recordings kept safe in your vault'] },
+            'liveset-distribution': { group: 'Distribution', name: 'Pro', price: '£3,500', feats: ['12 vertical clips per set', 'Marketing thumbnails', 'Up to 8 sets a month', '100 hours of sets stored'] },
+            'starter-creative': { group: 'Creative & Production', name: 'Starter', price: '£5,500', feats: ['1 OBSBOT 4K camera + Starlink Mini', 'Recording runs on your calendar', '12 vertical clips per set, branded', '200 hours of sets stored'] },
+            'liveset-creative': { group: 'Creative & Production', name: 'Live-Set', price: '£7,500', feats: ['2 OBSBOT 4K cameras + Starlink Mini + Mac mini', 'Multi-camera edit, cut to the music', 'Unlimited vertical clips, branded', '1,000 hours of sets stored'] }
+        };
         var TIER_NAMES = { 'starter-distribution': 'Distribution · Starter', 'liveset-distribution': 'Distribution · Pro', 'starter-creative': 'Creative & Production · Starter', 'liveset-creative': 'Creative & Production · Live-Set' };
         function selectTier(tierId) {
             var esc = function(v) { return String(v).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+            var T = SIGNUP_TIERS[tierId] || { group: '', name: TIER_NAMES[tierId] || tierId, price: '', feats: [] };
+            var ICON = {
+                venue: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V9l8-5 8 5v12"/><path d="M9 21v-6h6v6"/></svg>',
+                label: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.5"/><path d="M12 6.5a5.5 5.5 0 0 0-5.5 5.5"/></svg>',
+                artist: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M5 20.5c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/></svg>'
+            };
+            var CHK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
             showCameraOrder(
-                '<p class="ord-eyebrow">Sign up · ' + esc(TIER_NAMES[tierId] || tierId) + '</p>' +
-                '<h3 class="ord-title" id="ord-title">Create your account</h3>' +
-                '<p class="ord-sub">Tell us who the account is for. After payment we set up your private video storage and email you how to sign in.</p>' +
-                '<form id="su-form" style="margin-top:18px;display:flex;flex-direction:column;gap:14px">' +
-                    '<div class="su-types">' +
-                        [['venue', 'Venue', 'Club, bar or event space'], ['label', 'Record label', 'Releases music for its artists'], ['artist', 'Artist', 'DJ or live act']].map(function(t, i) {
-                            return '<label class="su-type"><input type="radio" name="type" value="' + t[0] + '"' + (i ? '' : ' checked') + '><b>' + t[1] + '</b><span>' + t[2] + '</span></label>';
-                        }).join('') +
+                '<div class="su-layout">' +
+                    '<aside class="su-plan">' +
+                        '<p class="su-plan-group">' + esc(T.group) + '</p>' +
+                        '<p class="su-plan-name">' + esc(T.name) + '</p>' +
+                        (T.price ? '<p class="su-plan-price"><b>' + esc(T.price) + '</b><span>/ month</span></p>' : '') +
+                        '<ul class="su-plan-feats">' + T.feats.map(function(f) { return '<li>' + CHK + '<span>' + esc(f) + '</span></li>'; }).join('') + '</ul>' +
+                        '<p class="su-plan-h">What happens next</p>' +
+                        '<ol class="su-steps"><li><b>1</b><span>Pay securely with Stripe</span></li><li><b>2</b><span>We set up your private cloud</span></li><li><b>3</b><span>Sign in with the link we email you</span></li></ol>' +
+                    '</aside>' +
+                    '<div class="su-main">' +
+                        '<h3 class="su-title" id="ord-title">Create your account</h3>' +
+                        '<p class="su-lead">Who is this account for?</p>' +
+                        '<form id="su-form" class="su-form">' +
+                            '<div class="su-types" role="radiogroup" aria-label="Account type">' +
+                                [['venue', 'Venue', 'Club, bar or event space'], ['label', 'Record label', 'Releases music for its artists'], ['artist', 'Artist', 'DJ or live act']].map(function(t, i) {
+                                    return '<label class="su-type"><input type="radio" name="type" value="' + t[0] + '"' + (i ? '' : ' checked') + '><span class="su-ic">' + ICON[t[0]] + '</span><b>' + t[1] + '</b><span class="su-tick">' + CHK + '</span></label>';
+                                }).join('') +
+                            '</div>' +
+                            '<p class="su-desc" id="su-desc">Club, bar or event space</p>' +
+                            '<label class="su-field"><span id="su-name-label">Venue name</span><input name="name" maxlength="60" required autocomplete="organization" placeholder="e.g. Venue Name"></label>' +
+                            '<button type="submit" class="ord-go su-go">Continue to payment</button>' +
+                            '<p id="su-error" class="ord-error"></p>' +
+                            '<p class="su-secure"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Secure payment with Stripe · card, Apple Pay or Google Pay</p>' +
+                            '<p class="su-fine">Billed monthly. Usage above your plan is invoiced at the end of each month. Cancel anytime.</p>' +
+                        '</form>' +
                     '</div>' +
-                    '<p class="su-desc" id="su-desc">Club, bar or event space</p>' +
-                    '<label class="su-field"><span id="su-name-label">Venue name</span><input name="name" maxlength="60" required placeholder="e.g. Venue Name"></label>' +
-                    '<button type="submit" class="ord-go" style="flex:none;height:46px;margin-top:4px">Continue to payment</button>' +
-                    '<p id="su-error" class="ord-error"></p>' +
-                    '<p class="ord-fine">Billed monthly. Usage above your plan is invoiced at the end of each month. Cancel anytime.</p>' +
-                '</form>');
+                '</div>');
             var form = document.getElementById('su-form');
             var syncLabel = function() { var t = form.type.value; document.getElementById('su-desc').textContent = t === 'label' ? 'Releases music for its artists' : t === 'artist' ? 'DJ or live act' : 'Club, bar or event space'; document.getElementById('su-name-label').textContent = t === 'label' ? 'Record label name' : t === 'artist' ? 'Artist name' : 'Venue name'; form.name.placeholder = t === 'label' ? 'e.g. Record Label Name' : t === 'artist' ? 'e.g. DJ Name' : 'e.g. Venue Name'; };
             form.addEventListener('change', syncLabel);
@@ -895,7 +951,7 @@
     }
 
     function closeCameraOrder() { document.getElementById('ord-wrap').classList.remove('open'); document.body.style.overflow = ''; }
-    function showCameraOrder(html) { document.getElementById('ord-body').innerHTML = html; document.getElementById('ord-wrap').classList.add('open'); document.body.style.overflow = 'hidden'; }
+    function showCameraOrder(html) { document.getElementById('ord-body').innerHTML = html; var pnl = document.querySelector('.ord-panel'); if (pnl) pnl.classList.toggle('su-wide', html.indexOf('su-layout') >= 0); document.getElementById('ord-wrap').classList.add('open'); document.body.style.overflow = 'hidden'; }
     document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeCameraOrder(); });
     function openCameraOrder() {
         var feats = [
