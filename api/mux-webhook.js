@@ -2,6 +2,32 @@ import { put } from '@vercel/blob';
 import { processCameraRecording } from './_camera-recording.js';
 import { createClient } from 'redis';
 import { startVerticals, venueForAsset } from './_verticals.js';
+import crypto from 'crypto';
+
+// Signature check: every event must be signed by one of our Mux environments' webhook secrets
+// (DJ_TENNIS_TEAM_MUX_WEBHOOK_SECRET, AMONGST_FEW_MUX_WEBHOOK_SECRET, … and MUX_WEBHOOK_SECRET).
+// Header "mux-signature: t=<unix seconds>,v1=<hex HMAC-SHA256 of '<t>.<raw body>'>"; at most 5 minutes old.
+export const config = { api: { bodyParser: false } };
+const webhookSecrets = () => Object.entries(process.env)
+    .filter(([k, v]) => v && (k === 'MUX_WEBHOOK_SECRET' || /_MUX_WEBHOOK_SECRET$/.test(k)))
+    .map(([, v]) => v.trim());
+function signedByMux(raw, header) {
+    const parts = Object.fromEntries(String(header || '').split(',').map(p => p.trim().split('=')).filter(x => x.length === 2));
+    const t = Number(parts.t), sig = String(parts.v1 || '');
+    if (!t || !/^[0-9a-f]{64}$/.test(sig) || Math.abs(Date.now() / 1000 - t) > 300) return false;
+    return webhookSecrets().some(secret => {
+        const want = crypto.createHmac('sha256', secret).update(`${t}.`).update(raw).digest('hex');
+        return crypto.timingSafeEqual(Buffer.from(want), Buffer.from(sig));
+    });
+}
+function rawBody(req) {
+    return new Promise((resolve, reject) => {
+        const chunks = [];
+        req.on('data', c => chunks.push(c));
+        req.on('end', () => resolve(Buffer.concat(chunks)));
+        req.on('error', reject);
+    });
+}
 
 // Every venue has its own Mux environment: each event is handled with the keys of the venue
 // whose Cloud Storage holds the asset (found by asking each venue's environment).
@@ -111,7 +137,14 @@ async function createThumbnails(auth, assetId, artistName, playbackId, duration)
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).send('Use POST');
 
-    const { type, data } = req.body;
+    const raw = await rawBody(req);
+    if (!signedByMux(raw, req.headers['mux-signature'])) {
+        console.error('[Webhook] rejected: not signed by one of our Mux environments');
+        return res.status(401).send('Invalid signature');
+    }
+    let body;
+    try { body = JSON.parse(raw.toString('utf8')); } catch { return res.status(400).send('Invalid JSON'); }
+    const { type, data } = body;
 
     // ── ASSET READY ──────────────────────────────────────────────────
     if (type === 'video.asset.ready') {
