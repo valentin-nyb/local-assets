@@ -142,18 +142,22 @@
         .cam-form [hidden] { display:none !important; }
 .deck-section { margin-top:28px !important; padding-top:24px; border-top:1px solid var(--la-line); }
         .deck-head { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:16px; }
-        .deck-h { margin:0; font:700 18px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif !important; text-transform:none !important; color:var(--la-text); }
-        .deck-sub { margin:4px 0 0; font-size:13px; color:var(--la-dim); }
-        .deck-state { display:flex; align-items:center; gap:7px; margin:8px 0 0; font:600 11px 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.06em; text-transform:uppercase; color:var(--la-dim); }
+        .deck-h { margin:0; font:700 20px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif !important; text-transform:none !important; color:var(--la-text); }
+        .deck-sub { margin:6px 0 0; font-size:14px; color:var(--la-sub); }
+        .deck-title { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+        .deck-state { display:inline-flex; align-items:center; gap:6px; height:22px; padding:0 10px; border-radius:999px; border:1px solid var(--la-line); font:500 11px 'Helvetica Neue', Helvetica, Arial, sans-serif; color:var(--la-dim); }
         .deck-state:empty { display:none; }
-        .deck-state::before { content:""; width:7px; height:7px; border-radius:50%; background:currentColor; }
-        .deck-state.on { color:var(--la-ok); }
+        .deck-state::before { content:""; width:6px; height:6px; border-radius:50%; background:currentColor; }
+        .deck-state.on { color:var(--la-ok); border-color:color-mix(in srgb, var(--la-ok) 45%, transparent); }
         .deck-state.on::before { animation:camBlink 1.4s ease-in-out infinite; }
         #deck-grid:empty::before { content:"No decks connected yet."; display:block; padding:22px; border:1px dashed var(--la-line); border-radius:14px; font-size:13px; color:var(--la-dim); text-align:center; }
         .cam-howto { padding:14px 16px; border:1px solid color-mix(in srgb, var(--la-text) 16%, transparent); border-radius:8px; background:color-mix(in srgb, var(--la-text) 3%, transparent); }
         .cam-howto-t { margin:0 0 8px; font-size:14px; font-weight:600; color:var(--la-text); }
         .cam-howto ol { margin:0; padding-left:18px; display:flex; flex-direction:column; gap:7px; font-size:13px; line-height:1.5; color:var(--la-sub); }
         .cam-howto b { color:var(--la-text); font-weight:600; }
+        .cam-howto-get { display:flex; align-items:center; gap:12px; margin-top:12px; font-size:12px; line-height:1.45; color:var(--la-dim); }
+        .cam-howto-get .cam-btn { flex-shrink:0; }
+        @media (max-width:520px) { .cam-howto-get { flex-direction:column; align-items:stretch; } }
         .cam-howto-n { margin:10px 0 0; font-size:12px; line-height:1.5; color:var(--la-dim); }
         .cam-two { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; }
         @media (max-width:520px) { .cam-two { grid-template-columns:minmax(0,1fr); } }
@@ -162,6 +166,14 @@
         :root body .cam-form input:not([type=checkbox]):not([type=radio]), :root body .cam-form select { height:44px !important; border-radius:6px !important; border:1px solid color-mix(in srgb, var(--la-text) 22%, transparent) !important; background-color:var(--la-input) !important; color:var(--la-text) !important; font-size:14px !important; padding-left:14px !important; box-sizing:border-box; width:100%; }
         :root body .cam-form input:not([type=checkbox]):not([type=radio]):focus { border-color:transparent !important; box-shadow:0 0 0 2px var(--la-text); }
         .cam-qr { display:grid; grid-template-columns:150px minmax(0,1fr); gap:18px; align-items:center; padding:16px; margin-bottom:16px; border:1px solid var(--la-line); border-radius:12px; }
+        .cam-obs { padding:14px 16px; margin-bottom:16px; border:1px solid var(--la-line); border-radius:12px; }
+        .cam-obs-steps { margin:0; padding:0; list-style:none; counter-reset:obs; display:flex; flex-direction:column; }
+        .cam-obs-steps li { counter-increment:obs; display:flex; align-items:center; justify-content:space-between; gap:14px; padding:10px 0; border-top:1px solid var(--la-line); font-size:13px; line-height:1.5; color:var(--la-sub); }
+        .cam-obs-steps li:first-child { border-top:0; }
+        .cam-obs-steps li span::before { content:counter(obs); display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; margin-right:10px; border-radius:50%; border:1px solid var(--la-line); font-size:11px; font-weight:600; color:var(--la-text); }
+        .cam-obs-steps b { color:var(--la-text); font-weight:600; }
+        .cam-obs-steps .cam-btn { flex-shrink:0; }
+        @media (max-width:640px) { .cam-obs-steps li { flex-direction:column; align-items:stretch; } }
         .cam-qr-code { width:150px; height:150px; background:#fff; border-radius:8px; padding:6px; box-sizing:border-box; display:flex; align-items:center; justify-content:center; color:#000; font-size:11px; }
         .cam-qr-code svg { width:100%; height:100%; }
         .cam-qr-title { margin:0 0 8px; font-size:15px; font-weight:600; color:var(--la-text); }
@@ -462,7 +474,7 @@
                 <!-- The decks' sound: on the same page as the cameras, in its own section -->
                 <section id="deck-section" class="deck-section">
                     <div class="deck-head">
-                        <div class="min-w-0"><h3 class="deck-h">Decks audio</h3><p class="deck-sub">The mixer's sound, recorded as each set's HQ audio.</p><p class="deck-state" id="deck-state"></p></div>
+                        <div class="min-w-0"><div class="deck-title"><h3 class="deck-h">Decks audio</h3><span class="deck-state" id="deck-state"></span></div><p class="deck-sub">The mixer's sound becomes each set's HQ audio.</p></div>
                         <button type="button" class="cam-btn ghost" id="deck-add" onclick="openCamForm(null, 'audio')">Add decks audio</button>
                     </div>
                     <div id="deck-grid" class="cam-grid"></div>
@@ -824,8 +836,8 @@
             var st = document.getElementById('deck-state');
             if (st) {
                 st.className = 'deck-state' + (on.length ? ' on' : '');
-                st.textContent = !decks.length ? '' : on.length ? 'Decks connected · sound coming in' + (decks.length > 1 ? ' (' + on.length + ' of ' + decks.length + ')' : '')
-                    : 'Not connected · start the stream from the mixer setup';
+                st.textContent = !decks.length ? '' : on.length ? 'Live' + (decks.length > 1 ? ' · ' + on.length + ' of ' + decks.length : '') : 'Not connected';
+                st.title = on.length ? 'Sound is coming in from the mixer' : 'Start streaming from the mixer setup (see Stream setup)';
             }
             _cams.forEach(function(c) {
                 if (c.kind === 'audio') { if (deck) deck.appendChild(cameraCard(c, 0)); }
@@ -908,7 +920,7 @@
                 : c.status === 'missing' ? '<span class="cam-pill warn">STREAM MISSING</span>'
                 : '<span class="cam-pill">OFFLINE</span>';
             var chips = '';
-            if (c.model) chips += '<span class="cam-chip">' + esc(c.model) + '</span>';
+            if (c.model && c.kind !== 'audio') chips += '<span class="cam-chip">' + esc(c.model) + '</span>';
             if (c.ndiName) chips += '<span class="cam-chip ndi" title="NDI source name">NDI · ' + esc(c.ndiName) + '</span>';
             if (c.ip) chips += '<span class="cam-chip">' + esc(c.ip) + '</span>';
             var actions = '';
@@ -921,13 +933,13 @@
             }
             card.innerHTML =
                 '<div class="cam-stage"></div>' +
-                '<div class="cam-meta"><span class="cam-label">' + (c.kind === 'audio' ? 'DECKS // ' : 'CAM ' + String(i + 1).padStart(2, '0') + ' // ') + esc(c.name) + '</span>' + pill + '</div>' +
+                '<div class="cam-meta"><span class="cam-label">' + (c.kind === 'audio' ? '' : 'CAM ' + String(i + 1).padStart(2, '0') + ' // ') + esc(c.name) + '</span>' + pill + '</div>' +
                 (chips ? '<div class="cam-chips">' + chips + '</div>' : '') +
                 (c.external ? '' :
                     '<button type="button" class="cam-onstage" data-act="stage">' +
                     // The calendar's current set wins over the name typed on the card
                     '<span style="min-width:0"><span class="lbl">ON STAGE</span><span class="val' + (_calNow || c.artist ? '' : ' empty') + '">' + esc(_calNow ? _calNow.artist : (c.artist || 'Set the artist')) + '</span></span>' +
-                    '<span class="go">' + (_calNow ? 'From calendar' : c.autoClips === false ? 'Recording only' : 'Recording + clips') + '</span></button>' +
+                    '<span class="go">' + (c.kind === 'audio' ? 'Saved as HQ audio' : _calNow ? 'From calendar' : c.autoClips === false ? 'Recording only' : 'Recording + clips') + '</span></button>' +
                     (_calSched && c.followCalendar !== false ? '<div class="cam-sched' + (_calSched.open && isLive ? ' on' : '') + '"><span>' + (_calSched.open ? (isLive ? 'Recording ' : 'Waiting for the camera · ') + esc(_calSched.currentArtist || 'this set') + ' · stops ' + fmtTime(_calSched.closesAt) : _calSched.opensAt ? 'Starts ' + fmtDay(_calSched.opensAt) + ' ' + fmtTime(_calSched.opensAt) + (_calSched.nextArtist ? ' · ' + esc(_calSched.nextArtist) : '') : 'No sets coming up in the calendar') + '</span>' + (_calSched.open ? '<span class="lbl">Calendar</span>' : '<button type="button" class="cam-preview" data-act="preview">Preview now</button>') + '</div>' : '') +
                     (c.recording === false && c.status !== 'missing' ? '<div class="cam-recoff"><span>Recording is off for this camera</span><button type="button" data-act="rec">Turn on</button></div>' : '')) +
                 (actions ? '<div class="cam-row-actions">' + actions + '</div>' : '');
@@ -1164,9 +1176,10 @@
                     '<p class="cam-howto-t">How to connect your decks</p>' +
                     '<ol>' +
                     '<li><b>Take the sound from the mixer.</b> Use its <b>Rec Out</b> or <b>Booth Out</b>, or its USB port (most Pioneer, Allen &amp; Heath and Rane mixers work as a USB sound card).</li>' +
-                    '<li><b>Plug it into something that streams:</b> a phone with a USB audio adapter and Larix (audio only), the venue Mac with OBS (free), or a streaming box like an ATEM Mini Pro.</li>' +
+                    '<li><b>Plug it into something that streams:</b> a computer with OBS (free), a phone with a USB audio adapter and Larix (audio only), or a streaming box like an ATEM Mini Pro.</li>' +
                     '<li><b>Send it here.</b> After you add it, Stream setup gives the address and a QR code to scan with the phone.</li>' +
                     '</ol>' +
+                    '<div class="cam-howto-get"><a class="cam-btn ghost" href="https://obsproject.com/download" target="_blank" rel="noopener">Get OBS (free)</a><span>For a Mac or PC at the decks. After adding, Stream setup gives you a ready OBS profile.</span></div>' +
                     '<p class="cam-howto-n">Each set\'s sound is saved as the session\'s HQ AUDIO, cut at the calendar times. Clips, the multi-camera edit and SoundCloud use it.</p>' +
                 '</div>' +
                 '<p id="cam-form-error" class="cam-form-error"></p>' +
@@ -1196,6 +1209,30 @@
             });
         }
 
+        // An OBS profile folder (basic.ini + service.json) in a zip: Profile → Import in OBS
+        function downloadObsProfile(c, d, btn) {
+            var name = 'local-assets ' + String(c.name || 'camera').replace(/[^\w .-]+/g, '').trim();
+            var audio = c.kind === 'audio';
+            var ini = ['[General]', 'Name=' + name, '', '[Output]', 'Mode=Simple', '', '[SimpleOutput]',
+                'VBitrate=' + (audio ? 500 : 6000), 'ABitrate=320', 'StreamEncoder=x264', 'Preset=veryfast', 'UseAdvanced=true', 'x264Settings=keyint=60', '',
+                '[Video]', 'BaseCX=1920', 'BaseCY=1080', 'OutputCX=1920', 'OutputCY=1080', 'FPSType=0', 'FPSCommon=30', '',
+                '[Audio]', 'SampleRate=48000', 'ChannelSetup=Stereo', ''].join('\r\n');
+            var service = JSON.stringify({ type: 'rtmp_custom', settings: { server: d.rtmpsUrl, key: d.streamKey, use_auth: false, bwtest: false } }, null, 2);
+            btn.disabled = true; btn.textContent = 'Preparing…';
+            loadZip().then(function(JSZip) {
+                var z = new JSZip(), f = z.folder(name);
+                f.file('basic.ini', ini); f.file('service.json', service);
+                return z.generateAsync({ type: 'blob' });
+            }).then(function(blob) {
+                var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name + ' (OBS profile).zip';
+                document.body.appendChild(a); a.click(); a.remove(); setTimeout(function() { URL.revokeObjectURL(a.href); }, 5000);
+            }).catch(function() { laAlert('Could not make the OBS profile. Use the Server and Stream key below instead.'); })
+              .then(function() { btn.disabled = false; btn.textContent = 'Download OBS profile'; });
+        }
+        function loadZip() {
+            if (window.JSZip) return Promise.resolve(window.JSZip);
+            return new Promise(function(ok, bad) { var sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js'; sc.onload = function() { ok(window.JSZip); }; sc.onerror = bad; document.head.appendChild(sc); });
+        }
         function loadQr() {
             if (window.qrcode) return Promise.resolve(window.qrcode);
             return new Promise(function(ok, bad) { var sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js'; sc.onload = function() { ok(window.qrcode); }; sc.onerror = bad; document.head.appendChild(sc); });
@@ -1212,12 +1249,19 @@
                 // Larix imports a ready-made connection from this link (scan the QR code, or tap it on the phone)
                 var larix = 'larix://set/v1?conn[][url]=' + encodeURIComponent(full) + '&conn[][name]=' + encodeURIComponent('local / assets · ' + c.name) + '&conn[][overwrite]=on';
                 var onPhone = /iPhone|iPad|Android/i.test(navigator.userAgent);
-                var guide = function(key, title, steps) { return '<details class="cam-guide"' + (String(c.model || '').indexOf(key) === 0 ? ' open' : '') + '><summary>' + title + '</summary><ol>' + steps.map(function(x) { return '<li>' + x + '</li>'; }).join('') + '</ol></details>'; };
+                var guide = function(key, title, steps) { return '<details class="cam-guide"><summary>' + title + '</summary><ol>' + steps.map(function(x) { return '<li>' + x + '</li>'; }).join('') + '</ol></details>'; };
                 document.getElementById('cam-dialog-body').innerHTML =
                     (other ? '<div class="cam-qr"><div id="cam-qr-code" class="cam-qr-code"></div><div><p class="cam-qr-title">Set up the phone in one tap</p>' +
                         '<ol class="cam-qr-steps"><li>Install <b>Larix Broadcaster</b> (free) on the phone.</li><li>' + (onPhone ? 'Tap <b>Open in Larix</b> below.' : 'Point the phone\'s camera at this code and tap the link.') + '</li><li>Turn the phone sideways and press record.</li></ol>' +
                         (onPhone ? '<a class="cam-btn primary" href="' + esc(larix) + '">Open in Larix</a>' : '') + '</div></div>' : '') +
                     '<p class="cam-dialog-text">' + (other ? 'Send the camera\'s video to these addresses. Then it records with the calendar, saves each set for the DJ and makes the clips, like any camera.' : 'Paste these into the camera\'s RTMP live-streaming settings, or into OBS (Settings → Stream → Custom) on the venue computer that receives this camera over NDI.') + '</p>' +
+                    // OBS (the venue Mac): a ready-made profile to import, with the address, key and settings
+                    '<div class="cam-obs"><p class="cam-qr-title">' + (c.kind === 'audio' ? 'Stream the decks from a computer' : 'Stream from a computer (OBS)') + '</p>' +
+                        '<ol class="cam-obs-steps">' +
+                        '<li><span>Install OBS, free, Mac and Windows.</span><a class="cam-btn ghost" href="https://obsproject.com/download" target="_blank" rel="noopener">Get OBS (free)</a></li>' +
+                        '<li><span>Download our ready profile: address, key and settings included.</span><button type="button" class="cam-btn ghost" id="cam-obs-dl">Download OBS profile</button></li>' +
+                        '<li><span>Unzip it. In OBS: <b>Profile → Import</b>, pick the folder, choose it in the <b>Profile</b> menu, add ' + (c.kind === 'audio' ? 'an <b>Audio Input Capture</b> with the mixer' : 'your camera as a <b>Video Capture Device</b>') + ' and press <b>Start Streaming</b>.</span></li>' +
+                        '</ol></div>' +
                     // Apps like Larix and DJI Mimo want one address that ends with the key: shown first
                     row('Full address · paste this into Larix, DJI Mimo or any app that asks for one URL', full, true) +
                     '<p class="cam-dialog-note" style="margin:-4px 0 12px">It must end with your stream key. Apps with separate boxes (OBS) use the two lines below.</p>' +
@@ -1236,6 +1280,8 @@
                         guide('Other', 'Any other camera', ['Look for <b>RTMP</b>, <b>custom stream</b> or <b>live streaming</b> in its settings or app.', 'Paste the <b>Server</b> and <b>Stream key</b>, or the <b>full address</b> if it asks for one address.', 'No RTMP? Stream it through a laptop with OBS, like the Sony Alpha.']) +
                       '</div><p class="cam-dialog-note">Pan, tilt, zoom and AI tracking from Camera Control are for OBSBOT cameras; everything else works the same.</p>' : '') +
                     '<p class="cam-dialog-note"> Keep the stream key private. Anyone with it can send video to this camera slot.</p>';
+                var obsBtn = document.getElementById('cam-obs-dl');
+                if (obsBtn) obsBtn.addEventListener('click', function() { downloadObsProfile(c, d, obsBtn); });
                 var qrBox = document.getElementById('cam-qr-code');
                 if (qrBox) loadQr().then(function(qrcode) { var q = qrcode(0, 'L'); q.addData(larix); q.make(); qrBox.innerHTML = q.createSvgTag({ cellSize: 4, margin: 2, scalable: true }); }).catch(function() { qrBox.textContent = 'QR code unavailable'; });
                 document.querySelectorAll('[data-copy]').forEach(function(b) {

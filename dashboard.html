@@ -1365,7 +1365,7 @@
                     var pid = clip.status === 'ready' && clip.playback_ids && clip.playback_ids[0] ? clip.playback_ids[0].id : null;
                     var num = String(i + 1).padStart(2, '0');
                     var staticSrc = pid ? 'https://image.mux.com/' + pid + '/thumbnail.png?width=180&height=320&fit_mode=smartcrop&time=5' : '';
-                    var animSrc   = pid ? 'https://image.mux.com/' + pid + '/animated.gif?width=180&height=320&fit_mode=smartcrop&fps=10&start=5&duration=3' : '';
+                    var animSrc   = pid ? 'https://image.mux.com/' + pid + '/animated.webp?width=180&height=320&fit_mode=smartcrop&fps=24&start=5&end=8' : '';
                     var readyIdx = pid ? allPids.indexOf(pid) : -1;
                     var imgId = 'sclip-' + pid;
                     var clipDel = '<button type="button" class="tile-x" title="Delete clip" data-del-id="' + escHtml(clip.id) + '" data-del-label="' + escHtml(name + ' vertical clip ' + num) + '" onclick="event.stopPropagation(); deleteAsset(this)">&times;</button>';
