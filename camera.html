@@ -37,7 +37,7 @@
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
-    <script src="nav-component.js?v=17"></script>
+    <script src="nav-component.js?v=18"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
         .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
@@ -1073,10 +1073,12 @@
                 var guide = function(key, title, steps) { return '<details class="cam-guide"' + (String(c.model || '').indexOf(key) === 0 ? ' open' : '') + '><summary>' + title + '</summary><ol>' + steps.map(function(x) { return '<li>' + x + '</li>'; }).join('') + '</ol></details>'; };
                 document.getElementById('cam-dialog-body').innerHTML =
                     '<p class="cam-dialog-text">' + (other ? 'Send the camera\'s video to these addresses. Then it records with the calendar, saves each set for the DJ and makes the clips, like any camera.' : 'Paste these into the camera\'s RTMP live-streaming settings, or into OBS (Settings → Stream → Custom) on the venue computer that receives this camera over NDI.') + '</p>' +
+                    // Apps like Larix and DJI Mimo want one address that ends with the key: shown first
+                    row('Full address · paste this into Larix, DJI Mimo or any app that asks for one URL', full, true) +
+                    '<p class="cam-dialog-note" style="margin:-4px 0 12px">It must end with your stream key. Apps with separate boxes (OBS) use the two lines below.</p>' +
                     row('Server', d.rtmpsUrl) +
                     row('Server (if RTMPS isn\'t supported)', d.rtmpUrl) +
                     row('Stream key', d.streamKey, true) +
-                    (other ? row('Full address (server + key, for apps that ask for one address)', full, true) : '') +
                     (d.srtUrl ? row('SRT (alternative)', d.srtUrl, true) : '') +
                     (other ? '<div class="cam-guides">' +
                         guide('DJI', 'DJI Osmo (Pocket 3, Action)', ['Open the DJI Mimo app with the Osmo connected.', 'Choose <b>Live</b>, then <b>RTMP</b> (custom).', 'Paste the <b>full address</b> above. Pick the best quality your Wi-Fi allows.', 'Start the live stream before the first set.']) +

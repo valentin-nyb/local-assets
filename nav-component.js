@@ -44,7 +44,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // The local / assets admin account has no Brand Kit (that's for clients)
     var _isAdminAcct = (function() { try { var a = JSON.parse(localStorage.getItem('la_admin') || '{}'); return a.venueSlug === 'local-assets-admin' || /^local\s*[\/-]?\s*assets\b/i.test(String(a.venue || '').trim()); } catch (_) { return false; } })();
     sidebar.innerHTML = `
-        <div class="h-20 flex items-center justify-center px-8 border-b border-[#27272a] shrink-0" style="position:relative">
+        <div id="la-side-head" class="h-20 flex items-center justify-center px-8 border-b border-[#27272a] shrink-0" style="position:relative">
             <a href="/dashboard" class="h-5 w-24 flex">
                 <img src="/logos/White@2x.png" class="h-full w-full object-center object-contain" alt="logo">
             </a>
@@ -258,6 +258,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Accounts listed in several venues (VENUES_CONFIG) can switch between them.
+    // Phones: the logo starts on the left so the close button on the right never covers it
+    if (!document.getElementById('la-side-css')) {
+        var _sc = document.createElement('style');
+        _sc.id = 'la-side-css';
+        _sc.textContent = '@media (max-width:767px){#la-side-head{justify-content:flex-start !important;padding-left:24px !important;padding-right:64px !important}#la-side-head > a{width:auto !important;max-width:100%}#la-side-head > a img{width:auto !important;max-width:100%;object-position:left center}}';
+        document.head.appendChild(_sc);
+    }
     // Account menu (avatar): name and email, the accounts to switch to, log out
     var _LA_ICON = {
         venue: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V9l8-5 8 5v12"/><path d="M9 21v-6h6v6"/></svg>',

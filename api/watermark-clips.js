@@ -9,6 +9,8 @@ import { createClient } from 'redis';
 import { getWebSessionAuth } from './_venues.js';
 import { resolveWatermark } from './_watermark.js';
 import { renderWatermarkPng, renderWatermarkParts, animatedLogo, VERTICAL, HORIZONTAL } from './_watermark-render.js';
+import { spawn } from 'child_process';
+import ffmpegPath from 'ffmpeg-static';
 import { run, signJob, verifyJob, venueAuth as venueAuthFor, muxReq, SUB, socialInfo, tagFor, clipTimes, listAllAssets, sessionClips, videoSize, finishVerticals, originalsKey, clipOwner, artistMasters } from './_verticals.js';
 
 // Puts the Brand Kit watermark on a session's vertical clips, and takes it off again.
@@ -85,11 +87,23 @@ async function animateClip(job) {
     const a = job.at;
     const filter = `[1:v]scale=${job.vw}:${job.vh}[b];[2:v]scale=${Math.round(a.w * job.vw / a.W / 2) * 2}:${Math.round(a.h * job.vw / a.W / 2) * 2}:flags=lanczos,format=rgba,colorchannelmixer=aa=${a.opacity}[g];` +
       `[0:v][b]overlay=0:0[v1];[v1][g]overlay=${Math.round(a.left * job.vw / a.W)}:${Math.round(a.top * job.vw / a.W)}:shortest=1,format=yuv420p[v]`;
-    const enc = (src) => run(['-hide_banner', '-loglevel', 'warning', '-y', '-i', src, '-i', job.base, '-ignore_loop', '0', '-i', job.gif,
-      '-filter_complex', filter, '-map', '[v]', '-map', '0:a:0?', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-c:a', 'copy', '-movflags', '+faststart', out]);
+    const t0 = Date.now();
+    // Capped at the clip's length (the GIF loops forever) and stopped before the function's 5-minute limit
+    const enc = (src) => new Promise((resolve, reject) => {
+      const args = ['-hide_banner', '-loglevel', 'error', '-y', '-i', src, '-i', job.base, '-ignore_loop', '0', '-i', job.gif,
+        '-filter_complex', filter, '-map', '[v]', '-map', '0:a:0?', ...(job.dur ? ['-t', String(job.dur)] : []),
+        '-c:v', 'libx264', '-preset', 'superfast', '-crf', '20', '-pix_fmt', 'yuv420p', '-threads', '0', '-c:a', 'copy', '-movflags', '+faststart', out];
+      const ff = spawn(ffmpegPath, args, { stdio: ['ignore', 'ignore', 'pipe'] });
+      let err = '';
+      ff.stderr.on('data', d => { err = (err + d).slice(-1500); });
+      const kill = setTimeout(() => { ff.kill('SIGKILL'); reject(new Error('took over 4.5 minutes')); }, Math.max(30e3, 270e3 - (Date.now() - t0)));
+      ff.on('error', e => { clearTimeout(kill); reject(e); });
+      ff.on('close', code => { clearTimeout(kill); code === 0 ? resolve() : reject(new Error('ffmpeg: ' + err.trim().split('\n').pop())); });
+    });
     const size = () => (fs.existsSync(out) ? fs.statSync(out).size : 0);
-    await enc(`https://stream.mux.com/${job.pid}/highest.mp4`).catch(e => console.error('[watermark-gif] mp4', e.message));
-    if (size() < 100 * 1024) await enc(`https://stream.mux.com/${job.pid}.m3u8?rendition_order=desc`);
+    await enc(`https://stream.mux.com/${job.pid}/highest.mp4`).catch(e => console.error('[watermark-gif] mp4', job.n, e.message));
+    console.log('[watermark-gif] rendered', job.slug, job.n, Math.round((Date.now() - t0) / 1000) + 's', Math.round(size() / 1024) + ' KB');
+    if (size() < 100 * 1024 && Date.now() - t0 < 120e3) await enc(`https://stream.mux.com/${job.pid}.m3u8?rendition_order=desc`);
     if (size() < 100 * 1024) throw new Error('The clip could not be read');
     const blob = await put(`watermarks/${job.slug}/gif-${crypto.randomBytes(6).toString('hex')}.mp4`, fs.readFileSync(out), { access: 'public', contentType: 'video/mp4', addRandomSuffix: false, multipart: size() > 50 * 1024 * 1024 });
     const copy = await muxReq(auth, '/video/v1/assets', {
@@ -295,7 +309,7 @@ export default async function handler(req, res) {
           const p = await partsFor(size[0] || 1080, size[1] || 1920);
           await redis.hSet(animKey(slug), id, String(Date.now()));
           await fetch(`${origin}/api/watermark-clips`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(20000),
-            body: JSON.stringify({ action: 'animate', job: signJob({ kind: 'wm-gif', slug, artist, n, oldId: id, pid, vw: size[0] || 1080, vh: size[1] || 1920, base: p.base, gif: wm.url, at: p.at, masterId: sessionMaster?.id || null }) }) })
+            body: JSON.stringify({ action: 'animate', job: signJob({ kind: 'wm-gif', slug, artist, n, oldId: id, pid, dur: Math.ceil(Number(src.duration) || 0) || null, vw: size[0] || 1080, vh: size[1] || 1920, base: p.base, gif: wm.url, at: p.at, masterId: sessionMaster?.id || null }) }) })
             .catch(e => errors.push('Could not start clip ' + n + ': ' + e.message));
           started++;
           continue;

@@ -4,6 +4,7 @@ import { getWebSessionAuth, getVenuesConfig, getMuxAuthForVenue, platformAdmins,
 import { calendarKey, cleanCalendarUrl, fetchEvents } from './_calendar.js';
 import { listLiveStreams } from './_live.js';
 import crypto from 'crypto';
+import dns from 'dns';
 import { viscaFor, isContinuous, privateHost } from './_visca.js';
 import { relayKeyHash, cmdsKey, seenKey, tokenKey } from './camera-relay.js';
 import { scheduleWindow } from './camera-schedule.js';
@@ -23,6 +24,16 @@ async function relayStatus(redis, slug) {
 const MAX_CAMERAS = 16;
 const RTMPS_URL = 'rtmps://global-live.mux.com:443/app';
 const RTMP_URL  = 'rtmp://global-live.mux.com:5222/app';
+// Our own ingest address: live.local-assets.com, a DNS alias (CNAME) of Mux's ingest. Used once the alias
+// is in place; plain RTMP only (RTMPS checks Mux's certificate, which doesn't name our domain)
+const OWN_RTMP_URL = 'rtmp://live.local-assets.com:5222/app';
+let _ownIngest = { ok: false, at: 0 };
+async function ownIngestReady() {
+  if (Date.now() - _ownIngest.at < 10 * 60e3) return _ownIngest.ok;
+  const ok = await dns.promises.resolveCname('live.local-assets.com').then(r => r.some(x => /(^|\.)mux\.com\.?$/i.test(x))).catch(() => false);
+  _ownIngest = { ok, at: Date.now() };
+  return ok;
+}
 const SRT_HOST  = 'srt://global-live.mux.com:6001';
 
 const key = slug => `cameras:${slug}`;
@@ -241,9 +252,10 @@ export default async function handler(req, res) {
       const cam = cams.find(c => c.id === body.id);
       if (!cam) return res.status(404).json({ error: 'Camera not found' });
       const s = await mux(session.muxAuth, `/video/v1/live-streams/${encodeURIComponent(cam.streamId)}`);
+      const own = await ownIngestReady();
       return res.status(200).json({
         rtmpsUrl: RTMPS_URL,
-        rtmpUrl: RTMP_URL,
+        rtmpUrl: own ? OWN_RTMP_URL : RTMP_URL,
         streamKey: s.stream_key,
         srtUrl: s.srt_passphrase ? `${SRT_HOST}?streamid=${s.stream_key}&passphrase=${s.srt_passphrase}` : null,
       });
