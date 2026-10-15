@@ -1385,7 +1385,7 @@
                 '<label>Artist on stage<input name="artist" list="stage-artists" maxlength="60" placeholder="DJ TENNIS" autocomplete="off" value="' + esc(c.artist) + '"><datalist id="stage-artists"></datalist>' +
                 (live ? '<small>Streaming now. Saving a new name starts a new set from this moment.</small>' : '<small>Set this before the stream starts.</small>') + '</label>' +
                 // Without a calendar, the session's details are given here so it arrives complete
-                (_calSched ? '<p class="cam-dialog-note" style="margin:0">The calendar gives each set its name, venue and date.</p>' :
+                (_calSched ? '<p class="cam-dialog-note" style="margin:0">During calendar sets, the calendar\'s name, venue and date are used. These are for streams outside them.</p>' : '') + (
                     '<label>Session name<input name="title" maxlength="80" placeholder="e.g. Boiler Room Puglia" autocomplete="off" value="' + esc(c.stageTitle) + '"></label>' +
                     '<div class="cam-two"><label>Venue<select name="venue"><option value="">No venue</option>' + (c.stageVenue ? '<option selected>' + esc(c.stageVenue) + '</option>' : '') + '<option value="__new">+ New venue…</option></select></label>' +
                     '<label>Date<input name="date" type="date" value="' + esc(c.stageDate || new Date(Date.now() - new Date().getTimezoneOffset() * 60e3).toISOString().slice(0, 10)) + '"></label></div>' +
