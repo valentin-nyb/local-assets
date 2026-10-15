@@ -60,6 +60,9 @@
         .cam-eq { display:flex; align-items:center; gap:4px; height:56px; }
         .cam-eq i { width:5px; height:20%; border-radius:3px; background:#3f3f46; }
         .cam-audio.on .cam-eq i { background:#39FF14; animation:camEq .9s ease-in-out infinite alternate; }
+        .cam-audio.real .cam-eq i { animation:none !important; transition:height .06s linear; }
+        .cam-listen { position:absolute; right:12px; bottom:12px; z-index:2; height:28px; padding:0 12px; border-radius:999px; border:1px solid rgba(255,255,255,.3); background:rgba(0,0,0,.5); color:#fff; font:500 12px 'Helvetica Neue', Helvetica, Arial, sans-serif; cursor:pointer; }
+        .cam-listen.on { background:#39FF14; border-color:#39FF14; color:#000; }
         @keyframes camEq { from { height:15%; } to { height:100%; } }
         .cam-bars { position:absolute; inset:0; background:linear-gradient(90deg, #c0c0c0 0 14.28%, #c0c000 0 28.57%, #00c0c0 0 42.85%, #00c000 0 57.14%, #c000c0 0 71.42%, #c00000 0 85.71%, #0000c0 0); }
         .cam-bars::after { content:""; position:absolute; left:0; right:0; bottom:0; height:22%; background:linear-gradient(90deg, #00214c 0 18%, #fff 0 36%, #32006a 0 54%, #131313 0 72%, #090909 0 81%, #1d1d1d 0); }
@@ -898,6 +901,56 @@
             }).catch(function() {});
         }
 
+        // Decks: the level meter follows the real sound of the stream (Web Audio analyser). Browsers only
+        // allow audio after a click, so it starts at the first click on the page; it measures silently and
+        // "Listen" turns the sound on.
+        var _deckMeters = [], _audioCtx = null;
+        function deckMeter(stage, pid) {
+            var mp = document.createElement('mux-player');
+            mp.setAttribute('stream-type', 'live'); mp.setAttribute('playback-id', pid); mp.setAttribute('audio', '');
+            mp.style.cssText = 'position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;';
+            stage.appendChild(mp);
+            var btn = document.createElement('button');
+            btn.type = 'button'; btn.className = 'cam-listen'; btn.textContent = 'Listen';
+            stage.appendChild(btn);
+            var m = { stage: stage, mp: mp, btn: btn, gain: null, on: false };
+            _deckMeters.push(m);
+            btn.addEventListener('click', function(e) { e.stopPropagation(); startMeters(); m.on = !m.on; if (m.gain) m.gain.gain.value = m.on ? 1 : 0; btn.textContent = m.on ? 'Mute' : 'Listen'; btn.classList.toggle('on', m.on); });
+            if (_audioCtx) startMeters();
+        }
+        function startMeters() {
+            try { _audioCtx = _audioCtx || new (window.AudioContext || window.webkitAudioContext)(); if (_audioCtx.state === 'suspended') _audioCtx.resume(); } catch (_) { return; }
+            _deckMeters = _deckMeters.filter(function(m) { return m.stage.isConnected; });
+            _deckMeters.forEach(function(m) {
+                if (m.started) return;
+                var el = (m.mp.media && (m.mp.media.nativeEl || m.mp.media)) || (m.mp.shadowRoot && m.mp.shadowRoot.querySelector('video,audio'));
+                if (!el || !el.play) { setTimeout(startMeters, 800); return; }
+                m.started = true;
+                try {
+                    el.crossOrigin = 'anonymous'; el.muted = false;
+                    var src = _audioCtx.createMediaElementSource(el), an = _audioCtx.createAnalyser(), g = _audioCtx.createGain();
+                    an.fftSize = 128; an.smoothingTimeConstant = 0.75; g.gain.value = m.on ? 1 : 0;
+                    src.connect(an); an.connect(g); g.connect(_audioCtx.destination);
+                    m.gain = g; m.an = an;
+                    el.play().catch(function() {});
+                    var bars = m.stage.querySelectorAll('.cam-eq i'), data = new Uint8Array(an.frequencyBinCount);
+                    m.stage.querySelector('.cam-audio').classList.add('real');
+                    (function draw() {
+                        if (!m.stage.isConnected) return;
+                        an.getByteFrequencyData(data);
+                        // 24 bars from the low end (kick, bass) to the highs, mirrored round the middle like a deck waveform
+                        var half = bars.length / 2;
+                        for (var k = 0; k < half; k++) {
+                            var v = data[Math.min(data.length - 1, Math.round(Math.pow(k / half, 1.6) * (data.length * 0.7)))] / 255;
+                            var h = Math.max(6, Math.round(v * 100)) + '%';
+                            bars[half - 1 - k].style.height = h; bars[half + k].style.height = h;
+                        }
+                        requestAnimationFrame(draw);
+                    })();
+                } catch (e) { m.started = false; }
+            });
+        }
+        document.addEventListener('pointerdown', function first() { if (_deckMeters.length) startMeters(); }, { once: false, passive: true });
         // A live camera: broadcast colour bars until the picture actually plays (instead of Mux's own placeholder)
         function livePlayer(stage, pid, fit, extra) {
             stage.innerHTML = '<div class="cam-bars"><span><i></i>LIVE · Connecting…</span></div>';
@@ -950,7 +1003,7 @@
             if (c.kind === 'audio') {
                 // The decks: a level look instead of a picture, and the sound to listen in when live
                 stage.innerHTML = '<div class="cam-audio' + (isLive ? ' on' : '') + '"><div class="cam-eq">' + Array.from({ length: 24 }, function(_, k) { return '<i style="animation-delay:' + (k * 0.07 % 0.9).toFixed(2) + 's"></i>'; }).join('') + '</div><span>' + (isLive ? 'Decks audio · live' : 'Waiting for the mixer') + '</span></div>';
-                if (isLive) { var ap = document.createElement('mux-player'); ap.setAttribute('stream-type', 'live'); ap.setAttribute('playback-id', c.playbackId); ap.setAttribute('audio', ''); ap.setAttribute('accent-color', '#39FF14'); ap.style.cssText = 'position:absolute;left:12px;right:12px;bottom:10px;'; stage.appendChild(ap); }
+                if (isLive) deckMeter(stage, c.playbackId);
             } else if (isLive) {
                 livePlayer(stage, c.playbackId, 'cover', '');
             } else {
