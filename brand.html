@@ -612,6 +612,8 @@
             });
         }
         function positionPreview() {
+            var exb = document.getElementById('bk-wm-export');
+            if (exb && !exb.disabled) exb.textContent = /\.gif(\?|$)/i.test(wmPreviewLogoRaw()) ? 'Export GIF' : 'Export PNG';
             var img = document.getElementById('bk-wm-logo');
             if (!img) return;
             var url = wmPreviewLogo();
@@ -729,6 +731,20 @@
             var btn = document.getElementById('bk-wm-export'), st = document.getElementById('bk-wm-status');
             if (!wmPreviewLogo() && !wmText()) { if (st) st.textContent = 'Nothing to export yet. Add a logo or text.'; return; }
             btn.disabled = true;
+            // A GIF logo: the server makes an animated GIF of the whole watermark, at 4K
+            var raw = wmPreviewLogoRaw();
+            if (/\.gif(\?|$)/i.test(raw)) {
+                var tf0 = wmText();
+                btn.textContent = 'Making the GIF…'; if (st) st.textContent = '';
+                laFetch('/api/watermark-clips', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'exportGif', watermark: {
+                    url: raw, frame: _wmFrame, position: _wm.position, size: _wm.size, opacity: _wm.opacity,
+                    text: tf0 ? { value: wmTextValue(), font: tf0.url, position: _wm.text.position, size: wmTextSize(), color: _wm.text.color } : null } }) })
+                    .then(function(r) { return r.json().then(function(d) { if (!r.ok) throw new Error(d.error || r.status); return d; }); })
+                    .then(function(d) { return fetch(d.url).then(function(r) { return r.blob(); }).then(function(b) { saveBlob(b, 'watermark-' + d.width + 'x' + d.height + '.gif'); }); })
+                    .catch(function(e) { if (st) st.textContent = 'Could not export: ' + e.message; })
+                    .then(function() { btn.disabled = false; btn.textContent = 'Export GIF'; });
+                return;
+            }
             var L = WM_LAYOUT[_wmFrame], c = document.createElement('canvas'); c.width = L.W; c.height = L.H;
             drawWatermark(c.getContext('2d'), L).then(function() {
                 c.toBlob(function(blob) { saveBlob(blob, 'watermark-' + L.W + 'x' + L.H + '.png'); btn.disabled = false; }, 'image/png');

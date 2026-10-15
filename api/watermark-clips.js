@@ -129,6 +129,35 @@ export default async function handler(req, res) {
   const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
   if (body.action === 'apply') { const _p = await pausedBy(slug, body.artist ? `artist:${String(body.artist).toUpperCase()}` : null); if (_p) return sendPaused(res, _p); }
 
+  // Brand Kit "Export GIF": the watermark with a moving logo as an animated GIF, at 4K, transparent
+  if (body.action === 'exportGif') {
+    const w = body.watermark || {};
+    // Only files from this account's own Brand Kit are read
+    const own = u => typeof u === 'string' && /^https:\/\/[a-z0-9]+\.public\.blob\.vercel-storage\.com\//i.test(u) && new URL(u).pathname.startsWith(`/brand/${slug}/`);
+    if (!own(w.url) || !/\.gif(\?|$)/i.test(w.url)) return res.status(400).json({ error: 'Choose a GIF logo from your Brand Kit' });
+    const text = w.text && own(w.text.font) && String(w.text.value || '').trim()
+      ? { value: String(w.text.value).slice(0, 60), font: w.text.font, position: /^[tb][lr]$/.test(w.text.position) ? w.text.position : 'br', size: ['s', 'm', 'l'].includes(w.text.size) ? w.text.size : 'm', color: w.text.color === 'black' ? 'black' : 'white' } : null;
+    const wm = { url: w.url, position: /^[tb][lr]$/.test(w.position) ? w.position : 'bl', size: ['s', 'm', 'l'].includes(w.size) ? w.size : 'm', opacity: Math.min(1, Math.max(0.3, Number(w.opacity) || 0.9)), text };
+    const frame = await animatedLogo(wm);
+    if (!frame) return res.status(400).json({ error: 'This GIF has only one frame: use Export PNG' });
+    const L = w.frame === 'horizontal' ? HORIZONTAL : VERTICAL;
+    const width = L.W * 2;   // top resolution: 2160×3840 (vertical) or 3840×2160 (horizontal)
+    const parts = await renderWatermarkParts(wm, L, width, frame);
+    const a = parts.logoAt, dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wmgif-'));
+    try {
+      fs.writeFileSync(path.join(dir, 'base.png'), parts.png);
+      const out = path.join(dir, 'watermark.gif');
+      await run(['-hide_banner', '-loglevel', 'warning', '-y', '-loop', '1', '-i', path.join(dir, 'base.png'), '-i', wm.url,
+        '-filter_complex', `[1:v]scale=${a.w}:${a.h}:flags=lanczos,format=rgba,colorchannelmixer=aa=${a.opacity}[g];[0:v][g]overlay=${a.left}:${a.top}:shortest=1,split[x][y];[x]palettegen=reserve_transparent=1:stats_mode=full[p];[y][p]paletteuse=alpha_threshold=96:dither=none`,
+        '-loop', '0', out]);
+      const blob = await put(`watermarks/${slug}/export-${crypto.randomBytes(6).toString('hex')}.gif`, fs.readFileSync(out), { access: 'public', contentType: 'image/gif', addRandomSuffix: false });
+      return res.status(200).json({ url: blob.url, width: a.W, height: a.H });
+    } catch (e) {
+      console.error('[watermark-gif] export', slug, e.message);
+      return res.status(500).json({ error: 'Could not make the GIF' });
+    } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+  }
+
   const redis = createClient({ url: process.env.REDIS_URL });
   await redis.connect();
   try {
