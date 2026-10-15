@@ -226,6 +226,18 @@ export default async function handler(req, res) {
       });
     }
 
+    // "Preview now": opens a calendar camera's stream for 10 minutes between sets (api/camera-schedule.js keeps it open)
+    if (body.action === 'preview') {
+      return await withRedis(async redis => {
+        const cam = (await readCameras(redis, slug)).find(c => c.id === body.id);
+        if (!cam?.streamId) return res.status(404).json({ error: 'Camera not found' });
+        await redis.set(`cam_preview:${cam.streamId}`, String(Date.now()), { EX: 600 });
+        await mux(session.muxAuth, `/video/v1/live-streams/${encodeURIComponent(cam.streamId)}/enable`, { method: 'PUT' }).catch(() => {});
+        await redis.set(`cam_sched:${cam.streamId}`, 'enabled');
+        return res.status(200).json({ ok: true, until: Date.now() + 600e3 });
+      });
+    }
+
     if (body.action === 'enableRecording') {
       // Streams created before recording was switched on: replace the stream with one that records.
       // Mux only takes recording settings when a stream is created, so the stream key changes.

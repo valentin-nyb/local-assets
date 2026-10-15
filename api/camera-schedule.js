@@ -55,7 +55,9 @@ export default async function handler(req, res) {
         if (!cam.streamId) continue;
         // Open unless this camera follows a connected calendar and no set is on
         const follow = cam.followCalendar !== false && !!win;
-        const want = !follow || win.open ? 'enabled' : 'disabled';
+        // "Preview now" keeps a calendar camera open for 10 minutes between sets
+        const preview = follow && !win.open && await redis.exists(`cam_preview:${cam.streamId}`);
+        const want = !follow || win.open || preview ? 'enabled' : 'disabled';
         const have = await redis.get(stateKey(cam.streamId));
         if (have === want) continue;
         if (!have && want === 'enabled') { await redis.set(stateKey(cam.streamId), want); continue; }   // streams start open

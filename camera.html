@@ -127,6 +127,13 @@
         /* Every field in the form alike: same height, corners and line as the dropdowns */
         :root body .cam-form input:not([type=checkbox]):not([type=radio]), :root body .cam-form select { height:44px !important; border-radius:6px !important; border:1px solid color-mix(in srgb, var(--la-text) 22%, transparent) !important; background-color:var(--la-input) !important; color:var(--la-text) !important; font-size:14px !important; padding-left:14px !important; box-sizing:border-box; width:100%; }
         :root body .cam-form input:not([type=checkbox]):not([type=radio]):focus { border-color:transparent !important; box-shadow:0 0 0 2px var(--la-text); }
+        .cam-qr { display:grid; grid-template-columns:150px minmax(0,1fr); gap:18px; align-items:center; padding:16px; margin-bottom:16px; border:1px solid var(--la-line); border-radius:12px; }
+        .cam-qr-code { width:150px; height:150px; background:#fff; border-radius:8px; padding:6px; box-sizing:border-box; display:flex; align-items:center; justify-content:center; color:#000; font-size:11px; }
+        .cam-qr-code svg { width:100%; height:100%; }
+        .cam-qr-title { margin:0 0 8px; font-size:15px; font-weight:600; color:var(--la-text); }
+        .cam-qr-steps { margin:0 0 10px; padding-left:18px; font-size:13px; line-height:1.55; color:var(--la-sub); }
+        .cam-qr-steps b { color:var(--la-text); }
+        @media (max-width:640px) { .cam-qr { grid-template-columns:minmax(0,1fr); } .cam-qr-code { display:none; } }
         .cam-guides { margin-top:14px; border:1px solid var(--la-line); border-radius:10px; overflow:hidden; }
         .cam-guide + .cam-guide { border-top:1px solid var(--la-line); }
         .cam-guide summary { cursor:pointer; padding:12px 14px; font-size:14px; font-weight:500; color:var(--la-text); list-style:none; display:flex; justify-content:space-between; }
@@ -359,6 +366,8 @@
         .cam-sched { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:8px 12px 12px; padding:9px 12px; border-radius:10px; background:var(--la-chip); font:700 10px/1.3 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.06em; text-transform:uppercase; color:var(--la-sub); }
         .cam-sched .lbl { color:var(--la-dim); font-weight:500; flex-shrink:0; }
         .cam-sched.on { color:var(--la-ok); }
+        .cam-preview { flex-shrink:0; height:26px; padding:0 12px; border-radius:999px; border:1px solid color-mix(in srgb, var(--la-text) 26%, transparent); background:transparent; color:var(--la-text); font:500 11px 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:0; text-transform:none; cursor:pointer; }
+        .cam-preview:hover:not(:disabled) { background:var(--la-text); color:var(--la-bg); }
         .cam-check { display:flex !important; flex-direction:row !important; align-items:flex-start; gap:10px; cursor:pointer; }
         .cam-check input { width:16px; height:16px; margin-top:2px; accent-color:var(--la-accent); flex-shrink:0; }
         .cam-check span { display:flex; flex-direction:column; gap:3px; }
@@ -811,7 +820,7 @@
                     // The calendar's current set wins over the name typed on the card
                     '<span style="min-width:0"><span class="lbl">ON STAGE</span><span class="val' + (_calNow || c.artist ? '' : ' empty') + '">' + esc(_calNow ? _calNow.artist : (c.artist || 'Set the artist')) + '</span></span>' +
                     '<span class="go">' + (_calNow ? 'From calendar' : c.autoClips === false ? 'Recording only' : 'Recording + clips') + '</span></button>' +
-                    (_calSched && c.followCalendar !== false ? '<div class="cam-sched' + (_calSched.open && isLive ? ' on' : '') + '"><span>' + (_calSched.open ? (isLive ? 'Recording ' : 'Waiting for the camera · ') + esc(_calSched.currentArtist || 'this set') + ' · stops ' + fmtTime(_calSched.closesAt) : _calSched.opensAt ? 'Starts ' + fmtDay(_calSched.opensAt) + ' ' + fmtTime(_calSched.opensAt) + (_calSched.nextArtist ? ' · ' + esc(_calSched.nextArtist) : '') : 'No sets coming up in the calendar') + '</span><span class="lbl">Calendar</span></div>' : '') +
+                    (_calSched && c.followCalendar !== false ? '<div class="cam-sched' + (_calSched.open && isLive ? ' on' : '') + '"><span>' + (_calSched.open ? (isLive ? 'Recording ' : 'Waiting for the camera · ') + esc(_calSched.currentArtist || 'this set') + ' · stops ' + fmtTime(_calSched.closesAt) : _calSched.opensAt ? 'Starts ' + fmtDay(_calSched.opensAt) + ' ' + fmtTime(_calSched.opensAt) + (_calSched.nextArtist ? ' · ' + esc(_calSched.nextArtist) : '') : 'No sets coming up in the calendar') + '</span>' + (_calSched.open ? '<span class="lbl">Calendar</span>' : '<button type="button" class="cam-preview" data-act="preview">Preview now</button>') + '</div>' : '') +
                     (c.recording === false && c.status !== 'missing' ? '<div class="cam-recoff"><span>Recording is off for this camera</span><button type="button" data-act="rec">Turn on</button></div>' : '')) +
                 (actions ? '<div class="cam-row-actions">' + actions + '</div>' : '');
             var stage = card.querySelector('.cam-stage');
@@ -836,6 +845,11 @@
                     if (act === 'remove') removeCamera(c, b);
                     if (act === 'stage') openOnStage(c);
                     if (act === 'rec') enableRecording(c, b);
+                    if (act === 'preview') {
+                        b.disabled = true; b.textContent = 'Opening…';
+                        camApi({ action: 'preview', id: c.id }).then(function() { b.textContent = 'Open for 10 min'; laToast('Start streaming from the camera: the picture appears here in a few seconds'); setTimeout(function() { _camKey = ''; loadCameras(); }, 8000); })
+                            .catch(function(e) { b.disabled = false; b.textContent = 'Preview now'; laAlert('Could not open the camera: ' + e.message, { tone: 'error' }); });
+                    }
                     if (act === 'control') openControl(c);
                 });
             });
@@ -1048,7 +1062,12 @@
                 '<button type="submit" class="cam-btn primary">' + (c ? 'Save' : 'Add camera') + '</button></div>' +
                 '</form>');
             var form = document.getElementById('cam-form');
-            var syncKind = function() { var other = form.kind.value === 'other'; form.querySelectorAll('.cam-obsbot-only').forEach(function(el) { el.hidden = other; }); form.querySelectorAll('.cam-other-only').forEach(function(el) { el.hidden = !other; }); };
+            var syncKind = function(e) {
+                var other = form.kind.value === 'other';
+                form.querySelectorAll('.cam-obsbot-only').forEach(function(el) { el.hidden = other; }); form.querySelectorAll('.cam-other-only').forEach(function(el) { el.hidden = !other; });
+                // A phone or own camera is started by hand: by default it streams whenever it's on (sets are still cut by the calendar)
+                if (e && !c) form.followCalendar.checked = !other;
+            };
             form.querySelectorAll('[name=kind]').forEach(function(r) { r.addEventListener('change', syncKind); });
             syncKind();
             form.name.focus();
@@ -1062,6 +1081,10 @@
             });
         }
 
+        function loadQr() {
+            if (window.qrcode) return Promise.resolve(window.qrcode);
+            return new Promise(function(ok, bad) { var sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js'; sc.onload = function() { ok(window.qrcode); }; sc.onerror = bad; document.head.appendChild(sc); });
+        }
         function openStreamSetup(c) {
             openCamDialog('Stream setup — ' + c.name, '<p class="cam-dialog-text">Loading…</p>');
             camApi({ action: 'connection', id: c.id }).then(function(d) {
@@ -1069,9 +1092,16 @@
                     return '<div class="cam-field"><span>' + label + '</span><div><code' + (secret ? ' class="secret"' : '') + '>' + esc(value) + '</code>' +
                         '<button type="button" class="cam-icon-btn" data-copy="' + esc(value) + '" title="Copy"><iconify-icon icon="solar:copy-linear"></iconify-icon></button></div></div>';
                 }
-                var other = c.kind === 'other', full = d.rtmpUrl.replace(/\/$/, '') + '/' + d.streamKey;
+                // The secure address (port 443) works on every Wi-Fi and mobile network
+                var other = c.kind === 'other', full = d.rtmpsUrl.replace(/\/$/, '') + '/' + d.streamKey;
+                // Larix imports a ready-made connection from this link (scan the QR code, or tap it on the phone)
+                var larix = 'larix://set/v1?conn[][url]=' + encodeURIComponent(full) + '&conn[][name]=' + encodeURIComponent('local / assets · ' + c.name) + '&conn[][overwrite]=on';
+                var onPhone = /iPhone|iPad|Android/i.test(navigator.userAgent);
                 var guide = function(key, title, steps) { return '<details class="cam-guide"' + (String(c.model || '').indexOf(key) === 0 ? ' open' : '') + '><summary>' + title + '</summary><ol>' + steps.map(function(x) { return '<li>' + x + '</li>'; }).join('') + '</ol></details>'; };
                 document.getElementById('cam-dialog-body').innerHTML =
+                    (other ? '<div class="cam-qr"><div id="cam-qr-code" class="cam-qr-code"></div><div><p class="cam-qr-title">Set up the phone in one tap</p>' +
+                        '<ol class="cam-qr-steps"><li>Install <b>Larix Broadcaster</b> (free) on the phone.</li><li>' + (onPhone ? 'Tap <b>Open in Larix</b> below.' : 'Point the phone\'s camera at this code and tap the link.') + '</li><li>Turn the phone sideways and press record.</li></ol>' +
+                        (onPhone ? '<a class="cam-btn primary" href="' + esc(larix) + '">Open in Larix</a>' : '') + '</div></div>' : '') +
                     '<p class="cam-dialog-text">' + (other ? 'Send the camera\'s video to these addresses. Then it records with the calendar, saves each set for the DJ and makes the clips, like any camera.' : 'Paste these into the camera\'s RTMP live-streaming settings, or into OBS (Settings → Stream → Custom) on the venue computer that receives this camera over NDI.') + '</p>' +
                     // Apps like Larix and DJI Mimo want one address that ends with the key: shown first
                     row('Full address · paste this into Larix, DJI Mimo or any app that asks for one URL', full, true) +
@@ -1087,6 +1117,8 @@
                         guide('Other', 'Any other camera', ['Look for <b>RTMP</b>, <b>custom stream</b> or <b>live streaming</b> in its settings or app.', 'Paste the <b>Server</b> and <b>Stream key</b>, or the <b>full address</b> if it asks for one address.', 'No RTMP? Stream it through a laptop with OBS, like the Sony Alpha.']) +
                       '</div><p class="cam-dialog-note">Pan, tilt, zoom and AI tracking from Camera Control are for OBSBOT cameras; everything else works the same.</p>' : '') +
                     '<p class="cam-dialog-note"> Keep the stream key private. Anyone with it can send video to this camera slot.</p>';
+                var qrBox = document.getElementById('cam-qr-code');
+                if (qrBox) loadQr().then(function(qrcode) { var q = qrcode(0, 'L'); q.addData(larix); q.make(); qrBox.innerHTML = q.createSvgTag({ cellSize: 4, margin: 2, scalable: true }); }).catch(function() { qrBox.textContent = 'QR code unavailable'; });
                 document.querySelectorAll('[data-copy]').forEach(function(b) {
                     b.addEventListener('click', function() {
                         navigator.clipboard.writeText(b.dataset.copy).then(function() {
