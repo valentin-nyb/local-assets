@@ -37,7 +37,7 @@
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
-    <script src="nav-component.js?v=16"></script>
+    <script src="nav-component.js?v=17"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
         .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
@@ -263,7 +263,9 @@
         .bk-wm-frame { display:flex; justify-content:center; margin-bottom:10px; }
         .bk-wm-foot { grid-column:1 / -1; display:flex; align-items:center; justify-content:flex-end; gap:12px; padding-top:18px; border-top:1px solid var(--la-line-soft); font-size:12px; color:var(--la-sub); }
         .bk-wm-cap { font-size:11px; color:var(--la-dim); text-align:center; margin-top:8px; }
-        .bk-wm-sharp { font-size:11px; line-height:1.45; color:var(--la-warn, #f59e0b); text-align:center; margin-top:6px; }
+        .bk-wm-sharp { font-size:11px; line-height:1.45; color:var(--la-warn, #f59e0b); text-align:center; margin:6px auto 0; max-width:300px; }
+        .bk-wm-preview { margin-left:auto; margin-right:auto; }
+        .bk-wm-cap { max-width:300px; margin-left:auto; margin-right:auto; }
         .bk-wm-sharp.hidden { display:none; }
         .bk-wm-export { width:100%; justify-content:center; margin-top:12px; }
         @media (max-width: 640px) {

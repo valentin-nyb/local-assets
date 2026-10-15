@@ -48,7 +48,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <a href="/dashboard" class="h-5 w-24 flex">
                 <img src="/logos/White@2x.png" class="h-full w-full object-center object-contain" alt="logo">
             </a>
-            <button onclick="toggleSidebar()" aria-label="Close menu" class="md:hidden text-zinc-400 hover:text-white transition-colors" style="position:absolute;right:20px;top:50%;transform:translateY(-50%);display:flex;align-items:center;justify-content:center;width:36px;height:36px;">
+            <button onclick="toggleSidebar()" aria-label="Close menu" class="md:hidden text-zinc-400 hover:text-white transition-colors" style="position:absolute;right:20px;top:50%;transform:translateY(-50%);width:36px;height:36px;line-height:0;">
                 <iconify-icon icon="solar:close-circle-linear" class="text-2xl"></iconify-icon>
             </button>
         </div>
