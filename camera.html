@@ -120,6 +120,8 @@
         .cal-how span { font:500 10px/1 'JetBrains Mono', monospace; color:var(--la-accent); letter-spacing:.1em; }
         .cal-how b { font:700 12px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.05em; text-transform:uppercase; color:var(--la-text); }
         .cal-how p { margin:0; font-size:12px; line-height:1.55; color:var(--la-sub); }
+        .cal-panel.folded .cal-how, .cal-panel.folded .cal-sched, .cal-panel.folded #cal-note, .cal-panel.folded #cal-find { display:none !important; }
+        .cal-panel.folded .cal-source { margin-top:16px; }
         .cal-source { display:flex; align-items:center; gap:12px; margin-top:18px; padding:12px 14px; border:1px solid var(--la-line); border-radius:12px; }
         .cal-source-dot { width:8px; height:8px; border-radius:50%; background:var(--la-ok); flex-shrink:0; }
         .cal-source.bad .cal-source-dot { background:var(--la-bad); }
@@ -129,7 +131,8 @@
         .cal-form { display:flex; gap:8px; margin-top:14px; }
         .cal-form input { flex:1; min-width:0; height:40px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 12px; font-size:13px; outline:none; }
         .cal-form input:focus { border-color:var(--la-accent); }
-        .cam-kind { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px; }
+        .cam-kind { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px; }
+        .cam-kind[hidden] { display:none !important; }
         @media (max-width:520px) { .cam-kind { grid-template-columns:minmax(0,1fr); } }
         .cam-kind label { position:relative; display:block; cursor:pointer; }
         .cam-kind input { position:absolute; opacity:0; pointer-events:none; }
@@ -137,6 +140,21 @@
         .cam-kind small { font-size:12px; font-weight:400; color:var(--la-dim); }
         .cam-kind input:checked + span { border-color:var(--la-text); background:color-mix(in srgb, var(--la-text) 4%, transparent); }
         .cam-form [hidden] { display:none !important; }
+.deck-section { margin-top:28px !important; padding-top:24px; border-top:1px solid var(--la-line); }
+        .deck-head { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:16px; }
+        .deck-h { margin:0; font:700 18px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif !important; text-transform:none !important; color:var(--la-text); }
+        .deck-sub { margin:4px 0 0; font-size:13px; color:var(--la-dim); }
+        .deck-state { display:flex; align-items:center; gap:7px; margin:8px 0 0; font:600 11px 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.06em; text-transform:uppercase; color:var(--la-dim); }
+        .deck-state:empty { display:none; }
+        .deck-state::before { content:""; width:7px; height:7px; border-radius:50%; background:currentColor; }
+        .deck-state.on { color:var(--la-ok); }
+        .deck-state.on::before { animation:camBlink 1.4s ease-in-out infinite; }
+        #deck-grid:empty::before { content:"No decks connected yet."; display:block; padding:22px; border:1px dashed var(--la-line); border-radius:14px; font-size:13px; color:var(--la-dim); text-align:center; }
+        .cam-howto { padding:14px 16px; border:1px solid color-mix(in srgb, var(--la-text) 16%, transparent); border-radius:8px; background:color-mix(in srgb, var(--la-text) 3%, transparent); }
+        .cam-howto-t { margin:0 0 8px; font-size:14px; font-weight:600; color:var(--la-text); }
+        .cam-howto ol { margin:0; padding-left:18px; display:flex; flex-direction:column; gap:7px; font-size:13px; line-height:1.5; color:var(--la-sub); }
+        .cam-howto b { color:var(--la-text); font-weight:600; }
+        .cam-howto-n { margin:10px 0 0; font-size:12px; line-height:1.5; color:var(--la-dim); }
         .cam-two { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; }
         @media (max-width:520px) { .cam-two { grid-template-columns:minmax(0,1fr); } }
         :root body .cam-form input[type=date] { color-scheme:dark light; }
@@ -153,7 +171,10 @@
         .cam-guides { margin-top:14px; border:1px solid var(--la-line); border-radius:10px; overflow:hidden; }
         .cam-guides .cam-guide { border:0 !important; border-radius:0 !important; margin:0 !important; padding:0 !important; background:none !important; box-shadow:none !important; }
         .cam-guides .cam-guide + .cam-guide { border-top:1px solid var(--la-line) !important; }
-        .cam-guides .cam-guide summary { margin:0 !important; border:0 !important; background:none !important; }
+        .cam-guides .cam-guide summary { margin:0 !important; border:0 !important; background:none !important; padding:14px 18px !important; align-items:center; font-size:14px !important; font-weight:600 !important; }
+        .cam-guides .cam-guide ol { margin:0 !important; padding:0 18px 16px 38px !important; gap:8px !important; }
+        .cam-guides { margin:16px 0 0 !important; }
+        @media (max-width:640px) { .cam-guides .cam-guide summary { padding:13px 14px !important; } .cam-guides .cam-guide ol { padding:0 14px 14px 32px !important; } }
         .cam-guide summary { cursor:pointer; padding:12px 14px; font-size:14px; font-weight:500; color:var(--la-text); list-style:none; display:flex; justify-content:space-between; }
         .cam-guide summary::-webkit-details-marker { display:none; }
         .cam-guide summary::after { content:"+"; color:var(--la-dim); }
@@ -438,6 +459,14 @@
 
                 <div id="cam-relay" class="cam-relay hidden"><span class="cam-relay-dot"></span><span id="cam-relay-text">Remote control</span><button type="button" class="cam-link" onclick="openRelaySetup()">Set up</button></div>
                 <div id="cam-grid" class="cam-grid"></div>
+                <!-- The decks' sound: on the same page as the cameras, in its own section -->
+                <section id="deck-section" class="deck-section">
+                    <div class="deck-head">
+                        <div class="min-w-0"><h3 class="deck-h">Decks audio</h3><p class="deck-sub">The mixer's sound, recorded as each set's HQ audio.</p><p class="deck-state" id="deck-state"></p></div>
+                        <button type="button" class="cam-btn ghost" id="deck-add" onclick="openCamForm(null, 'audio')">Add decks audio</button>
+                    </div>
+                    <div id="deck-grid" class="cam-grid"></div>
+                </section>
                 <div id="cam-empty" class="hidden cam-intro">
                     <div class="ci-copy">
                         <p class="cam-eyebrow">How it works</p>
@@ -500,6 +529,7 @@
                     <div class="cal-source" id="cal-source" hidden>
                         <span class="cal-source-dot"></span>
                         <div class="cal-source-text"><b id="cal-source-name">Google Calendar</b><span id="cal-source-sub">Checked every minute</span></div>
+                        <button type="button" class="cam-btn ghost" id="cal-expand" aria-expanded="false">Show sets</button>
                         <button type="button" class="cam-btn ghost" id="cal-change">Change link</button>
                         <button type="button" class="cam-btn ghost" id="cal-remove">Disconnect</button>
                     </div>
@@ -623,11 +653,22 @@
             src.hidden = !cal.connected;
             src.classList.toggle('bad', !!cal.error);
             document.getElementById('cal-source-name').textContent = calSourceName(cal.host);
-            document.getElementById('cal-source-sub').textContent = cal.error ? 'The link can\'t be read. Paste the right one.' : 'Connected · checked every minute';
+            // Connected and working: folded to one line (the source, the next set and the buttons) unless opened
+            var nextSet = cal.current || (cal.upcoming || [])[0];
+            var nextTxt = nextSet ? (cal.current ? ' · On now: ' : ' · Next: ') + niceArtist(nextSet.artist) + ', ' + new Date(nextSet.start).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/London' }) + ' ' + fmtTime(nextSet.start) : '';
+            document.getElementById('cal-source-sub').textContent = cal.error ? 'The link can\'t be read. Paste the right one.' : 'Connected · checked every minute' + nextTxt;
+            var open = calOpen();
+            var panel = document.getElementById('cal-panel');
+            panel.classList.toggle('folded', ok && !open);
+            var ex = document.getElementById('cal-expand');
+            ex.hidden = !ok;
+            var n = (cal.current ? 1 : 0) + (cal.upcoming || []).length;
+            ex.textContent = open ? 'Hide sets' : 'Show sets' + (n ? ' (' + n + ')' : '');
+            ex.setAttribute('aria-expanded', open ? 'true' : 'false');
             // The link field shows when not connected, when it can't be read, or after Change link
             form.hidden = cal.connected && !cal.error && !form.dataset.open;
             document.getElementById('cal-save').textContent = cal.connected ? 'Save link' : 'Connect';
-            document.getElementById('cal-find').hidden = cal.connected && !cal.error && !form.dataset.open;
+            document.getElementById('cal-find').hidden = cal.connected && !cal.error && !form.dataset.open && !calOpen();
             var sets = [];
             if (cal.current) sets.push(Object.assign({ now: true }, cal.current));
             (cal.upcoming || []).forEach(function(e) { sets.push(e); });
@@ -650,6 +691,17 @@
             note.textContent = 'No sets in the next two months. Add one event per set, titled with the DJ\'s name.';
             if (cal.error) document.getElementById('cal-error').textContent = cal.error;
         }
+        function niceArtist(n) { n = String(n || ''); return n === n.toUpperCase() ? n.toLowerCase().replace(/(^|[\s\-\/(&.])([a-z])/g, function(m, a, b) { return a + b.toUpperCase(); }) : n; }
+        function calOpen() { try { return localStorage.getItem('la_cal_open') === '1'; } catch (_) { return false; } }
+        document.getElementById('cal-expand').addEventListener('click', function() {
+            var open = !calOpen();
+            try { localStorage.setItem('la_cal_open', open ? '1' : '0'); } catch (_) {}
+            var panel = document.getElementById('cal-panel');
+            panel.classList.toggle('folded', !open);
+            if (open) document.getElementById('cal-find').hidden = false;
+            this.setAttribute('aria-expanded', open ? 'true' : 'false');
+            this.textContent = open ? 'Hide sets' : 'Show sets';
+        });
         async function saveCalendar(url) {
             var err = document.getElementById('cal-error'), btn = document.getElementById('cal-save');
             err.textContent = ''; btn.disabled = true;
@@ -691,15 +743,16 @@
                 empty.classList.toggle('hidden', _cams.length > 0);
                 document.getElementById('cam-head-actions').style.display = _cams.length ? '' : 'none';
                 if (!_cams.length && !fillIntroExample.done) { fillIntroExample.done = true; fillIntroExample(); }
-                var live = _cams.filter(function(c) { return c.status === 'active'; }).length;
-                camStatus(_cams.length ? live + ' of ' + _cams.length + ' live' : 'No cameras', live ? 'var(--la-ok)' : 'var(--la-dim)');
+                var camsOnly = _cams.filter(function(c) { return c.kind !== 'audio'; });
+                var live = camsOnly.filter(function(c) { return c.status === 'active'; }).length;
+                camStatus(camsOnly.length ? live + ' of ' + camsOnly.length + ' live' : 'No cameras', live ? 'var(--la-ok)' : 'var(--la-dim)');
 
                 // Only rebuild when something changed, so playing video isn't interrupted
                 var key = JSON.stringify(_cams.map(function(c) { return [c.id, c.status, c.name, c.ndiName, c.ip, c.artist, c.autoClips, c.recording, c.followCalendar]; }).concat([_calNow && _calNow.artist, _calSched]));
                 if (key === _camKey) return;
                 _camKey = key;
                 grid.innerHTML = '';
-                _cams.forEach(function(c, i) { grid.appendChild(cameraCard(c, i)); });
+                drawCameras(grid);
             } catch (e) {
                 document.getElementById('cam-head-actions').style.display = '';
                 err.textContent = 'Could not load cameras — ' + e.message;
@@ -713,6 +766,7 @@
         var _adminVenueSel = (function() { try { return localStorage.getItem('la_cam_acct') || ''; } catch (_) { return ''; } })();
         function renderAdminCameras(venues) {
             var grid = document.getElementById('cam-grid'), intro = document.getElementById('cam-empty');
+            var da = document.getElementById('deck-add'); if (da) da.style.display = 'none';
             document.getElementById('cal-panel').classList.add('hidden');
             document.getElementById('cam-head-actions').style.display = 'none';
             document.getElementById('cam-error').classList.add('hidden');
@@ -760,7 +814,23 @@
                 latestLoop(v.slug, function(src) { var st = full.querySelector('#ctl-stage'); if (st) st.innerHTML = '<img alt="" src="' + src + '" style="width:100%;height:100%;object-fit:cover">'; });
                 return;
             }
-            _cams.forEach(function(c, i) { grid.appendChild(cameraCard(c, i)); });
+            drawCameras(grid);
+        }
+        // Cameras in the grid, the decks in their own section below
+        function drawCameras(grid) {
+            var deck = document.getElementById('deck-grid');
+            if (deck) deck.innerHTML = '';
+            var n = 0, decks = _cams.filter(function(c) { return c.kind === 'audio'; }), on = decks.filter(function(c) { return c.status === 'active'; });
+            var st = document.getElementById('deck-state');
+            if (st) {
+                st.className = 'deck-state' + (on.length ? ' on' : '');
+                st.textContent = !decks.length ? '' : on.length ? 'Decks connected · sound coming in' + (decks.length > 1 ? ' (' + on.length + ' of ' + decks.length + ')' : '')
+                    : 'Not connected · start the stream from the mixer setup';
+            }
+            _cams.forEach(function(c) {
+                if (c.kind === 'audio') { if (deck) deck.appendChild(cameraCard(c, 0)); }
+                else grid.appendChild(cameraCard(c, n++));
+            });
         }
         var _adminVenuesData = [];
 
@@ -851,7 +921,7 @@
             }
             card.innerHTML =
                 '<div class="cam-stage"></div>' +
-                '<div class="cam-meta"><span class="cam-label">CAM ' + String(i + 1).padStart(2, '0') + ' // ' + esc(c.name) + '</span>' + pill + '</div>' +
+                '<div class="cam-meta"><span class="cam-label">' + (c.kind === 'audio' ? 'DECKS // ' : 'CAM ' + String(i + 1).padStart(2, '0') + ' // ') + esc(c.name) + '</span>' + pill + '</div>' +
                 (chips ? '<div class="cam-chips">' + chips + '</div>' : '') +
                 (c.external ? '' :
                     '<button type="button" class="cam-onstage" data-act="stage">' +
@@ -1076,19 +1146,29 @@
         function closeCamDialog() { document.getElementById('cam-dialog').classList.add('hidden'); document.querySelector('#cam-dialog .cam-dialog-panel').classList.remove('wide'); }
         document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeCamDialog(); });
 
-        function openCamForm(c) {
-            openCamDialog(c ? 'Edit camera' : 'Add camera',
+        function openCamForm(c, preset) {
+            var deckForm = preset === 'audio' || (c && c.kind === 'audio');
+            openCamDialog(deckForm ? (c ? 'Edit decks audio' : 'Add decks audio') : (c ? 'Edit camera' : 'Add camera'),
                 '<form id="cam-form" class="cam-form">' +
-                '<div class="cam-kind" role="radiogroup" aria-label="Camera">' +
-                    '<label><input type="radio" name="kind" value="obsbot"' + (!c || c.kind !== 'other' ? ' checked' : '') + '><span>OBSBOT Tail 2<small>Steer it from here</small></span></label>' +
+                '<div class="cam-kind" role="radiogroup" aria-label="Camera"' + (deckForm ? ' hidden' : '') + '>' +
+                    '<label><input type="radio" name="kind" value="obsbot"' + (!deckForm && (!c || c.kind !== 'other') ? ' checked' : '') + '><span>OBSBOT Tail 2<small>Steer it from here</small></span></label>' +
                     '<label><input type="radio" name="kind" value="other"' + (c && c.kind === 'other' ? ' checked' : '') + '><span>Other camera<small>Osmo, Sony, phone…</small></span></label>' +
-                    '<label><input type="radio" name="kind" value="audio"' + (c && c.kind === 'audio' ? ' checked' : '') + '><span>Decks audio<small>The mixer\'s sound</small></span></label>' +
+                    '<label hidden><input type="radio" name="kind" value="audio"' + (deckForm ? ' checked' : '') + '><span>Decks audio</span></label>' +
                 '</div>' +
                 '<label class="cam-other-only">Which camera<select name="model">' + ['DJI Osmo', 'Sony Alpha', 'Phone', 'Other camera with RTMP'].map(function(m) { return '<option' + (c && c.model === m ? ' selected' : '') + '>' + m + '</option>'; }).join('') + '</select></label>' +
                 '<label>Name<input name="name" maxlength="40" required placeholder="Main floor" value="' + esc(c && c.name) + '"></label>' +
                 '<label class="cam-obsbot-only">NDI source name<input name="ndiName" maxlength="80" placeholder="OBSBOT-TAIL2 (MAIN FLOOR)" value="' + esc(c && c.ndiName) + '"><small>As shown in the OBSBOT app or NDI Studio Monitor.</small></label>' +
                 '<label class="cam-obsbot-only">IP address<input name="ip" maxlength="70" placeholder="192.168.1.50" value="' + esc(c && c.ip) + '"><small>The camera\'s address on the venue network. Needed for Control.</small></label>' +
                 '<label class="cam-check"><input type="checkbox" name="followCalendar"' + (!c || c.followCalendar !== false ? ' checked' : '') + '><span>Start and stop with the calendar<small>Records each set, 2 minutes either side.</small></span></label>' +
+                '<div class="cam-audio-only cam-howto">' +
+                    '<p class="cam-howto-t">How to connect your decks</p>' +
+                    '<ol>' +
+                    '<li><b>Take the sound from the mixer.</b> Use its <b>Rec Out</b> or <b>Booth Out</b>, or its USB port (most Pioneer, Allen &amp; Heath and Rane mixers work as a USB sound card).</li>' +
+                    '<li><b>Plug it into something that streams:</b> a phone with a USB audio adapter and Larix (audio only), the venue Mac with OBS (free), or a streaming box like an ATEM Mini Pro.</li>' +
+                    '<li><b>Send it here.</b> After you add it, Stream setup gives the address and a QR code to scan with the phone.</li>' +
+                    '</ol>' +
+                    '<p class="cam-howto-n">Each set\'s sound is saved as the session\'s HQ AUDIO, cut at the calendar times. Clips, the multi-camera edit and SoundCloud use it.</p>' +
+                '</div>' +
                 '<p id="cam-form-error" class="cam-form-error"></p>' +
                 '<div class="cam-form-actions"><button type="button" class="cam-btn ghost" onclick="closeCamDialog()">Cancel</button>' +
                 '<button type="submit" class="cam-btn primary">' + (c ? 'Save' : 'Add camera') + '</button></div>' +
@@ -1097,6 +1177,8 @@
             var syncKind = function(e) {
                 var k = form.kind.value, other = k === 'other';
                 form.querySelectorAll('.cam-obsbot-only').forEach(function(el) { el.hidden = k !== 'obsbot'; }); form.querySelectorAll('.cam-other-only').forEach(function(el) { el.hidden = !other; });
+                form.querySelectorAll('.cam-audio-only').forEach(function(el) { el.hidden = k !== 'audio'; });
+                var sub = form.querySelector('[type=submit]'); if (sub && !c) sub.textContent = k === 'audio' ? 'Add decks audio' : 'Add camera';
                 if (e && !c && k === 'audio' && !form.name.value) form.name.value = 'Decks';
                 // A phone or own camera is started by hand: by default it streams whenever it's on (sets are still cut by the calendar)
                 if (e && !c) form.followCalendar.checked = k !== 'other';

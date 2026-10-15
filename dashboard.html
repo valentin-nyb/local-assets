@@ -556,7 +556,7 @@
         function brandSlug(name) {
             return String(name).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
         }
-        var _brandPhotos = null, _venueLogos = {}, _venueLogosByName = {}, _brandPhotosAt = 0, _venueRefetched = false;
+        var _brandPhotos = null, _venueLogos = {}, _venueLogosByName = {}, _venueOwnerByName = {}, _brandPhotosAt = 0, _venueRefetched = false;
         function nameKey(v) { return String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ''); }
         // Brand Kit data: this account's, or on the admin account every client's merged
         function brandForView() {
@@ -592,6 +592,15 @@
                 var missing = false, dark = document.documentElement.classList.contains('dark');
                 document.querySelectorAll('[data-venue-logo]').forEach(function(box) {
                     var list = _venueLogos[box.dataset.venueLogo] || _venueLogosByName[nameKey(box.dataset.venueName)];
+                    // The venue's chosen profile picture (a GIF plays) comes before its logos
+                    var owner = (_brandPhotos && _brandPhotos[box.dataset.venueLogo]) ? box.dataset.venueLogo : _venueOwnerByName[nameKey(box.dataset.venueName)];
+                    var prof = owner && _brandPhotos && _brandPhotos[owner];
+                    if (prof) {
+                        if (box.dataset.painted === prof) return;
+                        box.dataset.painted = prof; box.title = 'Venue profile picture from Brand Kit';
+                        box.innerHTML = '<img src="' + prof.replace(/"/g, '&quot;') + '" alt="" style="width:100%;height:100%;object-fit:cover">';
+                        return;
+                    }
                     if (!list || !list.length) { missing = true; box.title = 'No Brand Kit logo found for venue "' + (box.dataset.venueName || '') + '"'; return; }
                     var url = pickVenueLogo(list, dark), key = url + (dark ? '#d' : '#l');
                     if (box.dataset.painted === key) return;
@@ -611,8 +620,10 @@
                     var own = 'artist-' + brandSlug(d.orgName || getVenueName());
                     if (!_brandPhotos[own]) _brandPhotos[own] = _brandPhotos.venue;
                 }
-                _venueLogos = {}; _venueLogosByName = {};
+                _venueLogos = {}; _venueLogosByName = {}; _venueOwnerByName = {};
                 var names = (d && d.ownerNames) || {};
+                Object.keys(names).forEach(function(k) { if (k.indexOf('venue-') === 0) _venueOwnerByName[nameKey(names[k])] = k; });
+                if (d && d.orgType !== 'artist') _venueOwnerByName[nameKey(d.orgName || getVenueName())] = 'venue';
                 ((d && d.files) || []).forEach(function(f) {
                     // Added venues ("venue-…") and the account's own brand kit ("venue", named in Brand Kit)
                     if ((f.owner !== 'venue' && f.owner.indexOf('venue-') !== 0) || !/\.(png|jpe?g|svg|webp|gif)$/i.test(f.name)) return;
