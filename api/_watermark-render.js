@@ -62,13 +62,37 @@ async function withOpacity(layer, opacity) {
 
 // width: the clip's real width in px. The layout is designed at L.W and scaled up, so on a 4K clip
 // the watermark is drawn at 4K instead of being stretched.
+// An animated logo (a GIF or animated WebP with more than one frame): its frame size, else null
+export async function animatedLogo(wm) {
+  if (!wm?.url || !/\.(gif|webp)(\?|$)/i.test(wm.url)) return null;
+  try {
+    const m = await sharp(await download(wm.url), { animated: true }).metadata();
+    return (m.pages || 1) > 1 ? { w: m.width, h: m.pageHeight || m.height } : null;
+  } catch { return null; }
+}
+
+// For an animated logo: the still parts (text) as a full-frame PNG, and where the moving logo goes,
+// laid out exactly as renderWatermarkPng would place a still logo of the same size
+export async function renderWatermarkParts(wm, L = VERTICAL, width = L.W, frame) {
+  const s = Math.max(1, width / L.W);
+  const box = BOX[wm.size] || BOX.m;
+  const k = Math.min(box[0] * s / frame.w, box[1] * s / frame.h);
+  const w = Math.max(2, Math.round(frame.w * k / 2) * 2), h = Math.max(2, Math.round(frame.h * k / 2) * 2);
+  return compose(wm, L, width, { w, h });
+}
+
 export async function renderWatermarkPng(wm, L = VERTICAL, width = L.W) {
+  return (await compose(wm, L, width, null)).png;
+}
+
+async function compose(wm, L, width, movingLogo) {
   const s = Math.max(1, width / L.W);
   if (s !== 1) L = { W: Math.round(L.W * s), H: Math.round(L.H * s), mx: L.mx * s, top: L.top * s, bottom: L.bottom * s };
   const position = wm.position || 'bl';
   const layers = [];
   let logo = null;
-  if (wm.url) logo = await logoLayer(wm, s).catch(e => { console.error('[watermark-render] logo:', e.message); return null; });
+  if (movingLogo) logo = { input: null, w: movingLogo.w, h: movingLogo.h, moving: true };
+  else if (wm.url) logo = await logoLayer(wm, s).catch(e => { console.error('[watermark-render] logo:', e.message); return null; });
   const place = (pos, w, h, shift) => ({
     left: Math.round(pos[1] === 'l' ? L.mx : L.W - L.mx - w),
     top: Math.round(pos[0] === 't' ? L.top + shift : L.H - L.bottom - shift - h),
@@ -85,9 +109,13 @@ export async function renderWatermarkPng(wm, L = VERTICAL, width = L.W) {
       layers.push({ ...t, ...place(tPos, t.w, t.h, shift) });
     }
   }
-  if (!layers.length) return null;
-  const faded = await Promise.all(layers.map(l => withOpacity(l, wm.opacity)));
-  return sharp({ create: { width: L.W, height: L.H, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+  const moving = layers.find(l => l.moving) || null;
+  const still = layers.filter(l => !l.moving);
+  const logoAt = moving ? { left: moving.left, top: moving.top, w: moving.w, h: moving.h, opacity: Math.min(1, Math.max(0.3, Number(wm.opacity) || 0.9)), W: L.W, H: L.H } : null;
+  if (!still.length) return { png: moving ? await sharp({ create: { width: L.W, height: L.H, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } }).png().toBuffer() : null, logoAt };
+  const faded = await Promise.all(still.map(l => withOpacity(l, wm.opacity)));
+  const png = await sharp({ create: { width: L.W, height: L.H, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
     .composite(faded.map(l => ({ input: l.input, left: l.left, top: l.top })))
     .png().toBuffer();
+  return { png, logoAt };
 }

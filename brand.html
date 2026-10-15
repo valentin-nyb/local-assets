@@ -37,7 +37,7 @@
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
-    <script src="nav-component.js?v=15"></script>
+    <script src="nav-component.js?v=16"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
         .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
@@ -471,7 +471,7 @@
         var WM_TEXT_PX = { s: 48, m: 66, l: 92 };
         // The clip worker draws watermark text from these font files (not WOFF2)
         var WM_TEXT_FONT = /\.(ttf|otf|woff)$/i;
-        function wmLogos() { return _files.filter(function(f) { return f.category === 'logos' && /\.(png|svg|webp|jpe?g)$/i.test(f.name); }); }
+        function wmLogos() { return _files.filter(function(f) { return f.category === 'logos' && /\.(png|svg|webp|jpe?g|gif)$/i.test(f.name); }); }
         function wmPreviewLogoRaw() {
             var logos = wmLogos();
             if (/^https:/.test(_wm.logo)) { var m = logos.filter(function(f) { return f.url === _wm.logo; })[0]; if (m) return m.url; }
@@ -483,6 +483,8 @@
         function wmPreviewLogo() {
             var url = wmPreviewLogoRaw();
             if (!url) return url;
+            // A GIF logo moves on the clips, so the preview shows it moving too (it isn't trimmed)
+            if (/\.gif(\?|$)/i.test(url)) return url;
             if (_trimmed[url]) return _trimmed[url] === 'none' ? url : _trimmed[url];
             _trimmed[url] = 'none';
             loadImage(url).then(function(im) {
@@ -1052,7 +1054,7 @@
         // Pictures that can become a session thumbnail (covers, artwork, photos)
         function thumbFile(f) { return f.category !== 'logos' && /\.(png|jpe?g|webp)$/i.test(f.name); }
         // Logos the clip worker can stamp on clips
-        function wmLogoFile(f) { return f.category === 'logos' && /\.(png|svg|webp|jpe?g)$/i.test(f.name); }
+        function wmLogoFile(f) { return f.category === 'logos' && /\.(png|svg|webp|jpe?g|gif)$/i.test(f.name); }
         function wmUsesLogo(f) { return !!_wm && _wm.enabled && wmPreviewLogoRaw() === f.url; }
         // From a logo card or its popup: this logo becomes the watermark, bottom left
         function useLogoAsWatermark(url) {
@@ -1377,7 +1379,7 @@
                 CATS.map(function(c) {
                     return '<button type="button" class="bk-org-opt bk-cat-opt' + (c.key === f.category ? ' on' : '') + '" data-cat="' + c.key + '"><b>' + c.label + '</b></button>';
                 }).join('') +
-                (/\.(png|svg|webp|jpe?g)$/i.test(f.name) ? '<button type="button" class="bk-org-opt bk-cat-opt' + (wmUsesLogo(f) ? ' on' : '') + '" data-cat="watermark"><b>Watermark</b><span>Saved as a logo and stamped bottom left on every vertical clip</span></button>' : '') +
+                (/\.(png|svg|webp|jpe?g|gif)$/i.test(f.name) ? '<button type="button" class="bk-org-opt bk-cat-opt' + (wmUsesLogo(f) ? ' on' : '') + '" data-cat="watermark"><b>Watermark</b><span>Saved as a logo and stamped bottom left on every vertical clip</span></button>' : '') +
                 '</div><p id="bk-move-error" class="cam-form-error"></p>');
             document.querySelectorAll('.bk-cat-opt').forEach(function(b) {
                 b.addEventListener('click', async function() {

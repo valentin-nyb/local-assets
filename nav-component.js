@@ -44,11 +44,11 @@ document.addEventListener("DOMContentLoaded", () => {
     // The local / assets admin account has no Brand Kit (that's for clients)
     var _isAdminAcct = (function() { try { var a = JSON.parse(localStorage.getItem('la_admin') || '{}'); return a.venueSlug === 'local-assets-admin' || /^local\s*[\/-]?\s*assets\b/i.test(String(a.venue || '').trim()); } catch (_) { return false; } })();
     sidebar.innerHTML = `
-        <div class="h-20 relative flex items-center justify-center px-8 border-b border-[#27272a] shrink-0">
+        <div class="h-20 flex items-center justify-center px-8 border-b border-[#27272a] shrink-0" style="position:relative">
             <a href="/dashboard" class="h-5 w-24 flex">
                 <img src="/logos/White@2x.png" class="h-full w-full object-center object-contain" alt="logo">
             </a>
-            <button onclick="toggleSidebar()" aria-label="Close menu" class="md:hidden absolute right-6 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors">
+            <button onclick="toggleSidebar()" aria-label="Close menu" class="md:hidden text-zinc-400 hover:text-white transition-colors" style="position:absolute;right:20px;top:50%;transform:translateY(-50%);display:flex;align-items:center;justify-content:center;width:36px;height:36px;">
                 <iconify-icon icon="solar:close-circle-linear" class="text-2xl"></iconify-icon>
             </button>
         </div>

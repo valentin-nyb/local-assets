@@ -40,7 +40,7 @@
     <script src="/la-dialogs.js?v=2"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-    <script src="nav-component.js?v=15"></script>
+    <script src="nav-component.js?v=16"></script>
     <style>
         /* Standardized sidebar styles used by the JS component */
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
@@ -102,6 +102,17 @@
         #recent-sets-list button.w-8.h-8.rounded-full { width:34px !important; height:34px !important; border-radius:999px !important; border:1px solid color-mix(in srgb, var(--la-text) 18%, transparent); transition:background .2s ease, border-color .2s ease; }
         #recent-sets-list button.w-8.h-8.rounded-full iconify-icon { color:var(--la-text) !important; font-size:15px; }
         @media (hover:hover) { #recent-sets-list button.w-8.h-8.rounded-full:hover:not(:disabled) { background:color-mix(in srgb, var(--la-text) 10%, transparent) !important; border-color:color-mix(in srgb, var(--la-text) 40%, transparent); } }
+        /* Phones: the assets use the full width (no indent), and buttons wrap under their title instead of overlapping */
+        /* Every screen: the assets start in line with the session above (no indent, no empty icon box) */
+        #recent-sets-list .pl-16 { padding-left:22px !important; }
+        #recent-sets-list .w-8.h-8.rounded-lg.border { display:none !important; }
+        @media (max-width:640px) {
+            #recent-sets-list .pl-16 { padding-left:14px !important; padding-right:14px !important; }
+            #recent-sets-list .justify-between { flex-wrap:wrap; row-gap:10px; }
+            #recent-sets-list .justify-between > .flex.items-center.gap-2 { flex-wrap:wrap; }
+            #recent-sets-list .justify-between > div:last-child { margin-left:auto; }
+            #recent-sets-list [id^="zip-btn-"], #recent-sets-list .wm-apply, #recent-sets-list .wm-restore, #recent-sets-list .yt-dist-btn, #recent-sets-list .sc-dist-btn { height:32px !important; padding:0 12px !important; font-size:12px !important; }
+        }
         .wm-apply { height:28px; padding:0 12px; border-radius:999px; border:1px solid var(--la-line); background:transparent; color:var(--la-text); font:500 11px Inter,ui-sans-serif,system-ui,sans-serif; cursor:pointer; white-space:nowrap; }
         .wm-apply:disabled { opacity:.6; cursor:default; }
         .wm-restore { height:28px; padding:0 12px; border-radius:999px; border:1px solid var(--la-line); background:transparent; color:var(--la-sub); font:500 11px Inter,ui-sans-serif,system-ui,sans-serif; cursor:pointer; white-space:nowrap; }

@@ -37,7 +37,7 @@
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
-    <script src="nav-component.js?v=15"></script>
+    <script src="nav-component.js?v=16"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
         .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
@@ -321,7 +321,7 @@
         .ctl-grid button { font:700 11px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.04em; text-transform:uppercase; color:var(--la-text); background:var(--la-input); border:1px solid var(--la-line); border-radius:8px; cursor:pointer; touch-action:none; user-select:none; -webkit-user-select:none; }
         .ctl-grid button:active, .ctl-grid button.on, .ctl-grid button.flash { background:var(--la-text); color:var(--la-bg); border-color:var(--la-text); }
         .ctl-pad { display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; }
-        .ctl-pad button { aspect-ratio:1; font-size:16px; }
+        .ctl-pad button { aspect-ratio:1; font-size:16px; display:flex; align-items:center; justify-content:center; padding:0; }
         .ctl-pad button.home { font-size:9px; }
         .ctl-speed { display:flex; flex-direction:column; gap:6px; margin-top:12px; font:700 10px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.08em; text-transform:uppercase; color:var(--la-dim); }
         .ctl-speed input { accent-color:var(--la-accent); }
@@ -348,6 +348,14 @@
         .ctl-full.ctl-inline .ctl-grid { grid-template-columns:repeat(4, minmax(0,1fr)); }
         @media (max-width: 900px) { .ctl-full.ctl-inline .ctl-grid { grid-template-columns:repeat(2, minmax(0,1fr)); } .ctl-full { padding:16px; } }
         @media (max-width: 520px) { .ctl-full.ctl-inline .ctl-grid { grid-template-columns:minmax(0,1fr); } }
+        /* Phones: a compact centred pad, the status under the title, one-line badge */
+        .ctl-relay, .ctl-relay.ex { white-space:nowrap; }
+        @media (max-width: 640px) {
+            .ctl-head { flex-direction:column; align-items:flex-start; gap:8px; }
+            .ctl-title { font-size:16px; }
+            .ctl-pad, .ctl-inline .ctl-pad { max-width:216px; margin:0 auto; }
+            .ctl-full { border-radius:16px; }
+        }
         .cam-sched { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:8px 12px 12px; padding:9px 12px; border-radius:10px; background:var(--la-chip); font:700 10px/1.3 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.06em; text-transform:uppercase; color:var(--la-sub); }
         .cam-sched .lbl { color:var(--la-dim); font-weight:500; flex-shrink:0; }
         .cam-sched.on { color:var(--la-ok); }
@@ -891,7 +899,9 @@
             }
             var body = inline || document.getElementById('cam-dialog-body');
             var isLive = c.status === 'active' && c.playbackId;
-            var dirs = [['upleft', '↖'], ['up', '↑'], ['upright', '↗'], ['left', '←'], ['home', 'HOME'], ['right', '→'], ['downleft', '↙'], ['down', '↓'], ['downright', '↘']];
+            // Drawn arrows (the arrow characters turn into emoji on iPhone)
+            var arrow = function(deg) { return '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(' + deg + 'deg)"><path d="M12 19V5M6 11l6-6 6 6"/></svg>'; };
+            var dirs = [['upleft', arrow(-45)], ['up', arrow(0)], ['upright', arrow(45)], ['left', arrow(-90)], ['home', 'HOME'], ['right', arrow(90)], ['downleft', arrow(-135)], ['down', arrow(180)], ['downright', arrow(135)]];
             var seg = function(name, opts) { return '<div class="ctl-seg" data-seg="' + name + '">' + opts.map(function(o) { return '<button type="button" data-v="' + o[0] + '">' + o[1] + '</button>'; }).join('') + '</div>'; };
             body.innerHTML =
                 '<div class="ctl-head"><div><p class="cam-eyebrow">' + 'Control' + '</p><h3 class="ctl-title">' + esc(c.name) + '</h3></div><span class="ctl-relay" id="ctl-relay"></span></div>' +

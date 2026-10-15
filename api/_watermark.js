@@ -8,7 +8,7 @@ export const WATERMARK_DEFAULTS = { enabled: true, logo: 'auto', position: 'bl',
 const POSITIONS = ['br', 'bl', 'tr', 'tl'];
 const SIZES = ['s', 'm', 'l'];
 // ffmpeg reads these; SVG is rasterised by the worker
-const LOGO_FILE = /\.(png|svg|webp|jpe?g)$/i;
+const LOGO_FILE = /\.(png|svg|webp|jpe?g|gif)$/i;   // a GIF logo moves on the clips
 // The worker draws watermark text with opentype.js, which reads these (not WOFF2)
 export const TEXT_FONT_FILE = /\.(ttf|otf|woff)$/i;
 const TEXT_POSITIONS = ['br', 'bl', 'tr', 'tl'];

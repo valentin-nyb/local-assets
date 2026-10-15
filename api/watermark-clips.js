@@ -1,11 +1,15 @@
 import { pausedBy, sendPaused } from './_suspend.js';
 import crypto from 'crypto';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+import { waitUntil } from '@vercel/functions';
 import { put } from '@vercel/blob';
 import { createClient } from 'redis';
 import { getWebSessionAuth } from './_venues.js';
 import { resolveWatermark } from './_watermark.js';
-import { renderWatermarkPng, VERTICAL, HORIZONTAL } from './_watermark-render.js';
-import { muxReq, SUB, socialInfo, tagFor, clipTimes, listAllAssets, sessionClips, videoSize, finishVerticals, originalsKey, clipOwner, artistMasters } from './_verticals.js';
+import { renderWatermarkPng, renderWatermarkParts, animatedLogo, VERTICAL, HORIZONTAL } from './_watermark-render.js';
+import { run, signJob, verifyJob, venueAuth as venueAuthFor, muxReq, SUB, socialInfo, tagFor, clipTimes, listAllAssets, sessionClips, videoSize, finishVerticals, originalsKey, clipOwner, artistMasters } from './_verticals.js';
 
 // Puts the Brand Kit watermark on a session's vertical clips, and takes it off again.
 // The vertical originals are cut once from the full recording (api/_verticals.js). Applying makes a
@@ -18,6 +22,8 @@ import { muxReq, SUB, socialInfo, tagFor, clipTimes, listAllAssets, sessionClips
 const del = (auth, id) => muxReq(auth, `/video/v1/assets/${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(e => { if (e.status !== 404) throw e; });
 const setTag = (auth, id, passthrough) => muxReq(auth, `/video/v1/assets/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify({ passthrough }) });
 
+export const config = { maxDuration: 300 };
+const animKey = slug => `wm_anim:${slug}`;   // hash clip id → time: clips being drawn with a moving (GIF) logo
 const swapsKey = slug => `wm_swaps:${slug}`;   // hash newId → JSON { old: clip it replaces }
 const markedKey = slug => `wm_marked:${slug}`;   // set of the watermarked copies this app made
 // Copies made by the earlier version were listed in wm_raw (watermarked clip → its original)
@@ -68,9 +74,54 @@ async function removeWatermark(redis, slug, auth, artist, date) {
   return { restored, recreated, missing };
 }
 
+// A moving (GIF) logo: Mux overlays only take still images, so the clip is drawn again with ffmpeg,
+// the GIF looping in the logo's place over the clean clip, the text as a still layer. One clip per call.
+async function animateClip(job) {
+  const redis = createClient({ url: process.env.REDIS_URL });
+  await redis.connect();
+  const out = path.join(os.tmpdir(), `wm-${job.oldId}-${Date.now()}.mp4`);
+  const auth = venueAuthFor(job.slug);
+  try {
+    const a = job.at;
+    const filter = `[1:v]scale=${job.vw}:${job.vh}[b];[2:v]scale=${Math.round(a.w * job.vw / a.W / 2) * 2}:${Math.round(a.h * job.vw / a.W / 2) * 2}:flags=lanczos,format=rgba,colorchannelmixer=aa=${a.opacity}[g];` +
+      `[0:v][b]overlay=0:0[v1];[v1][g]overlay=${Math.round(a.left * job.vw / a.W)}:${Math.round(a.top * job.vw / a.W)}:shortest=1,format=yuv420p[v]`;
+    const enc = (src) => run(['-hide_banner', '-loglevel', 'warning', '-y', '-i', src, '-i', job.base, '-ignore_loop', '0', '-i', job.gif,
+      '-filter_complex', filter, '-map', '[v]', '-map', '0:a:0?', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-c:a', 'copy', '-movflags', '+faststart', out]);
+    const size = () => (fs.existsSync(out) ? fs.statSync(out).size : 0);
+    await enc(`https://stream.mux.com/${job.pid}/highest.mp4`).catch(e => console.error('[watermark-gif] mp4', e.message));
+    if (size() < 100 * 1024) await enc(`https://stream.mux.com/${job.pid}.m3u8?rendition_order=desc`);
+    if (size() < 100 * 1024) throw new Error('The clip could not be read');
+    const blob = await put(`watermarks/${job.slug}/gif-${crypto.randomBytes(6).toString('hex')}.mp4`, fs.readFileSync(out), { access: 'public', contentType: 'video/mp4', addRandomSuffix: false, multipart: size() > 50 * 1024 * 1024 });
+    const copy = await muxReq(auth, '/video/v1/assets', {
+      method: 'POST',
+      body: JSON.stringify({ input: [{ url: blob.url }], playback_policy: ['public'], passthrough: tagFor(job.artist, job.n),
+        ...(job.masterId ? { meta: { external_id: job.masterId } } : {}), static_renditions: [{ resolution: 'highest' }] }),
+    });
+    await redis.hSet(swapsKey(job.slug), copy.id, JSON.stringify({ old: job.oldId, n: job.n }));
+    await redis.sAdd(markedKey(job.slug), copy.id);
+    console.log('[watermark-gif]', job.slug, job.artist, job.n, Math.round(size() / 1024) + ' KB');
+  } catch (e) {
+    console.error('[watermark-gif] failed', job.slug, job.n, e.message);
+  } finally {
+    await redis.hDel(animKey(job.slug), job.oldId).catch(() => {});
+    fs.rm(out, { force: true }, () => {});
+    await redis.quit().catch(() => {});
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return res.status(405).end();
+  // One clip's moving-logo render, started by "apply" (signed by the server, not a signed-in user)
+  {
+    const b = typeof req.body === 'string' ? (() => { try { return JSON.parse(req.body); } catch { return {}; } })() : (req.body || {});
+    if (b.action === 'animate') {
+      const job = verifyJob(b.job);
+      if (!job || job.kind !== 'wm-gif') return res.status(401).json({ error: 'Invalid job' });
+      waitUntil(animateClip(job));
+      return res.status(202).json({ ok: true });
+    }
+  }
   const session = getWebSessionAuth(req);
   if (!session?.email) return res.status(401).json({ error: 'Not authenticated' });
   if (!session.venueSlug || !session.muxAuth) return res.status(403).json({ error: 'No Cloud Storage for this account' });
@@ -118,7 +169,11 @@ export default async function handler(req, res) {
       if (v.done) assets = await listAllAssets(auth);
       const isClean = cleanCheck(assets, await markedSet(redis, slug));
       const watermarked = assets.filter(a => /^.+ \/\/ SOCIAL \/\/ \d+$/i.test(String(a.passthrough || '').trim()) && !isClean(a)).map(a => a.id);
-      const pendingIds = Object.values(await redis.hGetAll(swapsKey(slug))).map(v => parseSwap(v).old);
+      // Clips still being drawn with a moving logo (dropped if a render never reported back)
+      const anim = await redis.hGetAll(animKey(slug));
+      for (const [k, at] of Object.entries(anim)) if (Date.now() - Number(at) > 20 * 60e3) { await redis.hDel(animKey(slug), k); delete anim[k]; }
+      pending += Object.keys(anim).length;
+      const pendingIds = Object.values(await redis.hGetAll(swapsKey(slug))).map(v => parseSwap(v).old).concat(Object.keys(anim));
       // Shown clips that aren't vertical originals yet (or watermarked copies of them): these get cut once
       const originals = new Set(await redis.sMembers(originalsKey(slug)));
       const horizontal = assets.filter(a => {
@@ -161,6 +216,23 @@ export default async function handler(req, res) {
       return overlays.get(key);
     };
 
+    // A moving (GIF) logo: each clip is drawn by ffmpeg in its own call
+    const frame = await animatedLogo(wm);
+    const origin = `https://${req.headers['x-forwarded-host'] || req.headers.host}`;
+    const parts = new Map();
+    const partsFor = async (w, h) => {
+      const L = w > h ? HORIZONTAL : VERTICAL;
+      const width = Math.max(L.W, Math.round(w) || L.W);
+      const key = `${L.W}x${L.H}@${width}`;
+      if (!parts.has(key)) parts.set(key, (async () => {
+        const r = await renderWatermarkParts(wm, L, width, frame);
+        const url = (await put(`watermarks/${slug}/${crypto.randomBytes(6).toString('hex')}.png`, r.png, { access: 'public', contentType: 'image/png', addRandomSuffix: false })).url;
+        return { base: url, at: r.logoAt };
+      })());
+      return parts.get(key);
+    };
+    const animating = new Set(Object.keys(await redis.hGetAll(animKey(slug))));
+
     const assets = await listAllAssets(auth);
     const byId = new Map(assets.map(a => [a.id, a]));
     const isClean = cleanCheck(assets, await markedSet(redis, slug));
@@ -169,7 +241,7 @@ export default async function handler(req, res) {
     let started = 0;
     const errors = [];
     for (const id of ids) {
-      if (pendingOld.has(id)) continue;
+      if (pendingOld.has(id) || animating.has(id)) continue;
       try {
         const clip = byId.get(id) || await muxReq(auth, `/video/v1/assets/${encodeURIComponent(id)}`);
         const pt = String(clip.passthrough || '').trim();
@@ -187,6 +259,18 @@ export default async function handler(req, res) {
         if (isClean(clip)) { input = { url: `mux://assets/${clip.id}` }; size = videoSize(clip); }
         else if (kept) { input = { url: `mux://assets/${kept.id}` }; size = videoSize(kept); }
         else { errors.push(`Clip ${String(n).padStart(2, '0')} has no clean version to start from.`); continue; }
+        if (frame) {
+          const src = byId.get(input.url.slice('mux://assets/'.length)) || clip;
+          const pid = (src.playback_ids || [])[0]?.id;
+          if (!pid) { errors.push(`Clip ${String(n).padStart(2, '0')} isn't ready yet.`); continue; }
+          const p = await partsFor(size[0] || 1080, size[1] || 1920);
+          await redis.hSet(animKey(slug), id, String(Date.now()));
+          await fetch(`${origin}/api/watermark-clips`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(20000),
+            body: JSON.stringify({ action: 'animate', job: signJob({ kind: 'wm-gif', slug, artist, n, oldId: id, pid, vw: size[0] || 1080, vh: size[1] || 1920, base: p.base, gif: wm.url, at: p.at, masterId: sessionMaster?.id || null }) }) })
+            .catch(e => errors.push('Could not start clip ' + n + ': ' + e.message));
+          started++;
+          continue;
+        }
         const overlayUrl = await overlayFor(size[0] || 1080, size[1] || 1920);
         const copy = await muxReq(auth, '/video/v1/assets', {
           method: 'POST',

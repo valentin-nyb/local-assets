@@ -255,7 +255,7 @@ function hasAudio(file) {
   });
 }
 
-function run(args) {
+export function run(args) {
   return new Promise((resolve, reject) => {
     const ff = spawn(ffmpegPath, args, { stdio: ['ignore', 'ignore', 'pipe'] });
     let err = '';
