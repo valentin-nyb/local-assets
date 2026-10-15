@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { createClient } from 'redis';
 import { getVenuesConfig, getMuxAuthForVenue } from './_venues.js';
 import { venueEvents } from './_calendar.js';
+import { startAudioOnly } from './_verticals.js';
 
 // When a camera's broadcast ends, Mux has saved it as an asset. This turns that recording
 // into dashboard sessions: one per artist who was "on stage" (set on the Camera page),
@@ -136,10 +137,11 @@ export async function processCameraRecording(event) {
     }
     console.log(`[camera-rec] ${slug} ${camName}${calSets.length ? ' (calendar)' : ''}: ${sessions.map(s => s.artist).join(', ')}`);
 
-    // A single decks recording (no split): add its downloadable audio file
+    // A single decks recording (no split): saved as audio only (the sets cut by the calendar are handled
+    // when Mux has them ready, in api/mux-webhook.js)
     if (isAudio && !calSets.length && sets.length === 1) {
-      await muxReq(auth, `/video/v1/assets/${assetId}/static-renditions`, { method: 'POST', body: JSON.stringify({ resolution: 'audio-only' }) })
-        .catch(e => console.error('[camera-rec] audio file', assetId, e.message));
+      const passthrough = tag(sets[0].artist, date, null, camLabel);
+      await startAudioOnly(slug, { ...asset, passthrough }).catch(e => console.error('[camera-rec] audio only', assetId, e.message));
     }
     // Markers up to the end of this recording are used up
     await redis.del(`cam_markers:${streamId}`);

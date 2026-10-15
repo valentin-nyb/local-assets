@@ -1,7 +1,7 @@
 import { put } from '@vercel/blob';
 import { processCameraRecording } from './_camera-recording.js';
 import { createClient } from 'redis';
-import { startVerticals, venueForAsset } from './_verticals.js';
+import { startVerticals, venueForAsset, startAudioOnly } from './_verticals.js';
 import crypto from 'crypto';
 
 // Signature check: every event must be signed by one of our Mux environments' webhook secrets
@@ -54,6 +54,29 @@ function masterArtist(rawPassthrough, tracks) {
         } catch { return null; }
     }
     return isMasterAsset(pt) ? pt.toUpperCase() : null;
+}
+
+async function decksAudio(found, data, playbackId) {
+  let o = null; try { o = JSON.parse(String(data.passthrough || '')); } catch {}
+  const isDecks = o && String(o.camera || '').toUpperCase() === 'AUDIO';
+  if (!isDecks) return;
+  const hasVideo = (data.tracks || []).some(t => t.type === 'video');
+  const redis = createClient({ url: process.env.REDIS_URL });
+  await redis.connect();
+  try {
+    if (hasVideo && data.source_asset_id) {
+      // A set cut from the decks' recording (calendar): make it audio-only
+      if (await redis.set(`aud_job:${data.id}`, '1', { NX: true, EX: 86400 })) await startAudioOnly(found.slug, { ...data, playback_ids: data.playback_ids || [{ id: playbackId }] });
+    } else if (!hasVideo) {
+      // The audio-only copy is ready: the video version it replaces goes
+      const swap = JSON.parse(await redis.get(`aud_swap:${data.id}`) || 'null');
+      if (swap?.old) {
+        await fetch(`https://api.mux.com/video/v1/assets/${encodeURIComponent(swap.old)}`, { method: 'DELETE', headers: { Authorization: found.auth } }).catch(() => {});
+        await redis.del(`aud_swap:${data.id}`);
+        console.log('[decks-audio] replaced', swap.old, 'with audio-only', data.id);
+      }
+    }
+  } finally { await redis.quit().catch(() => {}); }
 }
 
 // ── 1. AUDIO EXTRACTION ──────────────────────────────────────────────
@@ -173,6 +196,9 @@ export default async function handler(req, res) {
         const auth = found.auth;
 
         console.log(`[Webhook] asset.ready — id:${assetId} pt:"${passthrough}" dur:${duration}s`);
+
+        // Decks audio: a recording that arrived as video becomes audio-only; the audio copy replaces it
+        await decksAudio(found, data, playbackId).catch(e => console.error('[decks-audio]', e.message));
 
         // Set asset name = passthrough + date
         try {

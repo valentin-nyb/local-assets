@@ -63,7 +63,6 @@
         .cam-audio.real .cam-eq i { animation:none !important; transition:height .06s linear; }
         .cam-audio.silent .cam-eq i { background:#3f3f46 !important; }
         .cam-audio.silent span { color:#71717a !important; }
-        .cam-golive { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); z-index:3; height:40px; padding:0 18px; border-radius:999px; border:0; background:#39FF14; color:#000; font:600 14px 'Helvetica Neue', Helvetica, Arial, sans-serif; cursor:pointer; box-shadow:0 8px 24px -8px rgba(57,255,20,.6); }
         .cam-listen { position:absolute; right:12px; bottom:12px; z-index:2; height:28px; padding:0 12px; border-radius:999px; border:1px solid rgba(255,255,255,.3); background:rgba(0,0,0,.5); color:#fff; font:500 12px 'Helvetica Neue', Helvetica, Arial, sans-serif; cursor:pointer; }
         .cam-listen.on { background:#39FF14; border-color:#39FF14; color:#000; }
         @keyframes camEq { from { height:15%; } to { height:100%; } }
@@ -920,11 +919,6 @@
             var btn = document.createElement('button');
             btn.type = 'button'; btn.className = 'cam-listen'; btn.textContent = 'Listen';
             stage.appendChild(btn);
-            // Browsers only allow sound after a click: until then, one clear button starts the real meter
-            var go = document.createElement('button');
-            go.type = 'button'; go.className = 'cam-golive'; go.innerHTML = '&#9654; Show live sound';
-            if (!_audioCtx) stage.appendChild(go);
-            go.addEventListener('click', function(e) { e.stopPropagation(); startMeters(); });
             var m = { stage: stage, mp: mp, btn: btn, gain: null, on: false };
             _deckMeters.push(m);
             btn.addEventListener('click', function(e) { e.stopPropagation(); startMeters(); m.on = !m.on; if (m.gain) m.gain.gain.value = m.on ? 1 : 0; btn.textContent = m.on ? 'Mute' : 'Listen'; btn.classList.toggle('on', m.on); });
@@ -947,7 +941,6 @@
                     el.play().catch(function() {});
                     var bars = m.stage.querySelectorAll('.cam-eq i'), data = new Uint8Array(an.frequencyBinCount);
                     m.stage.querySelector('.cam-audio').classList.add('real');
-                    var gl = m.stage.querySelector('.cam-golive'); if (gl) gl.remove();
                     var quietSince = 0, box = m.stage.querySelector('.cam-audio'), lbl = box && box.querySelector('span');
                     (function draw() {
                         if (!m.stage.isConnected) return;

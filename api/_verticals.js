@@ -161,6 +161,14 @@ export async function venueForAsset(assetId) {
   return null;
 }
 
+// Decks audio: has the recording's sound copied out as an audio-only recording (api/watermark-clips.js)
+export async function startAudioOnly(slug, asset, origin = 'https://local-assets.com') {
+  const pid = asset.playback_ids?.[0]?.id;
+  if (!pid) return;
+  await fetch(`${origin}/api/watermark-clips`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(20000),
+    body: JSON.stringify({ action: 'audioOnly', job: signJob({ kind: 'audio-only', slug, assetId: asset.id, pid, passthrough: asset.passthrough }) }) });
+}
+
 // Starts one cutting job per clip that hasn't been cut yet; each runs in its own function
 export async function startVerticals(redis, slug, master, artist, origin, retry = false, count = null) {
   if (!count) count = await planMaxClips(redis, slug);

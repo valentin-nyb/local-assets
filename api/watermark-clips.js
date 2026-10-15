@@ -123,12 +123,50 @@ async function animateClip(job) {
   }
 }
 
+// The decks: OBS (and most streaming apps) always send a picture with the sound, so Mux saves a video.
+// The sound alone is copied out (no re-encoding) and saved as an audio-only recording with an M4A file;
+// the video version is deleted once that copy is ready (api/mux-webhook.js).
+async function audioOnly(job) {
+  const redis = createClient({ url: process.env.REDIS_URL });
+  await redis.connect();
+  const out = path.join(os.tmpdir(), `aud-${job.assetId}-${Date.now()}.m4a`);
+  try {
+    const auth = venueAuthFor(job.slug);
+    const t0 = Date.now();
+    const grab = src => new Promise((resolve, reject) => {
+      const ff = spawn(ffmpegPath, ['-hide_banner', '-loglevel', 'error', '-y', '-i', src, '-vn', '-map', '0:a:0', '-c:a', 'copy', '-movflags', '+faststart', out], { stdio: ['ignore', 'ignore', 'pipe'] });
+      let err = ''; ff.stderr.on('data', d => { err = (err + d).slice(-800); });
+      const kill = setTimeout(() => { ff.kill('SIGKILL'); reject(new Error('took too long')); }, 260e3);
+      ff.on('close', code => { clearTimeout(kill); code === 0 ? resolve() : reject(new Error(err.trim().split('\n').pop())); });
+    });
+    const size = () => (fs.existsSync(out) ? fs.statSync(out).size : 0);
+    await grab(`https://stream.mux.com/${job.pid}/audio.m4a`).catch(() => {});
+    if (size() < 20 * 1024) await grab(`https://stream.mux.com/${job.pid}.m3u8`);
+    if (size() < 20 * 1024) throw new Error('no sound found in the recording');
+    const blob = await put(`watermarks/${job.slug}/decks-${crypto.randomBytes(6).toString('hex')}.m4a`, fs.readFileSync(out), { access: 'public', contentType: 'audio/mp4', addRandomSuffix: false, multipart: size() > 50 * 1024 * 1024 });
+    const copy = await muxReq(auth, '/video/v1/assets', { method: 'POST', body: JSON.stringify({ input: [{ url: blob.url }], playback_policy: ['public'], passthrough: job.passthrough, static_renditions: [{ resolution: 'audio-only' }] }) });
+    await redis.set(`aud_swap:${copy.id}`, JSON.stringify({ old: job.assetId, blob: blob.url }), { EX: 7 * 86400 });
+    console.log('[decks-audio] audio-only copy', job.slug, job.assetId, '→', copy.id, Math.round(size() / 1024) + ' KB', Math.round((Date.now() - t0) / 1000) + 's');
+  } catch (e) {
+    console.error('[decks-audio] failed', job.slug, job.assetId, e.message);
+  } finally {
+    fs.rm(out, { force: true }, () => {});
+    await redis.quit().catch(() => {});
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return res.status(405).end();
   // One clip's moving-logo render, started by "apply" (signed by the server, not a signed-in user)
   {
     const b = typeof req.body === 'string' ? (() => { try { return JSON.parse(req.body); } catch { return {}; } })() : (req.body || {});
+    if (b.action === 'audioOnly') {
+      const job = verifyJob(b.job);
+      if (!job || job.kind !== 'audio-only') return res.status(401).json({ error: 'Invalid job' });
+      waitUntil(audioOnly(job));
+      return res.status(202).json({ ok: true });
+    }
     if (b.action === 'animate') {
       const job = verifyJob(b.job);
       if (!job || job.kind !== 'wm-gif') return res.status(401).json({ error: 'Invalid job' });
