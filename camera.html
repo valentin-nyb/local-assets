@@ -133,6 +133,9 @@
         .cal-form input:focus { border-color:var(--la-accent); }
         .cam-kind { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px; }
         .cam-kind[hidden] { display:none !important; }
+        .cam-kind.three { grid-template-columns:repeat(3, minmax(0,1fr)); }
+        @media (max-width:520px) { .cam-kind.three { grid-template-columns:minmax(0,1fr); } }
+        .cam-kind label[hidden] { display:none !important; }
         @media (max-width:520px) { .cam-kind { grid-template-columns:minmax(0,1fr); } }
         .cam-kind label { position:relative; display:block; cursor:pointer; }
         .cam-kind input { position:absolute; opacity:0; pointer-events:none; }
@@ -1162,10 +1165,11 @@
             var deckForm = preset === 'audio' || (c && c.kind === 'audio');
             openCamDialog(deckForm ? (c ? 'Edit decks audio' : 'Add decks audio') : (c ? 'Edit camera' : 'Add camera'),
                 '<form id="cam-form" class="cam-form">' +
-                '<div class="cam-kind" role="radiogroup" aria-label="Camera"' + (deckForm ? ' hidden' : '') + '>' +
+                // Adding: cameras or decks have their own button. Editing: any slot can change type
+                '<div class="cam-kind' + (c ? ' three' : '') + '" role="radiogroup" aria-label="Type"' + (deckForm && !c ? ' hidden' : '') + '>' +
                     '<label><input type="radio" name="kind" value="obsbot"' + (!deckForm && (!c || c.kind !== 'other') ? ' checked' : '') + '><span>OBSBOT Tail 2<small>Steer it from here</small></span></label>' +
                     '<label><input type="radio" name="kind" value="other"' + (c && c.kind === 'other' ? ' checked' : '') + '><span>Other camera<small>Osmo, Sony, phone…</small></span></label>' +
-                    '<label hidden><input type="radio" name="kind" value="audio"' + (deckForm ? ' checked' : '') + '><span>Decks audio</span></label>' +
+                    '<label' + (c ? '' : ' hidden') + '><input type="radio" name="kind" value="audio"' + (deckForm ? ' checked' : '') + '><span>Decks audio<small>The mixer\'s sound</small></span></label>' +
                 '</div>' +
                 '<label class="cam-other-only">Which camera<select name="model">' + ['DJI Osmo', 'Sony Alpha', 'Phone', 'Other camera with RTMP'].map(function(m) { return '<option' + (c && c.model === m ? ' selected' : '') + '>' + m + '</option>'; }).join('') + '</select></label>' +
                 '<label>Name<input name="name" maxlength="40" required placeholder="Main floor" value="' + esc(c && c.name) + '"></label>' +
