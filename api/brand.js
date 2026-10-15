@@ -143,7 +143,9 @@ export default async function handler(req, res) {
       let pathname = '';
       try { pathname = decodeURIComponent(new URL(url).pathname.slice(1)); } catch {}
       const meta = pathname.startsWith(prefixFor(slug)) ? parsePath(pathname, slug) : null;
-      if (!meta || meta.category !== 'photos') return res.status(400).json({ error: 'Pick one of your photos' });
+      // A photo, or a logo image (a GIF logo moves wherever the profile picture shows)
+      const ok = meta && (meta.category === 'photos' || (meta.category === 'logos' && /\.(png|jpe?g|webp|gif|svg)$/i.test(pathname)));
+      if (!ok) return res.status(400).json({ error: 'Pick one of your photos or logos' });
       await withRedis(r => r.hSet(`brand_owner_photo:${slug}`, meta.owner, url));
       return res.status(200).json({ owner: meta.owner, url });
     }

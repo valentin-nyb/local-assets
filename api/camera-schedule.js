@@ -78,7 +78,7 @@ export default async function handler(req, res) {
       if (!auth) continue;
       try {
         const assets = await listAllAssets(auth);
-        const expected = JSON.parse(await redis.get(`cameras:${slug}`) || '[]').filter(c => c.streamId).length;
+        const expected = JSON.parse(await redis.get(`cameras:${slug}`) || '[]').filter(c => c.streamId && c.kind !== 'audio').length;
         for (const [key, p] of due) {
           const [artist, date] = key.split('|');
           const src = sessionSources(assets, artist, date);

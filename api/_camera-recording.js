@@ -88,11 +88,14 @@ export async function processCameraRecording(event) {
     const cams = JSON.parse(await redis.get(`cameras:${slug}`) || '[]');
     const cam  = cams.find(c => c.streamId === streamId) || {};
     const camName = (cam.name || 'Camera').toUpperCase();
-    const recording = cams.filter(c => c.streamId);
-    const camLabel = recording[0]?.streamId === streamId ? 'MASTER' : camName.replace(/\s*\/\/\s*/g, ' - ').replace(/[^A-Z0-9 \-]/g, '').trim().slice(0, 30) || 'CAMERA';
-    const multi = recording.length >= 2;
+    // The decks' sound is saved as each session's HQ AUDIO; it isn't one of the cameras
+    const isAudio = cam.kind === 'audio';
+    const recording = cams.filter(c => c.streamId && c.kind !== 'audio');
+    const camLabel = isAudio ? 'AUDIO' : recording[0]?.streamId === streamId ? 'MASTER' : camName.replace(/\s*\/\/\s*/g, ' - ').replace(/[^A-Z0-9 \-]/g, '').trim().slice(0, 30) || 'CAMERA';
+    const multi = !isAudio && recording.length >= 2;
     const startMs = Number(asset.created_at) * 1000;
-    const date    = londonDate(startMs);
+    // The date set in "On stage" (no calendar), else the day it was recorded
+    const date    = cam.stageDate || londonDate(startMs);
     const markers = (await redis.lRange(`cam_markers:${streamId}`, 0, -1)).map(m => { try { return JSON.parse(m); } catch { return null; } }).filter(Boolean);
 
     // The venue calendar decides who played when: each set is cut at its exact start and end.
@@ -111,7 +114,7 @@ export async function processCameraRecording(event) {
 
     let sessions;
     if (!calSets.length && sets.length === 1) {
-      await muxReq(auth, `/video/v1/assets/${assetId}`, { method: 'PATCH', body: JSON.stringify({ passthrough: tag(sets[0].artist, date) }) });
+      await muxReq(auth, `/video/v1/assets/${assetId}`, { method: 'PATCH', body: JSON.stringify({ passthrough: tag(sets[0].artist, date, null, camLabel) }) });
       sessions = [{ assetId, artist: sets[0].artist }];
     } else {
       // One clip per artist, cut from the full recording. The full recording stays as its own session.
@@ -128,12 +131,28 @@ export async function processCameraRecording(event) {
         });
         sessions.push({ assetId: clip.id, artist: s.artist });
       }
-      await muxReq(auth, `/video/v1/assets/${assetId}`, { method: 'PATCH', body: JSON.stringify({ passthrough: tag(camName + ' FULL RECORDING', date) }) });
+      await muxReq(auth, `/video/v1/assets/${assetId}`, { method: 'PATCH', body: JSON.stringify({ passthrough: tag(camName + ' FULL RECORDING', date, null, isAudio ? 'AUDIO' : 'MASTER') }) });
     }
     console.log(`[camera-rec] ${slug} ${camName}${calSets.length ? ' (calendar)' : ''}: ${sessions.map(s => s.artist).join(', ')}`);
 
     // Markers up to the end of this recording are used up
     await redis.del(`cam_markers:${streamId}`);
+    // "On stage" session details (no calendar): name and venue go on each session; the name and date are used once
+    if (!calSets.length && (cam.stageTitle || cam.stageVenue)) {
+      for (const s of sessions) {
+        const field = `${String(s.artist).toUpperCase().trim()}|${date}`;
+        let prev = {};
+        try { prev = JSON.parse(await redis.hGet(`session_meta:${slug}`, field) || '{}'); } catch {}
+        await redis.hSet(`session_meta:${slug}`, field, JSON.stringify({ ...prev, title: cam.stageTitle || prev.title || '', venue: cam.stageVenue || prev.venue || '' }));
+      }
+      const fresh = JSON.parse(await redis.get(`cameras:${slug}`) || '[]');
+      const me = fresh.find(c => c.streamId === streamId);
+      if (me) { me.stageTitle = ''; me.stageDate = ''; await redis.set(`cameras:${slug}`, JSON.stringify(fresh)); }
+    } else if (!calSets.length && cam.stageDate) {
+      const fresh = JSON.parse(await redis.get(`cameras:${slug}`) || '[]');
+      const me = fresh.find(c => c.streamId === streamId);
+      if (me) { me.stageDate = ''; await redis.set(`cameras:${slug}`, JSON.stringify(fresh)); }
+    }
 
     // Several cameras on the same calendar set: once every camera's recording is in, they become one
     // multi-camera edit (api/camera-schedule.js starts it); its clips come from the edit. With one camera,

@@ -54,6 +54,18 @@
         .cam-stage { aspect-ratio:16/9; background:#000; position:relative; }
         .cam-off { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; color:#71717a; font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.1em; text-align:center; padding:16px; }
         .cam-off iconify-icon { font-size:24px; }
+        .cam-audio { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; background:radial-gradient(circle at 50% 40%, #16161a, #050505 70%); }
+        .cam-audio span { font:600 10px 'JetBrains Mono', monospace; letter-spacing:.14em; text-transform:uppercase; color:#71717a; }
+        .cam-audio.on span { color:#39FF14; }
+        .cam-eq { display:flex; align-items:center; gap:4px; height:56px; }
+        .cam-eq i { width:5px; height:20%; border-radius:3px; background:#3f3f46; }
+        .cam-audio.on .cam-eq i { background:#39FF14; animation:camEq .9s ease-in-out infinite alternate; }
+        @keyframes camEq { from { height:15%; } to { height:100%; } }
+        .cam-bars { position:absolute; inset:0; background:linear-gradient(90deg, #c0c0c0 0 14.28%, #c0c000 0 28.57%, #00c0c0 0 42.85%, #00c000 0 57.14%, #c000c0 0 71.42%, #c00000 0 85.71%, #0000c0 0); }
+        .cam-bars::after { content:""; position:absolute; left:0; right:0; bottom:0; height:22%; background:linear-gradient(90deg, #00214c 0 18%, #fff 0 36%, #32006a 0 54%, #131313 0 72%, #090909 0 81%, #1d1d1d 0); }
+        .cam-bars span { position:absolute; z-index:1; left:50%; top:50%; transform:translate(-50%,-50%); display:inline-flex; align-items:center; gap:7px; padding:6px 12px; border-radius:999px; background:rgba(0,0,0,.72); color:#fff; font:600 11px 'JetBrains Mono', monospace; letter-spacing:.12em; white-space:nowrap; }
+        .cam-bars i { width:7px; height:7px; border-radius:50%; background:#ef4444; animation:camBlink 1.2s ease-in-out infinite; }
+        @keyframes camBlink { 50% { opacity:.25; } }
         .cam-meta { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; }
         .cam-label { font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.15em; color:var(--la-text-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .cam-pill { font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.15em; padding:3px 8px; border-radius:999px; border:1px solid var(--la-line); color:var(--la-dim); flex-shrink:0; }
@@ -117,13 +129,17 @@
         .cal-form { display:flex; gap:8px; margin-top:14px; }
         .cal-form input { flex:1; min-width:0; height:40px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 12px; font-size:13px; outline:none; }
         .cal-form input:focus { border-color:var(--la-accent); }
-        .cam-kind { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+        .cam-kind { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px; }
+        @media (max-width:520px) { .cam-kind { grid-template-columns:minmax(0,1fr); } }
         .cam-kind label { position:relative; display:block; cursor:pointer; }
         .cam-kind input { position:absolute; opacity:0; pointer-events:none; }
         .cam-kind span { display:flex; flex-direction:column; gap:3px; padding:12px 14px; border:1px solid color-mix(in srgb, var(--la-text) 22%, transparent); border-radius:6px; font-size:14px; font-weight:500; color:var(--la-text); transition:border-color .2s ease, background .2s ease; }
         .cam-kind small { font-size:12px; font-weight:400; color:var(--la-dim); }
         .cam-kind input:checked + span { border-color:var(--la-text); background:color-mix(in srgb, var(--la-text) 4%, transparent); }
         .cam-form [hidden] { display:none !important; }
+        .cam-two { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; }
+        @media (max-width:520px) { .cam-two { grid-template-columns:minmax(0,1fr); } }
+        :root body .cam-form input[type=date] { color-scheme:dark light; }
         /* Every field in the form alike: same height, corners and line as the dropdowns */
         :root body .cam-form input:not([type=checkbox]):not([type=radio]), :root body .cam-form select { height:44px !important; border-radius:6px !important; border:1px solid color-mix(in srgb, var(--la-text) 22%, transparent) !important; background-color:var(--la-input) !important; color:var(--la-text) !important; font-size:14px !important; padding-left:14px !important; box-sizing:border-box; width:100%; }
         :root body .cam-form input:not([type=checkbox]):not([type=radio]):focus { border-color:transparent !important; box-shadow:0 0 0 2px var(--la-text); }
@@ -135,7 +151,9 @@
         .cam-qr-steps b { color:var(--la-text); }
         @media (max-width:640px) { .cam-qr { grid-template-columns:minmax(0,1fr); } .cam-qr-code { display:none; } }
         .cam-guides { margin-top:14px; border:1px solid var(--la-line); border-radius:10px; overflow:hidden; }
-        .cam-guide + .cam-guide { border-top:1px solid var(--la-line); }
+        .cam-guides .cam-guide { border:0 !important; border-radius:0 !important; margin:0 !important; padding:0 !important; background:none !important; box-shadow:none !important; }
+        .cam-guides .cam-guide + .cam-guide { border-top:1px solid var(--la-line) !important; }
+        .cam-guides .cam-guide summary { margin:0 !important; border:0 !important; background:none !important; }
         .cam-guide summary { cursor:pointer; padding:12px 14px; font-size:14px; font-weight:500; color:var(--la-text); list-style:none; display:flex; justify-content:space-between; }
         .cam-guide summary::-webkit-details-marker { display:none; }
         .cam-guide summary::after { content:"+"; color:var(--la-dim); }
@@ -300,6 +318,9 @@
         .cam-acct select { height:38px; min-width:220px; max-width:100%; padding:0 34px 0 12px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); font:700 12px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.04em; text-transform:uppercase; cursor:pointer; }
         @media (max-width:640px) { .cam-acct { margin-left:0; width:100%; } .cam-acct select { width:100%; } }
         .cam-ctl { color:var(--la-accent) !important; font-weight:600; }
+        /* Less empty space above the cameras */
+        @media (min-width:768px) { .cam-page { padding-top:24px !important; } .cam-page > * + * { margin-top:20px !important; } }
+        .cam-page > .cam-relay { margin-top:12px !important; }
         .cam-relay { display:flex; align-items:center; gap:10px; font:700 10px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.08em; text-transform:uppercase; color:var(--la-dim); margin-top:-8px; }
         .cam-relay.hidden { display:none; }
         .cam-relay-dot { width:6px; height:6px; border-radius:50%; background:var(--la-dim); }
@@ -399,10 +420,10 @@
         </header>
 
         <div class="flex-1 w-full overflow-y-auto no-scrollbar">
-            <div class="max-w-6xl mx-auto w-full p-4 md:p-10 flex flex-col space-y-4 md:space-y-8 mt-2 md:mt-0">
+            <div class="max-w-6xl mx-auto w-full p-4 md:p-10 flex flex-col space-y-4 md:space-y-8 mt-2 md:mt-0 cam-page">
                 <div class="cam-toolbar">
                     <div class="min-w-0">
-                        <p class="cam-eyebrow">OBSBOT Tail 2 · NDI HX3</p>
+                        <p class="cam-eyebrow">Camera control</p>
                         <h2 class="cam-h">Cameras</h2>
                     </div>
                     <div class="cam-actions" id="cam-head-actions" style="display:none">
@@ -792,6 +813,23 @@
             }).catch(function() {});
         }
 
+        // A live camera: broadcast colour bars until the picture actually plays (instead of Mux's own placeholder)
+        function livePlayer(stage, pid, fit, extra) {
+            stage.innerHTML = '<div class="cam-bars"><span><i></i>LIVE · Connecting…</span></div>';
+            var mp = document.createElement('mux-player');
+            mp.setAttribute('stream-type', 'live'); mp.setAttribute('playback-id', pid);
+            mp.setAttribute('muted', ''); mp.setAttribute('autoplay', 'muted'); mp.setAttribute('accent-color', '#39FF14');
+            mp.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;opacity:0;transition:opacity .4s ease;--media-object-fit:' + fit + ';' + extra;
+            var show = function() { mp.style.opacity = '1'; var b = stage.querySelector('.cam-bars'); if (b) setTimeout(function() { b.remove(); }, 450); };
+            mp.addEventListener('playing', show);
+            // Stay at the live edge: if playback falls more than a few seconds behind, jump ahead
+            var edge = setInterval(function() {
+                if (!mp.isConnected) { clearInterval(edge); return; }
+                try { var sk = mp.seekable; if (sk && sk.length && !mp.paused) { var end = sk.end(sk.length - 1); if (end - mp.currentTime > 4) mp.currentTime = end - 1.5; } } catch (_) {}
+            }, 3000);
+            mp.addEventListener('timeupdate', function t() { if (mp.currentTime > 0) { show(); mp.removeEventListener('timeupdate', t); } });
+            stage.appendChild(mp);
+        }
         function cameraCard(c, i) {
             var card = document.createElement('div');
             card.className = 'cam-card';
@@ -804,7 +842,7 @@
             if (c.ndiName) chips += '<span class="cam-chip ndi" title="NDI source name">NDI · ' + esc(c.ndiName) + '</span>';
             if (c.ip) chips += '<span class="cam-chip">' + esc(c.ip) + '</span>';
             var actions = '';
-            if (!c.external && c.kind !== 'other') actions += '<button type="button" class="cam-link cam-ctl" data-act="control">Control</button>';
+            if (!c.external && (!c.kind || c.kind === 'obsbot')) actions += '<button type="button" class="cam-link cam-ctl" data-act="control">Control</button>';
             if (c.ip) actions += '<a class="cam-link" href="http://' + esc(c.ip) + '/" target="_blank" rel="noopener" title="The camera\'s own settings page. Works on the venue network.">Camera page</a>';
             if (!c.external) {
                 actions += '<button type="button" class="cam-link" data-act="setup">Stream setup</button>';
@@ -824,15 +862,12 @@
                     (c.recording === false && c.status !== 'missing' ? '<div class="cam-recoff"><span>Recording is off for this camera</span><button type="button" data-act="rec">Turn on</button></div>' : '')) +
                 (actions ? '<div class="cam-row-actions">' + actions + '</div>' : '');
             var stage = card.querySelector('.cam-stage');
-            if (isLive) {
-                var mp = document.createElement('mux-player');
-                mp.setAttribute('stream-type', 'live');
-                mp.setAttribute('playback-id', c.playbackId);
-                mp.setAttribute('muted', '');
-                mp.setAttribute('autoplay', 'muted');
-                mp.setAttribute('accent-color', '#39FF14');
-                mp.style.cssText = 'width:100%;height:100%;--media-object-fit:cover;';
-                stage.appendChild(mp);
+            if (c.kind === 'audio') {
+                // The decks: a level look instead of a picture, and the sound to listen in when live
+                stage.innerHTML = '<div class="cam-audio' + (isLive ? ' on' : '') + '"><div class="cam-eq">' + Array.from({ length: 24 }, function(_, k) { return '<i style="animation-delay:' + (k * 0.07 % 0.9).toFixed(2) + 's"></i>'; }).join('') + '</div><span>' + (isLive ? 'Decks audio · live' : 'Waiting for the mixer') + '</span></div>';
+                if (isLive) { var ap = document.createElement('mux-player'); ap.setAttribute('stream-type', 'live'); ap.setAttribute('playback-id', c.playbackId); ap.setAttribute('audio', ''); ap.setAttribute('accent-color', '#39FF14'); ap.style.cssText = 'position:absolute;left:12px;right:12px;bottom:10px;'; stage.appendChild(ap); }
+            } else if (isLive) {
+                livePlayer(stage, c.playbackId, 'cover', '');
             } else {
                 stage.innerHTML = '<div class="cam-off"><span>' +
                     (c.status === 'missing' ? 'This camera\'s stream was deleted from Cloud Storage' : 'Waiting for video') + '</span></div>';
@@ -939,11 +974,7 @@
             if (inline && !c.picture) stage.innerHTML = '<div class="cam-off"><span>Live picture</span></div>';
             else if (c.picture) stage.innerHTML = '<img alt="" src="' + esc(c.picture) + '" style="width:100%;height:100%;object-fit:cover">';
             else if (isLive) {
-                var mp = document.createElement('mux-player');
-                mp.setAttribute('stream-type', 'live'); mp.setAttribute('playback-id', c.playbackId);
-                mp.setAttribute('muted', ''); mp.setAttribute('autoplay', 'muted'); mp.setAttribute('accent-color', '#39FF14');
-                mp.style.cssText = 'width:100%;height:100%;--media-object-fit:contain;--controls:none;';
-                stage.appendChild(mp);
+                livePlayer(stage, c.playbackId, 'contain', '--controls:none;');
             } else stage.innerHTML = '<div class="cam-off"><span>The picture shows here while the camera streams</span></div>';
 
             var msg = body.querySelector('#ctl-msg'), relayEl = body.querySelector('#ctl-relay');
@@ -1051,6 +1082,7 @@
                 '<div class="cam-kind" role="radiogroup" aria-label="Camera">' +
                     '<label><input type="radio" name="kind" value="obsbot"' + (!c || c.kind !== 'other' ? ' checked' : '') + '><span>OBSBOT Tail 2<small>Steer it from here</small></span></label>' +
                     '<label><input type="radio" name="kind" value="other"' + (c && c.kind === 'other' ? ' checked' : '') + '><span>Other camera<small>Osmo, Sony, phone…</small></span></label>' +
+                    '<label><input type="radio" name="kind" value="audio"' + (c && c.kind === 'audio' ? ' checked' : '') + '><span>Decks audio<small>The mixer\'s sound</small></span></label>' +
                 '</div>' +
                 '<label class="cam-other-only">Which camera<select name="model">' + ['DJI Osmo', 'Sony Alpha', 'Phone', 'Other camera with RTMP'].map(function(m) { return '<option' + (c && c.model === m ? ' selected' : '') + '>' + m + '</option>'; }).join('') + '</select></label>' +
                 '<label>Name<input name="name" maxlength="40" required placeholder="Main floor" value="' + esc(c && c.name) + '"></label>' +
@@ -1063,10 +1095,11 @@
                 '</form>');
             var form = document.getElementById('cam-form');
             var syncKind = function(e) {
-                var other = form.kind.value === 'other';
-                form.querySelectorAll('.cam-obsbot-only').forEach(function(el) { el.hidden = other; }); form.querySelectorAll('.cam-other-only').forEach(function(el) { el.hidden = !other; });
+                var k = form.kind.value, other = k === 'other';
+                form.querySelectorAll('.cam-obsbot-only').forEach(function(el) { el.hidden = k !== 'obsbot'; }); form.querySelectorAll('.cam-other-only').forEach(function(el) { el.hidden = !other; });
+                if (e && !c && k === 'audio' && !form.name.value) form.name.value = 'Decks';
                 // A phone or own camera is started by hand: by default it streams whenever it's on (sets are still cut by the calendar)
-                if (e && !c) form.followCalendar.checked = !other;
+                if (e && !c) form.followCalendar.checked = k !== 'other';
             };
             form.querySelectorAll('[name=kind]').forEach(function(r) { r.addEventListener('change', syncKind); });
             syncKind();
@@ -1093,7 +1126,7 @@
                         '<button type="button" class="cam-icon-btn" data-copy="' + esc(value) + '" title="Copy"><iconify-icon icon="solar:copy-linear"></iconify-icon></button></div></div>';
                 }
                 // The secure address (port 443) works on every Wi-Fi and mobile network
-                var other = c.kind === 'other', full = d.rtmpsUrl.replace(/\/$/, '') + '/' + d.streamKey;
+                var audio = c.kind === 'audio', other = c.kind === 'other' || audio, full = d.rtmpsUrl.replace(/\/$/, '') + '/' + d.streamKey;
                 // Larix imports a ready-made connection from this link (scan the QR code, or tap it on the phone)
                 var larix = 'larix://set/v1?conn[][url]=' + encodeURIComponent(full) + '&conn[][name]=' + encodeURIComponent('local / assets · ' + c.name) + '&conn[][overwrite]=on';
                 var onPhone = /iPhone|iPad|Android/i.test(navigator.userAgent);
@@ -1110,10 +1143,14 @@
                     row('Server (if RTMPS isn\'t supported)', d.rtmpUrl) +
                     row('Stream key', d.streamKey, true) +
                     (d.srtUrl ? row('SRT (alternative)', d.srtUrl, true) : '') +
-                    (other ? '<div class="cam-guides">' +
+                    (audio ? '<div class="cam-guides">' +
+                        guide('Decks', 'A phone and a USB audio adapter', ['Connect the mixer\'s <b>Rec Out</b> or <b>Booth Out</b> to a USB audio adapter on the phone.', 'In <b>Larix</b>: Settings → Video → turn video <b>off</b> (Audio only), Audio → <b>48 kHz, 320 kbps</b>.', 'Scan the QR code above, then press record before the first set.']) +
+                        guide('Mac', 'The venue Mac with OBS (free)', ['Connect the mixer to the Mac by USB (most Pioneer, Allen &amp; Heath and Rane mixers are a USB sound card) or through an audio interface.', 'In <b>OBS</b>: add an <b>Audio Input Capture</b> with the mixer\'s master, Settings → Audio → 48 kHz, Output → Audio bitrate <b>320</b>.', 'Settings → Stream → Custom: paste the <b>Server</b> and <b>Stream key</b>, then Start streaming.']) +
+                        guide('Box', 'A streaming box (ATEM Mini Pro, YoloBox)', ['Connect the mixer\'s Rec Out to the box\'s audio input.', 'Set its streaming to <b>custom RTMP</b> with the <b>Full address</b>.', 'Start streaming before the first set.']) +
+                      '</div><p class="cam-dialog-note">Each set\'s sound is saved as the session\'s HQ AUDIO: vertical clips, the multi-camera edit and SoundCloud use it.</p>' : other ? '<div class="cam-guides">' +
                         guide('DJI', 'DJI Osmo (Pocket 3, Action)', ['Open the DJI Mimo app with the Osmo connected.', 'Choose <b>Live</b>, then <b>RTMP</b> (custom).', 'Paste the <b>full address</b> above. Pick the best quality your Wi-Fi allows.', 'Start the live stream before the first set.']) +
                         guide('Sony', 'Sony Alpha', ['<b>With a laptop:</b> connect the camera by USB (it works as a webcam) or by HDMI with a capture adapter.', 'Open <b>OBS</b> (free): Settings → Stream → Service <b>Custom</b>. Paste the <b>Server</b> and the <b>Stream key</b>.', 'Add the camera as a video source and press <b>Start streaming</b>.', '<b>Newer models</b> can stream on their own through Sony\'s Creators\' App, if your model has it: use the full address.']) +
-                        guide('Phone', 'A phone', ['Install <b>Larix Broadcaster</b> (free, iPhone and Android).', 'Settings → Connections → New connection: paste the <b>full address</b>.', 'Turn the phone sideways and press the record button to go live.']) +
+                        guide('Phone', 'A phone', ['Install <b>Larix Broadcaster</b> (free, iPhone and Android).', 'Settings → Connections → New connection: paste the <b>full address</b>.', 'For the shortest delay: Settings → Video → <b>Keyframe frequency 1 s</b>.', 'Turn the phone sideways and press the record button to go live.']) +
                         guide('Other', 'Any other camera', ['Look for <b>RTMP</b>, <b>custom stream</b> or <b>live streaming</b> in its settings or app.', 'Paste the <b>Server</b> and <b>Stream key</b>, or the <b>full address</b> if it asks for one address.', 'No RTMP? Stream it through a laptop with OBS, like the Sony Alpha.']) +
                       '</div><p class="cam-dialog-note">Pan, tilt, zoom and AI tracking from Camera Control are for OBSBOT cameras; everything else works the same.</p>' : '') +
                     '<p class="cam-dialog-note"> Keep the stream key private. Anyone with it can send video to this camera slot.</p>';
@@ -1162,6 +1199,12 @@
                 '<form id="stage-form" class="cam-form">' +
                 '<label>Artist on stage<input name="artist" list="stage-artists" maxlength="60" placeholder="DJ TENNIS" autocomplete="off" value="' + esc(c.artist) + '"><datalist id="stage-artists"></datalist>' +
                 (live ? '<small>Streaming now. Saving a new name starts a new set from this moment.</small>' : '<small>Set this before the stream starts.</small>') + '</label>' +
+                // Without a calendar, the session's details are given here so it arrives complete
+                (_calSched ? '<p class="cam-dialog-note" style="margin:0">The calendar gives each set its name, venue and date.</p>' :
+                    '<label>Session name<input name="title" maxlength="80" placeholder="e.g. Boiler Room Puglia" autocomplete="off" value="' + esc(c.stageTitle) + '"></label>' +
+                    '<div class="cam-two"><label>Venue<select name="venue"><option value="">No venue</option>' + (c.stageVenue ? '<option selected>' + esc(c.stageVenue) + '</option>' : '') + '<option value="__new">+ New venue…</option></select></label>' +
+                    '<label>Date<input name="date" type="date" value="' + esc(c.stageDate || new Date(Date.now() - new Date().getTimezoneOffset() * 60e3).toISOString().slice(0, 10)) + '"></label></div>' +
+                    '<label class="stage-newvenue" hidden>New venue<input name="newVenue" maxlength="60" placeholder="e.g. Fabric London" autocomplete="off"></label>') +
                 '<label class="cam-check"><input type="checkbox" name="autoClips"' + (c.autoClips === false ? '' : ' checked') + '><span>Make vertical clips automatically<small>Vertical clips for social media from each set, once the recording is saved.</small></span></label>' +
                 '<p id="stage-error" class="cam-form-error"></p>' +
                 '<div class="cam-form-actions"><button type="button" class="cam-btn ghost" onclick="closeCamDialog()">Cancel</button>' +
@@ -1172,12 +1215,24 @@
                 var dl = document.getElementById('stage-artists');
                 if (dl) dl.innerHTML = list.map(function(n) { return '<option value="' + esc(n) + '">'; }).join('');
             });
+            if (form.venue) {
+                laFetch('/api/brand').then(function(r) { return r.ok ? r.json() : {}; }).then(function(d) {
+                    var names = Object.keys(d.ownerNames || {}).filter(function(k) { return k.indexOf('venue-') === 0; }).map(function(k) { return d.ownerNames[k]; }).filter(Boolean).sort();
+                    var cur = form.venue.value;
+                    form.venue.innerHTML = '<option value="">No venue</option>' + names.concat(c.stageVenue && names.indexOf(c.stageVenue) < 0 ? [c.stageVenue] : []).map(function(n) { return '<option' + (n === cur ? ' selected' : '') + '>' + esc(n) + '</option>'; }).join('') + '<option value="__new">+ New venue…</option>';
+                }).catch(function() {});
+                form.venue.addEventListener('change', function() { var nv = form.querySelector('.stage-newvenue'); nv.hidden = form.venue.value !== '__new'; if (!nv.hidden) form.newVenue.focus(); });
+            }
             form.artist.focus();
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
                 var btn = form.querySelector('[type=submit]');
                 btn.disabled = true; btn.textContent = 'Saving…';
-                camApi({ action: 'onStage', id: c.id, artist: form.artist.value.trim().toUpperCase(), autoClips: form.autoClips.checked })
+                var venue = form.venue ? (form.venue.value === '__new' ? form.newVenue.value.trim() : form.venue.value) : '';
+                // A new venue joins the Brand Kit's venues
+                if (form.venue && form.venue.value === '__new' && venue) laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setOwnerName', owner: 'venue-' + venue.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50), name: venue }) }).catch(function() {});
+                camApi({ action: 'onStage', id: c.id, artist: form.artist.value.trim().toUpperCase(), autoClips: form.autoClips.checked,
+                    title: form.title ? form.title.value.trim() : '', venue: venue, date: form.date ? form.date.value : '' })
                     .then(function() { _camKey = ''; closeCamDialog(); laToast(form.artist.value.trim() ? form.artist.value.trim().toUpperCase() + ' is on stage' : 'Saved'); return loadCameras(); })
                     .catch(function(err) { document.getElementById('stage-error').textContent = err.message; btn.disabled = false; btn.textContent = 'Save'; });
             });

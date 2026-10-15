@@ -153,9 +153,10 @@ export default async function handler(req, res) {
       const ndiName = clean(body.ndiName, 80);
       // An OBSBOT (controllable over the venue network) or any other camera that streams RTMP:
       // a DJI Osmo, a Sony Alpha through a laptop, a phone…
-      const kind    = body.kind === 'other' ? 'other' : 'obsbot';
-      const ip      = kind === 'other' ? '' : clean(body.ip, 70);
-      const model   = kind === 'other' ? (clean(body.model, 40) || 'Own camera') : 'OBSBOT Tail 2';
+      // …or the DJ mixer's sound ("audio"): its recordings become each session's HQ AUDIO
+      const kind    = ['other', 'audio'].includes(body.kind) ? body.kind : 'obsbot';
+      const ip      = kind === 'obsbot' ? clean(body.ip, 70) : '';
+      const model   = kind === 'audio' ? 'Decks audio' : kind === 'other' ? (clean(body.model, 40) || 'Own camera') : 'OBSBOT Tail 2';
       if (!name) return res.status(400).json({ error: 'Give the camera a name' });
       if (!validHost(ip)) return res.status(400).json({ error: 'Camera address should look like 192.168.1.50' });
 
@@ -164,7 +165,7 @@ export default async function handler(req, res) {
         if (body.action === 'update') {
           const cam = cams.find(c => c.id === body.id);
           if (!cam) return res.status(404).json({ error: 'Camera not found' });
-          Object.assign(cam, { name, ndiName: kind === 'other' ? '' : ndiName, ip, kind, model });
+          Object.assign(cam, { name, ndiName: kind === 'obsbot' ? ndiName : '', ip, kind, model });
           if (typeof body.followCalendar === 'boolean') cam.followCalendar = body.followCalendar;
           await redis.set(key(slug), JSON.stringify(cams));
           return res.status(200).json({ camera: cam });
@@ -177,7 +178,7 @@ export default async function handler(req, res) {
           name,
           model,
           kind,
-          ndiName: kind === 'other' ? '' : ndiName,
+          ndiName: kind === 'obsbot' ? ndiName : '',
           ip,
           artist: clean(body.artist, 60),
           autoClips: true,
@@ -216,6 +217,10 @@ export default async function handler(req, res) {
         const before = cam.artist || '';
         if (typeof body.autoClips === 'boolean') cam.autoClips = body.autoClips;
         cam.artist = artist;
+        // Without a calendar: the session's name, venue and date, given to the recording when the stream ends
+        cam.stageTitle = clean(body.title, 80).replace(/[<>]/g, '');
+        cam.stageVenue = clean(body.venue, 60).replace(/[<>]/g, '');
+        cam.stageDate = /^\d{4}-\d{2}-\d{2}$/.test(String(body.date || '')) ? String(body.date) : '';
         await redis.set(key(slug), JSON.stringify(cams));
         if (artist.toUpperCase() !== before.toUpperCase()) {
           const mk = `cam_markers:${cam.streamId}`;
