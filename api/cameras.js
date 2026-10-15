@@ -55,11 +55,14 @@ async function readCameras(redis, slug) {
 
 // Every camera stream records: when the broadcast ends Mux saves it as an asset, which
 // api/_camera-recording.js then names after the artist on stage and sends for vertical clips.
-function newStreamBody(name) {
+// How long Mux waits for a dropped stream before calling it ended: phones, own cameras and the decks are
+// started and stopped by hand, so they end within seconds; a venue OBSBOT rides out short network drops
+const reconnectFor = kind => (kind === 'obsbot' ? 60 : 10);
+function newStreamBody(name, kind = 'obsbot') {
   return JSON.stringify({
     playback_policy: ['public'],
     latency_mode: 'low',
-    reconnect_window: 60,
+    reconnect_window: reconnectFor(kind),
     // Mux now takes one passthrough for the stream and its recordings; recordings keep this label until
     // each set is saved for its DJ (api/_camera-recording.js), so they never show as sessions on their own
     passthrough: 'CAMERA // RECORDING',
@@ -165,13 +168,18 @@ export default async function handler(req, res) {
         if (body.action === 'update') {
           const cam = cams.find(c => c.id === body.id);
           if (!cam) return res.status(404).json({ error: 'Camera not found' });
+          const kindChanged = (cam.kind || 'obsbot') !== kind;
           Object.assign(cam, { name, ndiName: kind === 'obsbot' ? ndiName : '', ip, kind, model });
+          if (cam.streamId && (kindChanged || !cam.reconnectSet)) {
+            await mux(session.muxAuth, `/video/v1/live-streams/${encodeURIComponent(cam.streamId)}`, { method: 'PATCH', body: JSON.stringify({ reconnect_window: reconnectFor(kind) }) }).catch(() => {});
+            cam.reconnectSet = true;
+          }
           if (typeof body.followCalendar === 'boolean') cam.followCalendar = body.followCalendar;
           await redis.set(key(slug), JSON.stringify(cams));
           return res.status(200).json({ camera: cam });
         }
         if (cams.length >= MAX_CAMERAS) return res.status(400).json({ error: `Up to ${MAX_CAMERAS} cameras per venue` });
-        const stream = await mux(session.muxAuth, '/video/v1/live-streams', { method: 'POST', body: newStreamBody(name) });
+        const stream = await mux(session.muxAuth, '/video/v1/live-streams', { method: 'POST', body: newStreamBody(name, kind) });
         const cam = {
           id: 'cam_' + stream.id.slice(0, 12),
           streamId: stream.id,

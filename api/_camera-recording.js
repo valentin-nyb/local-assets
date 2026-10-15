@@ -126,7 +126,8 @@ export async function processCameraRecording(event) {
             input: [{ url: `mux://assets/${assetId}`, start_time: Math.floor(s.start), end_time: Math.ceil(s.end) }],
             playback_policy: ['public'],
             passthrough: tag(s.artist, date, calSets.length ? s : null, camLabel, multi && calSets.length > 0),
-            static_renditions: [{ resolution: 'highest' }],
+            // The decks: a downloadable audio file; cameras: the full-quality MP4
+            static_renditions: [{ resolution: isAudio ? 'audio-only' : 'highest' }],
           }),
         });
         sessions.push({ assetId: clip.id, artist: s.artist });
@@ -135,6 +136,11 @@ export async function processCameraRecording(event) {
     }
     console.log(`[camera-rec] ${slug} ${camName}${calSets.length ? ' (calendar)' : ''}: ${sessions.map(s => s.artist).join(', ')}`);
 
+    // A single decks recording (no split): add its downloadable audio file
+    if (isAudio && !calSets.length && sets.length === 1) {
+      await muxReq(auth, `/video/v1/assets/${assetId}/static-renditions`, { method: 'POST', body: JSON.stringify({ resolution: 'audio-only' }) })
+        .catch(e => console.error('[camera-rec] audio file', assetId, e.message));
+    }
     // Markers up to the end of this recording are used up
     await redis.del(`cam_markers:${streamId}`);
     // "On stage" session details (no calendar): name and venue go on each session; the name and date are used once
