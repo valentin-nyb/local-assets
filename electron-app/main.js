@@ -18,6 +18,34 @@ let pendingLink = null       // a localassets:// link that arrived before the wi
 
 const onSite = url => { try { return new URL(url).origin === SITE } catch { return false } }
 
+// Every window of the app: only local-assets.com inside it; other sites open in the browser.
+// Pages the site opens in a new tab (the video player, files) open as a pop-up window over the app,
+// so the client never leaves it; Back or closing the pop-up returns to where they were.
+function guard(wc) {
+  const keepOnSite = (e, url, isMain = true) => {
+    if (!isMain || onSite(url) || url.startsWith('file:')) return
+    e.preventDefault()
+    if (/^https?:\/\//.test(url)) shell.openExternal(url)
+  }
+  wc.on('will-navigate', (e, url) => keepOnSite(e, url))
+  // Redirects too (e.g. /api/google-auth → Google): Google sign-in never runs inside the app
+  wc.on('will-redirect', (e, url, _inPage, isMain) => keepOnSite(e, url, isMain))
+  wc.setWindowOpenHandler(({ url }) => {
+    if (onSite(url)) {
+      const parent = BrowserWindow.fromWebContents(wc)
+      const [w, h] = parent ? parent.getSize() : [1280, 820]
+      return { action: 'allow', overrideBrowserWindowOptions: {
+        parent, width: Math.round(w * 0.86), height: Math.round(h * 0.86), minWidth: 640, minHeight: 420,
+        backgroundColor: '#070905', title: 'a™', show: true,
+        webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true },
+      } }
+    }
+    if (/^https?:\/\//.test(url)) shell.openExternal(url)
+    return { action: 'deny' }
+  })
+  wc.on('did-create-window', child => guard(child.webContents))
+}
+
 function createWindow() {
   win = new BrowserWindow({
     width: 1440, height: 920, minWidth: 900, minHeight: 600,
@@ -35,18 +63,8 @@ function createWindow() {
   win.once('ready-to-show', () => { win.maximize(); win.show() })
 
   // The window only shows local-assets.com; any other link opens in the browser
-  win.webContents.setWindowOpenHandler(({ url }) => {
-    if (/^https?:\/\//.test(url)) shell.openExternal(url)
-    return { action: 'deny' }
-  })
-  const keepOnSite = (e, url, isMain = true) => {
-    if (!isMain || onSite(url) || url.startsWith('file:')) return
-    e.preventDefault()
-    if (/^https?:\/\//.test(url)) shell.openExternal(url)
-  }
-  win.webContents.on('will-navigate', (e, url) => keepOnSite(e, url))
-  // Redirects too (e.g. /api/google-auth → Google): Google sign-in never runs inside the app
-  win.webContents.on('will-redirect', (e, url, _inPage, isMain) => keepOnSite(e, url, isMain))
+  guard(win.webContents)
+
   win.webContents.on('did-fail-load', (_e, code, desc, url, isMain) => {
     if (isMain && code !== -3) win.loadFile(path.join(__dirname, 'offline.html'), { query: { retry: url || HOME } })
   })

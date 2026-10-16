@@ -37,7 +37,7 @@
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
-    <script src="nav-component.js?v=18"></script>
+    <script src="nav-component.js?v=19"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
         .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
@@ -156,7 +156,27 @@
         .rec-bar.hidden { display:none; }
         .rec-bar.idle { border-color:var(--la-line); background:var(--la-surface); }
         .rec-bar.idle .rec-dot { background:var(--la-dim); box-shadow:none; animation:none; }
-        .rec-bar.idle .rec-stop, .rec-bar:not(.idle) .rec-start { display:none; }
+        .rec-bar.idle .rec-stop, .rec-bar:not(.idle) .rec-start, .rec-bar:not(.cal) .rec-see { display:none; }
+        /* See session: the set the calendar is recording now */
+        .ls-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:14px; }
+        .ls-artist { font:700 26px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; text-transform:uppercase; letter-spacing:-.01em; color:var(--la-text); }
+        .ls-sub { margin-top:8px; font-size:13px; color:var(--la-sub); }
+        .ls-sub .v { color:#F97316; }
+        .ls-rec { flex:none; display:inline-flex; align-items:center; gap:6px; height:24px; padding:0 10px; border-radius:999px; border:1px solid color-mix(in srgb, #ef4444 50%, transparent); color:#ef4444; font:600 10px/1 'JetBrains Mono', monospace; letter-spacing:.14em; }
+        .ls-rec::before { content:""; width:6px; height:6px; border-radius:50%; background:#ef4444; animation:camBlink 1.2s ease-in-out infinite; }
+        .ls-bar { height:4px; border-radius:4px; background:var(--la-line); overflow:hidden; margin:4px 0 6px; }
+        .ls-bar i { display:block; height:100%; background:#ef4444; }
+        .ls-times { display:flex; justify-content:space-between; font:500 11px/1 'JetBrains Mono', monospace; letter-spacing:.08em; color:var(--la-dim); }
+        .ls-sec { margin-top:20px; }
+        .ls-h { font:700 10px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.14em; text-transform:uppercase; color:var(--la-dim); margin-bottom:10px; }
+        .ls-row { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 0; border-top:1px solid var(--la-line-soft); font-size:13px; color:var(--la-text); }
+        .ls-row:first-of-type { border-top:0; }
+        .ls-row small { color:var(--la-dim); font-size:12px; }
+        .ls-ok { color:var(--la-ok); } .ls-warn { color:var(--la-warn); }
+        .ls-files { display:grid; grid-template-columns:repeat(auto-fill, minmax(84px, 1fr)); gap:8px; }
+        .ls-file { aspect-ratio:1; border-radius:10px; border:1px solid var(--la-line); background:#141416 center / 70% no-repeat; }
+        .ls-file.photo { background-size:cover; }
+        .ls-empty { font-size:13px; color:var(--la-sub); }
         @media (max-width:640px) { .rec-bar { flex-wrap:wrap; } .rec-bar .cam-btn { width:100%; justify-content:center; } }
         .rec-dot { flex:none; width:10px; height:10px; border-radius:50%; background:#ef4444; box-shadow:0 0 12px #ef4444; animation:camBlink 1.2s ease-in-out infinite; }
         .rec-text { flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
@@ -508,14 +528,11 @@
                         <h2 class="cam-h">CAMERAS</h2>
                     </div>
                     <div class="cam-actions" id="cam-head-actions" style="display:none">
-                        <button type="button" class="cam-btn ghost" onclick="openOrderCameras()">
+                        <button type="button" class="cam-btn ghost" id="cam-head-order" onclick="openOrderCameras()">
                             <span>Order cameras</span>
                         </button>
                         <button type="button" class="cam-btn ghost" onclick="openCamForm()">
-                            <span>Add camera</span>
-                        </button>
-                        <button type="button" class="cam-btn primary" onclick="openSession()">
-                            <span>Create a session</span>
+                            <span>Connect camera</span>
                         </button>
                     </div>
                 </div>
@@ -525,6 +542,7 @@
                 <div id="rec-bar" class="rec-bar idle hidden" role="status">
                     <span class="rec-dot"></span>
                     <div class="rec-text"><b id="rec-title">Record a session</b><span id="rec-meta">Any time, without the calendar</span></div>
+                    <button type="button" class="cam-btn ghost rec-see" onclick="openLiveSession()">See session</button>
                     <button type="button" class="cam-btn primary rec-start" onclick="openSession()">Create a session</button>
                     <button type="button" class="cam-btn primary rec-stop" id="rec-stop">Stop and save</button>
                 </div>
@@ -541,7 +559,6 @@
                 <section id="mac-section" class="deck-section hidden">
                     <div class="deck-head">
                         <div class="min-w-0"><div class="deck-title"><h3 class="deck-h">THIS MAC</h3><span class="deck-state" id="mac-state"></span></div><p class="deck-sub">Link a camera or the mixer plugged into this Mac to a slot. a™ streams it by itself during every set, or whenever you create a session. No OBS needed.</p></div>
-                        <button type="button" class="cam-btn primary" onclick="openSession()">Create a session</button>
                     </div>
                     <p class="mac-found" id="mac-found"></p>
                     <div id="mac-rows" class="mac-rows"></div>
@@ -552,8 +569,7 @@
                         <h2 class="ci-title">Record every set. Get the clips automatically.</h2>
                         <p class="ci-text">Each OBSBOT Tail 2 streams over the venue's Wi-Fi or network straight to your Cloud Storage. When the set ends, the recording is in Distribution History as a session for the artist on stage, with vertical clips ready for social media.</p>
                         <div class="ci-actions">
-                            <button type="button" class="cam-btn primary" onclick="openCamForm()">Connect a camera</button>
-                            <button type="button" class="cam-btn ghost" onclick="openOrderCameras()">Order cameras · buy or hire</button>
+                            <button type="button" class="cam-btn primary" onclick="openOrderCameras()">Order cameras · buy or hire</button>
                         </div>
                         <p class="ci-note">Setup and integration included with every camera ordered from us.</p>
                     </div>
@@ -582,7 +598,7 @@
 
                     <ol class="ci-steps">
                         <li><b>1</b><div><strong>Plug in</strong><span>Power the camera and connect it to the venue's Wi-Fi or an Ethernet cable.</span></div></li>
-                        <li><b>2</b><div><strong>Connect it here</strong><span>Press <em>Connect a camera</em> and give it a name. You get a stream address and key.</span></div></li>
+                        <li><b>2</b><div><strong>Connect it here</strong><span>Press <em>Connect camera</em> next to Cameras and give it a name. You get a stream address and key.</span></div></li>
                         <li><b>3</b><div><strong>Connect your calendar</strong><span>Paste your calendar's iCal link below. Each event is a set: the title is the DJ, the start and end are the exact times.</span></div></li>
                         <li><b>4</b><div><strong>Leave it streaming</strong><span>The calendar starts and stops the recording: from 2 minutes before each set to 2 minutes after it. Each set is saved for its DJ in Distribution History.</span></div></li>
                         <li><b>5</b><div><strong>Add your Brand Kit</strong><span>Upload logos and fonts for your venue and each artist in <a href="/brand" class="ci-link">Brand Kit</a>.</span></div></li>
@@ -806,7 +822,9 @@
                 renderCalendar(data.calendar || { connected: false });
                 err.classList.add('hidden');
                 empty.classList.toggle('hidden', _cams.length > 0);
-                document.getElementById('cam-head-actions').style.display = _cams.length ? '' : 'none';
+                // Add camera always shows; Order cameras is in the How it works box while there are no cameras
+                document.getElementById('cam-head-actions').style.display = '';
+                document.getElementById('cam-head-order').style.display = _cams.length ? '' : 'none';
                 if (!_cams.length && !fillIntroExample.done) { fillIntroExample.done = true; fillIntroExample(); }
                 var camsOnly = _cams.filter(function(c) { return c.kind !== 'audio'; });
                 var live = camsOnly.filter(function(c) { return c.status === 'active'; }).length;
@@ -1141,6 +1159,64 @@
                 } catch (x) { err.textContent = x.message || String(x); btn.disabled = false; btn.textContent = 'Start recording'; }
             });
         }
+        // See session: what the calendar is recording now — the set, the slots and the artist's brand assets
+        async function openLiveSession() {
+            var ev = _calNow || {}, sched = _calSched || {};
+            var artist = ev.artist || sched.currentArtist || 'This set';
+            var start = ev.start || null, end = ev.end || null, closes = sched.closesAt || end;
+            var slots = _cams.filter(function(c) { return !c.external && c.followCalendar !== false; });
+            var pct = start && end ? Math.max(0, Math.min(100, (Date.now() - start) / (end - start) * 100)) : 0;
+            var left = closes ? Math.max(0, Math.round((closes - Date.now()) / 60000)) : null;
+            var linked = macLinked();
+            document.querySelector('#cam-dialog .cam-dialog-panel').classList.add('wide');
+            openCamDialog('',
+                '<div class="ls-head"><div class="min-w-0"><p class="ls-artist">' + esc(artist) + '</p>' +
+                '<p class="ls-sub">' + (ev.venue ? '<span class="v">' + esc(ev.venue) + '</span> · ' : '') + (start ? fmtDay(start) : '') + '</p></div><span class="ls-rec">REC</span></div>' +
+                (start && end ? '<div class="ls-bar"><i style="width:' + pct.toFixed(1) + '%"></i></div><div class="ls-times"><span>' + fmtTime(start) + '</span><span>' + (left != null ? 'Stops in ' + (left >= 60 ? Math.floor(left / 60) + ' h ' : '') + (left % 60) + ' min' : '') + '</span><span>' + fmtTime(end) + '</span></div>' : '') +
+                '<div class="ls-sec"><p class="ls-h">Recording</p>' + (slots.length ? slots.map(function(c) {
+                    var live = c.status === 'active', m = linked[c.id];
+                    return '<div class="ls-row"><span>' + esc(c.name) + ' <small>' + (c.kind === 'audio' ? 'Decks · HQ audio' : 'Camera') + (m ? ' · this Mac' : '') + '</small></span>' +
+                        '<span class="' + (live ? 'ls-ok' : 'ls-warn') + '">' + (live ? (c.recording === false ? 'Live, not recording' : 'Live · recording') : 'No signal') + '</span></div>';
+                }).join('') : '<p class="ls-empty">No camera follows the calendar.</p>') + '</div>' +
+                '<div class="ls-sec"><p class="ls-h">After the set</p>' +
+                '<div class="ls-row"><span>Saved to Distribution History</span><small>' + esc(artist) + (start ? ' · ' + fmtDay(start) : '') + '</small></div>' +
+                '<div class="ls-row"><span>Vertical clips</span><small>' + (slots.some(function(c) { return c.kind !== 'audio' && c.autoClips !== false; }) ? 'Made automatically' : 'Off') + '</small></div>' +
+                '<div class="ls-row"><span>Watermark</span><small id="ls-wm">…</small></div></div>' +
+                '<div class="ls-sec"><p class="ls-h">Brand assets</p><div id="ls-brand"><p class="ls-empty">Loading…</p></div></div>' +
+                '<div class="cam-form-actions" style="margin-top:20px"><a class="cam-btn ghost" href="/brand">Open Brand Kit</a><button type="button" class="cam-btn primary" onclick="closeCamDialog()">Close</button></div>');
+            try {
+                var r = await laFetch('/api/brand'); var d = r.ok ? await r.json() : {};
+                var slug = function(n) { return String(n).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60); };
+                var names = d.ownerNames || {}, files = d.files || [];
+                var find = function(name, prefix) {
+                    if (!name) return null;
+                    var key = prefix + slug(name);
+                    var hit = Object.keys(names).filter(function(k) { return k.indexOf(prefix) === 0 && String(names[k]).toUpperCase() === String(name).toUpperCase(); })[0];
+                    return hit || key;
+                };
+                var org = (d.orgName || '').toUpperCase() === String(artist).toUpperCase() ? 'venue' : null;
+                var owners = [org || find(artist, 'artist-'), ev.venue ? find(ev.venue, 'venue-') : null].filter(Boolean);
+                var html = owners.map(function(o) {
+                    var mine = files.filter(function(f) { return f.owner === o; });
+                    var photo = (d.ownerPhotos || {})[o];
+                    var logos = mine.filter(function(f) { return f.category === 'logos' && /\.(png|jpe?g|webp|gif|svg)$/i.test(f.name || f.url); });
+                    var fonts = mine.filter(function(f) { return f.category === 'fonts'; }).length;
+                    var other = mine.length - logos.length - fonts - (photo ? 1 : 0);
+                    var title = o === 'venue' ? (d.orgName || artist) : (names[o] || (o.indexOf('venue-') === 0 ? ev.venue : artist));
+                    return '<div class="ls-row" style="border-top:0;padding-top:0"><span>' + esc(String(title).toUpperCase()) + ' <small>' + (o.indexOf('venue-') === 0 ? 'Venue' : 'Artist') + '</small></span><small>' +
+                        [logos.length ? logos.length + ' logo' + (logos.length > 1 ? 's' : '') : '', fonts ? fonts + ' font' + (fonts > 1 ? 's' : '') : '', other > 0 ? other + ' other' : ''].filter(Boolean).join(' · ') + '</small></div>' +
+                        (photo || logos.length ? '<div class="ls-files" style="margin-bottom:14px">' + (photo ? '<span class="ls-file photo" style="background-image:url(' + esc(photo) + ')"></span>' : '') +
+                            logos.slice(0, 7).map(function(f) { return '<span class="ls-file" style="background-image:url(' + esc(f.url) + ')"></span>'; }).join('') + '</div>'
+                            : '<p class="ls-empty" style="margin-bottom:14px">No brand files yet.</p>');
+                }).join('');
+                document.getElementById('ls-brand').innerHTML = html || '<p class="ls-empty">No brand kit for ' + esc(artist) + ' yet.</p>';
+                var wm = d.watermark || {};
+                var el = document.getElementById('ls-wm');
+                if (el) el.textContent = wm.enabled === false ? 'Off' : 'On' + (wm.text && wm.text.source === 'artist' ? ' · logo and ' + artist.toLowerCase() : wm.text && wm.text.value ? ' · logo and "' + wm.text.value + '"' : ' · logo');
+            } catch (_) {
+                var b = document.getElementById('ls-brand'); if (b) b.innerHTML = '<p class="ls-empty">Could not load the brand kit.</p>';
+            }
+        }
         function macLinked() { return (_mac && _mac.links) || {}; }
         var _recTimer = null;
         function paintRecBar() {
@@ -1150,6 +1226,7 @@
             clearInterval(_recTimer);
             bar.classList.toggle('hidden', !slots.length);
             bar.classList.toggle('idle', !rec.length);
+            bar.classList.toggle('cal', !rec.length && !!(_calSched && _calSched.open));
             if (!rec.length) {
                 document.getElementById('rec-title').textContent = 'Record a session';
                 document.getElementById('rec-meta').textContent = _calSched && _calSched.open ? 'The calendar is recording ' + (_calSched.currentArtist || 'this set') + ' now' : 'Any time, without the calendar · ' + slots.map(function(c) { return c.name; }).join(' · ');

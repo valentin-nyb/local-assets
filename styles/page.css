@@ -1,0 +1,36 @@
+/* Standalone pages (video player, terms, privacy): the site's header, type and colours.
+   Uses the theme tokens from theme.css, so light and dark follow the dashboard's setting. */
+.pg { margin: 0; background: var(--la-bg); color: var(--la-text); font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 400; -webkit-font-smoothing: antialiased; }
+.pg-header { position: sticky; top: 0; z-index: 40; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: max(env(safe-area-inset-top), 14px) max(env(safe-area-inset-right), 24px) 14px max(env(safe-area-inset-left), 24px);
+  background: color-mix(in srgb, var(--la-bg) 90%, transparent); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-bottom: 1px solid var(--la-line); }
+.pg-left, .pg-right { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.pg-right { flex-shrink: 0; gap: 10px; }
+/* The wordmark: green in dark, near-black in light (the logo's shape, recoloured) */
+.pg-wordmark { display: block; flex: none; width: 128px; aspect-ratio: 1328 / 165; background: #39FF14;
+  -webkit-mask: url(/logos/Green@2x.png) left center / contain no-repeat; mask: url(/logos/Green@2x.png) left center / contain no-repeat; }
+html:not(.dark) .pg-wordmark { background: var(--la-text); }
+.pg-sep { flex: none; width: 1px; height: 18px; background: var(--la-line); }
+.pg-title { min-width: 0; font-size: 14px; font-weight: 400; color: var(--la-sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pg-header .cam-btn { display: inline-flex; align-items: center; justify-content: center; line-height: 1; min-height: 36px; padding: 0 16px; font-size: 13px; font-weight: 500; gap: 8px; text-decoration: none; }
+.pg-header .cam-btn svg { width: 14px; height: 14px; flex: none; }
+.pg-header .cam-btn.hidden { display: none; }
+@media (max-width: 640px) {
+  .pg-header { gap: 10px; padding-left: max(env(safe-area-inset-left), 16px); padding-right: max(env(safe-area-inset-right), 16px); }
+  .pg-wordmark, .pg-sep.wm { display: none; }
+  .pg-header .cam-btn { padding: 0 13px; }
+}
+
+/* Legal pages */
+.lg-main { max-width: 760px; margin: 0 auto; padding: 72px 24px 112px; }
+.lg-eyebrow { font: 500 11px/1 'JetBrains Mono', ui-monospace, monospace; letter-spacing: .28em; text-transform: uppercase; color: var(--la-accent); margin: 0 0 18px; }
+.lg-main h1 { font-size: clamp(34px, 5vw, 48px); font-weight: 500; letter-spacing: -.02em; line-height: 1.05; color: var(--la-text); margin: 0 0 14px; }
+.lg-date { font-size: 13px; color: var(--la-dim); margin: 0 0 48px; }
+.lg-main h2 { font-size: 19px; font-weight: 500; letter-spacing: -.005em; color: var(--la-text); margin: 44px 0 12px; }
+.lg-main p, .lg-main li { font-size: 15px; font-weight: 300; line-height: 1.75; color: var(--la-sub); }
+.lg-main p { margin: 0 0 14px; }
+.lg-main ul { padding-left: 20px; margin: 0 0 14px; list-style: disc; }
+.lg-main li { margin-bottom: 6px; }
+.lg-main strong { font-weight: 500; color: var(--la-text); }
+.lg-main a { color: var(--la-accent); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.lg-main hr { border: 0; border-top: 1px solid var(--la-line); margin: 48px 0; }

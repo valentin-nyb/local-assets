@@ -1,4 +1,14 @@
 // Dropdown menus in the site's style (la-select.js), on every page that has the nav
+// Faster page changes: hovering a sidebar link starts loading that page (and its data) in the background,
+// so it's usually ready when clicked (Chrome, Edge, Brave and the a™ app; other browsers just load normally)
+(function () {
+    if (!(window.HTMLScriptElement && HTMLScriptElement.supports && HTMLScriptElement.supports('speculationrules'))) return;
+    if (document.querySelector('script[type=speculationrules]')) return;
+    var sr = document.createElement('script');
+    sr.type = 'speculationrules';
+    sr.textContent = JSON.stringify({ prerender: [{ where: { href_matches: ['/dashboard', '/camera', '/brand', '/assets', '/billing'] }, eagerness: 'moderate' }] });
+    document.head.appendChild(sr);
+})();
 (function () { if (document.querySelector('script[data-la-select]')) return; var sc = document.createElement('script'); sc.src = '/la-select.js?v=5'; sc.defer = true; sc.setAttribute('data-la-select', ''); document.head.appendChild(sc); })();
 document.addEventListener("DOMContentLoaded", () => {
     // Inject theme switcher CSS if not already present

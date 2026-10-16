@@ -2,19 +2,30 @@ import { getWebSessionAuth, getVenuesConfig, getMuxAuthForVenue, isAdminVenue, p
 import { listThumbnailAssets } from './_thumbnails.js';
 import crypto from 'crypto';
 
+// Every asset in a Mux environment. The first page comes alone; if it's full, the next pages are fetched
+// four at a time instead of one after another.
+async function muxAllAssets(auth) {
+  const page = async n => {
+    const r = await fetch(`https://api.mux.com/video/v1/assets?limit=100&page=${n}`, { headers: { Authorization: auth }, signal: AbortSignal.timeout(20000) });
+    if (!r.ok) { const e = new Error('Mux ' + r.status); e.status = r.status; e.body = await r.text().catch(() => ''); throw e; }
+    return (await r.json()).data || [];
+  };
+  const all = await page(1);
+  if (all.length < 100) return all;
+  for (let next = 2; next <= 40; next += 4) {
+    const batch = await Promise.all([0, 1, 2, 3].map(i => page(next + i)));
+    for (const b of batch) all.push(...b);
+    if (batch.some(b => b.length < 100)) break;
+  }
+  return all;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', 'https://local-assets.com');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-User-Email');
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
   if (req.method === 'OPTIONS') return res.status(200).end();
-
-  const rawEmail = (req.headers['x-user-email'] || '').trim();
-  const authHdr  = (req.headers['authorization'] || '').trim();
-  console.error('[list-assets] incoming headers:', JSON.stringify({
-    'x-user-email': rawEmail || '(not set)',
-    'authorization': authHdr ? authHdr.slice(0, 20) + '…' : '(not set)',
-  }));
 
   const session = getWebSessionAuth(req);
 
@@ -28,22 +39,17 @@ export default async function handler(req, res) {
 
   // Admin account: every client's Distribution History together, each asset marked with its account
   if (session?.email && platformAdmins().includes(session.email) && isAdminVenue(session.venue) && !req.headers['x-la-venue']) {
+    // Every client at once, each with its videos and thumbnails fetched together
     const out = [];
-    for (const [slug, cfg] of Object.entries(getVenuesConfig())) {
-      if (isAdminVenue({ slug, ...cfg })) continue;
-      const auth = getMuxAuthForVenue({ slug, ...cfg });
-      if (!auth) continue;
+    const clients = Object.entries(getVenuesConfig()).filter(([slug, cfg]) => !isAdminVenue({ slug, ...cfg }) && getMuxAuthForVenue({ slug, ...cfg }));
+    const lists = await Promise.all(clients.map(async ([slug, cfg]) => {
+      const tag = a => ({ ...a, _venue: slug, _venueName: cfg.name || slug });
       try {
-        for (let page = 1; page <= 20; page++) {
-          const r = await fetch(`https://api.mux.com/video/v1/assets?limit=100&page=${page}`, { headers: { Authorization: auth }, signal: AbortSignal.timeout(20000) });
-          if (!r.ok) throw new Error('Mux ' + r.status);
-          const { data } = await r.json();
-          for (const a of data || []) out.push({ ...a, _venue: slug, _venueName: cfg.name || slug });
-          if (!data || data.length < 100) break;
-        }
-        for (const t of await listThumbnailAssets(slug).catch(() => [])) out.push({ ...t, _venue: slug, _venueName: cfg.name || slug });
-      } catch (e) { console.error('[list-assets] admin view', slug, e.message); }
-    }
+        const [videos, thumbs] = await Promise.all([muxAllAssets(getMuxAuthForVenue({ slug, ...cfg })), listThumbnailAssets(slug).catch(() => [])]);
+        return videos.concat(thumbs).map(tag);
+      } catch (e) { console.error('[list-assets] admin view', slug, e.message); return []; }
+    }));
+    for (const l of lists) out.push(...l);
     // Isolation check: two clients whose keys reach the same Mux environment would see the same videos.
     // Logs a short fingerprint of each key (never the key) and any clients that share videos.
     const seen = {}, fp = {};
@@ -64,34 +70,17 @@ export default async function handler(req, res) {
   }
 
   try {
-    const allAssets = [];
-    let page = 1;
-    while (true) {
-      const url = `https://api.mux.com/video/v1/assets?limit=100&page=${page}`;
-      console.error('[list-assets] fetching:', url);
-      const r = await fetch(url, {
-        headers: { Authorization: session.muxAuth },
-        signal: AbortSignal.timeout(20000),
-      });
-      if (!r.ok) {
-        const txt = await r.text();
-        console.error('[list-assets] Mux error', r.status, txt);
-        return res.status(r.status).json({ error: txt });
-      }
-      const { data } = await r.json();
-      console.error('[list-assets] page', page, '— items:', data?.length ?? 0);
-      if (!data || data.length === 0) break;
-      allAssets.push(...data);
-      if (data.length < 100) break;
-      page++;
-    }
-    // Uploaded marketing thumbnails are plain images in Vercel Blob, not Mux assets
-    if (session.venueSlug) {
-      try {
-        allAssets.push(...await listThumbnailAssets(session.venueSlug));
-      } catch (e) {
-        console.error('[list-assets] thumbnail list failed:', e.message);
-      }
+    // Videos and uploaded thumbnails (plain images in Vercel Blob, not Mux assets) at the same time
+    let allAssets;
+    try {
+      const [videos, thumbs] = await Promise.all([
+        muxAllAssets(session.muxAuth),
+        session.venueSlug ? listThumbnailAssets(session.venueSlug).catch(e => { console.error('[list-assets] thumbnail list failed:', e.message); return []; }) : [],
+      ]);
+      allAssets = videos.concat(thumbs);
+    } catch (e) {
+      if (e.status) { console.error('[list-assets] Mux error', e.status, e.body); return res.status(e.status).json({ error: e.body || e.message }); }
+      throw e;
     }
     console.error('[list-assets] total assets returned:', allAssets.length);
     return res.status(200).json(allAssets);

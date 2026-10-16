@@ -236,6 +236,24 @@ export default async function handler(req, res) {
         }
     }
 
+    // ── BROKEN CAMERA RECORDINGS ARE NEVER KEPT ──
+    // A camera or decks stream that connects and drops (a device cutting out, a reconnect) leaves a recording
+    // Mux can't process, or one only seconds long. Those hold nothing usable: they're deleted straight away,
+    // so they never fill Cloud Storage or System Health.
+    if (data?.live_stream_id && (type === 'video.asset.errored' || (type === 'video.asset.live_stream_completed' && Number(data.duration) > 0 && Number(data.duration) < 15))) {
+        const assetId = data.id;
+        try {
+            const found = await venueForAsset(assetId);
+            const a = found?.asset;
+            // Checked again with Mux before deleting: still a live recording, and still broken or seconds long
+            if (a && a.live_stream_id && (a.status === 'errored' || (a.status === 'ready' && Number(a.duration) < 15))) {
+                const r = await fetch(`https://api.mux.com/video/v1/assets/${encodeURIComponent(assetId)}`, { method: 'DELETE', headers: { Authorization: found.auth }, signal: AbortSignal.timeout(10000) });
+                console.log('[Webhook] removed broken camera recording', found.slug, assetId, a.status, Math.round(Number(a.duration) || 0) + 's', r.status);
+                return res.status(200).send('Broken recording removed');
+            }
+        } catch (e) { console.error('[Webhook] broken recording cleanup', assetId, e.message); }
+    }
+
     // ── CAMERA BROADCAST ENDED → sessions per artist + vertical clips ──
     if (type === 'video.asset.live_stream_completed') {
         try { await processCameraRecording(data); }

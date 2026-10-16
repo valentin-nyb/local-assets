@@ -3,38 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Terms of Service — Local Assets</title>
+    <title>local / assets™ — Terms of service</title>
     <link rel="icon" type="image/x-icon" href="favicon/favicon.ico">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>tailwind.config = { darkMode: 'class' }</script>
-    <style>
-        body { background:#050505; color:#e4e4e7; font-family:'JetBrains Mono',ui-monospace,monospace; }
-        h2 { font-size:11px; font-family:'JetBrains Mono',monospace; text-transform:uppercase; letter-spacing:.2em; color:#39FF14; margin-bottom:12px; margin-top:40px; }
-        p, li { font-size:13px; line-height:1.8; color:#a1a1aa; }
-        li { margin-bottom:6px; }
-        a { color:#39FF14; text-decoration:none; }
-        a:hover { text-decoration:underline; }
-        hr { border-color:#27272a; margin:40px 0; }
-    </style>
+    <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'&&window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');})()</script>
+    <link rel="stylesheet" href="styles/theme.css?v=9">
+    <link rel="stylesheet" href="styles/page.css?v=1">
 </head>
-<body class="min-h-screen">
+<body class="pg">
 
     <!-- Header -->
-    <header style="border-bottom:1px solid #27272a;background:#0a0a0a;">
-        <div class="max-w-3xl mx-auto px-6 py-5 flex items-center justify-between">
-            <a href="/" style="font-size:13px;font-weight:700;color:#ffffff;text-decoration:none;letter-spacing:.05em;">local / assets™</a>
-            <a href="/" style="font-size:9px;font-family:'JetBrains Mono',monospace;color:#71717a;text-transform:uppercase;letter-spacing:.2em;text-decoration:none;">← Back</a>
+    <header class="pg-header">
+        <div class="pg-left">
+            <a href="/" class="pg-wordmark" aria-label="local / assets"></a>
+        </div>
+        <div class="pg-right">
+            <a href="/" class="cam-btn ghost" onclick="if (document.referrer && new URL(document.referrer).origin === location.origin && history.length > 1) { history.back(); return false; }">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg><span>Back</span>
+            </a>
         </div>
     </header>
 
     <!-- Content -->
-    <main class="max-w-3xl mx-auto px-6 py-16">
+    <main class="lg-main">
 
-        <div style="margin-bottom:48px;">
-            <p style="font-size:9px;color:#39FF14;text-transform:uppercase;letter-spacing:.25em;margin-bottom:12px;">Legal</p>
-            <h1 style="font-size:28px;font-weight:800;color:#ffffff;letter-spacing:-.03em;margin-bottom:16px;">Terms of Service</h1>
-            <p style="font-size:11px;color:#52525b;">Effective date: October 8, 2026</p>
-        </div>
+        <p class="lg-eyebrow">Legal</p>
+        <h1>Terms of service</h1>
+        <p class="lg-date">Effective date: October 8, 2026</p>
 
         <p>By accessing or using the Local Assets platform at local-assets.com (the "Service"), you agree to be bound by these Terms of Service. If you do not agree, do not use the Service.</p>
 
@@ -47,7 +41,7 @@
 
         <h2>3. Acceptable Use</h2>
         <p>You agree not to:</p>
-        <ul style="padding-left:20px;list-style:disc;">
+        <ul>
             <li>Upload content that infringes any third-party intellectual property rights</li>
             <li>Upload unlawful, abusive, defamatory, or obscene content</li>
             <li>Attempt to gain unauthorised access to other accounts or systems</li>
