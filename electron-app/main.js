@@ -1,136 +1,175 @@
-const { app, BrowserWindow, session, shell } = require('electron')
+// a™ — the local / assets app for Mac.
+// A window on https://local-assets.com, so every deploy reaches the app at once. Google doesn't allow
+// sign-in inside apps, so sign-in happens in the browser: the app opens it with the hash of a one-time
+// secret, the browser hands back a code through localassets://signed-in, and the app swaps the code and
+// its secret for the session (api/google-auth POST). Only the app that started the sign-in can finish it.
+const { app, BrowserWindow, shell, ipcMain, Menu, net, nativeTheme } = require('electron')
+const crypto = require('crypto')
 const path = require('path')
+const thisMac = require('./this-mac')
 
-const DASHBOARD_URL  = 'https://local-assets.com/dashboard'
-const SITE_ORIGIN    = 'https://local-assets.com'
-const SESSION_COOKIE = 'la_session'
+const SITE = 'https://local-assets.com'
+const HOME = SITE + '/dashboard'
+const SCHEME = 'localassets'
 
-let mainWindow = null
+let win = null
+let verifier = null          // the one-time secret of the sign-in in progress
+let pendingLink = null       // a localassets:// link that arrived before the window was ready
 
-// ── Deep-link handler ─────────────────────────────────────────────────────────
-async function handleDeepLink(url) {
-  try {
-    const parsed = new URL(url)
+const onSite = url => { try { return new URL(url).origin === SITE } catch { return false } }
 
-    // localassets://verified?session=TOKEN  — Google OAuth success
-    if (parsed.hostname === 'verified') {
-      const sessionToken = parsed.searchParams.get('session')
-      if (!sessionToken) return
-      await setSessionCookie(sessionToken)
-      if (mainWindow) {
-        mainWindow.show()
-        mainWindow.loadURL(DASHBOARD_URL)
-      }
-      return
-    }
-
-    // localassets://auth-error?reason=...  — Google OAuth failure
-    if (parsed.hostname === 'auth-error') {
-      const reason = parsed.searchParams.get('reason')
-      const msg = reason === 'not-a-client'
-        ? 'This Google account is not registered. Contact local / assets for access.'
-        : 'Sign-in was cancelled.'
-      if (mainWindow) {
-        mainWindow.show()
-        mainWindow.webContents.executeJavaScript(
-          `showError(${JSON.stringify(msg)})`
-        )
-      }
-    }
-  } catch (err) {
-    console.error('Deep-link error:', err)
-  }
-}
-
-// ── Session helpers ───────────────────────────────────────────────────────────
-function setSessionCookie(sessionToken) {
-  const expirationDate = Math.floor(Date.now() / 1000) + 7 * 24 * 3600
-  return session.defaultSession.cookies.set({
-    url:            SITE_ORIGIN,
-    name:           SESSION_COOKIE,
-    value:          sessionToken,
-    httpOnly:       true,
-    secure:         true,
-    sameSite:       'lax',
-    expirationDate,
-  })
-}
-
-async function getSessionCookie() {
-  const cookies = await session.defaultSession.cookies.get({
-    url:  SITE_ORIGIN,
-    name: SESSION_COOKIE,
-  })
-  return cookies.length > 0 ? cookies[0].value : null
-}
-
-// ── Window ────────────────────────────────────────────────────────────────────
-async function createWindow() {
-  mainWindow = new BrowserWindow({
-    fullscreen: true,
-    frame: false,
-    titleBarStyle: 'hidden',
-    backgroundColor: '#0d0d0d',
-    icon: path.join(__dirname, 'build', 'icons', 'icon.icns'),
+function createWindow() {
+  win = new BrowserWindow({
+    width: 1440, height: 920, minWidth: 900, minHeight: 600,
+    title: 'a™',
+    backgroundColor: '#070905',
+    show: false,
     webPreferences: {
-      nodeIntegration: false,
+      preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
-      webSecurity: true,
+      nodeIntegration: false,
+      sandbox: true,
     },
   })
+  win.once('ready-to-show', () => win.show())
 
-  // Re-enforce fullscreen if the user escapes via Escape key
-  mainWindow.on('leave-full-screen', () => mainWindow.setFullScreen(true))
-
-  // Suppress Electron user-agent fingerprint
-  session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
-    details.requestHeaders['User-Agent'] =
-      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
-    callback({ requestHeaders: details.requestHeaders })
-  })
-
-  // Open all window.open() / target=_blank calls in the system browser
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith('https://')) shell.openExternal(url)
+  // The window only shows local-assets.com; any other link opens in the browser
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (/^https?:\/\//.test(url)) shell.openExternal(url)
     return { action: 'deny' }
   })
+  const keepOnSite = (e, url, isMain = true) => {
+    if (!isMain || onSite(url) || url.startsWith('file:')) return
+    e.preventDefault()
+    if (/^https?:\/\//.test(url)) shell.openExternal(url)
+  }
+  win.webContents.on('will-navigate', (e, url) => keepOnSite(e, url))
+  // Redirects too (e.g. /api/google-auth → Google): Google sign-in never runs inside the app
+  win.webContents.on('will-redirect', (e, url, _inPage, isMain) => keepOnSite(e, url, isMain))
+  win.webContents.on('did-fail-load', (_e, code, desc, url, isMain) => {
+    if (isMain && code !== -3) win.loadFile(path.join(__dirname, 'offline.html'), { query: { retry: url || HOME } })
+  })
 
-  const cookie = await getSessionCookie()
-  if (cookie) {
-    mainWindow.loadURL(DASHBOARD_URL)
-  } else {
-    mainWindow.loadFile(path.join(__dirname, 'login.html'))
+  win.on('closed', () => { win = null })
+  win.loadURL(HOME)
+}
+
+// Sign-in: open Google in the browser with the hash of a fresh one-time secret
+ipcMain.handle('la:sign-in', e => {
+  if (!fromSite(e)) return
+  verifier = crypto.randomBytes(48).toString('base64url')
+  const challenge = crypto.createHash('sha256').update(verifier).digest('base64url')
+  shell.openExternal(`${SITE}/api/google-auth?mode=web&app=${challenge}`)
+})
+
+// This Mac (cameras and the mixer plugged into the computer): only pages of local-assets.com may use it
+const fromSite = e => { try { return new URL(e.senderFrame.url).origin === SITE } catch { return false } }
+const str = (v, max) => String(v == null ? '' : v).replace(/[\u0000-\u001f]/g, '').slice(0, max)
+ipcMain.handle('la:mac-state', (e, venue) => fromSite(e) ? thisMac.state(str(venue, 80)) : null)
+ipcMain.handle('la:mac-link', (e, l) => {
+  if (!fromSite(e) || !l) throw new Error('Not allowed')
+  const key = str(l.key, 120)
+  if (!/^[A-Za-z0-9-]{10,120}$/.test(key)) throw new Error('This slot has no stream key yet')
+  const kind = l.kind === 'audio' ? 'audio' : 'camera'
+  if (kind === 'camera' ? !l.video : !l.audio) throw new Error('Choose a device')
+  thisMac.link({ venue: str(l.venue, 80), slotId: str(l.slotId, 80), slotName: str(l.slotName, 60), kind, video: str(l.video, 120), audio: str(l.audio, 120), key })
+  return thisMac.state(str(l.venue, 80))
+})
+ipcMain.handle('la:mac-unlink', (e, venue, slotId) => {
+  if (!fromSite(e)) throw new Error('Not allowed')
+  thisMac.unlink(str(venue, 80), str(slotId, 80))
+  return thisMac.state(str(venue, 80))
+})
+
+async function handleLink(url) {
+  let u
+  try { u = new URL(url) } catch { return }
+  if (u.protocol !== SCHEME + ':' || u.hostname !== 'signed-in') return
+  if (!win) createWindow()
+  win.show(); win.focus()
+  const code = u.searchParams.get('code') || ''
+  if (!verifier) return showError('Press Continue with Google in this app to sign in.')
+  const secret = verifier
+  verifier = null
+  try {
+    const res = await net.fetch(SITE + '/api/google-auth', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, verifier: secret }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok || !data.session) return showError(data.error || 'Sign-in failed. Try again.')
+    const s = data.session
+    // Save the session as the website does, then open the dashboard
+    if (!onSite(win.webContents.getURL())) await win.loadURL(SITE + '/login.html')
+    await win.webContents.executeJavaScript(`(function (s) {
+      localStorage.setItem('la_admin', JSON.stringify(s));
+      if (s.venue && s.venue !== 'Admin') localStorage.setItem('la_venue_name', String(s.venue).toUpperCase()); else localStorage.removeItem('la_venue_name');
+      localStorage.removeItem('la_revenue_cache_v2');
+      location.replace('/dashboard');
+    })(${JSON.stringify(s)})`)
+  } catch {
+    showError('Could not reach local / assets. Check your connection and try again.')
   }
 }
 
-// ── App lifecycle ──────────────────────────────────────────────────────────────
-app.setAsDefaultProtocolClient('localassets')
+function showError(msg) {
+  if (!win) return
+  const run = () => win.webContents.executeJavaScript(`(function (m) {
+    var el = document.getElementById('status');
+    if (el) { el.textContent = m; el.className = 'err'; } else alert(m);
+  })(${JSON.stringify(msg)})`).catch(() => {})
+  if (onSite(win.webContents.getURL())) run()
+  else win.loadURL(SITE + '/login.html').then(run)
+}
 
-// macOS: deep link that arrives before the app is ready
-app.on('open-url', (event, url) => {
-  event.preventDefault()
-  app._pendingDeepLink = url
-})
+// Menu: the standard Mac menus, plus Reload and the website
+function buildMenu() {
+  Menu.setApplicationMenu(Menu.buildFromTemplate([
+    { role: 'appMenu' },
+    { role: 'editMenu' },
+    { label: 'View', submenu: [
+      { label: 'Dashboard', accelerator: 'Cmd+1', click: () => win && win.loadURL(HOME) },
+      { label: 'Camera Control', accelerator: 'Cmd+2', click: () => win && win.loadURL(SITE + '/camera') },
+      { label: 'Brand Kit', accelerator: 'Cmd+3', click: () => win && win.loadURL(SITE + '/brand') },
+      { type: 'separator' },
+      { label: 'Back', accelerator: 'Cmd+[', click: () => win && win.webContents.navigationHistory.canGoBack() && win.webContents.navigationHistory.goBack() },
+      { label: 'Forward', accelerator: 'Cmd+]', click: () => win && win.webContents.navigationHistory.canGoForward() && win.webContents.navigationHistory.goForward() },
+      { role: 'reload' },
+      { type: 'separator' },
+      { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' },
+      { type: 'separator' },
+      { role: 'togglefullscreen' },
+    ] },
+    { role: 'windowMenu' },
+    { role: 'help', submenu: [
+      { label: 'Open local-assets.com', click: () => shell.openExternal(SITE) },
+      { label: 'Email support', click: () => shell.openExternal('mailto:info@local-assets.com') },
+    ] },
+  ]))
+}
 
-app.whenReady().then(async () => {
-  await createWindow()
-
-  if (app._pendingDeepLink) {
-    handleDeepLink(app._pendingDeepLink)
-    app._pendingDeepLink = null
-  }
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+// One copy of the app at a time; a second launch (or a localassets:// link) goes to the first
+if (!app.requestSingleInstanceLock()) {
+  app.quit()
+} else {
+  app.setAsDefaultProtocolClient(SCHEME)
+  app.on('open-url', (e, url) => {
+    e.preventDefault()
+    if (app.isReady()) handleLink(url); else pendingLink = url
   })
-
-  // macOS: deep link while the app is already open
-  app.on('open-url', (event, url) => {
-    event.preventDefault()
-    handleDeepLink(url)
+  app.on('second-instance', (_e, argv) => {
+    const link = argv.find(a => a.startsWith(SCHEME + '://'))
+    if (link) handleLink(link)
+    else if (win) { if (win.isMinimized()) win.restore(); win.focus() }
   })
-})
-
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit()
-})
+  app.whenReady().then(() => {
+    nativeTheme.themeSource = 'dark'      // a dark title bar, like the site
+    buildMenu()
+    thisMac.init(() => { if (win && !win.isDestroyed()) win.webContents.send('la:mac-changed') })
+    createWindow()
+    if (pendingLink) { handleLink(pendingLink); pendingLink = null }
+  })
+  app.on('activate', () => { if (!win) createWindow(); else win.show() })
+  app.on('before-quit', () => thisMac.stopAll())
+  app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit() })
+}

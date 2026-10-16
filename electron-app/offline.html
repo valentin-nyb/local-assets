@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>a™</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+<style>
+  html, body { height: 100%; margin: 0; background: #070905; color: #fafafa; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-app-region: drag; }
+  body { display: flex; align-items: center; justify-content: center; text-align: center; }
+  h1 { font-size: 26px; font-weight: 500; margin: 0 0 10px; }
+  p { color: #a1a1aa; font-size: 14px; margin: 0 0 28px; }
+  button { -webkit-app-region: no-drag; padding: 13px 30px; border: 0; border-radius: 999px; background: #39FF14; color: #000; font: 600 14px 'Helvetica Neue', Helvetica, Arial, sans-serif; cursor: pointer; }
+</style></head>
+<body><div>
+  <h1>You're offline</h1>
+  <p>a™ needs the internet to reach local / assets.</p>
+  <button id="retry" type="button">Try again</button>
+</div>
+<script>
+  var target = new URLSearchParams(location.search).get('retry') || 'https://local-assets.com/dashboard';
+  if (target.indexOf('https://local-assets.com/') !== 0) target = 'https://local-assets.com/dashboard';
+  document.getElementById('retry').onclick = function () { location.href = target; };
+  window.addEventListener('online', function () { location.href = target; });
+</script>
+</body></html>

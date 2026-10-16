@@ -82,6 +82,12 @@
         #next-event-card.kpi-link { cursor:pointer; transition:border-color .2s; }
         @media (hover:hover) { #next-event-card.kpi-link:hover { border-color:var(--la-accent); } }
         #next-event-card.kpi-link .kpi-label::after { content:'↗'; margin-left:6px; opacity:.6; }
+        /* Phones: an Open map button like Revenue's Manage (it opens the card's Maps link); computers keep the ↗ */
+        #next-event-map { display:none; }
+        @media (max-width:767px) {
+            #next-event-card.kpi-link #next-event-map { display:inline-block; }
+            #next-event-card.kpi-link .kpi-label::after { content:none; }
+        }
         .mm-share { height:30px; padding:0 14px; border-radius:999px; border:0; background:var(--la-accent); color:var(--la-accent-ink, #000); font:600 12px Inter,ui-sans-serif,system-ui,sans-serif; cursor:pointer; margin-right:4px; }
         .mm-share:disabled { opacity:.6; cursor:default; }
         .mm-share.pulse { box-shadow:0 0 0 0 var(--la-accent); animation:mmPulse 1.2s ease-out 3; }
@@ -217,7 +223,7 @@
                     </div>
                 </div>
                 <div id="next-event-card" class="kpi">
-                    <div class="kpi-head"><span class="kpi-label">Next event</span></div>
+                    <div class="kpi-head"><span class="kpi-label">Next event</span><button id="next-event-map" type="button" class="kpi-action" tabindex="-1">Open map</button></div>
                     <div id="next-event-title" class="kpi-value kpi-value-text">—</div>
                     <div class="kpi-sub"><span id="next-event-time"></span></div>
                 </div>
@@ -235,7 +241,7 @@
                     <!-- Pipeline progress banner (hidden until a job is active) -->
                     <div id="pipeline-banner" class="hidden border-b border-border bg-black/30"></div>
                     <div id="recent-sets-list" class="flex-1"></div>
-                    <div id="dist-footer" class="hidden border-t border-border font-mono uppercase text-zinc-500" style="margin-top:auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;font-size:9px;letter-spacing:.2em;"></div>
+                    <div id="dist-footer" class="hidden border-t border-border font-mono uppercase" style="color:var(--la-text);margin-top:auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;font-size:9px;letter-spacing:.2em;"></div>
                 </div>
 
                 <div class="space-y-6">
@@ -686,8 +692,8 @@
             var stats = [plural(artistCount, 'ARTIST'), plural(sessionCount, 'SESSION'), plural(assetCount, 'ASSET')];
             var time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             el.innerHTML = '<span style="display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;">' +
-                stats.map(function(t) { return '<span style="white-space:nowrap">' + t + '</span>'; }).join('<span class="text-zinc-700">·</span>') +
-                '</span><span class="dist-updated text-zinc-600" style="white-space:nowrap">UPDATED ' + time + '</span>';
+                stats.map(function(t) { return '<span style="white-space:nowrap">' + t + '</span>'; }).join('<span>·</span>') +
+                '</span><span class="dist-updated" style="white-space:nowrap">UPDATED ' + time + '</span>';
             el.classList.remove('hidden');
             el.style.display = 'flex';
         }
@@ -997,7 +1003,7 @@
             const olderCount = muxAssets.length - recentCount;
             const pctEl = document.getElementById('growth-pct');
             if (pctEl) pctEl.innerHTML = recentCount > 0
-                ? '<span class="kpi-up">+' + recentCount + '</span> in the last 30 days'
+                ? '<span class="kpi-up">+' + recentCount + ' in the last 30 days</span>'
                 : 'None in the last 30 days';
 
             // Calculate real cloud storage from static rendition file sizes

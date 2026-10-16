@@ -140,7 +140,11 @@
         /* ── Brand kit ── */
         .bk-owners { display:flex; flex-direction:column; gap:16px; }
         .bk-owner { background:var(--la-surface); border:1px solid var(--la-line); border-radius:16px; overflow:hidden; }
-        .bk-owner.bk-sub { margin-left:28px; border-left:2px solid var(--la-accent); }
+        .bk-owner.bk-sub { margin-left:28px; border-left:2px solid var(--bk-label); }
+        /* Each kind of brand kit in its own colour: artists green, record labels orange, venues blue */
+        :root { --bk-artist:#39FF14; --bk-label:#F97316; --bk-venue:#38BDF8; }
+        html:not(.dark) { --bk-artist:#16a34a; --bk-label:#ea580c; --bk-venue:#0284c7; }
+        .bk-kind-artist { color:var(--bk-artist); } .bk-kind-label { color:var(--bk-label); } .bk-kind-venue { color:var(--bk-venue); }
         @media (max-width:640px) { .bk-owner.bk-sub { margin-left:12px; } }
         .bk-owner-head { display:flex; align-items:center; gap:14px; padding:16px 18px; }
         .bk-avatar { width:44px; height:44px; border-radius:12px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; color:var(--la-sub); background:var(--la-chip); border:1px solid var(--la-line); overflow:hidden; }
@@ -233,6 +237,13 @@
         .bk-wm.hidden { display:none; }
         .bk-wm-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
         .bk-wm-title { font-size:15px; font-weight:600; color:var(--la-text); }
+        /* Fold: the title row opens and closes the watermark settings (remembered on this device) */
+        .bk-wm-fold { display:flex; align-items:center; gap:10px; background:none; border:0; padding:0; margin:0; color:inherit; font:inherit; text-align:left; cursor:pointer; }
+        .bk-wm-fold svg { width:16px; height:16px; color:var(--la-sub); transition:transform .2s; flex:none; }
+        .bk-wm.folded .bk-wm-fold svg { transform:rotate(-90deg); }
+        .bk-wm.folded { grid-template-columns:minmax(0,1fr); gap:0; }
+        .bk-wm.folded .bk-wm-sub, .bk-wm.folded .bk-wm-rows, .bk-wm.folded .bk-wm-status, .bk-wm.folded .bk-wm-preview-wrap { display:none; }
+        .bk-wm.folded .bk-wm-foot { margin-top:16px; }
         .bk-wm-sub { font-size:13px; line-height:1.55; color:var(--la-sub); margin-top:4px; max-width:520px; }
         .bk-wm-rows { display:grid; grid-template-columns:110px minmax(0,1fr); gap:14px 16px; align-items:center; margin-top:20px; }
         .bk-wm-rows.off { opacity:.45; pointer-events:none; }
@@ -530,8 +541,10 @@
             if (!_wm.text || !wmTextValue()) return null;
             return _files.filter(function(f) { return f.url === _wm.text.font; })[0] || null;
         }
+        function unfoldWm() { var b = document.getElementById('bk-wm'), f = document.getElementById('bk-wm-fold'); if (b) b.classList.remove('folded'); if (f) f.setAttribute('aria-expanded', 'true'); try { localStorage.setItem('la_bk_wm_folded', ''); } catch (_) {} }
         function renderWatermark() {
             var box = document.getElementById('bk-wm');
+            if (box && !box.dataset.foldInit) { box.dataset.foldInit = '1'; try { if (localStorage.getItem('la_bk_wm_folded')) box.classList.add('folded'); } catch (_) {} }
             if (!_wm) { box.classList.add('hidden'); return; }
             box.classList.remove('hidden');
             var logos = wmLogos();
@@ -552,7 +565,7 @@
             var noLogo = !logos.length;
             box.innerHTML =
                 '<div>' +
-                    '<div class="bk-wm-head"><div><p class="bk-wm-title">Watermark</p>' +
+                    '<div class="bk-wm-head"><div><button type="button" class="bk-wm-fold" id="bk-wm-fold" aria-expanded="' + !box.classList.contains('folded') + '" aria-controls="bk-wm"><p class="bk-wm-title">Watermark</p><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>' +
                     '<p class="bk-wm-sub">Adds your logo, and text in one of your fonts, to every vertical clip and thumbnail, drawn sharp at each clip\'s full resolution. Applies to clips made from now on.</p></div>' +
                     '</div>' +
                     '<div class="bk-wm-rows' + (_wm.enabled ? '' : ' off') + '">' +
@@ -586,6 +599,11 @@
             img.addEventListener('error', function() { if (img.crossOrigin) { img.removeAttribute('crossorigin'); var u = img.src; img.removeAttribute('src'); img.src = u; } });
             img.addEventListener('load', function() { fitPreviewBg(img); positionPreview(); });
             document.getElementById('bk-wm-export').addEventListener('click', exportWatermarkPng);
+            document.getElementById('bk-wm-fold').addEventListener('click', function() {
+                var folded = box.classList.toggle('folded');
+                this.setAttribute('aria-expanded', String(!folded));
+                try { localStorage.setItem('la_bk_wm_folded', folded ? '1' : ''); } catch (_) {}
+            });
             positionPreview();
             var addArtist = document.getElementById('bk-wm-text-artist');
             if (addArtist) addArtist.addEventListener('click', function() {
@@ -1002,7 +1020,7 @@
                 }
                 return heading + '<section class="bk-owner' + (o.parent ? ' bk-sub' : '') + '">' +
                     '<div class="bk-owner-head"><div class="bk-avatar">' + avatar + '</div>' +
-                    '<div class="min-w-0"><p class="bk-owner-name">' + esc(o.name) + '</p><p class="bk-owner-meta">' + esc(o.kind) + ' · ' + files.length + ' file' + (files.length !== 1 ? 's' : '') +
+                    '<div class="min-w-0"><p class="bk-owner-name">' + esc(o.name) + '</p><p class="bk-owner-meta"><span class="bk-kind-' + (/label/i.test(o.kind) ? 'label' : /artist/i.test(o.kind) ? 'artist' : 'venue') + '">' + esc(o.kind) + '</span> · ' + files.length + ' file' + (files.length !== 1 ? 's' : '') +
                         ' · <button type="button" class="bk-org-edit" ' + (o.org ? 'data-org' : 'data-edit-owner="' + esc(o.key) + '"') + '>Edit</button></p></div>' +
                     '<div class="bk-owner-actions">' +
                         (files.length ? '<button type="button" class="cam-btn ghost" data-zip="' + esc(o.key) + '"><span>Download all</span></button>' : '') +
@@ -1088,7 +1106,7 @@
             closeCamDialog();
             renderWatermark();
             saveWatermark();
-            document.getElementById('bk-wm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            unfoldWm(); document.getElementById('bk-wm').scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
         // A file opened from its card: preview, download, and its local-assets.com share link
@@ -1177,7 +1195,7 @@
                 closeCamDialog();
                 renderWatermark();
                 saveWatermark();
-                document.getElementById('bk-wm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                unfoldWm(); document.getElementById('bk-wm').scrollIntoView({ behavior: 'smooth', block: 'start' });
             });
             loadBrandFont(url).then(function(family) {
                 out.style.fontFamily = family;

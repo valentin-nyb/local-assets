@@ -2,56 +2,82 @@
   "name": "a-tm",
   "productName": "a™",
   "version": "1.0.0",
-  "description": "local / assets dashboard",
+  "description": "local / assets for Mac",
   "main": "main.js",
   "author": {
     "name": "local / assets"
   },
+  "homepage": "https://local-assets.com",
+  "private": true,
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder --mac dmg"
+    "dist": "electron-builder --mac dmg --arm64 --x64"
   },
   "devDependencies": {
-    "electron": "^30.0.0",
-    "electron-builder": "^24.13.3"
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
   },
   "build": {
-    "appId": "com.localassets.dashboard",
+    "appId": "com.localassets.app",
     "productName": "a™",
     "copyright": "Copyright © 2026 local / assets",
     "directories": {
-      "output": "dist"
+      "output": "dist",
+      "buildResources": "icons"
     },
     "files": [
       "main.js",
-      "login.html",
-      "build/**/*"
+      "preload.js",
+      "this-mac.js",
+      "offline.html"
+    ],
+    "protocols": [
+      {
+        "name": "local / assets sign-in",
+        "schemes": [
+          "localassets"
+        ]
+      }
     ],
     "mac": {
       "category": "public.app-category.productivity",
-      "icon": "build/icons/icon.icns",
+      "icon": "icons/icon.icns",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
-      "target": [
-        {
-          "target": "dmg",
-          "arch": ["universal"]
-        }
-      ]
+      "darkModeSupport": true,
+      "artifactName": "local-assets-${arch}.${ext}",
+      "extendInfo": {
+        "NSCameraUsageDescription": "a™ streams the cameras you link in Camera Control to your local / assets recordings.",
+        "NSMicrophoneUsageDescription": "a™ streams the mixer or microphone you link in Camera Control as your sets' HQ audio.",
+        "NSCameraUseContinuityCameraDeviceType": true,
+        "LSMultipleInstancesProhibited": true
+      }
     },
     "dmg": {
       "title": "a™",
-      "icon": "build/icons/dmg-icon.icns",
-      "background": null,
-      "backgroundColor": "#000000",
+      "contents": [
+        {
+          "x": 150,
+          "y": 190,
+          "type": "file"
+        },
+        {
+          "x": 390,
+          "y": 190,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ],
       "window": {
         "width": 540,
         "height": 380
-      },
-      "contents": [
-        { "x": 150, "y": 185, "type": "file" },
-        { "x": 390, "y": 185, "type": "link", "path": "/Applications" }
-      ]
-    }
+      }
+    },
+    "extraResources": [
+      {
+        "from": "vendor/${arch}/ffmpeg",
+        "to": "ffmpeg"
+      }
+    ]
   }
 }

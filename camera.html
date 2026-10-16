@@ -151,6 +151,22 @@
         .cam-kind input:checked + span { border-color:var(--la-text); background:color-mix(in srgb, var(--la-text) 4%, transparent); }
         .cam-form [hidden] { display:none !important; }
 .deck-section { margin-top:28px !important; padding-top:24px; border-top:1px solid var(--la-line); }
+        /* This Mac (only in the a™ app): cameras and the mixer plugged into this computer, linked to slots */
+        .mac-found { margin:-4px 0 14px; font-size:13px; line-height:1.5; color:var(--la-sub); }
+        .mac-rows { display:grid; gap:10px; }
+        .mac-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.2fr) minmax(0,1.2fr) minmax(150px,auto); gap:10px 14px; align-items:center; padding:14px 16px; border:1px solid var(--la-line); border-radius:12px; background:var(--la-surface); }
+        .mac-row.deck { grid-template-columns:minmax(0,1fr) minmax(0,2.4fr) minmax(150px,auto); }
+        .mac-name { min-width:0; font-size:14px; font-weight:600; color:var(--la-text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .mac-name small { display:block; margin-top:3px; font-size:12px; font-weight:400; color:var(--la-dim); }
+        .mac-row label { display:flex; flex-direction:column; gap:5px; min-width:0; font:700 10px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.08em; text-transform:uppercase; color:var(--la-dim); }
+        .mac-row select { height:36px; width:100%; padding:0 30px 0 10px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); font:500 13px 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:0; text-transform:none; cursor:pointer; }
+        .mac-chip { justify-self:end; display:inline-flex; align-items:center; gap:6px; min-height:24px; padding:3px 10px; border-radius:999px; border:1px solid var(--la-line); font:500 11px/1.3 'Helvetica Neue', Helvetica, Arial, sans-serif; color:var(--la-dim); text-align:left; }
+        .mac-chip::before { content:""; flex:none; width:6px; height:6px; border-radius:50%; background:currentColor; }
+        .mac-chip.on { color:var(--la-ok); border-color:color-mix(in srgb, var(--la-ok) 45%, transparent); }
+        .mac-chip.on::before { animation:camBlink 1.4s ease-in-out infinite; }
+        .mac-chip.warn { color:var(--la-warn); border-color:color-mix(in srgb, var(--la-warn) 45%, transparent); }
+        .mac-chip.off::before { display:none; }
+        @media (max-width:900px) { .mac-row, .mac-row.deck { grid-template-columns:minmax(0,1fr); } .mac-chip { justify-self:start; } }
         .deck-head { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:16px; }
         .deck-h { margin:0; font:700 22px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif !important; text-transform:none !important; color:var(--la-text); }
         .deck-sub { margin:6px 0 0; font-size:14px; color:var(--la-sub); }
@@ -371,6 +387,7 @@
         .cam-relay-dot { width:6px; height:6px; border-radius:50%; background:var(--la-dim); }
         .cam-relay[data-on="1"] { color:var(--la-ok); } .cam-relay[data-on="1"] .cam-relay-dot { background:var(--la-ok); }
         .cam-relay .cam-link { height:24px; font:inherit; letter-spacing:inherit; text-transform:inherit; color:var(--la-text); }
+        .cam-relay .cam-link[hidden] { display:none; }
         .rl-text { font-size:13px; line-height:1.6; color:var(--la-sub); margin:0 0 12px; }
         .rl-state { font:700 11px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.06em; text-transform:uppercase; color:var(--la-dim); margin:0 0 14px; }
         .rl-state.on { color:var(--la-ok); }
@@ -490,6 +507,14 @@
                         <button type="button" class="cam-btn ghost" id="deck-add" onclick="openCamForm(null, 'audio')">Add decks audio</button>
                     </div>
                     <div id="deck-grid" class="cam-grid"></div>
+                </section>
+                <!-- This Mac: only in the a™ app for Mac (camera.html ↔ electron-app/this-mac.js) -->
+                <section id="mac-section" class="deck-section hidden">
+                    <div class="deck-head">
+                        <div class="min-w-0"><div class="deck-title"><h3 class="deck-h">THIS MAC</h3><span class="deck-state" id="mac-state"></span></div><p class="deck-sub">Link a camera or the mixer plugged into this Mac to a slot. a™ streams it by itself during every set. No OBS needed.</p></div>
+                    </div>
+                    <p class="mac-found" id="mac-found"></p>
+                    <div id="mac-rows" class="mac-rows"></div>
                 </section>
                 <div id="cam-empty" class="hidden cam-intro">
                     <div class="ci-copy">
@@ -746,6 +771,7 @@
                 if (data.admin) { renderAdminCameras(data.venues || []); return; }
                 _relay = data.relay || null; paintRelay();
                 _cams = data.cameras || [];
+                setTimeout(renderMac);
                 _calSched = data.calendar && data.calendar.connected && !data.calendar.error ? data.calendar.schedule || null : null;
                 renderCalendar(data.calendar || { connected: false });
                 err.classList.add('hidden');
@@ -806,6 +832,7 @@
             var eb = document.querySelector('.cam-eyebrow'); if (eb) eb.textContent = v.name;
             _relay = v.relay || null; paintRelay();
             _cams = v.cameras;
+            setTimeout(renderMac);
             var live = _cams.filter(function(c) { return c.status === 'active'; }).length;
             camStatus(v.error ? 'Unavailable' : _cams.length ? live + ' of ' + _cams.length + ' live' : 'No cameras', live ? 'var(--la-ok)' : v.error ? 'var(--la-bad)' : 'var(--la-dim)');
             var key = v.slug + JSON.stringify([v.error || ''].concat(_cams.map(function(c) { return [c.id, c.status, c.name, c.ndiName, c.ip, c.artist, c.autoClips, c.recording]; })));
@@ -1028,6 +1055,78 @@
             return card;
         }
 
+        // ── This Mac (a™ app only): devices plugged into this computer, each streamed to a slot ──
+        var MAC_STATE = {
+            sending: ['Sending', 'on'], waiting: ['Waiting for the next set', ''], starting: ['Starting…', ''],
+            missing: ['Plug in ', 'warn'], blocked: ['Allow access in System Settings', 'warn'], error: ['', 'warn'], linking: ['Linking…', '']
+        };
+        function macVenue() {
+            if (document.getElementById('cam-acct')) return _adminVenueSel || '';
+            try { return JSON.parse(localStorage.getItem('la_admin') || '{}').venueSlug || ''; } catch (_) { return ''; }
+        }
+        function macChip(l) {
+            if (!l) return '<span class="mac-chip off">Not linked</span>';
+            var m = MAC_STATE[l.state] || MAC_STATE.starting, t = m[0];
+            if (l.state === 'missing') t += l.detail;
+            else if (l.state === 'blocked') t = 'Allow ' + (l.detail === 'camera' ? 'Camera' : 'Microphone') + ' for a™ in System Settings → Privacy & Security';
+            else if (l.state === 'error' || (l.state === 'starting' && l.detail)) t = l.detail || 'Something went wrong';
+            return '<span class="mac-chip ' + m[1] + '">' + esc(t) + '</span>';
+        }
+        function macOptions(names, current, none) {
+            var list = names.slice();
+            if (current && list.indexOf(current) < 0) list.push(current);
+            return '<option value="">' + esc(none) + '</option>' + list.map(function(n) {
+                return '<option value="' + esc(n) + '"' + (n === current ? ' selected' : '') + '>' + esc(n) + (names.indexOf(n) < 0 ? ' (not plugged in)' : '') + '</option>';
+            }).join('');
+        }
+        var _macBusy = {};
+        async function renderMac() {
+            if (!(window.laApp && window.laApp.mac)) return;
+            var sec = document.getElementById('mac-section');
+            var venue = macVenue();
+            var slots = _cams.filter(function(c) { return !c.external; });
+            if (!venue || !slots.length) { sec.classList.add('hidden'); return; }
+            var st;
+            try { st = await window.laApp.mac.state(venue); } catch (_) { return; }
+            if (!st) return;
+            // Links to slots that were removed stop streaming
+            Object.keys(st.links).forEach(function(id) { if (!slots.some(function(c) { return c.id === id; })) window.laApp.mac.unlink(venue, id); });
+            var a = document.activeElement;
+            if (a && a.tagName === 'SELECT' && sec.contains(a)) return;   // not while a list is open
+            sec.classList.remove('hidden');
+            var d = st.devices, all = d.video.concat(d.audio);
+            document.getElementById('mac-found').textContent = all.length ? 'Found on this Mac: ' + all.join(' · ') : 'Nothing plugged in yet. Connect a camera by USB, or the mixer\'s USB cable.';
+            var sending = Object.keys(st.links).filter(function(id) { return st.links[id].state === 'sending'; }).length;
+            var ms = document.getElementById('mac-state');
+            ms.textContent = sending ? sending + ' sending' : ''; ms.className = 'deck-state' + (sending ? ' on' : '');
+            document.getElementById('mac-rows').innerHTML = slots.map(function(c) {
+                var l = _macBusy[c.id] ? { state: 'linking' } : st.links[c.id], deck = c.kind === 'audio';
+                var cur = st.links[c.id] || {};
+                return '<div class="mac-row' + (deck ? ' deck' : '') + '" data-slot="' + esc(c.id) + '" data-kind="' + (deck ? 'audio' : 'camera') + '" data-name="' + esc(c.name) + '">' +
+                    '<div class="mac-name">' + esc(c.name) + '<small>' + (deck ? 'Decks audio' : 'Camera') + '</small></div>' +
+                    (deck
+                        ? '<label>Mixer or audio input<select data-mac="audio">' + macOptions(d.audio, cur.audio, 'Not from this Mac') + '</select></label>'
+                        : '<label>Camera<select data-mac="video">' + macOptions(d.video, cur.video, 'Not from this Mac') + '</select></label>' +
+                          '<label>Sound<select data-mac="audio">' + macOptions(d.audio, cur.audio, 'No sound') + '</select></label>') +
+                    macChip(l) + '</div>';
+            }).join('');
+        }
+        document.getElementById('mac-rows').addEventListener('change', async function(e) {
+            var row = e.target.closest('.mac-row');
+            if (!row) return;
+            var venue = macVenue(), id = row.dataset.slot, kind = row.dataset.kind;
+            var video = (row.querySelector('[data-mac=video]') || {}).value || '', audio = (row.querySelector('[data-mac=audio]') || {}).value || '';
+            try {
+                if (kind === 'audio' ? !audio : !video) { await window.laApp.mac.unlink(venue, id); return renderMac(); }
+                _macBusy[id] = true; renderMac();
+                var conn = await camApi({ action: 'connection', id: id });
+                await window.laApp.mac.link({ venue: venue, slotId: id, slotName: row.dataset.name, kind: kind, video: video, audio: audio, key: conn.streamKey });
+            } catch (err) {
+                camStatus('Could not link: ' + (err.message || err), 'var(--la-bad)');
+            } finally { delete _macBusy[id]; renderMac(); }
+        });
+        if (window.laApp && window.laApp.mac) window.laApp.mac.onChange(function() { renderMac(); });
+
         // ── Remote control (pan, tilt, zoom, presets, AI tracking) through the venue relay ──
         var _relay = null;
         function paintRelay() {
@@ -1036,7 +1135,9 @@
             box.classList.toggle('hidden', !_cams.length);
             box.dataset.on = _relay && _relay.online ? '1' : '';
             document.getElementById('cam-relay-text').textContent = _relay && _relay.online ? 'Remote control on · venue relay connected' : _relay && _relay.set ? 'Remote control off · venue relay not connected' : 'Remote control not set up';
-            box.querySelector('button').textContent = _relay && _relay.online ? 'Relay' : 'Set up';
+            var btn = box.querySelector('button');
+            btn.textContent = _relay && _relay.online ? 'Relay' : 'Set up';
+            btn.hidden = !document.getElementById('cam-acct');   // only local / assets (admin) sets up the venue relay
         }
         function adminVenueArg() { return document.getElementById('cam-acct') ? { venue: _adminVenueSel } : {}; }
         function openRelaySetup() {

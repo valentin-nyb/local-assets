@@ -6,7 +6,7 @@ import { signWebToken } from './_venues.js';
 export default async function handler(req, res) {
   await freshVenues();
   const oauthCookie = parseCookie(req.headers.cookie || '').la_google_state || '';
-  const [expectedState, intent = 'admin', devPort = ''] = oauthCookie.split('.');
+  const [expectedState, intent = 'admin', devPort = '', appChallenge = ''] = oauthCookie.split('.');
   const clearState = 'la_google_state=; Path=/api/google-callback; HttpOnly; Secure; SameSite=Lax; Max-Age=0';
   try {
     const { code, state } = req.query;
@@ -116,6 +116,22 @@ export default async function handler(req, res) {
     res.setHeader('Set-Cookie', clearState);
     // Local development: the session goes to the dev server on this computer only (in the URL fragment,
     // which is never sent to a server)
+    // The Mac app: park the session for two minutes under a one-time code and hand the code to the app.
+    // Only the app that started the sign-in holds the secret that collects it.
+    if (/^[A-Za-z0-9_-]{43}$/.test(appChallenge)) {
+      const code = crypto.randomBytes(32).toString('base64url');
+      const redis = createClient({ url: process.env.REDIS_URL });
+      await redis.connect();
+      try { await redis.set('app_signin:' + code, JSON.stringify({ challenge: appChallenge, session: sessionData }), { EX: 120 }); }
+      finally { await redis.quit().catch(() => {}); }
+      const link = 'localassets://signed-in?code=' + code;
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      return res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Signed in</title>
+<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#070905;color:#fafafa;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;text-align:center}
+h1{font-size:28px;font-weight:500;margin:0 0 10px}p{color:#a1a1aa;font-size:14px;margin:0 0 28px}a{display:inline-block;padding:14px 30px;border-radius:999px;background:#39FF14;color:#000;font-weight:600;font-size:14px;text-decoration:none}</style></head>
+<body><div><h1>You're signed in</h1><p>Return to the a&trade; app. You can close this tab.</p><a href="${link}">Open a&trade;</a></div>
+<script>location.href=${JSON.stringify(link)};</script></body></html>`);
+    }
     if (/^\d{4,5}$/.test(devPort)) {
       return res.redirect(`http://localhost:${devPort}/__dev/session#` + Buffer.from(sessionData).toString('base64url'));
     }

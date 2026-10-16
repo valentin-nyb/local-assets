@@ -307,6 +307,8 @@ export default async function handler(req, res) {
 
     if (body.action === 'relayKey') {
       // A new key for the venue relay (the old one stops working). Shown once.
+      // Only local / assets sets up a venue relay (from the admin account, acting for the client)
+      if (!platformAdmins().includes(session.email)) return res.status(403).json({ error: 'The remote control relay is set up by local / assets' });
       const secret = crypto.randomBytes(24).toString('base64url');
       await withRedis(r => r.set(tokenKey(slug), relayKeyHash(secret)));
       return res.status(200).json({ key: `${slug}.${secret}` });

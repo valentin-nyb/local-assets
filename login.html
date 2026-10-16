@@ -181,6 +181,12 @@
         document.getElementById('google-btn').addEventListener('click', function() {
             var next = new URLSearchParams(location.search).get('next') || '/dashboard.html';
             sessionStorage.setItem('la_pending_next', next);
+            // In the Mac app (a™), Google sign-in opens in the browser and the app picks the session up
+            if (window.laApp && window.laApp.signIn) {
+                setStatus('Continue in your browser…', '');
+                window.laApp.signIn();
+                return;
+            }
             this.classList.add('loading');
             // On the local dev server (npm run dev), sign in on the live site and come back here
             var local = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
