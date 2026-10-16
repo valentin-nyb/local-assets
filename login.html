@@ -45,7 +45,8 @@
 
         .wrap { position: relative; z-index: 1; width: var(--col); display: flex; flex-direction: column; }
         .wrap .inner { padding-left: 6%; }
-        .wordmark { display: block; width: calc(var(--col) * .4); aspect-ratio: 1328 / 165; background: var(--green);
+        /* The wordmark in the brand's lime green, as in the design (the logo file's shape, recoloured) */
+        .wordmark { display: block; width: calc(var(--col) * .4); aspect-ratio: 1328 / 165; background: #85FA4F;
                     -webkit-mask: url(/logos/Green@2x.png) left center / contain no-repeat; mask: url(/logos/Green@2x.png) left center / contain no-repeat; margin-bottom: calc(var(--col) * .05); }
         h1 { font-family: var(--display); font-weight: 700; font-size: calc(var(--col) * .134); line-height: .86; letter-spacing: -0.01em; text-transform: uppercase; color: var(--fg); margin-bottom: clamp(56px, 13vh, 110px); }
 
@@ -64,6 +65,17 @@
 
         .mark { display: block; width: calc(var(--col) * .15); aspect-ratio: 72 / 80; margin: clamp(64px, 14vh, 130px) auto 0;
                 background: url(/logos/a-white.png) center / contain no-repeat; opacity: .94; }
+
+        /* Desktop: the wordmark top left, the sign-in in the middle, the a mark bottom right */
+        @media (min-width: 980px) {
+            :root { --col: min(490px, 34vw); }
+            .wrap .inner { padding-left: 0; margin-left: -2.6%; }
+            .wordmark { position: fixed; top: 56px; left: 4%; width: clamp(200px, 18vw, 290px); margin: 0; }
+            h1 { font-size: clamp(60px, 5.2vw, 90px); line-height: .86; margin-bottom: 104px; }
+            #google-btn { height: 76px; font-size: 15px; }
+            #google-btn svg { width: 22px; height: 22px; }
+            .mark { position: fixed; right: 4%; bottom: 52px; width: clamp(40px, 3.8vw, 58px); margin: 0; }
+        }
     </style>
 </head>
 <body>
@@ -89,6 +101,7 @@
         <div id="status"></div>
         <span class="mark" aria-hidden="true"></span>
     </main>
+
 
     <script>
         function setStatus(msg, cls) {
