@@ -3,8 +3,9 @@ import { createClient } from 'redis';
 import { readPlans } from './_billing.js';
 
 // Sign-up from the home page: a tier, the account type (venue, record label or artist) and its name.
-// Stripe takes the monthly plan as a subscription; the account is created when payment completes
-// (api/stripe-webhook.js), and local / assets finishes its video storage setup.
+// Monthly plans are a Stripe subscription; pay as you go saves the card (and takes any sign-up fee,
+// e.g. the DJ Trial Month). The account is created when Stripe confirms (api/stripe-webhook.js),
+// with ready video storage when there is some (api/_mux-pool.js).
 const TYPES = ['venue', 'label', 'artist'];
 
 export default async function handler(req, res) {
@@ -27,27 +28,35 @@ export default async function handler(req, res) {
   let plan;
   try { await redis.connect(); plan = (await readPlans(redis)).find(p => p.id === body?.tier); }
   finally { await redis.quit().catch(() => {}); }
-  if (!plan || !(plan.price > 0)) return res.status(400).json({ error: 'Unknown plan' });
+  if (!plan) return res.status(400).json({ error: 'Unknown plan' });
+  const fee = Number(plan.signupFee) > 0 ? Number(plan.signupFee) : 0;
 
   try {
     const stripe = new Stripe(sk);
-    const session = await stripe.checkout.sessions.create({
-      mode: 'subscription',
-      line_items: [{
-        quantity: 1,
-        price_data: {
-          currency: 'gbp', unit_amount: Math.round(plan.price * 100), tax_behavior: 'exclusive',
-          recurring: { interval: 'month' },
-          product_data: { name: `local / assets · ${plan.name}` },
-        },
-      }],
+    const metadata = { kind: 'signup', tier: plan.id, tierName: plan.name, accountType, accountName };
+    const common = {
       success_url: 'https://local-assets.com/?signup=success',
       cancel_url: 'https://local-assets.com/?signup=cancelled',
-      allow_promotion_codes: true,
       billing_address_collection: 'required',
-      metadata: { kind: 'signup', tier: plan.id, tierName: plan.name, accountType, accountName },
-      subscription_data: { metadata: { kind: 'signup', tier: plan.id, accountType, accountName } },
-    });
+      metadata,
+    };
+    const feeItem = fee ? [{ quantity: 1, price_data: { currency: 'gbp', unit_amount: Math.round(fee * 100), tax_behavior: 'exclusive', product_data: { name: `local / assets · ${plan.name} · sign-up` } } }] : [];
+    let session;
+    if (plan.price > 0) {
+      // A monthly plan: Stripe subscription (plus any one-off sign-up fee on the first invoice)
+      session = await stripe.checkout.sessions.create({ ...common, mode: 'subscription', allow_promotion_codes: true,
+        line_items: [{ quantity: 1, price_data: { currency: 'gbp', unit_amount: Math.round(plan.price * 100), tax_behavior: 'exclusive', recurring: { interval: 'month' }, product_data: { name: `local / assets · ${plan.name}` } } }, ...feeItem],
+        subscription_data: { metadata } });
+    } else if (fee) {
+      // Pay as you go with a sign-up fee (DJ Trial Month): the fee now, and the card is kept for usage on the 1st
+      session = await stripe.checkout.sessions.create({ ...common, mode: 'payment', allow_promotion_codes: true, customer_creation: 'always',
+        line_items: feeItem, payment_intent_data: { setup_future_usage: 'off_session', metadata },
+        invoice_creation: { enabled: true, invoice_data: { description: `local / assets · ${plan.name}`, metadata } } });
+    } else {
+      // Pay as you go: nothing to pay now, the card is saved for the usage charged on the 1st
+      session = await stripe.checkout.sessions.create({ ...common, mode: 'setup', currency: 'gbp', customer_creation: 'always',
+        setup_intent_data: { metadata, description: `local / assets · ${plan.name}: usage charged monthly` } });
+    }
     return res.status(200).json({ url: session.url });
   } catch (e) {
     console.error('[create-checkout]', e.message);

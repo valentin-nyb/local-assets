@@ -141,7 +141,7 @@
         /* Plans: one row of labelled fields per plan, wrapping to fit the screen (no sideways scroll) */
         #bl-plans, #bl-plans tbody { display:block; width:100%; }
         #bl-plans thead { display:none; }
-        #bl-plans tr { position:relative; display:grid; grid-template-columns:minmax(180px,2.2fr) repeat(5,minmax(0,1fr)); gap:12px; align-items:end; padding:16px 56px 16px 20px; border-top:1px solid var(--la-line); }
+        #bl-plans tr { position:relative; display:grid; grid-template-columns:minmax(180px,2.2fr) repeat(6,minmax(0,1fr)); gap:12px; align-items:end; padding:16px 56px 16px 20px; border-top:1px solid var(--la-line); }
         #bl-plans tr:first-child { border-top:0; }
         #bl-plans td { display:block; min-width:0; padding:0 !important; border:0 !important; text-align:left; }
         #bl-plans td[data-l]::before { content:attr(data-l); display:block; margin-bottom:6px; font-size:11px; color:var(--la-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -218,6 +218,24 @@
                 <section class="bl-section hidden" id="bl-setup">
                     <div class="bl-section-head"><h3>Finish setup</h3><span class="bl-msg">New sign-ups waiting for their video storage</span></div>
                     <div id="bl-setup-list"></div>
+                </section>
+                <section class="bl-section hidden" id="bl-pool">
+                    <div class="bl-section-head"><h3>Ready video storage</h3><span class="bl-msg" id="bl-pool-count">Empty Mux environments, given to new sign-ups straight away</span></div>
+                    <div id="bl-pool-list"></div>
+                    <div class="bl-setup-item">
+                        <ol class="bl-setup-steps">
+                            <li>In Mux, <b>Create environment</b> (Production). Name it anything, e.g. <code>client-07</code>.</li>
+                            <li>In that environment: <b>Settings → Access Tokens → Generate new token</b> with Mux Video read and write.</li>
+                            <li><b>Settings → Webhooks</b>: add <code>https://local-assets.com/api/mux-webhook</code>, then copy its <b>signing secret</b>.</li>
+                        </ol>
+                        <form class="bl-admin" id="bl-pool-form" style="padding:0;grid-template-columns:repeat(2,minmax(0,1fr))" autocomplete="off">
+                            <label>Name<input name="label" maxlength="60" placeholder="client-07"></label>
+                            <label>Access token ID<input name="tokenId" autocomplete="off"></label>
+                            <label>Secret key<input name="tokenSecret" type="password" autocomplete="new-password"></label>
+                            <label>Webhook signing secret<input name="webhookSecret" type="password" autocomplete="new-password"></label>
+                        </form>
+                        <div class="bl-admin-actions" style="padding:0"><button type="button" class="cam-btn primary" id="bl-pool-add">Add to ready list</button><span class="bl-msg" id="bl-pool-msg"></span></div>
+                    </div>
                 </section>
                 <section class="bl-section hidden" id="bl-send-box">
                     <div class="bl-section-head"><h3>Bill to</h3><span class="bl-msg" id="bl-stripe-acct">Choose who to see and invoice: plan price, plus usage above what the plan includes</span></div>
@@ -595,7 +613,7 @@
         function planRow(p) {
             p = p || { id: '', name: '', price: 0, maxClips: 5, included: { storedMinutes: 0, deliveredMinutes: 0, fileGB: 0 } };
             var inp = function(k, v, num) { return '<input class="bl-plan-in" data-k="' + k + '"' + (num ? ' inputmode="decimal"' : '') + ' value="' + esc(v) + '">'; };
-            return '<tr data-id="' + esc(p.id) + '"><td data-l="Plan">' + inp('name', p.name) + '</td><td data-l="£ per month">' + inp('price', p.price, 1) + '</td><td data-l="Storage incl., min">' + inp('storedMinutes', p.included.storedMinutes, 1) + '</td><td data-l="Streaming incl., min">' + inp('deliveredMinutes', p.included.deliveredMinutes, 1) + '</td><td data-l="Files incl., GB">' + inp('fileGB', p.included.fileGB, 1) + '</td><td data-l="Clips / session, 0 = unlimited">' + inp('maxClips', p.maxClips == null ? 5 : p.maxClips, 1) + '</td><td><button type="button" class="bl-x" title="Remove plan" data-del-plan>×</button></td></tr>';
+            return '<tr data-id="' + esc(p.id) + '"><td data-l="Plan">' + inp('name', p.name) + '</td><td data-l="£ per month">' + inp('price', p.price, 1) + '</td><td data-l="£ to sign up">' + inp('signupFee', p.signupFee || 0, 1) + '</td><td data-l="Storage incl., min">' + inp('storedMinutes', p.included.storedMinutes, 1) + '</td><td data-l="Streaming incl., min">' + inp('deliveredMinutes', p.included.deliveredMinutes, 1) + '</td><td data-l="Files incl., GB">' + inp('fileGB', p.included.fileGB, 1) + '</td><td data-l="Clips / session, 0 = unlimited">' + inp('maxClips', p.maxClips == null ? 5 : p.maxClips, 1) + '</td><td><button type="button" class="bl-x" title="Remove plan" data-del-plan>×</button></td></tr>';
         }
         document.getElementById('bl-plans').addEventListener('input', function() { this.dataset.editing = '1'; });
         document.getElementById('bl-plans').addEventListener('click', function(e) { var b = e.target.closest('[data-del-plan]'); if (b) { this.dataset.editing = '1'; b.closest('tr').remove(); } });
@@ -604,7 +622,7 @@
             var msg = document.getElementById('bl-plans-msg'), t = document.getElementById('bl-plans');
             var plans = Array.prototype.map.call(t.querySelectorAll('tbody tr'), function(tr) {
                 var v = function(k) { return tr.querySelector('[data-k=' + k + ']').value; };
-                return { id: tr.dataset.id, name: v('name'), price: Number(v('price')), maxClips: Number(v('maxClips')), included: { storedMinutes: Number(v('storedMinutes')), deliveredMinutes: Number(v('deliveredMinutes')), fileGB: Number(v('fileGB')) } };
+                return { id: tr.dataset.id, name: v('name'), price: Number(v('price')), signupFee: Number(v('signupFee')), maxClips: Number(v('maxClips')), included: { storedMinutes: Number(v('storedMinutes')), deliveredMinutes: Number(v('deliveredMinutes')), fileGB: Number(v('fileGB')) } };
             });
             this.disabled = true; msg.textContent = 'Saving…';
             try { await post({ action: 'setPlans', plans: plans }); t.dataset.editing = ''; msg.textContent = 'Saved'; await load(); }
@@ -833,25 +851,59 @@
                 var box = document.getElementById('bl-setup'), list = document.getElementById('bl-setup-list');
                 box.classList.toggle('hidden', !d.clients.length);
                 list.innerHTML = d.clients.map(function(c) {
+                    var useReady = d.ready ? '<div class="bl-admin-actions" style="padding:0"><button type="button" class="cam-btn primary" data-use-ready>Use ready storage</button><span class="bl-msg">' + d.ready + ' ready</span></div><p class="bl-msg">Or set one up by hand:</p>' : '';
                     return '<div class="bl-setup-item" data-slug="' + esc(c.slug) + '">' +
                         '<p class="bl-setup-name">' + esc(c.name) + ' <span class="bl-pill">' + esc(c.type === 'label' ? 'Record label' : c.type) + '</span></p>' +
                         '<p class="bl-msg">' + esc(c.email) + ' · ' + esc(c.plan) + ' · signed up ' + new Date(c.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + '</p>' +
+                        useReady +
                         '<ol class="bl-setup-steps"><li>In Mux, <b>Create environment</b> named <b>' + esc(c.name) + '</b> (Production).</li>' +
                         '<li>In that environment: <b>Settings → Access Tokens → Generate new token</b> with Mux Video read and write. Paste the ID and secret below.</li>' +
-                        '<li><b>Settings → Webhooks</b>: add <code>https://local-assets.com/api/mux-webhook</code>.</li></ol>' +
-                        '<div class="bl-admin" style="padding:0;grid-template-columns:1fr 1fr auto;align-items:end"><label>Access token ID<input data-k="id" autocomplete="off"></label><label>Secret key<input data-k="secret" type="password" autocomplete="off"></label><button type="button" class="cam-btn primary" data-activate>Activate</button></div>' +
+                        '<li><b>Settings → Webhooks</b>: add <code>https://local-assets.com/api/mux-webhook</code> and copy its signing secret.</li></ol>' +
+                        '<div class="bl-admin" style="padding:0;grid-template-columns:1fr 1fr 1fr auto;align-items:end"><label>Access token ID<input data-k="id" autocomplete="off"></label><label>Secret key<input data-k="secret" type="password" autocomplete="new-password"></label><label>Webhook signing secret<input data-k="webhook" type="password" autocomplete="new-password"></label><button type="button" class="cam-btn ghost" data-activate>Activate</button></div>' +
                         '<p class="bl-msg" data-msg></p></div>';
                 }).join('');
+                list.querySelectorAll('[data-use-ready]').forEach(function(b) {
+                    b.addEventListener('click', async function() {
+                        var item = b.closest('.bl-setup-item'), msg = item.querySelector('[data-msg]');
+                        b.disabled = true; msg.textContent = 'Checking the environment with Mux…';
+                        try { var r = await post({ action: 'useReady', slug: item.dataset.slug }); laToast('Client is live on ' + r.label); loadSetup(); loadPool(); load(); }
+                        catch (e) { msg.textContent = e.message; b.disabled = false; }
+                    });
+                });
                 list.querySelectorAll('[data-activate]').forEach(function(b) {
                     b.addEventListener('click', async function() {
                         var item = b.closest('.bl-setup-item'), msg = item.querySelector('[data-msg]');
                         b.disabled = true; msg.textContent = 'Checking the keys with Mux…';
-                        try { await post({ action: 'finishSetup', slug: item.dataset.slug, tokenId: item.querySelector('[data-k=id]').value, tokenSecret: item.querySelector('[data-k=secret]').value }); laToast('Client is live'); loadSetup(); load(); }
+                        try { await post({ action: 'finishSetup', slug: item.dataset.slug, tokenId: item.querySelector('[data-k=id]').value, tokenSecret: item.querySelector('[data-k=secret]').value, webhookSecret: item.querySelector('[data-k=webhook]').value }); laToast('Client is live'); loadSetup(); load(); }
                         catch (e) { msg.textContent = e.message; b.disabled = false; }
                     });
                 });
             }).catch(function() {});
         }
+        // Ready video storage: the list (names only, never keys) and adding one
+        function drawPool(pool) {
+            document.getElementById('bl-pool').classList.remove('hidden');
+            document.getElementById('bl-pool-count').textContent = pool.length ? pool.length + ' ready · the next sign-up takes the oldest' : 'None ready: new sign-ups wait in Finish setup until you add one';
+            document.getElementById('bl-pool-list').innerHTML = pool.map(function(e) {
+                return '<div class="bl-setup-item" style="flex-direction:row;align-items:center;justify-content:space-between"><span><b class="bl-setup-name" style="text-transform:none">' + esc(e.label) + '</b> <span class="bl-msg">added ' + new Date(e.addedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + '</span></span>' +
+                    '<button type="button" class="bl-x" title="Remove from the ready list" data-pool-del="' + esc(e.key) + '">×</button></div>';
+            }).join('');
+        }
+        function loadPool() { post({ action: 'muxPool' }).then(function(d) { drawPool(d.pool); }).catch(function() {}); }
+        document.getElementById('bl-pool-list').addEventListener('click', async function(e) {
+            var b = e.target.closest('[data-pool-del]'); if (!b) return;
+            if (!(await laConfirm({ title: 'Remove from the ready list?', message: 'The Mux environment itself is not deleted.', confirmText: 'Remove' }))) return;
+            try { drawPool((await post({ action: 'muxPoolRemove', key: b.dataset.poolDel })).pool); } catch (er) { laAlert(er.message, { tone: 'error' }); }
+        });
+        document.getElementById('bl-pool-add').addEventListener('click', async function() {
+            var f = document.getElementById('bl-pool-form'), msg = document.getElementById('bl-pool-msg'), b = this;
+            b.disabled = true; msg.textContent = 'Checking the keys with Mux…';
+            try {
+                var d = await post({ action: 'muxPoolAdd', label: f.label.value.trim(), tokenId: f.tokenId.value.trim(), tokenSecret: f.tokenSecret.value.trim(), webhookSecret: f.webhookSecret.value.trim() });
+                f.reset(); msg.textContent = ''; drawPool(d.pool); laToast('Added to the ready list'); loadSetup();
+            } catch (e) { msg.textContent = e.message; }
+            b.disabled = false;
+        });
         if (new URLSearchParams(location.search).get('plan') === 'updated') { history.replaceState({}, '', '/billing'); setTimeout(function() { laToast('Your plan is active'); }, 800); }
         document.getElementById('bl-cancel-btn').addEventListener('click', async function() {
             var b = this, resume = b.dataset.mode === 'resume';
@@ -865,7 +917,7 @@
             } catch (e) { laAlert('Could not update: ' + e.message, { tone: 'error' }); }
             b.disabled = false;
         });
-        load().then(function() { if (_data && _data.isAdmin) loadSetup(); });
+        load().then(function() { if (_data && _data.isAdmin) { loadSetup(); loadPool(); } });
     </script>
 </body>
 </html>

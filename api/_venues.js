@@ -3,7 +3,8 @@ import JSON5 from 'json5';
 import { createClient } from 'redis';
 
 // ── Client accounts created by sign-ups (Redis "la_venues"), alongside VENUES_CONFIG ──
-// Each entry: { name, emails, type, plan, status: 'pending'|'active', mux: <encrypted "id:secret"> }.
+// Each entry: { name, emails, type, plan, status: 'pending'|'active', mux: <encrypted "id:secret">,
+//   muxWebhook: <encrypted signing secret of the environment's webhook> }.
 // Read into a cache when a function starts and refreshed in the background, so lookups stay synchronous.
 const REGISTRY_KEY = 'la_venues';
 let _registry = {}, _registryAt = 0, _registryLoading = null, _deleted = new Set();
@@ -13,7 +14,7 @@ export function sealSecret(text) {
   const data = Buffer.concat([c.update(String(text), 'utf8'), c.final()]);
   return [iv, c.getAuthTag(), data].map(b => b.toString('base64url')).join('.');
 }
-function openSecret(sealed) {
+export function openSecret(sealed) {
   try {
     const [iv, tag, data] = String(sealed).split('.').map(x => Buffer.from(x, 'base64url'));
     const d = crypto.createDecipheriv('aes-256-gcm', encKey(), iv); d.setAuthTag(tag);
@@ -30,7 +31,7 @@ export async function refreshRegistry(redis = null) {
       try {
         const o = JSON.parse(v);
         const [id, secret] = o.mux ? openSecret(o.mux).split(':') : [];
-        out[slug] = { ...o, mux: undefined, mux_token_id: id || '', mux_token_secret: secret || '' };
+        out[slug] = { ...o, mux: undefined, muxWebhook: undefined, mux_token_id: id || '', mux_token_secret: secret || '', mux_webhook_secret: o.muxWebhook ? openSecret(o.muxWebhook) : '' };
       } catch {}
     }
     _deleted = new Set(await redis.sMembers('la_deleted').catch(() => []));   // accounts deleted by the admin
@@ -38,6 +39,10 @@ export async function refreshRegistry(redis = null) {
   } catch (e) { console.error('[_venues] registry:', e.message); }
   finally { if (own && redis) await redis.quit().catch(() => {}); }
   return _registry;
+}
+// Webhook signing secrets of the sign-ups' Mux environments (so their events are accepted with no env var)
+export function registryWebhookSecrets() {
+  return Object.entries(_registry).filter(([slug]) => !_deleted.has(slug)).map(([, v]) => v.mux_webhook_secret).filter(Boolean);
 }
 export async function readRegistryRaw(redis) {
   const raw = await redis.hGetAll(REGISTRY_KEY);

@@ -3,14 +3,16 @@ import { processCameraRecording } from './_camera-recording.js';
 import { createClient } from 'redis';
 import { startVerticals, venueForAsset, startAudioOnly } from './_verticals.js';
 import crypto from 'crypto';
+import { freshVenues, registryWebhookSecrets } from './_venues.js';
 
 // Signature check: every event must be signed by one of our Mux environments' webhook secrets
 // (DJ_TENNIS_TEAM_MUX_WEBHOOK_SECRET, AMONGST_FEW_MUX_WEBHOOK_SECRET, … and MUX_WEBHOOK_SECRET).
 // Header "mux-signature: t=<unix seconds>,v1=<hex HMAC-SHA256 of '<t>.<raw body>'>"; at most 5 minutes old.
 export const config = { api: { bodyParser: false } };
-const webhookSecrets = () => Object.entries(process.env)
+// Sign-ups' environments keep their secret in the account registry (Billing → Ready video storage).
+const webhookSecrets = () => [...Object.entries(process.env)
     .filter(([k, v]) => v && (k === 'MUX_WEBHOOK_SECRET' || /_MUX_WEBHOOK_SECRET$/.test(k)))
-    .map(([, v]) => v.trim());
+    .map(([, v]) => v.trim()), ...registryWebhookSecrets()];
 function signedByMux(raw, header) {
     const parts = Object.fromEntries(String(header || '').split(',').map(p => p.trim().split('=')).filter(x => x.length === 2));
     const t = Number(parts.t), sig = String(parts.v1 || '');
@@ -177,6 +179,7 @@ export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).send('Use POST');
 
     const raw = await rawBody(req);
+    await freshVenues(60000);
     if (!signedByMux(raw, req.headers['mux-signature'])) {
         console.error('[Webhook] rejected: not signed by one of our Mux environments');
         return res.status(401).send('Invalid signature');

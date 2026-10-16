@@ -1,3 +1,4 @@
+import { listPool, addToPool, removeFromPool, activateFromPool, poolSize } from './_mux-pool.js';
 import { unpaidKey, readUnpaid } from './_suspend.js';
 import { createClient } from 'redis';
 import { getWebSessionAuth, getVenuesConfig, readRegistryRaw, saveRegistryEntry, sealSecret, freshVenues } from './_venues.js';
@@ -259,7 +260,8 @@ export default async function handler(req, res) {
         venue: venueName, target, period: { label: base.label, start: base.start, end: base.end, elapsed },
         usage: data.usage, ...priced, invoices, stripe: !!stripe, isAdmin, subscription, accountType: data.accountType, accountTypeLabel: TYPE_LABEL[data.accountType] || 'Account',
         // Plans a client can move to (name, price, what's included)
-        plansOffered: data.plans.map(p => ({ id: p.id, name: p.name, price: p.price, maxClips: p.maxClips, cameras: p.cameras || 0, features: p.features || [], included: p.included })),
+        // (pay-as-you-go plans are chosen at sign-up only; an account can move up to a monthly plan from them)
+        plansOffered: data.plans.filter(p => p.price > 0 || p.id === ((data.assignments.venue || {}).plan || '')).map(p => ({ signupFee: p.signupFee || 0, id: p.id, name: p.name, price: p.price, maxClips: p.maxClips, cameras: p.cameras || 0, features: p.features || [], included: p.included })),
         currentPlan: (data.assignments.venue || {}).plan || '',
         ...(isAdmin ? { stripeAccount, venueSlug: slug, venues: billable.map(k => ({ slug: k, name: cfg[k]?.name || k })), rates: data.rates, plans: data.plans, assignments: data.assignments, artists: data.artists, labels: data.labels, bkVenues: data.bkVenues, assignment: a } : {}),
       });
@@ -333,17 +335,41 @@ export default async function handler(req, res) {
     // Sign-ups waiting for their video storage (a Mux environment created by local / assets)
     if (body.action === 'pendingClients') {
       const reg = await withRedis(r => readRegistryRaw(r));
-      return res.status(200).json({ clients: Object.entries(reg).filter(([, v]) => v.status === 'pending').map(([slug, v]) => ({ slug, name: v.name, type: v.type, plan: v.plan, email: (v.emails || [])[0] || '', createdAt: v.createdAt })) });
+      const ready = await withRedis(r => poolSize(r));
+      return res.status(200).json({ ready, clients: Object.entries(reg).filter(([, v]) => v.status === 'pending').map(([slug, v]) => ({ slug, name: v.name, type: v.type, plan: v.plan, email: (v.emails || [])[0] || '', createdAt: v.createdAt })) });
+    }
+    // Ready video storage: empty Mux environments a new sign-up takes straight away
+    if (body.action === 'muxPool') {
+      const pool = await withRedis(r => listPool(r));
+      return res.status(200).json({ pool });
+    }
+    if (body.action === 'muxPoolAdd') {
+      const out = await withRedis(r => addToPool(r, { label: body.label, tokenId: body.tokenId, tokenSecret: body.tokenSecret, webhookSecret: body.webhookSecret }));
+      if (out.error) return res.status(400).json({ error: out.error });
+      console.log('[billing] ready storage added', out.key);
+      return res.status(200).json({ ok: true, pool: await withRedis(r => listPool(r)) });
+    }
+    if (body.action === 'muxPoolRemove') {
+      await withRedis(r => removeFromPool(r, String(body.key || '')));
+      return res.status(200).json({ ok: true, pool: await withRedis(r => listPool(r)) });
+    }
+    // A sign-up still waiting: give it the next ready environment
+    if (body.action === 'useReady') {
+      const slug = String(body.slug || '');
+      const label = await withRedis(async r => { const reg = await readRegistryRaw(r); return reg[slug]?.status === 'pending' ? activateFromPool(r, slug) : null; });
+      if (!label) return res.status(400).json({ error: 'No ready video storage left. Add one under Ready video storage.' });
+      console.log('[billing] client activated from ready storage', slug, label);
+      return res.status(200).json({ ok: true, label });
     }
     if (body.action === 'finishSetup') {
-      const slug = String(body.slug || ''), id = String(body.tokenId || '').trim(), secret = String(body.tokenSecret || '').trim();
+      const slug = String(body.slug || ''), id = String(body.tokenId || '').trim(), secret = String(body.tokenSecret || '').trim(), webhook = String(body.webhookSecret || '').trim();
       if (!id || !secret) return res.status(400).json({ error: 'Paste the access token ID and secret' });
       const check = await fetch('https://api.mux.com/video/v1/assets?limit=1', { headers: { Authorization: 'Basic ' + Buffer.from(`${id}:${secret}`).toString('base64') }, signal: AbortSignal.timeout(15000) });
       if (!check.ok) return res.status(400).json({ error: check.status === 401 ? 'Mux rejected these keys. Copy them again from the environment\'s Access Tokens.' : `Mux answered ${check.status}` });
       const out = await withRedis(async r => {
         const reg = await readRegistryRaw(r);
         if (!reg[slug]) return null;
-        await saveRegistryEntry(r, slug, { ...reg[slug], mux: sealSecret(`${id}:${secret}`), status: 'active', activatedAt: new Date().toISOString() });
+        await saveRegistryEntry(r, slug, { ...reg[slug], mux: sealSecret(`${id}:${secret}`), ...(webhook ? { muxWebhook: sealSecret(webhook) } : {}), status: 'active', activatedAt: new Date().toISOString() });
         return reg[slug];
       });
       if (!out) return res.status(404).json({ error: 'Unknown client' });

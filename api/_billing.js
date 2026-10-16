@@ -22,12 +22,18 @@ export async function readRates(redis) {
 
 // Plans: a monthly price with usage included; usage above it is billed as overage
 export const DEFAULT_PLANS = [
-  { id: 'starter-distribution', name: 'Distribution · Starter', price: 2750, maxClips: 6, cameras: 0,
+  { id: 'payg', name: 'Pay as you go', price: 0, maxClips: 6, cameras: 0,
+    included: { storedMinutes: 0, deliveredMinutes: 0, fileGB: 0 },
+    features: ['No monthly fee', 'Pay only for what you store and stream', 'Charged to your card on the 1st', '6 vertical social clips per set', 'Brand Kit watermark'] },
+  { id: 'dj-trial', name: 'DJ Trial Month', price: 0, signupFee: 55, maxClips: 6, cameras: 0,
+    included: { storedMinutes: 0, deliveredMinutes: 0, fileGB: 0 },
+    features: ['£55 to join, then pay as you go', '6 vertical social clips per session', 'Brand Kit and watermark', 'Camera Control: phone, OBS or your own camera', 'Distribution History', 'Usage charged to your card on the 1st'] },
+  { id: 'starter-distribution', name: 'Distribution · Starter', price: 2750, maxClips: 6, cameras: 1,
     included: { storedMinutes: 3000, deliveredMinutes: 25000, fileGB: 250 },
-    features: ['Content intake & quality control', 'Up to 8 events processed / month', '6 vertical social clips', '250 GB cloud storage'] },
-  { id: 'liveset-distribution', name: 'Distribution · Pro', price: 3500, maxClips: 12, cameras: 0,
+    features: ['1 camera included', 'Content intake & quality control', 'Up to 8 events processed / month', '6 vertical social clips', '250 GB cloud storage'] },
+  { id: 'liveset-distribution', name: 'Distribution · Pro', price: 3500, maxClips: 12, cameras: 1,
     included: { storedMinutes: 6000, deliveredMinutes: 50000, fileGB: 500 },
-    features: ['Content intake & quality control', 'Up to 8 events processed / month', '12+ vertical social clips', 'Marketing thumbnails', '500 GB cloud storage'] },
+    features: ['1 camera included', 'Content intake & quality control', 'Up to 8 events processed / month', '12+ vertical social clips', 'Marketing thumbnails', '500 GB cloud storage'] },
   { id: 'starter-creative', name: 'Creative & Production · Starter', price: 5500, maxClips: 12, cameras: 1,
     included: { storedMinutes: 12000, deliveredMinutes: 100000, fileGB: 2000 },
     features: ['1 camera included', 'Starlink Mini', '4K master recordings', 'HQ audio capture', '12 vertical social clips', 'Marketing thumbnails', 'Brand Kit watermark', '2 TB cloud storage'] },
@@ -36,7 +42,9 @@ export const DEFAULT_PLANS = [
     features: ['2 cameras included', 'Starlink Mini + Mac mini', '4K master recordings', 'HQ audio capture', 'Multi-camera auto edit, cut to the music', 'Unlimited vertical social clips', 'Marketing thumbnails & watermark', 'Quarterly performance reports', '20 TB cloud storage'] },
 ];
 export async function readPlans(redis) {
-  try { const p = JSON.parse(await redis.get('billing_plans') || 'null'); return Array.isArray(p) && p.length ? p.map(x => { const d = DEFAULT_PLANS.find(z => z.id === x.id) || {}; return { ...x, features: (x.features && x.features.length ? x.features : d.features), cameras: x.cameras || d.cameras || 0, maxClips: x.maxClips != null ? x.maxClips : (d.maxClips != null ? d.maxClips : 5) }; }) : DEFAULT_PLANS; }
+  // Pay as you go and the DJ Trial Month are always offered, even when the saved plan list predates them
+  const withPayg = list => [...DEFAULT_PLANS.filter(d => ['payg', 'dj-trial'].includes(d.id) && !list.some(p => p.id === d.id)), ...list];
+  try { const p = JSON.parse(await redis.get('billing_plans') || 'null'); return Array.isArray(p) && p.length ? withPayg(p.map(x => { const d = DEFAULT_PLANS.find(z => z.id === x.id) || {}; return { ...x, signupFee: x.signupFee != null ? x.signupFee : (d.signupFee || 0), features: (x.features && x.features.length ? x.features : d.features), cameras: x.cameras || d.cameras || 0, maxClips: x.maxClips != null ? x.maxClips : (d.maxClips != null ? d.maxClips : 5) }; })) : DEFAULT_PLANS; }
   catch { return DEFAULT_PLANS; }
 }
 export function cleanPlans(list) {
@@ -44,7 +52,7 @@ export function cleanPlans(list) {
     const name = String(p?.name || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 60);
     const num = v => { const n = Number(v); return Number.isFinite(n) && n >= 0 ? n : 0; };
     const id = String(p?.id || '').replace(/[^a-z0-9-]/g, '').slice(0, 40) || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `plan-${i + 1}`;
-    return name ? { id, name, price: num(p.price), maxClips: Math.min(60, Math.max(0, Math.round(num(p.maxClips)))), cameras: Math.round(num(p.cameras)), features: Array.isArray(p.features) ? p.features.map(f => String(f).replace(/[<>]/g, '').slice(0, 80)).filter(Boolean).slice(0, 14) : undefined, included: { storedMinutes: num(p.included?.storedMinutes), deliveredMinutes: num(p.included?.deliveredMinutes), fileGB: num(p.included?.fileGB) } } : null;
+    return name ? { id, name, price: num(p.price), signupFee: num(p.signupFee), maxClips: Math.min(60, Math.max(0, Math.round(num(p.maxClips)))), cameras: Math.round(num(p.cameras)), features: Array.isArray(p.features) ? p.features.map(f => String(f).replace(/[<>]/g, '').slice(0, 80)).filter(Boolean).slice(0, 14) : undefined, included: { storedMinutes: num(p.included?.storedMinutes), deliveredMinutes: num(p.included?.deliveredMinutes), fileGB: num(p.included?.fileGB) } } : null;
   }).filter(Boolean);
 }
 
@@ -266,6 +274,13 @@ export async function venueCustomer(stripe, redis, slug, { email, name, details 
   return c.id;
 }
 
+// The card the customer saved at sign-up (or later through Stripe), if any
+export async function defaultCard(stripe, customer) {
+  const c = await stripe.customers.retrieve(customer).catch(() => null);
+  const pm = c && !c.deleted ? c.invoice_settings?.default_payment_method : null;
+  return pm ? (typeof pm === 'string' ? pm : pm.id) : null;
+}
+
 export function venueEntries() {
   return Object.entries(getVenuesConfig()).map(([slug, cfg]) => ({ slug, cfg, auth: getMuxAuthForVenue({ slug, ...cfg }) }));
 }
@@ -299,12 +314,20 @@ export async function invoiceVenue(redis, stripe, { slug, auth, email, name, tar
     const over = l.included ? ` (${l.billable.toLocaleString('en-GB')} over the ${l.included.toLocaleString('en-GB')} included)` : '';
     await stripe.invoiceItems.create({ customer, currency, amount: Math.round(l.amount * 100), description: `${l.label} · ${l.quantity.toLocaleString('en-GB')} ${l.unit}${over} · ${period.label}` });
   }
+  // A card saved at sign-up is charged on the 1st; otherwise the invoice is emailed with 14 days to pay
+  const card = await defaultCard(stripe, customer);
   const invoice = await stripe.invoices.create({
-    customer, collection_method: 'send_invoice', days_until_due: 14, pending_invoice_items_behavior: 'include',
+    customer, pending_invoice_items_behavior: 'include',
+    ...(card ? { collection_method: 'charge_automatically', default_payment_method: card, auto_advance: true } : { collection_method: 'send_invoice', days_until_due: 14 }),
     description: `local / assets · ${plan ? plan.name + ' · ' : ''}${period.label}`, metadata: { venueSlug: slug, target, period: period.key },
   });
-  const sent = await stripe.invoices.finalizeInvoice(invoice.id);
-  await stripe.invoices.sendInvoice(sent.id).catch(() => {});
+  let sent = await stripe.invoices.finalizeInvoice(invoice.id);
+  if (card) {
+    // A declined card leaves the invoice open: Stripe retries it and emails the customer a link to pay
+    sent = await stripe.invoices.pay(sent.id).catch(e => { console.error('[billing] card charge failed', slug, sent.id, e.message); return sent; });
+  } else {
+    await stripe.invoices.sendInvoice(sent.id).catch(() => {});
+  }
   await redis.set(doneKey, sent.id);
-  return { invoice: sent.id, total: priced.total, url: sent.hosted_invoice_url || null, livemode: !!sent.livemode };
+  return { invoice: sent.id, total: priced.total, url: sent.hosted_invoice_url || null, livemode: !!sent.livemode, charged: card ? sent.status === 'paid' : undefined };
 }

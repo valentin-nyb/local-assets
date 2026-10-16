@@ -604,6 +604,12 @@
         @media (hover:hover) { .tr-btn:hover { color:#000; border-color:#fafafa; } .tr-btn:hover::before { transform:scaleX(1); transform-origin:left center; } .tr-btn-main:hover { color:#39FF14; border-color:#39FF14; } }
         .tr-spacer { flex:1; }
         @media (max-width:1000px) { .tr-grid { grid-template-columns:minmax(0,1fr); max-width:520px; margin:0 auto; } }
+        .tr-small { margin-top:56px; }
+        .tr-small-h { margin:0 0 16px; font:600 11px 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.08em; text-transform:uppercase; color:#71717a; text-align:center; }
+        .tr-small-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; max-width:880px; margin:0 auto; }
+        .tr-mini .tr-price b { font-size:34px; }
+        .tr-mini ul { margin-top:14px; }
+        @media (max-width:1000px) { .tr-small-grid { grid-template-columns:minmax(0,1fr); max-width:520px; } }
     </style>
     <div class="tr-top reveal active">
         <p class="tr-eyebrow">Pricing</p>
@@ -620,8 +626,8 @@
                 
                 <p class="tr-name">Starter</p>
                 <div class="tr-price"><b>£2,750</b><span>/ month</span></div>
-                <p class="tr-for">For venues and artists who already film their sets.</p>
-                <p class="tr-h">Every set gives you</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Your recording checked and kept safe in your vault</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>6 vertical clips, ready for Reels, TikTok and Shorts</span></li></ul><p class="tr-h">Each month</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Up to 8 sets processed</span></li></ul><p class="tr-h">Included every month</p><div class="tr-stats"><div><b>50 h</b><span>of sets stored</span></div><div><b>≈ 415 h</b><span>watched or downloaded</span></div><div><b>250 GB</b><span>of brand files</span></div></div>
+                <p class="tr-for">For venues and artists who want their sets on social media.</p>
+                <p class="tr-h">Filming</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>1 OBSBOT 4K camera, set up for you</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Starts and stops with your calendar</span></li></ul><p class="tr-h">Every set gives you</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Your recording checked and kept safe in your vault</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>6 vertical clips, ready for Reels, TikTok and Shorts</span></li></ul><p class="tr-h">Each month</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Up to 8 sets processed</span></li></ul><p class="tr-h">Included every month</p><div class="tr-stats"><div><b>50 h</b><span>of sets stored</span></div><div><b>≈ 415 h</b><span>watched or downloaded</span></div><div><b>250 GB</b><span>of brand files</span></div></div>
                 <span class="tr-spacer"></span><button type="button" onclick="selectTier('starter-distribution')" class="tr-btn">Choose this plan</button>
             </div>
             <div class="tr-card tr-feat">
@@ -629,7 +635,7 @@
                 <p class="tr-name">Pro</p>
                 <div class="tr-price"><b>£3,500</b><span>/ month</span></div>
                 <p class="tr-for">For venues and labels posting every week.</p>
-                <p class="tr-h">Every set gives you</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Your recording checked and kept safe in your vault</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>12 vertical clips per set</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Marketing thumbnails for every set</span></li></ul><p class="tr-h">Each month</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Up to 8 sets processed</span></li></ul><p class="tr-h">Included every month</p><div class="tr-stats"><div><b>100 h</b><span>of sets stored</span></div><div><b>≈ 830 h</b><span>watched or downloaded</span></div><div><b>500 GB</b><span>of brand files</span></div></div>
+                <p class="tr-h">Filming</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>1 OBSBOT 4K camera, set up for you</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Starts and stops with your calendar</span></li></ul><p class="tr-h">Every set gives you</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Your recording checked and kept safe in your vault</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>12 vertical clips per set</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Marketing thumbnails for every set</span></li></ul><p class="tr-h">Each month</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Up to 8 sets processed</span></li></ul><p class="tr-h">Included every month</p><div class="tr-stats"><div><b>100 h</b><span>of sets stored</span></div><div><b>≈ 830 h</b><span>watched or downloaded</span></div><div><b>500 GB</b><span>of brand files</span></div></div>
                 <span class="tr-spacer"></span><button type="button" onclick="selectTier('liveset-distribution')" class="tr-btn tr-btn-main">Choose this plan</button>
             </div>
             <div class="tr-card">
@@ -665,6 +671,25 @@
                 <p class="tr-for">For festivals and venues with several rooms.</p>
                 <p class="tr-h">Built around you</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Full camera setup in every room</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>A dedicated on-site crew</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Unlimited sets filmed</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Custom content packages</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Priority 24-hour turnaround</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Unlimited storage</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Camera control panel for your team</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>API access</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Live-streaming</span></li></ul>
                 <span class="tr-spacer"></span><a href="mailto:hello@local-assets.com?subject=Enterprise%20Creative%20Enquiry" class="tr-btn">Talk to us</a>
+            </div>
+        </div>
+        <div class="tr-small">
+            <p class="tr-small-h">Or start small</p>
+            <div class="tr-small-grid">
+                <div class="tr-card tr-mini">
+                    <p class="tr-name">DJ Trial Month</p>
+                    <div class="tr-price"><b>£55</b><span>to join, then pay as you go</span></div>
+                    <p class="tr-for">For DJs trying it with their own phone or camera.</p>
+                    <ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>6 vertical clips per session</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Brand Kit, with your logo on every clip</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Camera Control: phone, OBS or your own camera</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Usage charged to your card on the 1st</span></li></ul>
+                    <span class="tr-spacer"></span><button type="button" onclick="selectTier('dj-trial')" class="tr-btn tr-btn-main">Start the trial</button>
+                </div>
+                <div class="tr-card tr-mini">
+                    <p class="tr-name">Pay as you go</p>
+                    <div class="tr-price"><b>£0</b><span>a month</span></div>
+                    <p class="tr-for">No plan. Pay only for what you store and stream.</p>
+                    <ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>6 vertical clips per session</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Brand Kit and Camera Control</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Usage charged to your card on the 1st</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Move to a monthly plan any time</span></li></ul>
+                    <span class="tr-spacer"></span><button type="button" onclick="selectTier('payg')" class="tr-btn">Add your card</button>
+                </div>
             </div>
         </div>
     </div>
@@ -821,9 +846,11 @@
     <script>
         // Sign up: choose the account type and name, then pay the monthly plan through Stripe
         var SIGNUP_TIERS = {
-            'starter-distribution': { group: 'Distribution', name: 'Starter', price: '£2,750', feats: ['6 vertical clips per set', 'Up to 8 sets a month', '50 hours of sets stored', 'Your recordings kept safe in your vault'] },
-            'liveset-distribution': { group: 'Distribution', name: 'Pro', price: '£3,500', feats: ['12 vertical clips per set', 'Marketing thumbnails', 'Up to 8 sets a month', '100 hours of sets stored'] },
+            'starter-distribution': { group: 'Distribution', name: 'Starter', price: '£2,750', feats: ['1 OBSBOT 4K camera', '6 vertical clips per set', 'Up to 8 sets a month', '50 hours of sets stored', 'Your recordings kept safe in your vault'] },
+            'liveset-distribution': { group: 'Distribution', name: 'Pro', price: '£3,500', feats: ['1 OBSBOT 4K camera', '12 vertical clips per set', 'Marketing thumbnails', 'Up to 8 sets a month', '100 hours of sets stored'] },
             'starter-creative': { group: 'Creative & Production', name: 'Starter', price: '£5,500', feats: ['1 OBSBOT 4K camera + Starlink Mini', 'Recording runs on your calendar', '12 vertical clips per set, branded', '200 hours of sets stored'] },
+            'dj-trial': { group: 'Start small', name: 'DJ Trial Month', price: '£55', per: 'to join', type: 'artist', go: 'Continue to payment', feats: ['6 vertical clips per session', 'Brand Kit and Camera Control', 'Then pay as you go, charged on the 1st'] },
+            'payg': { group: 'Start small', name: 'Pay as you go', price: '£0', per: 'a month', go: 'Continue to add your card', feats: ['No monthly fee', 'Pay only for what you store and stream', 'Charged to your card on the 1st'] },
             'liveset-creative': { group: 'Creative & Production', name: 'Live-Set', price: '£7,500', feats: ['2 OBSBOT 4K cameras + Starlink Mini + Mac mini', 'Multi-camera edit, cut to the music', 'Unlimited vertical clips, branded', '1,000 hours of sets stored'] }
         };
         var TIER_NAMES = { 'starter-distribution': 'Distribution · Starter', 'liveset-distribution': 'Distribution · Pro', 'starter-creative': 'Creative & Production · Starter', 'liveset-creative': 'Creative & Production · Live-Set' };
@@ -841,7 +868,7 @@
                     '<aside class="su-plan">' +
                         '<p class="su-plan-group">' + esc(T.group) + '</p>' +
                         '<p class="su-plan-name">' + esc(T.name) + '</p>' +
-                        (T.price ? '<p class="su-plan-price"><b>' + esc(T.price) + '</b><span>/ month</span></p>' : '') +
+                        (T.price ? '<p class="su-plan-price"><b>' + esc(T.price) + '</b><span>' + esc(T.per || '/ month') + '</span></p>' : '') +
                         '<ul class="su-plan-feats">' + T.feats.slice(0, 3).map(function(f) { return '<li>' + CHK + '<span>' + esc(f) + '</span></li>'; }).join('') + '</ul>' +
 
                     '</aside>' +
@@ -851,12 +878,12 @@
                         '<form id="su-form" class="su-form">' +
                             '<div class="su-types" role="radiogroup" aria-label="Account type">' +
                                 [['venue', 'Venue', 'Club, bar or event space'], ['label', 'Record label', 'Releases music for its artists'], ['artist', 'Artist', 'DJ or live act']].map(function(t, i) {
-                                    return '<label class="su-type"><input type="radio" name="type" value="' + t[0] + '"' + (i ? '' : ' checked') + '><span class="su-ic">' + ICON[t[0]] + '</span><b>' + t[1] + '</b><span class="su-tick">' + CHK + '</span></label>';
+                                    return '<label class="su-type"><input type="radio" name="type" value="' + t[0] + '"' + ((T.type ? t[0] === T.type : !i) ? ' checked' : '') + '><span class="su-ic">' + ICON[t[0]] + '</span><b>' + t[1] + '</b><span class="su-tick">' + CHK + '</span></label>';
                                 }).join('') +
                             '</div>' +
 
                             '<label class="su-field"><span id="su-name-label">Venue name</span><input name="name" maxlength="60" required autocomplete="organization" placeholder="e.g. Venue Name"></label>' +
-                            '<button type="submit" class="ord-go su-go">Continue to payment</button>' +
+                            '<button type="submit" class="ord-go su-go">' + esc(T.go || 'Continue to payment') + '</button>' +
                             '<p id="su-error" class="ord-error"></p>' +
                             '<p class="su-secure"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Secure checkout with Stripe · Cancel anytime</p>' +
                         '</form>' +
@@ -864,7 +891,7 @@
                 '</div>');
             var form = document.getElementById('su-form');
             var syncLabel = function() { var t = form.type.value; var _d = document.getElementById('su-desc'); if (_d) _d.textContent = t === 'label' ? 'Releases music for its artists' : t === 'artist' ? 'DJ or live act' : 'Club, bar or event space'; document.getElementById('su-name-label').textContent = t === 'label' ? 'Record label name' : t === 'artist' ? 'Artist name' : 'Venue name'; form.name.placeholder = t === 'label' ? 'e.g. Record Label Name' : t === 'artist' ? 'e.g. DJ Name' : 'e.g. Venue Name'; };
-            form.addEventListener('change', syncLabel);
+            form.addEventListener('change', syncLabel); syncLabel();
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
                 var btn = form.querySelector('button'), err = document.getElementById('su-error');
@@ -872,7 +899,7 @@
                 fetch('/api/create-checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tier: tierId, accountType: form.type.value, accountName: form.name.value.trim() }) })
                     .then(function(r) { return r.json().then(function(d) { if (!r.ok) throw new Error(d.error || r.status); return d; }); })
                     .then(function(d) { location.href = d.url; })
-                    .catch(function(er) { btn.disabled = false; btn.textContent = 'Continue to payment'; err.innerHTML = er.message === 'payments_not_configured' ? 'Online sign-up isn\'t open yet. Email <a href="mailto:info@local-assets.com">info@local-assets.com</a>.' : 'Could not open checkout: ' + esc(er.message); });
+                    .catch(function(er) { btn.disabled = false; btn.textContent = T.go || 'Continue to payment'; err.innerHTML = er.message === 'payments_not_configured' ? 'Online sign-up isn\'t open yet. Email <a href="mailto:info@local-assets.com">info@local-assets.com</a>.' : 'Could not open checkout: ' + esc(er.message); });
             });
         }
         (function() {
@@ -880,7 +907,7 @@
             if (su !== 'success') return;
             history.replaceState({}, '', '/');
             document.addEventListener('DOMContentLoaded', function() {
-                showCameraOrder('<p class="ord-eyebrow">Welcome to local / assets</p><h3 class="ord-title" id="ord-title">You\'re in</h3><p class="ord-done">Payment received. We\'re setting up your private video storage now and will email you as soon as it\'s ready. You can already sign in with the email you used at checkout to set up your Brand Kit.</p><a href="/login.html" class="ord-go" style="display:flex;align-items:center;justify-content:center;margin-top:16px;text-decoration:none">Sign in</a>');
+                showCameraOrder('<p class="ord-eyebrow">Welcome to local / assets</p><h3 class="ord-title" id="ord-title">You\'re in</h3><p class="ord-done">Your account is being created. We\'ve emailed the address you used at checkout: sign in with Google using it to set up your Brand Kit and connect a camera.</p><a href="/login.html" class="ord-go" style="display:flex;align-items:center;justify-content:center;margin-top:16px;text-decoration:none">Sign in</a>');
             });
         })();
 
