@@ -1584,13 +1584,16 @@
 
         function openCamForm(c, preset) {
             var deckForm = preset === 'audio' || (c && c.kind === 'audio');
+            var inApp = !!(window.laApp && window.laApp.mac);
             openCamDialog(deckForm ? (c ? 'Edit decks audio' : 'Add decks audio') : (c ? 'Edit camera' : 'Add camera'),
                 '<form id="cam-form" class="cam-form">' +
                 // Adding: cameras or decks have their own button. Editing: any slot can change type
-                '<div class="cam-kind' + (c ? ' three' : '') + '" role="radiogroup" aria-label="Type"' + (deckForm && !c ? ' hidden' : '') + '>' +
+                '<div class="cam-kind three" role="radiogroup" aria-label="Type"' + (deckForm && !c ? ' hidden' : '') + '>' +
                     '<label><input type="radio" name="kind" value="obsbot"' + (!deckForm && (!c || c.kind !== 'other') ? ' checked' : '') + '><span>OBSBOT Tail 2<small>Steer it from here</small></span></label>' +
                     '<label><input type="radio" name="kind" value="other"' + (c && c.kind === 'other' ? ' checked' : '') + '><span>Other camera<small>Phone, Osmo, Sony</small></span></label>' +
                     '<label' + (c ? '' : ' hidden') + '><input type="radio" name="kind" value="audio"' + (deckForm ? ' checked' : '') + '><span>Decks audio<small>The mixer\'s sound</small></span></label>' +
+                    // A camera plugged into this computer: USB, an HDMI capture card, a tethered camera, an iPhone
+                    '<label' + (c ? ' hidden' : '') + '><input type="radio" name="kind" value="mac"><span>On this Mac<small>USB, HDMI, iPhone</small></span></label>' +
                 '</div>' +
                 '<label class="cam-other-only">Which camera<select name="model">' + ['DJI Osmo', 'Sony Alpha', 'Phone', 'Other camera with RTMP'].map(function(m) { return '<option' + (c && c.model === m ? ' selected' : '') + '>' + m + '</option>'; }).join('') + '</select></label>' +
                 '<label>Name<input name="name" maxlength="40" required placeholder="Main floor" value="' + esc(c && c.name) + '"></label>' +
@@ -1606,6 +1609,7 @@
                     '<li><b>Pan, tilt, zoom and tracking</b> work from Controls on the camera card, on the venue network.</li>' +
                     '</ol>' +
                 '</div>') +
+                (inApp && !c ? '<label class="cam-audio-only">Mixer on this Mac<select name="macMixer"></select><small>Plug the mixer in by USB, or into an audio interface, and choose it here. a™ sends it by itself during every set. No OBS needed.</small></label>' : '') +
                 '<div class="cam-audio-only cam-howto">' +
                     '<p class="cam-howto-t">How to connect your decks</p>' +
                     '<ol>' +
@@ -1616,6 +1620,11 @@
                     '<div class="cam-howto-get"><a class="cam-btn ghost" href="https://obsproject.com/download" target="_blank" rel="noopener">Get OBS (free)</a><span>For a Mac or PC at the decks. After adding, Stream setup gives you a ready OBS profile.</span></div>' +
                     '<p class="cam-howto-n">Each set\'s sound is saved as the session\'s HQ AUDIO, cut at the calendar times. Clips, the multi-camera edit and SoundCloud use it.</p>' +
                 '</div>' +
+                // On this Mac (the a™ app): the camera and sound plugged into this computer, streamed by the app
+                (inApp ? '<label class="cam-mac-only">Camera<select name="macVideo"></select><small>Plug it in by USB, an HDMI capture card (like an Elgato Cam Link) or a cable, or bring your iPhone close (Continuity Camera). It shows here within seconds.</small></label>' +
+                    '<label class="cam-mac-only">Sound<select name="macAudio"></select><small>The camera\'s own microphone, the mixer, or none. The decks\' HQ audio has its own slot.</small></label>' +
+                    ''
+                  : '<p class="cam-mac-only cam-dialog-note" style="margin:0">Open Camera Control in the a™ app for Mac to use a camera plugged into this computer. The app finds it by itself and records it on the calendar, with no OBS.</p>') +
                 '<p id="cam-form-error" class="cam-form-error"></p>' +
                 '<div class="cam-form-actions"><button type="button" class="cam-btn ghost" onclick="closeCamDialog()">Cancel</button>' +
                 '<button type="submit" class="cam-btn primary">' + (c ? 'Save' : 'Add camera') + '</button></div>' +
@@ -1625,6 +1634,8 @@
                 var k = form.kind.value, other = k === 'other';
                 form.querySelectorAll('.cam-obsbot-only').forEach(function(el) { el.hidden = k !== 'obsbot'; }); form.querySelectorAll('.cam-other-only').forEach(function(el) { el.hidden = !other; });
                 form.querySelectorAll('.cam-audio-only').forEach(function(el) { el.hidden = k !== 'audio'; });
+                form.querySelectorAll('.cam-mac-only').forEach(function(el) { el.hidden = k !== 'mac'; });
+                var sb = form.querySelector('[type=submit]'); if (sb && !c) sb.disabled = k === 'mac' && !inApp;
                 var sub = form.querySelector('[type=submit]'); if (sub && !c) sub.textContent = k === 'audio' ? 'Add decks audio' : 'Add camera';
                 if (e && !c && k === 'audio' && !form.name.value) form.name.value = 'Decks';
                 // A phone or own camera is started by hand: by default it streams whenever it's on (sets are still cut by the calendar)
@@ -1632,13 +1643,44 @@
             };
             form.querySelectorAll('[name=kind]').forEach(function(r) { r.addEventListener('change', syncKind); });
             syncKind();
+            if (deckForm && !c && !form.name.value) form.name.value = 'Decks';
+            // The devices on this Mac, kept up to date while the form is open
+            var fillMac = function() {
+                if (!inApp || !document.body.contains(form)) return;
+                window.laApp.mac.state(macVenue()).then(function(st) {
+                    if (!st || !document.body.contains(form)) return;
+                    var keep = function(sel, list, none) { if (!sel) return; var v = sel.value; sel.innerHTML = macOptions(list, v, none); };
+                    keep(form.macVideo, st.devices.video, st.devices.video.length ? 'Choose a camera' : 'No camera plugged in yet');
+                    keep(form.macAudio, st.devices.audio, 'No sound');
+                    keep(form.macMixer, st.devices.audio, 'Stream it another way');
+                });
+            };
+            fillMac();
+            if (inApp) window.laApp.mac.onChange(fillMac);
+            // Decks with the mixer on this Mac: the app sends it, so the OBS instructions step aside
+            if (form.macMixer) form.macMixer.addEventListener('change', function() {
+                var how = form.querySelector('.cam-audio-only.cam-howto'); if (how) how.style.display = form.macMixer.value ? 'none' : '';
+            });
             form.name.focus();
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
                 var btn = form.querySelector('[type=submit]');
                 btn.disabled = true; btn.textContent = c ? 'Saving…' : 'Adding…';
-                camApi({ action: c ? 'update' : 'add', id: c && c.id, kind: form.kind.value, model: form.model.value, name: form.name.value, ndiName: form.ndiName.value, ip: form.ip.value, followCalendar: form.followCalendar.checked })
-                    .then(function(d) { _camKey = ''; return loadCameras().then(function() { if (c) closeCamDialog(); else openStreamSetup(d.camera); }); })
+                var k = form.kind.value;
+                var macVid = form.macVideo ? form.macVideo.value : '', macAud = form.macAudio ? form.macAudio.value : '', mixer = form.macMixer ? form.macMixer.value : '';
+                if (k === 'mac' && !macVid) { document.getElementById('cam-form-error').textContent = 'Choose the camera plugged into this Mac.'; btn.disabled = false; btn.textContent = 'Add camera'; return; }
+                camApi({ action: c ? 'update' : 'add', id: c && c.id, kind: k === 'mac' ? 'other' : k, model: k === 'mac' ? 'This Mac' : form.model.value, name: form.name.value, ndiName: form.ndiName.value, ip: form.ip.value, followCalendar: form.followCalendar.checked })
+                    .then(async function(d) {
+                        // On this Mac, or the decks' mixer on this Mac: linked straight away, the app streams it
+                        var linkKind = !c && k === 'mac' ? 'camera' : !c && k === 'audio' && mixer ? 'audio' : '';
+                        if (linkKind && d.camera) {
+                            var conn = await camApi({ action: 'connection', id: d.camera.id });
+                            await window.laApp.mac.link({ venue: macVenue(), slotId: d.camera.id, slotName: d.camera.name, kind: linkKind, video: linkKind === 'camera' ? macVid : '', audio: linkKind === 'camera' ? macAud : mixer, key: conn.streamKey });
+                        }
+                        _camKey = ''; await loadCameras();
+                        if (c || linkKind) { closeCamDialog(); if (linkKind) laToast(d.camera.name + ' is linked to this Mac. It records with the calendar, or press Create a session.'); }
+                        else openStreamSetup(d.camera);
+                    })
                     .catch(function(err) { document.getElementById('cam-form-error').textContent = err.message; btn.disabled = false; btn.textContent = c ? 'Save' : 'Add camera'; });
             });
         }
