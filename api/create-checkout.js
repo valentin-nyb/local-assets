@@ -28,7 +28,8 @@ export default async function handler(req, res) {
   let plan;
   try { await redis.connect(); plan = (await readPlans(redis)).find(p => p.id === body?.tier); }
   finally { await redis.quit().catch(() => {}); }
-  if (!plan) return res.status(400).json({ error: 'Unknown plan' });
+  // The old stand-alone pay-as-you-go plan (now a toggle on every plan) can't be signed up for
+  if (!plan || plan.id === 'payg') return res.status(400).json({ error: 'Unknown plan' });
   const fee = Number(plan.signupFee) > 0 ? Number(plan.signupFee) : 0;
 
   try {

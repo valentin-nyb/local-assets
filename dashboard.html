@@ -77,6 +77,11 @@
         /* Boxes that used to hold an icon: hidden until something (a logo or photo) fills them */
         div.w-8.h-8:empty, div.w-10.h-10:empty, div.w-12.h-12:empty { display:none; }
         .sess-venue { color:var(--la-accent); }
+        #yt-revenue-label { color:#FF0000 !important; }
+        #sc-revenue-label { color:#FF5500 !important; }
+        #next-event-card.kpi-link { cursor:pointer; transition:border-color .2s; }
+        @media (hover:hover) { #next-event-card.kpi-link:hover { border-color:var(--la-accent); } }
+        #next-event-card.kpi-link .kpi-label::after { content:'↗'; margin-left:6px; opacity:.6; }
         .mm-share { height:30px; padding:0 14px; border-radius:999px; border:0; background:var(--la-accent); color:var(--la-accent-ink, #000); font:600 12px Inter,ui-sans-serif,system-ui,sans-serif; cursor:pointer; margin-right:4px; }
         .mm-share:disabled { opacity:.6; cursor:default; }
         .mm-share.pulse { box-shadow:0 0 0 0 var(--la-accent); animation:mmPulse 1.2s ease-out 3; }
@@ -2861,6 +2866,15 @@
         async function fetchNextEvent() {
             const titleEl = document.getElementById('next-event-title');
             const timeEl = document.getElementById('next-event-time');
+            // With an address, the card opens it in Maps (the phone's maps app, or Google Maps on a computer)
+            const card = document.getElementById('next-event-card');
+            const linkMaps = loc => {
+                if (!loc) { card.classList.remove('kpi-link'); card.onclick = card.onkeydown = null; card.removeAttribute('role'); card.removeAttribute('tabindex'); return; }
+                const url = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(loc);
+                card.classList.add('kpi-link'); card.setAttribute('role', 'link'); card.tabIndex = 0; card.setAttribute('aria-label', 'Open ' + loc + ' in Maps');
+                card.onclick = () => window.open(url, '_blank', 'noopener');
+                card.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); card.onclick(); } };
+            };
             try {
                 const res = await laFetch('/api/next-event?t=' + Date.now());
                 const data = await res.json();
@@ -2880,6 +2894,7 @@
                     const until = new Date(ev.end).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
                     timeEl.innerHTML = '<span class="kpi-today">On now</span>, until ' + until + (ev.location ? ' · ' + ev.location.replace(/&/g, '&amp;').replace(/</g, '&lt;') : '');
                     titleEl.title = ev.title; timeEl.title = timeEl.textContent;
+                    linkMaps(ev.location);
                     return;
                 }
                 const start = new Date(ev.start);
@@ -2906,6 +2921,7 @@
                 if (isToday || isTomorrow) { var w = isToday ? 'Today' : 'Tomorrow'; timeEl.innerHTML = '<span class="kpi-today">' + w + '</span>' + timeEl.textContent.slice(w.length).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
                 titleEl.title = ev.title + (ev.location ? ' — ' + ev.location : '');
                 timeEl.title = timeEl.textContent;
+                linkMaps(ev.location);
             } catch (e) {
                 titleEl.textContent = 'Calendar unavailable';
                 timeEl.textContent = 'Try again in a moment';
