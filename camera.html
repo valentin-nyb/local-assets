@@ -301,6 +301,7 @@
         .cal-dj span { font:500 11px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.04em; text-transform:uppercase; color:var(--la-sub); }
         .cal-tag { align-self:center; font:700 9px/1 'Helvetica Neue', Helvetica, Arial, sans-serif !important; letter-spacing:.08em !important; padding:4px 7px; border-radius:5px; border:1px solid var(--la-line); color:var(--la-dim) !important; }
         .cal-date .cal-tag { align-self:flex-start; margin-top:5px; color:var(--la-ok) !important; border-color:color-mix(in srgb, var(--la-ok) 40%, transparent); }
+        .cal-date .cal-tag.done { color:var(--la-dim) !important; border-color:var(--la-line); }
         .cal-tag.on { color:var(--la-ok) !important; border-color:color-mix(in srgb, var(--la-ok) 40%, transparent); }
         .cal-time { font:500 12px/1 'JetBrains Mono', monospace; color:var(--la-text); white-space:nowrap; }
         .cal-time.rec { color:var(--la-sub); }
@@ -773,11 +774,11 @@
                 var d = new Date(e.start);
                 var wd = d.toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'Europe/London' });
                 var dm = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'Europe/London' });
-                var tag = e.now ? (e.endedAt ? '<span class="cal-tag">Finished</span>' : '<span class="cal-tag on">On now</span>') : i === (cal.current ? 1 : 0) ? '<span class="cal-tag">Next</span>' : '';
+                var tag = e.now ? (e.endedAt ? '<span class="cal-tag done">Finished</span>' : '<span class="cal-tag on">On now</span>') : i === (cal.current ? 1 : 0) ? '<span class="cal-tag">Next</span>' : '';
                 return '<div class="cal-row' + (e.now ? ' now' : '') + '">' +
                     '<div class="cal-date"><span>' + wd + '</span><b>' + dm + '</b>' + tag + '</div>' +
                     '<div class="cal-dj"><b>' + esc(e.artist) + '</b>' + (e.venue ? '<span>' + esc(e.venue) + '</span>' : '') + '</div>' +
-                    '<div class="cal-time">' + fmtTime(e.start) + ' – ' + fmtTime(e.endedAt || e.end) + (e.endedAt ? ' <small>finished early</small>' : '') + '</div>' +
+                    '<div class="cal-time">' + fmtTime(e.start) + ' – ' + fmtTime(e.endedAt || e.end) + '</div>' +
                     '<div class="cal-time rec">' + fmtTime(e.start - 120e3) + ' – ' + fmtTime(e.endedAt || (e.end + 120e3)) + '</div>' +
                 '</div>';
             });

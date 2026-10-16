@@ -784,6 +784,43 @@
             };
         }
 
+        // Delete a whole session: every file Distribution History shows for it (4K, audio, vertical
+        // clips, thumbnails), then its name, venue and label
+        async function deleteSession(artist, date, shown) {
+            var e = sessionFilesFor(artist, date), files = [];
+            if (e.MASTER) files.push({ id: e.MASTER.id });
+            if (e.AUDIO) files.push({ id: e.AUDIO.id });
+            (e.SOCIAL || []).forEach(function(c) { files.push({ id: c.id }); });
+            (e.THUMB || []).forEach(function(t) { files.push({ id: t.id, url: (t.meta && t.meta.thumbnail_url) || '' }); });
+            files = files.filter(function(f, i) { return f.id && files.findIndex(function(x) { return x.id === f.id; }) === i; });
+            var parts = [];
+            if (e.MASTER) parts.push('the 4K long form');
+            if (e.AUDIO) parts.push('the audio');
+            if ((e.SOCIAL || []).length) parts.push(e.SOCIAL.length + ' vertical clip' + (e.SOCIAL.length > 1 ? 's' : ''));
+            if ((e.THUMB || []).length) parts.push(e.THUMB.length + ' thumbnail' + (e.THUMB.length > 1 ? 's' : ''));
+            var what = parts.length > 1 ? parts.slice(0, -1).join(', ') + ' and ' + parts[parts.length - 1] : (parts[0] || 'its details');
+            if (!(await laConfirm({ title: 'Delete this session?', message: artist + ' · ' + shown + '. This permanently removes ' + what + ' from Cloud Storage. This can\'t be undone.', confirmText: 'Delete session', danger: true }))) return;
+            var venue = _adminView ? (_venueOfArtist[String(artist).toUpperCase().trim()] || '') : '';
+            var failed = 0;
+            laToast('Deleting session…');
+            for (var i = 0; i < files.length; i++) {
+                var h = { 'Content-Type': 'application/json' }, v = (_adminView && _venueOfAsset[files[i].id]) || venue;
+                if (v) h['X-LA-Venue'] = v;
+                try {
+                    var r = await laFetch('/api/delete-asset', { method: 'POST', headers: h, body: JSON.stringify(files[i]) });
+                    if (!r.ok && r.status !== 404) failed++;
+                } catch (_) { failed++; }
+            }
+            if (!failed) {
+                var mh = { 'Content-Type': 'application/json' };
+                if (venue) mh['X-LA-Venue'] = venue;
+                try { await laFetch('/api/session-meta', { method: 'POST', headers: mh, body: JSON.stringify({ artist: artist, date: date }) }); } catch (_) {}
+                delete _sessionMeta[String(artist).toUpperCase().trim() + '|' + date];
+            }
+            laToast(failed ? failed + ' file' + (failed > 1 ? 's' : '') + ' could not be deleted. Try again.' : 'Session deleted');
+            fetchRecentUploads();
+        }
+
         async function editSession(btn) {
             var artist = btn.dataset.artist, date = btn.dataset.date, meta = sessionMeta(artist, date);
             var venues = [], labels = [];
@@ -813,10 +850,11 @@
                 '<label>Record label<input name="slabel" maxlength="60" list="se-labels" placeholder="Optional" value="' + escHtml(meta.label || '') + '">' +
                 '<datalist id="se-labels">' + labels.map(function(v) { return '<option value="' + escHtml(v) + '">'; }).join('') + '</datalist></label>' +
                 '<p class="se-error"></p>' +
-                '<div class="se-actions"><button type="button" class="se-btn ghost" data-cancel>Cancel</button><button type="submit" class="se-btn primary">Save</button></div>' +
+                '<div class="se-actions"><button type="button" class="se-del" data-delete><iconify-icon icon="solar:trash-bin-trash-linear"></iconify-icon>Delete session</button><button type="button" class="se-btn ghost" data-cancel>Cancel</button><button type="submit" class="se-btn primary">Save</button></div>' +
                 '</form>';
             var form = m.querySelector('form');
             m.querySelector('.se-x').onclick = m.querySelector('[data-cancel]').onclick = function() { m.remove(); };
+            m.querySelector('[data-delete]').onclick = function() { m.remove(); deleteSession(artist, date, meta.title || meta.shownDate); };
             form.sname.focus();
             form.addEventListener('submit', async function(e) {
                 e.preventDefault();
@@ -3280,6 +3318,9 @@
         .se-btn.primary { background:var(--la-accent); color:var(--la-accent-ink); }
         .se-btn.ghost { background:none; color:var(--la-text); border-color:var(--la-line); }
         .se-btn:disabled { opacity:.6; }
+        .se-del { margin-right:auto; display:inline-flex; align-items:center; gap:6px; height:36px; padding:0 4px; background:none; border:none; color:var(--la-bad); font-size:13px; font-weight:500; cursor:pointer; }
+        .se-del iconify-icon { font-size:15px; }
+        @media (hover:hover) { .se-del:hover { text-decoration:underline; text-underline-offset:3px; } }
         .sh-card { padding:0; overflow:hidden; }
         .sh-title { margin:0; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--la-text); }
         .sh-head { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:56px; padding:0 22px; }
