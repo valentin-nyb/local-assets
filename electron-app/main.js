@@ -31,7 +31,8 @@ function createWindow() {
       sandbox: true,
     },
   })
-  win.once('ready-to-show', () => win.show())
+  // Opens filling the screen (not macOS full screen, so the Dock and menu bar stay)
+  win.once('ready-to-show', () => { win.maximize(); win.show() })
 
   // The window only shows local-assets.com; any other link opens in the browser
   win.webContents.setWindowOpenHandler(({ url }) => {
