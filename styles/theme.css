@@ -545,3 +545,12 @@ h1:not(header h1), h2, h3,
     :root body :is(.cam-btn, .se-btn, .vs-btn, .lad-btn, .ing-btn, .bl-pay), :root body :is(.cam-btn, .se-btn, .vs-btn, .lad-btn, .ing-btn, .bl-pay)::before { transition: none; }
 }
 
+
+/* Dialogs stay put on phones: the page behind doesn't scroll, the panel never slides sideways,
+   and date fields fit the panel (iOS gives them a wide minimum size of their own) */
+html:has(.cam-dialog:not(.hidden)), html:has(.cam-dialog:not(.hidden)) body { overflow: hidden; overscroll-behavior: none; }
+.cam-dialog { overscroll-behavior: contain; touch-action: pan-y; }
+.cam-dialog-panel { overflow-x: hidden !important; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.cam-form label { min-width: 0; }
+.cam-form input[type=date] { -webkit-appearance: none; appearance: none; display: block; min-width: 0; max-width: 100%; width: 100%; text-align: left; }
+.cam-form input[type=date]::-webkit-date-and-time-value { text-align: left; }

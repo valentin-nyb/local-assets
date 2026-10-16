@@ -9,7 +9,7 @@
     <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script>
         if (new URLSearchParams(location.search).get('clear') === '1') {
             localStorage.removeItem('la_admin');
@@ -28,207 +28,53 @@
     <!-- The sign-in page is always dark, whatever theme the dashboard uses -->
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
         :root {
-            --green:   #39FF14;
-            --bg:      #050505;
-            --fg:      #ffffff;
-            --border:  rgba(255,255,255,0.14);
-            --btn-bg:  #0a0a0a;
-            --mono:    'JetBrains Mono', ui-monospace, 'Courier New', monospace;
-            --display: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            --safe-top:    env(safe-area-inset-top,    0px);
-            --safe-bottom: env(safe-area-inset-bottom, 0px);
+            --green: #85FA4F;
+            --bg: #070905;
+            --fg: #fafafa;
+            --mono: 'JetBrains Mono', ui-monospace, 'Courier New', monospace;
+            --display: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            --col: min(100vw - 48px, 440px);
         }
+        html, body { height: 100%; background: var(--bg); color: var(--fg); -webkit-font-smoothing: antialiased; font-family: var(--display); }
+        body { position: relative; min-height: 100dvh; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center;
+               padding: max(env(safe-area-inset-top), 40px) 0 max(env(safe-area-inset-bottom), 40px); }
 
-        html.light {
-            --green:  #F97316;
-            --bg:     #f5f5f4;
-            --fg:     #18181b;
-            --border: rgba(0,0,0,0.12);
-            --btn-bg: #ffffff;
-        }
-
-        html, body {
-            height: 100%;
-            background: var(--bg);
-            color: var(--fg);
-            -webkit-font-smoothing: antialiased;
-            font-family: var(--mono);
-        }
-
-        body {
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100dvh;
-            overflow: hidden;
-        }
-
-        /* Dot grid that lights up around the pointer (same as the home page hero) */
+        /* Faint dot grid that lights up around the pointer */
         .dot-grid-canvas { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
 
-        /* Scanlines — dark only */
-        html:not(.light) body::after {
-            content: '';
-            position: fixed;
-            inset: 0;
-            background: repeating-linear-gradient(
-                to bottom,
-                transparent,
-                transparent 3px,
-                rgba(0,0,0,0.18) 3px,
-                rgba(0,0,0,0.18) 4px
-            );
-            pointer-events: none;
-            z-index: 0;
-        }
+        .wrap { position: relative; z-index: 1; width: var(--col); display: flex; flex-direction: column; }
+        .wrap .inner { padding-left: 6%; }
+        .wordmark { display: block; width: calc(var(--col) * .4); aspect-ratio: 1328 / 165; background: var(--green);
+                    -webkit-mask: url(/logos/Green@2x.png) left center / contain no-repeat; mask: url(/logos/Green@2x.png) left center / contain no-repeat; margin-bottom: calc(var(--col) * .05); }
+        h1 { font-family: var(--display); font-weight: 700; font-size: calc(var(--col) * .134); line-height: .86; letter-spacing: -0.01em; text-transform: uppercase; color: var(--fg); margin-bottom: clamp(56px, 13vh, 110px); }
 
-        .bg-glow {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 700px;
-            height: 700px;
-            background: radial-gradient(circle, rgba(57,255,20,0.04) 0%, transparent 70%);
-            pointer-events: none;
-            z-index: 0;
-        }
-        html.light .bg-glow {
-            background: radial-gradient(circle, rgba(0,0,0,0.06) 0%, transparent 70%);
-        }
-
-        .wrap {
-            position: relative;
-            z-index: 10;
-            width: 100%;
-            max-width: 480px;
-            padding: max(var(--safe-top), 40px) 32px max(var(--safe-bottom), 40px);
-            display: flex;
-            flex-direction: column;
-            align-items: stretch;
-        }
-
-        /* ── Brand label row ── */
-        .brand-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 32px;
-        }
-        .pulse-dot {
-            width: 8px;
-            height: 8px;
-            background: var(--green);
-            border-radius: 50%;
-            box-shadow: 0 0 8px var(--green);
-            flex-shrink: 0;
-            animation: pulse-dot 2s ease-in-out infinite;
-        }
-        @keyframes pulse-dot {
-            0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--green); }
-            50%       { opacity: 0.6; box-shadow: 0 0 4px var(--green); }
-        }
-        .brand-label {
-            font-family: var(--mono);
-            font-size: 13px;
-            font-weight: 700;
-            letter-spacing: 0.32em;
-            text-transform: uppercase;
-            color: var(--green);
-        }
-
-        /* ── Hero title ── */
-        h1 {
-            font-family: var(--display);
-            font-size: clamp(46px, 9vw, 78px);
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: -0.03em;
-            line-height: 0.88;
-            color: #fff;
-            margin-bottom: 48px;
-        }
-        html.light h1 { color: #F97316; }
-        html.light .brand-label { color: #18181b; }
-
-        /* ── Google button ── */
-        #google-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            width: 100%;
-            padding: 16px 20px;
-            background: var(--btn-bg);
-            border: 1px solid var(--border);
-            color: var(--fg);
-            font-family: var(--mono);
-            font-size: 13px;
-            font-weight: 700;
-            letter-spacing: 0.2em;
-            text-transform: uppercase;
-            cursor: pointer;
-            transition: border-color .15s, background .15s;
-            margin-bottom: 16px;
-            border-radius: 0;
-            -webkit-appearance: none;
-        }
-        #google-btn:hover:not(.loading) {
-            border-color: rgba(57,255,20,0.5);
-            background: #0d120d;   /* solid, so the dot grid doesn't show through */
-        }
-        #google-btn:active:not(.loading) { transform: scale(0.99); }
-        #google-btn.loading { opacity: 0.5; pointer-events: none; }
+        #google-btn { display: flex; align-items: center; justify-content: center; gap: 18px; width: 100%; height: calc(var(--col) * .16);
+                      background: #0b0c0a; border: 1px solid rgba(255,255,255,.13); border-radius: 0; color: var(--fg);
+                      font-family: var(--mono); font-size: clamp(12px, calc(var(--col) * .03), 14px); font-weight: 500; letter-spacing: .34em; text-transform: uppercase;
+                      cursor: pointer; -webkit-appearance: none; transition: border-color .2s, background .2s; }
+        #google-btn:hover:not(.loading) { border-color: color-mix(in srgb, var(--green) 55%, transparent); background: #0d110b; }
+        #google-btn:active:not(.loading) { transform: scale(.995); }
+        #google-btn.loading { opacity: .5; pointer-events: none; }
         #google-btn svg { flex-shrink: 0; }
 
-        /* ── Status ── */
-        #status {
-            font-family: var(--mono);
-            font-size: 12px;
-            letter-spacing: 0.15em;
-            text-transform: uppercase;
-            text-align: center;
-            min-height: 14px;
-            color: #52525b;
-        }
+        #status { margin-top: 16px; min-height: 14px; font-family: var(--mono); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; text-align: center; color: #6b6f68; }
         #status.err { color: #ef4444; }
         #status.ok  { color: var(--green); }
 
-        /* ── Footer ── */
-        .footer-note {
-            position: fixed;
-            bottom: max(var(--safe-bottom), 24px);
-            left: 0;
-            right: 0;
-            text-align: center;
-            font-family: var(--mono);
-            font-size: 12px;
-            letter-spacing: 0.25em;
-            text-transform: uppercase;
-            color: #888888;
-            z-index: 10;
-            pointer-events: none;
-        }
-    </style>
-    <style>
+        .mark { display: block; width: calc(var(--col) * .15); aspect-ratio: 72 / 80; margin: clamp(64px, 14vh, 130px) auto 0;
+                background: url(/logos/a-white.png) center / contain no-repeat; opacity: .94; }
     </style>
 </head>
 <body>
 
     <canvas class="dot-grid-canvas" aria-hidden="true"></canvas>
-    <div class="bg-glow" aria-hidden="true"></div>
 
-    <div class="wrap">
-        <div class="brand-row">
-            <div class="pulse-dot"></div>
-            <span class="brand-label">LOCAL / ASSETS™</span>
+    <main class="wrap">
+        <div class="inner">
+            <span class="wordmark" role="img" aria-label="local / assets"></span>
+            <h1>Sign in<br>to your<br>workspace</h1>
         </div>
-
-        <h1>SIGN IN TO<br>YOUR WORKSPACE</h1>
 
         <button id="google-btn" type="button">
             <svg width="16" height="16" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -237,13 +83,12 @@
                 <path d="M3.964 10.707A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/>
                 <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z" fill="#EA4335"/>
             </svg>
-            CONTINUE WITH GOOGLE
+            Continue with Google
         </button>
 
         <div id="status"></div>
-    </div>
-
-    <p class="footer-note">Unauthorized access is prohibited</p>
+        <span class="mark" aria-hidden="true"></span>
+    </main>
 
     <script>
         function setStatus(msg, cls) {
@@ -319,7 +164,9 @@
             var next = new URLSearchParams(location.search).get('next') || '/dashboard.html';
             sessionStorage.setItem('la_pending_next', next);
             this.classList.add('loading');
-            window.location.href = '/api/google-auth?mode=web';
+            // On the local dev server (npm run dev), sign in on the live site and come back here
+            var local = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+            window.location.href = local ? 'https://local-assets.com/api/google-auth?mode=web&dev=' + (location.port || '80') : '/api/google-auth?mode=web';
         });
     </script>
 
@@ -329,14 +176,14 @@
             var canvas = document.querySelector('.dot-grid-canvas');
             if (!canvas) return;
             var ctx = canvas.getContext('2d'), dots = [], mouse = { x: -1000, y: -1000 };
-            var SPACING = 30, DOT_SIZE = 1.2, GLOW_RADIUS = 120, ACTIVE = '57, 255, 20';
+            var SPACING = 45, DOT_SIZE = 1.1, GLOW_RADIUS = 120, ACTIVE = '133, 250, 79';
             function init() {
                 canvas.width = window.innerWidth; canvas.height = window.innerHeight; dots = [];
                 for (var x = SPACING / 2; x < canvas.width; x += SPACING)
                     for (var y = SPACING / 2; y < canvas.height; y += SPACING) dots.push({ x: x, y: y });
             }
             function draw() {
-                var idle = document.documentElement.classList.contains('light') ? '#d4d4d8' : '#1a1a1a';
+                var idle = '#141a11';
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 for (var i = 0; i < dots.length; i++) {
                     var d = dots[i], dx = mouse.x - d.x, dy = mouse.y - d.y, dist = Math.sqrt(dx * dx + dy * dy);

@@ -6,7 +6,7 @@ import { signWebToken } from './_venues.js';
 export default async function handler(req, res) {
   await freshVenues();
   const oauthCookie = parseCookie(req.headers.cookie || '').la_google_state || '';
-  const [expectedState, intent = 'admin'] = oauthCookie.split('.');
+  const [expectedState, intent = 'admin', devPort = ''] = oauthCookie.split('.');
   const clearState = 'la_google_state=; Path=/api/google-callback; HttpOnly; Secure; SameSite=Lax; Max-Age=0';
   try {
     const { code, state } = req.query;
@@ -114,6 +114,11 @@ export default async function handler(req, res) {
     console.error('[google-callback] web login OK:', email, 'venue:', venueSlug);
 
     res.setHeader('Set-Cookie', clearState);
+    // Local development: the session goes to the dev server on this computer only (in the URL fragment,
+    // which is never sent to a server)
+    if (/^\d{4,5}$/.test(devPort)) {
+      return res.redirect(`http://localhost:${devPort}/__dev/session#` + Buffer.from(sessionData).toString('base64url'));
+    }
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.send(`<!DOCTYPE html><html><body><script>
       localStorage.setItem('la_admin', ${JSON.stringify(sessionData)});

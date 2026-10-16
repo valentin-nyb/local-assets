@@ -32,7 +32,7 @@
     <link rel="manifest" href="favicon/site.webmanifest">
 
     <link rel="stylesheet" href="styles/tailwind.css">
-    <link rel="stylesheet" href="styles/theme.css?v=8">
+    <link rel="stylesheet" href="styles/theme.css?v=9">
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
@@ -165,6 +165,7 @@
         .cam-howto-t { margin:0 0 8px; font-size:14px; font-weight:600; color:var(--la-text); }
         .cam-howto ol { margin:0; padding-left:18px; display:flex; flex-direction:column; gap:7px; font-size:13px; line-height:1.5; color:var(--la-sub); }
         .cam-howto b { color:var(--la-text); font-weight:600; }
+        .cam-howto code { font-family:'JetBrains Mono',monospace; font-size:11px; padding:1px 5px; border-radius:4px; background:var(--la-chip); color:var(--la-text); }
         .cam-howto-get { display:flex; align-items:center; gap:12px; margin-top:12px; font-size:12px; line-height:1.45; color:var(--la-dim); }
         .cam-howto-get .cam-btn { flex-shrink:0; }
         @media (max-width:520px) { .cam-howto-get { flex-direction:column; align-items:stretch; } }
@@ -228,6 +229,7 @@
         .cal-dj b { font:700 14px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif; text-transform:uppercase; color:var(--la-text); }
         .cal-dj span { font:500 11px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.04em; text-transform:uppercase; color:var(--la-sub); }
         .cal-tag { align-self:center; font:700 9px/1 'Helvetica Neue', Helvetica, Arial, sans-serif !important; letter-spacing:.08em !important; padding:4px 7px; border-radius:5px; border:1px solid var(--la-line); color:var(--la-dim) !important; }
+        .cal-date .cal-tag { align-self:flex-start; margin-top:5px; color:var(--la-ok) !important; border-color:color-mix(in srgb, var(--la-ok) 40%, transparent); }
         .cal-tag.on { color:var(--la-ok) !important; border-color:color-mix(in srgb, var(--la-ok) 40%, transparent); }
         .cal-time { font:500 12px/1 'JetBrains Mono', monospace; color:var(--la-text); white-space:nowrap; }
         .cal-time.rec { color:var(--la-sub); }
@@ -543,11 +545,6 @@
                         </div>
                         <span class="cal-state" id="cal-state">Not connected</span>
                     </div>
-                    <ol class="cal-how">
-                        <li><span>01</span><b>One event per set</b><p>Title it with the DJ's name. Add the venue as the location.</p></li>
-                        <li><span>02</span><b>Cameras start</b><p>Recording starts 2 minutes before the set.</p></li>
-                        <li><span>03</span><b>Saved for the DJ</b><p>Recording stops 2 minutes after the set. It's saved in Distribution History with vertical clips.</p></li>
-                    </ol>
                     <div class="cal-source" id="cal-source" hidden>
                         <span class="cal-source-dot"></span>
                         <div class="cal-source-text"><b id="cal-source-name">Google Calendar</b><span id="cal-source-sub">Checked every minute</span></div>
@@ -572,23 +569,13 @@
                         <div id="cal-list"></div>
                     </div>
                     <p class="cal-help" id="cal-note" hidden></p>
+                    <ol class="cal-how">
+                        <li><span>01</span><b>One event per set</b><p>Title it with the DJ's name. Add the venue as the location.</p></li>
+                        <li><span>02</span><b>Cameras start</b><p>Recording starts 2 minutes before the set.</p></li>
+                        <li><span>03</span><b>Saved for the DJ</b><p>Recording stops 2 minutes after the set. It's saved in Distribution History with vertical clips.</p></li>
+                    </ol>
                 </section>
 
-                <details class="cam-guide">
-                    <summary> How to connect an OBSBOT Tail 2 with NDI</summary>
-                    <ol>
-                        <li><b>Connect the camera</b> to the venue network: Wi-Fi, or an Ethernet cable (the Tail 2 is powered over the same cable from a PoE+ switch). Ethernet is steadier for long sets.</li>
-                        <li><b>Turn on NDI</b> in the OBSBOT Start app (or the camera's web page) and give it a clear NDI name, e.g. <code>MAIN FLOOR</code>. Activate NDI there if the app asks.</li>
-                        <li><b>Add the camera here</b> with the same name, its NDI name and its IP address (shown in the OBSBOT app).</li>
-                        <li><b>Send the video to local / assets</b> with <em>Stream setup</em> on the camera card, either:
-                            <ul>
-                                <li>directly from the camera: paste the RTMP server and stream key into the camera's live-streaming (RTMP) settings, or</li>
-                                <li>from the venue computer: in OBS with the free DistroAV plugin, add the camera's NDI source, then use the same server and key under Settings → Stream.</li>
-                            </ul>
-                        </li>
-                        <li><b>Pan, tilt, zoom and AI tracking</b>: use <em>Controls</em> on the camera card while you're on the venue network. It opens the camera's own control page.</li>
-                    </ol>
-                </details>
                 <p id="cam-error" class="hidden text-center text-[10px] font-mono uppercase tracking-widest text-red-500"></p>
             </div>
         </div>
@@ -700,8 +687,8 @@
                 var dm = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'Europe/London' });
                 var tag = e.now ? '<span class="cal-tag on">On now</span>' : i === (cal.current ? 1 : 0) ? '<span class="cal-tag">Next</span>' : '';
                 return '<div class="cal-row' + (e.now ? ' now' : '') + '">' +
-                    '<div class="cal-date"><span>' + wd + '</span><b>' + dm + '</b></div>' +
-                    '<div class="cal-dj"><b>' + esc(e.artist) + '</b>' + (e.venue ? '<span>' + esc(e.venue) + '</span>' : '') + tag + '</div>' +
+                    '<div class="cal-date"><span>' + wd + '</span><b>' + dm + '</b>' + tag + '</div>' +
+                    '<div class="cal-dj"><b>' + esc(e.artist) + '</b>' + (e.venue ? '<span>' + esc(e.venue) + '</span>' : '') + '</div>' +
                     '<div class="cal-time">' + fmtTime(e.start) + ' – ' + fmtTime(e.end) + '</div>' +
                     '<div class="cal-time rec">' + fmtTime(e.start - 120e3) + ' – ' + fmtTime(e.end + 120e3) + '</div>' +
                 '</div>';
@@ -1241,6 +1228,15 @@
                 '<label class="cam-obsbot-only">NDI source name<input name="ndiName" maxlength="80" placeholder="OBSBOT-TAIL2 (MAIN FLOOR)" value="' + esc(c && c.ndiName) + '"><small>As shown in the OBSBOT app or NDI Studio Monitor.</small></label>' +
                 '<label class="cam-obsbot-only">IP address<input name="ip" maxlength="70" placeholder="192.168.1.50" value="' + esc(c && c.ip) + '"><small>The camera\'s address on the venue network. Needed for Control.</small></label>' +
                 '<label class="cam-check"><input type="checkbox" name="followCalendar"' + (!c || c.followCalendar !== false ? ' checked' : '') + '><span>Start and stop with the calendar<small>Records each set, 2 minutes either side.</small></span></label>' +
+                (c ? '' : '<div class="cam-obsbot-only cam-howto">' +
+                    '<p class="cam-howto-t">How to connect an OBSBOT Tail 2</p>' +
+                    '<ol>' +
+                    '<li><b>Put it on the venue network.</b> Ethernet from a PoE+ switch (it powers the camera too) is steadier than Wi-Fi for long sets.</li>' +
+                    '<li><b>Turn on NDI</b> in the OBSBOT Start app and name it, e.g. <code>MAIN FLOOR</code>. Enter that name and the camera\'s IP address below.</li>' +
+                    '<li><b>Send it here.</b> After you add it, Stream setup gives the RTMP address and key for the camera\'s live-streaming settings, or for OBS with the DistroAV plugin.</li>' +
+                    '<li><b>Pan, tilt, zoom and tracking</b> work from Controls on the camera card, on the venue network.</li>' +
+                    '</ol>' +
+                '</div>') +
                 '<div class="cam-audio-only cam-howto">' +
                     '<p class="cam-howto-t">How to connect your decks</p>' +
                     '<ol>' +

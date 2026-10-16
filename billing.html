@@ -32,7 +32,7 @@
     <link rel="manifest" href="favicon/site.webmanifest">
 
     <link rel="stylesheet" href="styles/tailwind.css">
-    <link rel="stylesheet" href="styles/theme.css?v=8">
+    <link rel="stylesheet" href="styles/theme.css?v=9">
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
@@ -148,6 +148,14 @@
         #bl-plans td:last-child { position:absolute; right:16px; bottom:20px; }
         @media (max-width:1180px) { #bl-plans tr { grid-template-columns:repeat(3,minmax(0,1fr)); } #bl-plans td:first-child { grid-column:1 / -1; } #bl-plans td:last-child { top:38px; bottom:auto; } }
         @media (max-width:640px) { #bl-plans tr { grid-template-columns:repeat(2,minmax(0,1fr)); padding:16px 48px 16px 16px; } #bl-plans td:last-child { right:10px; } }
+        @media (max-width:640px) {
+            .bl-admin-actions { display:grid !important; grid-template-columns:1fr 1fr; gap:10px !important; }
+            .bl-admin-actions > * { margin:0 !important; width:100%; justify-content:center; }
+            .bl-admin-actions .bl-check, .bl-admin-actions #bl-send, .bl-admin-actions .bl-msg, .bl-admin-actions #bl-delete-acct { grid-column:1 / -1; }
+            .bl-admin-actions .bl-check { justify-content:flex-start; padding:4px 0; }
+            .bl-admin-actions .bl-msg:empty { display:none; }
+            .bl-admin-actions #bl-delete-acct { margin-top:8px !important; }
+        }
         .bl-check { display:inline-flex; align-items:center; gap:8px; font-size:12px; color:var(--la-sub); margin-right:6px; }
         .bl-status { min-width:190px; height:28px; border-radius:99px; border:1px solid var(--la-line); background:var(--la-chip); color:var(--la-sub); font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; padding:0 8px; cursor:pointer; }
         .bl-status.paid { background:color-mix(in srgb, var(--la-ok) 14%, transparent); color:color-mix(in srgb, var(--la-ok) 72%, var(--la-text)); border-color:transparent; font-weight:700; }

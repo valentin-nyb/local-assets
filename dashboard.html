@@ -34,7 +34,7 @@
     <link rel="manifest" href="favicon/site.webmanifest">
     
     <link rel="stylesheet" href="styles/tailwind.css">
-    <link rel="stylesheet" href="styles/theme.css?v=8">
+    <link rel="stylesheet" href="styles/theme.css?v=9">
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
@@ -76,6 +76,7 @@
         }
         /* Boxes that used to hold an icon: hidden until something (a logo or photo) fills them */
         div.w-8.h-8:empty, div.w-10.h-10:empty, div.w-12.h-12:empty { display:none; }
+        .sess-venue { color:var(--la-accent); }
         .mm-share { height:30px; padding:0 14px; border-radius:999px; border:0; background:var(--la-accent); color:var(--la-accent-ink, #000); font:600 12px Inter,ui-sans-serif,system-ui,sans-serif; cursor:pointer; margin-right:4px; }
         .mm-share:disabled { opacity:.6; cursor:default; }
         .mm-share.pulse { box-shadow:0 0 0 0 var(--la-accent); animation:mmPulse 1.2s ease-out 3; }
@@ -1568,8 +1569,8 @@
                     html += '<div>';
                     var sMeta = sessionMeta(artist.name, dateStr);
                     html += '<p class="text-xs font-bold text-zinc-300 uppercase tracking-tight">' + escHtml(sMeta.title || sMeta.shownDate) + '</p>';
-                    html += '<p class="text-[8px] font-mono text-zinc-600 uppercase tracking-widest"' + (sMeta.venue ? '' : ' data-venue-label') + '>' +
-                        escHtml(sMeta.venue || getVenueName()) + (sMeta.title ? ' · ' + sMeta.shownDate : '') + '</p>';
+                    html += '<p class="text-[8px] font-mono text-zinc-600 uppercase tracking-widest"><span class="sess-venue"' + (sMeta.venue ? '' : ' data-venue-label') + '>' +
+                        escHtml(sMeta.venue || getVenueName()) + '</span>' + (sMeta.title ? ' · ' + sMeta.shownDate : '') + '</p>';
                     html += '</div>';
                     html += '</div>';
                     html += '<div class="flex items-center gap-2">';
