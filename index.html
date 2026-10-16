@@ -733,6 +733,59 @@
     </main>
 
     <script>
+        // Plans as edited in Billing → Plans: names, prices, clips, cameras and what's included every month
+        (function livePlans() {
+            var money = function(n) { return '£' + Number(n).toLocaleString('en-GB', { maximumFractionDigits: n % 1 ? 2 : 0, minimumFractionDigits: n % 1 ? 2 : 0 }); };
+            var hours = function(min) { return Math.round(min / 60).toLocaleString('en-GB'); };
+            var size = function(gb) { return gb >= 1000 ? (Math.round(gb / 100) / 10).toLocaleString('en-GB') + ' TB' : Math.round(gb).toLocaleString('en-GB') + ' GB'; };
+            var short = function(name) { var i = name.lastIndexOf('·'); return (i >= 0 ? name.slice(i + 1) : name).trim(); };
+            fetch('/api/plans').then(function(r) { return r.ok ? r.json() : null; }).then(function(d) {
+                if (!d || !d.plans) return;
+                // The sign-up window's plan details (defined further down the page, so applied once it exists)
+                var tiers = function() {
+                    if (typeof SIGNUP_TIERS === 'undefined') return false;
+                    d.plans.forEach(function(p) {
+                        var tier = SIGNUP_TIERS[p.id];
+                        if (!tier) return;
+                        tier.price = money(p.signupFee && !p.price ? p.signupFee : p.price);
+                        tier.feats = tier.feats.map(function(f) {
+                            f = f.replace(/^(\d+|Unlimited) vertical clips/, p.maxClips ? p.maxClips + ' vertical clips' : 'Unlimited vertical clips');
+                            f = f.replace(/^[\d,]+ hours of sets stored/, hours(p.included.storedMinutes) + ' hours of sets stored');
+                            if (p.cameras) f = f.replace(/^\d+ OBSBOT 4K cameras?/, p.cameras + ' OBSBOT 4K camera' + (p.cameras > 1 ? 's' : ''));
+                            return f;
+                        });
+                    });
+                    return true;
+                };
+                if (!tiers()) window.addEventListener('DOMContentLoaded', tiers);
+                d.plans.forEach(function(p) {
+                    if (p.id === 'dj-trial') {
+                        document.querySelectorAll('.tr-offer-price b').forEach(function(b) { b.textContent = money(p.signupFee); });
+                        document.querySelectorAll('.tr-offer-name').forEach(function(b) { b.textContent = p.name; });
+                        document.querySelectorAll('.tr-offer-feats span').forEach(function(sp) { sp.textContent = sp.textContent.replace(/^(\d+|Unlimited) vertical clips/, p.maxClips ? p.maxClips + ' vertical clips' : 'Unlimited vertical clips'); });
+                        return;
+                    }
+                    document.querySelectorAll('.tr-card').forEach(function(card) {
+                        var btn = card.querySelector('[onclick="selectTier(\'' + p.id + '\')"]');
+                        if (!btn) return;
+                        var nm = card.querySelector('.tr-name'); if (nm) nm.textContent = short(p.name);
+                        var pr = card.querySelector('.tr-price b'); if (pr && p.price) pr.textContent = money(p.price);
+                        card.querySelectorAll('li span').forEach(function(sp) {
+                            var t = sp.textContent;
+                            if (/vertical clips/.test(t)) sp.textContent = t.replace(/^(\d+ vertical clips|Unlimited vertical clips)/, p.maxClips ? p.maxClips + ' vertical clips' : 'Unlimited vertical clips');
+                            if (p.cameras && /^\d+ OBSBOT 4K cameras?/.test(t)) sp.textContent = t.replace(/^\d+ OBSBOT 4K cameras?/, p.cameras + ' OBSBOT 4K camera' + (p.cameras > 1 ? 's' : ''));
+                        });
+                        var st = card.querySelectorAll('.tr-stats > div > b');
+                        if (st.length === 3) {
+                            st[0].textContent = hours(p.included.storedMinutes) + ' h';
+                            st[1].textContent = '≈ ' + hours(p.included.deliveredMinutes) + ' h';
+                            st[2].textContent = size(p.included.fileGB);
+                        }
+                    });
+                });
+            }).catch(function() {});
+        })();
+
         function togglePricing(mode) {
             const distro = document.getElementById('pricing-distribution'), creative = document.getElementById('pricing-creative');
             const showDistro = mode === 'distribution';

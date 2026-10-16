@@ -296,7 +296,7 @@ export default async function handler(req, res) {
         });
         return res.status(200).json(out);
       }
-      if (body0.action !== 'changePlan') return res.status(403).json({ error: 'Only local / assets can change billing' });
+      if (body0.action !== 'changePlan') return res.status(403).json({ error: admins().includes(session.email) ? `You're now signed in to ${venueName || 'another account'}, not local / assets (switched in another tab or the account menu). Switch back to local / assets, then save again.` : 'Only local / assets can change billing', code: 'not_admin' });
       const stripe = stripeClient();
       if (!stripe) return res.status(503).json({ error: 'Payments are not set up yet' });
       const out = await withRedis(async redis => {
@@ -329,7 +329,7 @@ export default async function handler(req, res) {
       const { status, ...rest } = out;
       return res.status(status).json(rest);
     }
-    if (!isAdmin) return res.status(403).json({ error: 'Only local / assets can change billing' });
+    if (!isAdmin) return res.status(403).json({ error: admins().includes(session.email) ? `You're now signed in to ${venueName || 'another account'}, not local / assets (switched in another tab or the account menu). Switch back to local / assets, then save again.` : 'Only local / assets can change billing', code: 'not_admin' });
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
 
     // Sign-ups waiting for their video storage (a Mux environment created by local / assets)
