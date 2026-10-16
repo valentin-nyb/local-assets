@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('laApp', {
     state: venue => ipcRenderer.invoke('la:mac-state', venue),
     link: l => ipcRenderer.invoke('la:mac-link', l),
     kick: () => ipcRenderer.invoke('la:mac-kick'),
+    preview: (venue, slotId) => ipcRenderer.invoke('la:mac-preview', venue, slotId),
     unlink: (venue, slotId) => ipcRenderer.invoke('la:mac-unlink', venue, slotId),
     onChange: cb => { ipcRenderer.on('la:mac-changed', () => cb()) },
   },

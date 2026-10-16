@@ -64,6 +64,12 @@ export default async function handler(req, res) {
     return res.status(200).json(out);
   }
 
+  // ?only=thumbs: just this account's session thumbnails (images, fast), e.g. for See session in Camera Control
+  if (req.query?.only === 'thumbs') {
+    if (!session?.venueSlug) return res.status(200).json([]);
+    return res.status(200).json(await listThumbnailAssets(session.venueSlug).catch(() => []));
+  }
+
   if (!session?.muxAuth) {
     console.error('[list-assets] no muxAuth — returning []');
     return res.status(200).json([]);

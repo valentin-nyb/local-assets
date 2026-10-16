@@ -1,6 +1,6 @@
 import { pausedBy, sendPaused } from './_suspend.js';
 import { createClient } from 'redis';
-import { getWebSessionAuth, getVenuesConfig, getMuxAuthForVenue, platformAdmins, isAdminVenue } from './_venues.js';
+import { getWebSessionAuth, getVenuesConfig, getMuxAuthForVenue, platformAdmins, isAdminVenue, framePass } from './_venues.js';
 import { calendarKey, cleanCalendarUrl, fetchEvents } from './_calendar.js';
 import { listLiveStreams } from './_live.js';
 import crypto from 'crypto';
@@ -145,6 +145,8 @@ export default async function handler(req, res) {
           const events = await fetchEvents(calUrl, now - 12 * 3600e3, now + 60 * 86400e3);
           const cur = events.find(e => e.start <= now && e.end > now);
           calendar.current = cur ? { artist: cur.artist, venue: cur.venue, start: cur.start, end: cur.end } : null;
+          // A set stopped early with Stop set: finished, at the time it was stopped
+          if (cur) { try { const fin = JSON.parse(await withRedis(r => r.get(`cam_set_end:${slug}`)) || 'null'); if (fin && fin.start === cur.start) calendar.current.endedAt = fin.endedAt; } catch {} }
           calendar.upcoming = events.filter(e => e.start > now).slice(0, 6).map(e => ({ artist: e.artist, venue: e.venue, start: e.start, end: e.end }));
           // When the cameras that follow the calendar open and close
           const w = scheduleWindow(events, now);
@@ -290,6 +292,8 @@ export default async function handler(req, res) {
         rtmpUrl: own ? OWN_RTMP_URL : RTMP_URL,
         streamKey: s.stream_key,
         srtUrl: s.srt_passphrase ? `${SRT_HOST}?streamid=${s.stream_key}&passphrase=${s.srt_passphrase}` : null,
+        // For the a™ app: lets it show this camera's live picture in Camera Control
+        frame: { cam: `${slug}.${cam.id}`, pass: framePass(slug, cam.id) },
       });
     }
 
@@ -349,13 +353,17 @@ export default async function handler(req, res) {
           return res.status(200).json({ ok: true, since });
         }
         // Stop: the recording ends now and is saved; between sets the stream closes again
-        let open = false, closesAt = 0;
+        let open = false, closesAt = 0, setStart = 0;
         const calUrl = await redis.get(calendarKey(slug));
-        if (calUrl) { try { const w = scheduleWindow(await fetchEvents(calUrl, Date.now() - 24 * 3600e3, Date.now() + 24 * 3600e3)); open = w.open; closesAt = w.closesAt || 0; } catch { open = true; } }
+        if (calUrl) { try { const w = scheduleWindow(await fetchEvents(calUrl, Date.now() - 24 * 3600e3, Date.now() + 24 * 3600e3)); open = w.open; closesAt = w.closesAt || 0; setStart = w.current?.start || 0; } catch { open = true; } }
         // Stop set: a calendar set finishing early. The cameras stay closed until this set's time is over,
         // then open again for the next set (api/camera-schedule.js)
         const endSet = body.endSet === true && open && closesAt > Date.now();
-        if (endSet) open = false;
+        if (endSet) {
+          open = false;
+          // The calendar in Camera Control shows this set as finished, at the time it was stopped
+          if (setStart) await redis.set(`cam_set_end:${slug}`, JSON.stringify({ start: setStart, endedAt: Date.now() }), { PX: closesAt - Date.now() + 6 * 3600e3 });
+        }
         for (const cam of chosen) {
           await redis.del(manualKey(cam.streamId));
           await redis.del(`cam_preview:${cam.streamId}`);

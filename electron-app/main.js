@@ -91,9 +91,11 @@ ipcMain.handle('la:mac-link', (e, l) => {
   if (!/^[A-Za-z0-9-]{10,120}$/.test(key)) throw new Error('This slot has no stream key yet')
   const kind = l.kind === 'audio' ? 'audio' : 'camera'
   if (kind === 'camera' ? !l.video : !l.audio) throw new Error('Choose a device')
-  thisMac.link({ venue: str(l.venue, 80), slotId: str(l.slotId, 80), slotName: str(l.slotName, 60), kind, video: str(l.video, 120), audio: str(l.audio, 120), key })
+  const frame = l.frame && /^[a-z0-9-]{1,80}\.[A-Za-z0-9_-]{1,80}$/.test(String(l.frame.cam || '')) && /^[A-Za-z0-9_-]{20,100}$/.test(String(l.frame.pass || '')) ? { cam: String(l.frame.cam), pass: String(l.frame.pass) } : null
+  thisMac.link({ venue: str(l.venue, 80), slotId: str(l.slotId, 80), slotName: str(l.slotName, 60), kind, video: str(l.video, 120), audio: str(l.audio, 120), key, frame })
   return thisMac.state(str(l.venue, 80))
 })
+ipcMain.handle('la:mac-preview', (e, venue, slotId) => fromSite(e) ? thisMac.preview(str(venue, 80), str(slotId, 80)) : null)
 ipcMain.handle('la:mac-kick', e => { if (fromSite(e)) thisMac.kick() })
 ipcMain.handle('la:mac-unlink', (e, venue, slotId) => {
   if (!fromSite(e)) throw new Error('Not allowed')

@@ -5,7 +5,7 @@
 //   Outside a set the calendar keeps the stream closed, so Mux refuses the connection: the link waits
 //   and tries again until the set opens it, then records, exactly as an OBSBOT left on all night.
 // - Stream keys are kept only encrypted by the macOS Keychain (safeStorage) and never written to logs.
-const { app, safeStorage, powerSaveBlocker, systemPreferences } = require('electron')
+const { app, safeStorage, powerSaveBlocker, systemPreferences, net } = require('electron')
 const { spawn, execFile } = require('child_process')
 const path = require('path')
 const fs = require('fs')
@@ -91,13 +91,50 @@ function argsFor(link, key, run) {
       '-b:v', '300k', '-g', '20', '-pix_fmt', 'yuv420p', ...audioOut, ...out]
   }
   const [size, fps] = run.picked || VIDEO_MODES[run.mode] || VIDEO_MODES[VIDEO_MODES.length - 1]
-  const a = link.audio ? indexOf('audio', link.audio) : 'none'
-  return ['-hide_banner', '-nostats', '-loglevel', 'error', '-progress', 'pipe:1',
+  const a = link.audio ? indexOf('audio', link.audio) : null
+  return ['-hide_banner', '-nostats', '-loglevel', 'error', '-progress', 'pipe:1', '-y',
     '-f', 'avfoundation', ...(fps ? ['-framerate', fps] : []), ...(size ? ['-video_size', size] : []),
     '-i', indexOf('video', link.video) + ':' + (a == null ? 'none' : a),
+    // Mux drops a live stream that has no sound, so "No sound" sends a silent track
+    ...(a == null ? ['-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo'] : []),
+    '-map', '0:v', '-map', a == null ? '1:a' : '0:a',
     ...(run.x264 ? ['-c:v', 'libx264', '-preset', 'veryfast', '-tune', 'zerolatency'] : ['-c:v', 'h264_videotoolbox', '-realtime', '1']),
     '-b:v', '6000k', '-maxrate', '6000k', '-bufsize', '12000k', '-g', '60', '-pix_fmt', 'yuv420p',
-    ...(link.audio ? audioOut : []), ...out]
+    ...audioOut, ...out,
+    // What the camera sees, for Camera Control (two small frames a second)
+    ...previewOut(run.id)]
+}
+
+// ── Preview: the camera's picture in Camera Control, from the app's own capture ──
+// A camera can often be used by one app at a time (an iPhone always), so the page can't open it itself.
+// While streaming, the stream also writes a small frame twice a second; between sets a light preview does.
+const previewFile = id => path.join(app.getPath('userData'), 'previews', require('crypto').createHash('sha1').update(id).digest('hex').slice(0, 16) + '.jpg')
+const previewOut = id => ['-map', '0:v', '-an', '-vf', 'fps=2,scale=640:-2', '-q:v', '6', '-f', 'image2', '-update', '1', previewFile(id)]
+
+function startPreview(id) {
+  const link = links[id], run = runs[id]
+  if (!link || !run || run.proc || run.preview || link.kind === 'audio') return
+  if (indexOf('video', link.video) == null || systemPreferences.getMediaAccessStatus('camera') !== 'granted') return
+  fs.mkdirSync(path.dirname(previewFile(id)), { recursive: true })
+  const [size, fps] = run.picked || VIDEO_MODES[run.mode] || VIDEO_MODES[VIDEO_MODES.length - 1]
+  const proc = spawn(FFMPEG, ['-hide_banner', '-nostats', '-loglevel', 'error', '-y',
+    '-f', 'avfoundation', ...(fps ? ['-framerate', fps] : []), ...(size ? ['-video_size', size] : []),
+    '-i', indexOf('video', link.video) + ':none', ...previewOut(id)], { stdio: 'ignore' })
+  run.preview = proc
+  proc.on('exit', () => { if (run.preview === proc) run.preview = null })
+}
+function stopPreview(run) {
+  if (!run || !run.preview) return Promise.resolve()
+  const p = run.preview; run.preview = null
+  return new Promise(r => { p.once('exit', r); p.kill('SIGINT'); setTimeout(r, 1500) })
+}
+function preview(venue, slotId) {
+  const f = previewFile(venue + '/' + slotId)
+  try {
+    const st = fs.statSync(f)
+    if (Date.now() - st.mtimeMs > 6000) return null
+    return 'data:image/jpeg;base64,' + fs.readFileSync(f).toString('base64')
+  } catch { return null }
 }
 
 function setState(id, state, detail = '') {
@@ -109,8 +146,10 @@ function setState(id, state, detail = '') {
 
 function later(id, ms) {
   const run = runs[id]
+  if (!run) return
   clearTimeout(run.timer)
   run.timer = setTimeout(() => start(id), ms)
+  if (ms >= 3000) setTimeout(() => startPreview(id), 400)
 }
 
 async function start(id) {
@@ -125,6 +164,9 @@ async function start(id) {
   if (!key) return setState(id, 'error', 'Link this slot again')
 
   setState(id, 'starting')
+  await stopPreview(run)
+  if (run.proc || !links[id]) return
+  fs.mkdirSync(path.dirname(previewFile(id)), { recursive: true })
   run.startedAt = Date.now(); run.sentAt = 0
   const proc = spawn(FFMPEG, argsFor(link, key, run), { stdio: ['ignore', 'pipe', 'pipe'] })
   run.proc = proc
@@ -193,6 +235,8 @@ function stop(id) {
   if (!run) return
   clearTimeout(run.timer)
   if (run.proc) { run.proc.removeAllListeners('exit'); run.proc.kill('SIGINT') }
+  if (run.preview) run.preview.kill('SIGINT')
+  clearInterval(run.stallCheck)
   delete runs[id]
 }
 
@@ -208,7 +252,7 @@ function sync() {
   for (const id of Object.keys(runs)) if (!links[id]) stop(id)
   for (const id of Object.keys(links)) {
     if (runs[id]) continue
-    runs[id] = { proc: null, state: 'starting', detail: '', timer: null, mode: 0, x264: false }
+    runs[id] = { id, proc: null, preview: null, state: 'starting', detail: '', timer: null, mode: 0, x264: false }
     start(id)
   }
   awake()
@@ -229,11 +273,29 @@ async function poll() {
   }
 }
 
+// The live picture on the website: the newest preview frame of each linked camera, every 3 seconds
+const sentAt = {}
+async function sendFrames() {
+  for (const [id, l] of Object.entries(links)) {
+    if (l.kind !== 'camera' || !l.frameCam) continue
+    const f = previewFile(id)
+    let st; try { st = fs.statSync(f) } catch { continue }
+    if (st.mtimeMs <= (sentAt[id] || 0) || Date.now() - st.mtimeMs > 6000) continue
+    sentAt[id] = st.mtimeMs
+    try {
+      const r = await net.fetch('https://local-assets.com/api/camera-frame', { method: 'POST',
+        headers: { 'Content-Type': 'image/jpeg', 'X-LA-Cam': l.frameCam, 'X-LA-Pass': open(l.framePass) }, body: fs.readFileSync(f) })
+      if (r.status === 404) { delete l.frameCam; save() }   // the camera was removed from Camera Control
+    } catch {}
+  }
+}
+
 function init(onChange) {
   notify = onChange
   load()
   poll().then(sync)
   setInterval(() => poll().catch(() => {}), POLL_MS)
+  setInterval(() => sendFrames().catch(() => {}), 3000)
 }
 
 function state(venue) {
@@ -241,16 +303,17 @@ function state(venue) {
   for (const [id, l] of Object.entries(links)) {
     if (venue && l.venue !== venue) continue
     const r = runs[id] || {}
-    out[l.slotId] = { video: l.video || '', audio: l.audio || '', kind: l.kind, state: r.state || 'starting', detail: r.detail || '' }
+    out[l.slotId] = { video: l.video || '', audio: l.audio || '', kind: l.kind, state: r.state || 'starting', detail: r.detail || '', frame: !!l.frameCam }
   }
   return { devices: { video: devices.video.map(d => d.name), audio: devices.audio.map(d => d.name) }, links: out }
 }
 
-function link({ venue, slotId, slotName, kind, video, audio, key }) {
+function link({ venue, slotId, slotName, kind, video, audio, key, frame }) {
   const id = venue + '/' + slotId
   if (!safeStorage.isEncryptionAvailable()) throw new Error('This Mac can\'t keep the stream key safely')
   stop(id)
-  links[id] = { venue, slotId, slotName, kind, video: kind === 'audio' ? '' : video, audio, key: seal(key) }
+  links[id] = { venue, slotId, slotName, kind, video: kind === 'audio' ? '' : video, audio, key: seal(key),
+    ...(frame && frame.cam && frame.pass ? { frameCam: frame.cam, framePass: seal(frame.pass) } : {}) }
   save(); sync(); notify()
 }
 
@@ -268,4 +331,4 @@ function kick() {
 
 function stopAll() { for (const id of Object.keys(runs)) stop(id) }
 
-module.exports = { init, state, link, unlink, kick, stopAll }
+module.exports = { init, state, link, unlink, kick, stopAll, preview }

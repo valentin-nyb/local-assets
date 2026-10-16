@@ -204,6 +204,12 @@ export function getMuxAuthForVenue(venue) {
 
 const getSecret = () => process.env.LOCAL_ASSETS_API_KEY || 'dev-secret-change-me';
 
+// A camera slot's pass for sending its live picture (api/camera-frame.js): given to the a™ app when it
+// links a camera, valid only for that slot
+export function framePass(slug, camId) {
+  return crypto.createHmac('sha256', getSecret()).update(`frame|${slug}|${camId}`).digest('base64url');
+}
+
 export function signWebToken(email, venueSlug) {
   const payload = { email, venueSlug, exp: Date.now() + 3_600_000 };
   const data    = Buffer.from(JSON.stringify(payload)).toString('base64url');

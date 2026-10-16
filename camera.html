@@ -180,17 +180,30 @@
         .ls-file { aspect-ratio:1; border-radius:10px; border:1px solid var(--la-line); background:#141416 center / 70% no-repeat; }
         .ls-file.photo { background-size:cover; }
         .ls-empty { font-size:13px; color:var(--la-sub); }
+        .ls-venue { display:flex; align-items:center; gap:14px; }
+        .ls-venue .ls-file { width:64px; flex:none; }
+        .ls-initial { display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:600; color:var(--la-sub); }
+        .ls-vname { margin:0; font-size:15px; font-weight:600; color:#F97316; }
+        html:not(.dark) .ls-vname { color:#ea580c; }
+        .ls-vsub { margin:3px 0 0; font-size:12px; color:var(--la-dim); }
+        .ls-art { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px; }
+        .ls-tile { aspect-ratio:16 / 9; border-radius:10px; border:1px solid var(--la-line); background:#141416 center / cover no-repeat; }
+        .ls-tile.wide { aspect-ratio:16 / 9; }
         @media (max-width:640px) { .rec-bar { flex-wrap:wrap; } .rec-bar .cam-btn { width:100%; justify-content:center; } }
         .rec-dot { flex:none; width:10px; height:10px; border-radius:50%; background:#ef4444; box-shadow:0 0 12px #ef4444; animation:camBlink 1.2s ease-in-out infinite; }
         .rec-text { flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
         .rec-text b { font-size:14px; font-weight:600; color:var(--la-text); text-transform:uppercase; letter-spacing:.02em; }
         .rec-text span { font:500 11px/1.4 'JetBrains Mono', monospace; letter-spacing:.12em; text-transform:uppercase; color:var(--la-sub); }
-        .rec-stop { background:#ef4444 !important; color:#fff !important; }
+        /* Stop: red text and outline; hovering fills it red (both themes) */
+        :root body .cam-btn.rec-stop { --rec-red:#ef4444; --la-btn-fill:var(--la-surface); background:var(--rec-red) !important; color:#fff !important; border:1px solid var(--rec-red) !important; }
+        html:not(.dark) body .cam-btn.rec-stop { --rec-red:#dc2626; }
+        @media (hover:hover) { :root body .cam-btn.rec-stop:hover:not(:disabled) { color:var(--rec-red) !important; border-color:var(--rec-red) !important; } }
         .ses-slots { display:grid; gap:8px; }
         .ses-slots .cam-check { margin:0; }
         /* This Mac (only in the a™ app): cameras and the mixer plugged into this computer, linked to slots */
         /* A camera or the mixer linked on this Mac plays in its card before the set opens the stream */
         .mac-live { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; background:#000; }
+        .mac-wait { position:absolute; inset:0; }
         .mac-tag { position:absolute; left:10px; bottom:10px; z-index:2; display:inline-flex; align-items:center; gap:6px; padding:4px 9px; border-radius:999px; background:rgba(0,0,0,.6); color:#fafafa; font:500 10px/1 'JetBrains Mono', monospace; letter-spacing:.14em; text-transform:uppercase; }
         .mac-tag::before { content:""; width:6px; height:6px; border-radius:50%; background:#39FF14; box-shadow:0 0 8px #39FF14; }
         .cam-audio.mac .cam-eq i { height:70%; animation:none; transition:transform .08s linear; transform-origin:center; }
@@ -739,7 +752,7 @@
             document.getElementById('cal-source-name').textContent = calSourceName(cal.host);
             // Connected and working: folded to one line (the source, the next set and the buttons) unless opened
             var nextSet = cal.current || (cal.upcoming || [])[0];
-            var nextTxt = nextSet ? (cal.current ? ' · On now: ' : ' · Next: ') + niceArtist(nextSet.artist) + ', ' + new Date(nextSet.start).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/London' }) + ' ' + fmtTime(nextSet.start) : '';
+            var nextTxt = nextSet ? (cal.current ? (cal.current.endedAt ? ' · Finished ' + fmtTime(cal.current.endedAt) + ': ' : ' · On now: ') : ' · Next: ') + niceArtist(nextSet.artist) + ', ' + new Date(nextSet.start).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/London' }) + ' ' + fmtTime(nextSet.start) : '';
             document.getElementById('cal-source-sub').textContent = cal.error ? 'The link can\'t be read. Paste the right one.' : 'Connected · checked every minute' + nextTxt;
             var open = calOpen();
             var panel = document.getElementById('cal-panel');
@@ -760,12 +773,12 @@
                 var d = new Date(e.start);
                 var wd = d.toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'Europe/London' });
                 var dm = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'Europe/London' });
-                var tag = e.now ? '<span class="cal-tag on">On now</span>' : i === (cal.current ? 1 : 0) ? '<span class="cal-tag">Next</span>' : '';
+                var tag = e.now ? (e.endedAt ? '<span class="cal-tag">Finished</span>' : '<span class="cal-tag on">On now</span>') : i === (cal.current ? 1 : 0) ? '<span class="cal-tag">Next</span>' : '';
                 return '<div class="cal-row' + (e.now ? ' now' : '') + '">' +
                     '<div class="cal-date"><span>' + wd + '</span><b>' + dm + '</b>' + tag + '</div>' +
                     '<div class="cal-dj"><b>' + esc(e.artist) + '</b>' + (e.venue ? '<span>' + esc(e.venue) + '</span>' : '') + '</div>' +
-                    '<div class="cal-time">' + fmtTime(e.start) + ' – ' + fmtTime(e.end) + '</div>' +
-                    '<div class="cal-time rec">' + fmtTime(e.start - 120e3) + ' – ' + fmtTime(e.end + 120e3) + '</div>' +
+                    '<div class="cal-time">' + fmtTime(e.start) + ' – ' + fmtTime(e.endedAt || e.end) + (e.endedAt ? ' <small>finished early</small>' : '') + '</div>' +
+                    '<div class="cal-time rec">' + fmtTime(e.start - 120e3) + ' – ' + fmtTime(e.endedAt || (e.end + 120e3)) + '</div>' +
                 '</div>';
             });
             document.getElementById('cal-list').innerHTML = rows.join('');
@@ -1088,6 +1101,7 @@
             } else {
                 stage.innerHTML = '<div class="cam-off"><span>' +
                     (c.status === 'missing' ? 'This camera\'s stream was deleted from Cloud Storage' : 'Waiting for video') + '</span></div>';
+                if (c.status !== 'missing') webFrames(stage, c.id);
             }
             card.querySelectorAll('[data-act]').forEach(function(b) {
                 b.addEventListener('click', function() {
@@ -1186,34 +1200,41 @@
                 '<div class="ls-row"><span>Saved to Distribution History</span><small>' + esc(artist) + (start ? ' · ' + fmtDay(start) : '') + '</small></div>' +
                 '<div class="ls-row"><span>Vertical clips</span><small>' + (slots.some(function(c) { return c.kind !== 'audio' && c.autoClips !== false; }) ? 'Made automatically' : 'Off') + '</small></div>' +
                 '<div class="ls-row"><span>Watermark</span><small id="ls-wm">…</small></div></div>' +
-                '<div class="ls-sec"><p class="ls-h">Brand assets</p><div id="ls-brand"><p class="ls-empty">Loading…</p></div></div>' +
+                '<div class="ls-sec"><div id="ls-brand"><p class="ls-empty">Loading…</p></div></div>' +
                 '<div class="cam-form-actions" style="margin-top:20px"><a class="cam-btn ghost" href="/brand">Open Brand Kit</a><button type="button" class="cam-btn primary rec-stop" onclick="stopCalendarSet(this)">Stop set</button></div>');
             try {
-                var r = await laFetch('/api/brand'); var d = r.ok ? await r.json() : {};
+                var hdr = {}; if (macVenue() && document.getElementById('cam-acct')) hdr['X-LA-Venue'] = macVenue();
+                var res = await Promise.all([
+                    laFetch('/api/brand', { headers: hdr }).then(function(r) { return r.ok ? r.json() : {}; }),
+                    laFetch('/api/list-assets?only=thumbs', { headers: hdr }).then(function(r) { return r.ok ? r.json() : []; }).catch(function() { return []; })
+                ]);
+                var d = res[0] || {}, thumbs = Array.isArray(res[1]) ? res[1] : [];
                 var slug = function(n) { return String(n).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60); };
-                var names = d.ownerNames || {}, files = d.files || [];
-                var find = function(name, prefix) {
+                var names = d.ownerNames || {}, files = d.files || [], photos = d.ownerPhotos || {};
+                var owner = function(name, prefix) {
                     if (!name) return null;
-                    var key = prefix + slug(name);
-                    var hit = Object.keys(names).filter(function(k) { return k.indexOf(prefix) === 0 && String(names[k]).toUpperCase() === String(name).toUpperCase(); })[0];
-                    return hit || key;
+                    return Object.keys(names).filter(function(k) { return k.indexOf(prefix) === 0 && String(names[k]).toUpperCase() === String(name).toUpperCase(); })[0] || prefix + slug(name);
                 };
-                var org = (d.orgName || '').toUpperCase() === String(artist).toUpperCase() ? 'venue' : null;
-                var owners = [org || find(artist, 'artist-'), ev.venue ? find(ev.venue, 'venue-') : null].filter(Boolean);
-                var html = owners.map(function(o) {
-                    var mine = files.filter(function(f) { return f.owner === o; });
-                    var photo = (d.ownerPhotos || {})[o];
-                    var logos = mine.filter(function(f) { return f.category === 'logos' && /\.(png|jpe?g|webp|gif|svg)$/i.test(f.name || f.url); });
-                    var fonts = mine.filter(function(f) { return f.category === 'fonts'; }).length;
-                    var other = mine.length - logos.length - fonts - (photo ? 1 : 0);
-                    var title = o === 'venue' ? (d.orgName || artist) : (names[o] || (o.indexOf('venue-') === 0 ? ev.venue : artist));
-                    return '<div class="ls-row" style="border-top:0;padding-top:0"><span>' + esc(String(title).toUpperCase()) + ' <small>' + (o.indexOf('venue-') === 0 ? 'Venue' : 'Artist') + '</small></span><small>' +
-                        [logos.length ? logos.length + ' logo' + (logos.length > 1 ? 's' : '') : '', fonts ? fonts + ' font' + (fonts > 1 ? 's' : '') : '', other > 0 ? other + ' other' : ''].filter(Boolean).join(' · ') + '</small></div>' +
-                        (photo || logos.length ? '<div class="ls-files" style="margin-bottom:14px">' + (photo ? '<span class="ls-file photo" style="background-image:url(' + esc(photo) + ')"></span>' : '') +
-                            logos.slice(0, 7).map(function(f) { return '<span class="ls-file" style="background-image:url(' + esc(f.url) + ')"></span>'; }).join('') + '</div>'
-                            : '<p class="ls-empty" style="margin-bottom:14px">No brand files yet.</p>');
-                }).join('');
-                document.getElementById('ls-brand').innerHTML = html || '<p class="ls-empty">No brand kit for ' + esc(artist) + ' yet.</p>';
+                var isImg = function(f) { return /\.(png|jpe?g|webp|gif|svg)$/i.test(f.name || f.url); };
+                var html = '';
+                // The venue: one logo, the one it's shown with (its profile image, else its first logo)
+                if (ev.venue) {
+                    var vo = owner(ev.venue, 'venue-');
+                    var vlogo = photos[vo] || ((files.filter(function(f) { return f.owner === vo && f.category === 'logos' && isImg(f); })[0] || {}).url);
+                    html += '<div class="ls-venue">' + (vlogo ? '<span class="ls-file" style="background-image:url(' + esc(vlogo) + ')"></span>' : '<span class="ls-file ls-initial">' + esc(String(ev.venue).charAt(0).toUpperCase()) + '</span>') +
+                        '<div><p class="ls-vname">' + esc(String(ev.venue).toUpperCase()) + '</p><p class="ls-vsub">Venue</p></div></div>';
+                }
+                // The artist's thumbnails (newest first) and artwork, album covers and photos
+                var A = String(artist).toUpperCase().trim();
+                var th = thumbs.filter(function(t) { return String(t.passthrough || '').toUpperCase().split(' // ')[0].trim() === A && t.meta && t.meta.thumbnail_url; })
+                    .sort(function(x, y) { return Number(y.created_at) - Number(x.created_at); }).map(function(t) { return { url: t.meta.thumbnail_url, wide: true }; });
+                var ao = owner(artist, 'artist-'), orgIsArtist = (d.orgName || '').toUpperCase() === A;
+                var art = files.filter(function(f) { return (f.owner === ao || (orgIsArtist && f.owner === 'venue')) && ['artwork', 'covers', 'photos'].indexOf(f.category) >= 0 && isImg(f); }).map(function(f) { return { url: f.url }; });
+                var tiles = th.concat(art).slice(0, 9);
+                html += '<p class="ls-h" style="margin-top:18px">Thumbnails &amp; artwork</p>' + (tiles.length
+                    ? '<div class="ls-art">' + tiles.map(function(t) { return '<span class="ls-tile' + (t.wide ? ' wide' : '') + '" style="background-image:url(' + esc(t.url) + ')"></span>'; }).join('') + '</div>'
+                    : '<p class="ls-empty">No thumbnails or artwork for ' + esc(artist) + ' yet. Add them in Brand Kit or from Distribution History.</p>');
+                document.getElementById('ls-brand').innerHTML = html;
                 var wm = d.watermark || {};
                 var el = document.getElementById('ls-wm');
                 if (el) el.textContent = wm.enabled === false ? 'Off' : 'On' + (wm.text && wm.text.source === 'artist' ? ' · logo and ' + artist.toLowerCase() : wm.text && wm.text.value ? ' · logo and "' + wm.text.value + '"' : ' · logo');
@@ -1312,6 +1333,15 @@
             try { st = await window.laApp.mac.state(venue); } catch (_) { return; }
             if (!st) return;
             _mac = st;
+            // Links made before the live picture existed get its pass (not while sending, so nothing is cut)
+            Object.keys(st.links).forEach(function(id) {
+                var l = st.links[id], c = slots.find(function(x) { return x.id === id; });
+                if (!c || l.kind !== 'camera' || l.frame || l.state === 'sending' || renderMac.upgrading) return;
+                renderMac.upgrading = true;
+                camApi({ action: 'connection', id: id }).then(function(conn) {
+                    if (conn.frame) return window.laApp.mac.link({ venue: venue, slotId: id, slotName: c.name, kind: 'camera', video: l.video, audio: l.audio, key: conn.streamKey, frame: conn.frame });
+                }).catch(function() {}).then(function() { renderMac.upgrading = false; });
+            });
             // Links to slots that were removed stop streaming
             Object.keys(st.links).forEach(function(id) { if (!slots.some(function(c) { return c.id === id; })) window.laApp.mac.unlink(venue, id); });
             var a = document.activeElement;
@@ -1334,6 +1364,24 @@
                     macChip(l) + '</div>';
             }).join('');
             macPreviews(st);
+        }
+        // A camera linked on a Mac with the a™ app sends its picture every few seconds: shown in its card on
+        // any computer or phone, also between sets (nothing is recorded then)
+        function webFrames(stage, camId) {
+            var img = null, misses = 0;
+            var tick = function() {
+                if (!stage.isConnected || stage.dataset.live || stage.dataset.mac) return;
+                var h = {}; if (_camVenue[camId]) h['X-LA-Venue'] = _camVenue[camId];
+                laFetch('/api/camera-frame?cam=' + encodeURIComponent(camId), { headers: h }).then(function(r) { return r.status === 200 ? r.json() : null; }).then(function(f) {
+                    if (!stage.isConnected || stage.dataset.mac) return;
+                    if (f && f.src) {
+                        misses = 0;
+                        if (!img) { stage.innerHTML = '<img class="mac-live" alt=""><span class="mac-tag">Live picture · not recording</span>'; img = stage.querySelector('img'); }
+                        img.src = f.src;
+                    } else if (img && ++misses > 3) { img = null; stage.innerHTML = '<div class="cam-off"><span>Waiting for video</span></div>'; }
+                }).catch(function() {}).then(function() { if (stage.isConnected && !stage.dataset.mac) setTimeout(tick, 3000); });
+            };
+            tick();
         }
         // The linked camera's picture (and the mixer's level) straight from this Mac, in the slot's card
         var _macMedia = {};   // device name → Promise<MediaStream>
@@ -1370,6 +1418,19 @@
                 used[(deck ? 'audio:' : 'video:') + name] = true;
                 if (stage.dataset.mac === name) return;
                 stage.dataset.mac = name;
+                // The picture comes from the app's own capture (a camera like an iPhone can only be used once)
+                if (!deck && window.laApp.mac.preview) {
+                    var venue = macVenue(), slot = stage.dataset.cam;
+                    stage.innerHTML = '<img class="mac-live" alt=""><span class="mac-tag">This Mac · ' + esc(name) + '</span><div class="cam-off mac-wait"><span>Starting the camera…</span></div>';
+                    var img = stage.querySelector('img'), wait = stage.querySelector('.mac-wait');
+                    var tick = setInterval(function() {
+                        if (!stage.isConnected || stage.dataset.mac !== name || stage.dataset.live) { clearInterval(tick); return; }
+                        window.laApp.mac.preview(venue, slot).then(function(src) {
+                            if (src) { img.src = src; wait.style.display = 'none'; }
+                        }).catch(function() {});
+                    }, 600);
+                    return;
+                }
                 macMedia(deck ? 'audio' : 'video', name).then(function(ms) {
                     if (stage.dataset.mac !== name) return;
                     if (deck) {
@@ -1411,7 +1472,7 @@
                 if (kind === 'audio' ? !audio : !video) { await window.laApp.mac.unlink(venue, id); return renderMac(); }
                 _macBusy[id] = true; renderMac();
                 var conn = await camApi({ action: 'connection', id: id });
-                await window.laApp.mac.link({ venue: venue, slotId: id, slotName: row.dataset.name, kind: kind, video: video, audio: audio, key: conn.streamKey });
+                await window.laApp.mac.link({ venue: venue, slotId: id, slotName: row.dataset.name, kind: kind, video: video, audio: audio, key: conn.streamKey, frame: conn.frame });
             } catch (err) {
                 camStatus('Could not link: ' + (err.message || err), 'var(--la-bad)');
             } finally { delete _macBusy[id]; renderMac(); }
@@ -1423,7 +1484,8 @@
         function paintRelay() {
             var box = document.getElementById('cam-relay');
             if (!box) return;
-            box.classList.toggle('hidden', !_cams.length);
+            // Remote control is for OBSBOT cameras: the line only shows when the account has one
+            box.classList.toggle('hidden', !_cams.some(function(c) { return !c.external && (!c.kind || c.kind === 'obsbot'); }));
             box.dataset.on = _relay && _relay.online ? '1' : '';
             document.getElementById('cam-relay-text').textContent = _relay && _relay.online ? 'Remote control on · venue relay connected' : _relay && _relay.set ? 'Remote control off · venue relay not connected' : 'Remote control not set up';
             var btn = box.querySelector('button');
@@ -1698,7 +1760,7 @@
                         var linkKind = !c && k === 'mac' ? 'camera' : !c && k === 'audio' && mixer ? 'audio' : '';
                         if (linkKind && d.camera) {
                             var conn = await camApi({ action: 'connection', id: d.camera.id });
-                            await window.laApp.mac.link({ venue: macVenue(), slotId: d.camera.id, slotName: d.camera.name, kind: linkKind, video: linkKind === 'camera' ? macVid : '', audio: linkKind === 'camera' ? macAud : mixer, key: conn.streamKey });
+                            await window.laApp.mac.link({ venue: macVenue(), slotId: d.camera.id, slotName: d.camera.name, kind: linkKind, video: linkKind === 'camera' ? macVid : '', audio: linkKind === 'camera' ? macAud : mixer, key: conn.streamKey, frame: conn.frame });
                         }
                         _camKey = ''; await loadCameras();
                         if (c || linkKind) { closeCamDialog(); if (linkKind) laToast(d.camera.name + ' is linked to this Mac. It records with the calendar, or press Create a session.'); }
