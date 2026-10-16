@@ -792,14 +792,15 @@
             if (e.AUDIO) files.push({ id: e.AUDIO.id });
             (e.SOCIAL || []).forEach(function(c) { files.push({ id: c.id }); });
             (e.THUMB || []).forEach(function(t) { files.push({ id: t.id, url: (t.meta && t.meta.thumbnail_url) || '' }); });
+            (_sessionAll[String(artist).toUpperCase().trim() + '|' + date] || []).forEach(function(a) { files.push({ id: a.id }); });
             files = files.filter(function(f, i) { return f.id && files.findIndex(function(x) { return x.id === f.id; }) === i; });
             var parts = [];
             if (e.MASTER) parts.push('the 4K long form');
             if (e.AUDIO) parts.push('the audio');
             if ((e.SOCIAL || []).length) parts.push(e.SOCIAL.length + ' vertical clip' + (e.SOCIAL.length > 1 ? 's' : ''));
             if ((e.THUMB || []).length) parts.push(e.THUMB.length + ' thumbnail' + (e.THUMB.length > 1 ? 's' : ''));
-            var what = parts.length > 1 ? parts.slice(0, -1).join(', ') + ' and ' + parts[parts.length - 1] : (parts[0] || 'its details');
-            if (!(await laConfirm({ title: 'Delete this session?', message: artist + ' · ' + shown + '. This permanently removes ' + what + ' from Cloud Storage. This can\'t be undone.', confirmText: 'Delete session', danger: true }))) return;
+            var what = parts.length > 1 ? parts.slice(0, -1).join(', ') + ' and ' + parts[parts.length - 1] : (parts[0] || 'recordings');
+            if (!(await laConfirm({ title: 'Delete this session?', message: artist + ' · ' + shown + '. This permanently removes all ' + files.length + ' file' + (files.length === 1 ? '' : 's') + ' of this session (' + what + ') from Cloud Storage. This can\'t be undone.', confirmText: 'Delete session', danger: true }))) return;
             var venue = _adminView ? (_venueOfArtist[String(artist).toUpperCase().trim()] || '') : '';
             var failed = 0;
             laToast('Deleting session…');
@@ -1140,6 +1141,7 @@
             ];
 
             var artistMap = {};
+            _sessionAll = {};
             for (var i = 0; i < muxAssets.length; i++) {
                 var a = muxAssets[i];
                 // Skip legacy sub-asset strings (e.g. "ARTIST // AUDIO") — they carry no
@@ -1157,6 +1159,9 @@
                 var dateStr = meta.date || (isNaN(tsMs) ? '1970-01-01' : new Date(tsMs).toISOString().slice(0, 10));
                 if (!artistMap[artistName]) artistMap[artistName] = {};
                 if (!artistMap[artistName][dateStr]) artistMap[artistName][dateStr] = true;
+                // Every file that makes up the session, so Delete session leaves nothing behind
+                var allKey = artistName + '|' + dateStr;
+                (_sessionAll[allKey] = _sessionAll[allKey] || []).push(a);
             }
 
             if (Object.keys(artistMap).length === 0) {
@@ -1770,6 +1775,7 @@
         // Files each session row is showing, recorded while the list renders, so
         // "Download all" always matches what the user sees.
         var _sessionFiles = {};
+        var _sessionAll = {};   // "ARTIST|date" → every Cloud Storage file grouped into that session
         function sessionFilesFor(sessionName, sessionDate) {
             var key = sessionName.toUpperCase().trim() + '|' + sessionDate;
             return _sessionFiles[key] || (_sessionFiles[key] = {});
