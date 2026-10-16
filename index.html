@@ -183,6 +183,8 @@
         .su-lead { margin:8px 0 0; font-size:15px; color:#a1a1aa; }
         .su-form { margin-top:24px; display:flex; flex-direction:column; gap:16px; }
         .su-types { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+        .su-types.one { grid-template-columns:minmax(0,1fr); }
+        .su-types.one .su-type { flex-direction:row; align-items:center; }
         .su-type { position:relative; display:flex; flex-direction:column; align-items:flex-start; gap:10px; padding:16px 14px; border:1px solid rgba(250,250,250,.16); border-radius:10px; cursor:pointer; color:#a1a1aa; transition:border-color .2s ease, background .2s ease, color .2s ease; }
         .su-type:hover { border-color:rgba(250,250,250,.35); }
         .su-types .su-type input[type=radio] { position:absolute !important; opacity:0 !important; width:0 !important; height:0 !important; margin:0 !important; pointer-events:none; -webkit-appearance:none; appearance:none; }
@@ -367,7 +369,10 @@
                 /* 5 vertical clips */
                 .nt-clips { display:flex; gap:8px; }
                 .nt-clips div { position:relative; width:58px; height:104px; border-radius:9px; background-size:cover; background-position:center; border:1px solid #2a2a2e; overflow:hidden; }
-                .nt-clips div::after { content:"AMONGST FEW"; position:absolute; left:0; right:0; bottom:7px; text-align:center; font:900 8px 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#fff; letter-spacing:.04em; }
+                /* The watermark as on the real clips (and the clips under Total venue control): the logo bottom left, the artist bottom right */
+                .nt-clips div { container-type:inline-size; }
+                .nt-clips div::before { content:""; position:absolute; bottom:6.25%; left:5.6%; width:12%; height:6.5%; background:url(/logos/a-white.png) left center/contain no-repeat; }
+                .nt-clips div::after { content:"AMONGST FEW"; position:absolute; bottom:9%; transform:translateY(50%); right:calc(7% + 2px); max-width:60%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font:900 6.5cqw/1 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#fff; }
                 .nt-clips div:nth-child(2) { transform:translateY(-8px); }
                 /* 6 posted */
                 .nt-posts { display:grid; grid-template-columns:repeat(2,auto); gap:10px; }
@@ -581,14 +586,30 @@
     });
     </script>
     <style>
-        .tr-top { text-align:center; margin-bottom:44px; }
-        .tr-eyebrow { font:500 13px 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#39FF14; margin:0 0 12px; }
-        .tr-top h2 { font:800 clamp(32px,4.5vw,52px)/1.05 'Helvetica Neue', Helvetica, Arial, sans-serif; text-transform:uppercase; letter-spacing:-.01em; color:#fff; margin:0 0 28px; }
+        .tr-top { text-align:center; margin-bottom:40px; }
+        .tr-eyebrow { font:500 11px/1 'JetBrains Mono', ui-monospace, monospace; letter-spacing:.32em; text-transform:uppercase; color:#85FA4F; margin:0 0 18px; }
+        .tr-top h2 { font:700 clamp(30px,3.6vw,44px)/.95 'Helvetica Neue', Helvetica, Arial, sans-serif; text-transform:uppercase; letter-spacing:-.005em; color:#fafafa; margin:0 0 14px; }
+        .tr-lede { font:400 15px/1.5 'Helvetica Neue', Helvetica, Arial, sans-serif !important; color:#a1a1aa !important; margin:0 0 26px !important; }
         .tr-top p { font:400 16px/1.5 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#a1a1aa; margin:0 0 26px; }
-        .tr-toggle { display:inline-flex; gap:2px; padding:4px; border:1px solid rgba(250,250,250,.24); border-radius:999px; }
-        .tr-toggle button { height:40px; padding:0 20px; border:0; border-radius:999px; background:none; color:#e4e4e7; font:500 14px 'Helvetica Neue', Helvetica, Arial, sans-serif; cursor:pointer; transition:background .25s ease, color .25s ease; }
+        .tr-toggle { display:inline-flex; gap:0; padding:3px; border:1px solid rgba(250,250,250,.16); border-radius:999px; background:#0a0a0a; }
+        .tr-toggle button { height:36px; padding:0 18px; border:0; border-radius:999px; background:none; color:#a1a1aa; font:500 13px 'Helvetica Neue', Helvetica, Arial, sans-serif; cursor:pointer; transition:background .25s ease, color .25s ease; }
         .tr-toggle button.on { background:#fafafa; color:#000; }
-        .tr-toggle small { display:block; font-size:11px; font-weight:400; opacity:.65; margin-top:1px; }
+        @media (hover:hover) { .tr-toggle button:not(.on):hover { color:#fafafa; } }
+        .tr-offer { position:relative; display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1.4fr) auto; gap:28px; align-items:center; margin:0 auto 28px; padding:26px 30px; border-radius:18px; border:1px dashed rgba(133,250,79,.55); background:linear-gradient(100deg, rgba(133,250,79,.07), rgba(133,250,79,0) 60%), #0a0a0a; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; }
+        .tr-offer-tag { display:inline-flex; align-items:center; gap:8px; margin:0 0 10px; font:500 10px/1 'JetBrains Mono', ui-monospace, monospace; letter-spacing:.24em; text-transform:uppercase; color:#85FA4F; }
+        .tr-offer-dot { width:6px; height:6px; border-radius:50%; background:#85FA4F; box-shadow:0 0 8px #85FA4F; animation:trPulse 2s ease-in-out infinite; }
+        @keyframes trPulse { 50% { opacity:.4; } }
+        .tr-offer-name { margin:0; font-size:22px; font-weight:700; text-transform:uppercase; letter-spacing:-.005em; color:#fafafa; }
+        .tr-offer-for { margin:6px 0 0; font-size:14px; line-height:1.5; color:#a1a1aa; }
+        .tr-offer-feats { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px 18px; }
+        .tr-offer-feats li { display:flex; gap:9px; font-size:13px; line-height:1.4; color:#e4e4e7; }
+        .tr-offer-feats svg { width:15px; height:15px; flex-shrink:0; margin-top:1px; color:#85FA4F; }
+        .tr-offer-buy { display:flex; flex-direction:column; align-items:stretch; gap:12px; min-width:190px; }
+        .tr-offer-price { display:flex; align-items:baseline; gap:8px; }
+        .tr-offer-price b { font-size:38px; font-weight:800; letter-spacing:-.02em; color:#fff; line-height:1; }
+        .tr-offer-price span { font-size:13px; color:#71717a; }
+        .tr-offer .tr-btn { margin-top:0 !important; }
+        @media (max-width:1000px) { .tr-offer { grid-template-columns:minmax(0,1fr); max-width:520px; gap:18px; padding:24px; } .tr-offer-feats { grid-template-columns:minmax(0,1fr); } }
         .tr-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; align-items:stretch; }
         .tr-card { position:relative; display:flex; flex-direction:column; padding:28px; border:1px solid #27272a; border-radius:18px; background:#0a0a0a; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; }
         .tr-feat { border-color:#39FF14; box-shadow:0 0 0 1px rgba(57,255,20,.25), 0 30px 60px -30px rgba(57,255,20,.18); }
@@ -615,19 +636,29 @@
         @media (hover:hover) { .tr-btn:hover { color:#000; border-color:#fafafa; } .tr-btn:hover::before { transform:scaleX(1); transform-origin:left center; } .tr-btn-main:hover { color:#39FF14; border-color:#39FF14; } }
         .tr-spacer { flex:1; }
         @media (max-width:1000px) { .tr-grid { grid-template-columns:minmax(0,1fr); max-width:520px; margin:0 auto; } }
-        .tr-small { margin-top:56px; }
-        .tr-small-h { margin:0 0 16px; font:600 11px 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.08em; text-transform:uppercase; color:#71717a; text-align:center; }
-        .tr-small-grid { display:grid; grid-template-columns:minmax(0,1fr); gap:20px; max-width:440px; margin:0 auto; }
-        .tr-mini .tr-price b { font-size:34px; }
-        .tr-mini ul { margin-top:14px; }
-        @media (max-width:1000px) { .tr-small-grid { max-width:520px; } }
     </style>
     <div class="tr-top reveal active">
         <p class="tr-eyebrow">Pricing</p>
         <h2>Pick your plan</h2>
+        <p class="tr-lede" id="tr-lede">We film every set, edit it and post it for you.</p>
         <div class="tr-toggle" role="group" aria-label="Plan type">
-            <button type="button" onclick="togglePricing('distribution')" id="toggle-distro">Distribution<small>You film, we do the rest</small></button>
-            <button type="button" onclick="togglePricing('creative')" id="toggle-creative" class="on">Creative &amp; Production<small>We film it for you</small></button>
+            <button type="button" onclick="togglePricing('distribution')" id="toggle-distro">Distribution</button>
+            <button type="button" onclick="togglePricing('creative')" id="toggle-creative" class="on">Creative &amp; Production</button>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto reveal active">
+        <div class="tr-offer">
+            <div class="tr-offer-main">
+                <p class="tr-offer-tag"><span class="tr-offer-dot"></span>Special offer · limited time</p>
+                <p class="tr-offer-name">DJ Trial Month</p>
+                <p class="tr-offer-for">For DJs trying it with their own phone or camera.</p>
+            </div>
+            <ul class="tr-offer-feats"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>6 vertical clips per session</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Brand Kit, your logo on every clip</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Camera Control: phone, OBS or your own camera</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Then pay as you go, charged on the 1st</span></li></ul>
+            <div class="tr-offer-buy">
+                <div class="tr-offer-price"><b>£55</b><span>to join</span></div>
+                <button type="button" onclick="selectTier('dj-trial')" class="tr-btn tr-btn-main">Start the trial</button>
+            </div>
         </div>
     </div>
 
@@ -684,18 +715,6 @@
                 <span class="tr-spacer"></span><a href="mailto:hello@local-assets.com?subject=Enterprise%20Creative%20Enquiry" class="tr-btn">Talk to us</a>
             </div>
         </div>
-        <div class="tr-small">
-            <p class="tr-small-h">Or try it first</p>
-            <div class="tr-small-grid">
-                <div class="tr-card tr-mini">
-                    <p class="tr-name">DJ Trial Month</p>
-                    <div class="tr-price"><b>£55</b><span>to join, then pay as you go</span></div>
-                    <p class="tr-for">For DJs trying it with their own phone or camera.</p>
-                    <ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>6 vertical clips per session</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Brand Kit, with your logo on every clip</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Camera Control: phone, OBS or your own camera</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Usage charged to your card on the 1st</span></li></ul>
-                    <span class="tr-spacer"></span><button type="button" onclick="selectTier('dj-trial')" class="tr-btn tr-btn-main">Start the trial</button>
-                </div>
-            </div>
-        </div>
     </div>
 </section>
 
@@ -721,6 +740,7 @@
             creative.classList.toggle('hidden', showDistro); creative.classList.toggle('grid', !showDistro);
             document.getElementById('toggle-distro').classList.toggle('on', showDistro);
             document.getElementById('toggle-creative').classList.toggle('on', !showDistro);
+            var lede = document.getElementById('tr-lede'); if (lede) lede.textContent = showDistro ? 'You film your sets. We edit them, brand them and post them.' : 'We film every set, edit it and post it for you.';
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -853,7 +873,7 @@
             'starter-distribution': { group: 'Distribution', name: 'Starter', price: '£2,750', feats: ['1 OBSBOT 4K camera', '6 vertical clips per set', 'Up to 8 sets a month', '50 hours of sets stored', 'Your recordings kept safe in your vault'] },
             'liveset-distribution': { group: 'Distribution', name: 'Pro', price: '£3,500', feats: ['1 OBSBOT 4K camera', '12 vertical clips per set', 'Marketing thumbnails', 'Up to 8 sets a month', '100 hours of sets stored'] },
             'starter-creative': { group: 'Creative & Production', name: 'Starter', price: '£5,500', feats: ['1 OBSBOT 4K camera + Starlink Mini', 'Recording runs on your calendar', '12 vertical clips per set, branded', '200 hours of sets stored'] },
-            'dj-trial': { group: 'Try it first', name: 'DJ Trial Month', price: '£55', per: 'to join', type: 'artist', payg: true, go: 'Continue to payment', feats: ['6 vertical clips per session', 'Brand Kit and Camera Control', 'Then pay as you go, charged on the 1st'] },
+            'dj-trial': { group: 'Special offer · limited time', name: 'DJ Trial Month', price: '£55', per: 'to join', type: 'artist', only: 'artist', payg: true, go: 'Continue to payment', feats: ['6 vertical clips per session', 'Brand Kit and Camera Control', 'Then pay as you go, charged on the 1st'] },
             'liveset-creative': { group: 'Creative & Production', name: 'Live-Set', price: '£7,500', feats: ['2 OBSBOT 4K cameras + Starlink Mini + Mac mini', 'Multi-camera edit, cut to the music', 'Unlimited vertical clips, branded', '1,000 hours of sets stored'] }
         };
         var TIER_NAMES = { 'starter-distribution': 'Distribution · Starter', 'liveset-distribution': 'Distribution · Pro', 'starter-creative': 'Creative & Production · Starter', 'liveset-creative': 'Creative & Production · Live-Set' };
@@ -879,8 +899,8 @@
                         '<h3 class="su-title" id="ord-title">Create your account</h3>' +
 
                         '<form id="su-form" class="su-form">' +
-                            '<div class="su-types" role="radiogroup" aria-label="Account type">' +
-                                [['venue', 'Venue', 'Club, bar or event space'], ['label', 'Record label', 'Releases music for its artists'], ['artist', 'Artist', 'DJ or live act']].map(function(t, i) {
+                            '<div class="su-types' + (T.only ? ' one' : '') + '" role="radiogroup" aria-label="Account type">' +
+                                [['venue', 'Venue', 'Club, bar or event space'], ['label', 'Record label', 'Releases music for its artists'], ['artist', 'Artist', 'DJ or live act']].filter(function(t) { return !T.only || t[0] === T.only; }).map(function(t, i) {
                                     return '<label class="su-type"><input type="radio" name="type" value="' + t[0] + '"' + ((T.type ? t[0] === T.type : !i) ? ' checked' : '') + '><span class="su-ic">' + ICON[t[0]] + '</span><b>' + t[1] + '</b><span class="su-tick">' + CHK + '</span></label>';
                                 }).join('') +
                             '</div>' +

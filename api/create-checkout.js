@@ -30,6 +30,8 @@ export default async function handler(req, res) {
   finally { await redis.quit().catch(() => {}); }
   // The old stand-alone pay-as-you-go plan (now a toggle on every plan) can't be signed up for
   if (!plan || plan.id === 'payg') return res.status(400).json({ error: 'Unknown plan' });
+  // The DJ Trial Month is for artist accounts only
+  if (plan.id === 'dj-trial' && accountType !== 'artist') return res.status(400).json({ error: 'The DJ Trial Month is for artist accounts' });
   const fee = Number(plan.signupFee) > 0 ? Number(plan.signupFee) : 0;
 
   try {
