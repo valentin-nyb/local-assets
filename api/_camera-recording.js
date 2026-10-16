@@ -9,6 +9,9 @@ import { startAudioOnly } from './_verticals.js';
 // each tagged like an upload and queued for vertical clips.
 
 const MIN_SET_SEC = 60;   // artist changes closer together than this are merged
+// Shortest recording that becomes a session: anything shorter is a reconnect fragment (mux-webhook.js
+// deletes those under 15 s). A session made with Create a session can be short.
+const MIN_RECORDING_SEC = 15;
 
 const muxReq = (auth, path, init = {}) => fetch('https://api.mux.com' + path, {
   ...init,
@@ -84,7 +87,7 @@ export async function processCameraRecording(event) {
     const asset = await muxReq(auth, `/video/v1/assets/${encodeURIComponent(assetId)}`);
     if (asset.live_stream_id !== streamId) { console.error('[camera-rec] asset/stream mismatch', assetId); return; }
     const duration = Number(asset.duration) || 0;
-    if (duration < MIN_SET_SEC) { console.log(`[camera-rec] ${assetId} only ${Math.round(duration)}s, left as is`); return; }
+    if (duration < MIN_RECORDING_SEC) { console.log(`[camera-rec] ${assetId} only ${Math.round(duration)}s, left as is`); return; }
 
     const cams = JSON.parse(await redis.get(`cameras:${slug}`) || '[]');
     const cam  = cams.find(c => c.streamId === streamId) || {};
@@ -108,7 +111,7 @@ export async function processCameraRecording(event) {
       start: Math.max(0, (ev.start - startMs) / 1000),
       end: Math.min(duration, (ev.end - startMs) / 1000),
       from: Math.max(ev.start, startMs), to: Math.min(ev.end, endMs),
-    })).filter(x => x.end - x.start >= MIN_SET_SEC);
+    })).filter(x => x.end - x.start >= MIN_RECORDING_SEC);
 
     // No artist set: the session goes under the account's name (an artist account's own name), never the camera's
     const fallbackArtist = String(cfg?.name || 'Untitled set').replace(/\s+TEAM$/i, '');

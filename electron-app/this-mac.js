@@ -331,6 +331,8 @@ async function sendFrames() {
 
 function init(onChange) {
   notify = onChange
+  // Camera processes left by an earlier copy of the app (an update, a crash) would hold the cameras
+  try { require('child_process').execFileSync('/usr/bin/pkill', ['-f', FFMPEG], { stdio: 'ignore' }) } catch {}
   load()
   poll().then(sync)
   setInterval(() => poll().catch(() => {}), POLL_MS)
