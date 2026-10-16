@@ -87,8 +87,8 @@ function argsFor(link, key, run) {
       '-re', '-f', 'lavfi', '-i', 'color=c=black:s=640x360:r=10',
       '-f', 'avfoundation', '-i', ':' + indexOf('audio', link.audio),
       '-map', '0:v', '-map', '1:a',
-      ...(run.x264 ? ['-c:v', 'libx264', '-preset', 'veryfast', '-tune', 'stillimage'] : ['-c:v', 'h264_videotoolbox', '-realtime', '1']),
-      '-b:v', '300k', '-g', '20', '-pix_fmt', 'yuv420p', ...audioOut, ...out]
+      '-c:v', 'libx264', '-preset', 'veryfast', '-tune', 'zerolatency',
+      '-b:v', '300k', '-maxrate', '300k', '-bufsize', '600k', '-g', '20', '-keyint_min', '20', '-sc_threshold', '0', '-pix_fmt', 'yuv420p', ...audioOut, ...out]
   }
   const [size, fps] = run.picked || VIDEO_MODES[run.mode] || VIDEO_MODES[VIDEO_MODES.length - 1]
   const a = link.audio ? indexOf('audio', link.audio) : null
@@ -98,28 +98,45 @@ function argsFor(link, key, run) {
     // Mux drops a live stream that has no sound, so "No sound" sends a silent track
     ...(a == null ? ['-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo'] : []),
     '-map', '0:v', '-map', a == null ? '1:a' : '0:a',
-    ...(run.x264 ? ['-c:v', 'libx264', '-preset', 'veryfast', '-tune', 'zerolatency'] : ['-c:v', 'h264_videotoolbox', '-realtime', '1']),
-    '-b:v', '6000k', '-maxrate', '6000k', '-bufsize', '12000k', '-g', '60', '-pix_fmt', 'yuv420p',
+    // x264 as OBS sends it (Mux hung up on the Mac's hardware encoder after ~15 s): steady bitrate,
+    // a keyframe every 2 s, no B-frames
+    '-c:v', 'libx264', '-preset', 'veryfast', '-tune', 'zerolatency', '-profile:v', 'high',
+    '-b:v', '4500k', '-maxrate', '4500k', '-bufsize', '9000k', '-r', '30', '-g', '60', '-keyint_min', '60', '-sc_threshold', '0', '-pix_fmt', 'yuv420p',
     ...audioOut, ...out,
     // What the camera sees, for Camera Control (two small frames a second)
-    ...previewOut(run.id)]
+    ...previewOut()]
 }
 
 // ── Preview: the camera's picture in Camera Control, from the app's own capture ──
 // A camera can often be used by one app at a time (an iPhone always), so the page can't open it itself.
 // While streaming, the stream also writes a small frame twice a second; between sets a light preview does.
-const previewFile = id => path.join(app.getPath('userData'), 'previews', require('crypto').createHash('sha1').update(id).digest('hex').slice(0, 16) + '.jpg')
-const previewOut = id => ['-map', '0:v', '-an', '-vf', 'fps=2,scale=640:-2', '-q:v', '6', '-f', 'image2', '-update', '1', previewFile(id)]
+const previewOut = () => ['-map', '0:v', '-an', '-vf', 'fps=12,scale=640:-2', '-q:v', '7', '-f', 'mjpeg', 'pipe:3']
+// The newest frame of each camera, read from ffmpeg's preview pipe (JPEGs one after another)
+const frames = {}
+function readFrames(id, stream) {
+  let buf = Buffer.alloc(0)
+  stream.on('data', d => {
+    buf = buf.length ? Buffer.concat([buf, d]) : d
+    for (;;) {
+      const start = buf.indexOf(Buffer.from([0xff, 0xd8]))
+      if (start < 0) { buf = Buffer.alloc(0); return }
+      const end = buf.indexOf(Buffer.from([0xff, 0xd9]), start + 2)
+      if (end < 0) { if (start > 0) buf = buf.subarray(start); if (buf.length > 4e6) buf = Buffer.alloc(0); return }
+      frames[id] = { jpg: buf.subarray(start, end + 2), at: Date.now() }
+      buf = buf.subarray(end + 2)
+    }
+  })
+}
 
 function startPreview(id) {
   const link = links[id], run = runs[id]
   if (!link || !run || run.proc || run.preview || link.kind === 'audio') return
   if (indexOf('video', link.video) == null || systemPreferences.getMediaAccessStatus('camera') !== 'granted') return
-  fs.mkdirSync(path.dirname(previewFile(id)), { recursive: true })
   const [size, fps] = run.picked || VIDEO_MODES[run.mode] || VIDEO_MODES[VIDEO_MODES.length - 1]
   const proc = spawn(FFMPEG, ['-hide_banner', '-nostats', '-loglevel', 'error', '-y',
     '-f', 'avfoundation', ...(fps ? ['-framerate', fps] : []), ...(size ? ['-video_size', size] : []),
-    '-i', indexOf('video', link.video) + ':none', ...previewOut(id)], { stdio: 'ignore' })
+    '-i', indexOf('video', link.video) + ':none', ...previewOut()], { stdio: ['ignore', 'ignore', 'ignore', 'pipe'] })
+  readFrames(id, proc.stdio[3])
   run.preview = proc
   proc.on('exit', () => { if (run.preview === proc) run.preview = null })
 }
@@ -129,12 +146,8 @@ function stopPreview(run) {
   return new Promise(r => { p.once('exit', r); p.kill('SIGINT'); setTimeout(r, 1500) })
 }
 function preview(venue, slotId) {
-  const f = previewFile(venue + '/' + slotId)
-  try {
-    const st = fs.statSync(f)
-    if (Date.now() - st.mtimeMs > 6000) return null
-    return 'data:image/jpeg;base64,' + fs.readFileSync(f).toString('base64')
-  } catch { return null }
+  const f = frames[venue + '/' + slotId]
+  return f && Date.now() - f.at < 3000 ? f.jpg : null
 }
 
 function setState(id, state, detail = '') {
@@ -166,9 +179,9 @@ async function start(id) {
   setState(id, 'starting')
   await stopPreview(run)
   if (run.proc || !links[id]) return
-  fs.mkdirSync(path.dirname(previewFile(id)), { recursive: true })
   run.startedAt = Date.now(); run.sentAt = 0
-  const proc = spawn(FFMPEG, argsFor(link, key, run), { stdio: ['ignore', 'pipe', 'pipe'] })
+  const proc = spawn(FFMPEG, argsFor(link, key, run), { stdio: ['ignore', 'pipe', 'pipe', link.kind === 'audio' ? 'ignore' : 'pipe'] })
+  if (link.kind !== 'audio') readFrames(id, proc.stdio[3])
   run.proc = proc
   let errText = ''
   let lastSize = 0, frames = 0
@@ -182,12 +195,16 @@ async function start(id) {
   // quiet): stop instead of hanging, and say what to check
   run.stallCheck = setInterval(() => {
     const quiet = Date.now() - (run.sentAt || run.startedAt)
-    if (quiet < 15000 || !run.proc) return
+    if (quiet < (run.sentAt ? 8000 : 15000) || !run.proc) return
     clearInterval(run.stallCheck)
     run.stalled = link.kind === 'audio' || frames === 0 ? 'nodata' : 'quiet'
     proc.kill('SIGKILL')
-  }, 3000)
-  proc.stderr.on('data', d => { errText = (errText + d).slice(-4000).split(key).join('KEY') })
+  }, 2000)
+  proc.stderr.on('data', d => {
+    errText = (errText + d).slice(-4000).split(key).join('KEY')
+    // Mux hung up: ffmpeg can sit on a dead connection, so end it now and reconnect straight away
+    if (/Error muxing a packet|av_interleaved_write_frame\(\): (End of file|Broken pipe|Connection reset)/.test(errText) && run.proc === proc) proc.kill('SIGKILL')
+  })
   proc.on('exit', code => {
     run.proc = null
     clearInterval(run.stallCheck)
@@ -210,13 +227,18 @@ async function start(id) {
     }
     // It connected and dropped within a minute: every short connection leaves a broken recording in Cloud
     // Storage, so wait longer each time (30 s, 1, 2, 4… up to 10 min) and say which device keeps stopping
+    if (wasSending && lived < 60e3 && (run.quick || 0) < 3) {
+      run.quick = (run.quick || 0) + 1
+      setState(id, 'starting', 'Reconnecting')
+      return later(id, 1000)
+    }
     if (wasSending && lived < 60e3) {
       run.fails = (run.fails || 0) + 1
       const wait = Math.min(600e3, 30e3 * 2 ** (run.fails - 1))
       setState(id, 'error', (link.kind === 'audio' ? link.audio : link.video) + ' keeps stopping. Trying again in ' + (wait >= 60e3 ? Math.round(wait / 60e3) + ' min' : Math.round(wait / 1e3) + ' s'))
       return later(id, wait)
     }
-    if (wasSending) run.fails = 0
+    if (wasSending) { run.fails = 0; run.quick = 0 }
     if (/videotoolbox/i.test(errText) && !run.x264) { run.x264 = true; return later(id, 500) }
     if (/(video size|framerate|pixel format).*not supported|Selected (video size|framerate)/i.test(errText) && run.mode < VIDEO_MODES.length - 1) { run.mode++; return later(id, 500) }
     if (wasSending) { setState(id, 'starting', 'Reconnecting'); return later(id, RETRY_DROPPED_MS) }
@@ -278,13 +300,12 @@ const sentAt = {}
 async function sendFrames() {
   for (const [id, l] of Object.entries(links)) {
     if (l.kind !== 'camera' || !l.frameCam) continue
-    const f = previewFile(id)
-    let st; try { st = fs.statSync(f) } catch { continue }
-    if (st.mtimeMs <= (sentAt[id] || 0) || Date.now() - st.mtimeMs > 6000) continue
-    sentAt[id] = st.mtimeMs
+    const f = frames[id]
+    if (!f || f.at <= (sentAt[id] || 0) || Date.now() - f.at > 3000) continue
+    sentAt[id] = f.at
     try {
       const r = await net.fetch('https://local-assets.com/api/camera-frame', { method: 'POST',
-        headers: { 'Content-Type': 'image/jpeg', 'X-LA-Cam': l.frameCam, 'X-LA-Pass': open(l.framePass) }, body: fs.readFileSync(f) })
+        headers: { 'Content-Type': 'image/jpeg', 'X-LA-Cam': l.frameCam, 'X-LA-Pass': open(l.framePass) }, body: f.jpg })
       if (r.status === 404) { delete l.frameCam; save() }   // the camera was removed from Camera Control
     } catch {}
   }
@@ -295,7 +316,7 @@ function init(onChange) {
   load()
   poll().then(sync)
   setInterval(() => poll().catch(() => {}), POLL_MS)
-  setInterval(() => sendFrames().catch(() => {}), 3000)
+  setInterval(() => sendFrames().catch(() => {}), 1000)
 }
 
 function state(venue) {

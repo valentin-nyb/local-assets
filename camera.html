@@ -1379,7 +1379,7 @@
                         if (!img) { stage.innerHTML = '<img class="mac-live" alt=""><span class="mac-tag">Live picture · not recording</span>'; img = stage.querySelector('img'); }
                         img.src = f.src;
                     } else if (img && ++misses > 3) { img = null; stage.innerHTML = '<div class="cam-off"><span>Waiting for video</span></div>'; }
-                }).catch(function() {}).then(function() { if (stage.isConnected && !stage.dataset.mac) setTimeout(tick, 3000); });
+                }).catch(function() {}).then(function() { if (stage.isConnected && !stage.dataset.mac) setTimeout(tick, 1000); });
             };
             tick();
         }
@@ -1411,7 +1411,8 @@
             document.querySelectorAll('.cam-stage[data-cam]').forEach(function(stage) {
                 var l = st.links[stage.dataset.cam];
                 var cam = _cams.find(function(c) { return c.id === stage.dataset.cam; }) || {};
-                if (!l || stage.dataset.live) return;
+                // In the app the camera's own picture is shown even while live: instant, where the live stream runs seconds behind
+                if (!l || (stage.dataset.live && !(window.laApp.mac.preview && cam.kind !== 'audio'))) return;
                 var deck = cam.kind === 'audio', name = deck ? l.audio : l.video;
                 var here = deck ? st.devices.audio : st.devices.video;
                 if (!name || here.indexOf(name) < 0) return;
@@ -1423,12 +1424,19 @@
                     var venue = macVenue(), slot = stage.dataset.cam;
                     stage.innerHTML = '<img class="mac-live" alt=""><span class="mac-tag">This Mac · ' + esc(name) + '</span><div class="cam-off mac-wait"><span>Starting the camera…</span></div>';
                     var img = stage.querySelector('img'), wait = stage.querySelector('.mac-wait');
+                    // About 12 pictures a second, straight from the app (no network)
+                    var url = null, busy = false;
                     var tick = setInterval(function() {
-                        if (!stage.isConnected || stage.dataset.mac !== name || stage.dataset.live) { clearInterval(tick); return; }
-                        window.laApp.mac.preview(venue, slot).then(function(src) {
-                            if (src) { img.src = src; wait.style.display = 'none'; }
-                        }).catch(function() {});
-                    }, 600);
+                        if (!stage.isConnected || stage.dataset.mac !== name) { clearInterval(tick); if (url) URL.revokeObjectURL(url); return; }
+                        if (busy) return; busy = true;
+                        window.laApp.mac.preview(venue, slot).then(function(f) {
+                            busy = false;
+                            if (!f) return;
+                            var next = typeof f === 'string' ? f : URL.createObjectURL(new Blob([f], { type: 'image/jpeg' }));
+                            img.onload = function() { if (url && url !== next && url.indexOf('blob:') === 0) URL.revokeObjectURL(url); url = next; };
+                            img.src = next; wait.style.display = 'none';
+                        }).catch(function() { busy = false; });
+                    }, 80);
                     return;
                 }
                 macMedia(deck ? 'audio' : 'video', name).then(function(ms) {
