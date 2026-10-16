@@ -1,7 +1,7 @@
 import { createClient } from 'redis';
 import { getWebSessionAuth } from './_venues.js';
 
-// Editable session details (name and venue) for Distribution History.
+// Editable session details (name, venue and record label) for Distribution History.
 // Stored per account in Redis hash session_meta:<venueSlug>, keyed "ARTIST|YYYY-MM-DD".
 const clean = (v, max) => String(v ?? '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, max);
 
@@ -36,10 +36,11 @@ export default async function handler(req, res) {
     const meta = {
       title: clean(body.title, 80),
       venue: clean(body.venue, 60),
+      label: clean(body.label, 60),
       date: /^\d{4}-\d{2}-\d{2}$/.test(shownDate) && shownDate !== date ? shownDate : '',  // the session's real date, if different from the upload date
     };
     const field = `${artist}|${date}`;
-    await withRedis(r => (meta.title || meta.venue || meta.date) ? r.hSet(key, field, JSON.stringify(meta)) : r.hDel(key, field));
+    await withRedis(r => (meta.title || meta.venue || meta.label || meta.date) ? r.hSet(key, field, JSON.stringify(meta)) : r.hDel(key, field));
     return res.status(200).json({ key: field, meta });
   } catch (e) {
     console.error('[session-meta]', e.message);

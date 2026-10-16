@@ -3,7 +3,7 @@
 // sign-in inside apps, so sign-in happens in the browser: the app opens it with the hash of a one-time
 // secret, the browser hands back a code through localassets://signed-in, and the app swaps the code and
 // its secret for the session (api/google-auth POST). Only the app that started the sign-in can finish it.
-const { app, BrowserWindow, shell, ipcMain, Menu, net, nativeTheme } = require('electron')
+const { app, BrowserWindow, shell, ipcMain, Menu, net, nativeTheme, session } = require('electron')
 const crypto = require('crypto')
 const path = require('path')
 const thisMac = require('./this-mac')
@@ -75,6 +75,7 @@ ipcMain.handle('la:mac-link', (e, l) => {
   thisMac.link({ venue: str(l.venue, 80), slotId: str(l.slotId, 80), slotName: str(l.slotName, 60), kind, video: str(l.video, 120), audio: str(l.audio, 120), key })
   return thisMac.state(str(l.venue, 80))
 })
+ipcMain.handle('la:mac-kick', e => { if (fromSite(e)) thisMac.kick() })
 ipcMain.handle('la:mac-unlink', (e, venue, slotId) => {
   if (!fromSite(e)) throw new Error('Not allowed')
   thisMac.unlink(str(venue, 80), str(slotId, 80))
@@ -164,6 +165,11 @@ if (!app.requestSingleInstanceLock()) {
   })
   app.whenReady().then(() => {
     nativeTheme.themeSource = 'dark'      // a dark title bar, like the site
+    // Camera and microphone (the live preview in Camera Control) only for local-assets.com; nothing else
+    session.defaultSession.setPermissionRequestHandler((wc, permission, cb, details) => {
+      cb(permission === 'media' && onSite(details.requestingUrl || wc.getURL()))
+    })
+    session.defaultSession.setPermissionCheckHandler((_wc, permission, origin) => permission === 'media' && origin === SITE)
     buildMenu()
     thisMac.init(() => { if (win && !win.isDestroyed()) win.webContents.send('la:mac-changed') })
     createWindow()

@@ -131,11 +131,12 @@ async function start(id) {
     if (/videotoolbox/i.test(errText) && !run.x264) { run.x264 = true; return later(id, 500) }
     if (/(video size|framerate|pixel format).*not supported|Selected (video size|framerate)/i.test(errText) && run.mode < VIDEO_MODES.length - 1) { run.mode++; return later(id, 500) }
     if (wasSending) { setState(id, 'starting', 'Reconnecting'); return later(id, RETRY_DROPPED_MS) }
-    if (/Input\/output error|Connection refused|Broken pipe|Server returned|Operation timed out|End of file|Connection reset/i.test(errText) || !errText) {
+    // Mux refusing the stream (no set on, so the slot is closed) names the ingest address; anything else is the device
+    if (!errText || /global-live\.mux\.com/.test(errText) && /Input\/output error|Connection refused|Broken pipe|Server returned|Operation timed out|End of file|Connection reset/i.test(errText)) {
       setState(id, 'waiting'); return later(id, RETRY_WAITING_MS)
     }
     console.error('[this-mac]', link.slotName, errText.split('\n').filter(Boolean).slice(-2).join(' | '))
-    setState(id, 'error', 'Could not open the device')
+    setState(id, 'error', 'Could not open ' + (link.kind === 'audio' ? link.audio : link.video) + '. Unplug it and plug it in again.')
     later(id, RETRY_WAITING_MS)
   })
 }
@@ -213,6 +214,11 @@ function unlink(venue, slotId) {
   save(); awake(); notify()
 }
 
+// Record now: whatever is waiting connects straight away instead of at its next retry
+function kick() {
+  for (const [id, run] of Object.entries(runs)) if (!run.proc && run.state !== 'missing') { clearTimeout(run.timer); run.timer = null; start(id) }
+}
+
 function stopAll() { for (const id of Object.keys(runs)) stop(id) }
 
-module.exports = { init, state, link, unlink, stopAll }
+module.exports = { init, state, link, unlink, kick, stopAll }

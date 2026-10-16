@@ -77,6 +77,8 @@
         /* Boxes that used to hold an icon: hidden until something (a logo or photo) fills them */
         div.w-8.h-8:empty, div.w-10.h-10:empty, div.w-12.h-12:empty { display:none; }
         .sess-venue { color:var(--la-accent); }
+        .sess-label { color:#F97316; }
+        html:not(.dark) .sess-label { color:#ea580c; }
         #yt-revenue-label { color:#FF0000 !important; }
         #sc-revenue-label { color:#FF5500 !important; }
         #next-event-card.kpi-link { cursor:pointer; transition:border-color .2s; }
@@ -784,12 +786,13 @@
 
         async function editSession(btn) {
             var artist = btn.dataset.artist, date = btn.dataset.date, meta = sessionMeta(artist, date);
-            var venues = [];
+            var venues = [], labels = [];
             try {
                 var b = await laFetch('/api/brand').then(function(r) { return r.ok ? r.json() : {}; });
                 var names = b.ownerNames || {};
                 (b.files || []).forEach(function(f) { if (f.owner.indexOf('venue-') === 0 && !names[f.owner]) names[f.owner] = f.owner.slice(6).replace(/-/g, ' ').toUpperCase(); });
                 venues = Object.keys(names).filter(function(k) { return k.indexOf('venue-') === 0; }).map(function(k) { return names[k]; }).sort();
+                labels = Object.keys(names).filter(function(k) { return k.indexOf('label-') === 0; }).map(function(k) { return names[k]; }).sort();
             } catch (_) {}
             var m = document.getElementById('session-edit');
             if (!m) {
@@ -807,6 +810,8 @@
                 '<label>Venue<input name="svenue" maxlength="60" list="se-venues" placeholder="' + escHtml(getVenueName()) + '" value="' + escHtml(meta.venue || '') + '">' +
                 '<datalist id="se-venues">' + venues.map(function(v) { return '<option value="' + escHtml(v) + '">'; }).join('') + '</datalist>' +
                 '<small>' + (venues.length ? 'Pick one of your Brand Kit venues or type a new one.' : 'Type the venue name. Venues added in Brand Kit appear here.') + '</small></label>' +
+                '<label>Record label<input name="slabel" maxlength="60" list="se-labels" placeholder="Optional" value="' + escHtml(meta.label || '') + '">' +
+                '<datalist id="se-labels">' + labels.map(function(v) { return '<option value="' + escHtml(v) + '">'; }).join('') + '</datalist></label>' +
                 '<p class="se-error"></p>' +
                 '<div class="se-actions"><button type="button" class="se-btn ghost" data-cancel>Cancel</button><button type="submit" class="se-btn primary">Save</button></div>' +
                 '</form>';
@@ -818,9 +823,9 @@
                 var sb = form.querySelector('[type=submit]'); sb.disabled = true; sb.textContent = 'Saving…';
                 try {
                     var r = await laFetch('/api/session-meta', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ artist: artist, date: date, title: form.sname.value, venue: form.svenue.value, shownDate: form.sdate.value }) });
+                        body: JSON.stringify({ artist: artist, date: date, title: form.sname.value, venue: form.svenue.value, label: form.slabel.value, shownDate: form.sdate.value }) });
                     var d = await r.json(); if (!r.ok) throw new Error(d.error || r.status);
-                    if (d.meta.title || d.meta.venue || d.meta.date) _sessionMeta[d.key] = d.meta; else delete _sessionMeta[d.key];
+                    if (d.meta.title || d.meta.venue || d.meta.label || d.meta.date) _sessionMeta[d.key] = d.meta; else delete _sessionMeta[d.key];
                     m.remove();
                     fetchRecentUploads();
                 } catch (er) {
@@ -1584,7 +1589,7 @@
                     var sMeta = sessionMeta(artist.name, dateStr);
                     html += '<p class="text-xs font-bold text-zinc-300 uppercase tracking-tight">' + escHtml(sMeta.title || sMeta.shownDate) + '</p>';
                     html += '<p class="text-[8px] font-mono text-zinc-600 uppercase tracking-widest"><span class="sess-venue"' + (sMeta.venue ? '' : ' data-venue-label') + '>' +
-                        escHtml(sMeta.venue || getVenueName()) + '</span>' + (sMeta.title ? ' · ' + sMeta.shownDate : '') + '</p>';
+                        escHtml(sMeta.venue || getVenueName()) + '</span>' + (sMeta.label ? ' · <span class="sess-label">' + escHtml(sMeta.label) + '</span>' : '') + (sMeta.title ? ' · ' + sMeta.shownDate : '') + '</p>';
                     html += '</div>';
                     html += '</div>';
                     html += '<div class="flex items-center gap-2">';

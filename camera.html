@@ -151,7 +151,22 @@
         .cam-kind input:checked + span { border-color:var(--la-text); background:color-mix(in srgb, var(--la-text) 4%, transparent); }
         .cam-form [hidden] { display:none !important; }
 .deck-section { margin-top:28px !important; padding-top:24px; border-top:1px solid var(--la-line); }
+        /* Create a session: the recording bar while it runs */
+        .rec-bar { display:flex; align-items:center; gap:14px; margin:0 0 18px; padding:14px 16px 14px 18px; border:1px solid color-mix(in srgb, #ef4444 45%, transparent); border-radius:14px; background:color-mix(in srgb, #ef4444 7%, var(--la-surface)); }
+        .rec-bar.hidden { display:none; }
+        .rec-dot { flex:none; width:10px; height:10px; border-radius:50%; background:#ef4444; box-shadow:0 0 12px #ef4444; animation:camBlink 1.2s ease-in-out infinite; }
+        .rec-text { flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
+        .rec-text b { font-size:14px; font-weight:600; color:var(--la-text); text-transform:uppercase; letter-spacing:.02em; }
+        .rec-text span { font:500 11px/1.4 'JetBrains Mono', monospace; letter-spacing:.12em; text-transform:uppercase; color:var(--la-sub); }
+        .rec-stop { background:#ef4444 !important; color:#fff !important; }
+        .ses-slots { display:grid; gap:8px; }
+        .ses-slots .cam-check { margin:0; }
         /* This Mac (only in the a™ app): cameras and the mixer plugged into this computer, linked to slots */
+        /* A camera or the mixer linked on this Mac plays in its card before the set opens the stream */
+        .mac-live { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; background:#000; }
+        .mac-tag { position:absolute; left:10px; bottom:10px; z-index:2; display:inline-flex; align-items:center; gap:6px; padding:4px 9px; border-radius:999px; background:rgba(0,0,0,.6); color:#fafafa; font:500 10px/1 'JetBrains Mono', monospace; letter-spacing:.14em; text-transform:uppercase; }
+        .mac-tag::before { content:""; width:6px; height:6px; border-radius:50%; background:#39FF14; box-shadow:0 0 8px #39FF14; }
+        .cam-audio.mac .cam-eq i { height:70%; animation:none; transition:transform .08s linear; transform-origin:center; }
         .mac-found { margin:-4px 0 14px; font-size:13px; line-height:1.5; color:var(--la-sub); }
         .mac-rows { display:grid; gap:10px; }
         .mac-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.2fr) minmax(0,1.2fr) minmax(150px,auto); gap:10px 14px; align-items:center; padding:14px 16px; border:1px solid var(--la-line); border-radius:12px; background:var(--la-surface); }
@@ -492,13 +507,22 @@
                         <button type="button" class="cam-btn ghost" onclick="openOrderCameras()">
                             <span>Order cameras</span>
                         </button>
-                        <button type="button" class="cam-btn primary" onclick="openCamForm()">
+                        <button type="button" class="cam-btn ghost" onclick="openCamForm()">
                             <span>Add camera</span>
+                        </button>
+                        <button type="button" class="cam-btn primary" onclick="openSession()">
+                            <span>Create a session</span>
                         </button>
                     </div>
                 </div>
 
                 <div id="cam-relay" class="cam-relay hidden"><span class="cam-relay-dot"></span><span id="cam-relay-text">Remote control</span><button type="button" class="cam-link" onclick="openRelaySetup()">Set up</button></div>
+                <!-- A session recording now (Create a session), until Stop and save -->
+                <div id="rec-bar" class="rec-bar hidden" role="status">
+                    <span class="rec-dot"></span>
+                    <div class="rec-text"><b id="rec-title">Recording</b><span id="rec-meta"></span></div>
+                    <button type="button" class="cam-btn primary rec-stop" id="rec-stop">Stop and save</button>
+                </div>
                 <div id="cam-grid" class="cam-grid"></div>
                 <!-- The decks' sound: on the same page as the cameras, in its own section -->
                 <section id="deck-section" class="deck-section">
@@ -771,7 +795,7 @@
                 if (data.admin) { renderAdminCameras(data.venues || []); return; }
                 _relay = data.relay || null; paintRelay();
                 _cams = data.cameras || [];
-                setTimeout(renderMac);
+                setTimeout(renderMac); paintRecBar();
                 _calSched = data.calendar && data.calendar.connected && !data.calendar.error ? data.calendar.schedule || null : null;
                 renderCalendar(data.calendar || { connected: false });
                 err.classList.add('hidden');
@@ -1026,6 +1050,7 @@
                     (c.recording === false && c.status !== 'missing' ? '<div class="cam-recoff"><span>Recording is off for this camera</span><button type="button" data-act="rec">Turn on</button></div>' : '')) +
                 (actions ? '<div class="cam-row-actions">' + actions + '</div>' : '');
             var stage = card.querySelector('.cam-stage');
+            stage.dataset.cam = c.id; stage.dataset.live = isLive ? '1' : '';
             if (c.kind === 'audio') {
                 // The decks: a level look instead of a picture, and the sound to listen in when live
                 stage.innerHTML = '<div class="cam-audio' + (isLive ? ' on' : '') + '"><div class="cam-eq">' + Array.from({ length: 24 }, function(_, k) { return '<i style="animation-delay:' + (k * 0.07 % 0.9).toFixed(2) + 's"></i>'; }).join('') + '</div><span>' + (isLive ? 'Decks audio · live' : 'Waiting for the mixer') + '</span></div>';
@@ -1055,6 +1080,90 @@
             return card;
         }
 
+        // ── Create a session: record the chosen camera(s) and the decks now, until Stop and save ──
+        // The recordings are saved to Distribution History as one session (same artist and date).
+        function openSession() {
+            var slots = _cams.filter(function(c) { return !c.external; });
+            if (!slots.length) { openCamForm(); return; }
+            var linked = window.laApp && window.laApp.mac ? macLinked() : {};
+            var anyLinked = Object.keys(linked).length > 0;
+            var first = slots[0];
+            var today = new Date(Date.now() - new Date().getTimezoneOffset() * 60e3).toISOString().slice(0, 10);
+            openCamDialog('Create a session',
+                '<form id="ses-form" class="cam-form">' +
+                '<label>Artist<input name="artist" list="ses-artists" maxlength="60" required placeholder="DJ TENNIS" autocomplete="off" value="' + esc(_calNow ? _calNow.artist : (first.artist || '')) + '"><datalist id="ses-artists"></datalist></label>' +
+                '<label>Session name<input name="title" maxlength="80" placeholder="e.g. Sunset set" autocomplete="off" value="' + esc(first.stageTitle || '') + '"></label>' +
+                '<div class="cam-two"><label>Venue<select name="venue"><option value="">No venue</option>' + (first.stageVenue ? '<option selected>' + esc(first.stageVenue) + '</option>' : '') + '<option value="__new">+ New venue…</option></select></label>' +
+                '<label>Date<input name="date" type="date" value="' + today + '"></label></div>' +
+                '<label class="stage-newvenue" hidden>New venue<input name="newVenue" maxlength="60" placeholder="e.g. Fabric London" autocomplete="off"></label>' +
+                '<label>Record label<input name="label" list="ses-labels" maxlength="60" placeholder="Optional" autocomplete="off" value="' + esc(first.stageLabel || '') + '"><datalist id="ses-labels"></datalist></label>' +
+                '<div class="ses-slots"><span class="bk-wm-label" style="font-size:12px;color:var(--la-sub)">Record</span>' + slots.map(function(c) {
+                    var on = anyLinked ? !!linked[c.id] : true;
+                    return '<label class="cam-check"><input type="checkbox" name="slot" value="' + esc(c.id) + '"' + (on ? ' checked' : '') + '><span>' + esc(c.name) + '<small>' + (c.kind === 'audio' ? 'Decks audio · the session\'s HQ audio' : 'Camera') + (linked[c.id] ? ' · from this Mac' : '') + '</small></span></label>';
+                }).join('') + '</div>' +
+                '<label class="cam-check"><input type="checkbox" name="autoClips"' + (first.autoClips === false ? '' : ' checked') + '><span>Make vertical clips automatically<small>Once the recording is saved.</small></span></label>' +
+                '<p class="cam-dialog-note" style="margin:0">' + (anyLinked ? 'a™ starts sending from this Mac straight away.' : 'Start streaming from each camera and the mixer, then press Stop and save when the set ends.') + '</p>' +
+                '<p id="ses-error" class="cam-form-error"></p>' +
+                '<div class="cam-form-actions"><button type="button" class="cam-btn ghost" onclick="closeCamDialog()">Cancel</button>' +
+                '<button type="submit" class="cam-btn primary">Start recording</button></div>' +
+                '</form>');
+            var form = document.getElementById('ses-form');
+            loadArtistNames().then(function(list) { var dl = document.getElementById('ses-artists'); if (dl) dl.innerHTML = list.map(function(n) { return '<option value="' + esc(n) + '">'; }).join(''); });
+            laFetch('/api/brand').then(function(r) { return r.ok ? r.json() : {}; }).then(function(d) {
+                var names = Object.keys(d.ownerNames || {}).filter(function(k) { return k.indexOf('venue-') === 0; }).map(function(k) { return d.ownerNames[k]; }).filter(Boolean).sort();
+                var labels = Object.keys(d.ownerNames || {}).filter(function(k) { return k.indexOf('label-') === 0; }).map(function(k) { return d.ownerNames[k]; }).filter(Boolean).sort();
+                var dl = document.getElementById('ses-labels'); if (dl) dl.innerHTML = labels.map(function(n) { return '<option value="' + esc(n) + '">'; }).join('');
+                var cur = form.venue.value;
+                form.venue.innerHTML = '<option value="">No venue</option>' + names.concat(cur && cur !== '__new' && names.indexOf(cur) < 0 ? [cur] : []).map(function(n) { return '<option' + (n === cur ? ' selected' : '') + '>' + esc(n) + '</option>'; }).join('') + '<option value="__new">+ New venue…</option>';
+            }).catch(function() {});
+            form.venue.addEventListener('change', function() { var nv = form.querySelector('.stage-newvenue'); nv.hidden = form.venue.value !== '__new'; if (!nv.hidden) form.newVenue.focus(); });
+            form.artist.focus();
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                var ids = Array.from(form.querySelectorAll('[name=slot]:checked')).map(function(x) { return x.value; });
+                var err = document.getElementById('ses-error');
+                if (!ids.length) { err.textContent = 'Choose a camera or the decks to record.'; return; }
+                var btn = form.querySelector('[type=submit]');
+                btn.disabled = true; btn.textContent = 'Starting…';
+                try {
+                    await camApi({ action: 'recordNow', ids: ids, artist: form.artist.value.trim(), title: form.elements.title.value.trim(),
+                        venue: form.venue.value === '__new' ? form.newVenue.value.trim() : form.venue.value, label: form.label.value.trim(), date: form.date.value, autoClips: form.autoClips.checked });
+                    if (window.laApp && window.laApp.mac && window.laApp.mac.kick) window.laApp.mac.kick();
+                    closeCamDialog();
+                    laToast('Recording. Press Stop and save when the set ends.');
+                    _camKey = ''; loadCameras();
+                } catch (x) { err.textContent = x.message || String(x); btn.disabled = false; btn.textContent = 'Start recording'; }
+            });
+        }
+        function macLinked() { return (_mac && _mac.links) || {}; }
+        var _recTimer = null;
+        function paintRecBar() {
+            var bar = document.getElementById('rec-bar');
+            var rec = _cams.filter(function(c) { return c.manual; });
+            clearInterval(_recTimer);
+            if (!rec.length) { bar.classList.add('hidden'); return; }
+            var since = Math.min.apply(null, rec.map(function(c) { return c.manual; }));
+            document.getElementById('rec-title').textContent = 'Recording · ' + (rec[0].artist || 'Session');
+            var tick = function() {
+                var t = Math.max(0, Math.floor((Date.now() - since) / 1000));
+                var hms = (t >= 3600 ? Math.floor(t / 3600) + ':' : '') + String(Math.floor(t / 60) % 60).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0');
+                document.getElementById('rec-meta').textContent = hms + ' · ' + rec.map(function(c) { return c.name + (c.status === 'active' ? '' : ' (no signal yet)'); }).join(' · ');
+            };
+            tick(); _recTimer = setInterval(tick, 1000);
+            bar.classList.remove('hidden');
+            bar.dataset.ids = rec.map(function(c) { return c.id; }).join(',');
+        }
+        document.getElementById('rec-stop').addEventListener('click', async function() {
+            var b = this, ids = (document.getElementById('rec-bar').dataset.ids || '').split(',').filter(Boolean);
+            b.disabled = true; b.textContent = 'Saving…';
+            try {
+                await camApi({ action: 'stopRecording', ids: ids });
+                laToast('Saved. The session appears in Distribution History in a few minutes.');
+                _camKey = ''; await loadCameras();
+            } catch (x) { laAlert('Could not stop: ' + (x.message || x), { tone: 'error' }); }
+            b.disabled = false; b.textContent = 'Stop and save';
+        });
+
         // ── This Mac (a™ app only): devices plugged into this computer, each streamed to a slot ──
         var MAC_STATE = {
             sending: ['Sending', 'on'], waiting: ['Waiting for the next set', ''], starting: ['Starting…', ''],
@@ -1067,6 +1176,7 @@
         function macChip(l) {
             if (!l) return '<span class="mac-chip off">Not linked</span>';
             var m = MAC_STATE[l.state] || MAC_STATE.starting, t = m[0];
+            if (l.state === 'waiting' && _calSched && _calSched.opensAt) t = 'Waiting · opens ' + fmtDay(_calSched.opensAt) + ' ' + fmtTime(_calSched.opensAt);
             if (l.state === 'missing') t += l.detail;
             else if (l.state === 'blocked') t = 'Allow ' + (l.detail === 'camera' ? 'Camera' : 'Microphone') + ' for a™ in System Settings → Privacy & Security';
             else if (l.state === 'error' || (l.state === 'starting' && l.detail)) t = l.detail || 'Something went wrong';
@@ -1079,7 +1189,7 @@
                 return '<option value="' + esc(n) + '"' + (n === current ? ' selected' : '') + '>' + esc(n) + (names.indexOf(n) < 0 ? ' (not plugged in)' : '') + '</option>';
             }).join('');
         }
-        var _macBusy = {};
+        var _macBusy = {}, _mac = null;
         async function renderMac() {
             if (!(window.laApp && window.laApp.mac)) return;
             var sec = document.getElementById('mac-section');
@@ -1089,6 +1199,7 @@
             var st;
             try { st = await window.laApp.mac.state(venue); } catch (_) { return; }
             if (!st) return;
+            _mac = st;
             // Links to slots that were removed stop streaming
             Object.keys(st.links).forEach(function(id) { if (!slots.some(function(c) { return c.id === id; })) window.laApp.mac.unlink(venue, id); });
             var a = document.activeElement;
@@ -1110,6 +1221,74 @@
                           '<label>Sound<select data-mac="audio">' + macOptions(d.audio, cur.audio, 'No sound') + '</select></label>') +
                     macChip(l) + '</div>';
             }).join('');
+            macPreviews(st);
+        }
+        // The linked camera's picture (and the mixer's level) straight from this Mac, in the slot's card
+        var _macMedia = {};   // device name → Promise<MediaStream>
+        async function macMedia(kind, name) {
+            var k = kind + ':' + name;
+            if (!_macMedia[k]) _macMedia[k] = (async function() {
+                var find = async function() {
+                    return (await navigator.mediaDevices.enumerateDevices()).find(function(d) {
+                        return d.kind === (kind === 'video' ? 'videoinput' : 'audioinput') && d.label && (d.label === name || d.label.indexOf(name) === 0);
+                    });
+                };
+                var dev = await find();
+                if (!dev) {   // labels show once the page may use the camera/microphone
+                    var t = await navigator.mediaDevices.getUserMedia(kind === 'video' ? { video: true } : { audio: true });
+                    t.getTracks().forEach(function(x) { x.stop(); });
+                    dev = await find();
+                }
+                if (!dev) throw new Error('not found');
+                return navigator.mediaDevices.getUserMedia(kind === 'video'
+                    ? { video: { deviceId: { exact: dev.deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } } }
+                    : { audio: { deviceId: { exact: dev.deviceId }, echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+            })().catch(function(e) { delete _macMedia[k]; throw e; });
+            return _macMedia[k];
+        }
+        function macPreviews(st) {
+            var used = {};
+            document.querySelectorAll('.cam-stage[data-cam]').forEach(function(stage) {
+                var l = st.links[stage.dataset.cam];
+                var cam = _cams.find(function(c) { return c.id === stage.dataset.cam; }) || {};
+                if (!l || stage.dataset.live) return;
+                var deck = cam.kind === 'audio', name = deck ? l.audio : l.video;
+                var here = deck ? st.devices.audio : st.devices.video;
+                if (!name || here.indexOf(name) < 0) return;
+                used[(deck ? 'audio:' : 'video:') + name] = true;
+                if (stage.dataset.mac === name) return;
+                stage.dataset.mac = name;
+                macMedia(deck ? 'audio' : 'video', name).then(function(ms) {
+                    if (stage.dataset.mac !== name) return;
+                    if (deck) {
+                        stage.innerHTML = '<div class="cam-audio on mac"><div class="cam-eq">' + Array.from({ length: 24 }, function() { return '<i></i>'; }).join('') + '</div><span>Decks audio · this Mac</span></div><span class="mac-tag">This Mac</span>';
+                        macMeter(stage, ms);
+                    } else {
+                        stage.innerHTML = '<video class="mac-live" autoplay muted playsinline></video><span class="mac-tag">This Mac · ' + esc(name) + '</span>';
+                        stage.querySelector('video').srcObject = ms;
+                    }
+                }).catch(function() { delete stage.dataset.mac; });
+            });
+            // Let go of devices no card shows any more
+            Object.keys(_macMedia).forEach(function(k) {
+                if (used[k]) return;
+                _macMedia[k].then(function(ms) { ms.getTracks().forEach(function(t) { t.stop(); }); }).catch(function() {});
+                delete _macMedia[k];
+            });
+        }
+        function macMeter(stage, ms) {
+            try {
+                var ac = new (window.AudioContext || window.webkitAudioContext)();
+                var an = ac.createAnalyser(); an.fftSize = 64;
+                ac.createMediaStreamSource(ms).connect(an);
+                var bars = stage.querySelectorAll('.cam-eq i'), data = new Uint8Array(an.frequencyBinCount);
+                (function tick() {
+                    if (!stage.isConnected || !stage.querySelector('.cam-audio.mac')) { ac.close(); return; }
+                    an.getByteFrequencyData(data);
+                    bars.forEach(function(b, i) { b.style.transform = 'scaleY(' + Math.max(0.12, data[i % data.length] / 255).toFixed(2) + ')'; });
+                    requestAnimationFrame(tick);
+                })();
+            } catch (_) {}
         }
         document.getElementById('mac-rows').addEventListener('change', async function(e) {
             var row = e.target.closest('.mac-row');
@@ -1526,7 +1705,7 @@
                 // A new venue joins the Brand Kit's venues
                 if (form.venue && form.venue.value === '__new' && venue) laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setOwnerName', owner: 'venue-' + venue.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50), name: venue }) }).catch(function() {});
                 camApi({ action: 'onStage', id: c.id, artist: form.artist.value.trim().toUpperCase(), autoClips: form.autoClips.checked,
-                    title: form.title ? form.title.value.trim() : '', venue: venue, date: form.date ? form.date.value : '' })
+                    title: form.elements.title ? form.elements.title.value.trim() : '', venue: venue, date: form.date ? form.date.value : '' })
                     .then(function() { _camKey = ''; closeCamDialog(); laToast(form.artist.value.trim() ? form.artist.value.trim().toUpperCase() + ' is on stage' : 'Saved'); return loadCameras(); })
                     .catch(function(err) { document.getElementById('stage-error').textContent = err.message; btn.disabled = false; btn.textContent = 'Save'; });
             });

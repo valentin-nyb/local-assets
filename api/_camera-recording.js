@@ -146,16 +146,16 @@ export async function processCameraRecording(event) {
     // Markers up to the end of this recording are used up
     await redis.del(`cam_markers:${streamId}`);
     // "On stage" session details (no calendar): name and venue go on each session; the name and date are used once
-    if (!calSets.length && (cam.stageTitle || cam.stageVenue)) {
+    if (!calSets.length && (cam.stageTitle || cam.stageVenue || cam.stageLabel)) {
       for (const s of sessions) {
         const field = `${String(s.artist).toUpperCase().trim()}|${date}`;
         let prev = {};
         try { prev = JSON.parse(await redis.hGet(`session_meta:${slug}`, field) || '{}'); } catch {}
-        await redis.hSet(`session_meta:${slug}`, field, JSON.stringify({ ...prev, title: cam.stageTitle || prev.title || '', venue: cam.stageVenue || prev.venue || '' }));
+        await redis.hSet(`session_meta:${slug}`, field, JSON.stringify({ ...prev, title: cam.stageTitle || prev.title || '', venue: cam.stageVenue || prev.venue || '', label: cam.stageLabel || prev.label || '' }));
       }
       const fresh = JSON.parse(await redis.get(`cameras:${slug}`) || '[]');
       const me = fresh.find(c => c.streamId === streamId);
-      if (me) { me.stageTitle = ''; me.stageDate = ''; await redis.set(`cameras:${slug}`, JSON.stringify(fresh)); }
+      if (me) { me.stageTitle = ''; me.stageDate = ''; me.stageLabel = ''; await redis.set(`cameras:${slug}`, JSON.stringify(fresh)); }
     } else if (!calSets.length && cam.stageDate) {
       const fresh = JSON.parse(await redis.get(`cameras:${slug}`) || '[]');
       const me = fresh.find(c => c.streamId === streamId);
