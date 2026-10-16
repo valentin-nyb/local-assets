@@ -157,6 +157,9 @@
         .rec-bar.idle { border-color:var(--la-line); background:var(--la-surface); }
         .rec-bar.idle .rec-dot { background:var(--la-dim); box-shadow:none; animation:none; }
         .rec-bar.idle .rec-stop, .rec-bar:not(.idle) .rec-start, .rec-bar:not(.cal) .rec-see { display:none; }
+        .rec-bar.idle.cal .rec-endset { display:inline-flex; }
+        .rec-bar.cal { border-color:color-mix(in srgb, #ef4444 45%, transparent); background:color-mix(in srgb, #ef4444 7%, var(--la-surface)); }
+        .rec-bar.cal .rec-dot { background:#ef4444; box-shadow:0 0 12px #ef4444; animation:camBlink 1.2s ease-in-out infinite; }
         /* See session: the set the calendar is recording now */
         .ls-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:14px; }
         .ls-artist { font:700 26px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; text-transform:uppercase; letter-spacing:-.01em; color:var(--la-text); }
@@ -543,6 +546,7 @@
                     <span class="rec-dot"></span>
                     <div class="rec-text"><b id="rec-title">Record a session</b><span id="rec-meta">Any time, without the calendar</span></div>
                     <button type="button" class="cam-btn ghost rec-see" onclick="openLiveSession()">See session</button>
+                    <button type="button" class="cam-btn primary rec-stop rec-endset" onclick="stopCalendarSet(this)">Stop set</button>
                     <button type="button" class="cam-btn primary rec-start" onclick="openSession()">Create a session</button>
                     <button type="button" class="cam-btn primary rec-stop" id="rec-stop">Stop and save</button>
                 </div>
@@ -1115,7 +1119,7 @@
             var today = new Date(Date.now() - new Date().getTimezoneOffset() * 60e3).toISOString().slice(0, 10);
             openCamDialog('Create a session',
                 '<form id="ses-form" class="cam-form">' +
-                '<label>Artist<input name="artist" list="ses-artists" maxlength="60" required placeholder="DJ TENNIS" autocomplete="off" value="' + esc(_calNow ? _calNow.artist : (first.artist || '')) + '"><datalist id="ses-artists"></datalist></label>' +
+                '<label>Artist<input name="artist" list="ses-artists" maxlength="60" required placeholder="Artist name" autocomplete="off" value="' + esc(_calNow ? _calNow.artist : (first.artist || '')) + '"><datalist id="ses-artists"></datalist></label>' +
                 '<label>Session name<input name="title" maxlength="80" placeholder="e.g. Sunset set" autocomplete="off" value="' + esc(first.stageTitle || '') + '"></label>' +
                 '<div class="cam-two"><label>Venue<select name="venue"><option value="">No venue</option>' + (first.stageVenue ? '<option selected>' + esc(first.stageVenue) + '</option>' : '') + '<option value="__new">+ New venue…</option></select></label>' +
                 '<label>Date<input name="date" type="date" value="' + today + '"></label></div>' +
@@ -1183,7 +1187,7 @@
                 '<div class="ls-row"><span>Vertical clips</span><small>' + (slots.some(function(c) { return c.kind !== 'audio' && c.autoClips !== false; }) ? 'Made automatically' : 'Off') + '</small></div>' +
                 '<div class="ls-row"><span>Watermark</span><small id="ls-wm">…</small></div></div>' +
                 '<div class="ls-sec"><p class="ls-h">Brand assets</p><div id="ls-brand"><p class="ls-empty">Loading…</p></div></div>' +
-                '<div class="cam-form-actions" style="margin-top:20px"><a class="cam-btn ghost" href="/brand">Open Brand Kit</a><button type="button" class="cam-btn primary" onclick="closeCamDialog()">Close</button></div>');
+                '<div class="cam-form-actions" style="margin-top:20px"><a class="cam-btn ghost" href="/brand">Open Brand Kit</a><button type="button" class="cam-btn primary rec-stop" onclick="stopCalendarSet(this)">Stop set</button></div>');
             try {
                 var r = await laFetch('/api/brand'); var d = r.ok ? await r.json() : {};
                 var slug = function(n) { return String(n).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60); };
@@ -1217,6 +1221,21 @@
                 var b = document.getElementById('ls-brand'); if (b) b.innerHTML = '<p class="ls-empty">Could not load the brand kit.</p>';
             }
         }
+        // Stop set: the calendar's set finishes early. The recording is saved now; the cameras open again at the next set.
+        async function stopCalendarSet(btn) {
+            var artist = (_calNow && _calNow.artist) || (_calSched && _calSched.currentArtist) || 'this set';
+            var ids = _cams.filter(function(c) { return !c.external && c.followCalendar !== false; }).map(function(c) { return c.id; });
+            if (!ids.length) return;
+            if (!(await laConfirm({ title: 'Stop ' + artist + ' now?', message: 'The recording ends now and is saved to Distribution History. The cameras start again at the next set in the calendar.', confirmText: 'Stop set', danger: true }))) return;
+            btn.disabled = true; btn.textContent = 'Stopping…';
+            try {
+                await camApi({ action: 'stopRecording', ids: ids, endSet: true });
+                closeCamDialog();
+                laToast(artist + ' stopped. The session appears in Distribution History in a few minutes.');
+                _camKey = ''; await loadCameras();
+            } catch (x) { laAlert('Could not stop: ' + (x.message || x), { tone: 'error' }); }
+            btn.disabled = false; btn.textContent = 'Stop set';
+        }
         function macLinked() { return (_mac && _mac.links) || {}; }
         var _recTimer = null;
         function paintRecBar() {
@@ -1226,10 +1245,14 @@
             clearInterval(_recTimer);
             bar.classList.toggle('hidden', !slots.length);
             bar.classList.toggle('idle', !rec.length);
-            bar.classList.toggle('cal', !rec.length && !!(_calSched && _calSched.open));
+            var calCams = slots.filter(function(c) { return c.followCalendar !== false; });
+            var setEnded = calCams.length > 0 && calCams.every(function(c) { return c.ended; });
+            bar.classList.toggle('cal', !rec.length && !!(_calSched && _calSched.open) && !setEnded);
             if (!rec.length) {
                 document.getElementById('rec-title').textContent = 'Record a session';
-                document.getElementById('rec-meta').textContent = _calSched && _calSched.open ? 'The calendar is recording ' + (_calSched.currentArtist || 'this set') + ' now' : 'Any time, without the calendar · ' + slots.map(function(c) { return c.name; }).join(' · ');
+                document.getElementById('rec-meta').textContent = _calSched && _calSched.open
+                    ? (setEnded ? (_calSched.currentArtist || 'This set') + ' was stopped early · the cameras start again at the next set' : 'The calendar is recording ' + (_calSched.currentArtist || 'this set') + ' now')
+                    : 'Any time, without the calendar · ' + slots.map(function(c) { return c.name; }).join(' · ');
                 return;
             }
             var since = Math.min.apply(null, rec.map(function(c) { return c.manual; }));
@@ -1801,7 +1824,7 @@
                 '<li><b>3</b><span>Change the artist between sets while streaming and the recording is split at that moment, one session per artist.</span></li>' +
                 '</ol>' +
                 '<form id="stage-form" class="cam-form">' +
-                '<label>Artist on stage<input name="artist" list="stage-artists" maxlength="60" placeholder="DJ TENNIS" autocomplete="off" value="' + esc(c.artist) + '"><datalist id="stage-artists"></datalist>' +
+                '<label>Artist on stage<input name="artist" list="stage-artists" maxlength="60" placeholder="Artist name" autocomplete="off" value="' + esc(c.artist) + '"><datalist id="stage-artists"></datalist>' +
                 (live ? '<small>Streaming now. Saving a new name starts a new set from this moment.</small>' : '<small>Set this before the stream starts.</small>') + '</label>' +
                 // Without a calendar, the session's details are given here so it arrives complete
                 (_calSched ? '<p class="cam-dialog-note" style="margin:0">During calendar sets, the calendar\'s name, venue and date are used. These are for streams outside them.</p>' : '') + (

@@ -58,8 +58,10 @@ export default async function handler(req, res) {
         // "Preview now" keeps a calendar camera open for 10 minutes between sets
         const preview = follow && !win.open && await redis.exists(`cam_preview:${cam.streamId}`);
         // "Record now" in Camera Control keeps it open until Stop
-        const manual = follow && !win.open && !preview && await redis.exists(`cam_manual:${cam.streamId}`);
-        const want = !follow || win.open || preview || manual ? 'enabled' : 'disabled';
+        const manual = follow && await redis.exists(`cam_manual:${cam.streamId}`);
+        // "Stop set": the set finished early, so the camera stays closed until the set's time is over
+        const ended = follow && win.open && !manual && await redis.exists(`cam_ended:${cam.streamId}`);
+        const want = (!follow || win.open || preview || manual) && !ended ? 'enabled' : 'disabled';
         const have = await redis.get(stateKey(cam.streamId));
         if (have === want) continue;
         if (!have && want === 'enabled') { await redis.set(stateKey(cam.streamId), want); continue; }   // streams start open

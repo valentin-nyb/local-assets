@@ -103,12 +103,15 @@ export default async function handler(req, res) {
     if (saved.length) {
       await withRedis(r => r.hSet(STREAM_MAP, Object.fromEntries(saved.map(c => [c.streamId, vslug])))).catch(() => {});
     }
-    const manual = saved.length ? await withRedis(r => Promise.all(saved.map(c => c.streamId ? r.get(manualKey(c.streamId)) : null))).catch(() => []) : [];
+    const [manual, ended] = saved.length ? await withRedis(r => Promise.all([
+      Promise.all(saved.map(c => c.streamId ? r.get(manualKey(c.streamId)) : null)),
+      Promise.all(saved.map(c => c.streamId ? r.exists(`cam_ended:${c.streamId}`) : 0)),
+    ])).catch(() => [[], []]) : [[], []];
     const byId = new Map(streams.map(s => [s.id, s]));
     const cameras = saved.map(c => {
       const s = byId.get(c.streamId);
       byId.delete(c.streamId);
-      return { ...c, manual: Number(manual[saved.indexOf(c)]) || null, status: s ? s.status : 'missing', playbackId: s?.playbackId || null, liveSince: s?.liveSince || null, recording: s ? s.recording : true };
+      return { ...c, manual: Number(manual[saved.indexOf(c)]) || null, ended: !!ended[saved.indexOf(c)], status: s ? s.status : 'missing', playbackId: s?.playbackId || null, liveSince: s?.liveSince || null, recording: s ? s.recording : true };
     });
     // Streams created directly in Mux still show up, without camera details.
     for (const s of byId.values()) {
@@ -339,19 +342,25 @@ export default async function handler(req, res) {
           const since = Date.now();
           for (const cam of chosen) {
             await redis.set(manualKey(cam.streamId), String(since), { EX: 8 * 3600 });
+            await redis.del(`cam_ended:${cam.streamId}`);
             await mux(session.muxAuth, `/video/v1/live-streams/${encodeURIComponent(cam.streamId)}/enable`, { method: 'PUT' }).catch(() => {});
             await redis.set(`cam_sched:${cam.streamId}`, 'enabled');
           }
           return res.status(200).json({ ok: true, since });
         }
         // Stop: the recording ends now and is saved; between sets the stream closes again
-        let open = false;
+        let open = false, closesAt = 0;
         const calUrl = await redis.get(calendarKey(slug));
-        if (calUrl) { try { open = scheduleWindow(await fetchEvents(calUrl, Date.now() - 24 * 3600e3, Date.now() + 24 * 3600e3)).open; } catch { open = true; } }
+        if (calUrl) { try { const w = scheduleWindow(await fetchEvents(calUrl, Date.now() - 24 * 3600e3, Date.now() + 24 * 3600e3)); open = w.open; closesAt = w.closesAt || 0; } catch { open = true; } }
+        // Stop set: a calendar set finishing early. The cameras stay closed until this set's time is over,
+        // then open again for the next set (api/camera-schedule.js)
+        const endSet = body.endSet === true && open && closesAt > Date.now();
+        if (endSet) open = false;
         for (const cam of chosen) {
           await redis.del(manualKey(cam.streamId));
           await redis.del(`cam_preview:${cam.streamId}`);
           await mux(session.muxAuth, `/video/v1/live-streams/${encodeURIComponent(cam.streamId)}/complete`, { method: 'PUT' }).catch(() => {});
+          if (endSet && cam.followCalendar !== false) await redis.set(`cam_ended:${cam.streamId}`, '1', { PX: closesAt - Date.now() + 60e3 });
           if (cam.followCalendar !== false && calUrl && !open) {
             await mux(session.muxAuth, `/video/v1/live-streams/${encodeURIComponent(cam.streamId)}/disable`, { method: 'PUT' }).catch(() => {});
             await redis.set(`cam_sched:${cam.streamId}`, 'disabled');

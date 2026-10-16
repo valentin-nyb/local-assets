@@ -1289,7 +1289,7 @@
                 document.getElementById('bk-new-wrap').classList.toggle('hidden', !isNew);
                 document.getElementById('bk-label-artist-wrap').classList.toggle('hidden', v !== '__newLabel');
                 document.getElementById('bk-new-label').textContent = v === '__newVenue' ? 'Venue name' : v === '__newLabel' ? 'Record label name' : 'Artist name';
-                form.newName.placeholder = v === '__newVenue' ? 'e.g. Café 1001' : v === '__newLabel' ? 'e.g. Life and Death' : 'e.g. DJ TENNIS';
+                form.newName.placeholder = v === '__newVenue' ? 'e.g. Café 1001' : v === '__newLabel' ? 'e.g. Life and Death' : 'Artist name';
                 if (isNew) setTimeout(function() { form.newName.focus(); }, 0);
             };
             form.owner.addEventListener('change', syncNew);

@@ -90,7 +90,7 @@ function argsFor(link, key, run) {
       ...(run.x264 ? ['-c:v', 'libx264', '-preset', 'veryfast', '-tune', 'stillimage'] : ['-c:v', 'h264_videotoolbox', '-realtime', '1']),
       '-b:v', '300k', '-g', '20', '-pix_fmt', 'yuv420p', ...audioOut, ...out]
   }
-  const [size, fps] = VIDEO_MODES[run.mode] || VIDEO_MODES[VIDEO_MODES.length - 1]
+  const [size, fps] = run.picked || VIDEO_MODES[run.mode] || VIDEO_MODES[VIDEO_MODES.length - 1]
   const a = link.audio ? indexOf('audio', link.audio) : 'none'
   return ['-hide_banner', '-nostats', '-loglevel', 'error', '-progress', 'pipe:1',
     '-f', 'avfoundation', ...(fps ? ['-framerate', fps] : []), ...(size ? ['-video_size', size] : []),
@@ -129,16 +129,43 @@ async function start(id) {
   const proc = spawn(FFMPEG, argsFor(link, key, run), { stdio: ['ignore', 'pipe', 'pipe'] })
   run.proc = proc
   let errText = ''
+  let lastSize = 0, frames = 0
   proc.stdout.on('data', d => {
-    if (/total_size=[1-9]/.test(d)) { run.sentAt = Date.now(); setState(id, 'sending') }
+    const t = String(d), m = t.match(/total_size=(\d+)/g), f = t.match(/frame=(\d+)/g)
+    if (f) frames = Number(f[f.length - 1].split('=')[1])
+    const size = m ? Number(m[m.length - 1].split('=')[1]) : lastSize
+    if (size > lastSize) { lastSize = size; run.sentAt = Date.now(); setState(id, 'sending') }
   })
+  // No picture or sound coming through (camera blocked by macOS, in use elsewhere, or the connection gone
+  // quiet): stop instead of hanging, and say what to check
+  run.stallCheck = setInterval(() => {
+    const quiet = Date.now() - (run.sentAt || run.startedAt)
+    if (quiet < 15000 || !run.proc) return
+    clearInterval(run.stallCheck)
+    run.stalled = link.kind === 'audio' || frames === 0 ? 'nodata' : 'quiet'
+    proc.kill('SIGKILL')
+  }, 3000)
   proc.stderr.on('data', d => { errText = (errText + d).slice(-4000).split(key).join('KEY') })
   proc.on('exit', code => {
     run.proc = null
+    clearInterval(run.stallCheck)
+    const stalled = run.stalled; run.stalled = null
     if (!links[id]) return
     const wasSending = run.state === 'sending'
     const lived = Date.now() - run.startedAt
     log(link.slotName + ' exit ' + code + ' after ' + Math.round(lived / 1000) + 's' + (wasSending ? ' (was sending)' : '') + ': ' + errText.split('\n').filter(Boolean).slice(-3).join(' | '))
+    if (stalled === 'nodata') {
+      const what = link.kind === 'audio' ? 'Microphone' : 'Camera'
+      setState(id, 'error', 'No ' + (link.kind === 'audio' ? 'sound' : 'picture') + ' from ' + (link.kind === 'audio' ? link.audio : link.video) + '. In System Settings → Privacy & Security → ' + what + ', turn a™ off and on again, then reopen a™.')
+      return later(id, 60e3)
+    }
+    // The camera said which modes it has: use the best one (largest picture, then up to 30 fps)
+    if (!run.picked && /Supported modes|not supported by the device/i.test(errText)) {
+      const modes = [...errText.matchAll(/(\d{3,4})x(\d{3,4})@\[(\d+(?:\.\d+)?)/g)].map(m => ({ w: +m[1], h: +m[2], fps: +m[3] }))
+        .filter(m => m.fps >= 10 && m.fps <= 31 && m.w <= 1920)
+        .sort((a, b) => b.w * b.h - a.w * a.h || b.fps - a.fps)
+      if (modes.length) { run.picked = [modes[0].w + 'x' + modes[0].h, String(modes[0].fps)]; log(link.slotName + ' using ' + run.picked.join(' @ ')); return later(id, 500) }
+    }
     // It connected and dropped within a minute: every short connection leaves a broken recording in Cloud
     // Storage, so wait longer each time (30 s, 1, 2, 4… up to 10 min) and say which device keeps stopping
     if (wasSending && lived < 60e3) {
