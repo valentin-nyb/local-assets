@@ -18,6 +18,14 @@ const RETRY_DROPPED_MS = 3000       // it was sending and stopped: reconnect qui
 const VIDEO_MODES = [['1920x1080', '30'], ['1280x720', '30'], [null, '30'], [null, null]]
 
 const configFile = () => path.join(app.getPath('userData'), 'this-mac.json')
+// A short log for support (keys are never in it): ~/Library/Application Support/a™/this-mac.log
+function log(line) {
+  try {
+    const f = path.join(app.getPath('userData'), 'this-mac.log')
+    try { if (fs.statSync(f).size > 512e3) fs.renameSync(f, f + '.1') } catch {}
+    fs.appendFileSync(f, new Date().toISOString() + ' ' + line + '\n')
+  } catch {}
+}
 let devices = { video: [], audio: [] }
 let links = {}          // id → { venue, slotId, slotName, kind, video, audio, key (sealed) }
 const runs = {}         // id → { proc, state, detail, timer, mode, x264, sentAt }
@@ -117,6 +125,7 @@ async function start(id) {
   if (!key) return setState(id, 'error', 'Link this slot again')
 
   setState(id, 'starting')
+  run.startedAt = Date.now(); run.sentAt = 0
   const proc = spawn(FFMPEG, argsFor(link, key, run), { stdio: ['ignore', 'pipe', 'pipe'] })
   run.proc = proc
   let errText = ''
@@ -124,10 +133,21 @@ async function start(id) {
     if (/total_size=[1-9]/.test(d)) { run.sentAt = Date.now(); setState(id, 'sending') }
   })
   proc.stderr.on('data', d => { errText = (errText + d).slice(-4000).split(key).join('KEY') })
-  proc.on('exit', () => {
+  proc.on('exit', code => {
     run.proc = null
     if (!links[id]) return
     const wasSending = run.state === 'sending'
+    const lived = Date.now() - run.startedAt
+    log(link.slotName + ' exit ' + code + ' after ' + Math.round(lived / 1000) + 's' + (wasSending ? ' (was sending)' : '') + ': ' + errText.split('\n').filter(Boolean).slice(-3).join(' | '))
+    // It connected and dropped within a minute: every short connection leaves a broken recording in Cloud
+    // Storage, so wait longer each time (30 s, 1, 2, 4… up to 10 min) and say which device keeps stopping
+    if (wasSending && lived < 60e3) {
+      run.fails = (run.fails || 0) + 1
+      const wait = Math.min(600e3, 30e3 * 2 ** (run.fails - 1))
+      setState(id, 'error', (link.kind === 'audio' ? link.audio : link.video) + ' keeps stopping. Trying again in ' + (wait >= 60e3 ? Math.round(wait / 60e3) + ' min' : Math.round(wait / 1e3) + ' s'))
+      return later(id, wait)
+    }
+    if (wasSending) run.fails = 0
     if (/videotoolbox/i.test(errText) && !run.x264) { run.x264 = true; return later(id, 500) }
     if (/(video size|framerate|pixel format).*not supported|Selected (video size|framerate)/i.test(errText) && run.mode < VIDEO_MODES.length - 1) { run.mode++; return later(id, 500) }
     if (wasSending) { setState(id, 'starting', 'Reconnecting'); return later(id, RETRY_DROPPED_MS) }

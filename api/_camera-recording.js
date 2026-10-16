@@ -110,8 +110,10 @@ export async function processCameraRecording(event) {
       from: Math.max(ev.start, startMs), to: Math.min(ev.end, endMs),
     })).filter(x => x.end - x.start >= MIN_SET_SEC);
 
+    // No artist set: the session goes under the account's name (an artist account's own name), never the camera's
+    const fallbackArtist = String(cfg?.name || 'Untitled set').replace(/\s+TEAM$/i, '');
     const sets = calSets.length ? calSets : buildSets(cam.artist || '', markers, startMs, duration)
-      .map(s => ({ ...s, artist: (s.artist || camName).toUpperCase().trim() }));
+      .map(s => ({ ...s, artist: (s.artist || fallbackArtist).toUpperCase().trim() }));
 
     let sessions;
     if (!calSets.length && sets.length === 1) {

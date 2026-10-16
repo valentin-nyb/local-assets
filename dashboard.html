@@ -1977,11 +1977,12 @@
         }
 
         function renderVideoHealth(assets) {
-            var ready = 0, preparing = 0, failed = 0, failedNames = [];
+            var ready = 0, preparing = 0, failed = 0, failedNames = [], failedIds = [];
             assets.forEach(function(a) {
                 if (a.source === 'blob') return;
                 if (a.status === 'errored') {
                     failed++;
+                    failedIds.push({ id: a.id, venue: a._venue || '' });
                     var m = parsePassthrough(a.passthrough, a.name, a.id) || {};
                     // "ARTIST // THUMB // D:2026-10-08 // 04" → "ARTIST · thumbnail 04"
                     var KIND = { THUMB: 'thumbnail', SOCIAL: 'vertical clip', AUDIO: 'HQ audio' };
@@ -1998,8 +1999,31 @@
             var parts = [ready + ' ready'];
             if (preparing) parts.push(preparing + ' processing');
             if (failed) parts.push(failed + ' failed');
+            // The same failure many times reads once, with a count
+            var counts = {}; failedNames.forEach(function(n) { counts[n] = (counts[n] || 0) + 1; });
+            var grouped = Object.keys(counts).map(function(n) { return n + (counts[n] > 1 ? ' ×' + counts[n] : ''); });
             setHealthRow('video', failed ? 'bad' : preparing ? 'busy' : 'ok', parts.join(' · '),
-                failed ? 'Cloud Storage could not process: ' + failedNames.join(', ') + '. Upload it again.' : '');
+                failed ? 'Cloud Storage could not process: ' + grouped.join(', ') + '. These files are empty or broken.' : '');
+            var det = document.getElementById('sh-video-detail');
+            if (det && failed) {
+                var b = document.createElement('button');
+                b.type = 'button'; b.className = 'kpi-action'; b.style.marginTop = '10px'; b.style.display = 'block';
+                b.textContent = 'Remove failed recordings';
+                b.onclick = async function() {
+                    if (!(await laConfirm({ title: 'Remove ' + failed + ' failed recording' + (failed > 1 ? 's' : '') + '?', message: 'They hold no usable video. Your ready sessions are not touched.', confirmText: 'Remove', danger: true }))) return;
+                    b.disabled = true;
+                    var done = 0;
+                    for (var i = 0; i < failedIds.length; i++) {
+                        var f = failedIds[i], h = { 'Content-Type': 'application/json' };
+                        if (f.venue) h['X-LA-Venue'] = f.venue;
+                        b.textContent = 'Removing ' + (i + 1) + ' of ' + failedIds.length + '…';
+                        try { var r = await laFetch('/api/delete-asset', { method: 'POST', headers: h, body: JSON.stringify({ id: f.id }) }); if (r.ok) done++; } catch (_) {}
+                    }
+                    b.textContent = done + ' removed';
+                    setTimeout(function() { location.reload(); }, 900);
+                };
+                det.appendChild(b);
+            }
             renderSystemStatus();
         }
 

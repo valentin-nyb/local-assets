@@ -947,7 +947,9 @@
                 var assets = Array.isArray(res[1]) ? res[1] : (res[1].data || []);
                 buildSessions(assets);
                 var names = {};
-                assets.forEach(function(a) { var n = artistFromAsset(a); if (n) names['artist-' + slugify(n)] = n.toUpperCase(); });
+                // Artists from recordings; a camera's or slot's name is never an artist
+                var NOT_ARTIST = /^(cam(era)?\s*\d*|master|audio|decks(\s+audio)?|untitled\s+set|phone|webcam)$/i;
+                assets.forEach(function(a) { var n = artistFromAsset(a); if (n && !NOT_ARTIST.test(String(n).trim())) names['artist-' + slugify(n)] = n.toUpperCase(); });
                 _files.forEach(function(f) {
                     if (f.owner !== 'venue' && !names[f.owner]) names[f.owner] = f.owner.replace(/^(artist|venue|label)-/, '').replace(/-/g, ' ').toUpperCase();
                 });
