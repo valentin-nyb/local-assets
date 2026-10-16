@@ -231,7 +231,10 @@ async function createClientAccount(session, stripe) {
   const type = ['venue', 'label', 'artist'].includes(m.accountType) ? m.accountType : 'venue';
   const base = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'client';
   if (!email) { console.error('[Stripe Webhook] sign-up without an email', session.id); return; }
-  const card = await saveCardForUsage(stripe, session);
+  // Pay as you go chosen (always for plans without a monthly price): usage is charged to the card on the 1st;
+  // otherwise usage above the plan is invoiced by email
+  const payg = m.payg === '1' || session.mode !== 'subscription';
+  const card = payg ? await saveCardForUsage(stripe, session) : null;
   // The invoice details Stripe collected at checkout (billing address is required there)
   const cd = session.customer_details || {}, ad = cd.address || {};
   const details = { legalName: String(cd.name || name).slice(0, 100), line1: ad.line1 || '', line2: ad.line2 || '', city: ad.city || '', postcode: ad.postal_code || '', country: ad.country || 'GB', vat: '' };
@@ -276,7 +279,7 @@ async function createClientAccount(session, stripe) {
   }).catch(e => console.error('[Stripe Webhook] admin email', e.message));
   // What they paid today and how they're billed from now on
   const paid = (session.amount_total || 0) / 100, money = n => '£' + n.toLocaleString('en-GB', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 });
-  const line = session.mode === 'subscription' ? `${money(paid)} paid today, then billed monthly. Usage above your plan is charged on the 1st.`
+  const line = session.mode === 'subscription' ? `${money(paid)} paid today, then billed monthly. ${payg ? 'Pay as you go is on: usage above your plan is charged to your card on the 1st.' : 'Usage above your plan is invoiced on the 1st.'}`
     : session.mode === 'payment' ? `${money(paid)} paid today. After that, pay only for what you use, charged to your card on the 1st.`
     : 'No monthly fee. What you use is charged to your card on the 1st.';
   const mail = welcomeEmail({ name, email, type, plan: { name: m.tierName || m.tier || 'local / assets', line }, ready: !!storage });

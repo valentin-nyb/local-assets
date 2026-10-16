@@ -22,9 +22,6 @@ export async function readRates(redis) {
 
 // Plans: a monthly price with usage included; usage above it is billed as overage
 export const DEFAULT_PLANS = [
-  { id: 'payg', name: 'Pay as you go', price: 0, maxClips: 6, cameras: 0,
-    included: { storedMinutes: 0, deliveredMinutes: 0, fileGB: 0 },
-    features: ['No monthly fee', 'Pay only for what you store and stream', 'Charged to your card on the 1st', '6 vertical social clips per set', 'Brand Kit watermark'] },
   { id: 'dj-trial', name: 'DJ Trial Month', price: 0, signupFee: 55, maxClips: 6, cameras: 0,
     included: { storedMinutes: 0, deliveredMinutes: 0, fileGB: 0 },
     features: ['£55 to join, then pay as you go', '6 vertical social clips per session', 'Brand Kit and watermark', 'Camera Control: phone, OBS or your own camera', 'Distribution History', 'Usage charged to your card on the 1st'] },
@@ -42,8 +39,8 @@ export const DEFAULT_PLANS = [
     features: ['2 cameras included', 'Starlink Mini + Mac mini', '4K master recordings', 'HQ audio capture', 'Multi-camera auto edit, cut to the music', 'Unlimited vertical social clips', 'Marketing thumbnails & watermark', 'Quarterly performance reports', '20 TB cloud storage'] },
 ];
 export async function readPlans(redis) {
-  // Pay as you go and the DJ Trial Month are always offered, even when the saved plan list predates them
-  const withPayg = list => [...DEFAULT_PLANS.filter(d => ['payg', 'dj-trial'].includes(d.id) && !list.some(p => p.id === d.id)), ...list];
+  // The DJ Trial Month is always offered, even when the saved plan list predates it
+  const withPayg = list => [...DEFAULT_PLANS.filter(d => d.id === 'dj-trial' && !list.some(p => p.id === d.id)), ...list];
   try { const p = JSON.parse(await redis.get('billing_plans') || 'null'); return Array.isArray(p) && p.length ? withPayg(p.map(x => { const d = DEFAULT_PLANS.find(z => z.id === x.id) || {}; return { ...x, signupFee: x.signupFee != null ? x.signupFee : (d.signupFee || 0), features: (x.features && x.features.length ? x.features : d.features), cameras: x.cameras || d.cameras || 0, maxClips: x.maxClips != null ? x.maxClips : (d.maxClips != null ? d.maxClips : 5) }; })) : DEFAULT_PLANS; }
   catch { return DEFAULT_PLANS; }
 }

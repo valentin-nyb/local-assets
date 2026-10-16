@@ -33,7 +33,9 @@ export default async function handler(req, res) {
 
   try {
     const stripe = new Stripe(sk);
-    const metadata = { kind: 'signup', tier: plan.id, tierName: plan.name, accountType, accountName };
+    // Pay as you go (usage above the plan charged to the card on the 1st): chosen at sign-up, always on without a monthly price
+    const payg = !(plan.price > 0) || body?.payg === true;
+    const metadata = { kind: 'signup', tier: plan.id, tierName: plan.name, accountType, accountName, payg: payg ? '1' : '0' };
     const common = {
       success_url: 'https://local-assets.com/?signup=success',
       cancel_url: 'https://local-assets.com/?signup=cancelled',
