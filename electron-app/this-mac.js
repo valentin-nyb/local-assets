@@ -11,7 +11,24 @@ const path = require('path')
 const fs = require('fs')
 
 const FFMPEG = app.isPackaged ? path.join(process.resourcesPath, 'ffmpeg') : path.join(__dirname, 'vendor', process.arch, 'ffmpeg')
-const INGEST = 'rtmps://global-live.mux.com:443/app/'
+const net_ = require('net'), tls = require('tls')
+// RTMPS without ffmpeg's own TLS (the bundled build uses macOS SecureTransport, which stalls on long
+// uploads): ffmpeg sends plain RTMP to a relay on this Mac (127.0.0.1 only), and the app carries it to
+// Mux inside TLS with Node's OpenSSL. The stream key only ever leaves this Mac encrypted.
+const MUX_HOST = 'global-live.mux.com'
+let relayPort = 0
+const relayReady = new Promise(resolve => {
+  const server = net_.createServer(local => {
+    local.setNoDelay(true)
+    const remote = tls.connect({ host: MUX_HOST, port: 443, servername: MUX_HOST })
+    remote.setNoDelay(true)
+    local.pipe(remote); remote.pipe(local)
+    const end = () => { local.destroy(); remote.destroy() }
+    local.on('error', end); remote.on('error', end); local.on('close', end); remote.on('close', end)
+  })
+  server.listen(0, '127.0.0.1', () => { relayPort = server.address().port; resolve() })
+})
+const ingest = () => `rtmp://127.0.0.1:${relayPort}/app/`
 const POLL_MS = 4000
 const RETRY_WAITING_MS = 20000      // the slot is closed (no set on): try again in 20 s
 const RETRY_DROPPED_MS = 3000       // it was sending and stopped: reconnect quickly
@@ -79,7 +96,7 @@ async function allowed(link) {
 
 // ── Streaming ────────────────────────────────────────────────────────────────
 function argsFor(link, key, run) {
-  const out = ['-f', 'flv', INGEST + key]
+  const out = ['-rtmp_tcurl', `rtmps://${MUX_HOST}:443/app`, '-f', 'flv', ingest() + key]
   const audioOut = ['-c:a', 'aac', '-b:a', '320k', '-ar', '48000', '-ac', '2']
   if (link.kind === 'audio') {
     // Decks: the mixer's sound with a still black picture (the platform keeps the sound as the set's HQ audio)
@@ -177,6 +194,7 @@ async function start(id) {
   if (!key) return setState(id, 'error', 'Link this slot again')
 
   setState(id, 'starting')
+  await relayReady
   await stopPreview(run)
   if (run.proc || !links[id]) return
   run.startedAt = Date.now(); run.sentAt = 0
@@ -243,7 +261,7 @@ async function start(id) {
     if (/(video size|framerate|pixel format).*not supported|Selected (video size|framerate)/i.test(errText) && run.mode < VIDEO_MODES.length - 1) { run.mode++; return later(id, 500) }
     if (wasSending) { setState(id, 'starting', 'Reconnecting'); return later(id, RETRY_DROPPED_MS) }
     // Mux refusing the stream (no set on, so the slot is closed) names the ingest address; anything else is the device
-    if (!errText || /global-live\.mux\.com/.test(errText) && /Input\/output error|Connection refused|Broken pipe|Server returned|Operation timed out|End of file|Connection reset/i.test(errText)) {
+    if (!errText || /global-live\.mux\.com|rtmp:\/\/127\.0\.0\.1/.test(errText) && /Input\/output error|Connection refused|Broken pipe|Server returned|Operation timed out|End of file|Connection reset/i.test(errText)) {
       setState(id, 'waiting'); return later(id, RETRY_WAITING_MS)
     }
     console.error('[this-mac]', link.slotName, errText.split('\n').filter(Boolean).slice(-2).join(' | '))
