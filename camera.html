@@ -1141,7 +1141,7 @@
                 '<label>Session name<input name="title" maxlength="80" placeholder="e.g. Sunset set" autocomplete="off" value="' + esc(first.stageTitle || '') + '"></label>' +
                 '<div class="cam-two"><label>Venue<select name="venue"><option value="">No venue</option>' + (first.stageVenue ? '<option selected>' + esc(first.stageVenue) + '</option>' : '') + '<option value="__new">+ New venue…</option></select></label>' +
                 '<label>Date<input name="date" type="date" value="' + today + '"></label></div>' +
-                '<label class="stage-newvenue" hidden>New venue<input name="newVenue" maxlength="60" placeholder="e.g. Fabric London" autocomplete="off"></label>' +
+                '<label class="stage-newvenue" hidden>New venue<input name="newVenue" maxlength="60" placeholder="e.g. Venue Name" autocomplete="off"></label>' +
                 '<label>Record label<input name="label" list="ses-labels" maxlength="60" placeholder="Optional" autocomplete="off" value="' + esc(first.stageLabel || '') + '"><datalist id="ses-labels"></datalist></label>' +
                 '<div class="ses-slots"><span class="bk-wm-label" style="font-size:12px;color:var(--la-sub)">Record</span>' + slots.map(function(c) {
                     var on = anyLinked ? !!linked[c.id] : true;
@@ -1902,10 +1902,10 @@
                 (live ? '<small>Streaming now. Saving a new name starts a new set from this moment.</small>' : '<small>Set this before the stream starts.</small>') + '</label>' +
                 // Without a calendar, the session's details are given here so it arrives complete
                 (_calSched ? '<p class="cam-dialog-note" style="margin:0">During calendar sets, the calendar\'s name, venue and date are used. These are for streams outside them.</p>' : '') + (
-                    '<label>Session name<input name="title" maxlength="80" placeholder="e.g. Boiler Room Puglia" autocomplete="off" value="' + esc(c.stageTitle) + '"></label>' +
+                    '<label>Session name<input name="title" maxlength="80" placeholder="e.g. Friday Night Session" autocomplete="off" value="' + esc(c.stageTitle) + '"></label>' +
                     '<div class="cam-two"><label>Venue<select name="venue"><option value="">No venue</option>' + (c.stageVenue ? '<option selected>' + esc(c.stageVenue) + '</option>' : '') + '<option value="__new">+ New venue…</option></select></label>' +
                     '<label>Date<input name="date" type="date" value="' + esc(c.stageDate || new Date(Date.now() - new Date().getTimezoneOffset() * 60e3).toISOString().slice(0, 10)) + '"></label></div>' +
-                    '<label class="stage-newvenue" hidden>New venue<input name="newVenue" maxlength="60" placeholder="e.g. Fabric London" autocomplete="off"></label>') +
+                    '<label class="stage-newvenue" hidden>New venue<input name="newVenue" maxlength="60" placeholder="e.g. Venue Name" autocomplete="off"></label>') +
                 '<label class="cam-check"><input type="checkbox" name="autoClips"' + (c.autoClips === false ? '' : ' checked') + '><span>Make vertical clips automatically<small>Vertical clips for social media from each set, once the recording is saved.</small></span></label>' +
                 '<p id="stage-error" class="cam-form-error"></p>' +
                 '<div class="cam-form-actions"><button type="button" class="cam-btn ghost" onclick="closeCamDialog()">Cancel</button>' +

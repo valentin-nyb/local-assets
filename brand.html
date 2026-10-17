@@ -1170,8 +1170,12 @@
                     var mx = Math.max(d[i], d[i + 1], d[i + 2]), mn = Math.min(d[i], d[i + 1], d[i + 2]);
                     sum += (0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]) / 255; sat += mx ? (mx - mn) / mx : 0; cnt++;
                 }
-                if (cnt < 6 && /\.gif(\?|$)/i.test(img.currentSrc || img.src)) {   // an animated GIF on an empty frame: look again
-                    if ((img._toneTries = (img._toneTries || 0) + 1) <= 15) setTimeout(function() { if (img.isConnected) fitThemeLogo(img); }, 350);
+                if (cnt < 6 && /\.gif(\?|$)/i.test(img.currentSrc || img.src)) {   // an animated GIF on an empty frame
+                    gifStats(img.currentSrc || img.src).then(function(st) {
+                        if (!st || st.cover >= 0.97) return fitPreviewBg(img);
+                        if (st.mono && (dark ? st.lum < 0.4 : st.lum > 0.6)) img.style.filter = 'invert(1)';
+                        else if (!st.mono) fitPreviewBg(img);
+                    });
                     return;
                 }
                 if (!cnt || cnt / (n * n) >= 0.97) return fitPreviewBg(img);   // a logo on a solid square: keep it
@@ -1182,6 +1186,34 @@
         }
         // Theme switched: redraw so profile logos swap colour
         new MutationObserver(function() { if (_files.length && typeof render === 'function') render(); }).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+        // An animated GIF: a browser reads only its first frame onto a canvas, and that frame can be empty
+        // (a logo that animates in). Decode a frame from the middle instead, where the logo shows.
+        var _gifStats = {};
+        function gifStats(url) {
+            if (_gifStats[url]) return _gifStats[url];
+            return (_gifStats[url] = (async function() {
+                if (!window.ImageDecoder) return null;
+                var r = await fetch(url, { mode: 'cors' }); if (!r.ok) return null;
+                var dec = new ImageDecoder({ data: await r.arrayBuffer(), type: 'image/gif' });
+                await dec.tracks.ready;
+                var count = dec.tracks.selectedTrack ? dec.tracks.selectedTrack.frameCount : 1;
+                var best = null;
+                for (var f of [0.5, 0.35, 0.65, 0.2, 0.8]) {
+                    var res = await dec.decode({ frameIndex: Math.min(count - 1, Math.floor(count * f)) });
+                    var c = document.createElement('canvas'), n = 32; c.width = n; c.height = n;
+                    var ctx = c.getContext('2d', { willReadFrequently: true }); ctx.drawImage(res.image, 0, 0, n, n); res.image.close();
+                    var d = ctx.getImageData(0, 0, n, n).data, sum = 0, sat = 0, cnt = 0;
+                    for (var i = 0; i < d.length; i += 4) {
+                        if (d[i + 3] < 40) continue;
+                        var mx = Math.max(d[i], d[i + 1], d[i + 2]), mn = Math.min(d[i], d[i + 1], d[i + 2]);
+                        sum += (0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]) / 255; sat += mx ? (mx - mn) / mx : 0; cnt++;
+                    }
+                    if (cnt >= 6) { best = { lum: sum / cnt, mono: sat / cnt < 0.15, cover: cnt / (n * n) }; break; }
+                }
+                dec.close();
+                return best;
+            })().catch(function() { return null; }));
+        }
         function fitPreviewBg(img) {
             var box = img.parentNode, tone = '';
             try {
@@ -1191,7 +1223,11 @@
                 for (var i = 0; i < d.length; i += 4) { if (d[i + 3] < 40) continue; sum += (0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]) / 255; cnt++; }
                 // An animated GIF can start on an empty frame: look again until the logo shows, and keep what was found
                 if (cnt < 6 && /\.gif(\?|$)/i.test(img.currentSrc || img.src)) {
-                    if ((img._toneTries = (img._toneTries || 0) + 1) <= 15) setTimeout(function() { if (img.isConnected) fitPreviewBg(img); }, 350);
+                    gifStats(img.currentSrc || img.src).then(function(st) {
+                        // Unreadable: watermark GIFs are usually white, so they get the dark tile
+                        var t = !st ? 'light' : st.cover >= 0.97 ? '' : st.lum > 0.6 ? 'light' : st.lum < 0.4 ? 'dark' : '';
+                        if (t) { box.setAttribute('data-tone', t); delete box.dataset.toneFrom; }
+                    });
                     return;
                 }
                 if (cnt && cnt / (n * n) < 0.97) tone = sum / cnt > 0.6 ? 'light' : sum / cnt < 0.4 ? 'dark' : '';

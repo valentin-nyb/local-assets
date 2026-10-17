@@ -197,11 +197,11 @@
                     <div class="ing-fields">
                         <label class="ing-field" id="ingest-artist-pick-wrap" hidden><span>Artist</span><select id="ingest-artist-pick"><option value="">Choose the artist</option><option value="__new">+ New artist…</option></select></label>
                         <label class="ing-field" id="ingest-name-wrap"><span id="ingest-name-label">Artist</span><input type="text" id="ingest-name" placeholder="e.g. DJ Name" autocomplete="off"></label>
-                        <label class="ing-field"><span>Session name</span><input type="text" id="ingest-title" maxlength="80" placeholder="e.g. Boiler Room Puglia" autocomplete="off"></label>
+                        <label class="ing-field"><span>Session name</span><input type="text" id="ingest-title" maxlength="80" placeholder="e.g. Friday Night Session" autocomplete="off"></label>
                         <label class="ing-field" id="ingest-venue-wrap"><span>Venue</span><select id="ingest-venue"><option value="">No venue</option><option value="__new">+ New venue…</option></select></label>
-                        <label class="ing-field hidden" id="ingest-venue-new-wrap"><span>New venue</span><input type="text" id="ingest-venue-new" maxlength="60" placeholder="e.g. Fabric London" autocomplete="off"></label>
+                        <label class="ing-field hidden" id="ingest-venue-new-wrap"><span>New venue</span><input type="text" id="ingest-venue-new" maxlength="60" placeholder="e.g. Venue Name" autocomplete="off"></label>
                         <label class="ing-field" id="ingest-label-wrap"><span>Record label</span><select id="ingest-label"><option value="">No record label</option><option value="__new">+ New record label…</option></select></label>
-                        <label class="ing-field hidden" id="ingest-label-new-wrap"><span>New record label</span><input type="text" id="ingest-label-new" maxlength="60" placeholder="e.g. Defected" autocomplete="off"></label>
+                        <label class="ing-field hidden" id="ingest-label-new-wrap"><span>New record label</span><input type="text" id="ingest-label-new" maxlength="60" placeholder="e.g. Record Label Name" autocomplete="off"></label>
                         <label class="ing-field"><span>Date of the set</span><input type="text" id="ingest-date" placeholder="Choose a date"></label>
                         <label class="ing-field"><span>Camera</span><select id="ingest-shot">
                             <option value="MASTER">Main camera</option>
@@ -591,9 +591,9 @@
         m.className = 'vs-backdrop';
         m.innerHTML = `<form class="vs-panel" role="dialog" aria-modal="true">
             <p class="vs-title">Edit session</p><p class="vs-sub">${e(artist)}</p>
-            <label>Session name<input name="title" maxlength="80" placeholder="e.g. Boiler Room Puglia" value="${e(saved.title)}"><small>Leave empty to show the artist and date.</small></label>
+            <label>Session name<input name="title" maxlength="80" placeholder="e.g. Friday Night Session" value="${e(saved.title)}"><small>Leave empty to show the artist and date.</small></label>
             <label>Date<input name="date" type="text" value="${e(saved.date || date)}"><small>When the set happened.</small></label>
-            <label>Venue<input name="venue" maxlength="60" placeholder="e.g. Fabric London" value="${e(saved.venue)}"></label>
+            <label>Venue<input name="venue" maxlength="60" placeholder="e.g. Venue Name" value="${e(saved.venue)}"></label>
             <p class="vs-error"></p>
             <div class="vs-actions"><button type="button" class="vs-btn ghost" data-cancel>Cancel</button><button type="submit" class="vs-btn primary">Save</button></div>
         </form>`;
