@@ -50,7 +50,8 @@
         .vault-card-header > div { min-width:0; }
         .vault-edit { order:2; flex-shrink:0; height:32px; padding:0 14px; border-radius:8px; border:1px solid var(--la-line); background:transparent; color:var(--la-text); font:700 11px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.06em; text-transform:uppercase; cursor:pointer; }
         .vault-edit:hover { border-color:var(--la-accent); color:var(--la-accent); }
-        .vault-mc { order:3; }
+        .vault-actions { order:2; flex-shrink:0; display:flex; align-items:center; gap:8px; margin-left:auto; }
+        .vault-edit { border-radius:999px; padding:0 16px; }
         .mc-cams { margin:4px 0 2px; padding:0; list-style:none; border:1px solid var(--la-line); border-radius:10px; }
         .mc-cams li { display:flex; justify-content:space-between; gap:12px; padding:9px 12px; font-size:13px; color:var(--la-text); border-top:1px solid var(--la-line); }
         .mc-cams li:first-child { border-top:0; }
@@ -485,8 +486,8 @@
             const saved   = (window._sessMeta || {})[asset._artist + '|' + asset._date] || {};
             const meta    = { artist: asset._artist, date: saved.date || asset._date, camera: [saved.venue, asset.status === 'no-master' ? 'NO 4K LONG FORM YET' : '4K LONG FORM'].filter(Boolean).join(' // ') };
             const title   = esc(saved.title ? saved.title.toUpperCase() : meta.artist) + (saved.title ? '<span class="vault-artist">' + esc(meta.artist) + '</span>' : '');
-            const editBtn = `<button type="button" class="vault-edit" data-artist="${esc(asset._artist)}" data-date="${esc(asset._date)}" onclick="event.stopPropagation(); editVaultSession(this)">Edit</button>`
-                + (asset._cams >= 2 ? `<button type="button" class="vault-edit vault-mc" data-artist="${esc(asset._artist)}" data-date="${esc(asset._date)}" onclick="event.stopPropagation(); openMulticam(this)">${asset._edit ? 'Multi-cam ✓' : 'Multi-cam edit'}</button>` : '');
+            const editBtn = `<div class="vault-actions"><button type="button" class="vault-edit" data-artist="${esc(asset._artist)}" data-date="${esc(asset._date)}" onclick="event.stopPropagation(); editVaultSession(this)">Edit</button>`
+                + (asset._cams >= 2 ? `<button type="button" class="vault-edit vault-mc" data-artist="${esc(asset._artist)}" data-date="${esc(asset._date)}" onclick="event.stopPropagation(); openMulticam(this)">${asset._edit ? 'Multi-cam ✓' : 'Multi-cam edit'}</button>` : '') + '</div>';
             const sub     = meta && (meta.date || meta.camera)
                 ? esc([meta.date, meta.camera].filter(Boolean).join(' // '))
                 : esc(new Date(asset.created_at * 1000).toLocaleDateString());
