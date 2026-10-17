@@ -59,6 +59,7 @@
         .bl-card .note { font-size:12px; color:var(--la-sub); margin-top:8px; }
         .bl-bar { height:4px; border-radius:99px; background:var(--la-chip); margin-top:14px; overflow:hidden; }
         .bl-bar i { display:block; height:100%; background:var(--la-accent); }
+        .bl-bar[hidden] { display:none; }
         .bl-section { border:1px solid var(--la-line); background:var(--la-surface); border-radius:16px; overflow:hidden; }
         .bl-section-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:18px 20px; border-bottom:1px solid var(--la-line-soft); }
         .bl-section-head h3 { font-size:14px; color:var(--la-text); }
@@ -268,7 +269,7 @@
                 <div class="bl-grid">
                     <div class="bl-card"><p class="lbl">Estimated invoice</p><p class="val" id="bl-total">—</p><p class="note" id="bl-total-note">Loading usage…</p><div class="bl-bar"><i id="bl-bar" style="width:0"></i></div></div>
                     <div class="bl-card"><p class="lbl">Plan</p><p class="val" id="bl-plan">—</p><p class="note" id="bl-plan-note"></p></div>
-                    <div class="bl-card"><p class="lbl">Usage so far</p><p class="val" id="bl-usage">—</p><p class="note" id="bl-usage-note"></p></div>
+                    <div class="bl-card"><p class="lbl" id="bl-usage-lbl">Usage so far</p><p class="val" id="bl-usage">—</p><p class="note" id="bl-usage-note"></p><div class="bl-bar" id="bl-usage-bar" hidden><i style="width:0"></i></div></div>
                 </div>
                 <section class="bl-section" id="bl-chart-box">
                     <div class="bl-section-head"><div><h3>Usage over time</h3><span class="bl-msg" id="bl-chart-sum"></span></div>
@@ -447,6 +448,18 @@
             document.getElementById('bl-usage').textContent = money(d.usageTotal, cur);
             document.getElementById('bl-usage-note').textContent = d.plan ? 'Above what the plan includes' : qty(d.usage.videos) + ' videos · ' + qty(d.usage.fileBytes / 1e9) + ' GB of files';
             document.getElementById('bl-usage-head').textContent = (d.usage.notes || []).join(' ');
+            // With a plan: how much of what it includes has been used (stored and streamed), and what's above it
+            var ls = {}; (d.lines || []).forEach(function(l) { ls[l.key] = l; });
+            var hrs = function(m) { m = Math.max(0, Number(m) || 0); var h = Math.floor(m / 60), mm = Math.round(m % 60); return h ? h + ' h' + (mm && h < 10 ? ' ' + mm + ' min' : '') : mm + ' min'; };
+            var st = ls.videoStorage, dl = ls.videoDelivery, bar = document.getElementById('bl-usage-bar');
+            if (d.plan && st && st.included) {
+                document.getElementById('bl-usage-lbl').textContent = 'Plan used';
+                document.getElementById('bl-usage').textContent = hrs(st.quantity) + ' of ' + hrs(st.included);
+                document.getElementById('bl-usage-note').textContent = 'stored · ' + hrs(dl ? dl.quantity : 0) + (dl && dl.included ? ' of ' + hrs(dl.included) : '') + ' streamed · ' + money(d.usageTotal, cur) + ' above plan';
+                var used = Math.max(st.quantity / st.included, dl && dl.included ? dl.quantity / dl.included : 0);
+                bar.hidden = false; bar.querySelector('i').style.width = Math.min(100, Math.max(used > 0 ? 2 : 0, Math.round(used * 100))) + '%';
+                bar.title = Math.round(used * 100) + '% of the plan used';
+            } else { document.getElementById('bl-usage-lbl').textContent = 'Usage so far'; bar.hidden = true; }
             var rows = d.lines.map(function(l) {
                 var inc = l.included ? '<span class="unit">' + qty(l.included) + ' included · ' + qty(l.billable) + ' over</span>' : '<span class="unit">' + esc(l.unit) + '</span>';
                 return '<tr><td class="svc">' + esc(l.label) + '</td><td class="num">' + qty(l.quantity) + inc + '</td>' +
