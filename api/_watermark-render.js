@@ -18,10 +18,29 @@ async function download(url) {
   return Buffer.from(await r.arrayBuffer());
 }
 
+// The frame of an animated image with the most visible pixels, as a PNG; a still image is returned as it is
+async function fullestFrame(src) {
+  const meta = await sharp(src, { animated: true }).metadata();
+  const pages = meta.pages || 1;
+  if (pages < 2) return src;
+  const ph = meta.pageHeight || meta.height, w = meta.width;
+  const { data, info } = await sharp(src, { animated: true }).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const ch = info.channels, per = w * ph * ch;
+  let best = 0, bestCount = -1;
+  for (let p = 0; p < pages; p++) {
+    let n = 0;
+    for (let i = p * per + 3; i < (p + 1) * per; i += ch * 4) if (data[i] > 128) n++;
+    if (n > bestCount) { bestCount = n; best = p; }
+  }
+  return sharp(src, { page: best }).png().toBuffer();
+}
+
 async function logoLayer(wm, s = 1) {
   const box = BOX[wm.size] || BOX.m;
   // SVG and PDF logos are drawn from their vectors at a high density, so they stay sharp at any size
-  const src = await download(wm.url);
+  let src = await download(wm.url);
+  // A moving logo (GIF / animated WebP) on a still picture: its fullest frame, where the whole logo shows
+  src = await fullestFrame(src).catch(() => src);
   const vector = /\.(svg|pdf)(\?|$)/i.test(wm.url) || /^\s*(<\?xml|<svg)/.test(src.subarray(0, 200).toString());
   // The empty margin around the logo is cut off first, so the logo itself fills the size's box
   let trimmed = await sharp(src, { density: vector ? Math.min(2400, Math.round(300 * s * 2)) : 72 }).trim({ threshold: 10 }).png().toBuffer().catch(() => null);

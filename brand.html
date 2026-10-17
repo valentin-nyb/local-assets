@@ -760,10 +760,38 @@
             });
         }
         // Draws the current watermark onto a canvas context, placed exactly as on the clips
+        // A GIF logo on a still picture (thumbnail, PNG export): its fullest frame, as a canvas.
+        // A canvas draws only a GIF's first frame, which can be empty for a logo that animates in.
+        var _gifFull = {};
+        function gifFullestFrame(url) {
+            if (_gifFull[url]) return _gifFull[url];
+            return (_gifFull[url] = (async function() {
+                if (!window.ImageDecoder) return null;
+                var r = await fetch(url, { mode: 'cors' }); if (!r.ok) return null;
+                var dec = new ImageDecoder({ data: await r.arrayBuffer(), type: 'image/gif' });
+                await dec.tracks.ready;
+                var count = dec.tracks.selectedTrack ? dec.tracks.selectedTrack.frameCount : 1, best = 0, bestN = -1;
+                var step = Math.max(1, Math.floor(count / 24));
+                for (var i = 0; i < count; i += step) {
+                    var fr = await dec.decode({ frameIndex: i });
+                    var c = document.createElement('canvas'); c.width = 48; c.height = 48;
+                    var x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(fr.image, 0, 0, 48, 48); fr.image.close();
+                    var d = x.getImageData(0, 0, 48, 48).data, n = 0;
+                    for (var k = 3; k < d.length; k += 4) if (d[k] > 128) n++;
+                    if (n > bestN) { bestN = n; best = i; }
+                }
+                var res = await dec.decode({ frameIndex: best }), im = res.image;
+                var out = document.createElement('canvas'); out.width = im.displayWidth; out.height = im.displayHeight;
+                out.getContext('2d').drawImage(im, 0, 0); im.close(); dec.close();
+                out.naturalWidth = out.width; out.naturalHeight = out.height;   // drawn like an image
+                return out;
+            })().catch(function() { return null; }));
+        }
         function drawWatermark(g, L) {
             var url = wmPreviewLogo(), tf = wmText(), p = _wm.position;
             var sb = tf ? wmSub() : null;
-            return Promise.all([url ? loadImage(url) : null, tf ? loadBrandFont(tf.url) : null, sb ? loadBrandFont(sb.font) : null]).then(function(r) {
+            var logoP = !url ? null : /\.gif(\?|$)/i.test(url) ? gifFullestFrame(url).then(function(c) { return c || loadImage(url); }) : loadImage(url);
+            return Promise.all([logoP, tf ? loadBrandFont(tf.url) : null, sb ? loadBrandFont(sb.font) : null]).then(function(r) {
                 var logo = r[0], family = r[1], W = L.W, H = L.H;
                 g.save();
                 g.imageSmoothingQuality = 'high';
