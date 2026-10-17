@@ -618,14 +618,16 @@
                     var owner = (_brandPhotos && _brandPhotos[box.dataset.venueLogo]) ? box.dataset.venueLogo : _venueOwnerByName[nameKey(box.dataset.venueName)];
                     var prof = owner && _brandPhotos && _brandPhotos[owner];
                     // A logo used as the profile picture: its white version in dark, its black one in light
-                    if (prof && list) { var me = list.filter(function(x) { return x.url === prof && x.logo; })[0]; if (me) prof = pickVenueLogo([me].concat(list.filter(function(x) { return x !== me && x.logo; })), dark); }
+                    var profLogo = false;
+                    if (prof && list) { var me = list.filter(function(x) { return x.url === prof && x.logo; })[0]; if (me) { profLogo = true; prof = pickVenueLogo([me].concat(list.filter(function(x) { return x !== me && x.logo; })), dark); } }
                     if (prof) {
                         // A one-colour logo used as the profile picture follows the theme too (white in dark, black in light)
                         var pkey = prof + (dark ? '#d' : '#l');
                         if (box.dataset.painted === pkey) return;
                         box.dataset.painted = pkey; box.title = 'Venue profile picture from Brand Kit';
                         box.style.setProperty('background', dark ? '#141416' : '#f4f4f5', 'important');
-                        box.innerHTML = '<img src="' + prof.replace(/"/g, '&quot;') + '" alt="" crossorigin="anonymous" style="width:100%;height:100%;object-fit:cover" onload="fitLogoBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}">';
+                        // A logo shows whole (contained, with a little room); a photo fills the tile
+                        box.innerHTML = '<img src="' + prof.replace(/"/g, '&quot;') + '" alt="" crossorigin="anonymous" style="width:100%;height:100%;' + (profLogo ? 'object-fit:contain;padding:4px' : 'object-fit:cover') + '" onload="fitLogoBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}">';
                         return;
                     }
                     if (!list || !list.length) { missing = true; box.title = 'No Brand Kit logo found for venue "' + (box.dataset.venueName || '') + '"'; return; }
