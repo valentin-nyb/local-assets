@@ -7,7 +7,7 @@ import { getVenuesConfig, getMuxAuthForVenue } from './_venues.js';
 
 // Costs in GBP. Saved over in Redis (billing_rates) from the Billing page.
 export const DEFAULT_RATES = {
-  videoStorage: 0.0024,    // per stored minute, per month
+  videoStorage: 0.01,      // per stored minute, per month (+ margin ≈ £120 per extra TB)
   videoDelivery: 0.0008,   // per minute streamed or downloaded
   videoEncoding: 0,        // per minute of new video (included)
   fileStorage: 0.018,      // per GB of files, per month
@@ -16,7 +16,16 @@ export const DEFAULT_RATES = {
 };
 
 export async function readRates(redis) {
-  try { return { ...DEFAULT_RATES, ...JSON.parse(await redis.get('billing_rates') || '{}') }; }
+  try {
+    const saved = JSON.parse(await redis.get('billing_rates') || '{}');
+    // Once: storage above a plan's allowance moves to about £120 per TB (it was below Mux's own cost)
+    if (saved.videoStorage != null && Number(saved.videoStorage) < DEFAULT_RATES.videoStorage && !(await redis.get('billing_rates_storage_v2'))) {
+      saved.videoStorage = DEFAULT_RATES.videoStorage;
+      await redis.set('billing_rates', JSON.stringify(saved));
+      await redis.set('billing_rates_storage_v2', new Date().toISOString());
+    }
+    return { ...DEFAULT_RATES, ...saved };
+  }
   catch { return { ...DEFAULT_RATES }; }
 }
 
@@ -26,22 +35,43 @@ export const DEFAULT_PLANS = [
     included: { storedMinutes: 0, deliveredMinutes: 0, fileGB: 0 },
     features: ['£55 to join, then pay as you go', '6 vertical social clips per session', 'Brand Kit and watermark', 'Camera Control: phone, OBS or your own camera', 'Distribution History', 'Usage charged to your card on the 1st'] },
   { id: 'starter-distribution', name: 'Distribution · Starter', price: 2750, maxClips: 6, cameras: 1,
-    included: { storedMinutes: 3000, deliveredMinutes: 25000, fileGB: 250 },
-    features: ['1 camera included', 'Content intake & quality control', 'Up to 8 events processed / month', '6 vertical social clips', '250 GB cloud storage'] },
+    included: { storedMinutes: 10000, deliveredMinutes: 25000, fileGB: 1000 },
+    features: ['1 camera included', 'Content intake & quality control', 'Up to 8 events processed / month', '6 vertical social clips', '1 TB cloud storage'] },
   { id: 'liveset-distribution', name: 'Distribution · Pro', price: 3500, maxClips: 12, cameras: 1,
-    included: { storedMinutes: 6000, deliveredMinutes: 50000, fileGB: 500 },
-    features: ['1 camera included', 'Content intake & quality control', 'Up to 8 events processed / month', '12+ vertical social clips', 'Marketing thumbnails', '500 GB cloud storage'] },
+    included: { storedMinutes: 20000, deliveredMinutes: 50000, fileGB: 2000 },
+    features: ['1 camera included', 'Content intake & quality control', 'Up to 8 events processed / month', '12+ vertical social clips', 'Marketing thumbnails', '2 TB cloud storage'] },
   { id: 'starter-creative', name: 'Creative & Production · Starter', price: 5500, maxClips: 12, cameras: 1,
-    included: { storedMinutes: 12000, deliveredMinutes: 100000, fileGB: 2000 },
-    features: ['1 camera included', 'Starlink Mini', '4K master recordings', 'HQ audio capture', '12 vertical social clips', 'Marketing thumbnails', 'Brand Kit watermark', '2 TB cloud storage'] },
+    included: { storedMinutes: 50000, deliveredMinutes: 100000, fileGB: 5000 },
+    features: ['1 camera included', 'Starlink Mini', '4K master recordings', 'HQ audio capture', '12 vertical social clips', 'Marketing thumbnails', 'Brand Kit watermark', '5 TB cloud storage'] },
   { id: 'liveset-creative', name: 'Creative & Production · Live-Set', price: 7500, maxClips: 0, cameras: 2,
-    included: { storedMinutes: 60000, deliveredMinutes: 500000, fileGB: 20000 },
-    features: ['2 cameras included', 'Starlink Mini + Mac mini', '4K master recordings', 'HQ audio capture', 'Multi-camera auto edit, cut to the music', 'Unlimited vertical social clips', 'Marketing thumbnails & watermark', 'Quarterly performance reports', '20 TB cloud storage'] },
+    included: { storedMinutes: 100000, deliveredMinutes: 500000, fileGB: 10000 },
+    features: ['2 cameras included', 'Starlink Mini + Mac mini', '4K master recordings', 'HQ audio capture', 'Multi-camera auto edit, cut to the music', 'Unlimited vertical social clips', 'Marketing thumbnails & watermark', 'Quarterly performance reports', '10 TB cloud storage'] },
 ];
+// Storage per plan: 1 / 2 / 5 / 10 TB (1 TB ≈ 10,000 minutes of 4K in Mux), so Mux stays near 10% of each plan's price.
+// Applied once to a plan list saved before the change, so Billing and invoices use the new allowances.
+const STORAGE_V2 = {
+  'starter-distribution': { storedMinutes: 10000, fileGB: 1000, label: '1 TB cloud storage' },
+  'liveset-distribution': { storedMinutes: 20000, fileGB: 2000, label: '2 TB cloud storage' },
+  'starter-creative': { storedMinutes: 50000, fileGB: 5000, label: '5 TB cloud storage' },
+  'liveset-creative': { storedMinutes: 100000, fileGB: 10000, label: '10 TB cloud storage' },
+};
+async function upgradeSavedStorage(redis, list) {
+  try {
+    if (await redis.get('billing_plans_storage_v2')) return list;
+    const out = list.map(x => {
+      const u = STORAGE_V2[x.id]; if (!u) return x;
+      return { ...x, included: { ...(x.included || {}), storedMinutes: u.storedMinutes, fileGB: u.fileGB },
+        features: Array.isArray(x.features) ? x.features.map(f => /^\s*[\d.,]+\s*(GB|TB)\s+cloud storage\s*$/i.test(f) ? u.label : f) : x.features };
+    });
+    await redis.set('billing_plans', JSON.stringify(out));
+    await redis.set('billing_plans_storage_v2', new Date().toISOString());
+    return out;
+  } catch { return list; }
+}
 export async function readPlans(redis) {
   // The DJ Trial Month is always offered, even when the saved plan list predates it
   const withPayg = list => [...DEFAULT_PLANS.filter(d => d.id === 'dj-trial' && !list.some(p => p.id === d.id)), ...list];
-  try { const p = JSON.parse(await redis.get('billing_plans') || 'null'); return Array.isArray(p) && p.length ? withPayg(p.map(x => { const d = DEFAULT_PLANS.find(z => z.id === x.id) || {}; return { ...x, signupFee: x.signupFee != null ? x.signupFee : (d.signupFee || 0), features: (x.features && x.features.length ? x.features : d.features), cameras: x.cameras || d.cameras || 0, maxClips: x.maxClips != null ? x.maxClips : (d.maxClips != null ? d.maxClips : 5) }; })) : DEFAULT_PLANS; }
+  try { let p = JSON.parse(await redis.get('billing_plans') || 'null'); if (Array.isArray(p) && p.length) p = await upgradeSavedStorage(redis, p); return Array.isArray(p) && p.length ? withPayg(p.map(x => { const d = DEFAULT_PLANS.find(z => z.id === x.id) || {}; return { ...x, signupFee: x.signupFee != null ? x.signupFee : (d.signupFee || 0), features: (x.features && x.features.length ? x.features : d.features), cameras: x.cameras || d.cameras || 0, maxClips: x.maxClips != null ? x.maxClips : (d.maxClips != null ? d.maxClips : 5) }; })) : DEFAULT_PLANS; }
   catch { return DEFAULT_PLANS; }
 }
 export function cleanPlans(list) {
