@@ -18,7 +18,7 @@ export default async function handler(req, res) {
   const raw = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
   const dot = raw.indexOf('.');
   const slug = dot > 0 ? raw.slice(0, dot) : '', secret = dot > 0 ? raw.slice(dot + 1) : '';
-  if (!slug || !/^[a-z0-9-]{1,60}$/.test(slug) || secret.length < 20) return res.status(401).json({ error: 'Relay key missing' });
+  if (!slug || !/^[A-Za-z0-9-]{1,60}$/.test(slug) || secret.length < 20) return res.status(401).json({ error: 'Relay key missing' });
 
   const redis = createClient({ url: process.env.REDIS_URL });
   await redis.connect();

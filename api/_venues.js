@@ -194,8 +194,10 @@ export function getMuxAuthForVenue(venue) {
   const envId = keys.map(k => process.env[`${k}_MUX_TOKEN_ID`]).find(Boolean);
   const envSecret = keys.map(k => process.env[`${k}_MUX_TOKEN_SECRET`]).find(Boolean);
   const fromEnv = envId && envSecret;
-  const id = (fromEnv ? envId : venue?.mux_token_id || '').trim();
-  const secret = (fromEnv ? envSecret : venue?.mux_token_secret || '').trim();
+  // Keys set on the account, else ready storage given to it in Billing (kept sealed in the registry)
+  const reg = venue?.slug ? _registry[venue.slug] : null;
+  const id = (fromEnv ? envId : venue?.mux_token_id || reg?.mux_token_id || '').trim();
+  const secret = (fromEnv ? envSecret : venue?.mux_token_secret || reg?.mux_token_secret || '').trim();
   if (!id || !secret) return null;
   return 'Basic ' + Buffer.from(`${id}:${secret}`).toString('base64');
 }

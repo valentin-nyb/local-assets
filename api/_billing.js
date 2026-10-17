@@ -34,9 +34,9 @@ export const DEFAULT_PLANS = [
   { id: 'dj-trial', name: 'DJ Trial Month', price: 0, signupFee: 55, maxClips: 6, cameras: 0,
     included: { storedMinutes: 0, deliveredMinutes: 0, fileGB: 0 },
     features: ['£55 to join, then pay as you go', '6 vertical social clips per session', 'Brand Kit and watermark', 'Camera Control: phone, OBS or your own camera', 'Distribution History', 'Usage charged to your card on the 1st'] },
-  { id: 'starter-distribution', name: 'Distribution · Starter', price: 2750, maxClips: 6, cameras: 1,
+  { id: 'starter-distribution', name: 'Distribution · Starter', price: 2750, maxClips: 6, cameras: 0,
     included: { storedMinutes: 10000, deliveredMinutes: 25000, fileGB: 1000 },
-    features: ['1 camera included', 'Content intake & quality control', 'Up to 8 events processed / month', '6 vertical social clips', '1 TB cloud storage'] },
+    features: ['Camera available as an add-on', 'Content intake & quality control', 'Up to 8 events processed / month', '6 vertical social clips', '1 TB cloud storage'] },
   { id: 'liveset-distribution', name: 'Distribution · Pro', price: 3500, maxClips: 12, cameras: 1,
     included: { storedMinutes: 20000, deliveredMinutes: 50000, fileGB: 2000 },
     features: ['1 camera included', 'Content intake & quality control', 'Up to 8 events processed / month', '12+ vertical social clips', 'Marketing thumbnails', '2 TB cloud storage'] },
@@ -68,10 +68,21 @@ async function upgradeSavedStorage(redis, list) {
     return out;
   } catch { return list; }
 }
+// Distribution · Starter has no camera included: a camera is an add-on for a fee. Applied once to a saved plan list.
+async function upgradeStarterCamera(redis, list) {
+  try {
+    if (await redis.get('billing_plans_camera_v3')) return list;
+    const out = list.map(x => x.id !== 'starter-distribution' ? x : { ...x, cameras: 0,
+      features: Array.isArray(x.features) ? x.features.map(f => /^\s*1 camera included\s*$/i.test(f) ? 'Camera available as an add-on' : f) : x.features });
+    await redis.set('billing_plans', JSON.stringify(out));
+    await redis.set('billing_plans_camera_v3', new Date().toISOString());
+    return out;
+  } catch { return list; }
+}
 export async function readPlans(redis) {
   // The DJ Trial Month is always offered, even when the saved plan list predates it
   const withPayg = list => [...DEFAULT_PLANS.filter(d => d.id === 'dj-trial' && !list.some(p => p.id === d.id)), ...list];
-  try { let p = JSON.parse(await redis.get('billing_plans') || 'null'); if (Array.isArray(p) && p.length) p = await upgradeSavedStorage(redis, p); return Array.isArray(p) && p.length ? withPayg(p.map(x => { const d = DEFAULT_PLANS.find(z => z.id === x.id) || {}; return { ...x, signupFee: x.signupFee != null ? x.signupFee : (d.signupFee || 0), features: (x.features && x.features.length ? x.features : d.features), cameras: x.cameras || d.cameras || 0, maxClips: x.maxClips != null ? x.maxClips : (d.maxClips != null ? d.maxClips : 5) }; })) : DEFAULT_PLANS; }
+  try { let p = JSON.parse(await redis.get('billing_plans') || 'null'); if (Array.isArray(p) && p.length) p = await upgradeStarterCamera(redis, await upgradeSavedStorage(redis, p)); return Array.isArray(p) && p.length ? withPayg(p.map(x => { const d = DEFAULT_PLANS.find(z => z.id === x.id) || {}; return { ...x, signupFee: x.signupFee != null ? x.signupFee : (d.signupFee || 0), features: (x.features && x.features.length ? x.features : d.features), cameras: x.cameras != null ? x.cameras : (d.cameras || 0), maxClips: x.maxClips != null ? x.maxClips : (d.maxClips != null ? d.maxClips : 5) }; })) : DEFAULT_PLANS; }
   catch { return DEFAULT_PLANS; }
 }
 export function cleanPlans(list) {

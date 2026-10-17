@@ -341,7 +341,25 @@ export default async function handler(req, res) {
     // Ready video storage: empty Mux environments a new sign-up takes straight away
     if (body.action === 'muxPool') {
       const pool = await withRedis(r => listPool(r));
-      return res.status(200).json({ pool });
+      // Accounts that have no video storage yet (e.g. added by hand to VENUES_CONFIG): ready storage can be given to them
+      const cfg = getVenuesConfig();
+      const without = Object.entries(cfg).filter(([slug, v]) => slug !== ADMIN_VENUE && !/^local\s*[\/-]?\s*assets\b/i.test(String(v?.name || '')) && !venueAuth(slug)).map(([slug, v]) => ({ slug, name: v?.name || slug }));
+      return res.status(200).json({ pool, without });
+    }
+    // Give one ready environment to an existing account that has no video storage
+    if (body.action === 'giveReady') {
+      const slug = String(body.slug || ''), key = String(body.key || '');
+      const v = getVenuesConfig()[slug];
+      if (!v) return res.status(404).json({ error: 'Unknown account' });
+      if (venueAuth(slug)) return res.status(400).json({ error: 'This account already has video storage' });
+      const label = await withRedis(async r => {
+        const reg = await readRegistryRaw(r);
+        if (!reg[slug]) await saveRegistryEntry(r, slug, { name: String(v.name || slug).toUpperCase(), emails: v.emails || [], type: v.type || 'venue', plan: '', status: 'pending', attached: true, createdAt: new Date().toISOString() });
+        return activateFromPool(r, slug, key);
+      });
+      if (!label) return res.status(400).json({ error: 'That ready storage could not be used (already taken, or Mux did not accept it). Try another one.' });
+      console.log('[billing] ready storage given to', slug, label);
+      return res.status(200).json({ ok: true, label, pool: await withRedis(r => listPool(r)) });
     }
     if (body.action === 'muxPoolAdd') {
       const out = await withRedis(r => addToPool(r, { label: body.label, tokenId: body.tokenId, tokenSecret: body.tokenSecret, webhookSecret: body.webhookSecret }));

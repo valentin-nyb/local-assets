@@ -33,7 +33,7 @@ export default async function handler(req, res) {
     if (req.method === 'POST') {
       const [slug, camId] = String(req.headers['x-la-cam'] || '').split('.');
       const pass = String(req.headers['x-la-pass'] || '');
-      if (!slug || !camId || !/^[a-z0-9-]{1,80}$/.test(slug) || !/^[A-Za-z0-9_-]{1,80}$/.test(camId)) return res.status(400).json({ error: 'Bad camera' });
+      if (!slug || !camId || !/^[A-Za-z0-9-]{1,80}$/.test(slug) || !/^[A-Za-z0-9_-]{1,80}$/.test(camId)) return res.status(400).json({ error: 'Bad camera' });
       const want = framePass(slug, camId);
       if (pass.length !== want.length || !crypto.timingSafeEqual(Buffer.from(pass), Buffer.from(want))) return res.status(403).json({ error: 'Not allowed' });
       const body = await rawBody(req);

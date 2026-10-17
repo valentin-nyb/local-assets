@@ -43,7 +43,7 @@ export default async function handler(req, res) {
 
   const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
   const slug = String((req.method === 'POST' ? body.slug : req.query.slug) || '').trim();
-  if (!/^[a-z0-9-]{2,60}$/.test(slug)) return res.status(400).json({ error: 'Account slug missing' });
+  if (!/^[A-Za-z0-9-]{2,60}$/.test(slug)) return res.status(400).json({ error: 'Account slug missing' });
   const venue = getVenuesConfig()[slug];
   if (!venue) return res.status(404).json({ error: 'No account with that slug' });
   if (isAdminVenue({ slug, ...venue })) return res.status(400).json({ error: 'The admin account cannot be deleted' });
