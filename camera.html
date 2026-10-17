@@ -32,7 +32,7 @@
     <link rel="manifest" href="favicon/site.webmanifest">
 
     <link rel="stylesheet" href="styles/tailwind.css">
-    <link rel="stylesheet" href="styles/theme.css?v=9">
+    <link rel="stylesheet" href="styles/theme.css?v=10">
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
@@ -310,7 +310,9 @@
             .cal-how { grid-template-columns:minmax(0,1fr); } .cal-how li + li { border-left:none; border-top:1px solid var(--la-line); }
             .cal-find-grid { grid-template-columns:minmax(0,1fr); }
             .cal-form { flex-wrap:wrap; } .cal-form input { flex-basis:100%; }
-            .cal-source { flex-wrap:wrap; } .cal-source-text { flex-basis:calc(100% - 20px); }
+            /* Phones: the status on its own line, then the three actions side by side, equal widths */
+            .cal-source { flex-wrap:wrap; gap:10px 8px; padding:14px; } .cal-source-text { flex-basis:calc(100% - 20px); }
+            .cal-source .cam-btn { flex:1 1 auto; padding:0 14px !important; font-size:13px !important; white-space:nowrap; }
             .cal-sched-head { display:none; }
             .cal-row { grid-template-columns:56px minmax(0,1fr); gap:6px 12px; }
             .cal-time { grid-column:2; } .cal-time.rec::before { content:'Records '; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; }
@@ -639,7 +641,7 @@
                         <div class="cal-source-text"><b id="cal-source-name">Google Calendar</b><span id="cal-source-sub">Checked every minute</span></div>
                         <button type="button" class="cam-btn ghost" id="cal-expand" aria-expanded="false">Show sets</button>
                         <button type="button" class="cam-btn ghost" id="cal-change">Change link</button>
-                        <button type="button" class="cam-btn ghost" id="cal-remove">Disconnect</button>
+                        <button type="button" class="cam-btn la-danger" id="cal-remove">Disconnect</button>
                     </div>
                     <form class="cal-form" id="cal-form">
                         <input name="url" id="cal-url" type="url" inputmode="url" autocomplete="off" placeholder="Paste your calendar's iCal link" aria-label="Calendar iCal link">
@@ -761,7 +763,7 @@
             var ex = document.getElementById('cal-expand');
             ex.hidden = !ok;
             var n = (cal.current ? 1 : 0) + (cal.upcoming || []).length;
-            ex.textContent = open ? 'Hide sets' : 'Show sets' + (n ? ' (' + n + ')' : '');
+            ex.textContent = open ? 'Hide sets' : 'Show sets';
             ex.setAttribute('aria-expanded', open ? 'true' : 'false');
             // The link field shows when not connected, when it can't be read, or after Change link
             form.hidden = cal.connected && !cal.error && !form.dataset.open;
@@ -1043,9 +1045,11 @@
             });
         }
         document.addEventListener('pointerdown', function first() { if (_deckMeters.length) startMeters(); }, { once: false, passive: true });
-        // A live camera: broadcast colour bars until the picture actually plays (instead of Mux's own placeholder)
+        // Broadcast colour bars: what a camera shows until its picture arrives (live, waiting, or starting)
+        function camBars(text) { return '<div class="cam-bars"><span><i></i>' + esc(text) + '</span></div>'; }
+        // A live camera: colour bars until the picture actually plays (instead of Mux's own placeholder)
         function livePlayer(stage, pid, fit, extra) {
-            stage.innerHTML = '<div class="cam-bars"><span><i></i>LIVE · Connecting…</span></div>';
+            stage.innerHTML = camBars('LIVE · Connecting…');
             var mp = document.createElement('mux-player');
             mp.setAttribute('stream-type', 'live'); mp.setAttribute('playback-id', pid);
             mp.setAttribute('muted', ''); mp.setAttribute('autoplay', 'muted'); mp.setAttribute('accent-color', '#39FF14');
@@ -1100,8 +1104,7 @@
             } else if (isLive) {
                 livePlayer(stage, c.playbackId, 'cover', '');
             } else {
-                stage.innerHTML = '<div class="cam-off"><span>' +
-                    (c.status === 'missing' ? 'This camera\'s stream was deleted from Cloud Storage' : 'Waiting for video') + '</span></div>';
+                stage.innerHTML = c.status === 'missing' ? '<div class="cam-off"><span>This camera\'s stream was deleted from Cloud Storage</span></div>' : camBars('Connecting…');
                 if (c.status !== 'missing') webFrames(stage, c.id);
             }
             card.querySelectorAll('[data-act]').forEach(function(b) {
@@ -1379,7 +1382,7 @@
                         misses = 0;
                         if (!img) { stage.innerHTML = '<img class="mac-live" alt=""><span class="mac-tag">Live picture · not recording</span>'; img = stage.querySelector('img'); }
                         img.src = f.src;
-                    } else if (img && ++misses > 3) { img = null; stage.innerHTML = '<div class="cam-off"><span>Waiting for video</span></div>'; }
+                    } else if (img && ++misses > 3) { img = null; stage.innerHTML = camBars('Connecting…'); }
                 }).catch(function() {}).then(function() { if (stage.isConnected && !stage.dataset.mac) setTimeout(tick, 1000); });
             };
             tick();
@@ -1423,7 +1426,7 @@
                 // The picture comes from the app's own capture (a camera like an iPhone can only be used once)
                 if (!deck && window.laApp.mac.preview) {
                     var venue = macVenue(), slot = stage.dataset.cam;
-                    stage.innerHTML = '<img class="mac-live" alt=""><span class="mac-tag">This Mac · ' + esc(name) + '</span><div class="cam-off mac-wait"><span>Starting the camera…</span></div>';
+                    stage.innerHTML = '<img class="mac-live" alt=""><span class="mac-tag">This Mac · ' + esc(name) + '</span><div class="mac-wait">' + camBars('This Mac · Connecting…') + '</div>';
                     var img = stage.querySelector('img'), wait = stage.querySelector('.mac-wait');
                     // About 12 pictures a second, straight from the app (no network)
                     var url = null, busy = false;
@@ -1571,11 +1574,11 @@
                 '</div>' +
                 (c.placeholder ? '' : '<p class="ctl-fine">' + (demo ? 'Example: nothing is sent. With a camera connected, each button moves or sets the real camera through the venue relay, from anywhere.' : 'Commands go to the camera through the venue relay. Keyboard: arrow keys to move, + and − to zoom.') + '</p>');
             var stage = body.querySelector('#ctl-stage');
-            if (inline && !c.picture) stage.innerHTML = '<div class="cam-off"><span>Live picture</span></div>';
+            if (inline && !c.picture) stage.innerHTML = camBars('Connecting…');
             else if (c.picture) stage.innerHTML = '<img alt="" src="' + esc(c.picture) + '" style="width:100%;height:100%;object-fit:cover">';
             else if (isLive) {
                 livePlayer(stage, c.playbackId, 'contain', '--controls:none;');
-            } else stage.innerHTML = '<div class="cam-off"><span>The picture shows here while the camera streams</span></div>';
+            } else stage.innerHTML = camBars('Connecting…');
 
             var msg = body.querySelector('#ctl-msg'), relayEl = body.querySelector('#ctl-relay');
             function relayState(online) {

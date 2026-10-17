@@ -69,6 +69,8 @@
           border-color: rgba(255, 255, 255, 0.6);
           transform: translateY(-1px);
         }
+        /* Small phones: the header keeps a 16px gutter and the button stays inside the screen */
+        @media (max-width:420px) { main > section > nav { padding-left:16px !important; padding-right:16px !important; } .la-dashboard-btn { padding:7px 12px; font-size:10px; } }
         .la-dashboard-btn:active {
           transform: scale(0.97);
         }
@@ -235,7 +237,7 @@
 
     <main class="min-h-screen bg-background relative">
         <section class="min-h-screen flex flex-col md:px-8 overflow-hidden pr-4 pl-4 relative justify-center">
-            <nav class="flex md:pr-8 md:pt-8 md:pb-8 md:pl-8 z-20 pt-8 pr-8 pb-8 pl-8 absolute top-0 right-0 left-0 items-center justify-between">
+            <nav class="flex md:pr-8 md:pt-8 md:pb-8 md:pl-8 z-20 pt-8 pr-4 pb-8 pl-4 absolute top-0 right-0 left-0 items-center justify-between">
                 <a href="index.html" class="flex items-center shrink-0">
                     <img src="logos/White@2x.png" alt="logo" class="h-5 md:h-6 w-auto object-contain object-left">
                 </a>

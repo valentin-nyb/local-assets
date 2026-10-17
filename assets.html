@@ -31,7 +31,7 @@
     <link rel="manifest" href="/favicon/site.webmanifest">
     
     <link rel="stylesheet" href="/styles/tailwind.css">
-    <link rel="stylesheet" href="/styles/theme.css?v=9">
+    <link rel="stylesheet" href="/styles/theme.css?v=10">
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
@@ -88,14 +88,29 @@
         .ing-field select { appearance:none; -webkit-appearance:none; cursor:pointer; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23888888' stroke-width='1.6'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 14px center; padding-right:36px; }
         .ing-field input:focus, .ing-field select:focus { border-color:var(--la-accent); }
         .ing-field input::placeholder { color:var(--la-dim); }
-        .ing-drop { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; min-height:170px; padding:24px; text-align:center; border:1.5px dashed var(--la-line); border-radius:16px; background:var(--la-bg); cursor:pointer; transition:border-color .15s, background .15s; }
-        .ing-drop iconify-icon { font-size:28px; color:var(--la-dim); margin-bottom:4px; }
-        .ing-drop-label { font:500 10px/1 'JetBrains Mono', monospace; letter-spacing:.18em; text-transform:uppercase; color:var(--la-dim); }
-        .ing-drop-main { font:700 15px/1.3 'Helvetica Neue', Helvetica, Arial, sans-serif; color:var(--la-text); word-break:break-all; }
-        .ing-drop-meta { font:400 12px/1.4 'Helvetica Neue', Helvetica, Arial, sans-serif; color:var(--la-dim); }
-        .ing-drop:hover, .ing-drop.over { border-color:var(--la-accent); background:var(--la-accent-soft); }
-        .ing-drop.active { border-style:solid; border-color:var(--la-accent); background:var(--la-accent-soft); }
-        .ing-drop.active iconify-icon { color:var(--la-accent); }
+        /* Drop zone: a calm card, the file type on top, one clear action, the limits as small chips */
+        .ing-drop { position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; min-height:240px; padding:34px 24px 28px; text-align:center; border:1px dashed color-mix(in srgb, var(--la-text) 22%, transparent); border-radius:20px; background:var(--la-surface); cursor:pointer; transition:border-color .2s, background .2s; }
+        .ing-drop-label { font:500 10px/1 'JetBrains Mono', monospace; letter-spacing:.2em; text-transform:uppercase; color:var(--la-dim); }
+        .ing-drop-ico { width:60px; height:60px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:var(--la-chip); border:1px solid var(--la-line); margin:6px 0 4px; transition:background .2s, border-color .2s, transform .2s; }
+        .ing-drop-ico iconify-icon { font-size:26px; color:var(--la-text); }
+        .ing-drop-main { max-width:100%; font:600 18px/1.3 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:-.01em; color:var(--la-text); overflow-wrap:anywhere; }
+        .ing-drop-meta { font:400 13px/1.45 'Helvetica Neue', Helvetica, Arial, sans-serif; color:var(--la-sub); }
+        .ing-drop-btn { display:inline-flex; align-items:center; height:40px; padding:0 22px; margin-top:6px; border-radius:999px; border:1px solid var(--la-line); background:var(--la-bg); color:var(--la-text); font:600 13px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; transition:border-color .2s, color .2s; }
+        .ing-drop-specs { display:flex; flex-wrap:wrap; justify-content:center; gap:6px; margin-top:10px; }
+        .ing-drop-specs i { font:500 9px/1 'JetBrains Mono', monospace; font-style:normal; letter-spacing:.14em; text-transform:uppercase; color:var(--la-dim); padding:6px 10px; border-radius:999px; border:1px solid var(--la-line); }
+        @media (hover:hover) {
+            .ing-drop:hover { border-color:var(--la-accent); }
+            .ing-drop:hover .ing-drop-btn { border-color:var(--la-accent); color:var(--la-accent); }
+            .ing-drop:hover .ing-drop-ico { transform:translateY(-2px); }
+        }
+        .ing-drop.over { border-color:var(--la-accent); background:var(--la-accent-soft); }
+        .ing-drop.over .ing-drop-ico { transform:scale(1.06); }
+        /* A file chosen: solid accent frame, the file's name and size, and Change file */
+        .ing-drop.active { border-style:solid; border-color:var(--la-accent); }
+        .ing-drop.active .ing-drop-ico { background:var(--la-accent); border-color:var(--la-accent); }
+        .ing-drop.active .ing-drop-ico iconify-icon { color:var(--la-accent-ink); }
+        .ing-drop.active .ing-drop-specs { display:none; }
+        @media (max-width:760px) { .ing-drop { min-height:220px; padding:28px 18px 24px; } .ing-drop-main { font-size:16px; } }
         .ing-foot { display:flex; align-items:center; gap:16px; }
         .ing-progress { flex:1; height:6px; border-radius:99px; background:var(--la-line); overflow:hidden; }
         .ing-progress[hidden] { display:none; }
@@ -180,10 +195,13 @@
                         <p class="ing-sub">The full recording of a set. Once it's in, the HQ audio, vertical clips and thumbnails are made from it automatically.</p></div>
                     </div>
                     <div class="ing-fields">
-                        <label class="ing-field"><span>Artist</span><input type="text" id="ingest-name" placeholder="e.g. DJ Name" autocomplete="off"></label>
+                        <label class="ing-field" id="ingest-artist-pick-wrap" hidden><span>Artist</span><select id="ingest-artist-pick"><option value="">Choose the artist</option><option value="__new">+ New artist…</option></select></label>
+                        <label class="ing-field" id="ingest-name-wrap"><span id="ingest-name-label">Artist</span><input type="text" id="ingest-name" placeholder="e.g. DJ Name" autocomplete="off"></label>
                         <label class="ing-field"><span>Session name</span><input type="text" id="ingest-title" maxlength="80" placeholder="e.g. Boiler Room Puglia" autocomplete="off"></label>
-                        <label class="ing-field"><span>Venue</span><select id="ingest-venue"><option value="">No venue</option><option value="__new">+ New venue…</option></select></label>
+                        <label class="ing-field" id="ingest-venue-wrap"><span>Venue</span><select id="ingest-venue"><option value="">No venue</option><option value="__new">+ New venue…</option></select></label>
                         <label class="ing-field hidden" id="ingest-venue-new-wrap"><span>New venue</span><input type="text" id="ingest-venue-new" maxlength="60" placeholder="e.g. Fabric London" autocomplete="off"></label>
+                        <label class="ing-field" id="ingest-label-wrap"><span>Record label</span><select id="ingest-label"><option value="">No record label</option><option value="__new">+ New record label…</option></select></label>
+                        <label class="ing-field hidden" id="ingest-label-new-wrap"><span>New record label</span><input type="text" id="ingest-label-new" maxlength="60" placeholder="e.g. Defected" autocomplete="off"></label>
                         <label class="ing-field"><span>Date of the set</span><input type="text" id="ingest-date" placeholder="Choose a date"></label>
                         <label class="ing-field"><span>Camera</span><select id="ingest-shot">
                             <option value="MASTER">Main camera</option>
@@ -194,10 +212,12 @@
                         </select></label>
                     </div>
                     <label class="ing-drop" id="node-video">
-                        <iconify-icon icon="solar:videocamera-record-linear"></iconify-icon>
                         <span class="ing-drop-label">4K Master (.MP4)</span>
-                        <b class="ing-drop-main" id="ing-file">Drop the recording here, or browse</b>
-                        <small class="ing-drop-meta" id="ing-meta">MP4 or MOV, up to 4K. Large files upload straight to your Cloud Storage.</small>
+                        <span class="ing-drop-ico"><iconify-icon icon="solar:videocamera-record-linear"></iconify-icon></span>
+                        <b class="ing-drop-main" id="ing-file">Add the recording of the set</b>
+                        <small class="ing-drop-meta" id="ing-meta">Drag it here, or choose the file.</small>
+                        <span class="ing-drop-btn" id="ing-pick">Choose file</span>
+                        <span class="ing-drop-specs"><i>MP4 · MOV</i><i>Up to 4K</i><i>Straight to Cloud Storage</i></span>
                         <input type="file" id="file-video" class="hidden" accept="video/*" onchange="markActive('video')">
                     </label>
                     <div class="ing-foot">
@@ -240,6 +260,7 @@
             const gb = f.size / 1e9;
             document.getElementById('ing-file').textContent = f.name;
             document.getElementById('ing-meta').textContent = (gb >= 1 ? gb.toFixed(2) + ' GB' : Math.max(1, Math.round(f.size / 1e6)) + ' MB') + ' · ready to upload';
+            document.getElementById('ing-pick').textContent = 'Change file';
         }
     };
     // Drag a file onto the drop zone
@@ -256,11 +277,11 @@
         const nodeIcon  = document.querySelector('#node-video iconify-icon');
         const nodeLabel = document.querySelector('#node-video span');
         const map = {
-            AUDIO:  { accept: 'audio/*', icon: 'solar:music-note-bold',            label: 'HQ Audio (.WAV/.MP3/.M4A)' },
-            SOCIAL: { accept: 'video/*', icon: 'solar:iphone-bold',                label: 'Social Clip (.MP4)'         },
-            THUMB:  { accept: 'image/*', icon: 'solar:gallery-minimalistic-bold',  label: 'Thumbnail (.PNG/.JPG)'      },
+            AUDIO:  { accept: 'audio/*', icon: 'solar:music-note-linear',          label: 'HQ Audio (.WAV/.MP3/.M4A)' },
+            SOCIAL: { accept: 'video/*', icon: 'solar:iphone-linear',              label: 'Social Clip (.MP4)'         },
+            THUMB:  { accept: 'image/*', icon: 'solar:gallery-minimalistic-linear', label: 'Thumbnail (.PNG/.JPG)'      },
         };
-        const cfg = map[camera] || { accept: 'video/*', icon: 'solar:videocamera-record-bold', label: '4K Master (.MP4)' };
+        const cfg = map[camera] || { accept: 'video/*', icon: 'solar:videocamera-record-linear', label: '4K Master (.MP4)' };
         if (fileInput)  fileInput.accept = cfg.accept;
         if (nodeIcon)   nodeIcon.setAttribute('icon', cfg.icon);
         if (nodeLabel)  nodeLabel.textContent = cfg.label;
@@ -292,6 +313,12 @@
                 const sel = document.getElementById('ingest-venue');
                 const h = n => String(n).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
                 sel.innerHTML = '<option value="">No venue</option>' + names.map(n => '<option>' + h(n) + '</option>').join('') + '<option value="__new">+ New venue…</option>';
+                const labels = Object.entries(d.ownerNames || {}).filter(([k]) => k.startsWith('label-')).map(([, v]) => v).filter(Boolean).sort((a, b) => a.localeCompare(b));
+                document.getElementById('ingest-label').innerHTML = '<option value="">No record label</option>' + labels.map(n => '<option>' + h(n) + '</option>').join('') + '<option value="__new">+ New record label…</option>';
+                // The account itself is the venue (or the label): that field isn't asked
+                _orgType = d.orgType || 'venue';
+                document.getElementById('ingest-venue-wrap').classList.toggle('hidden', _orgType === 'venue');
+                document.getElementById('ingest-label-wrap').classList.toggle('hidden', _orgType === 'label');
                 // An artist account uploads its own sets: the artist is the account. A venue or record label
                 // has many DJs: type one, with the Brand Kit's artists suggested.
                 const nameIn = document.getElementById('ingest-name');
@@ -299,14 +326,34 @@
                     let me = d.orgName; try { me = me || JSON.parse(localStorage.getItem('la_admin') || '{}').venue; } catch (_) {}
                     if (me) { nameIn.value = String(me).toUpperCase(); nameIn.readOnly = true; nameIn.classList.add('ing-locked'); nameIn.title = 'Uploads on this account are for ' + me; }
                 } else {
-                    const artists = Object.entries(d.ownerNames || {}).filter(([k]) => k.startsWith('artist-')).map(([, v]) => v).filter(Boolean).sort((a, b) => a.localeCompare(b));
-                    const dl = document.createElement('datalist'); dl.id = 'ingest-artists';
-                    dl.innerHTML = artists.map(n => '<option value="' + h(String(n).toUpperCase()) + '">').join('');
-                    document.body.appendChild(dl); nameIn.setAttribute('list', 'ingest-artists');
-                    nameIn.placeholder = d.orgType === 'label' ? 'Which artist? e.g. DJ Name' : 'Who played? e.g. DJ Name';
+                    // A venue or record label picks one of its Brand Kit artists, or adds a new one
+                    const artists = Object.entries(d.ownerNames || {}).filter(([k]) => k.startsWith('artist-')).map(([, v]) => String(v).toUpperCase()).filter(Boolean).sort((a, b) => a.localeCompare(b));
+                    nameIn.placeholder = 'e.g. DJ Name';
+                    if (artists.length) {
+                        const pick = document.getElementById('ingest-artist-pick');
+                        pick.innerHTML = '<option value="">Choose the artist</option>' + artists.map(n => '<option>' + h(n) + '</option>').join('') + '<option value="__new">+ New artist…</option>';
+                        document.getElementById('ingest-artist-pick-wrap').hidden = false;
+                        document.getElementById('ingest-name-label').textContent = 'New artist';
+                        const cur = nameIn.value.trim().toUpperCase();
+                        if (cur && artists.includes(cur)) pick.value = cur; else if (cur) pick.value = '__new';
+                        document.getElementById('ingest-name-wrap').classList.toggle('hidden', pick.value !== '__new');
+                        pick.addEventListener('change', () => {
+                            const isNew = pick.value === '__new';
+                            document.getElementById('ingest-name-wrap').classList.toggle('hidden', !isNew);
+                            nameIn.value = isNew ? '' : pick.value;
+                            if (isNew) nameIn.focus();
+                        });
+                        if (pick.value && pick.value !== '__new') nameIn.value = pick.value;
+                    }
                 }
             } catch (_) {}
         })();
+        let _orgType = 'venue';
+        document.getElementById('ingest-label').addEventListener('change', function() {
+            const isNew = this.value === '__new';
+            document.getElementById('ingest-label-new-wrap').classList.toggle('hidden', !isNew);
+            if (isNew) document.getElementById('ingest-label-new').focus();
+        });
         document.getElementById('ingest-venue').addEventListener('change', function() {
             const isNew = this.value === '__new';
             document.getElementById('ingest-venue-new-wrap').classList.toggle('hidden', !isNew);
@@ -328,9 +375,17 @@
             uploadBtn.textContent = 'Connecting…';
             // The session's name, saved like "Edit session" does, so it shows as soon as the upload is in
             const title = document.getElementById('ingest-title').value.trim();
-            const vSel = document.getElementById('ingest-venue').value;
+            const vSel = _orgType === 'venue' ? '' : document.getElementById('ingest-venue').value;
             const venue = vSel === '__new' ? document.getElementById('ingest-venue-new').value.trim() : vSel;
-            if (title || venue) laFetch('/api/session-meta', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ artist, date: dateVal, title, venue }) }).catch(() => {});
+            const lSel = _orgType === 'label' ? '' : document.getElementById('ingest-label').value;
+            const label = lSel === '__new' ? document.getElementById('ingest-label-new').value.trim() : lSel;
+            if (title || venue || label) laFetch('/api/session-meta', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ artist, date: dateVal, title, venue, label }) }).catch(() => {});
+            const ownerKey = (prefix, n) => prefix + n.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50);
+            const addOwner = (prefix, n) => { const key = ownerKey(prefix, n); if (key !== prefix) laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setOwnerName', owner: key, name: n }) }).catch(() => {}); };
+            // A new artist or record label joins the Brand Kit
+            if (lSel === '__new' && label) addOwner('label-', label);
+            const pickEl = document.getElementById('ingest-artist-pick');
+            if (_orgType !== 'artist' && (!pickEl || pickEl.value === '__new' || document.getElementById('ingest-artist-pick-wrap').hidden)) addOwner('artist-', artist);
             // A new venue joins the Brand Kit's venues
             if (vSel === '__new' && venue) {
                 const key = 'venue-' + venue.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50);

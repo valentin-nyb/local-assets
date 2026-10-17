@@ -81,10 +81,11 @@ export default async function handler(req, res) {
       for (const f of files) {
         if (f.category === 'photos' && !ownerPhotos[f.owner]) ownerPhotos[f.owner] = f.url;
       }
+      const ownerPhotosPicked = [];   // owners whose profile picture was chosen (not just their newest photo)
       for (const [owner, url] of Object.entries(pinned || {})) {
-        if (files.some(f => f.url === url)) ownerPhotos[owner] = url;
+        if (files.some(f => f.url === url)) { ownerPhotos[owner] = url; ownerPhotosPicked.push(owner); }
       }
-      return res.status(200).json({ files, orgType: ORG_TYPES.includes(orgType) ? orgType : 'venue', orgName: orgName || '', ownerNames: ownerNames || {}, ownerPhotos, watermark, labelArtists: labelArtists || {}, hiddenOwners: hiddenOwners || [] });
+      return res.status(200).json({ files, orgType: ORG_TYPES.includes(orgType) ? orgType : 'venue', orgName: orgName || '', ownerNames: ownerNames || {}, ownerPhotos, ownerPhotosPicked, watermark, labelArtists: labelArtists || {}, hiddenOwners: hiddenOwners || [] });
     }
 
     if (req.method !== 'POST') return res.status(405).end();

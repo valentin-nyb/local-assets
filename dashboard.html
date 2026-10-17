@@ -34,7 +34,7 @@
     <link rel="manifest" href="favicon/site.webmanifest">
     
     <link rel="stylesheet" href="styles/tailwind.css">
-    <link rel="stylesheet" href="styles/theme.css?v=9">
+    <link rel="stylesheet" href="styles/theme.css?v=10">
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
@@ -126,6 +126,14 @@
             #recent-sets-list .justify-between > .flex.items-center.gap-2 { flex-wrap:wrap; }
             #recent-sets-list .justify-between > div:last-child { margin-left:auto; }
             #recent-sets-list [id^="zip-btn-"], #recent-sets-list .wm-apply, #recent-sets-list .wm-restore, #recent-sets-list .yt-dist-btn, #recent-sets-list .sc-dist-btn { height:32px !important; padding:0 12px !important; font-size:12px !important; }
+            /* A session: logo, name and venue on the left (cut short if long), edit and Download on the right, one line */
+            #recent-sets-list .sess-row { flex-wrap:nowrap !important; gap:10px; padding-left:16px !important; padding-right:14px !important; }
+            #recent-sets-list .sess-main { flex:1 1 auto; min-width:0; }
+            #recent-sets-list .sess-main > [data-venue-logo] { flex-shrink:0; }
+            #recent-sets-list .sess-text { min-width:0; }
+            #recent-sets-list .sess-text p { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+            #recent-sets-list .sess-acts { flex-shrink:0; flex-wrap:nowrap !important; gap:4px; margin-left:0 !important; }
+            #recent-sets-list .sess-acts .se-edit { width:32px; height:32px; }
         }
         .wm-apply { height:28px; padding:0 12px; border-radius:999px; border:1px solid var(--la-line); background:transparent; color:var(--la-text); font:500 11px Inter,ui-sans-serif,system-ui,sans-serif; cursor:pointer; white-space:nowrap; }
         .wm-apply:disabled { opacity:.6; cursor:default; }
@@ -609,6 +617,8 @@
                     // The venue's chosen profile picture (a GIF plays) comes before its logos
                     var owner = (_brandPhotos && _brandPhotos[box.dataset.venueLogo]) ? box.dataset.venueLogo : _venueOwnerByName[nameKey(box.dataset.venueName)];
                     var prof = owner && _brandPhotos && _brandPhotos[owner];
+                    // A logo used as the profile picture: its white version in dark, its black one in light
+                    if (prof && list) { var me = list.filter(function(x) { return x.url === prof && x.logo; })[0]; if (me) prof = pickVenueLogo([me].concat(list.filter(function(x) { return x !== me && x.logo; })), dark); }
                     if (prof) {
                         // A one-colour logo used as the profile picture follows the theme too (white in dark, black in light)
                         var pkey = prof + (dark ? '#d' : '#l');
@@ -1620,22 +1630,22 @@
                         return !!findLinked(artist.name.toUpperCase().trim() + ' // ' + at.type, dateStr);
                     });
                     html += '<div>';
-                    html += '<div onclick="toggleDateSection(\'' + dateId + '\')" class="p-4 pl-10 flex items-center justify-between hover:bg-white/[0.02] transition-colors cursor-pointer group">';
-                    html += '<div class="flex items-center gap-3">';
+                    html += '<div onclick="toggleDateSection(\'' + dateId + '\')" class="sess-row p-4 pl-10 flex items-center justify-between hover:bg-white/[0.02] transition-colors cursor-pointer group">';
+                    html += '<div class="sess-main flex items-center gap-3">';
                     // A session without a venue of its own was at the account's venue
                     var sVenueName = sessionMeta(artist.name, dateStr).venue || '';
                     var sVenueKey = sVenueName ? 'venue-' + brandSlug(sVenueName) : 'venue';
                     html += '<div class="w-8 h-8 bg-[#050505] border border-border/50 flex items-center justify-center rounded-lg overflow-hidden" data-venue-logo="' + sVenueKey + '" data-venue-name="' + escHtml(sVenueName || getVenueName()) + '">';
                     html += '';
                     html += '</div>';
-                    html += '<div>';
+                    html += '<div class="sess-text">';
                     var sMeta = sessionMeta(artist.name, dateStr);
                     html += '<p class="text-xs font-bold text-zinc-300 uppercase tracking-tight">' + escHtml(sMeta.title || sMeta.shownDate) + '</p>';
                     html += '<p class="text-[8px] font-mono text-zinc-600 uppercase tracking-widest"><span class="sess-venue"' + (sMeta.venue ? '' : ' data-venue-label') + '>' +
                         escHtml(sMeta.venue || getVenueName()) + '</span>' + (sMeta.label ? ' · <span class="sess-label">' + escHtml(sMeta.label) + '</span>' : '') + (sMeta.title ? ' · ' + sMeta.shownDate : '') + '</p>';
                     html += '</div>';
                     html += '</div>';
-                    html += '<div class="flex items-center gap-2">';
+                    html += '<div class="sess-acts flex items-center gap-2">';
                     html += '<button type="button" onclick="event.stopPropagation(); editSession(this)" data-artist="' + escHtml(artist.name) + '" data-date="' + escHtml(dateStr) + '" class="se-edit" title="Edit session name and venue"><iconify-icon icon="solar:pen-linear"></iconify-icon></button>';
                     if (hasAnyLinked) {
                         var safeName = jsq(artist.name);
@@ -3324,6 +3334,8 @@
         .se-btn.primary { background:var(--la-accent); color:var(--la-accent-ink); }
         .se-btn.ghost { background:none; color:var(--la-text); border-color:var(--la-line); }
         .se-btn:disabled { opacity:.6; }
+        /* Small phones: Cancel and Save share the row, Delete session sits under them */
+        @media (max-width:400px) { .se-actions { flex-wrap:wrap; } .se-actions .se-btn { flex:1 1 0; } .se-del { order:3; flex-basis:100%; justify-content:center; margin-right:0; } }
         .se-del { margin-right:auto; display:inline-flex; align-items:center; gap:6px; height:36px; padding:0 4px; background:none; border:none; color:var(--la-bad); font-size:13px; font-weight:500; cursor:pointer; }
         .se-del iconify-icon { font-size:15px; }
         @media (hover:hover) { .se-del:hover { text-decoration:underline; text-underline-offset:3px; } }
@@ -3447,7 +3459,7 @@
                             <div class="pm-status" id="yt-status">Not connected</div>
                         </div>
                         <button id="yt-modal-btn" class="pm-connect" onclick="connectYouTube(this)">Connect</button>
-                        <button id="yt-modal-disconnect" class="pm-disconnect hidden" onclick="disconnectPlatform('youtube',this)">Disconnect</button>
+                        <button id="yt-modal-disconnect" class="pm-disconnect la-danger hidden" onclick="disconnectPlatform('youtube',this)">Disconnect</button>
                     </div>
                     <div id="yt-account" class="pm-account hidden"></div>
                     <div id="yt-desc" class="pm-desc">Upload recordings to your channel with one click and see channel views here.</div>
@@ -3462,7 +3474,7 @@
                             <div class="pm-status" id="sc-status">Not connected</div>
                         </div>
                         <button id="sc-modal-btn" class="pm-connect" onclick="connectSoundCloud(this)">Connect</button>
-                        <button id="sc-modal-disconnect" class="pm-disconnect hidden" onclick="disconnectPlatform('soundcloud',this)">Disconnect</button>
+                        <button id="sc-modal-disconnect" class="pm-disconnect la-danger hidden" onclick="disconnectPlatform('soundcloud',this)">Disconnect</button>
                     </div>
                     <div id="sc-account" class="pm-account hidden"></div>
                     <div id="sc-desc" class="pm-desc">Publish HQ audio to your profile and track plays across your tracks.</div>
