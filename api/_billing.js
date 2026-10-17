@@ -36,16 +36,16 @@ export const DEFAULT_PLANS = [
     features: ['£55 to join, then pay as you go', '6 vertical social clips per session', 'Brand Kit and watermark', 'Camera Control: phone, OBS or your own camera', 'Distribution History', 'Usage charged to your card on the 1st'] },
   { id: 'starter-distribution', name: 'Distribution · Starter', price: 2750, maxClips: 6, cameras: 0,
     included: { storedMinutes: 10000, deliveredMinutes: 25000, fileGB: 1000 },
-    features: ['Camera available as an add-on', 'Content intake & quality control', 'Up to 8 events processed / month', '6 vertical social clips', '1 TB cloud storage'] },
+    features: ['Camera available as an add-on', 'Content intake & quality control', 'Up to 8 events processed / month', '6 vertical clips per session', 'Brand Kit, thumbnails & watermark', '1 TB cloud storage'] },
   { id: 'liveset-distribution', name: 'Distribution · Pro', price: 3500, maxClips: 12, cameras: 1,
     included: { storedMinutes: 20000, deliveredMinutes: 50000, fileGB: 2000 },
-    features: ['1 camera included', 'Content intake & quality control', 'Up to 8 events processed / month', '12+ vertical social clips', 'Marketing thumbnails', '2 TB cloud storage'] },
+    features: ['1 camera included', 'Content intake & quality control', 'Up to 8 events processed / month', '12 vertical clips per session', 'Brand Kit, thumbnails & watermark', '2 TB cloud storage'] },
   { id: 'starter-creative', name: 'Creative & Production · Starter', price: 5500, maxClips: 12, cameras: 1,
     included: { storedMinutes: 50000, deliveredMinutes: 100000, fileGB: 5000 },
-    features: ['1 camera included', 'Starlink Mini', '4K master recordings', 'HQ audio capture', '12 vertical social clips', 'Marketing thumbnails', 'Brand Kit watermark', '5 TB cloud storage'] },
+    features: ['1 camera included', 'Starlink Mini', '4K master recordings', 'HQ audio capture', '12 vertical clips per session', 'Brand Kit, thumbnails & watermark', '5 TB cloud storage'] },
   { id: 'liveset-creative', name: 'Creative & Production · Live-Set', price: 7500, maxClips: 0, cameras: 2,
     included: { storedMinutes: 100000, deliveredMinutes: 500000, fileGB: 10000 },
-    features: ['2 cameras included', 'Starlink Mini + Mac mini', '4K master recordings', 'HQ audio capture', 'Multi-camera auto edit, cut to the music', 'Unlimited vertical social clips', 'Marketing thumbnails & watermark', 'Quarterly performance reports', '10 TB cloud storage'] },
+    features: ['2 cameras included', 'Starlink Mini + Mac mini', '4K master recordings', 'HQ audio capture', 'Multi-camera auto-edit', 'Unlimited vertical clips per session', 'Brand Kit, thumbnails & watermark', 'Quarterly performance reports', '10 TB cloud storage'] },
 ];
 // Storage per plan: 1 / 2 / 5 / 10 TB (1 TB ≈ 10,000 minutes of 4K in Mux), so Mux stays near 10% of each plan's price.
 // Applied once to a plan list saved before the change, so Billing and invoices use the new allowances.
@@ -79,10 +79,28 @@ async function upgradeStarterCamera(redis, list) {
     return out;
   } catch { return list; }
 }
+// Every plan: clips counted per session, and Brand Kit, thumbnails & watermark included. Applied once to a saved list.
+const BRAND_LINE = 'Brand Kit, thumbnails & watermark';
+async function upgradePlanWording(redis, list) {
+  try {
+    if (await redis.get('billing_plans_wording_v4')) return list;
+    const out = list.map(x => {
+      if (!Array.isArray(x.features) || x.id === 'dj-trial') return x;
+      let f = x.features.map(t => t.replace(/^(\S+) vertical(?: social)? clips(?: per (?:session|set))?$/i, '$1 vertical clips per session').replace(/^multi-camera auto edit(,\s*cut to the music)?$/i, 'Multi-camera auto-edit'))
+        .filter(t => !/^(marketing thumbnails( & watermark)?|brand kit watermark|brand kit, thumbnails & watermark)$/i.test(t.trim()));
+      const at = f.findIndex(t => /vertical clips per session$/.test(t));
+      f.splice(at >= 0 ? at + 1 : f.length, 0, BRAND_LINE);
+      return { ...x, features: f };
+    });
+    await redis.set('billing_plans', JSON.stringify(out));
+    await redis.set('billing_plans_wording_v4', new Date().toISOString());
+    return out;
+  } catch { return list; }
+}
 export async function readPlans(redis) {
   // The DJ Trial Month is always offered, even when the saved plan list predates it
   const withPayg = list => [...DEFAULT_PLANS.filter(d => d.id === 'dj-trial' && !list.some(p => p.id === d.id)), ...list];
-  try { let p = JSON.parse(await redis.get('billing_plans') || 'null'); if (Array.isArray(p) && p.length) p = await upgradeStarterCamera(redis, await upgradeSavedStorage(redis, p)); return Array.isArray(p) && p.length ? withPayg(p.map(x => { const d = DEFAULT_PLANS.find(z => z.id === x.id) || {}; return { ...x, signupFee: x.signupFee != null ? x.signupFee : (d.signupFee || 0), features: (x.features && x.features.length ? x.features : d.features), cameras: x.cameras != null ? x.cameras : (d.cameras || 0), maxClips: x.maxClips != null ? x.maxClips : (d.maxClips != null ? d.maxClips : 5) }; })) : DEFAULT_PLANS; }
+  try { let p = JSON.parse(await redis.get('billing_plans') || 'null'); if (Array.isArray(p) && p.length) p = await upgradePlanWording(redis, await upgradeStarterCamera(redis, await upgradeSavedStorage(redis, p))); return Array.isArray(p) && p.length ? withPayg(p.map(x => { const d = DEFAULT_PLANS.find(z => z.id === x.id) || {}; return { ...x, signupFee: x.signupFee != null ? x.signupFee : (d.signupFee || 0), features: (x.features && x.features.length ? x.features : d.features), cameras: x.cameras != null ? x.cameras : (d.cameras || 0), maxClips: x.maxClips != null ? x.maxClips : (d.maxClips != null ? d.maxClips : 5) }; })) : DEFAULT_PLANS; }
   catch { return DEFAULT_PLANS; }
 }
 export function cleanPlans(list) {
