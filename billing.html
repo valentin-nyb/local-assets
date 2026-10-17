@@ -454,8 +454,11 @@
             var st = ls.videoStorage, dl = ls.videoDelivery, bar = document.getElementById('bl-usage-bar');
             if (d.plan && st && st.included) {
                 document.getElementById('bl-usage-lbl').textContent = 'Plan used';
-                document.getElementById('bl-usage').textContent = hrs(st.quantity) + ' of ' + hrs(st.included);
-                document.getElementById('bl-usage-note').textContent = 'stored · ' + hrs(dl ? dl.quantity : 0) + (dl && dl.included ? ' of ' + hrs(dl.included) : '') + ' streamed · ' + money(d.usageTotal, cur) + ' above plan';
+                // Shown in the plan's own unit: 1 TB is about 10,000 minutes of 4K (as on the plan cards)
+                var size = function(m) { var gb = Math.max(0, Number(m) || 0) / 10; return gb >= 1000 ? (Math.round(gb / 100) / 10) + ' TB' : gb >= 10 ? Math.round(gb) + ' GB' : gb > 0 ? (Math.round(gb * 10) / 10 || 0.1) + ' GB' : '0 GB'; };
+                var hours = function(m) { var h = Math.max(0, Number(m) || 0) / 60; return h >= 10 ? Math.round(h) + ' h' : h >= 1 ? (Math.round(h * 10) / 10) + ' h' : Math.round(h * 60) + ' min'; };
+                document.getElementById('bl-usage').textContent = size(st.quantity) + ' of ' + size(st.included);
+                document.getElementById('bl-usage-note').textContent = 'stored (' + hours(st.quantity) + ' of video) · ' + hours(dl ? dl.quantity : 0) + (dl && dl.included ? ' of ' + hours(dl.included) : '') + ' streamed · ' + money(d.usageTotal, cur) + ' above plan';
                 var used = Math.max(st.quantity / st.included, dl && dl.included ? dl.quantity / dl.included : 0);
                 bar.hidden = false; bar.querySelector('i').style.width = Math.min(100, Math.max(used > 0 ? 2 : 0, Math.round(used * 100))) + '%';
                 bar.title = Math.round(used * 100) + '% of the plan used';
