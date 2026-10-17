@@ -886,11 +886,37 @@
             document.getElementById('bl-pool-count').textContent = pool.length ? pool.length + ' ready · the next sign-up takes the oldest' : 'None ready: new sign-ups wait in Finish setup until you add one';
             document.getElementById('bl-pool-list').innerHTML = pool.map(function(e) {
                 return '<div class="bl-setup-item" style="flex-direction:row;align-items:center;justify-content:space-between"><span><b class="bl-setup-name" style="text-transform:none">' + esc(e.label) + '</b> <span class="bl-msg">added ' + new Date(e.addedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + '</span></span>' +
-                    '<button type="button" class="bl-x" title="Remove from the ready list" data-pool-del="' + esc(e.key) + '">×</button></div>';
+                    '<span style="display:flex;align-items:center;gap:8px"><button type="button" class="cam-btn ghost" data-pool-open="' + esc(e.key) + '" data-label="' + esc(e.label) + '">Open account</button>' +
+                    '<button type="button" class="bl-x" title="Remove from the ready list" data-pool-del="' + esc(e.key) + '">×</button></span></div>';
             }).join('');
+        }
+        // Open an account by hand on one ready environment: no sign-up, no payment until a plan is assigned
+        function openAccountForm(b) {
+            var item = b.closest('.bl-setup-item');
+            if (item.nextElementSibling && item.nextElementSibling.classList.contains('bl-open-form')) { item.nextElementSibling.remove(); return; }
+            var f = document.createElement('div');
+            f.className = 'bl-setup-item bl-open-form';
+            f.innerHTML = '<div class="bl-admin" style="padding:0;grid-template-columns:repeat(2,minmax(0,1fr))">' +
+                '<label>Account name<input data-k="name" maxlength="60" value="' + esc(b.dataset.label) + '"></label>' +
+                '<label>Type<select data-k="type"><option value="venue">Venue</option><option value="artist">Artist</option><option value="label">Record label</option><option value="management">Management</option></select></label>' +
+                '<label style="grid-column:1/-1">Login emails<input data-k="emails" placeholder="owner@venue.com, manager@venue.com" autocomplete="off"></label></div>' +
+                '<p class="bl-msg">Everyone listed signs in with Google. The account opens free: it is only billed once you give it a plan under Bill to.</p>' +
+                '<div class="bl-admin-actions" style="padding:0"><button type="button" class="cam-btn primary" data-open-go>Open account</button><span class="bl-msg" data-msg></span></div>';
+            item.after(f);
+            f.querySelector('[data-k=emails]').focus();
+            f.querySelector('[data-open-go]').addEventListener('click', async function() {
+                var go = this, msg = f.querySelector('[data-msg]');
+                go.disabled = true; msg.textContent = 'Checking the environment with Mux…';
+                try {
+                    var d = await post({ action: 'openAccount', key: b.dataset.poolOpen, name: f.querySelector('[data-k=name]').value.trim(), type: f.querySelector('[data-k=type]').value, emails: f.querySelector('[data-k=emails]').value });
+                    drawPool(d.pool); loadSetup(); load();
+                    laToast(d.waiting ? 'Account opened · waiting for video storage' : 'Account is live on ' + d.label);
+                } catch (e) { msg.textContent = e.message; go.disabled = false; }
+            });
         }
         function loadPool() { post({ action: 'muxPool' }).then(function(d) { drawPool(d.pool); }).catch(function() {}); }
         document.getElementById('bl-pool-list').addEventListener('click', async function(e) {
+            var o = e.target.closest('[data-pool-open]'); if (o) return openAccountForm(o);
             var b = e.target.closest('[data-pool-del]'); if (!b) return;
             if (!(await laConfirm({ title: 'Remove from the ready list?', message: 'The Mux environment itself is not deleted.', confirmText: 'Remove' }))) return;
             try { drawPool((await post({ action: 'muxPoolRemove', key: b.dataset.poolDel })).pool); } catch (er) { laAlert(er.message, { tone: 'error' }); }

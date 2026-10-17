@@ -353,6 +353,33 @@ export default async function handler(req, res) {
       await withRedis(r => removeFromPool(r, String(body.key || '')));
       return res.status(200).json({ ok: true, pool: await withRedis(r => listPool(r)) });
     }
+    // Open an account by hand on one ready environment: no sign-up and no payment. It is billed only
+    // once a plan is assigned under Bill to.
+    if (body.action === 'openAccount') {
+      const name = String(body.name || '').replace(/[<>\u0000-\u001f]/g, '').trim().slice(0, 60);
+      const type = ['venue', 'label', 'artist', 'management'].includes(body.type) ? body.type : 'venue';
+      const emails = [...new Set(String(body.emails || '').split(/[\s,;]+/).map(e => e.toLowerCase().trim()).filter(Boolean))];
+      if (!name) return res.status(400).json({ error: 'Type the account name' });
+      if (!emails.length) return res.status(400).json({ error: 'Add at least one login email' });
+      const badEmail = emails.find(e => !/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/.test(e));
+      if (badEmail) return res.status(400).json({ error: `Check this email: ${badEmail}` });
+      if (emails.length > 20) return res.status(400).json({ error: 'Up to 20 login emails' });
+      const base = name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'client';
+      const out = await withRedis(async r => {
+        const existing = { ...getVenuesConfig(), ...(await readRegistryRaw(r)) };
+        const taken = new Set([...Object.keys(existing), ...(await r.sMembers('la_deleted').catch(() => []))].map(k => k.toLowerCase()));
+        let slug = base;
+        for (let i = 2; taken.has(slug); i++) slug = `${base}-${i}`;
+        await saveRegistryEntry(r, slug, { name: name.toUpperCase(), emails, type, plan: '', status: 'pending', manual: true, createdAt: new Date().toISOString() });
+        await r.set(`brand_org_type:${slug}`, type);
+        await r.set(`brand_org_name:${slug}`, name);
+        const label = await activateFromPool(r, slug, String(body.key || ''));
+        return { slug, label };
+      });
+      console.log('[billing] account opened by hand', out.slug, type, out.label ? 'live' : 'waiting for storage');
+      if (!out.label) return res.status(200).json({ ok: true, slug: out.slug, waiting: true, pool: await withRedis(r => listPool(r)) });
+      return res.status(200).json({ ok: true, slug: out.slug, label: out.label, pool: await withRedis(r => listPool(r)) });
+    }
     // A sign-up still waiting: give it the next ready environment
     if (body.action === 'useReady') {
       const slug = String(body.slug || '');

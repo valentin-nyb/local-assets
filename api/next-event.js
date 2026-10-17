@@ -2,8 +2,8 @@ import { createClient } from 'redis';
 import { getWebSessionAuth } from './_venues.js';
 import { calendarKey, fetchEvents } from './_calendar.js';
 
-// The dashboard's Next event card: the next sets from the venue's own calendar (connected on the Camera page).
-// Accounts without one fall back to the shared ICAL_URL calendar.
+// The dashboard's Next event card: the next sets from the account's own calendar (connected on the Camera page).
+// An account without one shows nothing: never another account's calendar.
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   const session = getWebSessionAuth(req);
@@ -14,8 +14,7 @@ export default async function handler(req, res) {
     catch (e) { console.error('[next-event] redis', e.message); }
     finally { await redis.quit().catch(() => {}); }
   }
-  const source = calUrl ? 'venue' : 'shared';
-  calUrl = calUrl || process.env.ICAL_URL;
+  const source = 'venue';
   if (!calUrl) return res.status(200).json({ events: [], connected: false });
 
   try {

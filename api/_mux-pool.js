@@ -65,11 +65,16 @@ export async function removeFromPool(redis, key) {
 
 // Gives the oldest ready environment to an account and makes it active. Returns its label, or null when
 // none is ready (the account then waits in Finish setup).
-export async function activateFromPool(redis, slug) {
+// With `key`, gives that one ready environment (an account opened by hand from Billing).
+export async function activateFromPool(redis, slug, key = null) {
   const reg = await readRegistryRaw(redis);
   if (!reg[slug]) return null;
-  for (let tries = 0; tries < 5; tries++) {
-    const raw = await redis.lPop(POOL_KEY);
+  for (let tries = 0; tries < (key ? 1 : 5); tries++) {
+    let raw = null;
+    if (key) {
+      raw = (await redis.lRange(POOL_KEY, 0, -1)).find(x => { try { return JSON.parse(x).key === key; } catch { return false; } }) || null;
+      if (raw && !(await redis.lRem(POOL_KEY, 1, raw))) raw = null;
+    } else raw = await redis.lPop(POOL_KEY);
     if (!raw) return null;
     let e; try { e = JSON.parse(raw); } catch { continue; }
     const [id, secret] = openSecret(e.mux).split(':');
