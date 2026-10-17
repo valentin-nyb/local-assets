@@ -262,7 +262,8 @@
             background-color:var(--la-chip); background-image:linear-gradient(45deg, rgba(128,128,128,.12) 25%, transparent 25%), linear-gradient(-45deg, rgba(128,128,128,.12) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(128,128,128,.12) 75%), linear-gradient(-45deg, transparent 75%, rgba(128,128,128,.12) 75%);
             background-size:16px 16px; background-position:0 0, 0 8px, 8px -8px, -8px 0; }
         .bk-wm-preview img.logo { position:absolute; object-fit:contain; transition:all .15s; }
-        .bk-wm-preview .text { position:absolute; color:#fff; white-space:nowrap; line-height:1; transition:all .15s; }
+        .bk-wm-preview .text { position:absolute; color:#fff; white-space:nowrap; line-height:1; transition:all .15s; display:flex; flex-direction:column; }
+        .bk-wm-preview .text .t2 { font-size:.6em; }
         .bk-wm-textrow { display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; min-width:0; }
         .bk-wm-textrow input { height:36px; flex:1 1 200px; max-width:260px; min-width:0; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 10px; font-size:13px; outline:none; }
         .bk-wm-textrow input:focus { border-color:var(--la-accent); }
@@ -541,6 +542,13 @@
             if (!_wm.text || !wmTextValue()) return null;
             return _files.filter(function(f) { return f.url === _wm.text.font; })[0] || null;
         }
+        // The subtitle under the title, while its font is still in the brand kit
+        var WM_SUB_SCALE = 0.6, WM_SUB_GAP = 0.2;   // same as the clip worker
+        function wmSub() {
+            var t = _wm && _wm.text && _wm.text.sub;
+            if (!t || !t.value) return null;
+            return _files.some(function(f) { return f.url === t.font; }) ? t : null;
+        }
         function unfoldWm() { var b = document.getElementById('bk-wm'), f = document.getElementById('bk-wm-fold'); if (b) b.classList.remove('folded'); if (f) f.setAttribute('aria-expanded', 'true'); try { localStorage.setItem('la_bk_wm_folded', ''); } catch (_) {} }
         function renderWatermark() {
             var box = document.getElementById('bk-wm');
@@ -563,6 +571,12 @@
                 return '<option value="' + esc(f.url) + '"' + (current === f.url ? ' selected' : '') + '>' + esc(label) + '</option>';
             }).join('');
             var noLogo = !logos.length;
+            // A font picker for the title or the subtitle (fonts the clip worker can draw)
+            var fontSelect = function(which, cur) {
+                return '<select data-wmfont="' + which + '" aria-label="' + (which === 'sub' ? 'Subtitle font' : 'Title font') + '">' + wmTextFonts().map(function(f) {
+                    return '<option value="' + esc(f.url) + '"' + (f.url === cur ? ' selected' : '') + '>' + esc(f.name.replace(/\.[^.]+$/, '')) + '</option>';
+                }).join('') + '</select>';
+            };
             box.innerHTML =
                 '<div>' +
                     '<div class="bk-wm-head"><div><button type="button" class="bk-wm-fold" id="bk-wm-fold" aria-expanded="' + !box.classList.contains('folded') + '" aria-controls="bk-wm"><p class="bk-wm-title">Watermark</p><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>' +
@@ -574,11 +588,16 @@
                         '<span class="bk-wm-label">Text</span>' + (wmText()
                             ? '<div class="bk-wm-textrow">' + seg('textsrc', WM_TEXT_SRC, _wm.text.source === 'artist' ? 'artist' : 'custom') +
                               (_wm.text.source === 'artist' ? '' : '<input id="bk-wm-text-input" value="' + esc(_wm.text.value) + '" maxlength="60" aria-label="Watermark text">') +
+                              fontSelect('title', _wm.text.font) +
                               seg('textpos', WM_TEXT_POS, _wm.text.position) +
                               seg('textcolor', WM_TEXT_COLOR, _wm.text.color === 'black' ? 'black' : 'white') +
                               '<div class="bk-wm-textmeta">' + (_wm.text.source === 'artist' ? '<span class="bk-wm-font">Each clip shows the name of the artist on stage.</span>' : '') +
                               '<span class="bk-wm-font">' + esc(wmText().name.replace(/\.[^.]+$/, '')) + '</span>' +
-                              '<button type="button" class="bk-wm-link" id="bk-wm-text-remove">Remove</button></div></div>'
+                              '<button type="button" class="bk-wm-link" id="bk-wm-text-remove">Remove</button></div></div>' +
+                              '<span class="bk-wm-label">Subtitle</span>' + (_wm.text.sub
+                                ? '<div class="bk-wm-textrow"><input id="bk-wm-sub-input" value="' + esc(_wm.text.sub.value) + '" maxlength="80" placeholder="e.g. Disco, Jazz-funk, Soulful House" aria-label="Subtitle">' +
+                                  fontSelect('sub', _wm.text.sub.font) + '<button type="button" class="bk-wm-link" id="bk-wm-sub-remove">Remove</button></div>'
+                                : '<div class="bk-wm-textrow"><button type="button" class="cam-btn ghost" id="bk-wm-sub-add">Add subtitle</button><span class="bk-wm-font">A smaller second line under the title, in its own font.</span></div>')
                             : wmTextFonts().length
                             ? '<div class="bk-wm-textrow"><button type="button" class="cam-btn ghost" id="bk-wm-text-artist">Add artist name</button><span class="bk-wm-font">Or preview a font, type your text and choose Use as watermark.</span></div>'
                             : '<p class="bk-wm-hint">Upload a font (TTF, OTF or WOFF) to add the artist\'s name or a line of text.</p>') +
@@ -610,6 +629,24 @@
                 _wm.text = { source: 'artist', value: '', font: wmTextFonts()[0].url, position: 'br' };
                 renderWatermark(); saveWatermark();
             });
+            box.querySelectorAll('[data-wmfont]').forEach(function(sel) {
+                sel.addEventListener('change', function() {
+                    if (sel.dataset.wmfont === 'sub') _wm.text.sub.font = sel.value; else _wm.text.font = sel.value;
+                    renderWatermark(); saveWatermark();
+                });
+            });
+            var subAdd = document.getElementById('bk-wm-sub-add');
+            if (subAdd) subAdd.addEventListener('click', function() {
+                var fonts = wmTextFonts(), other = fonts.filter(function(f) { return f.url !== _wm.text.font; })[0] || fonts[0];
+                _wm.text.sub = { value: '', font: other.url };
+                renderWatermark();
+                var si = document.getElementById('bk-wm-sub-input'); if (si) si.focus();
+            });
+            var subIn = document.getElementById('bk-wm-sub-input');
+            if (subIn) {
+                subIn.addEventListener('input', function() { _wm.text.sub.value = subIn.value.replace(/\s+/g, ' ').trim(); positionPreview(); if (_wm.text.sub.value) saveWatermark(); });
+                document.getElementById('bk-wm-sub-remove').addEventListener('click', function() { delete _wm.text.sub; renderWatermark(); saveWatermark(); });
+            }
             var tIn = document.getElementById('bk-wm-text-input');
             if (tIn) {
                 tIn.addEventListener('input', function() { if (tIn.value.trim()) { _wm.text.value = tIn.value.trim(); positionPreview(); saveWatermark(); } });
@@ -649,11 +686,18 @@
                 if (!tf) txt.style.display = 'none';
                 else {
                     txt.style.display = '';
-                    txt.textContent = wmTextValue();
+                    var sub = wmSub();
+                    if (!txt.querySelector('.t1')) txt.innerHTML = '<span class="t1"></span><span class="t2"></span>';
+                    var t1 = txt.querySelector('.t1'), t2 = txt.querySelector('.t2');
+                    t1.textContent = wmTextValue();
+                    t2.textContent = sub ? sub.value : '';
+                    t2.style.display = sub ? '' : 'none';
+                    txt.style.alignItems = _wm.text.position[1] === 'r' ? 'flex-end' : 'flex-start';
+                    if (sub) loadBrandFont(sub.font).then(function(family) { if (t2.dataset.family !== family) { t2.dataset.family = family; t2.style.fontFamily = family; positionPreview(); } }).catch(function() {});
                     var blackText = _wm.text.color === 'black';
                     txt.style.color = blackText ? '#000' : '#fff';
                     txt.style.textShadow = 'none';
-                    loadBrandFont(tf.url).then(function(family) { if (txt.dataset.family !== family) { txt.dataset.family = family; txt.style.fontFamily = family; positionPreview(); } }).catch(function() {});
+                    loadBrandFont(tf.url).then(function(family) { if (t1.dataset.family !== family) { t1.dataset.family = family; t1.style.fontFamily = family; positionPreview(); } }).catch(function() {});
                     var tp = _wm.text.position;
                     // Same corner as the logo: text sits next to it, further from the edge
                     var lhClip = url && img.complete && img.naturalWidth ? Math.min((WM_BOX[_wm.size] || WM_BOX.m)[1], (WM_BOX[_wm.size] || WM_BOX.m)[0] * img.naturalHeight / img.naturalWidth) : 0;
@@ -663,6 +707,7 @@
                     var lwClip = lhClip ? lhClip * img.naturalWidth / img.naturalHeight : 0;
                     var room = lhClip && tp !== p && tp[0] === p[0] ? Math.min(760, L.W - 2 * L.mx - lwClip - 48) : 760;
                     if (txt.offsetWidth / k > room) txt.style.fontSize = (WM_TEXT_PX[wmTextSize()] * room / (txt.offsetWidth / k)) * k + 'px';
+                    txt.style.gap = (parseFloat(txt.style.fontSize) * WM_SUB_GAP * 0.5) + 'px';
                     var thClip = txt.offsetHeight / k;
                     // Same corner as the logo: next to it. Same row, other side: lined up with the middle of the logo.
                     var shift = !lhClip ? 0 : tp === p ? lhClip + 24 : tp[0] === p[0] ? (lhClip - thClip) / 2 : 0;
@@ -714,7 +759,8 @@
         // Draws the current watermark onto a canvas context, placed exactly as on the clips
         function drawWatermark(g, L) {
             var url = wmPreviewLogo(), tf = wmText(), p = _wm.position;
-            return Promise.all([url ? loadImage(url) : null, tf ? loadBrandFont(tf.url) : null]).then(function(r) {
+            var sb = tf ? wmSub() : null;
+            return Promise.all([url ? loadImage(url) : null, tf ? loadBrandFont(tf.url) : null, sb ? loadBrandFont(sb.font) : null]).then(function(r) {
                 var logo = r[0], family = r[1], W = L.W, H = L.H;
                 g.save();
                 g.imageSmoothingQuality = 'high';
@@ -726,20 +772,29 @@
                     g.drawImage(logo, p[1] === 'l' ? L.mx : W - L.mx - lw, p[0] === 't' ? L.top : H - L.bottom - lh, lw, lh);
                 }
                 if (tf && family) {
+                    // The title, and the subtitle under it in its own font, laid out as on the clips
                     var px = WM_TEXT_PX[wmTextSize()] || WM_TEXT_PX.m, pad = 12, tp = _wm.text.position;
                     var room = logo && tp !== p && tp[0] === p[0] ? Math.min(760, W - 2 * L.mx - lh * ar - 48) : 760;
-                    g.font = px + 'px ' + family;
-                    var tv = wmTextValue();
-                    var m = g.measureText(tv), tw = m.actualBoundingBoxLeft + m.actualBoundingBoxRight;
-                    if (tw > room) { px = px * room / tw; g.font = px + 'px ' + family; m = g.measureText(tv); tw = m.actualBoundingBoxLeft + m.actualBoundingBoxRight; }
-                    var th = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent + pad * 2;
+                    var lines = [{ fam: family, v: wmTextValue(), k: 1 }];
+                    if (r[2]) lines.push({ fam: r[2], v: wmSub().value, k: WM_SUB_SCALE });
+                    var measure = function() { return lines.map(function(l) { g.font = (px * l.k) + 'px ' + l.fam; var m = g.measureText(l.v); return { m: m, w: m.actualBoundingBoxLeft + m.actualBoundingBoxRight, h: m.actualBoundingBoxAscent + m.actualBoundingBoxDescent }; }); };
+                    var ms = measure(), tw = Math.max.apply(null, ms.map(function(x) { return x.w; }));
+                    if (tw > room) { px = px * room / tw; ms = measure(); tw = Math.max.apply(null, ms.map(function(x) { return x.w; })); }
+                    var gap = px * WM_SUB_GAP;
+                    var th = ms.reduce(function(a, x) { return a + x.h; }, 0) + gap * (ms.length - 1) + pad * 2;
                     var shift = !logo ? 0 : tp === p ? lh + 24 : tp[0] === p[0] ? (lh - th) / 2 : 0;
                     var top = tp[0] === 't' ? L.top + shift : H - L.bottom - shift - th;
                     var blackText = _wm.text.color === 'black';
                     g.shadowColor = 'transparent'; g.shadowBlur = 0; g.shadowOffsetY = 0;
                     g.fillStyle = blackText ? '#000' : '#fff';
-                    var left = tp[1] === 'l' ? L.mx + pad : W - L.mx - pad - tw;
-                    g.fillText(tv, left + m.actualBoundingBoxLeft, top + pad + m.actualBoundingBoxAscent);
+                    var y = top + pad;
+                    lines.forEach(function(l, i) {
+                        var x = ms[i];
+                        g.font = (px * l.k) + 'px ' + l.fam;
+                        var left = tp[1] === 'l' ? L.mx + pad : W - L.mx - pad - x.w;
+                        g.fillText(l.v, left + x.m.actualBoundingBoxLeft, y + x.m.actualBoundingBoxAscent);
+                        y += x.h + gap;
+                    });
                 }
                 g.restore();
             });
@@ -763,7 +818,7 @@
                 btn.textContent = 'Making the GIF…'; if (st) st.textContent = '';
                 laFetch('/api/watermark-clips', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'exportGif', watermark: {
                     url: raw, frame: _wmFrame, position: _wm.position, size: _wm.size, opacity: _wm.opacity,
-                    text: tf0 ? { value: wmTextValue(), font: tf0.url, position: _wm.text.position, size: wmTextSize(), color: _wm.text.color } : null } }) })
+                    text: tf0 ? { value: wmTextValue(), font: tf0.url, position: _wm.text.position, size: wmTextSize(), color: _wm.text.color, sub: wmSub() || undefined } : null } }) })
                     .then(function(r) { return r.json().then(function(d) { if (!r.ok) throw new Error(d.error || r.status); return d; }); })
                     .then(function(d) { return fetch(d.url).then(function(r) { return r.blob(); }).then(function(b) { saveBlob(b, 'watermark-' + d.width + 'x' + d.height + '.gif'); }); })
                     .catch(function(e) { if (st) st.textContent = 'Could not export: ' + e.message; })
@@ -1192,7 +1247,7 @@
             if (useWm) useWm.addEventListener('click', function() {
                 var value = input.value.replace(/\s+/g, ' ').trim().slice(0, 60);
                 if (!value) { input.focus(); return; }
-                _wm.text = { source: 'custom', value: value, font: url, position: (_wm.text && _wm.text.position) || 'br', color: color, size: _wm.text && _wm.text.size };
+                _wm.text = { source: 'custom', value: value, font: url, position: (_wm.text && _wm.text.position) || 'br', color: color, size: _wm.text && _wm.text.size, sub: _wm.text && _wm.text.sub };
                 _wm.enabled = true;
                 closeCamDialog();
                 renderWatermark();

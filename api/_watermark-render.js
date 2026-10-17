@@ -32,21 +32,32 @@ async function logoLayer(wm, s = 1) {
   return { input: data, w: info.width, h: info.height };
 }
 
-async function textLayer(text, size, maxWidth, s = 1) {
-  const font = opentype.parse(new Uint8Array(await download(text.font)).buffer);
-  let px = (TEXT_PX[size] || TEXT_PX.m) * s;
-  let bb = font.getPath(text.value, 0, 0, px).getBoundingBox();
-  if (bb.x2 - bb.x1 > maxWidth) {
-    px = px * maxWidth / (bb.x2 - bb.x1);
-    bb = font.getPath(text.value, 0, 0, px).getBoundingBox();
+// The title, and the subtitle under it in its own font (smaller), as one block lined up on the side
+// of its corner. Both shrink together when the block is wider than maxWidth.
+export const SUB_SCALE = 0.6, SUB_GAP = 0.2;
+async function textLayer(text, size, maxWidth, s = 1, align = 'l') {
+  const lines = [{ font: opentype.parse(new Uint8Array(await download(text.font)).buffer), value: text.value, k: 1 }];
+  if (text.sub?.value && text.sub.font) {
+    try { lines.push({ font: opentype.parse(new Uint8Array(await download(text.sub.font)).buffer), value: text.sub.value, k: SUB_SCALE }); }
+    catch (e) { console.error('[watermark-render] subtitle:', e.message); }
   }
-  if (!(bb.x2 > bb.x1)) throw new Error('Text has no visible characters in this font');
-  const pad = Math.round(12 * s);
-  const w = Math.ceil(bb.x2 - bb.x1) + pad * 2, h = Math.ceil(bb.y2 - bb.y1) + pad * 2;
-  const d = font.getPath(text.value, pad - bb.x1, pad - bb.y1, px).toPathData(2);
+  let px = (TEXT_PX[size] || TEXT_PX.m) * s;
+  const measure = () => lines.map(l => l.font.getPath(l.value, 0, 0, px * l.k).getBoundingBox());
+  let bbs = measure(), width = Math.max(...bbs.map(b => b.x2 - b.x1));
+  if (width > maxWidth) { px = px * maxWidth / width; bbs = measure(); width = Math.max(...bbs.map(b => b.x2 - b.x1)); }
+  if (!(bbs[0].x2 > bbs[0].x1)) throw new Error('Text has no visible characters in this font');
+  const pad = Math.round(12 * s), gap = px * SUB_GAP;
+  let y = pad, paths = '';
+  lines.forEach((l, i) => {
+    const b = bbs[i], lw = b.x2 - b.x1;
+    if (!(lw > 0)) return;
+    const x = (align === 'r' ? pad + width - lw : pad) - b.x1;
+    paths += `<path d="${l.font.getPath(l.value, x, y - b.y1, px * l.k).toPathData(2)}"/>`;
+    y += (b.y2 - b.y1) + gap;
+  });
+  const w = Math.ceil(width) + pad * 2, h = Math.ceil(y - gap) + pad;
   const black = text.color === 'black';
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">` +
-    `<path d="${d}" fill="${black ? '#000' : '#fff'}"/></svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><g fill="${black ? '#000' : '#fff'}">${paths}</g></svg>`;
   return { input: await sharp(Buffer.from(svg)).png().toBuffer(), w, h };
 }
 
@@ -102,7 +113,7 @@ async function compose(wm, L, width, movingLogo) {
     const tPos = wm.text.position || 'br';
     const sameRow = logo && tPos !== position && tPos[0] === position[0];
     const room = sameRow ? Math.min(TEXT_MAX_WIDTH * s, L.W - 2 * L.mx - logo.w - 48 * s) : TEXT_MAX_WIDTH * s;
-    const t = await textLayer(wm.text, wm.text.size || wm.size, room, s).catch(e => { console.error('[watermark-render] text:', e.message); return null; });
+    const t = await textLayer(wm.text, wm.text.size || wm.size, room, s, tPos[1]).catch(e => { console.error('[watermark-render] text:', e.message); return null; });
     if (t) {
       // Same corner: next to the logo. Same row, other side: lined up with the middle of the logo.
       const shift = !logo ? 0 : tPos === position ? logo.h + STACK_GAP * s : sameRow ? (logo.h - t.h) / 2 : 0;

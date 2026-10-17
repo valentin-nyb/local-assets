@@ -4,7 +4,7 @@ import sharp from 'sharp';
 import opentype from 'opentype.js';
 
 // Brand Kit watermark for vertical clips (1080×1920).
-// The job carries { url, position, size, opacity, text: { value, font, position } }.
+// The job carries { url, position, size, opacity, text: { value, font, position, sub?: { value, font } } }.
 // The logo and the text are each turned into a PNG once per job, then laid over every clip by ffmpeg.
 
 // Largest logo box per size [width, height] in px on a 1080-wide frame; the logo keeps its proportions
@@ -33,25 +33,33 @@ async function prepareLogo(watermark, dir) {
   return { file, w: info.width, h: info.height };
 }
 
-// Draws the text with the uploaded font file (TTF, OTF or WOFF) as an SVG path, then rasterises it
-async function prepareText(text, size, dir, maxWidth = TEXT_MAX_WIDTH) {
-  const font = opentype.parse(new Uint8Array(await download(text.font)).buffer);
-  let px = TEXT_PX[size] || TEXT_PX.m;
-  let p = font.getPath(text.value, 0, 0, px);
-  let bb = p.getBoundingBox();
-  if (bb.x2 - bb.x1 > maxWidth) {
-    px = px * maxWidth / (bb.x2 - bb.x1);
-    p = font.getPath(text.value, 0, 0, px);
-    bb = p.getBoundingBox();
+// Draws the text with the uploaded font file (TTF, OTF or WOFF) as SVG paths, then rasterises it.
+// An optional subtitle (text.sub) sits under the title in its own font, smaller, lined up on the same side.
+const SUB_SCALE = 0.6, SUB_GAP = 0.2;
+async function prepareText(text, size, dir, maxWidth = TEXT_MAX_WIDTH, align = 'l') {
+  const lines = [{ font: opentype.parse(new Uint8Array(await download(text.font)).buffer), value: text.value, k: 1 }];
+  if (text.sub?.value && text.sub.font) {
+    try { lines.push({ font: opentype.parse(new Uint8Array(await download(text.sub.font)).buffer), value: text.sub.value, k: SUB_SCALE }); }
+    catch (e) { console.error(`  Watermark subtitle skipped: ${e.message}`); }
   }
-  if (!(bb.x2 > bb.x1)) throw new Error('Text has no visible characters in this font');
-  const pad = 12;
-  const w = Math.ceil(bb.x2 - bb.x1) + pad * 2, h = Math.ceil(bb.y2 - bb.y1) + pad * 2;
-  const d = font.getPath(text.value, pad - bb.x1, pad - bb.y1, px).toPathData(2);
+  let px = TEXT_PX[size] || TEXT_PX.m;
+  const measure = () => lines.map(l => l.font.getPath(l.value, 0, 0, px * l.k).getBoundingBox());
+  let bbs = measure(), width = Math.max(...bbs.map(b => b.x2 - b.x1));
+  if (width > maxWidth) { px = px * maxWidth / width; bbs = measure(); width = Math.max(...bbs.map(b => b.x2 - b.x1)); }
+  if (!(bbs[0].x2 > bbs[0].x1)) throw new Error('Text has no visible characters in this font');
+  const pad = 12, gap = px * SUB_GAP;
+  let y = pad, paths = '';
+  lines.forEach((l, i) => {
+    const b = bbs[i], lw = b.x2 - b.x1;
+    if (!(lw > 0)) return;
+    const x = (align === 'r' ? pad + width - lw : pad) - b.x1;
+    paths += `<path d="${l.font.getPath(l.value, x, y - b.y1, px * l.k).toPathData(2)}"/>`;
+    y += (b.y2 - b.y1) + gap;
+  });
+  const w = Math.ceil(width) + pad * 2, h = Math.ceil(y - gap) + pad;
   // Flat white or black text, no shadow
   const black = text.color === 'black';
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">` +
-    `<path d="${d}" fill="${black ? '#000' : '#fff'}"/></svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><g fill="${black ? '#000' : '#fff'}">${paths}</g></svg>`;
   const file = path.join(dir, 'watermark-text.png');
   await sharp(Buffer.from(svg)).png().toFile(file);
   return { file, w, h };
@@ -73,7 +81,7 @@ export async function prepareWatermark(watermark, dir) {
       const tPos = watermark.text.position || 'br';
       // On the same row as the logo, the text keeps clear of it
       const room = logo && tPos !== position && tPos[0] === position[0] ? 1080 - 2 * MARGIN_X - logo.w - 48 : TEXT_MAX_WIDTH;
-      const t = await prepareText(watermark.text, watermark.text.size || watermark.size, dir, Math.min(TEXT_MAX_WIDTH, room));
+      const t = await prepareText(watermark.text, watermark.text.size || watermark.size, dir, Math.min(TEXT_MAX_WIDTH, room), tPos[1]);
       if (logo && tPos === position) {
         // Same corner as the logo: the text sits next to it, further from the edge of the frame
         layers.push({ file: t.file, ...place(tPos, logo.h + STACK_GAP) });

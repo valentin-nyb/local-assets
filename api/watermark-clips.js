@@ -188,7 +188,8 @@ export default async function handler(req, res) {
     const own = u => typeof u === 'string' && /^https:\/\/[a-z0-9]+\.public\.blob\.vercel-storage\.com\//i.test(u) && new URL(u).pathname.startsWith(`/brand/${slug}/`);
     if (!own(w.url) || !/\.gif(\?|$)/i.test(w.url)) return res.status(400).json({ error: 'Choose a GIF logo from your Brand Kit' });
     const text = w.text && own(w.text.font) && String(w.text.value || '').trim()
-      ? { value: String(w.text.value).slice(0, 60), font: w.text.font, position: /^[tb][lr]$/.test(w.text.position) ? w.text.position : 'br', size: ['s', 'm', 'l'].includes(w.text.size) ? w.text.size : 'm', color: w.text.color === 'black' ? 'black' : 'white' } : null;
+      ? { value: String(w.text.value).slice(0, 60), font: w.text.font, position: /^[tb][lr]$/.test(w.text.position) ? w.text.position : 'br', size: ['s', 'm', 'l'].includes(w.text.size) ? w.text.size : 'm', color: w.text.color === 'black' ? 'black' : 'white',
+        ...(w.text.sub && own(w.text.sub.font) && String(w.text.sub.value || '').trim() ? { sub: { value: String(w.text.sub.value).slice(0, 80), font: w.text.sub.font } } : {}) } : null;
     const wm = { url: w.url, position: /^[tb][lr]$/.test(w.position) ? w.position : 'bl', size: ['s', 'm', 'l'].includes(w.size) ? w.size : 'm', opacity: Math.min(1, Math.max(0.3, Number(w.opacity) || 0.9)), text };
     const frame = await animatedLogo(wm);
     if (!frame) return res.status(400).json({ error: 'This GIF has only one frame: use Export PNG' });

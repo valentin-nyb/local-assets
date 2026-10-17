@@ -38,6 +38,9 @@ export function cleanWatermark(input = {}) {
   const value = t && String(t.value ?? '').replace(/[\u0000-\u001f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 60);
   if ((value || source === 'artist') && typeof t.font === 'string' && BLOB_URL.test(t.font) && TEXT_FONT_FILE.test(new URL(t.font).pathname)) {
     w.text = { source, value: value || '', font: t.font, position: TEXT_POSITIONS.includes(t.position) ? t.position : 'br', color: t.color === 'black' ? 'black' : 'white', ...(['s', 'm', 'l'].includes(t.size) ? { size: t.size } : {}) };
+    // A second, smaller line under the title (e.g. the genres), in a font of its own
+    const sv = t.sub && String(t.sub.value ?? '').replace(/[\u0000-\u001f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 80);
+    if (sv && typeof t.sub.font === 'string' && BLOB_URL.test(t.sub.font) && TEXT_FONT_FILE.test(new URL(t.sub.font).pathname)) w.text.sub = { value: sv, font: t.sub.font };
   }
   return w;
 }
@@ -73,6 +76,7 @@ export async function resolveWatermark(redis, slug, artist) {
   if (!url) url = logos.find(l => l.owner === 'venue')?.url || null;
   // Only a font still in this account's brand kit
   let text = w.text && fonts.has(w.text.font) ? w.text : null;
+  if (text?.sub && !fonts.has(text.sub.font)) text = { ...text, sub: undefined };
   // "Artist name": each session's own artist
   if (text?.source === 'artist') text = artist ? { ...text, value: String(artist).toUpperCase().trim() } : null;
   if (text && !text.value) text = null;
