@@ -644,6 +644,7 @@
             if (_brandPhotos && Date.now() - _brandPhotosAt < 300000) return paint();
             brandForView().then(function(d) {
                 _brandPhotos = (d && d.ownerPhotos) || {};
+                window._brandInfo = d || {};
                 // An artist account's own Brand Kit photo is that artist's photo
                 if (d && d.orgType === 'artist' && _brandPhotos.venue) {
                     var own = 'artist-' + brandSlug(d.orgName || getVenueName());
@@ -1294,7 +1295,7 @@
                             html += '</button>';
                         }
                         if (isAudioAsset) {
-                            html += '<button id="sc-dist-' + uid + '" class="sc-dist-btn hidden" style="display:none;align-items:center;justify-content:center;gap:6px;height:34px;padding:0 16px;border-radius:999px;border:1px solid #FF5500;background:transparent;color:#FF5500;font:500 13px/1 \'Helvetica Neue\',Helvetica,Arial,sans-serif;cursor:pointer;white-space:nowrap;transition:background .25s ease,color .25s ease;" onclick="distributeSoundCloud(\'' + pid + '\', \'' + dlFile + '\', \'' + safeName + '\', \'' + uid + '\')" onmouseover="this.style.background=\'#FF5500\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'#FF5500\'">';
+                            html += '<button id="sc-dist-' + uid + '" class="sc-dist-btn hidden" style="display:none;align-items:center;justify-content:center;gap:6px;height:34px;padding:0 16px;border-radius:999px;border:1px solid #FF5500;background:transparent;color:#FF5500;font:500 13px/1 \'Helvetica Neue\',Helvetica,Arial,sans-serif;cursor:pointer;white-space:nowrap;transition:background .25s ease,color .25s ease;" onclick="distributeSoundCloud(\'' + pid + '\', \'' + dlFile + '\', \'' + safeName + '\', \'' + uid + '\', \'' + jsq(sessionDate) + '\')" onmouseover="this.style.background=\'#FF5500\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'#FF5500\'">';
                             html += 'SoundCloud';
                             html += '</button>';
                         }
@@ -2602,10 +2603,81 @@
             if (!(await laConfirm({ title: 'Connect ' + name + '?', message: 'Connect your ' + name + ' account once, then post any set to it from here.', confirmText: 'Connect ' + name }))) return;
             if (name === 'YouTube') connectYouTube(); else connectSoundCloud();
         }
-        async function distributeSoundCloud(playbackId, dlFile, title, uid) {
+        // ── Publish details: everything YouTube and SoundCloud use to find and place a set, filled in from the session ──
+        function pdLongDate(d) { var t = new Date(d + 'T12:00:00Z'); return isNaN(t) ? d : t.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }); }
+        function publishDefaults(platform, artist, date) {
+            var meta = sessionMeta(artist, date), info = window._brandInfo || {};
+            var venue = meta.venue || getVenueName(), label = meta.label || '', shown = meta.shownDate || date;
+            var g = info.ownerGenres || {}, l = info.ownerLinks || {};
+            var aKey = 'artist-' + brandSlug(artist), vKey = meta.venue ? 'venue-' + brandSlug(meta.venue) : 'venue';
+            var genres = g[aKey] || (info.orgType === 'artist' ? g.venue : '') || '';
+            var genreList = genres.split(',').map(function(x) { return x.trim(); }).filter(Boolean);
+            var links = [];
+            [l[aKey], l[vKey], info.orgType === 'artist' ? l.venue : ''].forEach(function(t) { String(t || '').split('\n').forEach(function(u) { u = u.trim(); if (u && links.indexOf(u) < 0) links.push(u); }); });
+            var title = artist + (meta.title ? ' · ' + meta.title : '') + ' @ ' + venue + ' · ' + pdLongDate(shown);
+            var tagWord = function(t) { return '#' + String(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9]+/g, '').toLowerCase(); };
+            var desc = [artist + ' live at ' + venue + ', ' + pdLongDate(shown) + '.']
+                .concat(meta.title ? [meta.title] : [])
+                .concat(genres ? ['Genres: ' + genreList.join(', ')] : [])
+                .concat(label ? ['Record label: ' + label] : [])
+                .concat(links.length ? ['', 'Follow:'].concat(links) : [])
+                .concat(['', ['#djset'].concat(genreList.slice(0, 1).map(tagWord), [tagWord(venue)]).filter(function(h) { return h.length > 1; }).join(' ')]).join('\n');
+            var tags = [artist, venue].concat(label ? [label] : [], genreList, ['DJ set', 'live DJ set', 'DJ mix', venue + ' live', artist + ' live']);
+            var thumbs = (sessionFilesFor(artist, date).THUMB || []).map(function(t) { return thumbUrl(t); }).filter(Boolean);
+            return { title: title.slice(0, 100), description: desc, tags: tags, genre: genreList[0] || '', label: label, recordingDate: shown, artwork: thumbs[0] || '', hasGenres: !!genres };
+        }
+        function openPublish(platform, artist, date) {
+            return new Promise(function(resolve) {
+                var yt = platform === 'youtube', d = publishDefaults(platform, artist, date), name = yt ? 'YouTube' : 'SoundCloud';
+                var m = document.createElement('div');
+                m.className = 'se-backdrop';
+                var vis = yt ? [['public', 'Public'], ['unlisted', 'Unlisted'], ['schedule', 'Schedule']] : [['public', 'Public'], ['private', 'Private']];
+                m.innerHTML = '<form class="se-panel pd-panel" role="dialog" aria-modal="true">' +
+                    '<div class="se-head"><p class="se-title">Publish to ' + name + '</p><button type="button" class="se-x" aria-label="Close"><iconify-icon icon="solar:close-circle-linear"></iconify-icon></button></div>' +
+                    '<p class="se-sub">' + escHtml(artist) + ' · ' + escHtml(pdLongDate(date)) + '</p>' +
+                    '<label>Title<input name="title" maxlength="100" value="' + escHtml(d.title) + '"><small><span data-count>' + d.title.length + '</span> / 100 · artist first, then the session, venue and date</small></label>' +
+                    '<label>Description<textarea name="description" rows="8">' + escHtml(d.description) + '</textarea><small>The first two lines show in search: who, where and when.</small></label>' +
+                    '<label>Tags<input name="tags" value="' + escHtml(d.tags.join(', ')) + '"><small>Comma separated. Artist, venue, label and genres help the set be found.</small></label>' +
+                    (yt ? '' : '<label>Genre<input name="genre" maxlength="40" value="' + escHtml(d.genre) + '" placeholder="e.g. Disco"><small>One main genre: where the track is listed on SoundCloud.</small></label>') +
+                    (d.hasGenres ? '' : '<p class="pd-hint">Add the artist\'s genres in Brand Kit (Edit on the artist) to fill the tags and genre for every set.</p>') +
+                    '<div class="pd-row"><span>Visibility</span><div class="pd-seg">' + vis.map(function(v, i) { return '<button type="button" data-vis="' + v[0] + '" aria-pressed="' + (i === 0) + '">' + v[1] + '</button>'; }).join('') + '</div></div>' +
+                    (yt ? '<label class="pd-when" hidden>Publish on<input name="when" type="datetime-local"><small>It stays private until then, and goes public by itself.</small></label>' : '') +
+                    '<p class="pd-note">' + (yt ? 'Posted in Music, with the recording date' + (d.artwork ? ' and your thumbnail as the cover' : '') + '.' : 'With the record label and release date' + (d.artwork ? ', and your thumbnail as the artwork' : '') + '.') + '</p>' +
+                    '<div class="se-actions"><button type="button" class="se-btn ghost" data-cancel>Cancel</button><button type="submit" class="se-btn primary">Publish</button></div>' +
+                    '</form>';
+                document.body.appendChild(m);
+                var form = m.querySelector('form'), vis0 = 'public';
+                var close = function(v) { m.remove(); resolve(v); };
+                m.addEventListener('click', function(e) { if (e.target === m) close(null); });
+                m.querySelector('.se-x').onclick = m.querySelector('[data-cancel]').onclick = function() { close(null); };
+                form.title.addEventListener('input', function() { form.querySelector('[data-count]').textContent = form.title.value.length; });
+                form.querySelectorAll('[data-vis]').forEach(function(b) {
+                    b.addEventListener('click', function() {
+                        vis0 = b.dataset.vis;
+                        form.querySelectorAll('[data-vis]').forEach(function(x) { x.setAttribute('aria-pressed', x === b); });
+                        var w = form.querySelector('.pd-when'); if (w) { w.hidden = vis0 !== 'schedule'; if (!w.hidden && !form.when.value) { var t = new Date(Date.now() + 86400e3); t.setMinutes(0, 0, 0); form.when.value = new Date(t - t.getTimezoneOffset() * 60e3).toISOString().slice(0, 16); } }
+                    });
+                });
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    var publishAt = vis0 === 'schedule' && form.when.value ? new Date(form.when.value).toISOString() : null;
+                    if (vis0 === 'schedule' && (!publishAt || new Date(publishAt) < new Date(Date.now() + 5 * 60e3))) { form.when.focus(); return; }
+                    close({
+                        title: form.title.value.trim() || d.title, description: form.description.value,
+                        tags: form.tags.value.split(',').map(function(t) { return t.trim(); }).filter(Boolean),
+                        genre: form.genre ? form.genre.value.trim() : d.genre, label: d.label, recordingDate: d.recordingDate,
+                        privacy: vis0 === 'schedule' ? 'private' : vis0, publishAt: publishAt, artwork: d.artwork || undefined
+                    });
+                });
+                form.title.focus();
+            });
+        }
+        async function distributeSoundCloud(playbackId, dlFile, title, uid, sessionDate) {
             var btn = document.getElementById('sc-dist-' + uid);
             if (!btn) return;
             if (btn.classList.contains('is-off')) { offerConnect('SoundCloud'); return; }
+            var meta = await openPublish('soundcloud', title, sessionDate);
+            if (!meta) return;
 
             btn.disabled = true;
             btn.onmouseover = null;
@@ -2633,7 +2705,7 @@
                 var res = await laFetch('/api/soundcloud-upload', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ playbackId, dlFile, title }),
+                    body: JSON.stringify({ playbackId, dlFile, title, meta }),
                 });
                 var data = await res.json();
                 clearInterval(timer);
@@ -2697,6 +2769,8 @@
             var btn = document.getElementById('yt-dist-' + uid);
             if (!btn) return;
             if (btn.classList.contains('is-off')) { offerConnect('YouTube'); return; }
+            var meta = await openPublish('youtube', title, sessionDate);
+            if (!meta) return;
 
             btn.disabled = true;
             btn.onmouseover = null;
@@ -2725,7 +2799,7 @@
                     var res = await laFetch('/api/youtube-upload', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ playbackId: playbackId, dlFile: dlFile, title: title, uploadId: uploadId }),
+                        body: JSON.stringify({ playbackId: playbackId, dlFile: dlFile, title: title, uploadId: uploadId, meta: uploadId ? undefined : meta }),
                     });
                     data = await res.json().catch(function() { return {}; });
                     if (!res.ok) {
@@ -3417,6 +3491,20 @@
         .se-btn.primary { background:var(--la-accent); color:var(--la-accent-ink); }
         .se-btn.ghost { background:none; color:var(--la-text); border-color:var(--la-line); }
         .se-btn:disabled { opacity:.6; }
+        /* Publish details */
+        .pd-panel { width:560px; max-height:calc(100vh - 32px); overflow:auto; }
+        .pd-panel textarea { min-height:150px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:10px 12px; font:400 13px/1.5 'Helvetica Neue', Helvetica, Arial, sans-serif; outline:none; resize:vertical; }
+        .pd-panel textarea:focus { border-color:var(--la-accent); }
+        .pd-panel input[type=datetime-local] { color-scheme:dark; }
+        html:not(.dark) .pd-panel input[type=datetime-local] { color-scheme:light; }
+        .pd-row { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; font-size:12px; font-weight:500; color:var(--la-text-2); }
+        .pd-seg { display:inline-flex; gap:2px; padding:3px; border-radius:999px; background:var(--la-chip); }
+        .pd-seg button { height:30px; padding:0 14px; border-radius:999px; border:none; background:none; color:var(--la-sub); font:500 12px 'Helvetica Neue', Helvetica, Arial, sans-serif; cursor:pointer; }
+        .pd-seg button[aria-pressed="true"] { background:var(--la-raised); color:var(--la-text); box-shadow:0 1px 3px rgba(0,0,0,.25); }
+        .pd-hint { font-size:12px; line-height:1.5; color:var(--la-warn, #f59e0b); }
+        .pd-note { font-size:12px; color:var(--la-dim); }
+        .pd-panel .pd-when[hidden] { display:none; }
+        .pd-panel .se-actions .se-btn { white-space:nowrap; }
         /* Small phones: Cancel and Save share the row, Delete session sits under them */
         @media (max-width:400px) { .se-actions { flex-wrap:wrap; } .se-actions .se-btn { flex:1 1 0; } .se-del { order:3; flex-basis:100%; justify-content:center; margin-right:0; } }
         .se-del { margin-right:auto; display:inline-flex; align-items:center; gap:6px; height:36px; padding:0 4px; background:none; border:none; color:var(--la-bad); font-size:13px; font-weight:500; cursor:pointer; }

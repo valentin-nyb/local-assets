@@ -65,12 +65,13 @@ export default async function handler(req, res) {
         cursor = page.hasMore ? page.cursor : undefined;
       } while (cursor);
       files.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
-      const [orgType, orgName, ownerNames, pinned, watermark, labelArtists, fileLabels, hiddenOwners] = await withRedis(r => Promise.all([
+      const [orgType, orgName, ownerNames, pinned, watermark, labelArtists, fileLabels, hiddenOwners, ownerGenres, ownerLinks] = await withRedis(r => Promise.all([
         r.get(`brand_org_type:${slug}`), r.get(`brand_org_name:${slug}`),
         r.hGetAll(`brand_owner_names:${slug}`), r.hGetAll(`brand_owner_photo:${slug}`),
         readWatermark(r, slug), r.hGetAll(`brand_label_artist:${slug}`), r.hGetAll(`brand_file_label:${slug}`),
         r.sMembers(`brand_hidden_owners:${slug}`),
-      ])).catch(() => [null, null, {}, {}, cleanWatermark(), {}, {}, []]);
+        r.hGetAll(`brand_owner_genres:${slug}`), r.hGetAll(`brand_owner_links:${slug}`),
+      ])).catch(() => [null, null, {}, {}, cleanWatermark(), {}, {}, [], {}, {}]);
       // "Other" files carry what they are, as typed when uploading ("Press kit", "Tech rider")
       for (const f of files) {
         const key = decodeURIComponent(new URL(f.url).pathname.slice(1));
@@ -85,7 +86,7 @@ export default async function handler(req, res) {
       for (const [owner, url] of Object.entries(pinned || {})) {
         if (files.some(f => f.url === url)) { ownerPhotos[owner] = url; ownerPhotosPicked.push(owner); }
       }
-      return res.status(200).json({ files, orgType: ORG_TYPES.includes(orgType) ? orgType : 'venue', orgName: orgName || '', ownerNames: ownerNames || {}, ownerPhotos, ownerPhotosPicked, watermark, labelArtists: labelArtists || {}, hiddenOwners: hiddenOwners || [] });
+      return res.status(200).json({ files, orgType: ORG_TYPES.includes(orgType) ? orgType : 'venue', orgName: orgName || '', ownerNames: ownerNames || {}, ownerPhotos, ownerPhotosPicked, ownerGenres: ownerGenres || {}, ownerLinks: ownerLinks || {}, watermark, labelArtists: labelArtists || {}, hiddenOwners: hiddenOwners || [] });
     }
 
     if (req.method !== 'POST') return res.status(405).end();
@@ -105,6 +106,19 @@ export default async function handler(req, res) {
       const watermark = cleanWatermark(body.watermark);
       await withRedis(r => r.set(watermarkKey(slug), JSON.stringify(watermark)));
       return res.status(200).json({ watermark });
+    }
+
+    // Genres and links of an artist (or venue / label): used for YouTube and SoundCloud publish details
+    if (body.action === 'setOwnerDetails') {
+      const owner = String(body.owner || '');
+      if (!(owner === 'venue' || OWNER.test(owner))) return res.status(400).json({ error: 'Invalid brand kit' });
+      const genres = String(body.genres ?? '').replace(/[\u0000-\u001f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 120);
+      const links = String(body.links ?? '').split(/[\s,]+/).map(l => l.trim()).filter(l => /^https?:\/\/[^\s<>"]{3,200}$/i.test(l)).slice(0, 6).join('\n');
+      await withRedis(r => Promise.all([
+        genres ? r.hSet(`brand_owner_genres:${slug}`, owner, genres) : r.hDel(`brand_owner_genres:${slug}`, owner),
+        links ? r.hSet(`brand_owner_links:${slug}`, owner, links) : r.hDel(`brand_owner_links:${slug}`, owner),
+      ]));
+      return res.status(200).json({ owner, genres, links });
     }
 
     if (body.action === 'setOwnerName') {

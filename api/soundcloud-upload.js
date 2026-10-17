@@ -6,10 +6,35 @@ import { refreshScToken } from './_soundcloud.js';
 // Large audio files need the full 300s window
 export const config = { maxDuration: 300 };
 
-async function uploadToSoundCloud(accessToken, audioBuffer, audioPath, title) {
+// Publish details from the dashboard, cleaned to SoundCloud's fields: description, one genre, tags
+// (multi-word tags quoted), record label, release date, visibility and artwork
+function soundcloudDetails(meta, fallbackTitle) {
+  const m = meta && typeof meta === 'object' ? meta : {};
+  const clean = (v, max) => String(v ?? '').replace(/[<>]/g, '').replace(/[\u0000-\u0008\u000b-\u001f]/g, '').trim().slice(0, max);
+  const tags = [...new Set((Array.isArray(m.tags) ? m.tags : []).map(t => clean(t, 40).replace(/"/g, '')).filter(Boolean))].slice(0, 30);
+  const date = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(m.recordingDate || ''));
+  return {
+    title: clean(m.title || fallbackTitle || 'Untitled Session', 100) || 'Untitled Session',
+    description: clean(m.description, 4000),
+    genre: clean(m.genre, 40),
+    tagList: tags.map(t => t.includes(' ') ? `"${t}"` : t).join(' '),
+    label: clean(m.label, 60),
+    date,
+    sharing: m.privacy === 'private' ? 'private' : 'public',
+    artwork: typeof m.artwork === 'string' && /^https:\/\/([a-z0-9]+\.public\.blob\.vercel-storage\.com|image\.mux\.com)\//i.test(m.artwork) ? m.artwork : null,
+  };
+}
+
+async function uploadToSoundCloud(accessToken, audioBuffer, audioPath, d, artwork) {
   const formData = new FormData();
-  formData.append('track[title]',      title || 'Untitled Session');
-  formData.append('track[sharing]',    'public');
+  formData.append('track[title]',      d.title);
+  formData.append('track[sharing]',    d.sharing);
+  if (d.description) formData.append('track[description]', d.description);
+  if (d.genre) formData.append('track[genre]', d.genre);
+  if (d.tagList) formData.append('track[tag_list]', d.tagList);
+  if (d.label) formData.append('track[label_name]', d.label);
+  if (d.date) { formData.append('track[release_year]', d.date[1]); formData.append('track[release_month]', String(Number(d.date[2]))); formData.append('track[release_day]', String(Number(d.date[3]))); }
+  if (artwork) formData.append('track[artwork_data]', new Blob([artwork.buf], { type: artwork.type }), artwork.name);
   formData.append('track[asset_data]', new Blob([audioBuffer], { type: 'audio/mp4' }), audioPath);
 
   const scRes = await fetch('https://api.soundcloud.com/tracks', {
@@ -50,7 +75,8 @@ export default async function handler(req, res) {
 
   let body = req.body;
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch(e) {} }
-  const { playbackId, dlFile, title } = body || {};
+  const { playbackId, dlFile, title, meta } = body || {};
+  const details = soundcloudDetails(meta, title);
   if (!playbackId) return res.status(400).json({ error: 'playbackId required' });
 
   const redis = createClient({ url: process.env.REDIS_URL });
@@ -77,9 +103,19 @@ export default async function handler(req, res) {
     }
 
     const audioBuffer = Buffer.from(await audioRes.arrayBuffer());
-    console.log(`[soundcloud-upload] uploading "${title}" — ${(audioBuffer.length / 1048576).toFixed(1)} MB`);
+    console.log(`[soundcloud-upload] uploading "${details.title}" (${details.sharing}, ${details.genre || 'no genre'}) — ${(audioBuffer.length / 1048576).toFixed(1)} MB`);
 
-    let { scRes, scData, rawText } = await uploadToSoundCloud(accessToken, audioBuffer, audioPath, title);
+    // The session's thumbnail as the track's artwork (from Brand Kit / Cloud Storage only)
+    let artwork = null;
+    if (details.artwork) {
+      try {
+        const ar = await fetch(details.artwork, { signal: AbortSignal.timeout(20000) });
+        const type = ar.headers.get('content-type') || '';
+        const buf = ar.ok && /^image\/(jpeg|png)/.test(type) ? Buffer.from(await ar.arrayBuffer()) : null;
+        if (buf && buf.length < 8 * 1024 * 1024) artwork = { buf, type: type.split(';')[0], name: type.includes('png') ? 'artwork.png' : 'artwork.jpg' };
+      } catch (e) { console.error('[soundcloud-upload] artwork skipped:', e.message); }
+    }
+    let { scRes, scData, rawText } = await uploadToSoundCloud(accessToken, audioBuffer, audioPath, details, artwork);
 
     // On 401, try once with a refreshed token
     if (scRes.status === 401 && refreshToken) {
@@ -87,7 +123,7 @@ export default async function handler(req, res) {
       const newToken = await refreshScToken(venueSlug, refreshToken);
       if (newToken) {
         console.log('[soundcloud-upload] token refreshed, retrying upload');
-        ({ scRes, scData, rawText } = await uploadToSoundCloud(newToken, audioBuffer, audioPath, title));
+        ({ scRes, scData, rawText } = await uploadToSoundCloud(newToken, audioBuffer, audioPath, details, artwork));
       }
     }
 

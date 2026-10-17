@@ -455,7 +455,7 @@
         ];
         var IMG_EXT = /\.(png|jpe?g|svg|webp|gif)$/i;
         var FONT_EXT = /\.(otf|ttf|woff2?)$/i;
-        var _files = [], _owners = [], _uploading = false, _orgType = 'venue', _orgName = '', _ownerPhotos = {}, _photoPicked = {}, _labelArtists = {};
+        var _files = [], _owners = [], _uploading = false, _orgType = 'venue', _orgName = '', _ownerPhotos = {}, _photoPicked = {}, _ownerGenres = {}, _ownerLinks = {}, _labelArtists = {};
         var ORG_LABELS = { venue: 'Venue', artist: 'Artist', label: 'Record label', management: 'Management' };
 
         function slugify(name) {
@@ -1024,6 +1024,7 @@
                 _orgName = res[0].orgName || '';
                 _ownerPhotos = res[0].ownerPhotos || {};
                 _photoPicked = {}; (res[0].ownerPhotosPicked || []).forEach(function(k) { _photoPicked[k] = true; });
+                _ownerGenres = res[0].ownerGenres || {}; _ownerLinks = res[0].ownerLinks || {};
                 _labelArtists = res[0].labelArtists || {};
                 var hidden = res[0].hiddenOwners || [];
                 _wm = res[0].watermark || { enabled: true, logo: 'auto', position: 'bl', size: 'm', opacity: 0.9 };
@@ -1528,6 +1529,8 @@
                 '<div class="bk-org-options">' + Object.keys(ORG_LABELS).map(function(k) {
                     return '<button type="button" class="bk-org-opt' + (k === _orgType ? ' on' : '') + '" data-type="' + k + '"><b>' + ORG_LABELS[k] + '</b><span>' + DESC[k] + '</span></button>';
                 }).join('') + '</div>' +
+                '<label>Genres<input name="ownerGenres" maxlength="120" placeholder="e.g. Disco, Jazz-funk, Soulful House" value="' + esc(_ownerGenres.venue || '') + '"><small>The music you are known for: used for the tags and genre when a set is posted to YouTube and SoundCloud.</small></label>' +
+                '<label>Links<textarea name="ownerLinks" rows="3" placeholder="https://instagram.com/…&#10;https://yourwebsite.com" style="min-height:76px;padding:10px 12px;border-radius:10px;border:1px solid var(--la-line);background:var(--la-input);color:var(--la-text);font:inherit;resize:vertical">' + esc(_ownerLinks.venue || '') + '</textarea><small>One per line. Added to the description of every set posted.</small></label>' +
                 '<p id="bk-org-error" class="cam-form-error"></p>' +
                 '<div class="cam-form-actions"><button type="button" class="cam-btn ghost" onclick="closeCamDialog()">Cancel</button><button type="submit" class="cam-btn primary">Save</button></div>' +
                 '</form>');
@@ -1546,6 +1549,10 @@
                     var d = await r.json();
                     if (!r.ok) throw new Error(d.error || r.status);
                     _orgType = d.orgType; _orgName = d.orgName || '';
+                    var r2 = await laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setOwnerDetails', owner: 'venue', genres: form.ownerGenres.value, links: form.ownerLinks.value }) });
+                    var d2 = await r2.json(); if (!r2.ok) throw new Error(d2.error || r2.status);
+                    if (d2.genres) _ownerGenres.venue = d2.genres; else delete _ownerGenres.venue;
+                    if (d2.links) _ownerLinks.venue = d2.links; else delete _ownerLinks.venue;
                     _owners[0].kind = ORG_LABELS[_orgType] + ' brand kit';
                     _owners[0].group = ORG_LABELS[_orgType];
                     _owners[0].name = _orgName || venueName();
@@ -1565,6 +1572,8 @@
             openCamDialog(isVenue ? 'Edit venue' : isLabel ? 'Edit record label' : 'Edit artist',
                 '<form id="bk-owner-form" class="cam-form">' +
                 '<label>Name<input name="ownerName" maxlength="60" required value="' + esc(o.name) + '"><small>Shown on the brand kit, exactly as typed.</small></label>' +
+                (isVenue || isLabel ? '' : '<label>Genres<input name="ownerGenres" maxlength="120" placeholder="e.g. Disco, Jazz-funk, Soulful House" value="' + esc(_ownerGenres[key] || '') + '"><small>Used for the tags and genre when a set is posted to YouTube and SoundCloud.</small></label>') +
+                '<label>Links<textarea name="ownerLinks" rows="3" placeholder="https://instagram.com/…&#10;https://soundcloud.com/…" style="min-height:76px;padding:10px 12px;border-radius:10px;border:1px solid var(--la-line);background:var(--la-input);color:var(--la-text);font:inherit;resize:vertical">' + esc(_ownerLinks[key] || '') + '</textarea><small>Instagram, SoundCloud, website: one per line. Added to the description of every set posted.</small></label>' +
                 '<p id="bk-owner-error" class="cam-form-error"></p>' +
                 '<div class="cam-form-actions">' +
                     '<button type="button" class="cam-btn ghost bk-owner-del" style="margin-right:auto">Delete ' + kindName + '</button>' +
@@ -1583,6 +1592,10 @@
                     var d = await r.json();
                     if (!r.ok) throw new Error(d.error || r.status);
                     o.name = d.name;
+                    var r2 = await laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setOwnerDetails', owner: key, genres: form.ownerGenres ? form.ownerGenres.value : '', links: form.ownerLinks.value }) });
+                    var d2 = await r2.json(); if (!r2.ok) throw new Error(d2.error || r2.status);
+                    if (d2.genres) _ownerGenres[key] = d2.genres; else delete _ownerGenres[key];
+                    if (d2.links) _ownerLinks[key] = d2.links; else delete _ownerLinks[key];
                     closeCamDialog(); render(); renderWatermark();
                 } catch (er) {
                     document.getElementById('bk-owner-error').textContent = 'Could not save: ' + er.message;

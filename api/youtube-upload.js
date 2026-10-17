@@ -37,7 +37,34 @@ async function refreshYtToken(venueSlug, stored) {
   return updated.access_token;
 }
 
-async function initiateResumableUpload(accessToken, title, contentLength) {
+// Publish details from the dashboard (title, description, tags, visibility, schedule), cleaned to YouTube's limits.
+// Music category, recording date, and a scheduled release is private until its publish time.
+function youtubeDetails(meta, fallbackTitle) {
+  const m = meta && typeof meta === 'object' ? meta : {};
+  const clean = (v, max) => String(v ?? '').replace(/[<>]/g, '').replace(/[\u0000-\u0008\u000b-\u001f]/g, '').trim().slice(0, max);
+  const title = clean(m.title || fallbackTitle || 'Untitled Session', 100) || 'Untitled Session';
+  const description = clean(m.description, 5000);
+  // Tags: 500 characters in total, as YouTube counts them (a tag with a space counts its quotes)
+  const tags = []; let used = 0;
+  for (const t of (Array.isArray(m.tags) ? m.tags : [])) {
+    const tag = clean(t, 60).replace(/,/g, ' ');
+    if (!tag || tags.some(x => x.toLowerCase() === tag.toLowerCase())) continue;
+    const cost = tag.length + (tag.includes(' ') ? 2 : 0) + (tags.length ? 1 : 0);
+    if (used + cost > 500) break;
+    tags.push(tag); used += cost;
+  }
+  const at = m.publishAt ? new Date(m.publishAt) : null;
+  const scheduled = at && !isNaN(at) && at.getTime() > Date.now() + 60_000;
+  const privacy = scheduled ? 'private' : ['public', 'unlisted', 'private'].includes(m.privacy) ? m.privacy : 'unlisted';
+  const rec = /^\d{4}-\d{2}-\d{2}$/.test(String(m.recordingDate || '')) ? m.recordingDate + 'T00:00:00Z' : null;
+  return {
+    snippet: { title, description, categoryId: '10', ...(tags.length ? { tags } : {}) },
+    status: { privacyStatus: privacy, selfDeclaredMadeForKids: false, embeddable: true, ...(scheduled ? { publishAt: at.toISOString() } : {}) },
+    ...(rec ? { recordingDetails: { recordingDate: rec } } : {}),
+  };
+}
+
+async function initiateResumableUpload(accessToken, details, contentLength) {
   const initHeaders = {
     Authorization:  `Bearer ${accessToken}`,
     'Content-Type': 'application/json',
@@ -46,14 +73,11 @@ async function initiateResumableUpload(accessToken, title, contentLength) {
   if (contentLength) initHeaders['X-Upload-Content-Length'] = String(contentLength);
 
   const res = await fetch(
-    'https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status',
+    'https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status' + (details.recordingDetails ? ',recordingDetails' : ''),
     {
       method:  'POST',
       headers: initHeaders,
-      body: JSON.stringify({
-        snippet: { title: title || 'Untitled Session', description: '' },
-        status:  { privacyStatus: 'unlisted' },
-      }),
+      body: JSON.stringify(details),
     }
   );
 
@@ -128,7 +152,7 @@ export default async function handler(req, res) {
 
   let body = req.body;
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch(e) {} }
-  const { playbackId, dlFile, title, uploadId, action, videoId, image } = body || {};
+  const { playbackId, dlFile, title, uploadId, action, videoId, image, meta } = body || {};
   const isThumbnail = action === 'thumbnail';
   if (isThumbnail) {
     if (!videoId || !/^[A-Za-z0-9_-]{11}$/.test(videoId)) return res.status(400).json({ error: 'valid videoId required' });
@@ -219,13 +243,14 @@ export default async function handler(req, res) {
       if (!headRes.ok || !total) return res.status(502).json({ error: `Could not read the video from Cloud Storage (${headRes.status})` });
       console.log(`[youtube-upload] content-length: ${(total / 1e6).toFixed(0)} MB`);
 
-      let initResult = await initiateResumableUpload(stored.access_token, title, total);
+      const details = youtubeDetails(meta, title);
+      let initResult = await initiateResumableUpload(stored.access_token, details, total);
       if (!initResult.ok && initResult.status === 401) {
         console.log('[youtube-upload] 401 on initiation — refreshing token');
         const newToken = await refreshYtToken(venueSlug, stored);
         if (newToken) {
           stored.access_token = newToken;
-          initResult = await initiateResumableUpload(newToken, title, total);
+          initResult = await initiateResumableUpload(newToken, details, total);
         }
       }
       if (!initResult.ok) {
@@ -235,7 +260,7 @@ export default async function handler(req, res) {
         });
       }
       state = { id: crypto.randomBytes(12).toString('hex'), venueSlug, uploadUrl: initResult.uploadUrl, source: muxVideoUrl, total, offset: 0 };
-      console.log(`[youtube-upload] resumable upload initiated for "${title}" (${state.id})`);
+      console.log(`[youtube-upload] resumable upload initiated for "${details.snippet.title}" (${state.id}) ${details.status.privacyStatus}${details.status.publishAt ? ' at ' + details.status.publishAt : ''}, ${details.snippet.tags?.length || 0} tags`);
     }
 
     // Send 64 MB chunks until finished or the time budget runs out.
