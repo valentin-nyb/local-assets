@@ -87,7 +87,8 @@ export function artistMasters(assets, artist) {
   return assets.filter(a => masterOf(a) && Number(a.duration) > 10).sort((a, b) => Number(a.created_at) - Number(b.created_at));
 }
 // The recording a clip belongs to: the one it was cut from (meta.external_id), else that of the clip it was
-// copied from (a watermarked copy), else the newest recording uploaded before it (clips from before sessions were recorded)
+// copied from (a watermarked copy). A clip that names its recording never moves to another session: if that
+// recording was deleted, the clip belongs to none. Only old clips that name nothing go to the newest recording before them.
 export function clipOwner(a, byId, masters, depth = 0) {
   const ext = a?.meta?.external_id;
   if (ext && masters.some(m => m.id === ext)) return ext;
@@ -96,6 +97,7 @@ export function clipOwner(a, byId, masters, depth = 0) {
     if (masters.some(m => m.id === src.id)) return src.id;
     if (socialInfo(src)) return clipOwner(src, byId, masters, depth + 1);
   }
+  if (ext || a?.source_asset_id) return null;
   let owner = null;
   for (const m of masters) if (Number(m.created_at) <= Number(a.created_at)) owner = m.id;
   return owner;
@@ -113,7 +115,7 @@ export function sessionClips(assets, artist, date) {
     .sort((a, b) => Number(b.created_at) - Number(a.created_at));
   // The session's own date (set at upload) first, then the upload day
   const dateOf = a => { try { const o = JSON.parse(a.passthrough); if (o?.date) return String(o.date); } catch {} return null; };
-  const master = masters.find(a => dateOf(a) === date) || masters.find(a => !dateOf(a) && day(a) === date) || masters.find(a => day(a) === date) || masters[0] || null;
+  const master = masters.find(a => dateOf(a) === date) || masters.find(a => !dateOf(a) && day(a) === date) || masters.find(a => day(a) === date) || null;
   const shown = new Map(), hidden = new Map();
   if (!master) return { master, shown, hidden };
   const byId = new Map(assets.map(a => [a.id, a]));

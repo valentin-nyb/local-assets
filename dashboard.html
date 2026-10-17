@@ -838,6 +838,12 @@
             (e.SOCIAL || []).forEach(function(c) { files.push({ id: c.id }); });
             (e.THUMB || []).forEach(function(t) { files.push({ id: t.id, url: (t.meta && t.meta.thumbnail_url) || '' }); });
             (_sessionAll[String(artist).toUpperCase().trim() + '|' + date] || []).forEach(function(a) { files.push({ id: a.id }); });
+            // Every clip cut from these recordings, and the watermarked copies of those clips, goes too
+            var gone = {}; files.forEach(function(f) { gone[f.id] = true; });
+            for (var pass = 0; pass < 3; pass++) (window._muxAll || []).forEach(function(a) {
+                if (gone[a.id]) return;
+                if ((a.meta && gone[a.meta.external_id]) || gone[a.source_asset_id]) { gone[a.id] = true; files.push({ id: a.id }); }
+            });
             files = files.filter(function(f, i) { return f.id && files.findIndex(function(x) { return x.id === f.id; }) === i; });
             var parts = [];
             if (e.MASTER) parts.push('the 4K long form');
@@ -1109,7 +1115,9 @@
             const fileCount = muxAssets.reduce((n, a) => n + (a.static_renditions?.files || []).filter(f => Number(f.filesize) > 0).length, 0);
             const filesEl = document.getElementById('storage-files');
             if (filesEl) filesEl.textContent = fileCount + ' downloadable file' + (fileCount !== 1 ? 's' : '');
+            window._muxAll = muxAssets;
             renderVideoHealth(muxAssets);
+            showOrphanClips();
             setLatestSession(muxAssets);
 
             // Build a lookup: passthrough (uppercase) → array of assets
@@ -1358,6 +1366,7 @@
                 // from (a watermarked copy), else the newest recording uploaded before it
                 var assetById = {};
                 muxAssets.forEach(function (a) { assetById[a.id] = a; });
+                var ORPHAN = { id: '__orphan' };
                 function cutFrom(c, depth) {
                     depth = depth || 0;
                     var ext = c.meta && c.meta.external_id;
@@ -1367,6 +1376,8 @@
                         for (var mj = 0; mj < masters.length; mj++) if (masters[mj].id === src.id) return masters[mj];
                         if (/ \/\/ SOCIAL/i.test(String(src.passthrough || ''))) return cutFrom(src, depth + 1);
                     }
+                    // It names a recording that no longer exists (deleted session): it belongs to no session
+                    if (ext || c.source_asset_id) return ORPHAN;
                     var m = null;
                     for (var mk = 0; mk < masters.length; mk++) if (Number(masters[mk].created_at) <= Number(c.created_at)) m = masters[mk];
                     return m;
@@ -1378,7 +1389,7 @@
                     var match = null;
                     for (var ci = 0; ci < bucket.length; ci++) {
                         var src = cutFrom(bucket[ci]);
-                        var mine = ownMaster && src ? src.id === ownMaster.id
+                        var mine = src === ORPHAN ? false : ownMaster && src ? src.id === ownMaster.id
                             : new Date(bucket[ci].created_at * 1000).toISOString().slice(0, 10) === sessionDate;
                         if (mine) { match = bucket[ci]; break; }
                     }
@@ -2056,6 +2067,40 @@
         // --- System Health + hero: cameras (Mux live streams), clip pipeline, video processing ---
         var _health = { cameras: null, pipeline: null, video: null, latest: null, loaded: false };
 
+        // Clips whose recording was deleted (from a session deleted before clips went with it): they belong to
+        // no session and are never shown; System Health offers to remove them
+        function orphanClips(assets) {
+            var byId = {}; (assets || []).forEach(function(a) { byId[a.id] = a; });
+            var isClip = function(a) { return / \/\/ SOCIAL(RAW)?\b/i.test(String(a.passthrough || '')); };
+            var owned = function(a, depth) {
+                var ext = a.meta && a.meta.external_id, src = a.source_asset_id;
+                if (!ext && !src) return true;   // old clips that name nothing: left alone
+                if (ext && byId[ext]) return isClip(byId[ext]) && depth < 5 ? owned(byId[ext], depth + 1) : true;
+                if (src && byId[src]) return isClip(byId[src]) && depth < 5 ? owned(byId[src], depth + 1) : true;
+                return false;
+            };
+            return (assets || []).filter(function(a) { return isClip(a) && !owned(a, 0); });
+        }
+        function showOrphanClips() {
+            var det = document.getElementById('sh-clips-detail'), list = orphanClips(window._muxAll);
+            var old = document.getElementById('sh-orphan-btn'); if (old) old.remove();
+            if (!det || !list.length) return;
+            var b = document.createElement('button');
+            b.type = 'button'; b.id = 'sh-orphan-btn'; b.className = 'kpi-action'; b.style.marginTop = '10px'; b.style.display = 'block';
+            b.textContent = 'Remove ' + list.length + ' clip' + (list.length > 1 ? 's' : '') + ' of deleted sessions';
+            b.onclick = async function() {
+                if (!(await laConfirm({ title: 'Remove ' + list.length + ' leftover clip' + (list.length > 1 ? 's' : '') + '?', message: 'They were cut from recordings that were deleted, so they belong to no session. Your sessions and their clips are not touched.', confirmText: 'Remove', danger: true }))) return;
+                b.disabled = true; var done = 0;
+                for (var i = 0; i < list.length; i++) {
+                    var h = { 'Content-Type': 'application/json' }; if (list[i]._venue) h['X-LA-Venue'] = list[i]._venue;
+                    b.textContent = 'Removing ' + (i + 1) + ' of ' + list.length + '…';
+                    try { var r = await laFetch('/api/delete-asset', { method: 'POST', headers: h, body: JSON.stringify({ id: list[i].id }) }); if (r.ok || r.status === 404) done++; } catch (_) {}
+                }
+                b.textContent = done + ' removed';
+                setTimeout(function() { location.reload(); }, 900);
+            };
+            det.appendChild(b);
+        }
         function setHealthRow(key, level, text, detail) {
             var dot = document.getElementById('sh-' + key + '-dot');
             var val = document.getElementById('sh-' + key);
@@ -2391,6 +2436,7 @@
                 else if (v.processing) setHealthRow('clips', 'busy', v.processing + ' processing', 'New clips replace the current ones when they are ready.');
                 else if (v.failed) setHealthRow('clips', 'bad', v.failed + ' failed', (v.failedArtists.length ? v.failedArtists.join(', ') + ': ' : '') + 'press Make vertical clips on the session to try again.');
                 else setHealthRow('clips', 'ok', v.done ? v.done + ' made today' : 'Up to date');
+                showOrphanClips();
             } catch (e) {}
             _health.loaded = true;
             renderHero();
