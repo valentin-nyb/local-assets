@@ -101,12 +101,15 @@ async function upgradePlanWording(redis, list) {
 // its own name and price. Applied once to the saved plan list.
 async function upgradeVenueTrial(redis, list) {
   try {
-    if (await redis.get('billing_plans_trial_v5')) return list;
-    const starter = list.find(x => x.id === 'starter-distribution') || DEFAULT_PLANS.find(x => x.id === 'starter-distribution');
+    if (await redis.get('billing_plans_trial_v6')) return list;
+    // A saved plan without its own feature list shows the built-in one, so copy that
+    const def = DEFAULT_PLANS.find(x => x.id === 'starter-distribution');
+    const saved = list.find(x => x.id === 'starter-distribution') || {};
+    const starter = { ...def, ...saved, features: saved.features && saved.features.length ? saved.features : def.features, included: { ...def.included, ...(saved.included || {}) } };
     const out = list.map(x => !/venue\s*trial/i.test(String(x.name || '')) ? x : { ...x,
-      features: [...(starter.features || [])], included: { ...(starter.included || {}) }, maxClips: starter.maxClips, cameras: starter.cameras || 0 });
+      features: [...starter.features], included: { ...starter.included }, maxClips: starter.maxClips, cameras: starter.cameras || 0 });
     await redis.set('billing_plans', JSON.stringify(out));
-    await redis.set('billing_plans_trial_v5', new Date().toISOString());
+    await redis.set('billing_plans_trial_v6', new Date().toISOString());
     return out;
   } catch { return list; }
 }
