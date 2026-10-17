@@ -39,8 +39,10 @@ export function cleanWatermark(input = {}) {
   if ((value || source === 'artist') && typeof t.font === 'string' && BLOB_URL.test(t.font) && TEXT_FONT_FILE.test(new URL(t.font).pathname)) {
     w.text = { source, value: value || '', font: t.font, position: TEXT_POSITIONS.includes(t.position) ? t.position : 'br', color: t.color === 'black' ? 'black' : 'white', ...(['s', 'm', 'l'].includes(t.size) ? { size: t.size } : {}), ...(t.off === true ? { off: true } : {}) };
     // A second, smaller line under the title (e.g. the genres), in a font of its own
+    // …a fixed line, or each session's own name ("Session name")
     const sv = t.sub && String(t.sub.value ?? '').replace(/[\u0000-\u001f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 80);
-    if (sv && typeof t.sub.font === 'string' && BLOB_URL.test(t.sub.font) && TEXT_FONT_FILE.test(new URL(t.sub.font).pathname)) w.text.sub = { value: sv, font: t.sub.font };
+    const subSession = t.sub?.source === 'session';
+    if ((sv || subSession) && typeof t.sub.font === 'string' && BLOB_URL.test(t.sub.font) && TEXT_FONT_FILE.test(new URL(t.sub.font).pathname)) w.text.sub = { value: sv || '', font: t.sub.font, ...(subSession ? { source: 'session' } : {}) };
   }
   return w;
 }
@@ -51,7 +53,7 @@ export async function readWatermark(redis, slug) {
 }
 
 // The logo and text to stamp on an artist's clips, or null when watermarks are off or there is nothing to stamp.
-export async function resolveWatermark(redis, slug, artist) {
+export async function resolveWatermark(redis, slug, artist, date = null) {
   const w = await readWatermark(redis, slug);
   if (!w.enabled) return null;
 
@@ -77,6 +79,12 @@ export async function resolveWatermark(redis, slug, artist) {
   // Only a font still in this account's brand kit
   let text = w.text && !w.text.off && fonts.has(w.text.font) ? w.text : null;   // text switched off: logo only
   if (text?.sub && !fonts.has(text.sub.font)) text = { ...text, sub: undefined };
+  // "Session name": the session's own name (Edit session), else no subtitle on that session
+  if (text?.sub?.source === 'session') {
+    let title = '';
+    if (artist && date) { try { title = JSON.parse(await redis.hGet(`session_meta:${slug}`, `${String(artist).toUpperCase().trim()}|${date}`) || '{}').title || ''; } catch {} }
+    text = { ...text, sub: title ? { ...text.sub, value: title } : undefined };
+  }
   // "Artist name": each session's own artist
   if (text?.source === 'artist') text = artist ? { ...text, value: String(artist).toUpperCase().trim() } : null;
   if (text && !text.value) text = null;

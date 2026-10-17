@@ -34,7 +34,7 @@
     <link rel="manifest" href="favicon/site.webmanifest">
     
     <link rel="stylesheet" href="styles/tailwind.css">
-    <link rel="stylesheet" href="styles/theme.css?v=11">
+    <link rel="stylesheet" href="styles/theme.css?v=12">
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
@@ -97,7 +97,7 @@
         .clip-share { margin-top:2px; height:20px; padding:0 8px; border-radius:999px; border:1px solid var(--la-line); background:transparent; color:var(--la-text); font:600 9px Inter,ui-sans-serif,system-ui,sans-serif; letter-spacing:.04em; cursor:pointer; }
         @media (hover:hover) { .clip-share:hover { border-color:var(--la-accent); color:var(--la-accent); } }
         /* Distribution History actions in the platform style: quiet pills and icons, filled on hover */
-        #recent-sets-list [id^="zip-btn-"], #recent-sets-list .wm-apply, #recent-sets-list .wm-restore {
+        #recent-sets-list [id^="zip-btn-"], #recent-sets-list .wm-apply, #recent-sets-list .wm-restore, #recent-sets-list .wm-master {
             height:34px !important; padding:0 16px !important; gap:8px !important; border-radius:999px !important; border:1px solid color-mix(in srgb, var(--la-text) 26%, transparent) !important;
             background:transparent !important; color:var(--la-text) !important; font:500 13px/1 'Helvetica Neue', Helvetica, Arial, sans-serif !important; letter-spacing:0 !important; text-transform:none !important;
             display:inline-flex; align-items:center; justify-content:center; transition:background .25s ease, color .25s ease, border-color .25s ease !important; }
@@ -110,7 +110,7 @@
         #recent-sets-list a[id^="yt-dist-"], #recent-sets-list a[id^="sc-dist-"] { display:inline-flex !important; align-items:center; justify-content:center; gap:6px; height:34px; padding:0 16px !important; border-radius:999px !important; background:#FF0000 !important; border:1px solid #FF0000 !important; color:#fff !important; font:500 13px/1 'Helvetica Neue', Helvetica, Arial, sans-serif !important; letter-spacing:0 !important; text-transform:none !important; text-decoration:none !important; }
         #recent-sets-list a[id^="sc-dist-"] { background:#FF5500 !important; border-color:#FF5500 !important; }
         @media (hover:hover) {
-            #recent-sets-list [id^="zip-btn-"]:hover, #recent-sets-list .wm-apply:hover:not(:disabled), #recent-sets-list .wm-restore:hover:not(:disabled) {
+            #recent-sets-list [id^="zip-btn-"]:hover, #recent-sets-list .wm-apply:hover:not(:disabled), #recent-sets-list .wm-restore:hover:not(:disabled), #recent-sets-list .wm-master:hover:not(:disabled) {
                 background:var(--la-text) !important; color:var(--la-bg) !important; border-color:var(--la-text) !important; }
         }
         #recent-sets-list button.w-8.h-8.rounded-full { width:34px !important; height:34px !important; border-radius:999px !important; border:1px solid color-mix(in srgb, var(--la-text) 18%, transparent); transition:background .2s ease, border-color .2s ease; }
@@ -125,7 +125,7 @@
             #recent-sets-list .justify-between { flex-wrap:wrap; row-gap:10px; }
             #recent-sets-list .justify-between > .flex.items-center.gap-2 { flex-wrap:wrap; }
             #recent-sets-list .justify-between > div:last-child { margin-left:auto; }
-            #recent-sets-list [id^="zip-btn-"], #recent-sets-list .wm-apply, #recent-sets-list .wm-restore, #recent-sets-list .yt-dist-btn, #recent-sets-list .sc-dist-btn { height:32px !important; padding:0 12px !important; font-size:12px !important; }
+            #recent-sets-list [id^="zip-btn-"], #recent-sets-list .wm-apply, #recent-sets-list .wm-restore, #recent-sets-list .wm-master, #recent-sets-list .yt-dist-btn, #recent-sets-list .sc-dist-btn { height:32px !important; padding:0 12px !important; font-size:12px !important; }
             /* A session: logo, name and venue on the left (cut short if long), edit and Download on the right, one line */
             #recent-sets-list .sess-row { flex-wrap:nowrap !important; gap:10px; padding-left:16px !important; padding-right:14px !important; }
             #recent-sets-list .sess-main { flex:1 1 auto; min-width:0; }
@@ -928,6 +928,27 @@
             });
         }
 
+        // ── The 4K long form's watermark ──
+        var _wmRefresh = null;
+        function scheduleWmRefresh() { if (!_wmRefresh) _wmRefresh = setTimeout(function() { _wmRefresh = null; fetchRecentUploads(); }, 30000); }
+        async function masterWatermark(btn) {
+            var apply = btn.dataset.mode === 'apply', artist = btn.dataset.artist, date = btn.dataset.date;
+            if (apply && !(await laConfirm({ title: 'Watermark the 4K long form?', message: 'Cloud Storage makes a watermarked copy at the full resolution; the original is kept and comes back if you remove the watermark. It takes about as long as the set. A GIF logo is placed as a still on the long form (its fullest frame); it moves on the vertical clips.', confirmText: 'Apply watermark' }))) return;
+            if (!apply && !(await laConfirm({ title: 'Remove the watermark?', message: 'The watermarked copy is deleted and the original 4K long form is shown again.', confirmText: 'Remove watermark' }))) return;
+            btn.disabled = true; btn.textContent = apply ? 'Starting…' : 'Removing…';
+            var h = { 'Content-Type': 'application/json' };
+            if (_adminView) { var v = _venueOfArtist[String(artist).toUpperCase().trim()]; if (v) h['X-LA-Venue'] = v; }
+            try {
+                var r = await laFetch('/api/watermark-clips', { method: 'POST', headers: h, body: JSON.stringify({ action: apply ? 'applyMaster' : 'removeMaster', artist: artist, date: date }) });
+                var d = await r.json(); if (!r.ok) throw new Error(d.error || r.status);
+                laToast(apply ? 'Watermarking the 4K long form' : 'Watermark removed');
+                fetchRecentUploads();
+            } catch (e) {
+                btn.disabled = false; btn.textContent = apply ? 'Apply watermark' : 'Remove watermark';
+                laAlert('Could not ' + (apply ? 'apply' : 'remove') + ' the watermark: ' + e.message, { tone: 'error' });
+            }
+        }
+
         // ── Vertical clips and their watermark ──
         // Vertical originals are cut once from the full recording. Apply watermark shows watermarked copies of
         // them; Remove watermark deletes the copies and shows the originals again.
@@ -1254,6 +1275,17 @@
                 var accept = asset.type === 'MASTER' ? 'video/*' : asset.type === 'AUDIO' ? 'audio/*' : asset.type === 'SOCIAL' ? 'video/*' : 'image/*';
                 var lookupKey = asset.type === 'MASTER' ? sessionName.toUpperCase().trim() : sessionName.toUpperCase().trim() + ' // ' + asset.type;
                 var linkedMuxAsset = findLinked(lookupKey, sessionDate);
+                // The 4K long form with the Brand Kit watermark: a copy tied to the recording ("… // 4KWM").
+                // Once its MP4 is ready it's shown, played and downloaded in place of the original (kept).
+                var wmOrig = null, wmCopy = null, wmPending = false;
+                if (asset.type === 'MASTER' && linkedMuxAsset) {
+                    wmOrig = linkedMuxAsset;
+                    wmCopy = muxAssets.filter(function(a) { return a.meta && a.meta.external_id === wmOrig.id && / \/\/ 4KWM$/i.test(String(a.passthrough || '').trim()) && a.status !== 'errored'; })[0] || null;
+                    if (wmCopy) {
+                        var wmReady = wmCopy.status === 'ready' && ((wmCopy.static_renditions && wmCopy.static_renditions.files) || []).some(function(f) { return f.status === 'ready'; });
+                        if (wmReady) linkedMuxAsset = wmCopy; else wmPending = true;
+                    }
+                }
                 if (linkedMuxAsset) sessionFilesFor(sessionName, sessionDate)[asset.type] = linkedMuxAsset;
                 var isLinked = !!linkedMuxAsset;
                 var pid = linkedMuxAsset && linkedMuxAsset.playback_ids && linkedMuxAsset.playback_ids[0] ? linkedMuxAsset.playback_ids[0].id : null;
@@ -1266,7 +1298,7 @@
                 // If we have a playback ID, assume downloadable even if static_renditions not confirmed ready
                 var dlFile = srReady ? srReady.name : (pid && (srStatus === 'ready' || !srStatus)) ? (isAudioAsset ? 'audio.m4a' : 'highest.mp4') : null;
                 var dlExt = srReady ? srReady.ext : (isAudioAsset ? 'm4a' : 'mp4');
-                var linkedLabel = isLinked && !pid ? 'IN VAULT — PROCESSING' : (srReady || srStatus === 'ready') ? 'IN VAULT — UPLOADED' : (srFiles.some(function(f){ return f.status === 'preparing'; }) || srStatus === 'preparing') ? 'IN VAULT — READY TO STREAM · MP4 PREPARING' : 'IN VAULT — UPLOADED';
+                var linkedLabel = wmCopy && !wmPending ? 'IN VAULT — WATERMARKED' : wmPending ? 'IN VAULT — WATERMARKING…' : isLinked && !pid ? 'IN VAULT — PROCESSING' : (srReady || srStatus === 'ready') ? 'IN VAULT — UPLOADED' : (srFiles.some(function(f){ return f.status === 'preparing'; }) || srStatus === 'preparing') ? 'IN VAULT — READY TO STREAM · MP4 PREPARING' : 'IN VAULT — UPLOADED';
                 var html = '';
                 if (isLinked) {
                     var safeLabel = jsq(asset.label);
@@ -1289,6 +1321,10 @@
                         html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Play" onclick="' + (isAudioAsset ? 'toggleInlineAudio(\'aud-' + uid + '\')' : 'window.open(\'/player.html?v=' + pid + '&f=' + dlFile + '&title=\' + encodeURIComponent(\'' + safeLabel + '\'), \'_blank\')') + '">';
                         html += '<iconify-icon icon="solar:play-linear" class="text-primary"></iconify-icon>';
                         html += '</button>';
+                        if (isMasterAsset && wmOrig) {
+                            html += '<button type="button" class="wm-master" data-artist="' + escHtml(sessionName) + '" data-date="' + escHtml(sessionDate) + '" data-mode="' + (wmCopy ? 'remove' : 'apply') + '"' + (wmPending ? ' disabled' : '') + ' onclick="masterWatermark(this)">' + (wmPending ? 'Watermarking…' : wmCopy ? 'Remove watermark' : 'Apply watermark') + '</button>';
+                            if (wmPending) scheduleWmRefresh();
+                        }
                         if (isMasterAsset) {
                             html += '<button id="yt-dist-' + uid + '" class="yt-dist-btn hidden" style="display:none;align-items:center;justify-content:center;gap:6px;height:34px;padding:0 16px;border-radius:999px;border:1px solid #FF0000;background:transparent;color:#FF0000;font:500 13px/1 \'Helvetica Neue\',Helvetica,Arial,sans-serif;cursor:pointer;white-space:nowrap;transition:background .25s ease,color .25s ease;" onclick="distributeYouTube(\'' + pid + '\', \'' + dlFile + '\', \'' + safeName + '\', \'' + uid + '\', \'' + jsq(sessionDate) + '\')" onmouseover="this.style.background=\'#FF0000\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'#FF0000\'">';
                             html += 'YouTube';

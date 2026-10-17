@@ -556,16 +556,16 @@ html:has(.cam-dialog:not(.hidden)), html:has(.cam-dialog:not(.hidden)) body { ov
 .cam-form input[type=date]::-webkit-date-and-time-value { text-align: left; }
 
 /* Disconnect (and other ending actions): always filled red, site-wide.
-   Hover empties it to its red outline, like the other filled buttons. */
+   Hover stays red: a deeper red slides in, the text stays white. */
 :root body :is(.cam-btn, .pm-disconnect).la-danger {
     background: var(--la-bad, #ef4444) !important;
     color: #fff !important;
     border: 1px solid var(--la-bad, #ef4444) !important;
-    --la-btn-fill: var(--la-surface);
+    --la-btn-fill: #b91c1c;
 }
 html:not(.dark) body :is(.cam-btn, .pm-disconnect).la-danger { background: #dc2626 !important; border-color: #dc2626 !important; }
 @media (hover: hover) {
-    :root body .cam-btn.la-danger:hover:not(:disabled) { color: var(--la-bad, #ef4444) !important; }
+    :root body .cam-btn.la-danger:hover:not(:disabled) { color: #fff !important; border-color: #b91c1c !important; }
     :root body .pm-disconnect.la-danger:hover:not(:disabled) { filter: brightness(1.1); }
 }
 

@@ -179,7 +179,7 @@ export default async function handler(req, res) {
   if (!session.venueSlug || !session.muxAuth) return res.status(403).json({ error: 'No Cloud Storage for this account' });
   const slug = session.venueSlug, auth = session.muxAuth;
   const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
-  if (body.action === 'apply') { const _p = await pausedBy(slug, body.artist ? `artist:${String(body.artist).toUpperCase()}` : null); if (_p) return sendPaused(res, _p); }
+  if (body.action === 'apply' || body.action === 'applyMaster') { const _p = await pausedBy(slug, body.artist ? `artist:${String(body.artist).toUpperCase()}` : null); if (_p) return sendPaused(res, _p); }
 
   // Brand Kit "Export GIF": the watermark with a moving logo as an animated GIF, at 4K, transparent
   if (body.action === 'exportGif') {
@@ -274,12 +274,51 @@ export default async function handler(req, res) {
       return res.status(200).json(out);
     }
 
+    // The 4K long form: a watermarked copy made by Cloud Storage at the recording's full resolution, the
+    // original kept. A moving (GIF) logo goes on as a still, its fullest frame: animating a logo over a
+    // whole set would take hours of rendering. The copy is "ARTIST // 4KWM", tied to its recording by
+    // meta.external_id, so it never counts as a session of its own.
+    if (body.action === 'applyMaster' || body.action === 'removeMaster') {
+      const artist = String(body.artist || '').toUpperCase().trim();
+      if (!artist) return res.status(400).json({ error: 'Choose a session' });
+      const assets = await listAllAssets(auth);
+      const { master } = sessionClips(assets, artist, String(body.date || ''));
+      if (!master) return res.status(400).json({ error: 'The full recording of this session is not in Cloud Storage.' });
+      const copies = assets.filter(a => a.meta?.external_id === master.id && /\/\/ 4KWM$/i.test(String(a.passthrough || '').trim()));
+      if (body.action === 'removeMaster') {
+        for (const c of copies) await del(auth, c.id);
+        console.log('[watermark-clips] 4K watermark removed', slug, artist, copies.length);
+        return res.status(200).json({ removed: copies.length });
+      }
+      if (copies.some(c => c.status !== 'errored')) return res.status(200).json({ started: 0, already: true });
+      for (const c of copies) await del(auth, c.id).catch(() => {});   // a failed earlier try
+      const wm = await resolveWatermark(redis, slug, artist, String(body.date || ''));
+      if (!wm) return res.status(400).json({ error: 'The watermark is off, or there is no logo or text to apply. Set it up in Brand Kit.' });
+      const [w, h] = videoSize(master);
+      const L = (w || 1920) >= (h || 1080) ? HORIZONTAL : VERTICAL;
+      const png = await renderWatermarkPng(wm, L, Math.max(L.W, Math.round(w) || L.W));
+      if (!png) return res.status(400).json({ error: 'The watermark could not be drawn. Check the logo and font in Brand Kit.' });
+      const overlayUrl = (await put(`watermarks/${slug}/${crypto.randomBytes(6).toString('hex')}.png`, png, { access: 'public', contentType: 'image/png', addRandomSuffix: false })).url;
+      const copy = await muxReq(auth, '/video/v1/assets', {
+        method: 'POST',
+        body: JSON.stringify({
+          input: [{ url: `mux://assets/${master.id}` }, { url: overlayUrl, overlay_settings: { vertical_align: 'top', horizontal_align: 'left', width: '100%', opacity: '100%' } }],
+          playback_policy: ['public'],
+          passthrough: `${artist} // 4KWM`,
+          meta: { external_id: master.id },
+          static_renditions: [{ resolution: 'highest' }],
+        }),
+      });
+      console.log('[watermark-clips] 4K watermark started', slug, artist, copy.id, wm.url && /\.gif(\?|$)/i.test(wm.url) ? '(GIF as still)' : '');
+      return res.status(200).json({ started: 1, id: copy.id, gifStill: !!(wm.url && /\.gif(\?|$)/i.test(wm.url)) });
+    }
+
     if (body.action !== 'apply') return res.status(400).json({ error: 'Unknown action' });
     const artist = String(body.artist || '').toUpperCase().trim();
     const ids = Array.isArray(body.clipIds) ? body.clipIds.map(String).slice(0, 30) : [];
     if (!artist || !ids.length) return res.status(400).json({ error: 'Choose a session with vertical clips' });
 
-    const wm = await resolveWatermark(redis, slug, artist);
+    const wm = await resolveWatermark(redis, slug, artist, String(body.date || ''));
     if (!wm) return res.status(400).json({ error: 'The watermark is off, or there is no logo or text to apply. Set it up in Brand Kit.' });
 
     // One overlay per clip shape and size, drawn at the clip's own resolution so it stays sharp

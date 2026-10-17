@@ -33,7 +33,7 @@
     <link rel="manifest" href="favicon/site.webmanifest">
 
     <link rel="stylesheet" href="styles/tailwind.css">
-    <link rel="stylesheet" href="styles/theme.css?v=11">
+    <link rel="stylesheet" href="styles/theme.css?v=12">
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
@@ -552,8 +552,10 @@
         var WM_SUB_SCALE = 0.6, WM_SUB_GAP = 0.2;   // same as the clip worker
         function wmSub() {
             var t = _wm && _wm.text && _wm.text.sub;
-            if (!t || !t.value) return null;
-            return _files.some(function(f) { return f.url === t.font; }) ? t : null;
+            if (!t || (!t.value && t.source !== 'session')) return null;
+            if (!_files.some(function(f) { return f.url === t.font; })) return null;
+            // "Session name": each session's own; the preview shows an example
+            return t.source === 'session' ? { value: 'Friday Night Session', font: t.font, source: 'session' } : t;
         }
         function unfoldWm() { var b = document.getElementById('bk-wm'), f = document.getElementById('bk-wm-fold'); if (b) b.classList.remove('folded'); if (f) f.setAttribute('aria-expanded', 'true'); try { localStorage.setItem('la_bk_wm_folded', ''); } catch (_) {} }
         function renderWatermark() {
@@ -601,8 +603,10 @@
                               seg('textcolor', WM_TEXT_COLOR, _wm.text.color === 'black' ? 'black' : 'white') +
                               (_wm.text.source === 'artist' ? '<div class="bk-wm-textmeta"><span class="bk-wm-font">Each clip shows the name of the artist on stage.</span></div>' : '') + '</div>' +
                               '<span class="bk-wm-label">Subtitle</span>' + (_wm.text.sub
-                                ? '<div class="bk-wm-textrow"><input id="bk-wm-sub-input" value="' + esc(_wm.text.sub.value) + '" maxlength="80" placeholder="e.g. Disco, Jazz-funk, Soulful House" aria-label="Subtitle">' +
-                                  fontSelect('sub', _wm.text.sub.font) + '<button type="button" class="bk-wm-link" id="bk-wm-sub-remove">Remove</button></div>'
+                                ? '<div class="bk-wm-textrow">' + seg('subsrc', [['custom', 'Custom'], ['session', 'Session name']], _wm.text.sub.source === 'session' ? 'session' : 'custom') +
+                                  (_wm.text.sub.source === 'session' ? '' : '<input id="bk-wm-sub-input" value="' + esc(_wm.text.sub.value) + '" maxlength="80" placeholder="e.g. Disco, Jazz-funk, Soulful House" aria-label="Subtitle">') +
+                                  fontSelect('sub', _wm.text.sub.font) + '<button type="button" class="bk-wm-link" id="bk-wm-sub-remove">Remove</button>' +
+                                  (_wm.text.sub.source === 'session' ? '<div class="bk-wm-textmeta"><span class="bk-wm-font">Each session shows its own name (set with Edit session). Sessions without a name show no subtitle.</span></div>' : '') + '</div>'
                                 : '<div class="bk-wm-textrow"><button type="button" class="cam-btn ghost" id="bk-wm-sub-add">Add subtitle</button><span class="bk-wm-font">A smaller second line under the title, in its own font.</span></div>'))
                             : wmTextFonts().length
                             ? '<div class="bk-wm-textrow"><button type="button" class="cam-btn ghost" id="bk-wm-text-artist">Add artist name</button><span class="bk-wm-font">Or preview a font, type your text and choose Use as watermark.</span></div>'
@@ -662,6 +666,7 @@
                 var apply = function(v) {
                     // The frame only changes the preview and export, it isn't saved
                     if (key === 'frame') { _wmFrame = v; renderWatermark(); return; }
+                    if (key === 'subsrc') { if (v === 'session') _wm.text.sub.source = 'session'; else delete _wm.text.sub.source; renderWatermark(); saveWatermark(); return; }
                     if (key === 'texton') { _wm.text.off = v === 'off'; renderWatermark(); saveWatermark(); return; }
                     if (key === 'textsrc') { _wm.text.source = v; if (v === 'custom' && !_wm.text.value) _wm.text.value = _orgName || venueName(); renderWatermark(); saveWatermark(); return; }
                     if (key === 'textsize') { _wm.text.size = v; box.querySelectorAll('[data-wm="textsize"][data-v]').forEach(function(b) { b.setAttribute('aria-pressed', b.dataset.v === v); }); positionPreview(); saveWatermark(); return; }
