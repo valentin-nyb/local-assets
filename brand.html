@@ -542,10 +542,12 @@
         }
         // Fonts the clip worker can draw text with
         function wmTextFonts() { return _files.filter(function(f) { return f.category === 'fonts' && WM_TEXT_FONT.test(f.name); }); }
-        function wmText() {
-            if (!_wm.text || !wmTextValue()) return null;
+        function wmTextFile() {
+            if (!_wm.text) return null;
             return _files.filter(function(f) { return f.url === _wm.text.font; })[0] || null;
         }
+        // The text drawn on the clips: none while it's switched off (its settings are kept)
+        function wmText() { return _wm.text && !_wm.text.off && wmTextValue() ? wmTextFile() : null; }
         // The subtitle under the title, while its font is still in the brand kit
         var WM_SUB_SCALE = 0.6, WM_SUB_GAP = 0.2;   // same as the clip worker
         function wmSub() {
@@ -589,8 +591,10 @@
                     '<div class="bk-wm-rows' + (_wm.enabled ? '' : ' off') + '">' +
                         '<span class="bk-wm-label">Logo</span><select data-wm="logo"' + (noLogo ? ' disabled' : '') + '>' + logoOpts + '</select>' +
                         '<span class="bk-wm-label">Position</span>' + seg('position', WM_POS, _wm.position) +
-                        '<span class="bk-wm-label">Text</span>' + (wmText()
-                            ? '<div class="bk-wm-textrow">' + seg('textsrc', WM_TEXT_SRC, _wm.text.source === 'artist' ? 'artist' : 'custom') +
+                        '<span class="bk-wm-label">Text</span>' + (wmTextFile()
+                            ? '<div class="bk-wm-textrow">' + seg('texton', [['on', 'On'], ['off', 'Off']], _wm.text.off ? 'off' : 'on') + '</div>' +
+                              (_wm.text.off ? '' : '<span class="bk-wm-label"></span>' +
+                              '<div class="bk-wm-textrow">' + seg('textsrc', WM_TEXT_SRC, _wm.text.source === 'artist' ? 'artist' : 'custom') +
                               (_wm.text.source === 'artist' ? '' : '<input id="bk-wm-text-input" value="' + esc(_wm.text.value) + '" maxlength="60" aria-label="Watermark text">') +
                               fontSelect('title', _wm.text.font) +
                               seg('textpos', WM_TEXT_POS, _wm.text.position) +
@@ -599,7 +603,7 @@
                               '<span class="bk-wm-label">Subtitle</span>' + (_wm.text.sub
                                 ? '<div class="bk-wm-textrow"><input id="bk-wm-sub-input" value="' + esc(_wm.text.sub.value) + '" maxlength="80" placeholder="e.g. Disco, Jazz-funk, Soulful House" aria-label="Subtitle">' +
                                   fontSelect('sub', _wm.text.sub.font) + '<button type="button" class="bk-wm-link" id="bk-wm-sub-remove">Remove</button></div>'
-                                : '<div class="bk-wm-textrow"><button type="button" class="cam-btn ghost" id="bk-wm-sub-add">Add subtitle</button><span class="bk-wm-font">A smaller second line under the title, in its own font.</span></div>')
+                                : '<div class="bk-wm-textrow"><button type="button" class="cam-btn ghost" id="bk-wm-sub-add">Add subtitle</button><span class="bk-wm-font">A smaller second line under the title, in its own font.</span></div>'))
                             : wmTextFonts().length
                             ? '<div class="bk-wm-textrow"><button type="button" class="cam-btn ghost" id="bk-wm-text-artist">Add artist name</button><span class="bk-wm-font">Or preview a font, type your text and choose Use as watermark.</span></div>'
                             : '<p class="bk-wm-hint">Upload a font (TTF, OTF or WOFF) to add the artist\'s name or a line of text.</p>') +
@@ -658,6 +662,7 @@
                 var apply = function(v) {
                     // The frame only changes the preview and export, it isn't saved
                     if (key === 'frame') { _wmFrame = v; renderWatermark(); return; }
+                    if (key === 'texton') { _wm.text.off = v === 'off'; renderWatermark(); saveWatermark(); return; }
                     if (key === 'textsrc') { _wm.text.source = v; if (v === 'custom' && !_wm.text.value) _wm.text.value = _orgName || venueName(); renderWatermark(); saveWatermark(); return; }
                     if (key === 'textsize') { _wm.text.size = v; box.querySelectorAll('[data-wm="textsize"][data-v]').forEach(function(b) { b.setAttribute('aria-pressed', b.dataset.v === v); }); positionPreview(); saveWatermark(); return; }
                     if (key === 'textcolor') { _wm.text.color = v; box.querySelectorAll('[data-wm="textcolor"][data-v]').forEach(function(b) { b.setAttribute('aria-pressed', b.dataset.v === v); }); positionPreview(); saveWatermark(); return; }

@@ -110,6 +110,7 @@
         .ing-drop.active .ing-drop-ico { background:var(--la-accent); border-color:var(--la-accent); }
         .ing-drop.active .ing-drop-ico iconify-icon { color:var(--la-accent-ink); }
         .ing-drop.active .ing-drop-specs { display:none; }
+        .ing-drop-meta.ing-warn { color:var(--la-warn, #f59e0b); max-width:460px; }
         @media (max-width:760px) { .ing-drop { min-height:220px; padding:28px 18px 24px; } .ing-drop-main { font-size:16px; } }
         .ing-foot { display:flex; align-items:center; gap:16px; }
         .ing-progress { flex:1; height:6px; border-radius:99px; background:var(--la-line); overflow:hidden; }
@@ -252,15 +253,40 @@
         setTimeout(() => ov.classList.toggle('opacity-0'), 10);
     };
 
+    // The video codec of a file, read from its header and its end (where an MP4/MOV keeps its index),
+    // so a file Cloud Storage has to convert first (AV1, HEVC, ProRes) is flagged before it's uploaded
+    window._slowCodec = null;
+    async function slowCodec(f) {
+        const look = async (blob) => new Uint8Array(await blob.arrayBuffer());
+        const chunk = 4 * 1024 * 1024;
+        const parts = [await look(f.slice(0, chunk))];
+        if (f.size > chunk) parts.push(await look(f.slice(Math.max(chunk, f.size - chunk))));
+        const text = parts.map(b => { let t = ''; for (let i = 0; i < b.length; i++) t += String.fromCharCode(b[i]); return t; }).join('');
+        // MP4/MOV: the codec sits in the sample description ('stsd') right after its header; MKV/WebM names it
+        const mp4 = (/stsd[\s\S]{8,24}?(av01|hvc1|hev1|apch|apcn|apcs|apco|ap4h|ap4x)/.exec(text) || [])[1];
+        if (mp4 === 'av01' || /V_AV1/.test(text)) return 'AV1';
+        if (mp4 === 'hvc1' || mp4 === 'hev1' || /V_MPEGH\/ISO\/HEVC/.test(text)) return 'HEVC (H.265)';
+        if (mp4) return 'ProRes';
+        return null;
+    }
     window.markActive = (type) => {
         const node = document.getElementById('node-' + type);
         node?.classList.add('active');
         const f = document.getElementById('file-video').files[0];
         if (f) {
             const gb = f.size / 1e9;
+            const size = (gb >= 1 ? gb.toFixed(2) + ' GB' : Math.max(1, Math.round(f.size / 1e6)) + ' MB');
+            const meta = document.getElementById('ing-meta');
             document.getElementById('ing-file').textContent = f.name;
-            document.getElementById('ing-meta').textContent = (gb >= 1 ? gb.toFixed(2) + ' GB' : Math.max(1, Math.round(f.size / 1e6)) + ' MB') + ' · ready to upload';
+            meta.textContent = size + ' · ready to upload';
+            meta.classList.remove('ing-warn');
             document.getElementById('ing-pick').textContent = 'Change file';
+            window._slowCodec = null;
+            if (/^video\//.test(f.type) || /\.(mp4|mov|m4v|mkv|webm)$/i.test(f.name)) slowCodec(f).then(c => {
+                if (document.getElementById('file-video').files[0] !== f) return;
+                window._slowCodec = c;
+                if (c) { meta.textContent = size + ' · ' + c + ' video: takes about as long as the set to process. Export as H.264 MP4 to have it ready in minutes.'; meta.classList.add('ing-warn'); }
+            }).catch(() => {});
         }
     };
     // Drag a file onto the drop zone
@@ -370,6 +396,8 @@
             const dateVal = document.getElementById('ingest-date').value || new Date().toISOString().slice(0, 10);
             const camera  = document.getElementById('ingest-shot').value || 'MASTER';
             if (!file || !artist) return alert(!artist ? "Add the artist's name." : "Choose the recording to upload.");
+            // AV1, HEVC or ProRes: Cloud Storage converts the whole file first, which takes about as long as the set
+            if (window._slowCodec && !(await laConfirm({ title: 'This file will take a while to process', message: 'It uses ' + window._slowCodec + ' video, which Cloud Storage has to convert first: about as long as the set itself (an hour-long set takes about an hour). Exported as H.264 MP4 (constant frame rate, AAC audio), it is ready in minutes.', confirmText: 'Upload anyway', cancelText: 'Choose another file' }))) return;
 
             uploadBtn.disabled = true;
             uploadBtn.textContent = 'Connecting…';
