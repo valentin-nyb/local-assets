@@ -697,6 +697,8 @@
                     if (sub) loadBrandFont(sub.font).then(function(family) { if (t2.dataset.family !== family) { t2.dataset.family = family; t2.style.fontFamily = family; positionPreview(); } }).catch(function() {});
                     var blackText = _wm.text.color === 'black';
                     txt.style.color = blackText ? '#000' : '#fff';
+                    // No colour from the logo (yet): the background suits the text, so white text never sits on white
+                    if (pv && (!pv.hasAttribute('data-tone') || pv.dataset.toneFrom === 'text')) { pv.setAttribute('data-tone', blackText ? 'dark' : 'light'); pv.dataset.toneFrom = 'text'; }
                     txt.style.textShadow = 'none';
                     loadBrandFont(tf.url).then(function(family) { if (t1.dataset.family !== family) { t1.dataset.family = family; t1.style.fontFamily = family; positionPreview(); } }).catch(function() {});
                     var tp = _wm.text.position;
@@ -1168,6 +1170,10 @@
                     var mx = Math.max(d[i], d[i + 1], d[i + 2]), mn = Math.min(d[i], d[i + 1], d[i + 2]);
                     sum += (0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]) / 255; sat += mx ? (mx - mn) / mx : 0; cnt++;
                 }
+                if (cnt < 6 && /\.gif(\?|$)/i.test(img.currentSrc || img.src)) {   // an animated GIF on an empty frame: look again
+                    if ((img._toneTries = (img._toneTries || 0) + 1) <= 15) setTimeout(function() { if (img.isConnected) fitThemeLogo(img); }, 350);
+                    return;
+                }
                 if (!cnt || cnt / (n * n) >= 0.97) return fitPreviewBg(img);   // a logo on a solid square: keep it
                 var lum = sum / cnt, mono = sat / cnt < 0.15;
                 if (mono && (dark ? lum < 0.4 : lum > 0.6)) img.style.filter = 'invert(1)';
@@ -1183,12 +1189,17 @@
                 var ctx = c.getContext('2d', { willReadFrequently: true }); ctx.drawImage(img, 0, 0, n, n);
                 var d = ctx.getImageData(0, 0, n, n).data, sum = 0, cnt = 0;
                 for (var i = 0; i < d.length; i += 4) { if (d[i + 3] < 40) continue; sum += (0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]) / 255; cnt++; }
+                // An animated GIF can start on an empty frame: look again until the logo shows, and keep what was found
+                if (cnt < 6 && /\.gif(\?|$)/i.test(img.currentSrc || img.src)) {
+                    if ((img._toneTries = (img._toneTries || 0) + 1) <= 15) setTimeout(function() { if (img.isConnected) fitPreviewBg(img); }, 350);
+                    return;
+                }
                 if (cnt && cnt / (n * n) < 0.97) tone = sum / cnt > 0.6 ? 'light' : sum / cnt < 0.4 ? 'dark' : '';
             } catch (_) {
                 // Not readable: go by the file name
                 tone = /white|light|blanco/i.test(img.src) ? 'light' : /black|dark|negro/i.test(img.src) ? 'dark' : '';
             }
-            if (tone) box.setAttribute('data-tone', tone); else box.removeAttribute('data-tone');
+            if (tone) { box.setAttribute('data-tone', tone); delete box.dataset.toneFrom; } else if (box.dataset.toneFrom !== 'text') box.removeAttribute('data-tone');
         }
 
         // Pictures that can become a session thumbnail (covers, artwork, photos)

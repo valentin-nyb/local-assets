@@ -686,6 +686,10 @@
                     var mx = Math.max(d[i], d[i + 1], d[i + 2]), mn = Math.min(d[i], d[i + 1], d[i + 2]);
                     sum += (0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]) / 255; sat += mx ? (mx - mn) / mx : 0; cnt++;
                 }
+                if (cnt < 6 && /\.gif(\?|$)/i.test(img.currentSrc || img.src)) {   // an animated GIF on an empty frame: look again
+                    if ((img._toneTries = (img._toneTries || 0) + 1) <= 15) setTimeout(function() { if (img.isConnected) fitLogoBg(img); }, 350);
+                    return;
+                }
                 if (!cnt || cnt / (n * n) >= 0.97) return;   // a photo or a logo on a solid square: leave it
                 var lum = sum / cnt, mono = sat / cnt < 0.15;
                 var wrong = dark ? lum < 0.4 : lum > 0.6;
