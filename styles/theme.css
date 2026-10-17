@@ -568,3 +568,18 @@ html:not(.dark) body :is(.cam-btn, .pm-disconnect).la-danger { background: #dc26
     :root body .cam-btn.la-danger:hover:not(:disabled) { color: var(--la-bad, #ef4444) !important; }
     :root body .pm-disconnect.la-danger:hover:not(:disabled) { filter: brightness(1.1); }
 }
+
+/* Dropdowns on phones and tablets: the same closed box as on a computer (thin border, a divider and
+   up/down chevrons, room on the right), while tapping still opens the device's own picker.
+   On a computer la-select.js draws the same box and its own menu. */
+@media (hover: none), (pointer: coarse) {
+    :root body select:not([multiple]):not([size]):not(.bl-status):not([data-native]):not(.flatpickr-monthDropdown-months) {
+        -webkit-appearance: none; appearance: none;
+        padding-right: 50px !important; padding-left: 16px !important;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='38' height='26' viewBox='0 0 38 26'%3E%3Cpath d='M1 2v22' stroke='%238a8a93' stroke-width='1.2'/%3E%3Cpath d='M19 10.5l5-5 5 5M19 15.5l5 5 5-5' fill='none' stroke='%238a8a93' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+        background-repeat: no-repeat !important; background-position: right 6px center !important; background-size: 38px 26px !important;
+    }
+}
+/* Date fields: the date sits in the middle of the box, on the left (Safari puts it at the top) */
+.cam-form input[type=date], .se-panel input[type=date], .ing-field input[type=date] { line-height: normal; display: flex; align-items: center; }
+.cam-form input[type=date]::-webkit-date-and-time-value, .se-panel input[type=date]::-webkit-date-and-time-value { margin: 0; text-align: left; }

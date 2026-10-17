@@ -97,10 +97,23 @@ async function upgradePlanWording(redis, list) {
     return out;
   } catch { return list; }
 }
+// The Venue Trial Month gives the same as Distribution · Starter (its features, storage and clips); it keeps
+// its own name and price. Applied once to the saved plan list.
+async function upgradeVenueTrial(redis, list) {
+  try {
+    if (await redis.get('billing_plans_trial_v5')) return list;
+    const starter = list.find(x => x.id === 'starter-distribution') || DEFAULT_PLANS.find(x => x.id === 'starter-distribution');
+    const out = list.map(x => !/venue\s*trial/i.test(String(x.name || '')) ? x : { ...x,
+      features: [...(starter.features || [])], included: { ...(starter.included || {}) }, maxClips: starter.maxClips, cameras: starter.cameras || 0 });
+    await redis.set('billing_plans', JSON.stringify(out));
+    await redis.set('billing_plans_trial_v5', new Date().toISOString());
+    return out;
+  } catch { return list; }
+}
 export async function readPlans(redis) {
   // The DJ Trial Month is always offered, even when the saved plan list predates it
   const withPayg = list => [...DEFAULT_PLANS.filter(d => d.id === 'dj-trial' && !list.some(p => p.id === d.id)), ...list];
-  try { let p = JSON.parse(await redis.get('billing_plans') || 'null'); if (Array.isArray(p) && p.length) p = await upgradePlanWording(redis, await upgradeStarterCamera(redis, await upgradeSavedStorage(redis, p))); return Array.isArray(p) && p.length ? withPayg(p.map(x => { const d = DEFAULT_PLANS.find(z => z.id === x.id) || {}; return { ...x, signupFee: x.signupFee != null ? x.signupFee : (d.signupFee || 0), features: (x.features && x.features.length ? x.features : d.features), cameras: x.cameras != null ? x.cameras : (d.cameras || 0), maxClips: x.maxClips != null ? x.maxClips : (d.maxClips != null ? d.maxClips : 5) }; })) : DEFAULT_PLANS; }
+  try { let p = JSON.parse(await redis.get('billing_plans') || 'null'); if (Array.isArray(p) && p.length) p = await upgradeVenueTrial(redis, await upgradePlanWording(redis, await upgradeStarterCamera(redis, await upgradeSavedStorage(redis, p)))); return Array.isArray(p) && p.length ? withPayg(p.map(x => { const d = DEFAULT_PLANS.find(z => z.id === x.id) || {}; return { ...x, signupFee: x.signupFee != null ? x.signupFee : (d.signupFee || 0), features: (x.features && x.features.length ? x.features : d.features), cameras: x.cameras != null ? x.cameras : (d.cameras || 0), maxClips: x.maxClips != null ? x.maxClips : (d.maxClips != null ? d.maxClips : 5) }; })) : DEFAULT_PLANS; }
   catch { return DEFAULT_PLANS; }
 }
 export function cleanPlans(list) {
