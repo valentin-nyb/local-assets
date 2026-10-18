@@ -45,32 +45,20 @@
 
         /* ── Dashboard / Sign in button ── */
         .la-dashboard-btn {
-          display: inline-flex;
-          align-items: center;
-          font-family: 'JetBrains Mono', 'SF Mono', monospace;
-          font-size: 11px;
-          font-weight: 500;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          text-decoration: none;
-          color: #fff;
-          padding: 7px 16px;
-          border: 1px solid rgba(255, 255, 255, 0.3);
-          border-radius: 9999px;
-          background: transparent;
-          backdrop-filter: blur(12px);
-          transition: all 150ms ease;
-          white-space: nowrap;
-          -webkit-user-select: none;
-          user-select: none;
+          display: inline-flex; align-items: center; gap: 8px;
+          height: 42px; padding: 0 18px 0 20px; border-radius: 9999px;
+          font: 600 14px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing: -.005em; text-transform: none;
+          text-decoration: none; color: #000; background: #85FA4F; border: 1px solid #85FA4F;
+          box-shadow: 0 0 0 0 rgba(133,250,79,.0), 0 6px 24px rgba(133,250,79,.18);
+          transition: background .2s ease, box-shadow .2s ease, transform .15s ease;
+          white-space: nowrap; -webkit-user-select: none; user-select: none;
         }
-        .la-dashboard-btn:hover {
-          background: rgba(255, 255, 255, 0.08);
-          border-color: rgba(255, 255, 255, 0.6);
-          transform: translateY(-1px);
-        }
+        .la-dashboard-btn svg { width: 16px; height: 16px; transition: transform .2s ease; }
+        .la-dashboard-btn:hover { background: #9dff6e; box-shadow: 0 0 0 4px rgba(133,250,79,.16), 0 8px 30px rgba(133,250,79,.28); }
+        .la-dashboard-btn:hover svg { transform: translateX(3px); }
+        .la-dashboard-btn:focus-visible { outline: 2px solid #85FA4F; outline-offset: 3px; }
         /* Small phones: the header keeps a 16px gutter and the button stays inside the screen */
-        @media (max-width:420px) { main > section > nav { padding-left:16px !important; padding-right:16px !important; } .la-dashboard-btn { padding:7px 12px; font-size:10px; } }
+        @media (max-width:420px) { main > section > nav { padding-left:16px !important; padding-right:16px !important; } .la-dashboard-btn { height:38px; padding:0 14px 0 16px; font-size:13px; } }
         .la-dashboard-btn:active {
           transform: scale(0.97);
         }
@@ -242,8 +230,8 @@
                     <img src="logos/White@2x.png" alt="logo" class="h-5 md:h-6 w-auto object-contain object-left">
                 </a>
                 <div class="flex items-center gap-3">
-                    <a href="dashboard.html" class="la-dashboard-btn" id="la-dashboard-btn">DASHBOARD</a>
-                    <script>(function(){ try { var a = JSON.parse(localStorage.getItem("la_admin") || "null"); if (!a || !a.ts || Date.now() - a.ts > 6e5) { var b = document.getElementById("la-dashboard-btn"); b.textContent = "SIGN IN"; b.href = "/login"; } } catch (_) {} })();</script>
+                    <a href="dashboard.html" class="la-dashboard-btn" id="la-dashboard-btn"><span>Dashboard</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+                    <script>(function(){ try { var a = JSON.parse(localStorage.getItem("la_admin") || "null"); if (!a || !a.ts || Date.now() - a.ts > 6e5) { var b = document.getElementById("la-dashboard-btn"); b.querySelector("span").textContent = "Sign in"; b.href = "/login"; } } catch (_) {} })();</script>
                 </div>
             </nav>
 
@@ -323,8 +311,7 @@
                 .nt-vis { position:relative; height:190px; background:#0f0f11; border-bottom:1px solid #1f1f22; display:flex; align-items:center; justify-content:center; overflow:hidden; }
                 .nt-txt { padding:18px 20px 20px; }
                 .nt-time { font:700 12px 'JetBrains Mono', monospace; color:#39FF14; letter-spacing:.06em; }
-                .nt-txt h3 { font:700 18px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif !important; text-transform:none !important; color:#fff; margin:8px 0 6px; }
-                .nt-txt h3 { text-transform:uppercase; }   /* the six steps' titles in capitals */
+                .nt-txt h3 { font:700 18px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif !important; text-transform:uppercase !important; letter-spacing:.01em; color:#fff; margin:8px 0 6px; }
                 .nt-spec { margin-top:10px !important; padding-top:10px; border-top:1px solid #1f1f22; font:400 11px/1.5 'JetBrains Mono', monospace !important; color:#71717a !important; letter-spacing:.02em; }
                 .nt-txt p { font:400 14px/1.45 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#a1a1aa; margin:0; }
                 /* 1 calendar → camera on */
