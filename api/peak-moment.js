@@ -3,8 +3,10 @@ import ffmpegPath from 'ffmpeg-static';
 import { createClient } from 'redis';
 import { getWebSessionAuth } from './_venues.js';
 
-// Finds the peak moment of a set: the stretch with the most bass energy (the drops),
-// measured on the smallest HLS rendition. The result is cached per asset in Redis.
+// Finds the peak moment of a set for the dashboard banner: among the stretches with the most bass
+// energy (the drops, measured on the smallest HLS rendition), the one where the picture shows someone
+// playing (movement between frames, not an empty booth), and where in the frame that movement is, so
+// the banner is centred on the DJ. The result is cached per asset in Redis.
 export const config = { maxDuration: 300 };
 
 const MAX_SEGMENTS = 400;   // segments analysed per video (sampled evenly)
@@ -36,6 +38,49 @@ function segmentEnergy(bytes) {
     ff.stdin.on('error', () => {});
     ff.stdin.end(bytes);
   });
+}
+
+// ── The picture: is the DJ playing, and where ──────────────────────────────────
+const FW = 96, FH = 54;           // frames are compared this small, in grey
+const CANDIDATES = 8;             // loudest stretches looked at
+const SPACING_SEC = 45;           // candidates at least this far apart
+
+function grayFrame(bytes) {
+  return new Promise(resolve => {
+    const ff = spawn(ffmpegPath, ['-hide_banner', '-loglevel', 'error', '-i', 'pipe:0', '-vf', `scale=${FW}:${FH},format=gray`, '-f', 'rawvideo', 'pipe:1']);
+    const out = [];
+    ff.stdout.on('data', d => out.push(d));
+    ff.on('error', () => resolve(null));
+    ff.on('close', () => { const b = Buffer.concat(out); resolve(b.length >= FW * FH ? b.subarray(0, FW * FH) : null); });
+    ff.stdin.on('error', () => {});
+    ff.stdin.end(bytes);
+  });
+}
+async function frameAt(playbackId, t) {
+  try {
+    const r = await fetch(`https://image.mux.com/${playbackId}/thumbnail.jpg?time=${Math.max(0, Math.round(t))}&width=192`, { signal: AbortSignal.timeout(15000) });
+    return r.ok ? await grayFrame(Buffer.from(await r.arrayBuffer())) : null;
+  } catch { return null; }
+}
+// Movement across the banner's loop (frames 3 s apart): how much, and where. Each frame is evened out
+// for brightness first, so club lights changing don't count; a change over most of the picture
+// (a light sweep or a cut) counts for little.
+async function movement(playbackId, t) {
+  const frames = (await Promise.all([t - 3, t, t + 3].map(x => frameAt(playbackId, x)))).filter(Boolean);
+  if (frames.length < 2) return null;
+  const norm = frames.map(f => { let m = 0; for (const v of f) m += v; m /= f.length; return Float32Array.from(f, v => v - m); });
+  const diff = new Float32Array(FW * FH);
+  for (let k = 1; k < norm.length; k++) for (let i = 0; i < diff.length; i++) diff[i] += Math.abs(norm[k][i] - norm[k - 1][i]);
+  const sorted = Float32Array.from(diff).sort();
+  const thr = Math.max(18 * (norm.length - 1), sorted[Math.floor(sorted.length * 0.5)] * 3);
+  let count = 0, sx = 0; const rows = [];
+  for (let y = 0; y < FH; y++) for (let x = 0; x < FW; x++) if (diff[y * FW + x] > thr) { count++; sx += x; rows.push(y); }
+  const frac = count / diff.length;
+  const score = frac < 0.3 ? frac : Math.max(0, 0.6 - frac);
+  if (!count) return { score: 0, focus: null };
+  // Centre on the upper part of the movement (head and hands), not the middle of the decks
+  rows.sort((a, b) => a - b);
+  return { score, focus: { x: Math.round(sx / count / FW * 100), y: Math.round(rows[Math.floor(rows.length * 0.35)] / FH * 100) } };
 }
 
 export async function findPeak(playbackId, duration) {
@@ -74,14 +119,23 @@ export async function findPeak(playbackId, duration) {
   const total = duration || t;
   const pts = sample.filter(s => s.energy != null).map(s => ({ mid: s.start + s.dur / 2, e: s.energy }));
   if (!pts.length) throw new Error('No audio analysed');
-  let best = null;
+  const scored = [];
   for (const p of pts) {
     if (p.mid < total * EDGE || p.mid > total * (1 - EDGE)) continue;
     const near = pts.filter(q => Math.abs(q.mid - p.mid) <= WINDOW_SEC / 2);
-    const score = near.reduce((a, q) => a + q.e, 0) / near.length;
-    if (!best || score > best.score) best = { time: p.mid, score };
+    scored.push({ time: p.mid, score: near.reduce((a, q) => a + q.e, 0) / near.length });
   }
-  return Math.round((best || pts.reduce((a, b) => (b.e > a.e ? b : a))).time ?? pts[0].mid);
+  if (!scored.length) return { time: Math.round(pts.reduce((a, b) => (b.e > a.e ? b : a)).mid), focus: null };
+  // The loudest stretches, spread over the set
+  scored.sort((a, b) => b.score - a.score);
+  const cands = [];
+  for (const c of scored) { if (cands.every(d => Math.abs(d.time - c.time) >= SPACING_SEC)) cands.push(c); if (cands.length >= CANDIDATES) break; }
+  // Of those, the one where someone is playing on camera (louder breaks a tie)
+  await Promise.all(cands.map(async c => { c.move = await movement(playbackId, c.time); }));
+  const topBass = cands[0].score || 1, topMove = Math.max(...cands.map(c => c.move?.score || 0));
+  const rank = c => (topMove > 0 ? 0.65 * (c.move?.score || 0) / topMove : 0) + 0.35 * c.score / topBass;
+  const best = cands.reduce((a, b) => (rank(b) > rank(a) ? b : a));
+  return { time: Math.round(best.time), focus: best.move?.focus || null };
 }
 
 export default async function handler(req, res) {
@@ -96,7 +150,7 @@ export default async function handler(req, res) {
 
   try {
     return await withRedis(async redis => {
-      const cached = await redis.get(`peak:${assetId}`);
+      const cached = await redis.get(`peak2:${assetId}`);
       if (cached) return res.status(200).json(JSON.parse(cached));
 
       // Only one analysis per asset at a time; other callers fall back until it's done.
@@ -114,10 +168,10 @@ export default async function handler(req, res) {
         if (!playbackId || asset.status !== 'ready') return res.status(409).json({ error: 'Asset not ready' });
 
         const started = Date.now();
-        const time = await findPeak(playbackId, Number(asset.duration) || 0);
-        const result = { time, method: 'bass-energy' };
-        await redis.set(`peak:${assetId}`, JSON.stringify(result));
-        console.log(`[peak-moment] ${assetId} peak at ${time}s (${Date.now() - started} ms)`);
+        const { time, focus } = await findPeak(playbackId, Number(asset.duration) || 0);
+        const result = { time, focus, method: 'bass-and-movement' };
+        await redis.set(`peak2:${assetId}`, JSON.stringify(result));
+        console.log(`[peak-moment] ${assetId} peak at ${time}s focus ${JSON.stringify(focus)} (${Date.now() - started} ms)`);
         return res.status(200).json(result);
       } finally {
         await redis.del(`peak:lock:${assetId}`).catch(() => {});

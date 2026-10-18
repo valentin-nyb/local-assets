@@ -2283,7 +2283,9 @@
 
         // Banner loop position: the set's peak (see /api/peak-moment). Until the peak is known,
         // loop the middle of the set rather than the opening seconds.
-        var _peaks = (function() { try { return JSON.parse(localStorage.getItem('la_peaks') || '{}'); } catch (_) { return {}; } })();
+        // The moment the DJ is playing on camera, and where in the frame they are (la_peaks2: older entries were sound only)
+        var _peaks = {}, _peakFocus = {};
+        (function() { try { var o = JSON.parse(localStorage.getItem('la_peaks2') || '{}'); Object.keys(o).forEach(function(k) { _peaks[k] = o[k].time; _peakFocus[k] = o[k].focus || null; }); localStorage.removeItem('la_peaks'); } catch (_) {} })();
         var _peakPending = {};
         // The banner is a muted, autoplaying loop of the long-form video around its peak,
         // played as real video (hardware-decoded on phones) and faded in once it plays.
@@ -2392,6 +2394,17 @@
             // The DJ, not the lights: look at several moments of the loop, take the middle answer,
             // and keep it to the band where a DJ stands behind the decks (head and body, not ceiling or floor)
             var pid = a.playback_ids[0].id;
+            // Where the DJ is moving in the frame (found with the peak): the banner's strip is centred on them
+            var f = _peakFocus[a.id];
+            if (f) {
+                var tr = (a.tracks || []).filter(function(x) { return x.type === 'video' && x.max_width; })[0];
+                var va = tr ? tr.max_width / tr.max_height : 16 / 9;
+                var along = function(c, vis) { return vis >= 1 ? 50 : Math.round(Math.max(0, Math.min(1 - vis, c / 100 - vis / 2)) / (1 - vis) * 100); };
+                var fp = aspect > va ? '50% ' + along(f.y, va / aspect) + '%' : along(f.x, aspect / va) + '% 50%';
+                var fw = document.getElementById('live-feed-player-wrap');
+                if (fw) { fw.dataset.pos = fp; if (_heroLoop) _heroLoop.el.style.setProperty('--media-object-position', fp); }
+                return;
+            }
             Promise.all([-3, 0, 3].map(function(dt) { return heroFocus(pid, Math.max(0, Math.min(time + dt, Math.floor(dur - 1))), aspect).catch(function() { return null; }); })).then(function(list) {
                 list = list.filter(Boolean);
                 if (!list.length) throw new Error('no focus');
@@ -2425,8 +2438,8 @@
                 return r.ok ? r.json() : null;
             }).then(function(d) {
                 if (!d || d.time == null) return;
-                _peaks[assetId] = d.time;
-                try { localStorage.setItem('la_peaks', JSON.stringify(_peaks)); } catch (_) {}
+                _peaks[assetId] = d.time; _peakFocus[assetId] = d.focus || null;
+                try { var o = {}; Object.keys(_peaks).forEach(function(k) { o[k] = { time: _peaks[k], focus: _peakFocus[k] }; }); localStorage.setItem('la_peaks2', JSON.stringify(o)); } catch (_) {}
                 renderHero();
             }).catch(function() {});
         }
