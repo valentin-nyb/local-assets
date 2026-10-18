@@ -105,10 +105,11 @@ async function animateClip(job) {
       ff.on('close', code => { clearTimeout(kill); code === 0 ? resolve() : reject(new Error('ffmpeg: ' + err.trim().split('\n').pop())); });
     });
     const size = () => (fs.existsSync(out) ? fs.statSync(out).size : 0);
-    await enc(`https://stream.mux.com/${job.pid}/highest.mp4`).catch(e => console.error('[watermark-gif] mp4', job.n, e.message));
+    // Only a file ffmpeg finished is used: one stopped part-way is a broken MP4 that Cloud Storage can't read
+    let done = await enc(`https://stream.mux.com/${job.pid}/highest.mp4`).then(() => true, e => { console.error('[watermark-gif] mp4', job.n, e.message); fs.rmSync(out, { force: true }); return false; });
     console.log('[watermark-gif] rendered', job.slug, job.n, Math.round((Date.now() - t0) / 1000) + 's', Math.round(size() / 1024) + ' KB');
-    if (size() < 100 * 1024 && Date.now() - t0 < 120e3) await enc(`https://stream.mux.com/${job.pid}.m3u8?rendition_order=desc`);
-    if (size() < 100 * 1024) throw new Error('The clip could not be read');
+    if (!done && Date.now() - t0 < 120e3) done = await enc(`https://stream.mux.com/${job.pid}.m3u8?rendition_order=desc`).then(() => true, e => { console.error('[watermark-gif] hls', job.n, e.message); fs.rmSync(out, { force: true }); return false; });
+    if (!done || size() < 100 * 1024) throw new Error('The clip could not be drawn in time');
     const blob = await put(`watermarks/${job.slug}/gif-${crypto.randomBytes(6).toString('hex')}.mp4`, fs.readFileSync(out), { access: 'public', contentType: 'video/mp4', addRandomSuffix: false, multipart: size() > 50 * 1024 * 1024 });
     const copy = await muxReq(auth, '/video/v1/assets', {
       method: 'POST',
