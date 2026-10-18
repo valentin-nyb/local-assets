@@ -603,11 +603,20 @@
         @keyframes trPulse { 50% { opacity:.4; } }
         .tr-offer-name { margin:0; font-size:22px; font-weight:700; text-transform:uppercase; letter-spacing:-.005em; color:#fafafa; }
         /* Who the trial is for: Venue, Artist or Label, picked in the title */
-        .tr-offer-pick { position:relative; display:inline-flex; align-items:center; margin-right:.25em; }
-        .tr-offer-pick select { appearance:none; -webkit-appearance:none; margin:0; padding:0 26px 2px 0; border:0; border-bottom:2px solid #85FA4F; border-radius:0; background:none; font:inherit; letter-spacing:inherit; text-transform:uppercase; color:#85FA4F; cursor:pointer; }
-        .tr-offer-pick select:focus-visible { outline:2px solid #85FA4F; outline-offset:4px; }
-        .tr-offer-pick select option { background:#0a0a0a; color:#fafafa; text-transform:none; }
-        .tr-offer-pick svg { position:absolute; right:2px; width:16px; height:16px; color:#85FA4F; pointer-events:none; }
+        .tr-offer-pick { position:relative; display:inline-flex; margin-right:.25em; vertical-align:baseline; }
+        .tr-offer-pick > button { display:inline-flex; align-items:center; gap:6px; margin:0; padding:0 0 2px; border:0; border-bottom:2px solid #85FA4F; background:none; font:inherit; letter-spacing:inherit; text-transform:uppercase; color:#85FA4F; cursor:pointer; }
+        .tr-offer-pick > button:focus-visible { outline:2px solid #85FA4F; outline-offset:4px; border-radius:2px; }
+        .tr-offer-pick > button svg { width:16px; height:16px; transition:transform .2s ease; }
+        .tr-offer-pick > button[aria-expanded="true"] svg { transform:rotate(180deg); }
+        .tr-offer-menu { position:absolute; top:calc(100% + 10px); left:-8px; z-index:30; min-width:250px; margin:0; padding:6px; list-style:none; border:1px solid rgba(250,250,250,.16); border-radius:14px; background:#0a0a0a; box-shadow:0 18px 48px rgba(0,0,0,.6); opacity:0; transform:translateY(-4px); pointer-events:none; transition:opacity .18s ease, transform .18s ease; text-transform:none; letter-spacing:0; }
+        .tr-offer-menu.open { opacity:1; transform:none; pointer-events:auto; }
+        .tr-offer-menu li { display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:9px; cursor:pointer; outline:none; }
+        .tr-offer-menu li:hover, .tr-offer-menu li:focus-visible { background:rgba(250,250,250,.06); }
+        .tr-offer-menu li b { display:block; font-size:14px; font-weight:600; color:#fafafa; }
+        .tr-offer-menu li small { display:block; margin-top:2px; font-size:12px; font-weight:400; color:#71717a; }
+        .tr-offer-menu li svg { width:16px; height:16px; margin-left:auto; flex-shrink:0; color:#85FA4F; opacity:0; }
+        .tr-offer-menu li[aria-selected="true"] svg { opacity:1; }
+        .tr-offer-menu li[aria-selected="true"] b { color:#85FA4F; }
         .tr-offer-for { margin:6px 0 0; font-size:14px; line-height:1.5; color:#a1a1aa; }
         .tr-offer-feats { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px 18px; }
         .tr-offer-feats li { display:flex; gap:9px; font-size:13px; line-height:1.4; color:#e4e4e7; }
@@ -659,7 +668,7 @@
         <div class="tr-offer">
             <div class="tr-offer-main">
                 <p class="tr-offer-tag"><span class="tr-offer-dot"></span>Special offer · limited time</p>
-                <p class="tr-offer-name"><span class="tr-offer-pick"><select id="tr-offer-type" aria-label="Who the trial is for" onchange="trialType()"><option value="venue">Venue</option><option value="artist" selected>Artist</option><option value="label">Label</option></select><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span>Trial Month</p>
+                <div class="tr-offer-name"><span class="tr-offer-pick"><input type="hidden" id="tr-offer-type" value="artist"><button type="button" id="tr-offer-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Who the trial is for"><span id="tr-offer-type-name">Artist</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><ul class="tr-offer-menu" id="tr-offer-menu" role="listbox" aria-label="Who the trial is for"><li role="option" data-v="venue" tabindex="-1" aria-selected="false"><span><b>Venue</b><small>Club, bar or event space</small></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></li><li role="option" data-v="artist" tabindex="-1" aria-selected="true"><span><b>Artist</b><small>DJ or live act</small></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></li><li role="option" data-v="label" tabindex="-1" aria-selected="false"><span><b>Label</b><small>Releases music for its artists</small></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></li></ul></span>Trial Month</div>
                 <p class="tr-offer-for" id="tr-offer-for">For DJs and live acts trying it with their own phone or camera.</p>
             </div>
             <ul class="tr-offer-feats"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>6 vertical clips per session</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Brand Kit, your logo on every clip</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Camera Control: phone, OBS or your own camera</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Then pay as you go, charged on the 1st</span></li></ul>
@@ -944,6 +953,28 @@
             var f = document.getElementById('tr-offer-for'); if (f) f.textContent = TRIAL_TYPES[t][1];
             return t;
         }
+        // The trial's own dropdown (Venue, Artist or Label), in the site's style rather than the browser's menu
+        (function() {
+            var btn = document.getElementById('tr-offer-btn'), menu = document.getElementById('tr-offer-menu');
+            if (!btn || !menu) return;
+            var items = [].slice.call(menu.querySelectorAll('li'));
+            var open = function(on) { menu.classList.toggle('open', on); btn.setAttribute('aria-expanded', on ? 'true' : 'false'); if (on) (menu.querySelector('[aria-selected="true"]') || items[0]).focus(); };
+            var pick = function(li) {
+                items.forEach(function(x) { x.setAttribute('aria-selected', x === li ? 'true' : 'false'); });
+                document.getElementById('tr-offer-type').value = li.dataset.v;
+                document.getElementById('tr-offer-type-name').textContent = li.querySelector('b').textContent;
+                trialType(); open(false); btn.focus();
+            };
+            btn.addEventListener('click', function(e) { e.stopPropagation(); open(!menu.classList.contains('open')); });
+            items.forEach(function(li) { li.addEventListener('click', function(e) { e.stopPropagation(); pick(li); }); });
+            menu.addEventListener('keydown', function(e) {
+                var i = items.indexOf(document.activeElement);
+                if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); items[(i + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length].focus(); }
+                else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (i >= 0) pick(items[i]); }
+                else if (e.key === 'Escape' || e.key === 'Tab') { open(false); btn.focus(); }
+            });
+            document.addEventListener('click', function() { open(false); });
+        })();
         function selectTier(tierId) {
             var esc = function(v) { return String(v).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
             var T = SIGNUP_TIERS[tierId] || { group: '', name: TIER_NAMES[tierId] || tierId, price: '', feats: [] };
