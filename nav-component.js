@@ -159,7 +159,7 @@ document.addEventListener("DOMContentLoaded", () => {
         var breadcrumb = document.getElementById('venue-breadcrumb');
         var tier = document.getElementById('venue-tier');
         if (breadcrumb) breadcrumb.textContent = name;
-        if (tier) tier.textContent = 'Infrastructure Tier — ' + name;
+        if (tier) tier.textContent = String(name).toUpperCase();
         document.querySelectorAll('[data-venue-label]').forEach(function(el) {
             el.textContent = name;
         });

@@ -40,7 +40,7 @@
     <script src="/la-dialogs.js?v=2"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-    <script src="nav-component.js?v=19"></script>
+    <script src="nav-component.js?v=20"></script>
     <style>
         /* Standardized sidebar styles used by the JS component */
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
@@ -125,6 +125,10 @@
             #recent-sets-list .justify-between { flex-wrap:wrap; row-gap:10px; }
             #recent-sets-list .justify-between > .flex.items-center.gap-2 { flex-wrap:wrap; }
             #recent-sets-list .justify-between > div:last-child { margin-left:auto; }
+            /* An asset's name and status keep their width (never squeezed to one word per line); the buttons wrap under them */
+            #recent-sets-list .justify-between > .flex-1.min-w-0 { flex:1 0 auto !important; max-width:100%; }
+            #recent-sets-list .justify-between > .flex-1.min-w-0 p { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+            #recent-sets-list .justify-between > .flex-1.min-w-0 > .min-w-0 { min-width:0; overflow:hidden; }
             #recent-sets-list [id^="zip-btn-"], #recent-sets-list .wm-apply, #recent-sets-list .wm-restore, #recent-sets-list .wm-master, #recent-sets-list .yt-dist-btn, #recent-sets-list .sc-dist-btn { height:32px !important; padding:0 12px !important; font-size:12px !important; }
             /* A session: logo, name and venue on the left (cut short if long), edit and Download on the right, one line */
             #recent-sets-list .sess-row { flex-wrap:nowrap !important; gap:10px; padding-left:16px !important; padding-right:14px !important; }
@@ -177,8 +181,9 @@
 
 
         <div class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
-            <div class="flex justify-between items-center mb-6">
-                <span id="venue-tier" class="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">INFRASTRUCTURE TIER — ADMIN</span>
+            <div class="dash-head">
+                <h2 id="venue-tier" class="dash-h">ADMIN</h2>
+                <p class="dash-sub" id="venue-tier-sub">Your sessions, files and channels.</p>
             </div>
             <a id="live-feed-hero" href="/camera.html" class="block cursor-pointer hover:border-primary/50 transition-all duration-500 w-full bg-[#050505] border border-[#27272a] rounded-2xl p-5 md:p-8 relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-4 md:gap-6 shadow-2xl no-underline" style="background:#050505!important">
                 <img id="live-feed-video" src="" class="hidden absolute inset-0 w-full h-full object-cover opacity-60 transition-all duration-700 pointer-events-none" alt="">
@@ -273,10 +278,6 @@
         <div class="la-statusbar w-full bg-black border-t border-[#27272a] flex items-center justify-between px-4 md:px-6 shrink-0 py-5" style="padding-bottom: calc(env(safe-area-inset-bottom) + 1.25rem);">
             <div class="flex items-center gap-2 md:gap-4 text-[7px] md:text-[9px] font-mono text-zinc-600 uppercase tracking-widest">
                 <span>LOCAL / ASSETS V2.4.0</span>
-            </div>
-            <div class="flex items-center gap-2">
-                <span id="sys-foot-dot" class="w-1.5 h-1.5 rounded-full bg-zinc-600"></span>
-                <span id="sys-foot" class="text-[7px] md:text-[9px] font-mono text-zinc-400 uppercase tracking-widest">Checking…</span>
             </div>
         </div>
     </main>
@@ -391,7 +392,7 @@
                 modal.style.cssText = 'z-index:2147483000;background:rgba(0,0,0,.9);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);isolation:isolate;';
                 modal.innerHTML =
                     '<div class="mm-wrap relative flex items-center gap-3 max-w-full" onclick="event.stopPropagation()">' +
-                        '<button id="media-prev" class="mm-nav w-10 h-10 shrink-0 flex items-center justify-center rounded-full border border-zinc-700 text-zinc-300 hover:border-primary hover:text-primary transition-colors" title="Previous" onclick="stepMediaModal(-1)"><iconify-icon icon="solar:alt-arrow-left-linear"></iconify-icon></button>' +
+                        '<button id="media-prev" class="mm-nav w-10 h-10 shrink-0 flex items-center justify-center rounded-full border border-zinc-700 text-zinc-300 hover:border-primary hover:text-primary transition-colors" title="Previous" onclick="stepMediaModal(-1)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>' +
                         '<div class="mm-col flex flex-col gap-3 min-w-0">' +
                             '<div class="flex items-center justify-between gap-4">' +
                                 '<p class="text-[10px] font-mono uppercase tracking-widest text-zinc-400 min-w-0 flex" style="gap:.6em"><span id="media-modal-title" class="truncate"></span><span id="media-modal-count" class="shrink-0 text-zinc-500"></span></p>' +
@@ -403,7 +404,7 @@
                             '</div>' +
                             '<div id="media-modal-stage" class="overflow-hidden rounded-xl bg-black flex items-center justify-center" style="border:1px solid rgba(255,255,255,.12)"></div>' +
                         '</div>' +
-                        '<button id="media-next" class="mm-nav w-10 h-10 shrink-0 flex items-center justify-center rounded-full border border-zinc-700 text-zinc-300 hover:border-primary hover:text-primary transition-colors" title="Next" onclick="stepMediaModal(1)"><iconify-icon icon="solar:alt-arrow-right-linear"></iconify-icon></button>' +
+                        '<button id="media-next" class="mm-nav w-10 h-10 shrink-0 flex items-center justify-center rounded-full border border-zinc-700 text-zinc-300 hover:border-primary hover:text-primary transition-colors" title="Next" onclick="stepMediaModal(1)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>' +
                     '</div>';
                 modal.addEventListener('click', closeMediaModal);
                 document.body.appendChild(modal);
@@ -2608,7 +2609,11 @@
             ((account && account.stats) || []).forEach(function(t) {
                 var c = document.createElement('span'); c.className = 'pm-chip'; c.textContent = t; chips.appendChild(c);
             });
-            row.appendChild(av); row.appendChild(nm); row.appendChild(chips);
+            // The name with its numbers under it, next to the picture
+            var txt = document.createElement('div');
+            txt.className = 'pm-acct-text';
+            txt.appendChild(nm); if (chips.childNodes.length) txt.appendChild(chips);
+            row.appendChild(av); row.appendChild(txt);
         }
 
         function openRevenueSettings() {
@@ -2936,11 +2941,11 @@
 
             if (role === 'client') {
                 if (breadcrumb) breadcrumb.textContent = venue || 'CLIENT';
-                if (tier)       tier.textContent       = 'INFRASTRUCTURE TIER — ' + (venue || 'CLIENT');
+                if (tier)       tier.textContent       = String(venue || 'Your account').toUpperCase();
                 if (avatar)     avatar.textContent     = (venue || 'C')[0];
             } else {
                 if (breadcrumb) breadcrumb.textContent = 'ADMIN';
-                if (tier)       tier.textContent       = 'INFRASTRUCTURE TIER — ADMIN';
+                if (tier)       { tier.textContent = 'ADMIN'; var ts = document.getElementById('venue-tier-sub'); if (ts) ts.textContent = 'Every client account, in one place.'; }
                 if (avatar) {
                     var initial = (sess.email || 'A')[0].toUpperCase();
                     avatar.textContent = initial;
@@ -3565,14 +3570,23 @@
         .sh-dot[data-level="busy"], .sh-summary[data-level="busy"] .sh-dot { background:var(--la-warn); animation:shPulse 1.6s ease-in-out infinite; }
         .sh-dot[data-level="bad"], .sh-summary[data-level="bad"] .sh-dot { background:var(--la-bad); }
         @keyframes shPulse { 50% { opacity:.35; } }
+        /* Page heading: the account's name, in the platform style */
+        .dash-head { margin-bottom:8px; }
+        .dash-h { margin:0; font:700 22px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif !important; letter-spacing:-.01em !important; text-transform:none; color:var(--la-text); overflow-wrap:anywhere; }
+        .dash-sub { margin:6px 0 0; font:400 14px/1.4 'Helvetica Neue', Helvetica, Arial, sans-serif; color:var(--la-sub); }
         /* Media popup: arrows sit beside the media on desktop, over it on phones */
         #media-modal { --mm-side:140px; }
+        /* Arrows filled in the theme colour, like Share */
+        #media-modal .mm-nav { background:var(--la-accent) !important; border-color:var(--la-accent) !important; color:var(--la-accent-ink, #000) !important; box-shadow:0 4px 14px rgba(0,0,0,.35); transition:transform .15s ease, opacity .15s ease; }
+        #media-modal .mm-nav svg { display:block; }
+        @media (hover:hover) { #media-modal .mm-nav:hover { opacity:.88; } }
+        #media-modal .mm-nav:active { opacity:.8; }
         @media (max-width: 640px) {
             #media-modal { --mm-side:24px; padding:12px !important; }
             #media-modal .mm-wrap { width:100%; justify-content:center; }
             #media-modal .mm-col { align-items:center; max-width:100%; }
             #media-modal .mm-col > div:first-child { width:100%; }
-            #media-modal .mm-nav { position:absolute; top:calc(50% + 22px); transform:translateY(-50%); z-index:2; width:38px; height:38px; background:rgba(0,0,0,.6); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); border-color:rgba(255,255,255,.18); }
+            #media-modal .mm-nav { position:absolute; top:calc(50% + 22px); transform:translateY(-50%); z-index:2; width:38px; height:38px; }
             #media-modal #media-prev { left:8px; }
             #media-modal #media-next { right:8px; }
         }
@@ -3636,11 +3650,9 @@
         #revenue-modal .pm-foot a { color:var(--pm-sub); text-decoration:underline; text-underline-offset:2px; }
         #revenue-modal .hidden { display:none !important; }
         @media (max-width: 480px) { #dist-footer .dist-updated { display:none; } #dist-footer { letter-spacing:.12em !important; } }
-        @media (max-width: 480px) {
-            #revenue-modal .pm-account { flex-wrap:wrap; row-gap:8px; }
-            #revenue-modal .pm-account-name { flex-basis:calc(100% - 38px); }
-            #revenue-modal .pm-chips { width:100%; padding-left:38px; }
-        }
+        #revenue-modal .pm-acct-text { flex:1; min-width:0; display:flex; flex-direction:column; gap:6px; }
+        #revenue-modal .pm-acct-text .pm-account-name { flex:none; }
+        #revenue-modal .pm-acct-text .pm-chips { flex-wrap:wrap; }
     </style>
     <div id="revenue-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="pm-title">
         <div class="absolute inset-0" style="background:rgba(0,0,0,.7);backdrop-filter:blur(6px);" onclick="closeRevenueSettings()"></div>

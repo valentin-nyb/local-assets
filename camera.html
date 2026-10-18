@@ -37,7 +37,7 @@
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
-    <script src="nav-component.js?v=19"></script>
+    <script src="nav-component.js?v=20"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
         .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
@@ -81,6 +81,8 @@
         .cam-eyebrow { font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--la-dim); }
         .cam-h { font-size:22px; font-weight:700; letter-spacing:-.01em; margin-top:4px; color:var(--la-text); }
         .cam-actions { display:flex; gap:8px; flex-wrap:wrap; }
+        /* Phones: the buttons sit under the title, on the left (like Add decks audio) */
+        @media (max-width:640px) { .cam-toolbar, .deck-head { flex-direction:column; align-items:flex-start; } }
         .cam-btn { display:inline-flex; align-items:center; gap:8px; height:36px; padding:0 14px; border-radius:10px; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; border:1px solid transparent; text-decoration:none; transition:opacity .15s, border-color .15s, background .15s; }
         .cam-btn iconify-icon { font-size:16px; }
         .cam-btn.primary { background:var(--la-accent); color:var(--la-accent-ink); }
@@ -674,10 +676,6 @@
         <div class="la-statusbar w-full h-10 bg-black border-t border-[#27272a] flex items-center justify-between px-4 md:px-6 shrink-0">
             <div class="flex items-center gap-2 md:gap-4 text-[7px] md:text-[9px] font-mono text-zinc-600 uppercase tracking-widest">
                 <span>LOCAL / ASSETS V2.4.0</span>
-            </div>
-            <div class="flex items-center gap-2">
-                <span id="cam-foot-dot" class="w-1.5 h-1.5 rounded-full bg-zinc-600"></span>
-                <span id="cam-foot" class="text-[7px] md:text-[9px] font-mono text-zinc-400 uppercase tracking-widest">Checking…</span>
             </div>
         </div>
     </main>
