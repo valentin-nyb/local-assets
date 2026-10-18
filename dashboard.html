@@ -34,7 +34,7 @@
     <link rel="manifest" href="favicon/site.webmanifest">
     
     <link rel="stylesheet" href="styles/tailwind.css">
-    <link rel="stylesheet" href="styles/theme.css?v=23">
+    <link rel="stylesheet" href="styles/theme.css?v=24">
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
@@ -186,7 +186,7 @@
         <div class="flex-1 overflow-y-auto la-page la-page-scroll">
             <div class="dash-head">
                 <h2 id="venue-tier" class="dash-h">ADMIN</h2>
-                <script>(function(){ try { var k = 'la_venue_logo:' + (JSON.parse(localStorage.getItem('la_admin') || '{}').venueSlug || ''), v = JSON.parse(localStorage.getItem(k) || 'null'); if (v && v.mask) { var h = document.getElementById('venue-tier'); h.classList.add('has-logo', 'logo-early'); h.style.setProperty('--logo', 'url("' + v.mask + '")'); h.style.setProperty('--logo-w', Math.round(Math.min(260, Math.max(40, 40 * v.ar))) + 'px'); } } catch (_) {} })();</script>
+                <script>(function(){ try { var k = 'la_venue_logo2:' + (JSON.parse(localStorage.getItem('la_admin') || '{}').venueSlug || ''), v = JSON.parse(localStorage.getItem(k) || 'null'); if (v && v.mask) { var h = document.getElementById('venue-tier'); h.classList.add('has-logo', 'logo-early'); h.style.setProperty('--logo', 'url("' + v.mask + '")'); h.style.setProperty('--logo-w', Math.round(Math.min(260, Math.max(40, 40 * v.ar))) + 'px'); } } catch (_) {} })();</script>
                 <p class="dash-sub" id="venue-tier-sub">Your sessions, files and channels.</p>
             </div>
             <a id="live-feed-hero" href="/camera.html" class="block cursor-pointer hover:border-primary/50 transition-all duration-500 w-full bg-[#050505] border border-[#27272a] rounded-2xl p-5 md:p-8 relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-4 md:gap-6 shadow-2xl no-underline" style="background:#050505!important">
@@ -2238,7 +2238,7 @@
         // The page title as the venue's logo, drawn in the text colour (so it suits light and dark). A logo on a solid
         // background has that background taken out and its empty margins cut off first; the result is kept for this
         // venue so the next page shows it straight away, without the name appearing first.
-        function venueLogoKey() { try { return 'la_venue_logo:' + (JSON.parse(localStorage.getItem('la_admin') || '{}').venueSlug || ''); } catch (_) { return 'la_venue_logo:'; } }
+        function venueLogoKey() { try { return 'la_venue_logo2:' + (JSON.parse(localStorage.getItem('la_admin') || '{}').venueSlug || ''); } catch (_) { return 'la_venue_logo2:'; } }
         function applyVenueLogo(v) {
             var h = document.getElementById('venue-tier');
             if (!h || !v || !v.mask || /^admin$/i.test(h.textContent.trim())) return;
@@ -2259,9 +2259,20 @@
                         var cs = [0, W - 1, (H - 1) * W, H * W - 1].map(function(i) { return [d[i * 4], d[i * 4 + 1], d[i * 4 + 2], d[i * 4 + 3]]; });
                         var bg = [0, 1, 2, 3].map(function(k) { return cs.reduce(function(t, x) { return t + x[k]; }, 0) / 4; });
                         var solid = bg[3] > 200, x0 = W, y0 = H, x1 = -1, y1 = -1;
+                        // A logo printed on a badge (one colour fills most of what's drawn, e.g. white letters on a black
+                        // block): that colour is background too, so only the letters are kept
+                        var badge = null;
+                        if (!solid) {
+                            var counts = {}, sums = {}, opaque = 0;
+                            for (var j = 0; j < d.length; j += 4) { if (d[j + 3] < 200) continue; opaque++; var q = (d[j] >> 5) << 6 | (d[j + 1] >> 5) << 3 | (d[j + 2] >> 5); counts[q] = (counts[q] || 0) + 1; var sm = sums[q] || (sums[q] = [0, 0, 0]); sm[0] += d[j]; sm[1] += d[j + 1]; sm[2] += d[j + 2]; }
+                            var top = null; Object.keys(counts).forEach(function(q) { if (!top || counts[q] > counts[top]) top = q; });
+                            var share = top ? counts[top] / Math.max(1, opaque) : 0;
+                            if (share > 0.45 && share < 0.97) badge = sums[top].map(function(v) { return v / counts[top]; });
+                        }
                         for (var y = 0; y < H; y++) for (var x = 0; x < W; x++) {
                             var i = (y * W + x) * 4, al = d[i + 3];
-                            if (solid) { var diff = Math.abs(d[i] - bg[0]) + Math.abs(d[i + 1] - bg[1]) + Math.abs(d[i + 2] - bg[2]); al = Math.max(0, Math.min(255, (diff - 30) * 2.2)) * al / 255; }
+                            var ref = solid ? bg : badge;
+                            if (ref) { var diff = Math.abs(d[i] - ref[0]) + Math.abs(d[i + 1] - ref[1]) + Math.abs(d[i + 2] - ref[2]); al = Math.max(0, Math.min(255, (diff - 30) * 2.2)) * al / 255; }
                             d[i] = d[i + 1] = d[i + 2] = 0; d[i + 3] = al;
                             if (al > 24) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
                         }
