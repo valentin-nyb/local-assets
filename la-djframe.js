@@ -43,7 +43,10 @@
                 var cx = (b.originX + b.width / 2) / W;
                 var middle = 1 - Math.min(1, Math.abs(cx - 0.5) * 1.6);
                 var face = fcs.some(function (f) { var fb = f.boundingBox, fx = fb.originX + fb.width / 2, fy = fb.originY + fb.height / 2; return fx > b.originX && fx < b.originX + b.width && fy > b.originY && fy < b.originY + b.height * 0.5; });
-                var score = (p.categories[0] ? p.categories[0].score : 0.5) * Math.sqrt(area) * (0.4 + 0.6 * middle) * (face ? 1.6 : 1) / crowd;
+                // Seen from the front, the head is near the top of the picture; from above (the decks camera) only arms and
+                // shoulders show, starting low down
+                var top = b.originY / H, upright = top < 0.3 ? 1 : top < 0.45 ? 0.55 : 0.2;
+                var score = (p.categories[0] ? p.categories[0].score : 0.5) * Math.sqrt(area) * (0.4 + 0.6 * middle) * upright * (face ? 1.8 : 1) / crowd;
                 // Centred on the head and shoulders
                 if (!best || score > best.score) best = { time: t, score: score, focus: { x: Math.round(cx * 100), y: Math.round((b.originY + b.height * 0.3) / H * 100) } };
             });
@@ -54,12 +57,12 @@
     // asset: a Mux asset ({ id, duration, playback_ids }). Resolves to { time, focus } or null.
     window.laDjSpot = function (asset) {
         if (!asset || !asset.id || !asset.playback_ids || !asset.playback_ids[0]) return Promise.resolve(null);
-        var key = 'la_dj1:' + asset.id;
+        var key = 'la_dj2:' + asset.id;
         try { var c = JSON.parse(localStorage.getItem(key) || 'null'); if (c) return Promise.resolve(c.time != null ? c : null); } catch (_) {}
         if (inflight[asset.id]) return inflight[asset.id];
         var fetchFn = window.laFetch || fetch;
         var keep = function (v) { try { localStorage.setItem(key, JSON.stringify(v || { none: true })); } catch (_) {} return v; };
-        inflight[asset.id] = fetchFn('/api/peak-moment?dj=1&assetId=' + encodeURIComponent(asset.id))
+        inflight[asset.id] = fetchFn('/api/peak-moment?dj=2&assetId=' + encodeURIComponent(asset.id))
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (s) {
                 if (s && s.dj) return keep(s.dj);

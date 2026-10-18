@@ -34,11 +34,11 @@
     <link rel="manifest" href="favicon/site.webmanifest">
     
     <link rel="stylesheet" href="styles/tailwind.css">
-    <link rel="stylesheet" href="styles/theme.css?v=22">
+    <link rel="stylesheet" href="styles/theme.css?v=23">
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
-    <script src="/la-djframe.js?v=1"></script>
+    <script src="/la-djframe.js?v=2"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="nav-component.js?v=25"></script>
@@ -47,7 +47,13 @@
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
         .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
         .nav-link:hover:not(.active) { background: rgba(255, 255, 255, 0.03); color: white; }
-    </style>
+            /* Latest session: its name, then venue and record label */
+        .hero-meta .hero-session { margin:8px 0 0; font:500 15px/1.3 'Helvetica Neue', Helvetica, Arial, sans-serif; color:rgba(255,255,255,.88); }
+        .hero-meta .hero-facts { display:flex; flex-wrap:wrap; gap:6px 18px; margin:10px 0 0; }
+        .hero-meta .hero-facts:empty { display:none; }
+        .hero-meta .hero-facts span { display:inline-flex; align-items:baseline; gap:7px; font:600 12px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.04em; text-transform:uppercase; color:#fff; }
+        .hero-meta .hero-facts i { font:500 9px/1 'JetBrains Mono', monospace; font-style:normal; letter-spacing:.18em; color:rgba(255,255,255,.6); }
+</style>
     <style>
         body { background-color: #050505; color: #ffffff; -webkit-font-smoothing: antialiased; }
         .nav-link.active { background-color: rgba(255, 255, 255, 0.05); border: 1px solid #27272a; color: white; }
@@ -194,6 +200,7 @@
                         <span id="hero-sub" class="font-mono text-[10px] uppercase" style="color:#ffffff"></span>
                     </div>
                     <h2 id="hero-title" class="text-3xl font-extrabold tracking-tighter uppercase" style="color:#ffffff">&nbsp;</h2>
+                    <div id="hero-meta" class="hero-meta"></div>
                 </div>
 
                 <div id="hero-stats" class="flex gap-10 relative z-10 font-mono">
@@ -644,6 +651,12 @@
                 _brandPhotos = (d && d.ownerPhotos) || {};
                 window._brandInfo = d || {};
                 // An artist account's own Brand Kit photo is that artist's photo
+                if (d && d.orgType) { window._heroOrgType = d.orgType; if (typeof renderHero === 'function') renderHero(); }
+                // A venue's own logo (Brand Kit) in place of its name at the top of the page
+                if (d && d.orgType === 'venue') {
+                    var lg = (d.files || []).filter(function(f) { return f.owner === 'venue' && f.category === 'logos' && /\.(png|svg|webp)(\?|$)/i.test(f.name || f.url || ''); })[0];
+                    if (lg) showVenueLogo(lg.url);
+                }
                 if (d && d.orgType === 'artist' && _brandPhotos.venue) {
                     var own = 'artist-' + brandSlug(d.orgName || getVenueName());
                     if (!_brandPhotos[own]) _brandPhotos[own] = _brandPhotos.venue;
@@ -2220,6 +2233,21 @@
         }
 
         var _heroTimer = null;
+        // The account's own type (from its Brand Kit): a venue's sessions were played there
+        // The page title as the venue's logo, drawn in the text colour (so a black logo shows in dark mode too)
+        function showVenueLogo(url) {
+            var h = document.getElementById('venue-tier');
+            if (!h || h.dataset.logo === url || /^admin$/i.test(h.textContent.trim())) return;
+            var im = new Image();
+            im.onload = function() {
+                var ar = im.naturalWidth / Math.max(1, im.naturalHeight);
+                h.dataset.logo = url; h.classList.add('has-logo');
+                h.style.setProperty('--logo', 'url("' + url.replace(/"/g, '%22') + '")');
+                h.style.setProperty('--logo-w', Math.round(Math.min(280, Math.max(44, 44 * ar))) + 'px');
+            };
+            im.src = url;
+        }
+        function _orgTypeHero() { return window._heroOrgType || ''; }
         function renderHero() {
             var badge = document.getElementById('hero-badge');
             var sub   = document.getElementById('hero-sub');
@@ -2266,6 +2294,13 @@
                 var hm = sessionMeta(latest.meta.artist || '', date);
                 sub.textContent = (hm.venue ? hm.venue + ' · ' : '') + new Date(hm.shownDate + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
                 title.textContent = latest.meta.artist || 'Untitled';
+                // The session's name, then where it was played and for which record label
+                var hmEl = document.getElementById('hero-meta');
+                if (hmEl) {
+                    var venueName = hm.venue || (_orgTypeHero() === 'venue' ? getVenueName() : '');
+                    hmEl.innerHTML = (hm.title ? '<p class="hero-session">' + escHtml(hm.title) + '</p>' : '') +
+                        '<p class="hero-facts">' + [venueName ? '<span><i>Venue</i>' + escHtml(venueName) + '</span>' : '', hm.label ? '<span><i>Label</i>' + escHtml(hm.label) + '</span>' : ''].filter(Boolean).join('') + '</p>';
+                }
                 l1.textContent = 'Duration';
                 v1.textContent = fmtDuration(a.duration);
                 setImg('');            // no still: the banner is only the muted video
@@ -2274,6 +2309,7 @@
             } else if (_health.loaded) {
                 badge.className = 'hidden';
                 sub.textContent = '';
+                var hmE = document.getElementById('hero-meta'); if (hmE) hmE.innerHTML = '';
                 title.textContent = 'No sessions yet';
                 l1.textContent = 'Duration';
                 v1.textContent = '—';
@@ -3492,6 +3528,20 @@
         .kpi-platform { display:inline-flex; align-items:center; gap:6px; white-space:nowrap; font-variant-numeric:tabular-nums; }
         .kpi-platform iconify-icon { font-size:14px; }
         .kpi-muted { color:var(--la-dim); }
+        /* Page title as the venue's logo */
+        #venue-tier.has-logo { width:var(--logo-w); height:44px; font-size:0 !important; color:transparent !important; background:var(--la-text); -webkit-mask:var(--logo) left center / contain no-repeat; mask:var(--logo) left center / contain no-repeat; }
+        /* Stat cards, like the side menu: Geist, a plain label, a large number, a quiet line under it */
+        .kpi { border-radius:12px; padding:20px 22px; background-image:none !important; box-shadow:none !important; }
+        .kpi-label { font:500 13px/1.2 'Geist', 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:0; text-transform:none; color:var(--la-sub); }
+        .kpi-value { margin-top:14px; font-family:'Geist', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:30px; font-weight:600; letter-spacing:-.03em; line-height:1.1; }
+        .kpi-value-text { font-size:18px; letter-spacing:-.01em; line-height:1.3; }
+        .kpi-sub { margin-top:10px; font:400 13px/1.45 'Geist', 'Helvetica Neue', Helvetica, Arial, sans-serif; color:var(--la-dim); }
+        .kpi-up { display:inline-flex !important; align-items:center; padding:3px 8px; border-radius:999px; background:color-mix(in srgb, var(--la-ok) 12%, transparent); color:var(--la-ok); font-size:12px; font-weight:500; }
+        .kpi-action { height:26px; line-height:24px; padding:0 11px; font:500 12px/24px 'Geist', 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+        .kpi-platform, .kpi-platform * { color:var(--la-sub) !important; font-weight:400; }
+        .kpi-platform::before { content:""; width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+        #yt-indicator::before { background:#ef4444; }
+        #sc-indicator::before { background:#f97316; }
         /* The banner sits on video in both themes, so its text always stays light */
         #live-feed-hero #hero-badge, #live-feed-hero #hero-badge * { color:#ffffff !important; }
         #live-feed-hero #hero-title, #live-feed-hero #hero-sub, #live-feed-hero #hero-stat1 { color:#ffffff !important; }
