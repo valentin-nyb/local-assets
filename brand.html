@@ -286,13 +286,18 @@
         .bk-wm-textmeta { flex-basis:100%; display:flex; align-items:center; gap:12px; min-width:0; }
         .bk-wm-link { font-size:12px; color:var(--la-sub); background:none; border:none; padding:0; cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
         .bk-wm-hint { font-size:12px; color:var(--la-dim); line-height:1.5; }
-        .bk-wm-preview.horizontal { width:300px; max-width:100%; aspect-ratio:16/9; }
+        .bk-wm-preview.horizontal { width:100%; max-width:100%; aspect-ratio:16/9; }
         .bk-wm-frame { display:flex; justify-content:center; margin-bottom:10px; }
         .bk-wm-foot { grid-column:1 / -1; display:flex; align-items:center; justify-content:flex-end; gap:12px; padding-top:18px; border-top:1px solid var(--la-line-soft); font-size:12px; color:var(--la-sub); }
         .bk-wm-cap { font-size:11px; color:var(--la-dim); text-align:center; margin-top:8px; }
         .bk-wm-sharp { font-size:11px; line-height:1.45; color:var(--la-warn, #f59e0b); text-align:center; margin:6px auto 0; max-width:300px; }
         .bk-wm-preview { margin-left:auto; margin-right:auto; }
-        .bk-wm-cap { max-width:300px; margin-left:auto; margin-right:auto; }
+        .bk-wm-cap { max-width:none; margin-left:auto; margin-right:auto; }
+        /* A large preview: the column is 520px (400px on medium screens); vertical clips 280px wide */
+        .bk-wm-preview-wrap { width:520px; max-width:100%; }
+        .bk-wm-preview:not(.horizontal) { width:min(280px, 100%); }
+        .bk-wm-sharp { max-width:none; }
+        @media (max-width: 1280px) { .bk-wm-preview-wrap { width:400px; } }
         .bk-wm-sharp.hidden { display:none; }
         .bk-wm-export { width:100%; justify-content:center; margin-top:12px; }
         @media (max-width: 640px) {
@@ -302,7 +307,7 @@
             .bk-seg { display:grid; grid-template-columns:1fr 1fr; justify-self:stretch; }
             .bk-seg[data-n="3"] { grid-template-columns:repeat(3,1fr); }
             .bk-wm select { max-width:none; }
-            .bk-wm-preview-wrap { justify-self:center; }
+            .bk-wm-preview-wrap { justify-self:stretch; width:auto; }
             .bk-wm-textrow input { max-width:none; flex-basis:100%; }
             .bk-wm-textrow .bk-seg { flex:1 1 100%; width:100%; }
             #bk-thumb-form .cam-form-actions { flex-wrap:wrap; }
