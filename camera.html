@@ -1024,10 +1024,22 @@
                 // Short silent loops from the session (animated WebP: plays like a GIF, smaller)
                 var loop = function(t, w) { var a = Math.round(t); return 'https://image.mux.com/' + pid + '/animated.webp?start=' + a + '&end=' + (a + 4) + '&width=' + w + '&fps=10'; };
                 document.getElementById('ci-stage').innerHTML = '<img alt="" class="ci-loop" src="' + loop(dur * 0.45, 480) + '">';
+                // The session's own vertical clips (four different highlights); a session with fewer is filled
+                // from moments spread over the recording
+                var socialOf = function(a) {
+                    var pt = String(a.passthrough || '').trim(), x = /^(.+?) \/\/ SOCIAL \/\/ (\d+)/i.exec(pt);
+                    if (x) return { artist: x[1].toUpperCase().trim(), n: Number(x[2]) };
+                    try { var o = JSON.parse(pt); if (o && String(o.camera || '').toUpperCase() === 'SOCIAL') return { artist: String(o.artist || '').toUpperCase().trim(), n: Number(o.clip || o.n) || 0 }; } catch (_) {}
+                    return null;
+                };
+                var clips = list.filter(function(a) { var c = socialOf(a); return c && c.artist === name && a.status === 'ready' && (a.playback_ids || []).length && Number(a.created_at) >= Number(m.created_at); })
+                    .sort(function(a, b) { return socialOf(a).n - socialOf(b).n; }).slice(0, 4);
                 document.querySelectorAll('#ci-branded i').forEach(function(t, i) {
                     var img = document.createElement('img');
                     img.alt = ''; img.className = 'ci-loop'; img.loading = 'lazy';
-                    img.src = loop(dur * (0.15 + i * 0.2), 240);
+                    var c = clips[i];
+                    if (c) { var cd = Number(c.duration) || 8, cs = Math.max(0, Math.round(cd * 0.35)); img.src = 'https://image.mux.com/' + c.playback_ids[0].id + '/animated.webp?start=' + cs + '&end=' + Math.min(cs + 4, Math.floor(cd)) + '&width=240&fps=10'; }
+                    else img.src = loop(dur * (0.12 + i * 0.25), 240);
                     t.insertBefore(img, t.firstChild);
                 });
             }).catch(function() {});
