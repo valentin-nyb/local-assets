@@ -154,7 +154,7 @@ export default async function handler(req, res) {
         } catch (e) { console.error('[cameras] calendar', slug, e.message); calendar.error = e.message || 'The calendar could not be read'; }
       }
       const relay = await withRedis(r => relayStatus(r, slug)).catch(() => null);
-      return res.status(200).json({ cameras, calendar, relay });
+      return res.status(200).json({ venue: slug, cameras, calendar, relay });
     }
 
     if (req.method !== 'POST') return res.status(405).end();

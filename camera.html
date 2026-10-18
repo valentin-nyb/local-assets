@@ -747,7 +747,7 @@
             });
         }
 
-        var _cams = [], _camKey = '', _calNow = null, _calSched = null;
+        var _camsLoaded = false, _cams = [], _camKey = '', _calNow = null, _calSched = null;
         // ── Venue calendar: who plays when ──
         function fmtTime(ms) { return new Date(ms).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' }); }
         function fmtDay(ms) { return new Date(ms).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/London' }); }
@@ -854,7 +854,7 @@
                 if (!res.ok) throw new Error(data.error || res.status);
                 if (data.admin) { renderAdminCameras(data.venues || []); return; }
                 _relay = data.relay || null; paintRelay();
-                _cams = data.cameras || [];
+                _cams = data.cameras || []; _camsLoaded = true;
                 setTimeout(renderMac); paintRecBar();
                 _calSched = data.calendar && data.calendar.connected && !data.calendar.error ? data.calendar.schedule || null : null;
                 renderCalendar(data.calendar || { connected: false });
@@ -918,7 +918,7 @@
             }).join('');
             var eb = document.querySelector('.cam-eyebrow'); if (eb) eb.textContent = v.name;
             _relay = v.relay || null; paintRelay();
-            _cams = v.cameras;
+            _cams = v.cameras; _camsLoaded = !v.error;   // a venue that couldn't be read never unlinks its cameras
             setTimeout(renderMac); paintRecBar();
             var live = _cams.filter(function(c) { return c.status === 'active'; }).length;
             camStatus(v.error ? 'Unavailable' : _cams.length ? live + ' of ' + _cams.length + ' live' : 'No cameras', live ? 'var(--la-ok)' : v.error ? 'var(--la-bad)' : 'var(--la-dim)');
@@ -1351,10 +1351,13 @@
             var sec = document.getElementById('mac-section');
             var venue = macVenue();
             var slots = _cams.filter(function(c) { return !c.external; });
-            if (!venue || !slots.length) { sec.classList.add('hidden'); return; }
+            if (!venue || !_camsLoaded) { sec.classList.add('hidden'); return; }
             var st;
             try { st = await window.laApp.mac.state(venue); } catch (_) { return; }
             if (!st) return;
+            // Links to slots that were removed stop streaming (also when no camera is left at all)
+            Object.keys(st.links).forEach(function(id) { if (!slots.some(function(c) { return c.id === id; })) window.laApp.mac.unlink(venue, id); });
+            if (!slots.length) { sec.classList.add('hidden'); return; }
             _mac = st;
             // Links made before the live picture existed get its pass (not while sending, so nothing is cut)
             Object.keys(st.links).forEach(function(id) {
@@ -1365,8 +1368,6 @@
                     if (conn.frame) return window.laApp.mac.link({ venue: venue, slotId: id, slotName: c.name, kind: 'camera', video: l.video, audio: l.audio, key: conn.streamKey, frame: conn.frame });
                 }).catch(function() {}).then(function() { renderMac.upgrading = false; });
             });
-            // Links to slots that were removed stop streaming
-            Object.keys(st.links).forEach(function(id) { if (!slots.some(function(c) { return c.id === id; })) window.laApp.mac.unlink(venue, id); });
             var a = document.activeElement;
             if (a && a.tagName === 'SELECT' && sec.contains(a)) return;   // not while a list is open
             sec.classList.remove('hidden');

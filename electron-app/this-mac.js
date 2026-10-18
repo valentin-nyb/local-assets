@@ -5,7 +5,7 @@
 //   Outside a set the calendar keeps the stream closed, so Mux refuses the connection: the link waits
 //   and tries again until the set opens it, then records, exactly as an OBSBOT left on all night.
 // - Stream keys are kept only encrypted by the macOS Keychain (safeStorage) and never written to logs.
-const { app, safeStorage, powerSaveBlocker, systemPreferences, net } = require('electron')
+const { app, safeStorage, powerSaveBlocker, systemPreferences, net, session } = require('electron')
 const { spawn, execFile } = require('child_process')
 const path = require('path')
 const fs = require('fs')
@@ -47,6 +47,8 @@ let devices = { video: [], audio: [] }
 let links = {}          // id → { venue, slotId, slotName, kind, video, audio, key (sealed) }
 const runs = {}         // id → { proc, state, detail, timer, mode, x264, sentAt }
 let notify = () => {}
+// Links whose slot the site has confirmed is still in Camera Control: only these open a camera
+const confirmed = new Set()
 let blocker = null
 
 // ── Storage ──────────────────────────────────────────────────────────────────
@@ -312,11 +314,33 @@ function awake() {
 function sync() {
   for (const id of Object.keys(runs)) if (!links[id]) stop(id)
   for (const id of Object.keys(links)) {
-    if (runs[id]) continue
+    if (runs[id] || !confirmed.has(id)) continue
     runs[id] = { id, proc: null, preview: null, state: 'starting', detail: '', timer: null, mode: 0, x264: false }
     start(id)
   }
   awake()
+}
+
+// Ask the site (signed in as this Mac's user) which camera slots still exist. A link to a slot that was
+// removed is forgotten, so the app never opens a camera (an iPhone switches to webcam mode) for nothing.
+// Until the site has answered, nothing is opened.
+async function checkSite() {
+  try {
+    const r = await session.defaultSession.fetch('https://local-assets.com/api/cameras', { credentials: 'include', signal: AbortSignal.timeout(15000) })
+    if (!r.ok) return
+    const d = await r.json()
+    const ids = new Set(), venues = new Set()
+    if (d.admin) for (const v of d.venues || []) { if (v.error) continue; venues.add(v.slug); for (const c of v.cameras || []) ids.add(v.slug + '/' + c.id) }
+    else if (d.venue) { venues.add(d.venue); for (const c of d.cameras || []) ids.add(d.venue + '/' + c.id) }
+    else return
+    let removed = false
+    for (const [id, l] of Object.entries(links)) {
+      if (ids.has(id)) confirmed.add(id)
+      else if (venues.has(l.venue)) { log(l.slotName + ' is no longer in Camera Control: unlinked'); stop(id); confirmed.delete(id); delete links[id]; removed = true }
+    }
+    if (removed) { save(); awake(); notify() }
+    sync()
+  } catch {}
 }
 
 // ── Public API (used by main.js) ─────────────────────────────────────────────
@@ -355,7 +379,8 @@ function init(onChange) {
   // Camera processes left by an earlier copy of the app (an update, a crash) would hold the cameras
   try { require('child_process').execFileSync('/usr/bin/pkill', ['-f', FFMPEG], { stdio: 'ignore' }) } catch {}
   load()
-  poll().then(sync)
+  poll().then(checkSite)
+  setInterval(() => checkSite(), 60e3)
   // Each look opens AVFoundation in its own ffmpeg; never let them overlap (one can take 8 s while a
   // camera is being plugged in)
   let polling = false
@@ -372,7 +397,7 @@ function state(venue) {
   for (const [id, l] of Object.entries(links)) {
     if (venue && l.venue !== venue) continue
     const r = runs[id] || {}
-    out[l.slotId] = { video: l.video || '', audio: l.audio || '', kind: l.kind, state: r.state || 'starting', detail: r.detail || '', frame: !!l.frameCam }
+    out[l.slotId] = { video: l.video || '', audio: l.audio || '', kind: l.kind, state: r.state || 'starting', detail: r.detail || (confirmed.has(id) ? '' : 'Checking Camera Control'), frame: !!l.frameCam }
   }
   return { devices: { video: devices.video.map(d => d.name), audio: devices.audio.map(d => d.name) }, links: out }
 }
@@ -383,12 +408,14 @@ function link({ venue, slotId, slotName, kind, video, audio, key, frame }) {
   stop(id)
   links[id] = { venue, slotId, slotName, kind, video: kind === 'audio' ? '' : video, audio, key: seal(key),
     ...(frame && frame.cam && frame.pass ? { frameCam: frame.cam, framePass: seal(frame.pass) } : {}) }
+  confirmed.add(id)   // linked from Camera Control just now
   save(); sync(); notify()
 }
 
 function unlink(venue, slotId) {
   const id = venue + '/' + slotId
   stop(id)
+  confirmed.delete(id)
   delete links[id]
   save(); awake(); notify()
 }
