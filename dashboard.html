@@ -186,7 +186,7 @@
         <div class="flex-1 overflow-y-auto la-page la-page-scroll">
             <div class="dash-head">
                 <h2 id="venue-tier" class="dash-h">ADMIN</h2>
-                <script>(function(){ try { var a = JSON.parse(localStorage.getItem('la_admin') || '{}'), k = 'la_venue_logo2:' + (a.venueSlug || ''), v = JSON.parse(localStorage.getItem(k) || 'null'); if (a.role === 'client' && v && v.mask) { var h = document.getElementById('venue-tier'); h.classList.add('has-logo', 'logo-early'); h.style.setProperty('--logo', 'url("' + v.mask + '")'); h.style.setProperty('--logo-w', Math.round(Math.min(260, Math.max(40, 40 * v.ar))) + 'px'); } } catch (_) {} })();</script>
+                <script>(function(){ try { var a = JSON.parse(localStorage.getItem('la_admin') || '{}'), k = 'la_venue_logo3:' + (a.venueSlug || ''), v = JSON.parse(localStorage.getItem(k) || 'null'); if (a.role === 'client' && a.venueSlug !== 'local-assets-admin' && !/^local\s*[\/-]?\s*assets\b/i.test(String(a.venue || '').trim()) && v && v.mask) { var h = document.getElementById('venue-tier'); h.classList.add('has-logo', 'logo-early'); h.style.setProperty('--logo', 'url("' + v.mask + '")'); h.style.setProperty('--logo-w', Math.round(Math.min(260, Math.max(40, 40 * v.ar))) + 'px'); } } catch (_) {} })();</script>
                 <p class="dash-sub" id="venue-tier-sub">Your sessions, files and channels.</p>
             </div>
             <a id="live-feed-hero" href="/camera.html" class="block cursor-pointer hover:border-primary/50 transition-all duration-500 w-full bg-[#050505] border border-[#27272a] rounded-2xl p-5 md:p-8 relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-4 md:gap-6 shadow-2xl no-underline" style="background:#050505!important">
@@ -2238,9 +2238,9 @@
         // The page title as the venue's logo, drawn in the text colour (so it suits light and dark). A logo on a solid
         // background has that background taken out and its empty margins cut off first; the result is kept for this
         // venue so the next page shows it straight away, without the name appearing first.
-        function venueLogoKey() { try { return 'la_venue_logo2:' + (JSON.parse(localStorage.getItem('la_admin') || '{}').venueSlug || ''); } catch (_) { return 'la_venue_logo2:'; } }
+        function venueLogoKey() { try { return 'la_venue_logo3:' + (JSON.parse(localStorage.getItem('la_admin') || '{}').venueSlug || ''); } catch (_) { return 'la_venue_logo3:'; } }
         // Only a client account shows its venue's logo (the admin account keeps its name)
-        function isClientAcct() { try { return JSON.parse(localStorage.getItem('la_admin') || '{}').role === 'client'; } catch (_) { return false; } }
+        function isClientAcct() { try { var a = JSON.parse(localStorage.getItem('la_admin') || '{}'); return a.role === 'client' && a.venueSlug !== 'local-assets-admin' && !/^local\s*[\/-]?\s*assets\b/i.test(String(a.venue || '').trim()); } catch (_) { return false; } }
         function applyVenueLogo(v) {
             var h = document.getElementById('venue-tier');
             if (!h || !v || !v.mask || !isClientAcct() || /^admin$/i.test(h.textContent.trim())) return;
@@ -2270,6 +2270,20 @@
                             var top = null; Object.keys(counts).forEach(function(q) { if (!top || counts[q] > counts[top]) top = q; });
                             var share = top ? counts[top] / Math.max(1, opaque) : 0;
                             if (share > 0.45 && share < 0.97) badge = sums[top].map(function(v) { return v / counts[top]; });
+                            // One colour only: a plate with the letters cut out of it. The holes are the letters, so
+                            // within the plate (row by row, between its edges) what's see-through becomes the mark
+                            else if (share >= 0.97) {
+                                var spans = [], py0 = -1, py1 = -1, m = Math.max(2, Math.round(H * 0.03));   // m: the plate's soft edge, left out
+                                for (var ry = 0; ry < H; ry++) {
+                                    var lx = -1, rx = -1;
+                                    for (var cx = 0; cx < W; cx++) if (d[(ry * W + cx) * 4 + 3] > 128) { if (lx < 0) lx = cx; rx = cx; }
+                                    spans.push([lx, rx]); if (lx >= 0) { if (py0 < 0) py0 = ry; py1 = ry; }
+                                }
+                                for (var ry2 = 0; ry2 < H; ry2++) {
+                                    var sp = spans[ry2], inside = sp[0] >= 0 && ry2 >= py0 + m && ry2 <= py1 - m;
+                                    for (var cx2 = 0; cx2 < W; cx2++) { var ii = (ry2 * W + cx2) * 4; d[ii + 3] = inside && cx2 >= sp[0] + m && cx2 <= sp[1] - m ? 255 - d[ii + 3] : 0; }
+                                }
+                            }
                         }
                         for (var y = 0; y < H; y++) for (var x = 0; x < W; x++) {
                             var i = (y * W + x) * 4, al = d[i + 3];
