@@ -43,7 +43,7 @@
         .animate-marquee { display: flex; width: max-content; animation: marquee 24s linear infinite; }
         @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 
-        /* ── Venue Dashboard Button ── */
+        /* ── Dashboard / Sign in button ── */
         .la-dashboard-btn {
           display: inline-flex;
           align-items: center;
@@ -242,7 +242,8 @@
                     <img src="logos/White@2x.png" alt="logo" class="h-5 md:h-6 w-auto object-contain object-left">
                 </a>
                 <div class="flex items-center gap-3">
-                    <a href="dashboard.html" class="la-dashboard-btn">VENUE DASHBOARD</a>
+                    <a href="dashboard.html" class="la-dashboard-btn" id="la-dashboard-btn">DASHBOARD</a>
+                    <script>(function(){ try { var a = JSON.parse(localStorage.getItem("la_admin") || "null"); if (!a || !a.ts || Date.now() - a.ts > 6e5) { var b = document.getElementById("la-dashboard-btn"); b.textContent = "SIGN IN"; b.href = "/login"; } } catch (_) {} })();</script>
                 </div>
             </nav>
 
@@ -260,7 +261,7 @@
                         <div class="w-2 h-2 md:w-2.5 md:h-2.5 bg-primary rounded-full animate-pulse shadow-[0_0_8px_#39FF14]"></div>
                         
                         <span class="font-mono text-xs sm:text-sm md:text-base tracking-[0.2em] md:tracking-[0.3em] text-muted-foreground uppercase font-bold">
-                            [ LIVE-VENUE ASSET-MANAGEMENT ]
+                            [ FOR VENUES, ARTISTS &amp; LABELS ]
                         </span>
                     </div>
                     
