@@ -622,3 +622,27 @@ html .nav-link.nav-link.nav-link.active { color: #fafafa !important; background:
 html:not(.dark) .nav-link.nav-link.nav-link { color: #71717a !important; }
 html:not(.dark) .nav-link.nav-link.nav-link:hover { color: #18181b !important; background: rgba(0, 0, 0, .04) !important; }
 html:not(.dark) .nav-link.nav-link.nav-link.active { color: #18181b !important; background: rgba(0, 0, 0, .065) !important; }
+
+/* ============================================
+   PAGE LAYOUT — the same on every app page
+   Top bar 64px; content lined up with the top bar (32px in), up to 1200px wide, 32px from the top bar;
+   28px between sections; one title / subtitle style
+   ============================================ */
+html .la-topbar.la-topbar { height: calc(64px + env(safe-area-inset-top)) !important; min-height: 0 !important; padding-top: env(safe-area-inset-top) !important; padding-bottom: 0 !important; }
+html .la-page.la-page { display: flex !important; flex-direction: column !important; gap: 28px !important; width: 100% !important; max-width: 1264px !important; margin: 0 !important; padding: 32px 32px 72px !important; }
+html .la-page.la-page > * { margin-top: 0 !important; margin-bottom: 0 !important; }
+html .la-page.la-page-scroll { max-width: none !important; }
+html .la-page.la-page-scroll > * { max-width: 1200px; width: 100%; }
+@media (max-width: 767px) {
+    html .la-page.la-page { gap: 20px !important; padding: 20px 16px 56px !important; }
+}
+/* Page titles and the line under them */
+html .la-page .dash-h, html .la-page .cam-h, html .la-page .bl-h, html .la-page > .cam-toolbar .deck-h {
+    margin: 0 !important; font: 700 26px/1.15 'Helvetica Neue', Helvetica, Arial, sans-serif !important; letter-spacing: -.01em !important; text-transform: uppercase !important; color: var(--la-text) !important;
+}
+html .la-page .dash-sub, html .la-page .bk-lead, html .la-page .bl-sub, html .la-page > .cam-toolbar .deck-sub {
+    margin: 8px 0 0 !important; max-width: 680px; font: 400 14.5px/1.55 'Helvetica Neue', Helvetica, Arial, sans-serif !important; color: var(--la-sub) !important;
+}
+html .la-page .cam-eyebrow, html .la-page .bl-eyebrow { display: block; margin: 0 0 10px !important; }
+/* Calendar page: the calendar's parts sit on the page, not in a card inside a card */
+html body.cal-view .cal-panel { border: 0 !important; background: none !important; padding: 0 !important; box-shadow: none !important; }
