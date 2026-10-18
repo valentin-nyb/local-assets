@@ -125,12 +125,21 @@ async function upgradeThreePlans(redis, list) {
     return out;
   } catch { return list; }
 }
-export async function readPlans(redis) {
+// A Venue Trial plan always gives exactly what Starter gives (features, storage, clips, cameras), kept in step
+// whenever Starter changes; it keeps its own name and price
+function trialLikeStarter(list) {
+  const starter = list.find(x => x.id === 'starter-distribution');
+  if (!starter) return list;
+  return list.map(x => !/venue\s*trial/i.test(String(x.name || '')) ? x : { ...x,
+    features: [...(starter.features || [])], included: { ...(starter.included || {}) }, maxClips: starter.maxClips, cameras: starter.cameras || 0 });
+}
+export async function readPlansRaw(redis) {
   // The Trial Month is always offered, even when the saved plan list predates it
   const withPayg = list => [...DEFAULT_PLANS.filter(d => d.id === 'dj-trial' && !list.some(p => p.id === d.id)), ...list];
   try { let p = JSON.parse(await redis.get('billing_plans') || 'null'); if (Array.isArray(p) && p.length) p = await upgradeThreePlans(redis, await upgradeVenueTrial(redis, await upgradePlanWording(redis, await upgradeStarterCamera(redis, await upgradeSavedStorage(redis, p))))); return Array.isArray(p) && p.length ? withPayg(p.map(x => { const d = DEFAULT_PLANS.find(z => z.id === x.id) || {}; return { ...x, signupFee: x.signupFee != null ? x.signupFee : (d.signupFee || 0), features: (x.features && x.features.length ? x.features : d.features), cameras: x.cameras != null ? x.cameras : (d.cameras || 0), maxClips: x.maxClips != null ? x.maxClips : (d.maxClips != null ? d.maxClips : 5) }; })) : DEFAULT_PLANS; }
   catch { return DEFAULT_PLANS; }
 }
+export async function readPlans(redis) { return trialLikeStarter(await readPlansRaw(redis)); }
 export function cleanPlans(list) {
   return (Array.isArray(list) ? list : []).slice(0, 30).map((p, i) => {
     const name = String(p?.name || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 60);
