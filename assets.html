@@ -31,7 +31,7 @@
     <link rel="manifest" href="/favicon/site.webmanifest">
     
     <link rel="stylesheet" href="/styles/tailwind.css">
-    <link rel="stylesheet" href="/styles/theme.css?v=19">
+    <link rel="stylesheet" href="/styles/theme.css?v=20">
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
@@ -74,10 +74,10 @@
         .vs-btn { height:38px; padding:0 16px; border-radius:10px; font:700 12px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; cursor:pointer; border:1px solid transparent; }
         .vs-btn.primary { background:var(--la-accent); color:var(--la-accent-ink); } .vs-btn.ghost { background:none; color:var(--la-text); border-color:var(--la-line); }
 
-        .ing { border:1px solid var(--la-line); background:var(--la-surface); border-radius:20px; padding:28px; display:flex; flex-direction:column; gap:22px; }
+        .ing { display:flex; flex-direction:column; gap:24px; }   /* on the page like the other pages; the drop area is the card */
         .ing-eyebrow { margin:0; font:500 10px/1 'JetBrains Mono', monospace; letter-spacing:.2em; text-transform:uppercase; color:var(--la-dim); }
-        .ing-title { margin:8px 0 0; font:700 22px/1.15 'Helvetica Neue', Helvetica, Arial, sans-serif; text-transform:uppercase; color:var(--la-text); letter-spacing:.005em; }
-        .ing-sub { margin:8px 0 0; max-width:620px; font:400 13px/1.55 'Helvetica Neue', Helvetica, Arial, sans-serif; color:var(--la-sub); }
+        .ing-title { margin:10px 0 0; font:700 26px/1.15 'Helvetica Neue', Helvetica, Arial, sans-serif; text-transform:uppercase; color:var(--la-text); letter-spacing:-.01em; }
+        .ing-sub { margin:8px 0 0; max-width:680px; font:400 14.5px/1.55 'Helvetica Neue', Helvetica, Arial, sans-serif; color:var(--la-sub); }
         .ing-fields { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:14px; }
         .ing-field.hidden { display:none; }
         .ing-field input.ing-locked { color:var(--la-sub); cursor:default; }
@@ -89,21 +89,21 @@
         .ing-field input:focus, .ing-field select:focus { border-color:var(--la-accent); }
         .ing-field input::placeholder { color:var(--la-dim); }
         /* Drop zone: a calm card, the file type on top, one clear action, the limits as small chips */
-        .ing-drop { position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; min-height:240px; padding:34px 24px 28px; text-align:center; border:1px dashed color-mix(in srgb, var(--la-text) 22%, transparent); border-radius:20px; background:var(--la-surface); cursor:pointer; transition:border-color .2s, background .2s; }
+        .ing-drop { position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; min-height:300px; padding:40px 24px 32px; text-align:center; border:1px solid var(--la-line); border-radius:16px; background:var(--la-surface); cursor:pointer; transition:border-color .2s, background .2s, box-shadow .2s; }
         .ing-drop-label { font:500 10px/1 'JetBrains Mono', monospace; letter-spacing:.2em; text-transform:uppercase; color:var(--la-dim); }
         .ing-drop-ico { width:68px; height:68px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:var(--la-chip); border:1px solid var(--la-line); margin:6px 0 4px; transition:background .2s, border-color .2s, transform .2s; }
         .ing-drop-ico iconify-icon { font-size:30px; color:var(--la-text); }
         .ing-drop-main { max-width:100%; font:600 18px/1.3 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:-.01em; color:var(--la-text); overflow-wrap:anywhere; }
         .ing-drop-meta { font:400 13px/1.45 'Helvetica Neue', Helvetica, Arial, sans-serif; color:var(--la-sub); }
-        .ing-drop-btn { display:inline-flex; align-items:center; height:40px; padding:0 22px; margin-top:6px; border-radius:999px; border:1px solid var(--la-line); background:var(--la-bg); color:var(--la-text); font:600 13px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; transition:border-color .2s, color .2s; }
+        .ing-drop-btn { display:inline-flex; align-items:center; height:40px; padding:0 22px; margin-top:6px; border-radius:999px; border:1px solid color-mix(in srgb, var(--la-text) 24%, transparent); background:var(--la-surface); color:var(--la-text); font:600 13px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; transition:border-color .25s, background .25s, color .25s; }
         .ing-drop-specs { display:flex; flex-wrap:wrap; justify-content:center; gap:6px; margin-top:10px; }
         .ing-drop-specs i { font:500 9px/1 'JetBrains Mono', monospace; font-style:normal; letter-spacing:.14em; text-transform:uppercase; color:var(--la-dim); padding:6px 10px; border-radius:999px; border:1px solid var(--la-line); }
         @media (hover:hover) {
-            .ing-drop:hover { border-color:var(--la-accent); }
-            .ing-drop:hover .ing-drop-btn { border-color:var(--la-accent); color:var(--la-accent); }
+            .ing-drop:hover { border-color:color-mix(in srgb, var(--la-text) 28%, transparent); box-shadow:0 8px 28px rgba(0,0,0,.06); }
+            .ing-drop:hover .ing-drop-btn { border-color:var(--la-text); background:var(--la-text); color:var(--la-bg); }
             .ing-drop:hover .ing-drop-ico { transform:translateY(-2px); }
         }
-        .ing-drop.over { border-color:var(--la-accent); background:var(--la-accent-soft); }
+        .ing-drop.over { border-color:var(--la-accent); border-style:dashed; background:var(--la-accent-soft); }
         .ing-drop.over .ing-drop-ico { transform:scale(1.06); }
         /* A file chosen: solid accent frame, the file's name and size, and Change file */
         .ing-drop.active { border-style:solid; border-color:var(--la-accent); }
