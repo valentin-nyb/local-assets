@@ -34,13 +34,14 @@
     <link rel="manifest" href="favicon/site.webmanifest">
     
     <link rel="stylesheet" href="styles/tailwind.css">
-    <link rel="stylesheet" href="styles/theme.css?v=18">
+    <link rel="stylesheet" href="styles/theme.css?v=19">
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
+    <script src="/la-djframe.js?v=1"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-    <script src="nav-component.js?v=24"></script>
+    <script src="nav-component.js?v=25"></script>
     <style>
         /* Standardized sidebar styles used by the JS component */
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
@@ -2287,6 +2288,12 @@
         var _peaks = {}, _peakFocus = {};
         (function() { try { var o = JSON.parse(localStorage.getItem('la_peaks3') || '{}'); Object.keys(o).forEach(function(k) { _peaks[k] = o[k].time; _peakFocus[k] = o[k].focus || null; }); localStorage.removeItem('la_peaks'); localStorage.removeItem('la_peaks2'); } catch (_) {} })();
         var _peakPending = {};
+        // The DJ seen from the front (la-djframe.js): preferred over the sound-and-movement guess once found
+        var _djSpot = {};
+        function djSpot(a) {
+            if (!(a.id in _djSpot) && window.laDjSpot) { _djSpot[a.id] = undefined; window.laDjSpot(a).then(function(s) { _djSpot[a.id] = s || null; if (s) renderHero(); }); }
+            return _djSpot[a.id] || null;
+        }
         // The banner is a muted, autoplaying loop of the long-form video around its peak,
         // played as real video (hardware-decoded on phones) and faded in once it plays.
         var _heroLoop = null;
@@ -2295,7 +2302,8 @@
             if (!wrap || !window.customElements || !customElements.get('mux-player')) return;
             var pid = a.playback_ids[0].id, dur = Number(a.duration) || 0;
             if (_peaks[a.id] == null) requestPeak(a.id);   // re-renders with the peak once known
-            var t = _peaks[a.id] != null ? _peaks[a.id] : dur / 2;
+            var dj = djSpot(a);
+            var t = dj ? dj.time : _peaks[a.id] != null ? _peaks[a.id] : dur / 2;
             var start = Math.max(0, Math.min(t - 4, dur - 10)), end = start + 8;
             var key = pid + '|' + Math.round(start);
             if (_heroLoop && _heroLoop.key === key) return;
@@ -2388,14 +2396,14 @@
         function focusHeroImage(a) {
             var img = document.getElementById('live-feed-video'), hero = document.getElementById('live-feed-hero');
             if (!img || !hero || !a.playback_ids || !a.playback_ids[0]) return;
-            var dur = Number(a.duration) || 0, t = _peaks[a.id] != null ? _peaks[a.id] : dur / 2;
+            var dj = djSpot(a), dur = Number(a.duration) || 0, t = dj ? dj.time : _peaks[a.id] != null ? _peaks[a.id] : dur / 2;
             var time = Math.max(0, Math.min(Math.round(t), Math.floor(dur - 1)));
             var aspect = hero.clientWidth / Math.max(1, hero.clientHeight);
             // The DJ, not the lights: look at several moments of the loop, take the middle answer,
             // and keep it to the band where a DJ stands behind the decks (head and body, not ceiling or floor)
             var pid = a.playback_ids[0].id;
             // Where the DJ is moving in the frame (found with the peak): the banner's strip is centred on them
-            var f = _peakFocus[a.id];
+            var f = dj ? dj.focus : _peakFocus[a.id];
             if (f) {
                 var tr = (a.tracks || []).filter(function(x) { return x.type === 'video' && x.max_width; })[0];
                 var va = tr ? tr.max_width / tr.max_height : 16 / 9;

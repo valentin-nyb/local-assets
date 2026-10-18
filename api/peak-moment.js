@@ -147,13 +147,31 @@ export async function findPeak(playbackId, duration) {
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
-  if (req.method !== 'GET') return res.status(405).end();
+  if (req.method !== 'GET' && req.method !== 'POST') return res.status(405).end();
 
   const session = getWebSessionAuth(req);
   if (!session?.muxAuth) return res.status(401).json({ error: 'Not authenticated' });
 
-  const assetId = String(req.query.assetId || '');
+  let body = req.body;
+  if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
+  const assetId = String((req.method === 'POST' ? body?.assetId : req.query.assetId) || '');
   if (!ASSET_ID.test(assetId)) return res.status(400).json({ error: 'Invalid assetId' });
+
+  // The DJ seen from the front (found in the browser by la-djframe.js): kept per recording
+  if (req.method === 'GET' && req.query.dj) {
+    try { return res.status(200).json({ dj: await withRedis(async r => JSON.parse(await r.get(`djframe:${assetId}`) || 'null')) }); }
+    catch (e) { return res.status(200).json({ dj: null }); }
+  }
+  if (req.method === 'POST') {
+    const dj = body?.dj, num = (v, max) => Number.isFinite(Number(v)) && Number(v) >= 0 && Number(v) <= max;
+    if (!dj || !num(dj.time, 1e6) || !dj.focus || !num(dj.focus.x, 100) || !num(dj.focus.y, 100)) return res.status(400).json({ error: 'Invalid frame' });
+    // Only for a recording in this account's own Cloud Storage
+    const ar = await fetch(`https://api.mux.com/video/v1/assets/${assetId}`, { headers: { Authorization: session.muxAuth }, signal: AbortSignal.timeout(10000) }).catch(() => null);
+    if (!ar?.ok) return res.status(404).json({ error: 'Asset not found' });
+    const v = { time: Math.round(Number(dj.time)), focus: { x: Math.round(Number(dj.focus.x)), y: Math.round(Number(dj.focus.y)) } };
+    await withRedis(r => r.set(`djframe:${assetId}`, JSON.stringify(v)));
+    return res.status(200).json({ ok: true });
+  }
 
   try {
     return await withRedis(async redis => {

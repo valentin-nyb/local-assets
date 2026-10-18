@@ -55,8 +55,8 @@ document.addEventListener("DOMContentLoaded", () => {
     var _isAdminAcct = (function() { try { var a = JSON.parse(localStorage.getItem('la_admin') || '{}'); return a.venueSlug === 'local-assets-admin' || /^local\s*[\/-]?\s*assets\b/i.test(String(a.venue || '').trim()); } catch (_) { return false; } })();
     sidebar.innerHTML = `
         <div id="la-side-head" class="h-20 flex items-center justify-center px-8 border-b border-[#27272a] shrink-0" style="position:relative">
-            <a href="/dashboard" class="h-5 w-24 flex">
-                <img src="/logos/White@2x.png" class="h-full w-full object-center object-contain" alt="logo">
+            <a href="/dashboard" class="la-logo-link h-5 w-24 flex" aria-label="local / assets">
+                <span class="la-logo" role="img" aria-label="local / assets"></span>
             </a>
             <button onclick="toggleSidebar()" aria-label="Close menu" class="md:hidden text-zinc-400 hover:text-white transition-colors" style="position:absolute;right:20px;top:50%;transform:translateY(-50%);width:36px;height:36px;line-height:0;">
                 <iconify-icon icon="solar:close-circle-linear" class="text-2xl"></iconify-icon>

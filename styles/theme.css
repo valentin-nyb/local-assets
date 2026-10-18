@@ -646,3 +646,14 @@ html .la-page .dash-sub, html .la-page .bk-lead, html .la-page .bl-sub, html .la
 html .la-page .cam-eyebrow, html .la-page .bl-eyebrow { display: block; margin: 0 0 10px !important; }
 /* Calendar page: the calendar's parts sit on the page, not in a card inside a card */
 html body.cal-view .cal-panel { border: 0 !important; background: none !important; padding: 0 !important; box-shadow: none !important; }
+
+/* Side menu logo: drawn in the theme's text colour; the accent colour sweeps in from the left on hover */
+.la-logo {
+    display: block; width: 100%; height: 100%;
+    -webkit-mask: url(/logos/White@2x.png) center / contain no-repeat; mask: url(/logos/White@2x.png) center / contain no-repeat;
+    background: linear-gradient(90deg, var(--la-accent) 0 50%, var(--la-text) 50% 100%);
+    background-size: 200% 100%; background-position: 100% 0;
+    transition: background-position .45s cubic-bezier(.65, 0, .35, 1);
+}
+.la-logo-link:hover .la-logo, .la-logo-link:focus-visible .la-logo { background-position: 0 0; }
+@media (prefers-reduced-motion: reduce) { .la-logo { transition: none; } }

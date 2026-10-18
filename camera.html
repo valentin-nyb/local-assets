@@ -32,12 +32,13 @@
     <link rel="manifest" href="favicon/site.webmanifest">
 
     <link rel="stylesheet" href="styles/tailwind.css">
-    <link rel="stylesheet" href="styles/theme.css?v=18">
+    <link rel="stylesheet" href="styles/theme.css?v=19">
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
+    <script src="/la-djframe.js?v=1"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
-    <script src="nav-component.js?v=24"></script>
+    <script src="nav-component.js?v=25"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
         .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
@@ -1024,12 +1025,12 @@
                 // Short silent loops from the session (animated WebP: plays like a GIF, smaller)
                 var loop = function(t, w) { var a = Math.round(t); return 'https://image.mux.com/' + pid + '/animated.webp?start=' + a + '&end=' + (a + 4) + '&width=' + w + '&fps=10'; };
                 document.getElementById('ci-stage').innerHTML = '<img alt="" class="ci-loop" src="' + loop(dur * 0.45, 480) + '">';
-                // The moment the DJ is playing, seen from the front (as on the dashboard banner), once it's known
-                laFetch('/api/peak-moment?assetId=' + encodeURIComponent(m.id)).then(function(r) { return r.status === 200 ? r.json() : null; }).then(function(d) {
+                // The DJ seen from the front (la-djframe.js, as on the dashboard banner), once it's found
+                if (window.laDjSpot) window.laDjSpot(m).then(function(d) {
                     if (!d || d.time == null) return;
                     var st = document.querySelector('#ci-stage .ci-loop');
-                    if (st) st.src = loop(Math.max(0, Math.min(d.time - 2, dur - 5)), 480);
-                }).catch(function() {});
+                    if (st) { st.src = loop(Math.max(0, Math.min(d.time - 2, dur - 5)), 480); st.style.objectPosition = d.focus.x + '% ' + d.focus.y + '%'; }
+                });
                 // The session's own vertical clips (four different highlights); a session with fewer is filled
                 // from moments spread over the recording
                 var socialOf = function(a) {
