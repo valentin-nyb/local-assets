@@ -75,6 +75,9 @@ document.addEventListener("DOMContentLoaded", () => {
             <a href="/assets" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('/assets')}">
                 Upload Asset
             </a>
+            <a href="/calendar" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('/calendar')}">
+                Calendar
+            </a>
             <a href="/billing" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('/billing')}">
                 Billing
             </a>

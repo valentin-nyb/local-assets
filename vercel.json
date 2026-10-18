@@ -2,7 +2,7 @@
   "cleanUrls": true,
   "headers": [
     {
-      "source": "/(dashboard|assets|camera|login|brand|billing)(.*)",
+      "source": "/(dashboard|assets|camera|calendar|login|brand|billing)(.*)",
       "headers": [
         {
           "key": "Cache-Control",
@@ -51,6 +51,10 @@
     }
   },
   "rewrites": [
+    {
+      "source": "/calendar",
+      "destination": "/camera"
+    },
     {
       "source": "/asset/:path*",
       "destination": "/api/asset?path=brand/:path*"

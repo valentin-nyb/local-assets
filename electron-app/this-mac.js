@@ -145,9 +145,21 @@ function readFrames(id, stream) {
   })
 }
 
+// End an ffmpeg and wait until it has really gone: one stuck inside the camera driver ignores SIGINT,
+// and a second process opening a camera that is still held can lock up the camera (and the Mac)
+function end(proc) {
+  return new Promise(resolve => {
+    if (!proc || proc.exitCode != null || proc.signalCode != null) return resolve()
+    const hard = setTimeout(() => { try { proc.kill('SIGKILL') } catch {} }, 1500)
+    const giveUp = setTimeout(resolve, 5000)
+    proc.once('exit', () => { clearTimeout(hard); clearTimeout(giveUp); resolve() })
+    try { proc.kill('SIGINT') } catch {}
+  })
+}
+
 function startPreview(id) {
   const link = links[id], run = runs[id]
-  if (!link || !run || run.proc || run.preview || link.kind === 'audio') return
+  if (!link || !run || run.proc || run.preview || run.opening || link.kind === 'audio') return
   if (indexOf('video', link.video) == null || systemPreferences.getMediaAccessStatus('camera') !== 'granted') return
   const [size, fps] = run.picked || VIDEO_MODES[run.mode] || VIDEO_MODES[VIDEO_MODES.length - 1]
   const proc = spawn(FFMPEG, ['-hide_banner', '-nostats', '-loglevel', 'error', '-y',
@@ -160,7 +172,7 @@ function startPreview(id) {
 function stopPreview(run) {
   if (!run || !run.preview) return Promise.resolve()
   const p = run.preview; run.preview = null
-  return new Promise(r => { p.once('exit', r); p.kill('SIGINT'); setTimeout(r, 1500) })
+  return end(p)
 }
 function preview(venue, slotId) {
   const f = frames[venue + '/' + slotId]
@@ -182,7 +194,16 @@ function later(id, ms) {
   if (ms >= 3000) setTimeout(() => startPreview(id), 400)
 }
 
+// One opening at a time per slot: the retry timer, Record now and a device coming back can all call
+// start while it waits, and each would otherwise open the same camera in its own ffmpeg
 async function start(id) {
+  const run = runs[id]
+  if (!run || run.proc || run.opening) return
+  run.opening = true
+  try { await begin(id) } finally { run.opening = false }
+}
+
+async function begin(id) {
   const link = links[id], run = runs[id]
   if (!link || !run || run.proc) return
   const missing = (link.video && indexOf('video', link.video) == null) ? link.video
@@ -274,8 +295,8 @@ function stop(id) {
   const run = runs[id]
   if (!run) return
   clearTimeout(run.timer)
-  if (run.proc) { run.proc.removeAllListeners('exit'); run.proc.kill('SIGINT') }
-  if (run.preview) run.preview.kill('SIGINT')
+  if (run.proc) { run.proc.removeAllListeners('exit'); end(run.proc) }
+  if (run.preview) end(run.preview)
   clearInterval(run.stallCheck)
   delete runs[id]
 }
@@ -307,7 +328,7 @@ async function poll() {
     for (const id of Object.keys(runs)) {
       const l = links[id], r = runs[id]
       const gone = (l.video && indexOf('video', l.video) == null) || (l.audio && indexOf('audio', l.audio) == null)
-      if (gone && r.proc) { r.proc.kill('SIGINT') } else if (!gone && r.state === 'missing') { r.state = 'starting'; start(id) }
+      if (gone) { if (r.proc) end(r.proc); stopPreview(r) } else if (!gone && r.state === 'missing') { r.state = 'starting'; start(id) }
     }
     notify()
   }
@@ -335,7 +356,14 @@ function init(onChange) {
   try { require('child_process').execFileSync('/usr/bin/pkill', ['-f', FFMPEG], { stdio: 'ignore' }) } catch {}
   load()
   poll().then(sync)
-  setInterval(() => poll().catch(() => {}), POLL_MS)
+  // Each look opens AVFoundation in its own ffmpeg; never let them overlap (one can take 8 s while a
+  // camera is being plugged in)
+  let polling = false
+  setInterval(() => {
+    if (polling) return
+    polling = true
+    poll().catch(() => {}).then(() => { polling = false })
+  }, POLL_MS)
   setInterval(() => sendFrames().catch(() => {}), 1000)
 }
 

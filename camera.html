@@ -37,7 +37,7 @@
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
-    <script src="nav-component.js?v=21"></script>
+    <script src="nav-component.js?v=22"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
         .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
@@ -77,7 +77,19 @@
         .cam-pill.on { color:#fff; background:#ef4444; border-color:var(--la-bad); }
         .cam-empty { border:1px dashed var(--la-line); border-radius:16px; padding:48px 24px; display:flex; flex-direction:column; align-items:center; text-align:center; gap:8px; }
         .cam-empty.hidden { display:none; }
-        .cam-toolbar { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+        /* Calendar page (/calendar): only the calendar; the Cameras page doesn't show it */
+        body.cam-view #cal-panel { display:none !important; }
+        body.cal-view .cam-page > :not(#cal-panel):not(#cam-error):not(#cal-admin-note):not(.cam-toolbar) { display:none !important; }
+        body.cal-view .cam-toolbar .cam-actions, body.cal-view .cam-toolbar .cam-acct { display:none !important; }
+        body.cal-view .cal-head { display:none; }
+        body.cal-view .cal-panel > .cal-source { margin-top:0; }
+        body.cal-view .cal-panel > .cal-form { margin-top:0; }
+        body.cam-view #cal-page-state { display:none; }
+        .deck-state.bad { color:var(--la-bad); border-color:color-mix(in srgb, var(--la-bad) 45%, transparent); }
+        #cal-admin-note { display:none; }
+        body.cal-view #cal-admin-note.on { display:block; }
+        /* Cameras header: exactly like Decks audio (title, one line, the button) */
+        .cam-toolbar { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
         .cam-eyebrow { font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--la-dim); }
         .cam-h { font-size:22px; font-weight:700; letter-spacing:-.01em; margin-top:4px; color:var(--la-text); }
         .cam-actions { display:flex; gap:8px; flex-wrap:wrap; }
@@ -517,6 +529,12 @@
 </style>
 </head>
 <body class="font-sans antialiased bg-background text-foreground overflow-hidden h-screen w-screen flex selection:bg-primary selection:text-black">
+<script>
+    // /calendar is this page showing only the calendar (Calendar in the side menu); /camera shows the cameras
+    var CAL_VIEW = /^\/calendar(\.html)?\/?$/.test(location.pathname) || new URLSearchParams(location.search).get('view') === 'calendar';
+    document.body.classList.add(CAL_VIEW ? 'cal-view' : 'cam-view');
+    if (CAL_VIEW) document.title = 'local / assets™ - Calendar';
+</script>
 
     <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/90 z-40 hidden backdrop-blur-md opacity-0 transition-opacity duration-300"></div>
 
@@ -530,7 +548,7 @@
                 
                 <h1 class="text-[10px] md:text-[10px] font-mono uppercase tracking-[0.2em] md:tracking-[0.3em] text-[#39FF14] font-bold m-0 truncate">
                     CAMERAS
-                </h1>
+                </h1><script>if (CAL_VIEW) document.currentScript.previousElementSibling.textContent = 'CALENDAR';</script>
             </div>
             <div class="flex items-center gap-4 shrink-0">
                 <div class="hidden md:flex items-center gap-2 bg-[#0a0a0a] border border-[#27272a] px-3 py-1.5 rounded-md shadow-[inset_0_0_10px_rgba(0,0,0,0.5)]">
@@ -544,16 +562,14 @@
         <div class="flex-1 w-full overflow-y-auto no-scrollbar">
             <div class="max-w-6xl mx-auto w-full p-4 md:p-10 flex flex-col space-y-4 md:space-y-8 mt-2 md:mt-0 cam-page">
                 <div class="cam-toolbar">
-                    <div class="min-w-0">
-                        <p class="cam-eyebrow">Camera control</p>
-                        <h2 class="cam-h">CAMERAS</h2>
-                    </div>
+                    <div class="min-w-0"><div class="deck-title"><h2 class="deck-h" id="cam-page-title">CAMERAS</h2><span class="deck-state" id="cal-page-state"></span></div><p class="deck-sub" id="cam-page-sub">Each camera records every set, straight to your cloud storage.</p></div>
+                    <script>if (CAL_VIEW) { document.getElementById('cam-page-title').textContent = 'CALENDAR'; document.getElementById('cam-page-sub').textContent = 'Each event is a set: the cameras record it for the DJ on stage.'; }</script>
                     <div class="cam-actions" id="cam-head-actions" style="display:none">
                         <button type="button" class="cam-btn ghost" id="cam-head-order" onclick="openOrderCameras()">
                             <span>Order cameras</span>
                         </button>
                         <button type="button" class="cam-btn ghost" onclick="openCamForm()">
-                            <span>Connect camera</span>
+                            <span>Add camera</span>
                         </button>
                     </div>
                 </div>
@@ -620,8 +636,8 @@
 
                     <ol class="ci-steps">
                         <li><b>1</b><div><strong>Plug in</strong><span>Power the camera and connect it to the venue's Wi-Fi or an Ethernet cable.</span></div></li>
-                        <li><b>2</b><div><strong>Connect it here</strong><span>Press <em>Connect camera</em> next to Cameras and give it a name. You get a stream address and key.</span></div></li>
-                        <li><b>3</b><div><strong>Connect your calendar</strong><span>Paste your calendar's iCal link below. Each event is a set: the title is the DJ, the start and end are the exact times.</span></div></li>
+                        <li><b>2</b><div><strong>Connect it here</strong><span>Press <em>Add camera</em> next to Cameras and give it a name. You get a stream address and key.</span></div></li>
+                        <li><b>3</b><div><strong>Connect your calendar</strong><span>Paste your calendar's iCal link in <a href="/calendar" class="ci-link">Calendar</a>. Each event is a set: the title is the DJ, the start and end are the exact times.</span></div></li>
                         <li><b>4</b><div><strong>Leave it streaming</strong><span>The calendar starts and stops the recording: from 2 minutes before each set to 2 minutes after it. Each set is saved for its DJ in Distribution History.</span></div></li>
                         <li><b>5</b><div><strong>Add your Brand Kit</strong><span>Upload logos and fonts for your venue and each artist in <a href="/brand" class="ci-link">Brand Kit</a>.</span></div></li>
                         <li><b>6</b><div><strong>Set the watermark</strong><span>Pick the logo, position and size, and add a line of text in one of your fonts. Every clip gets it.</span></div></li>
@@ -669,6 +685,7 @@
                     </ol>
                 </section>
 
+                <p id="cal-admin-note" class="deck-sub">Each client connects their own calendar from their account.</p>
                 <p id="cam-error" class="hidden text-center text-[10px] font-mono uppercase tracking-widest text-red-500"></p>
             </div>
         </div>
@@ -747,6 +764,9 @@
             var state = document.getElementById('cal-state');
             state.textContent = cal.connected ? (cal.error ? 'Can\'t read' : 'Connected') : 'Not connected';
             state.className = 'cal-state' + (ok ? ' on' : cal.connected ? ' bad' : '');
+            // On the Calendar page the state sits beside the page title, like Decks audio's
+            var pageState = document.getElementById('cal-page-state');
+            if (pageState) { pageState.textContent = state.textContent; pageState.className = 'deck-state' + (ok ? ' on' : cal.connected ? ' bad' : ''); }
             var src = document.getElementById('cal-source'), form = document.getElementById('cal-form');
             src.hidden = !cal.connected;
             src.classList.toggle('bad', !!cal.error);
@@ -869,6 +889,7 @@
             var grid = document.getElementById('cam-grid'), intro = document.getElementById('cam-empty');
             var da = document.getElementById('deck-add'); if (da) da.style.display = 'none';
             document.getElementById('cal-panel').classList.add('hidden');
+            var calNote = document.getElementById('cal-admin-note'); if (calNote) calNote.classList.add('on');
             document.getElementById('cam-head-actions').style.display = 'none';
             document.getElementById('cam-error').classList.add('hidden');
             if (!venues.length) { camStatus('No client accounts', 'var(--la-dim)'); return; }
