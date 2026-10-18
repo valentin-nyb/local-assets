@@ -34,13 +34,13 @@
     <link rel="manifest" href="favicon/site.webmanifest">
     
     <link rel="stylesheet" href="styles/tailwind.css">
-    <link rel="stylesheet" href="styles/theme.css?v=15">
+    <link rel="stylesheet" href="styles/theme.css?v=16">
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-    <script src="nav-component.js?v=23"></script>
+    <script src="nav-component.js?v=24"></script>
     <style>
         /* Standardized sidebar styles used by the JS component */
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
@@ -2285,7 +2285,7 @@
         // loop the middle of the set rather than the opening seconds.
         // The moment the DJ is playing on camera, and where in the frame they are (la_peaks2: older entries were sound only)
         var _peaks = {}, _peakFocus = {};
-        (function() { try { var o = JSON.parse(localStorage.getItem('la_peaks2') || '{}'); Object.keys(o).forEach(function(k) { _peaks[k] = o[k].time; _peakFocus[k] = o[k].focus || null; }); localStorage.removeItem('la_peaks'); } catch (_) {} })();
+        (function() { try { var o = JSON.parse(localStorage.getItem('la_peaks3') || '{}'); Object.keys(o).forEach(function(k) { _peaks[k] = o[k].time; _peakFocus[k] = o[k].focus || null; }); localStorage.removeItem('la_peaks'); localStorage.removeItem('la_peaks2'); } catch (_) {} })();
         var _peakPending = {};
         // The banner is a muted, autoplaying loop of the long-form video around its peak,
         // played as real video (hardware-decoded on phones) and faded in once it plays.
@@ -2439,7 +2439,7 @@
             }).then(function(d) {
                 if (!d || d.time == null) return;
                 _peaks[assetId] = d.time; _peakFocus[assetId] = d.focus || null;
-                try { var o = {}; Object.keys(_peaks).forEach(function(k) { o[k] = { time: _peaks[k], focus: _peakFocus[k] }; }); localStorage.setItem('la_peaks2', JSON.stringify(o)); } catch (_) {}
+                try { var o = {}; Object.keys(_peaks).forEach(function(k) { o[k] = { time: _peaks[k], focus: _peakFocus[k] }; }); localStorage.setItem('la_peaks3', JSON.stringify(o)); } catch (_) {}
                 renderHero();
             }).catch(function() {});
         }

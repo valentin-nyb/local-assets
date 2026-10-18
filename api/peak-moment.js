@@ -73,10 +73,16 @@ async function movement(playbackId, t) {
   for (let k = 1; k < norm.length; k++) for (let i = 0; i < diff.length; i++) diff[i] += Math.abs(norm[k][i] - norm[k - 1][i]);
   const sorted = Float32Array.from(diff).sort();
   const thr = Math.max(18 * (norm.length - 1), sorted[Math.floor(sorted.length * 0.5)] * 3);
-  let count = 0, sx = 0; const rows = [];
-  for (let y = 0; y < FH; y++) for (let x = 0; x < FW; x++) if (diff[y * FW + x] > thr) { count++; sx += x; rows.push(y); }
+  let count = 0, sx = 0, mid = 0; const rows = [];
+  for (let y = 0; y < FH; y++) for (let x = 0; x < FW; x++) if (diff[y * FW + x] > thr) {
+    count++; sx += x; rows.push(y);
+    if (x > FW * 0.28 && x < FW * 0.72 && y > FH * 0.1 && y < FH * 0.7) mid++;
+  }
   const frac = count / diff.length;
-  const score = frac < 0.3 ? frac : Math.max(0, 0.6 - frac);
+  // The DJ from the front: the movement gathered in the middle and upper part of the picture (a wide
+  // room shot moves all over, the overhead shot of the decks only at the bottom)
+  const front = count ? mid / count : 0;
+  const score = (frac < 0.3 ? frac : Math.max(0, 0.6 - frac)) * (0.25 + front);
   if (!count) return { score: 0, focus: null };
   // Centre on the upper part of the movement (head and hands), not the middle of the decks
   rows.sort((a, b) => a - b);
@@ -151,7 +157,7 @@ export default async function handler(req, res) {
 
   try {
     return await withRedis(async redis => {
-      const cached = await redis.get(`peak2:${assetId}`);
+      const cached = await redis.get(`peak3:${assetId}`);
       if (cached) return res.status(200).json(JSON.parse(cached));
 
       // Only one analysis per asset at a time; other callers fall back until it's done.
@@ -171,7 +177,7 @@ export default async function handler(req, res) {
         const started = Date.now();
         const { time, focus } = await findPeak(playbackId, Number(asset.duration) || 0);
         const result = { time, focus, method: 'bass-and-movement' };
-        await redis.set(`peak2:${assetId}`, JSON.stringify(result));
+        await redis.set(`peak3:${assetId}`, JSON.stringify(result));
         console.log(`[peak-moment] ${assetId} peak at ${time}s focus ${JSON.stringify(focus)} (${Date.now() - started} ms)`);
         return res.status(200).json(result);
       } finally {

@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap');
 /* ============================================
    LIGHT / DARK THEME OVERRIDES
    When <html> has class="dark" → dark mode (default)
@@ -608,13 +609,16 @@ header h1.font-mono, header #venue-breadcrumb {
 header #venue-breadcrumb { color: var(--la-sub) !important; font-weight: 500 !important; }
 header #venue-breadcrumb:not(:empty)::after { content: " /"; color: var(--la-dim); }
 
-/* Side menu: the page you're on is shown by its text alone (accent colour, bold), with no box, border or tint */
-html .nav-link.nav-link.nav-link, html .nav-link.nav-link.nav-link:hover, html .nav-link.nav-link.nav-link.active {
-    background: none !important;
-    border: 0 !important;
-    box-shadow: none !important;
+/* Side menu: an icon and the name in Geist; the page you're on is white on a soft rounded tint */
+html .nav-link.nav-link.nav-link {
+    display: flex !important; align-items: center !important; gap: 12px !important;
+    padding: 9px 12px !important; border: 0 !important; border-radius: 9px !important; box-shadow: none !important;
+    font-family: 'Geist', 'Helvetica Neue', Helvetica, Arial, sans-serif !important; font-size: 14.5px !important; font-weight: 500 !important; letter-spacing: -.005em !important;
+    color: #a1a1aa !important; background: none !important; transition: background .15s ease, color .15s ease !important;
 }
-html .nav-link.nav-link.nav-link.active {
-    color: var(--la-accent) !important;
-    font-weight: 700 !important;
-}
+html .nav-link.nav-link.nav-link .nav-ic { width: 20px; height: 20px; flex-shrink: 0; }
+html .nav-link.nav-link.nav-link:hover { color: #fafafa !important; background: rgba(255, 255, 255, .05) !important; }
+html .nav-link.nav-link.nav-link.active { color: #fafafa !important; background: rgba(255, 255, 255, .09) !important; }
+html:not(.dark) .nav-link.nav-link.nav-link { color: #71717a !important; }
+html:not(.dark) .nav-link.nav-link.nav-link:hover { color: #18181b !important; background: rgba(0, 0, 0, .04) !important; }
+html:not(.dark) .nav-link.nav-link.nav-link.active { color: #18181b !important; background: rgba(0, 0, 0, .065) !important; }
