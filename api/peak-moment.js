@@ -118,7 +118,8 @@ export async function findPeak(playbackId, duration) {
 
   const total = duration || t;
   const pts = sample.filter(s => s.energy != null).map(s => ({ mid: s.start + s.dur / 2, e: s.energy }));
-  if (!pts.length) throw new Error('No audio analysed');
+  // No sound to measure (a recording whose audio is kept separately): moments spread over the set, by picture alone
+  if (!pts.length) for (let i = 0; i < 12; i++) pts.push({ mid: total * (EDGE + (1 - 2 * EDGE) * (i + 0.5) / 12), e: 1 });
   const scored = [];
   for (const p of pts) {
     if (p.mid < total * EDGE || p.mid > total * (1 - EDGE)) continue;
@@ -129,7 +130,7 @@ export async function findPeak(playbackId, duration) {
   // The loudest stretches, spread over the set
   scored.sort((a, b) => b.score - a.score);
   const cands = [];
-  for (const c of scored) { if (cands.every(d => Math.abs(d.time - c.time) >= SPACING_SEC)) cands.push(c); if (cands.length >= CANDIDATES) break; }
+  for (const c of scored) { if (cands.every(d => Math.abs(d.time - c.time) >= SPACING_SEC)) cands.push(c); if (cands.length >= (pts.every(p => p.e === 1) ? 12 : CANDIDATES)) break; }
   // Of those, the one where someone is playing on camera (louder breaks a tie)
   await Promise.all(cands.map(async c => { c.move = await movement(playbackId, c.time); }));
   const topBass = cands[0].score || 1, topMove = Math.max(...cands.map(c => c.move?.score || 0));
