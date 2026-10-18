@@ -157,7 +157,7 @@ function parseCookie(cookieHeader) {
 }
 
 // The browser page after signing in for the Mac app, in the login page's style: the wordmark top left,
-// the message in the middle, the a mark bottom right. It opens the app straight away.
+// the message in the middle, a quiet footer. It opens the app straight away.
 function appHandoffPage(link) {
   return `<!DOCTYPE html><html lang="en" style="color-scheme:dark"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -165,33 +165,31 @@ function appHandoffPage(link) {
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--green:#39FF14;--bg:#070905;--fg:#fafafa;--mono:'JetBrains Mono',ui-monospace,monospace;--display:'Helvetica Neue',Helvetica,Arial,sans-serif;--col:min(100vw - 48px,440px);--gut:24px}
+:root{--green:#39FF14;--bg:#070905;--fg:#fafafa;--mono:'JetBrains Mono',ui-monospace,monospace;--display:'Helvetica Neue',Helvetica,Arial,sans-serif;--col:min(100vw - 48px,420px);--gut:24px}
 html,body{height:100%;background:var(--bg);color:var(--fg);font-family:var(--display);-webkit-font-smoothing:antialiased}
 body{min-height:100dvh;display:flex;align-items:center;justify-content:center;overflow:hidden;
   background-image:radial-gradient(circle,#141a11 1.1px,transparent 1.2px);background-size:45px 45px;background-position:center}
-.wordmark{position:fixed;top:calc(max(env(safe-area-inset-top),12px) + 28px);left:var(--gut);width:min(44vw,170px);aspect-ratio:1328/165;background:url(/logos/Green@2x.png) left center/contain no-repeat}
-.mark{position:fixed;right:var(--gut);bottom:calc(max(env(safe-area-inset-bottom),12px) + 24px);width:30px;aspect-ratio:72/80;background:#ededed;
-  -webkit-mask:url(/logos/a-white.png) center/contain no-repeat;mask:url(/logos/a-white.png) center/contain no-repeat;transition:background-color .25s}
-.mark:hover{background:var(--green)}
-.wrap{width:var(--col)}
-.eyebrow{display:flex;align-items:center;gap:10px;font:500 11px/1 var(--mono);letter-spacing:.3em;text-transform:uppercase;color:var(--green);margin-bottom:22px}
-.eyebrow::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:pulse 1.6s ease-in-out infinite}
+.wordmark{position:fixed;top:calc(max(env(safe-area-inset-top),12px) + 28px);left:var(--gut);width:128px;aspect-ratio:1328/165;background:url(/logos/Green@2x.png) left center/contain no-repeat}
+.wrap{width:var(--col);display:flex;flex-direction:column;align-items:flex-start}
+.eyebrow{display:flex;align-items:center;gap:10px;font:500 10px/1 var(--mono);letter-spacing:.24em;text-transform:uppercase;color:var(--green);margin-bottom:18px}
+.eyebrow::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 1.6s ease-in-out infinite}
 @keyframes pulse{50%{opacity:.35}}
-h1{font-weight:700;font-size:min(calc(var(--col) * .155),64px);line-height:.88;letter-spacing:-.015em;text-transform:uppercase;margin-bottom:22px}
-h1 span{display:inline-block;transition:color .3s,transform .3s}
-@media (hover:hover){h1 span:hover{color:var(--green);transform:translateX(8px)}}
-p{font-size:15px;line-height:1.55;color:#a1a1aa;margin-bottom:clamp(32px,6vh,52px)}
-.btn{display:flex;align-items:center;justify-content:center;gap:14px;width:100%;height:60px;background:#0b0c0a;border:1px solid rgba(255,255,255,.14);color:var(--fg);
-  font:500 12px var(--mono);letter-spacing:.22em;text-transform:uppercase;text-decoration:none;transition:border-color .2s,background .2s}
-.btn:hover{border-color:color-mix(in srgb,var(--green) 55%,transparent);background:#0d110b}
-.btn i{width:16px;aspect-ratio:72/80;background:var(--green);-webkit-mask:url(/logos/a-white.png) center/contain no-repeat;mask:url(/logos/a-white.png) center/contain no-repeat}
-.note{margin:16px 0 0;font:400 11px/1.6 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:#52525b;text-align:center}
+h1{font-weight:700;font-size:clamp(28px,8.6vw,44px);line-height:.96;letter-spacing:-.02em;text-transform:uppercase}
+h1 span{display:inline-block;white-space:nowrap;transition:color .3s,transform .3s}
+@media (hover:hover){h1 span:hover{color:var(--green);transform:translateX(6px)}}
+.lead{margin-top:16px;font-size:15px;line-height:1.5;color:#a1a1aa;max-width:40ch}
+.btn{position:relative;isolation:isolate;overflow:hidden;margin-top:36px;display:flex;align-items:center;justify-content:center;gap:12px;width:100%;height:54px;
+  background:#fafafa;border:1px solid #fafafa;border-radius:999px;color:#0a0a0a;font:500 15px/1 var(--display);text-decoration:none;transition:transform .15s ease,border-color .3s ease}
+.btn::before{content:"";position:absolute;inset:-1px;z-index:-1;border-radius:inherit;background:var(--green);transform:scaleX(0);transform-origin:right center;transition:transform .42s cubic-bezier(.65,0,.35,1)}
+@media (hover:hover){.btn:hover::before{transform:scaleX(1);transform-origin:left center}.btn:hover{border-color:var(--green)}}
+.btn:active{transform:scale(.98)}
+.btn i{width:15px;aspect-ratio:72/80;background:#0a0a0a;-webkit-mask:url(/logos/a-white.png) center/contain no-repeat;mask:url(/logos/a-white.png) center/contain no-repeat}
+.note{margin-top:16px;font-size:12px;line-height:1.5;color:#71717a}
+.foot{position:fixed;left:0;right:0;bottom:calc(max(env(safe-area-inset-bottom),12px) + 18px);text-align:center;font:400 10px var(--mono);letter-spacing:.18em;text-transform:uppercase;color:#52564f}
 @media (min-width:980px){
-  :root{--col:min(430px,30vw)}
-  .wordmark{top:48px;left:4%;width:clamp(150px,11vw,190px)}
-  .mark{right:4%;bottom:44px;width:32px}
-  h1{font-size:clamp(52px,4.4vw,74px);line-height:.86}
-  .btn{height:58px;letter-spacing:.3em}
+  .wordmark{top:44px;left:4%;width:150px}
+  h1{font-size:50px}
+  .foot{bottom:32px}
 }
 </style></head>
 <body>
@@ -199,11 +197,11 @@ p{font-size:15px;line-height:1.55;color:#a1a1aa;margin-bottom:clamp(32px,6vh,52p
 <main class="wrap">
   <p class="eyebrow">Signed in</p>
   <h1><span>Back to</span><br><span>the app</span></h1>
-  <p>You're signed in. a™ opens your workspace now. You can close this tab.</p>
+  <p class="lead">a™ is opening your workspace. You can close this tab.</p>
   <a class="btn" href="${link}"><i aria-hidden="true"></i>Open a™</a>
-  <p class="note">Nothing happened? Press Open a™</p>
+  <p class="note">Nothing happened? Press Open a™.</p>
 </main>
-<span class="mark" aria-hidden="true"></span>
+<p class="foot">© 2026 local / assets™</p>
 <script>location.href=${JSON.stringify(link)};</script>
 </body></html>`;
 }

@@ -255,9 +255,10 @@
         .bk-wm-fold { display:flex; align-items:center; gap:10px; background:none; border:0; padding:0; margin:0; color:inherit; font:inherit; text-align:left; cursor:pointer; }
         .bk-wm-fold svg { width:16px; height:16px; color:var(--la-sub); transition:transform .2s; flex:none; }
         .bk-wm.folded .bk-wm-fold svg { transform:rotate(-90deg); }
-        .bk-wm.folded { grid-template-columns:minmax(0,1fr); gap:0; }
+        .bk-wm.folded { grid-template-columns:minmax(0,1fr) auto; gap:0 12px; align-items:center; }
         .bk-wm.folded .bk-wm-sub, .bk-wm.folded .bk-wm-rows, .bk-wm.folded .bk-wm-status, .bk-wm.folded .bk-wm-preview-wrap { display:none; }
-        .bk-wm.folded .bk-wm-foot { margin-top:16px; }
+        /* Folded: the switch sits on the title's line */
+        .bk-wm.folded .bk-wm-foot { grid-column:auto; margin-top:0; padding-top:0; border-top:0; }
         .bk-wm-sub { font-size:13px; line-height:1.55; color:var(--la-sub); margin-top:4px; max-width:520px; }
         .bk-wm-rows { display:grid; grid-template-columns:110px minmax(0,1fr); gap:14px 16px; align-items:center; margin-top:20px; }
         .bk-wm-rows.off { opacity:.45; pointer-events:none; }
