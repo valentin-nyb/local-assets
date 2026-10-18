@@ -90,6 +90,12 @@
         .bl-seg button { height:32px; min-width:56px; padding:0 14px; border:0; border-radius:999px; background:none; color:var(--la-text); font:500 13px 'Helvetica Neue', Helvetica, Arial, sans-serif; cursor:pointer; transition:background .25s ease, color .25s ease; }
         .bl-seg button.on { background:var(--la-text); color:var(--la-bg); }
         .bl-chart { position:relative; padding:12px 20px 18px; min-height:300px; }
+        .bl-chart svg .bar { fill:color-mix(in srgb, var(--la-accent) 38%, transparent); }
+        .bl-legend { display:flex; gap:18px; padding:0 20px 16px; font-size:12px; color:var(--la-sub); }
+        .bl-legend:empty { display:none; }
+        .bl-legend span { display:inline-flex; align-items:center; gap:7px; }
+        .bl-legend .lg-bar { width:9px; height:11px; border-radius:2px; background:color-mix(in srgb, var(--la-accent) 38%, transparent); }
+        .bl-legend .lg-line { width:16px; height:2px; border-radius:2px; background:var(--la-accent); }
         .bl-chart svg { display:block; width:100%; height:300px; overflow:visible; }
         .bl-chart-empty { padding:120px 0; text-align:center; color:var(--la-dim); font-size:13px; }
         .bl-chart .grid { stroke:color-mix(in srgb, var(--la-text) 16%, transparent); stroke-dasharray:3 4; }
@@ -278,10 +284,11 @@
                                 <optgroup label="Days"><option value="30d">Last 30 days</option><option value="60d">Last 60 days</option><option value="90d">Last 90 days</option><option value="120d">Last 120 days</option></optgroup>
                                 <optgroup label="Cycles"><option value="cycle">Current cycle</option><option value="inv1" selected>Last invoice + current cycle</option><option value="inv2">Last 2 invoices + current cycle</option><option value="inv3">Last 3 invoices + current cycle</option></optgroup>
                             </select>
-                            <div class="bl-seg" role="group" aria-label="Show"><button type="button" data-unit="money" class="on">£</button><button type="button" data-unit="mins">Mins</button></div>
+                            <div class="bl-seg" role="group" aria-label="Show"><button type="button" data-unit="streamed" class="on">Streamed</button><button type="button" data-unit="stored">Stored</button><button type="button" data-unit="money">£</button></div>
                         </div>
                     </div>
                     <div class="bl-chart" id="bl-chart"><p class="bl-chart-empty">Loading usage…</p></div>
+                    <div class="bl-legend" id="bl-legend"></div>
                 </section>
                 <section class="bl-section">
                     <div class="bl-section-head"><h3>Usage this month</h3><span class="bl-msg" id="bl-usage-head"></span></div>
@@ -362,25 +369,30 @@
             } catch (e) { err.textContent = 'Could not load billing: ' + e.message; err.classList.remove('hidden'); }
         }
         // Usage over time: day by day, adding up within each billing cycle (calendar month), like the invoice
-        var _chart = null, _unit = 'money';
+        var _chart = null, _unit = 'streamed', _chartAt = 0;
         async function loadChart() {
             var box = document.getElementById('bl-chart'), range = document.getElementById('bl-chart-range').value;
             try {
                 var r = await laFetch('/api/billing?usageDays=1&range=' + encodeURIComponent(range) + '&venue=' + encodeURIComponent(_venue) + '&target=' + encodeURIComponent(_target) + (_planOverride !== undefined ? '&plan=' + encodeURIComponent(_planOverride) : ''));
                 var d = await r.json();
                 if (!r.ok) throw new Error(d.error || r.status);
-                _chart = d; drawChart();
+                _chart = d; _chartAt = Date.now(); drawChart();
             } catch (e) { box.innerHTML = '<p class="bl-chart-empty">Usage chart unavailable: ' + esc(e.message) + '</p>'; }
         }
         // Points come from the server, priced exactly like the invoice (today's point is "Usage so far")
+        // v: the line (running total this cycle, video stored, or £ above the plan); b: that day on its own (bars)
         function chartSeries(d) {
             return (d.points || []).map(function(x) {
-                return { t: x.t + 86400e3, v: _unit === 'money' ? x.amount : x.mins, cycle: x.cycle, future: x.t > d.today, lines: x.lines, day: x.t };
+                var v = _unit === 'money' ? x.amount : _unit === 'stored' ? (x.stored || 0) : x.mins;
+                var b = _unit === 'money' ? null : _unit === 'stored' ? (x.added || 0) : (x.daily || 0);
+                return { t: x.t + 86400e3, v: v, b: b, cycle: _unit === 'stored' ? 0 : x.cycle, future: x.t > d.today, lines: x.lines, day: x.t };
             });
         }
-        function niceMax(v) { if (v <= 0) return _unit === 'money' ? 1 : 10; var p = Math.pow(10, Math.floor(Math.log10(v))), n = v / p; return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * p; }
-        function fmtV(v) { return _unit === 'money' ? money(v, _chart.currency) : Math.round(v).toLocaleString('en-GB') + ' min'; }
-        function fmtAxis(v) { return _unit === 'money' ? '£' + (v >= 100 ? Math.round(v) : +v.toFixed(v < 10 ? 2 : 0)) : (v >= 1000 ? +(v / 1000).toFixed(1) + 'k' : Math.round(v)); }
+        function fmtMin(m) { m = Math.max(0, m || 0); return m >= 600 ? Math.round(m / 60).toLocaleString('en-GB') + ' h' : m >= 60 ? (Math.round(m / 6) / 10) + ' h' : Math.round(m) + ' min'; }
+        function niceMax(v) { if (_unit !== 'money' && v > 120) return niceMax2(v / 60) * 60; return niceMax2(v); }
+        function niceMax2(v) { if (v <= 0) return _unit === 'money' ? 1 : 10; var p = Math.pow(10, Math.floor(Math.log10(v))), n = v / p; return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * p; }
+        function fmtV(v) { return _unit === 'money' ? money(v, _chart.currency) : fmtMin(v); }
+        function fmtAxis(v) { return _unit === 'money' ? '£' + (v >= 100 ? Math.round(v) : +v.toFixed(v < 10 ? 2 : 0)) : v >= 60 ? (+(v / 60).toFixed(v >= 600 ? 0 : 1)) + 'h' : Math.round(v) + 'm'; }
         function drawChart() {
             var d = _chart, box = document.getElementById('bl-chart');
             if (!d) return;
@@ -413,11 +425,22 @@
                 var ps = byC[c], dl = ps.map(function(p, j) { return (j ? 'L' : 'M') + x(p.t).toFixed(1) + ' ' + y(p.v).toFixed(1); }).join(' ');
                 svg += '<path class="area" d="' + dl + ' L' + x(ps[ps.length - 1].t).toFixed(1) + ' ' + y(0) + ' L' + x(ps[0].t).toFixed(1) + ' ' + y(0) + 'Z"/><path class="line" d="' + dl + '"/>';
             });
+            // each day on its own, as bars (their own scale, up to 55% of the height)
+            if (_unit !== 'money') {
+                var bmax = Math.max.apply(null, pts.map(function(p) { return p.b || 0; }).concat([0]));
+                var bw = Math.max(2, Math.min(18, iw / Math.max(1, span / 86400e3) * 0.62));
+                if (bmax > 0) pts.forEach(function(p) { if (!p.b) return; var bh = p.b / bmax * ih * 0.55; svg += '<rect class="bar" x="' + (x(p.day + 43200e3) - bw / 2).toFixed(1) + '" y="' + (T + ih - bh).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + bh.toFixed(1) + '" rx="1.5"/>'; });
+            }
             svg += '<line class="hover-line" id="bl-hl" y1="' + T + '" y2="' + (T + ih) + '" style="display:none"/><circle class="dot" id="bl-hd" r="4" style="display:none"/>';
             box.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" style="height:' + H + 'px">' + svg + '</svg><div class="bl-tip" id="bl-tip"></div>';
             // summary: this cycle so far
             var curPts = byC[cur] || [], last = curPts[curPts.length - 1];
-            document.getElementById('bl-chart-sum').textContent = (last ? fmtV(last.v) + (_unit === 'money' ? ' of usage this cycle so far' + (d.plan ? ', above what ' + d.plan + ' includes' : '') : ' streamed this cycle so far') : '') + (d.notes && d.notes.length ? ' · ' + d.notes.join(' ') : '');
+            var today = pts[pts.length - 1];
+            var upd = _chartAt ? ' · Live, updated ' + new Date(_chartAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
+            document.getElementById('bl-chart-sum').textContent = (last ? (_unit === 'money' ? fmtV(last.v) + ' of usage this cycle so far' + (d.plan ? ', above what ' + d.plan + ' includes' : '')
+                : _unit === 'stored' ? fmtMin(last.v) + ' of video stored' + (today && today.b ? ' · +' + fmtMin(today.b) + ' today' : '')
+                : fmtMin(today ? today.b : 0) + ' streamed today · ' + fmtMin(last.v) + ' this cycle') : '') + upd + (d.notes && d.notes.length ? ' · ' + d.notes.join(' ') : '');
+            document.getElementById('bl-legend').innerHTML = _unit === 'money' ? '' : '<span><i class="lg-bar"></i>' + (_unit === 'stored' ? 'Added each day' : 'Streamed each day') + '</span><span><i class="lg-line"></i>' + (_unit === 'stored' ? 'Video stored' : 'Total this cycle') + '</span>';
             var svgEl = box.querySelector('svg'), tip = document.getElementById('bl-tip'), hl = document.getElementById('bl-hl'), hd = document.getElementById('bl-hd');
             svgEl.addEventListener('mousemove', function(e) {
                 var rc = svgEl.getBoundingClientRect(), mx = (e.clientX - rc.left) / rc.width * W, best = null;
@@ -425,7 +448,10 @@
                 if (!best) return;
                 var px = x(best.t), py = y(best.v);
                 hl.setAttribute('x1', px); hl.setAttribute('x2', px); hl.style.display = ''; hd.setAttribute('cx', px); hd.setAttribute('cy', py); hd.style.display = '';
-                tip.innerHTML = new Date(best.t - 1).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) + '<br><b>' + fmtV(best.v) + '</b>' +
+                tip.innerHTML = new Date(best.t - 1).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) +
+                    (_unit === 'streamed' ? '<br><b>' + fmtMin(best.b) + '</b> streamed that day<br><span style="color:var(--la-sub)">' + fmtMin(best.v) + ' this cycle</span>'
+                    : _unit === 'stored' ? '<br><b>' + fmtMin(best.v) + '</b> of video stored' + (best.b ? '<br><span style="color:var(--la-sub)">+' + fmtMin(best.b) + ' added that day</span>' : '')
+                    : '<br><b>' + fmtV(best.v) + '</b>') +
                     (_unit === 'money' && best.lines ? best.lines.filter(function(l) { return l.amount > 0; }).map(function(l) { return '<br><span style="color:var(--la-sub)">' + esc(l.label) + ' · ' + money(l.amount, _chart.currency) + '</span>'; }).join('') : '');
                 tip.style.left = (20 + px / W * rc.width) + 'px'; tip.style.top = (12 + py) + 'px'; tip.style.opacity = '1';
             });
@@ -436,6 +462,9 @@
             b.addEventListener('click', function() { _unit = b.dataset.unit; document.querySelectorAll('.bl-seg button').forEach(function(o) { o.classList.toggle('on', o === b); }); drawChart(); });
         });
         var _rsz; window.addEventListener('resize', function() { clearTimeout(_rsz); _rsz = setTimeout(drawChart, 150); });
+        // Live: the chart follows the usage every minute while the page is open (not while a tooltip is showing)
+        setInterval(function() { var tip = document.getElementById('bl-tip'); if (document.hidden || !_chart || (tip && tip.style.opacity === '1')) return; loadChart(); }, 60e3);
+        document.addEventListener('visibilitychange', function() { if (!document.hidden && _chart && Date.now() - _chartAt > 60e3) loadChart(); });
         function targetName(t, d) { return t === 'venue' ? (d.venue || 'This venue') : t.replace(/^(artist|label|venue|management):/, ''); }
         function render(d) {
             var cur = d.currency, admin = d.isAdmin;

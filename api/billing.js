@@ -151,7 +151,10 @@ export default async function handler(req, res) {
           videos: 0, notes: [],
         };
         const p = priceUsage(usage, out.rates, out.plan);
+        // That day on its own too (for the daily bars): minutes streamed, minutes of video added; and video stored by its end
+        const added = out.vids.reduce((s, v) => s + (v.at >= d.start && v.at < end ? v.min : 0), 0);
         return { t: d.start, end, cycle: c, amount: p.usageTotal, mins: Math.round(streamed * 100) / 100,
+          daily: Math.round(d.delivered * 100) / 100, stored: Math.round(usage.storedMinutes), added: Math.round(added),
           lines: p.lines.map(l => ({ label: l.label, quantity: l.quantity, unit: l.unit, amount: l.amount })) };
       });
       const cycles = [];
