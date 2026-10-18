@@ -568,6 +568,7 @@
             return t.source === 'session' ? { value: 'Friday Night Session', font: t.font, source: 'session' } : t;
         }
         function unfoldWm() { var b = document.getElementById('bk-wm'), f = document.getElementById('bk-wm-fold'); if (b) b.classList.remove('folded'); if (f) f.setAttribute('aria-expanded', 'true'); try { localStorage.setItem('la_bk_wm_folded', ''); } catch (_) {} }
+        var _wmResize = null;
         function renderWatermark() {
             var box = document.getElementById('bk-wm');
             if (box && !box.dataset.foldInit) { box.dataset.foldInit = '1'; try { if (localStorage.getItem('la_bk_wm_folded')) box.classList.add('folded'); } catch (_) {} }
@@ -644,6 +645,10 @@
                 try { localStorage.setItem('la_bk_wm_folded', folded ? '1' : ''); } catch (_) {}
             });
             positionPreview();
+            // A folded panel has no size, so the preview is drawn again once it shows (unfolded, frame changed, window resized)
+            if (_wmResize) _wmResize.disconnect();
+            var pvBox = document.getElementById('bk-wm-preview');
+            if (window.ResizeObserver && pvBox) { _wmResize = new ResizeObserver(function() { if (pvBox.offsetWidth) positionPreview(); }); _wmResize.observe(pvBox); }
             var addArtist = document.getElementById('bk-wm-text-artist');
             if (addArtist) addArtist.addEventListener('click', function() {
                 _wm.text = { source: 'artist', value: '', font: wmTextFonts()[0].url, position: 'br' };
