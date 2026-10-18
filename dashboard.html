@@ -186,7 +186,7 @@
         <div class="flex-1 overflow-y-auto la-page la-page-scroll">
             <div class="dash-head">
                 <h2 id="venue-tier" class="dash-h">ADMIN</h2>
-                <script>(function(){ try { var a = JSON.parse(localStorage.getItem('la_admin') || '{}'); if (a.venueSlug === 'local-assets-admin' || /^local\s*[\/-]?\s*assets\b/i.test(String(a.venue || '').trim()) || a.role !== 'client') { document.getElementById('venue-tier').classList.add('is-la'); return; } var k = 'la_venue_logo4:' + (a.venueSlug || ''), v = JSON.parse(localStorage.getItem(k) || 'null'); if (a.role === 'client' && a.venueSlug !== 'local-assets-admin' && !/^local\s*[\/-]?\s*assets\b/i.test(String(a.venue || '').trim()) && v && (v.mask || v.img)) { var h = document.getElementById('venue-tier'); h.classList.add('has-logo', 'logo-early'); if (v.img) h.classList.add('logo-img'); h.style.setProperty('--logo', 'url("' + (v.img ? v.url : v.mask) + '")'); h.style.setProperty('--logo-w', Math.round(Math.min(260, Math.max(40, 40 * v.ar))) + 'px'); } } catch (_) {} })();</script>
+                <script>(function(){ try { var a = JSON.parse(localStorage.getItem('la_admin') || '{}'); if (a.venueSlug === 'local-assets-admin' || /^local\s*[\/-]?\s*assets\b/i.test(String(a.venue || '').trim()) || a.role !== 'client') { document.getElementById('venue-tier').classList.add('is-la'); return; } var k = 'la_venue_logo4:' + (a.venueSlug || ''), v = JSON.parse(localStorage.getItem(k) || 'null'); if (a.role === 'client' && a.venueSlug !== 'local-assets-admin' && !/^local\s*[\/-]?\s*assets\b/i.test(String(a.venue || '').trim()) && v && (v.mask || v.img)) { var h = document.getElementById('venue-tier'); h.classList.add('has-logo', 'logo-early'); if (v.img) h.classList.add('logo-img'); h.style.setProperty('--logo', 'url("' + (v.img ? v.url : v.mask) + '")'); h.style.setProperty('--logo-w', Math.round(Math.min(200, Math.max(28, 28 * v.ar))) + 'px'); } } catch (_) {} })();</script>
                 <p class="dash-sub" id="venue-tier-sub">Your sessions, files and channels.</p>
             </div>
             <a id="live-feed-hero" href="/camera.html" class="block cursor-pointer hover:border-primary/50 transition-all duration-500 w-full bg-[#050505] border border-[#27272a] rounded-2xl p-5 md:p-8 relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-4 md:gap-6 shadow-2xl no-underline" style="background:#050505!important">
@@ -2248,7 +2248,7 @@
             if (!h || !v || !(v.mask || v.img) || !isClientAcct() || /^admin$/i.test(h.textContent.trim())) return;
             h.classList.add('has-logo'); h.classList.toggle('logo-img', !!v.img);
             h.style.setProperty('--logo', 'url("' + (v.img ? v.url : v.mask).replace(/"/g, '%22') + '")');
-            h.style.setProperty('--logo-w', Math.round(Math.min(260, Math.max(40, 40 * v.ar))) + 'px');
+            h.style.setProperty('--logo-w', Math.round(Math.min(200, Math.max(28, 28 * v.ar))) + 'px');
         }
         function venueLogoMask(url) {
             return new Promise(function(res, rej) {
@@ -3598,9 +3598,9 @@
         .kpi-muted { color:var(--la-dim); }
         /* Page title as the venue's logo */
         /* The local / assets admin account: its own logo as the title */
-        #venue-tier.is-la { width:256px; max-width:100%; height:32px; font-size:0 !important; color:transparent !important; background:var(--la-text); -webkit-mask:url(/logos/White@2x.png) left center / contain no-repeat; mask:url(/logos/White@2x.png) left center / contain no-repeat; }
+        #venue-tier.is-la { width:176px; max-width:100%; height:22px; font-size:0 !important; color:transparent !important; background:var(--la-text); -webkit-mask:url(/logos/White@2x.png) left center / contain no-repeat; mask:url(/logos/White@2x.png) left center / contain no-repeat; }
         #venue-tier.has-logo.logo-img { background:var(--logo) left center / contain no-repeat !important; -webkit-mask:none !important; mask:none !important; }
-        #venue-tier.has-logo { width:var(--logo-w); height:40px; font-size:0 !important; color:transparent !important; background:var(--la-text); -webkit-mask:var(--logo) left center / contain no-repeat; mask:var(--logo) left center / contain no-repeat; }
+        #venue-tier.has-logo { width:var(--logo-w); height:28px; font-size:0 !important; color:transparent !important; background:var(--la-text); -webkit-mask:var(--logo) left center / contain no-repeat; mask:var(--logo) left center / contain no-repeat; }
         /* Stat cards, like the side menu: Geist, a plain label, a large number, a quiet line under it */
         .kpi { border-radius:12px; padding:20px 22px; background-image:none !important; box-shadow:none !important; }
         .kpi-label { font:500 13px/1.2 'Geist', 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:0; text-transform:none; color:var(--la-sub); }
