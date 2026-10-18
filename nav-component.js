@@ -66,17 +66,17 @@ document.addEventListener("DOMContentLoaded", () => {
             <a href="/dashboard" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('/dashboard')}">
                 Overview
             </a>
+            <a href="/calendar" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('/calendar')}">
+                Calendar
+            </a>
             <a href="/camera" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('/camera')}">
                 Camera Control
-            </a>
-            <a href="/brand" style="${_isAdminAcct ? 'display:none' : ''}" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('/brand')}">
-                Brand Kit
             </a>
             <a href="/assets" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('/assets')}">
                 Upload Asset
             </a>
-            <a href="/calendar" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('/calendar')}">
-                Calendar
+            <a href="/brand" style="${_isAdminAcct ? 'display:none' : ''}" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('/brand')}">
+                Brand Kit
             </a>
             <a href="/billing" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('/billing')}">
                 Billing

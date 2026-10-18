@@ -35,7 +35,7 @@
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
-    <script src="/nav-component.js?v=22"></script>
+    <script src="/nav-component.js?v=23"></script>
     <style>
         /* Standardized sidebar styles used by the JS component */
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
@@ -91,8 +91,8 @@
         /* Drop zone: a calm card, the file type on top, one clear action, the limits as small chips */
         .ing-drop { position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; min-height:240px; padding:34px 24px 28px; text-align:center; border:1px dashed color-mix(in srgb, var(--la-text) 22%, transparent); border-radius:20px; background:var(--la-surface); cursor:pointer; transition:border-color .2s, background .2s; }
         .ing-drop-label { font:500 10px/1 'JetBrains Mono', monospace; letter-spacing:.2em; text-transform:uppercase; color:var(--la-dim); }
-        .ing-drop-ico { width:60px; height:60px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:var(--la-chip); border:1px solid var(--la-line); margin:6px 0 4px; transition:background .2s, border-color .2s, transform .2s; }
-        .ing-drop-ico iconify-icon { font-size:26px; color:var(--la-text); }
+        .ing-drop-ico { width:68px; height:68px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:var(--la-chip); border:1px solid var(--la-line); margin:6px 0 4px; transition:background .2s, border-color .2s, transform .2s; }
+        .ing-drop-ico iconify-icon { font-size:30px; color:var(--la-text); }
         .ing-drop-main { max-width:100%; font:600 18px/1.3 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:-.01em; color:var(--la-text); overflow-wrap:anywhere; }
         .ing-drop-meta { font:400 13px/1.45 'Helvetica Neue', Helvetica, Arial, sans-serif; color:var(--la-sub); }
         .ing-drop-btn { display:inline-flex; align-items:center; height:40px; padding:0 22px; margin-top:6px; border-radius:999px; border:1px solid var(--la-line); background:var(--la-bg); color:var(--la-text); font:600 13px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; transition:border-color .2s, color .2s; }
@@ -107,7 +107,7 @@
         .ing-drop.over .ing-drop-ico { transform:scale(1.06); }
         /* A file chosen: solid accent frame, the file's name and size, and Change file */
         .ing-drop.active { border-style:solid; border-color:var(--la-accent); }
-        .ing-drop.active .ing-drop-ico { background:var(--la-accent); border-color:var(--la-accent); }
+        .ing-drop.active .ing-drop-ico { background:var(--la-accent); border-color:var(--la-accent); box-shadow:0 0 0 6px color-mix(in srgb, var(--la-accent) 18%, transparent), 0 8px 24px color-mix(in srgb, var(--la-accent) 35%, transparent); }
         .ing-drop.active .ing-drop-ico iconify-icon { color:var(--la-accent-ink); }
         .ing-drop.active .ing-drop-specs { display:none; }
         .ing-drop-meta.ing-warn { color:var(--la-warn, #f59e0b); max-width:460px; }
@@ -214,7 +214,7 @@
                     </div>
                     <label class="ing-drop" id="node-video">
                         <span class="ing-drop-label">4K Master (.MP4)</span>
-                        <span class="ing-drop-ico"><iconify-icon icon="solar:videocamera-record-linear"></iconify-icon></span>
+                        <span class="ing-drop-ico"><iconify-icon icon="lucide:video"></iconify-icon></span>
                         <b class="ing-drop-main" id="ing-file">ADD THE RECORDING OF THE SET</b>
                         <small class="ing-drop-meta" id="ing-meta">Drag it here, or choose the file.</small>
                         <span class="ing-drop-btn" id="ing-pick">Choose file</span>
@@ -303,11 +303,11 @@
         const nodeIcon  = document.querySelector('#node-video iconify-icon');
         const nodeLabel = document.querySelector('#node-video span');
         const map = {
-            AUDIO:  { accept: 'audio/*', icon: 'solar:music-note-linear',          label: 'HQ Audio (.WAV/.MP3/.M4A)' },
-            SOCIAL: { accept: 'video/*', icon: 'solar:iphone-linear',              label: 'Social Clip (.MP4)'         },
-            THUMB:  { accept: 'image/*', icon: 'solar:gallery-minimalistic-linear', label: 'Thumbnail (.PNG/.JPG)'      },
+            AUDIO:  { accept: 'audio/*', icon: 'lucide:music',                     label: 'HQ Audio (.WAV/.MP3/.M4A)' },
+            SOCIAL: { accept: 'video/*', icon: 'lucide:smartphone',                label: 'Social Clip (.MP4)'         },
+            THUMB:  { accept: 'image/*', icon: 'lucide:image', label: 'Thumbnail (.PNG/.JPG)'      },
         };
-        const cfg = map[camera] || { accept: 'video/*', icon: 'solar:videocamera-record-linear', label: '4K Master (.MP4)' };
+        const cfg = map[camera] || { accept: 'video/*', icon: 'lucide:video', label: '4K Master (.MP4)' };
         if (fileInput)  fileInput.accept = cfg.accept;
         if (nodeIcon)   nodeIcon.setAttribute('icon', cfg.icon);
         if (nodeLabel)  nodeLabel.textContent = cfg.label;
