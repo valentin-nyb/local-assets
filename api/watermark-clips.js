@@ -85,14 +85,18 @@ async function animateClip(job) {
   const auth = venueAuthFor(job.slug);
   try {
     const a = job.at;
-    const filter = `[1:v]scale=${job.vw}:${job.vh}[b];[2:v]scale=${Math.round(a.w * job.vw / a.W / 2) * 2}:${Math.round(a.h * job.vw / a.W / 2) * 2}:flags=lanczos,format=rgba,colorchannelmixer=aa=${a.opacity}[g];` +
-      `[0:v][b]overlay=0:0[v1];[v1][g]overlay=${Math.round(a.left * job.vw / a.W)}:${Math.round(a.top * job.vw / a.W)}:shortest=1,format=yuv420p[v]`;
+    // Drawn at 1080 × 1920 at most (what Instagram, TikTok and Shorts show): a 4K clip took over the
+    // function's 5 minutes, at a quarter of the work it fits easily
+    const k = Math.min(1, 1080 / Math.min(job.vw, job.vh));
+    const vw = Math.round(job.vw * k / 2) * 2, vh = Math.round(job.vh * k / 2) * 2;
+    const filter = `[0:v]scale=${vw}:${vh}:flags=bicubic[s];[1:v]scale=${vw}:${vh}[b];[2:v]scale=${Math.round(a.w * vw / a.W / 2) * 2}:${Math.round(a.h * vw / a.W / 2) * 2}:flags=lanczos,format=rgba,colorchannelmixer=aa=${a.opacity}[g];` +
+      `[s][b]overlay=0:0[v1];[v1][g]overlay=${Math.round(a.left * vw / a.W)}:${Math.round(a.top * vw / a.W)}:shortest=1,format=yuv420p[v]`;
     const t0 = Date.now();
     // Capped at the clip's length (the GIF loops forever) and stopped before the function's 5-minute limit
     const enc = (src) => new Promise((resolve, reject) => {
       const args = ['-hide_banner', '-loglevel', 'error', '-y', '-i', src, '-i', job.base, '-ignore_loop', '0', '-i', job.gif,
         '-filter_complex', filter, '-map', '[v]', '-map', '0:a:0?', ...(job.dur ? ['-t', String(job.dur)] : []),
-        '-c:v', 'libx264', '-preset', 'superfast', '-crf', '20', '-pix_fmt', 'yuv420p', '-threads', '0', '-c:a', 'copy', '-movflags', '+faststart', out];
+        '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '20', '-pix_fmt', 'yuv420p', '-threads', '0', '-c:a', 'copy', '-movflags', '+faststart', out];
       const ff = spawn(ffmpegPath, args, { stdio: ['ignore', 'ignore', 'pipe'] });
       let err = '';
       ff.stderr.on('data', d => { err = (err + d).slice(-1500); });
