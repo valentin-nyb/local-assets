@@ -298,6 +298,9 @@
         .bk-wm-preview:not(.horizontal) { width:min(280px, 100%); }
         .bk-wm-sharp { max-width:none; }
         @media (max-width: 1280px) { .bk-wm-preview-wrap { width:400px; } }
+        /* Export as wide as the preview above it (narrow under the vertical frame) */
+        .bk-wm-export { display:flex; margin-left:auto; margin-right:auto; }
+        .bk-wm-preview-wrap:has(.bk-wm-preview:not(.horizontal)) .bk-wm-export { width:min(280px, 100%); }
         .bk-wm-sharp.hidden { display:none; }
         .bk-wm-export { width:100%; justify-content:center; margin-top:12px; }
         @media (max-width: 640px) {
