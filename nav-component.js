@@ -27,10 +27,10 @@ document.addEventListener("DOMContentLoaded", () => {
             html:not(.dark) .la-theme-switcher button{color:rgba(0,0,0,.3)}
             html:not(.dark) .la-theme-switcher button:hover{color:rgba(0,0,0,.55)}
             html:not(.dark) .la-theme-switcher button[aria-checked="true"]{background:rgba(0,0,0,.07);color:#18181b}
-            .la-sign-in-btn{background:#18181b;border:1px solid #27272a}
-            .la-sign-in-btn span{color:#71717a}
-            html:not(.dark) .la-sign-in-btn{background:#f4f4f5;border-color:#d4d4d8}
-            html:not(.dark) .la-sign-in-btn span{color:#52525b}
+            .la-sign-in-btn{position:relative;isolation:isolate;overflow:hidden;height:36px;padding:0 18px;border-radius:999px;background:transparent;border:1px solid color-mix(in srgb,var(--la-text,#fafafa) 30%,transparent);color:var(--la-text,#fafafa);font:500 13px/1 'Helvetica Neue',Helvetica,Arial,sans-serif;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:color .3s cubic-bezier(.65,0,.35,1),border-color .3s cubic-bezier(.65,0,.35,1),transform .15s ease}
+            .la-sign-in-btn::before{content:"";position:absolute;inset:-1px;z-index:-1;border-radius:inherit;background:var(--la-text,#fafafa);transform:scaleX(0);transform-origin:right center;transition:transform .42s cubic-bezier(.65,0,.35,1);pointer-events:none}
+            .la-sign-in-btn:active{transform:scale(.97)}
+            @media (hover:hover){.la-sign-in-btn:hover{color:var(--la-bg,#000);border-color:var(--la-text,#fafafa)}.la-sign-in-btn:hover::before{transform:scaleX(1);transform-origin:left center}}
         `;
         document.head.appendChild(style);
     }
@@ -482,12 +482,13 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!session) {
             // Not logged in → "SIGN IN" pill
             btn.className = 'la-sign-in-btn';
-            btn.style.cssText = 'width:auto;min-width:60px;height:28px;padding:0 10px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;';
-            btn.innerHTML = '<span style="font-family:ui-monospace,monospace;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.15em;">SIGN IN</span>';
+            btn.style.cssText = '';
+            btn.textContent = 'Sign in';
             btn.title = 'Sign in';
             btn.onclick = function(e) { e.stopPropagation(); window.location.href = '/login.html'; };
         } else {
             // Logged in → profile photo (or initial fallback)
+            btn.classList.remove('la-sign-in-btn');
             btn.style.cssText = 'width:32px;height:32px;border-radius:50%;overflow:visible;cursor:pointer;flex-shrink:0;position:relative;display:inline-flex;align-items:center;justify-content:center;';
             btn.title = session.name || session.email || 'Account';
 

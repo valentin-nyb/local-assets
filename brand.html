@@ -33,11 +33,11 @@
     <link rel="manifest" href="favicon/site.webmanifest">
 
     <link rel="stylesheet" href="styles/tailwind.css">
-    <link rel="stylesheet" href="styles/theme.css?v=12">
+    <link rel="stylesheet" href="styles/theme.css?v=14">
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
-    <script src="nav-component.js?v=20"></script>
+    <script src="nav-component.js?v=21"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
         .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
@@ -153,6 +153,18 @@
         .bk-owner-meta { font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:var(--la-dim); margin-top:3px; }
         .bk-owner-actions { margin-left:auto; display:flex; gap:6px; flex-shrink:0; }
         .bk-body { border-top:1px solid var(--la-line-soft); padding:6px 18px 18px; }
+        /* Folders fold: tap the arrow or the name row; closed shows just the row */
+        .bk-owner-head { cursor:pointer; }
+        .bk-edit-more { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 0 2px; border-top:1px solid var(--la-line-soft); }
+        .bk-edit-more > span { font-size:13px; color:var(--la-sub); }
+        .bk-owner-actions .cam-btn:disabled { opacity:.45; cursor:default; }
+        .bk-owner-head > .min-w-0 { flex:1 1 0; min-width:0; }
+        .bk-fold { width:28px; height:28px; margin:0 -6px 0 -6px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border:0; border-radius:999px; background:transparent; color:var(--la-sub); cursor:pointer; transition:background .2s ease, color .2s ease; }
+        .bk-fold svg { transition:transform .25s cubic-bezier(.65,0,.35,1); transform:rotate(90deg); }
+        .bk-owner.is-closed .bk-fold svg { transform:rotate(0deg); }
+        @media (hover:hover) { .bk-fold:hover { background:var(--la-chip); color:var(--la-text); } }
+        .bk-owner.is-closed .bk-body { display:none; }
+        @media (max-width:640px) { .bk-owner.is-closed .bk-owner-actions { display:none; } }
         .bk-cat { margin-top:14px; }
         .bk-cat-label { display:flex; align-items:center; gap:6px; font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:var(--la-dim); margin-bottom:8px; }
         .bk-files { display:grid; grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:10px; }
@@ -1093,6 +1105,10 @@
             }
         }
 
+        // Which folders are open, remembered on this device (the account's own folder starts open)
+        var _bkOpen = (function() { try { return JSON.parse(localStorage.getItem('la_bk_open') || '{}') || {}; } catch (_) { return {}; } })();
+        function bkIsOpen(o) { return Object.prototype.hasOwnProperty.call(_bkOpen, o.key) ? !!_bkOpen[o.key] : !!o.org; }
+        function bkSetOpen(key, open) { _bkOpen[key] = !!open; try { localStorage.setItem('la_bk_open', JSON.stringify(_bkOpen)); } catch (_) {} }
         function render() {
             var wrap = document.getElementById('bk-owners');
             var bkFoot = document.getElementById('bk-foot'); if (bkFoot) bkFoot.textContent = _files.length + ' file' + (_files.length !== 1 ? 's' : '');
@@ -1119,19 +1135,32 @@
                     CATS.forEach(function(c) { files.forEach(function(f) { if (f.category === c.key) ordered.push(f); }); });
                     body = '<div class="bk-files">' + ordered.map(fileCard).join('') + '</div>';
                 }
-                return heading + '<section class="bk-owner' + (o.parent ? ' bk-sub' : '') + '">' +
-                    '<div class="bk-owner-head"><div class="bk-avatar">' + avatar + '</div>' +
+                var open = bkIsOpen(o);
+                return heading + '<section class="bk-owner' + (o.parent ? ' bk-sub' : '') + (open ? '' : ' is-closed') + '" data-owner="' + esc(o.key) + '">' +
+                    '<div class="bk-owner-head"><button type="button" class="bk-fold" aria-expanded="' + open + '" aria-label="' + (open ? 'Close ' : 'Open ') + esc(o.name) + '"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button><div class="bk-avatar">' + avatar + '</div>' +
                     '<div class="min-w-0"><p class="bk-owner-name">' + esc(o.name) + '</p><p class="bk-owner-meta"><span class="bk-kind-' + (/label/i.test(o.kind) ? 'label' : /artist/i.test(o.kind) ? 'artist' : 'venue') + '">' + esc(o.kind) + '</span> · ' + files.length + ' file' + (files.length !== 1 ? 's' : '') +
                         ' · <button type="button" class="bk-org-edit" ' + (o.org ? 'data-org' : 'data-edit-owner="' + esc(o.key) + '"') + '>Edit</button></p></div>' +
                     '<div class="bk-owner-actions">' +
-                        (files.length ? '<button type="button" class="cam-btn ghost" data-zip="' + esc(o.key) + '"><span>Download all</span></button>' : '') +
-                        (o.key.indexOf('artist-') === 0 || (o.org && _orgType === 'artist') ? '<button type="button" class="cam-btn ghost" data-up="__newLabel:' + esc(o.key) + '"><span>Add record label</span></button>' : '') +
+                        '<button type="button" class="cam-btn ghost" data-zip="' + esc(o.key) + '"' + (files.length ? '' : ' disabled title="No files yet"') + '><span>Download all</span></button>' +
                         '<button type="button" class="cam-btn ghost" data-up="' + esc(o.key) + '"><span>Upload</span></button>' +
-                        (!o.org ? '<button type="button" class="cam-btn ghost bk-del-owner" data-del-owner="' + esc(o.key) + '" title="Delete"><iconify-icon icon="solar:trash-bin-minimalistic-linear"></iconify-icon></button>' : '') +
                     '</div></div>' +
                     '<div class="bk-body">' + body + '</div></section>';
             }).join('');
-            wrap.querySelectorAll('[data-up]').forEach(function(b) { b.addEventListener('click', function() { openUpload(b.dataset.up); }); });
+            wrap.querySelectorAll('[data-up]').forEach(function(b) { b.addEventListener('click', function() {
+                var sec = b.closest('.bk-owner'); if (sec && b.dataset.up.indexOf('__') !== 0) bkSetOpen(sec.dataset.owner, true);
+                openUpload(b.dataset.up);
+            }); });
+            // Fold a folder: the arrow, or anywhere on its row that isn't a button
+            wrap.querySelectorAll('.bk-owner-head').forEach(function(head) {
+                head.addEventListener('click', function(e) {
+                    var t = e.target.closest('button, a, input, select');
+                    if (t && !t.classList.contains('bk-fold')) return;
+                    var sec = head.closest('.bk-owner'), fold = head.querySelector('.bk-fold');
+                    var open = sec.classList.toggle('is-closed') === false;
+                    bkSetOpen(sec.dataset.owner, open);
+                    if (fold) { fold.setAttribute('aria-expanded', open); fold.setAttribute('aria-label', (open ? 'Close ' : 'Open ') + head.querySelector('.bk-owner-name').textContent); }
+                });
+            });
             wrap.querySelectorAll('.bk-font[data-font]').forEach(function(el) {
                 loadBrandFont(el.dataset.font).then(function(family) {
                     el.querySelector('.bk-font-sample').style.fontFamily = family;
@@ -1533,10 +1562,13 @@
                 }).join('') + '</div>' +
                 '<label>Genres<input name="ownerGenres" maxlength="120" placeholder="e.g. Disco, Jazz-funk, Soulful House" value="' + esc(_ownerGenres.venue || '') + '"><small>The music you are known for: used for the tags and genre when a set is posted to YouTube and SoundCloud.</small></label>' +
                 '<label>Links<textarea name="ownerLinks" rows="3" placeholder="https://instagram.com/…&#10;https://yourwebsite.com" style="min-height:76px;padding:10px 12px;border-radius:10px;border:1px solid var(--la-line);background:var(--la-input);color:var(--la-text);font:inherit;resize:vertical">' + esc(_ownerLinks.venue || '') + '</textarea><small>One per line. Added to the description of every set posted.</small></label>' +
+                (_orgType === 'artist' ? '<div class="bk-edit-more"><span>Record label</span><button type="button" class="cam-btn ghost bk-org-addlabel"><span>Add record label</span></button></div>' : '') +
                 '<p id="bk-org-error" class="cam-form-error"></p>' +
                 '<div class="cam-form-actions"><button type="button" class="cam-btn ghost" onclick="closeCamDialog()">Cancel</button><button type="submit" class="cam-btn primary">Save</button></div>' +
                 '</form>');
             var form = document.getElementById('bk-org-form'), type = _orgType;
+            var orgLabel = form.querySelector('.bk-org-addlabel');
+            if (orgLabel) orgLabel.addEventListener('click', function() { var org = _owners.filter(function(x) { return x.org; })[0]; closeCamDialog(); openUpload('__newLabel:' + (org ? org.key : 'venue')); });
             form.querySelectorAll('.bk-org-opt').forEach(function(b) {
                 b.addEventListener('click', function() {
                     type = b.dataset.type;
@@ -1576,14 +1608,17 @@
                 '<label>Name<input name="ownerName" maxlength="60" required value="' + esc(o.name) + '"><small>Shown on the brand kit, exactly as typed.</small></label>' +
                 (isVenue || isLabel ? '' : '<label>Genres<input name="ownerGenres" maxlength="120" placeholder="e.g. Disco, Jazz-funk, Soulful House" value="' + esc(_ownerGenres[key] || '') + '"><small>Used for the tags and genre when a set is posted to YouTube and SoundCloud.</small></label>') +
                 '<label>Links<textarea name="ownerLinks" rows="3" placeholder="https://instagram.com/…&#10;https://soundcloud.com/…" style="min-height:76px;padding:10px 12px;border-radius:10px;border:1px solid var(--la-line);background:var(--la-input);color:var(--la-text);font:inherit;resize:vertical">' + esc(_ownerLinks[key] || '') + '</textarea><small>Instagram, SoundCloud, website: one per line. Added to the description of every set posted.</small></label>' +
+                (isVenue || isLabel ? '' : '<div class="bk-edit-more"><span>Record label</span><button type="button" class="cam-btn ghost bk-owner-addlabel"><span>Add record label</span></button></div>') +
                 '<p id="bk-owner-error" class="cam-form-error"></p>' +
                 '<div class="cam-form-actions">' +
-                    '<button type="button" class="cam-btn ghost bk-owner-del" style="margin-right:auto">Delete ' + kindName + '</button>' +
+                    '<button type="button" class="cam-btn la-danger bk-owner-del" style="margin-right:auto">Delete ' + kindName + '</button>' +
                     '<button type="button" class="cam-btn ghost" onclick="closeCamDialog()">Cancel</button><button type="submit" class="cam-btn primary">Save</button></div>' +
                 '</form>');
             var form = document.getElementById('bk-owner-form');
             var del = form.querySelector('.bk-owner-del');
             if (del) del.addEventListener('click', function() { closeCamDialog(); deleteOwner(key, del); });
+            var addLabel = form.querySelector('.bk-owner-addlabel');
+            if (addLabel) addLabel.addEventListener('click', function() { closeCamDialog(); openUpload('__newLabel:' + key); });
             form.addEventListener('submit', async function(e) {
                 e.preventDefault();
                 var nm = form.ownerName.value.trim();

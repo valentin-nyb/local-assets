@@ -214,7 +214,7 @@ html:not(.dark) .session-group + .session-group {
 }
 
 /* Avatar */
-html:not(.dark) #venue-avatar {
+html:not(.dark) #venue-avatar:not(.la-sign-in-btn) {
     background-color: #18181b !important;
     color: #ffffff !important;
 }
@@ -555,19 +555,28 @@ html:has(.cam-dialog:not(.hidden)), html:has(.cam-dialog:not(.hidden)) body { ov
 .cam-form input[type=date] { -webkit-appearance: none; appearance: none; display: block; min-width: 0; max-width: 100%; width: 100%; text-align: left; }
 .cam-form input[type=date]::-webkit-date-and-time-value { text-align: left; }
 
-/* Disconnect (and other ending actions): always filled red, site-wide.
-   Hover stays red: a deeper red slides in, the text stays white. */
+/* Disconnect (and other ending actions), site-wide: a red outline with red text;
+   on hover red slides in and the text turns white. */
 :root body :is(.cam-btn, .pm-disconnect).la-danger {
-    background: var(--la-bad, #ef4444) !important;
-    color: #fff !important;
+    position: relative; isolation: isolate; overflow: hidden;
+    background: transparent !important;
+    color: var(--la-bad, #ef4444) !important;
     border: 1px solid var(--la-bad, #ef4444) !important;
-    --la-btn-fill: #b91c1c;
+    --la-btn-fill: var(--la-bad, #ef4444);
+    transition: color .3s cubic-bezier(.65, 0, .35, 1), transform .15s ease !important;
 }
-html:not(.dark) body :is(.cam-btn, .pm-disconnect).la-danger { background: #dc2626 !important; border-color: #dc2626 !important; }
+html:not(.dark) body :is(.cam-btn, .pm-disconnect).la-danger { color: #dc2626 !important; border-color: #dc2626 !important; --la-btn-fill: #dc2626; }
+:root body .pm-disconnect.la-danger::before {
+    content: ""; position: absolute; inset: -1px; z-index: -1; border-radius: inherit;
+    background: var(--la-btn-fill); transform: scaleX(0); transform-origin: right center;
+    transition: transform .42s cubic-bezier(.65, 0, .35, 1); pointer-events: none;
+}
+:root body :is(.cam-btn, .pm-disconnect).la-danger:active:not(:disabled) { transform: scale(.97); }
 @media (hover: hover) {
-    :root body .cam-btn.la-danger:hover:not(:disabled) { color: #fff !important; border-color: #b91c1c !important; }
-    :root body .pm-disconnect.la-danger:hover:not(:disabled) { filter: brightness(1.1); }
+    :root body :is(.cam-btn, .pm-disconnect).la-danger:hover:not(:disabled) { color: #fff !important; background: transparent !important; filter: none; }
+    :root body :is(.cam-btn, .pm-disconnect).la-danger:hover:not(:disabled)::before { transform: scaleX(1); transform-origin: left center; }
 }
+@media (prefers-reduced-motion: reduce) { :root body :is(.cam-btn, .pm-disconnect).la-danger::before { transition: none; } }
 
 /* Dropdowns on phones and tablets: the same closed box as on a computer (thin border, a divider and
    up/down chevrons, room on the right), while tapping still opens the device's own picker.
@@ -583,3 +592,18 @@ html:not(.dark) body :is(.cam-btn, .pm-disconnect).la-danger { background: #dc26
 /* Date fields: the date sits in the middle of the box, on the left (Safari puts it at the top) */
 .cam-form input[type=date], .se-panel input[type=date], .ing-field input[type=date] { line-height: normal; display: flex; align-items: center; }
 .cam-form input[type=date]::-webkit-date-and-time-value, .se-panel input[type=date]::-webkit-date-and-time-value { margin: 0; text-align: left; }
+
+/* Footer: just the version, centred */
+.la-statusbar { justify-content: center !important; }
+
+/* Top bar page title (Dashboard overview, Cameras…): the platform's Helvetica, not the old monospace */
+header h1.font-mono, header #venue-breadcrumb {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    letter-spacing: .01em !important;
+    text-transform: uppercase;
+    line-height: 1.2;
+}
+header #venue-breadcrumb { color: var(--la-sub) !important; font-weight: 500 !important; }
+header #venue-breadcrumb:not(:empty)::after { content: " /"; color: var(--la-dim); }
