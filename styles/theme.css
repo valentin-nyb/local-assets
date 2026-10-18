@@ -597,17 +597,21 @@ html:not(.dark) body :is(.cam-btn, .pm-disconnect).la-danger { color: #dc2626 !i
 /* Footer: just the version, centred */
 .la-statusbar { justify-content: center !important; }
 
-/* Top bar page title (Dashboard overview, Cameras…): the platform's Helvetica, not the old monospace */
+/* Top bar breadcrumb, like the side menu: Geist in sentence case, the account in grey, a light slash,
+   the page you're on in the text colour ("Cafe 1001 / Dashboard overview") */
 header h1.font-mono, header #venue-breadcrumb {
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
-    font-size: 15px !important;
-    font-weight: 600 !important;
-    letter-spacing: .01em !important;
-    text-transform: uppercase;
+    display: inline-block !important;
+    font-family: 'Geist', 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
+    font-size: 14.5px !important;
+    font-weight: 500 !important;
+    letter-spacing: -.005em !important;
+    text-transform: lowercase !important;
     line-height: 1.2;
 }
-header #venue-breadcrumb { color: var(--la-sub) !important; font-weight: 500 !important; }
-header #venue-breadcrumb:not(:empty)::after { content: " /"; color: var(--la-dim); }
+header h1.font-mono::first-letter, header #venue-breadcrumb::first-letter { text-transform: uppercase; }
+html body header h1.font-mono.font-mono { color: var(--la-text) !important; }
+header #venue-breadcrumb { color: var(--la-sub) !important; }
+header #venue-breadcrumb:not(:empty)::after { content: "/"; display: inline-block; margin-left: 10px; color: var(--la-dim); font-weight: 300; }
 
 /* Side menu: an icon and the name in Geist; the page you're on is white on a soft rounded tint */
 html .nav-link.nav-link.nav-link {
@@ -625,14 +629,14 @@ html:not(.dark) .nav-link.nav-link.nav-link.active { color: #18181b !important; 
 
 /* ============================================
    PAGE LAYOUT — the same on every app page
-   Top bar 64px; content lined up with the top bar (32px in), up to 1200px wide, 32px from the top bar;
+   Top bar 64px; content lined up with the top bar (32px in), up to 1680px wide, 32px from the top bar;
    28px between sections; one title / subtitle style
    ============================================ */
 html .la-topbar.la-topbar { height: calc(64px + env(safe-area-inset-top)) !important; min-height: 0 !important; padding-top: env(safe-area-inset-top) !important; padding-bottom: 0 !important; }
-html .la-page.la-page { display: flex !important; flex-direction: column !important; gap: 28px !important; width: 100% !important; max-width: 1264px !important; margin: 0 !important; padding: 32px 32px 72px !important; }
+html .la-page.la-page { display: flex !important; flex-direction: column !important; gap: 28px !important; width: 100% !important; max-width: 1744px !important; margin: 0 !important; padding: 32px 32px 72px !important; }
 html .la-page.la-page > * { margin-top: 0 !important; margin-bottom: 0 !important; }
 html .la-page.la-page-scroll { max-width: none !important; }
-html .la-page.la-page-scroll > * { max-width: 1200px; width: 100%; }
+html .la-page.la-page-scroll > * { max-width: 1680px; width: 100%; }
 @media (max-width: 767px) {
     html .la-page.la-page { gap: 20px !important; padding: 20px 16px 56px !important; }
 }

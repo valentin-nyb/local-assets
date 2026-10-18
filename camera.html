@@ -32,7 +32,7 @@
     <link rel="manifest" href="favicon/site.webmanifest">
 
     <link rel="stylesheet" href="styles/tailwind.css">
-    <link rel="stylesheet" href="styles/theme.css?v=20">
+    <link rel="stylesheet" href="styles/theme.css?v=22">
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
@@ -423,6 +423,7 @@
         .ci-verts { display:grid; grid-template-columns:repeat(6,1fr); gap:6px; margin-top:12px; }
         .ci-verts i { aspect-ratio:9/16; border-radius:6px; background:var(--la-chip) center/cover no-repeat; border:1px solid var(--la-line); }
         .ci-verts i { position:relative; overflow:hidden; }
+        #ci-branded i.real .ci-wm, #ci-branded i.real .ci-name { display:none; }
         .ci-loop { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
         .ci-wm { z-index:1; }
         .ci-result-foot { font-size:11px; color:var(--la-dim); margin-top:10px; }
@@ -1045,6 +1046,7 @@
                     var img = document.createElement('img');
                     img.alt = ''; img.className = 'ci-loop'; img.loading = 'lazy';
                     var c = clips[i];
+                    t.classList.toggle('real', !!c);   // a real clip carries its own watermark: no example one on top
                     if (c) { var cd = Number(c.duration) || 8, cs = Math.max(0, Math.round(cd * 0.35)); img.src = 'https://image.mux.com/' + c.playback_ids[0].id + '/animated.webp?start=' + cs + '&end=' + Math.min(cs + 4, Math.floor(cd)) + '&width=240&fps=10'; }
                     else img.src = loop(dur * (0.12 + i * 0.25), 240);
                     t.insertBefore(img, t.firstChild);
