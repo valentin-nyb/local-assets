@@ -34,16 +34,16 @@ export const DEFAULT_PLANS = [
   { id: 'dj-trial', name: 'Trial Month', price: 0, signupFee: 55, maxClips: 6, cameras: 0,
     included: { storedMinutes: 0, deliveredMinutes: 0, fileGB: 0 },
     features: ['£55 to join, then pay as you go', '6 vertical social clips per session', 'Brand Kit and watermark', 'Camera Control: phone, OBS or your own camera', 'Distribution History', 'Usage charged to your card on the 1st'] },
-  { id: 'starter-distribution', name: 'Distribution · Starter', price: 2750, maxClips: 6, cameras: 0,
+  { id: 'starter-distribution', name: 'Starter', price: 2750, maxClips: 6, cameras: 0,
     included: { storedMinutes: 10000, deliveredMinutes: 25000, fileGB: 1000 },
     features: ['Camera available as an add-on', 'Content intake & quality control', 'Up to 8 events processed / month', '6 vertical clips per session', 'Brand Kit, thumbnails & watermark', '1 TB cloud storage'] },
-  { id: 'liveset-distribution', name: 'Distribution · Pro', price: 3500, maxClips: 12, cameras: 1,
+  { id: 'liveset-distribution', name: 'Pro', price: 3500, maxClips: 12, cameras: 1,
     included: { storedMinutes: 20000, deliveredMinutes: 50000, fileGB: 2000 },
     features: ['1 camera included', 'Content intake & quality control', 'Up to 8 events processed / month', '12 vertical clips per session', 'Brand Kit, thumbnails & watermark', '2 TB cloud storage'] },
   { id: 'starter-creative', name: 'Creative & Production · Starter', price: 5500, maxClips: 12, cameras: 1,
     included: { storedMinutes: 50000, deliveredMinutes: 100000, fileGB: 5000 },
     features: ['1 camera included', 'Starlink Mini', '4K master recordings', 'HQ audio capture', '12 vertical clips per session', 'Brand Kit, thumbnails & watermark', '5 TB cloud storage'] },
-  { id: 'liveset-creative', name: 'Creative & Production · Live-Set', price: 7500, maxClips: 0, cameras: 2,
+  { id: 'liveset-creative', name: 'Live-Set', price: 7500, maxClips: 0, cameras: 2,
     included: { storedMinutes: 100000, deliveredMinutes: 500000, fileGB: 10000 },
     features: ['2 cameras included', 'Starlink Mini + Mac mini', '4K master recordings', 'HQ audio capture', 'Multi-camera auto-edit', 'Unlimited vertical clips per session', 'Brand Kit, thumbnails & watermark', 'Quarterly performance reports', '10 TB cloud storage'] },
 ];
@@ -113,10 +113,22 @@ async function upgradeVenueTrial(redis, list) {
     return out;
   } catch { return list; }
 }
+// Three plans (18 Oct 2026): Starter, Pro and Live-Set, without the Distribution / Creative & Production split.
+// Their old names are renamed once; Creative & Production · Starter stays for anyone already on it, no longer offered.
+const THREE_PLAN_NAMES = { 'starter-distribution': [/^distribution\s*·\s*starter$/i, 'Starter'], 'liveset-distribution': [/^distribution\s*·\s*pro$/i, 'Pro'], 'liveset-creative': [/^creative\s*&\s*production\s*·\s*live-set$/i, 'Live-Set'] };
+async function upgradeThreePlans(redis, list) {
+  try {
+    if (await redis.get('billing_plans_three_v7')) return list;
+    const out = list.map(x => { const r = THREE_PLAN_NAMES[x.id]; return r && r[0].test(String(x.name || '').trim()) ? { ...x, name: r[1] } : x; });
+    await redis.set('billing_plans', JSON.stringify(out));
+    await redis.set('billing_plans_three_v7', new Date().toISOString());
+    return out;
+  } catch { return list; }
+}
 export async function readPlans(redis) {
   // The Trial Month is always offered, even when the saved plan list predates it
   const withPayg = list => [...DEFAULT_PLANS.filter(d => d.id === 'dj-trial' && !list.some(p => p.id === d.id)), ...list];
-  try { let p = JSON.parse(await redis.get('billing_plans') || 'null'); if (Array.isArray(p) && p.length) p = await upgradeVenueTrial(redis, await upgradePlanWording(redis, await upgradeStarterCamera(redis, await upgradeSavedStorage(redis, p)))); return Array.isArray(p) && p.length ? withPayg(p.map(x => { const d = DEFAULT_PLANS.find(z => z.id === x.id) || {}; return { ...x, signupFee: x.signupFee != null ? x.signupFee : (d.signupFee || 0), features: (x.features && x.features.length ? x.features : d.features), cameras: x.cameras != null ? x.cameras : (d.cameras || 0), maxClips: x.maxClips != null ? x.maxClips : (d.maxClips != null ? d.maxClips : 5) }; })) : DEFAULT_PLANS; }
+  try { let p = JSON.parse(await redis.get('billing_plans') || 'null'); if (Array.isArray(p) && p.length) p = await upgradeThreePlans(redis, await upgradeVenueTrial(redis, await upgradePlanWording(redis, await upgradeStarterCamera(redis, await upgradeSavedStorage(redis, p))))); return Array.isArray(p) && p.length ? withPayg(p.map(x => { const d = DEFAULT_PLANS.find(z => z.id === x.id) || {}; return { ...x, signupFee: x.signupFee != null ? x.signupFee : (d.signupFee || 0), features: (x.features && x.features.length ? x.features : d.features), cameras: x.cameras != null ? x.cameras : (d.cameras || 0), maxClips: x.maxClips != null ? x.maxClips : (d.maxClips != null ? d.maxClips : 5) }; })) : DEFAULT_PLANS; }
   catch { return DEFAULT_PLANS; }
 }
 export function cleanPlans(list) {

@@ -653,15 +653,17 @@
         @media (hover:hover) { .tr-btn:hover { color:#000; border-color:#fafafa; } .tr-btn:hover::before { transform:scaleX(1); transform-origin:left center; } .tr-btn-main:hover { color:#39FF14; border-color:#39FF14; } }
         .tr-spacer { flex:1; }
         @media (max-width:1000px) { .tr-grid { grid-template-columns:minmax(0,1fr); max-width:520px; margin:0 auto; } }
+        /* Enterprise: a slim strip under the three plans */
+        .tr-ent { display:flex; align-items:center; justify-content:space-between; gap:24px; margin:20px auto 0; padding:24px 30px; border:1px solid rgba(250,250,250,.12); border-radius:18px; background:#0a0a0a; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; }
+        .tr-ent .tr-name { margin:0; }
+        .tr-ent .tr-for { margin:6px 0 0; max-width:720px; }
+        .tr-ent .tr-btn { flex-shrink:0; margin-top:0 !important; min-width:160px; }
+        @media (max-width:1000px) { .tr-ent { flex-direction:column; align-items:stretch; max-width:520px; } }
     </style>
     <div class="tr-top reveal active">
         <p class="tr-eyebrow">Pricing</p>
         <h2>Pick your plan</h2>
-        <p class="tr-lede" id="tr-lede">We film every set, edit it and post it for you.</p>
-        <div class="tr-toggle" role="group" aria-label="Plan type">
-            <button type="button" onclick="togglePricing('distribution')" id="toggle-distro">Distribution</button>
-            <button type="button" onclick="togglePricing('creative')" id="toggle-creative" class="on">Creative &amp; Production</button>
-        </div>
+        <p class="tr-lede" id="tr-lede">Every set filmed, edited, branded and posted. Three plans, no setup fees.</p>
     </div>
 
     <div class="max-w-7xl mx-auto reveal active" style="position:relative;z-index:20">
@@ -680,7 +682,7 @@
     </div>
 
     <div class="max-w-7xl mx-auto reveal delay-200 active">
-        <div id="pricing-distribution" class="hidden tr-grid">
+        <div id="pricing-plans" class="grid tr-grid">
             <div class="tr-card">
                 
                 <p class="tr-name">Starter</p>
@@ -698,39 +700,16 @@
                 <span class="tr-spacer"></span><button type="button" onclick="selectTier('liveset-distribution')" class="tr-btn tr-btn-main">Choose this plan</button>
             </div>
             <div class="tr-card">
-                
-                <p class="tr-name">Enterprise</p>
-                <div class="tr-price"><b>Enquire</b></div>
-                <p class="tr-for">For groups, festivals and brands with many venues.</p>
-                <p class="tr-h">Built around you</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>A dedicated account manager</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Unlimited sets processed</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Custom content packages</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Priority 24-hour turnaround</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Unlimited storage</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>API access for your marketing team</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Quarterly performance reports</span></li></ul>
-                <span class="tr-spacer"></span><a href="mailto:hello@local-assets.com?subject=Enterprise%20Distribution%20Enquiry" class="tr-btn">Talk to us</a>
-            </div>
-        </div>
-        <div id="pricing-creative" class="grid tr-grid">
-            <div class="tr-card">
-                
-                <p class="tr-name">Starter</p>
-                <div class="tr-price"><b>£5,500</b><span>/ month</span></div>
-                <p class="tr-for">For a venue or artist starting to film every set.</p>
-                <p class="tr-h">Filming</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>1 OBSBOT 4K camera, set up for you</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Starlink Mini</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Starts and stops with your calendar</span></li></ul><p class="tr-h">Every set gives you</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>The full set in 4K, with HQ audio</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>12 vertical clips per session</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Brand Kit, thumbnails and watermark</span></li></ul><p class="tr-h">Included every month</p><div class="tr-stats"><div><b>200 h</b><span>of sets stored</span></div><div><b>≈ 1,665 h</b><span>watched or downloaded</span></div><div><b>2 TB</b><span>of brand files</span></div></div>
-                <span class="tr-spacer"></span><button type="button" onclick="selectTier('starter-creative')" class="tr-btn">Choose this plan</button>
-            </div>
-            <div class="tr-card tr-feat">
-                <span class="tr-badge">Most popular</span>
                 <p class="tr-name">Live-Set</p>
                 <div class="tr-price"><b>£7,500</b><span>/ month</span></div>
                 <p class="tr-for">For venues filming every night, from every angle.</p>
                 <p class="tr-h">Filming</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>2 OBSBOT 4K cameras, set up for you: two angles for the multi-camera auto-edit</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Starlink Mini + Mac mini</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Control every camera from your phone</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Starts and stops with your calendar</span></li></ul><p class="tr-h">Every set gives you</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Multi-camera auto-edit, the full length of the set</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>The full set in 4K, with HQ audio</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Unlimited vertical clips per session</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Brand Kit, thumbnails and watermark</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Quarterly performance reports</span></li></ul><p class="tr-h">Included every month</p><div class="tr-stats"><div><b>1,000 h</b><span>of sets stored</span></div><div><b>≈ 8,330 h</b><span>watched or downloaded</span></div><div><b>20 TB</b><span>of brand files</span></div></div>
-                <span class="tr-spacer"></span><button type="button" onclick="selectTier('liveset-creative')" class="tr-btn tr-btn-main">Choose this plan</button>
+                <span class="tr-spacer"></span><button type="button" onclick="selectTier('liveset-creative')" class="tr-btn">Choose this plan</button>
             </div>
-            <div class="tr-card">
-                
-                <p class="tr-name">Enterprise</p>
-                <div class="tr-price"><b>Enquire</b></div>
-                <p class="tr-for">For festivals and venues with several rooms.</p>
-                <p class="tr-h">Built around you</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Full camera setup in every room</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>A dedicated on-site crew</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Unlimited sets filmed</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Custom content packages</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Priority 24-hour turnaround</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Unlimited storage</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Camera control panel for your team</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>API access</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Live-streaming</span></li></ul>
-                <span class="tr-spacer"></span><a href="mailto:hello@local-assets.com?subject=Enterprise%20Creative%20Enquiry" class="tr-btn">Talk to us</a>
-            </div>
+        </div>
+        <div class="tr-ent">
+            <div><p class="tr-name">Enterprise</p><p class="tr-for">For groups, festivals and venues with several rooms: a full camera setup in every room, a dedicated team, unlimited sets and storage.</p></div>
+            <a href="mailto:hello@local-assets.com?subject=Enterprise%20Enquiry" class="tr-btn">Talk to us</a>
         </div>
     </div>
 </section>
@@ -802,15 +781,6 @@
             }).catch(function() {});
         })();
 
-        function togglePricing(mode) {
-            const distro = document.getElementById('pricing-distribution'), creative = document.getElementById('pricing-creative');
-            const showDistro = mode === 'distribution';
-            distro.classList.toggle('hidden', !showDistro); distro.classList.toggle('grid', showDistro);
-            creative.classList.toggle('hidden', showDistro); creative.classList.toggle('grid', !showDistro);
-            document.getElementById('toggle-distro').classList.toggle('on', showDistro);
-            document.getElementById('toggle-creative').classList.toggle('on', !showDistro);
-            var lede = document.getElementById('tr-lede'); if (lede) lede.textContent = showDistro ? 'You film your sets. We edit them, brand them and post them.' : 'We film every set, edit it and post it for you.';
-        }
 
         document.addEventListener('DOMContentLoaded', () => {
             const observer = new IntersectionObserver((entries) => {
@@ -939,13 +909,13 @@
     <script>
         // Sign up: choose the account type and name, then pay the monthly plan through Stripe
         var SIGNUP_TIERS = {
-            'starter-distribution': { group: 'Distribution', name: 'Starter', price: '£2,750', feats: ['Camera available as an add-on', '6 vertical clips per session', 'Brand Kit, thumbnails and watermark', 'Up to 8 sets a month', '167 hours of sets stored', 'Your recordings kept safe in your vault'] },
-            'liveset-distribution': { group: 'Distribution', name: 'Pro', price: '£3,500', feats: ['1 OBSBOT 4K camera', '12 vertical clips per session', 'Brand Kit, thumbnails and watermark', 'Up to 8 sets a month', '333 hours of sets stored'] },
+            'starter-distribution': { group: 'Monthly plan', name: 'Starter', price: '£2,750', feats: ['Camera available as an add-on', '6 vertical clips per session', 'Brand Kit, thumbnails and watermark', 'Up to 8 sets a month', '167 hours of sets stored', 'Your recordings kept safe in your vault'] },
+            'liveset-distribution': { group: 'Monthly plan', name: 'Pro', price: '£3,500', feats: ['1 OBSBOT 4K camera', '12 vertical clips per session', 'Brand Kit, thumbnails and watermark', 'Up to 8 sets a month', '333 hours of sets stored'] },
             'starter-creative': { group: 'Creative & Production', name: 'Starter', price: '£5,500', feats: ['1 OBSBOT 4K camera + Starlink Mini', 'Recording runs on your calendar', '12 vertical clips per session', 'Brand Kit, thumbnails and watermark', '833 hours of sets stored'] },
             'dj-trial': { group: 'Special offer · limited time', name: 'Trial Month', price: '£55', per: 'to join', type: 'artist', only: 'artist', payg: true, go: 'Continue to payment', feats: ['6 vertical clips per session', 'Brand Kit and Camera Control', 'Then pay as you go, charged on the 1st'] },
-            'liveset-creative': { group: 'Creative & Production', name: 'Live-Set', price: '£7,500', feats: ['2 OBSBOT 4K cameras + Starlink Mini + Mac mini', 'Multi-camera auto-edit', 'Unlimited vertical clips per session', 'Brand Kit, thumbnails and watermark', '1,667 hours of sets stored'] }
+            'liveset-creative': { group: 'Monthly plan', name: 'Live-Set', price: '£7,500', feats: ['2 OBSBOT 4K cameras + Starlink Mini + Mac mini', 'Multi-camera auto-edit', 'Unlimited vertical clips per session', 'Brand Kit, thumbnails and watermark', '1,667 hours of sets stored'] }
         };
-        var TIER_NAMES = { 'starter-distribution': 'Distribution · Starter', 'liveset-distribution': 'Distribution · Pro', 'starter-creative': 'Creative & Production · Starter', 'liveset-creative': 'Creative & Production · Live-Set' };
+        var TIER_NAMES = { 'starter-distribution': 'Starter', 'liveset-distribution': 'Pro', 'starter-creative': 'Creative & Production · Starter', 'liveset-creative': 'Live-Set' };
         // The trial is for a venue, an artist or a label: picked in its title, and the sign-up is for that type
         var TRIAL_TYPES = { venue: ['Venue', 'For venues trying it with their own phone or camera.'], artist: ['Artist', 'For DJs and live acts trying it with their own phone or camera.'], label: ['Label', 'For record labels trying it with their own phone or camera.'] };
         function trialType() {
