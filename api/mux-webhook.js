@@ -205,10 +205,12 @@ export default async function handler(req, res) {
 
         // Set asset name = passthrough + date
         try {
-            if (passthrough && !data.live_stream_id) {
-                const d = new Date((data.created_at || Date.now() / 1000) * 1000);
-                const dateStr = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
-                await fetch(`https://api.mux.com/video/v1/assets/${assetId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: auth }, body: JSON.stringify({ meta: { title: passthrough + ' — ' + dateStr } }) });
+            // Keep a title given at upload; an upload's passthrough can be JSON ({artist, date, camera}), named from its parts
+            if (passthrough && !data.live_stream_id && !data.meta?.title) {
+                let name = passthrough, when = (data.created_at || Date.now() / 1000) * 1000;
+                try { const o = JSON.parse(passthrough); if (o && o.artist) { name = String(o.artist).toUpperCase() + (o.camera ? ' // ' + String(o.camera).toUpperCase() : ''); if (o.date) when = Date.parse(o.date + 'T12:00:00Z') || when; } } catch {}
+                const dateStr = new Date(when).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).toUpperCase();
+                await fetch(`https://api.mux.com/video/v1/assets/${assetId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: auth }, body: JSON.stringify({ meta: { title: name + ' — ' + dateStr } }) });
             }
         } catch (e) {
             console.log('Title update failed:', e.message);

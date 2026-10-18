@@ -38,7 +38,10 @@ export default async function handler(req, res) {
   }
 
   const isAudio    = camera === 'AUDIO' || passthrough.includes('// AUDIO') || passthrough.includes('/AUDIO');
-  const videoTitle = (artist || legacyName || 'SESSION') + ' — ' + date;
+  // The title in Cloud Storage, like every other recording: "STAN LODGE // MASTER — 17 OCT 2026"
+  const d = new Date(date + 'T12:00:00Z');
+  const dateStr = isNaN(d) ? date : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).toUpperCase();
+  const videoTitle = (artist ? artist + ' // ' + camera : legacyName || 'SESSION') + ' — ' + dateStr;
 
   try {
     const muxRes = await fetch('https://api.mux.com/video/v1/uploads', {
@@ -49,7 +52,7 @@ export default async function handler(req, res) {
         new_asset_settings: {
           playback_policy: ['public'],
           passthrough: passthrough,
-          name: videoTitle,
+          meta: { title: videoTitle.slice(0, 512) },
           static_renditions: [{ resolution: isAudio ? 'audio-only' : 'highest' }],
         },
         cors_origin: 'https://local-assets.com',
