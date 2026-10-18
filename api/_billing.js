@@ -31,7 +31,7 @@ export async function readRates(redis) {
 
 // Plans: a monthly price with usage included; usage above it is billed as overage
 export const DEFAULT_PLANS = [
-  { id: 'dj-trial', name: 'DJ Trial Month', price: 0, signupFee: 55, maxClips: 6, cameras: 0,
+  { id: 'dj-trial', name: 'Trial Month', price: 0, signupFee: 55, maxClips: 6, cameras: 0,
     included: { storedMinutes: 0, deliveredMinutes: 0, fileGB: 0 },
     features: ['£55 to join, then pay as you go', '6 vertical social clips per session', 'Brand Kit and watermark', 'Camera Control: phone, OBS or your own camera', 'Distribution History', 'Usage charged to your card on the 1st'] },
   { id: 'starter-distribution', name: 'Distribution · Starter', price: 2750, maxClips: 6, cameras: 0,
@@ -114,7 +114,7 @@ async function upgradeVenueTrial(redis, list) {
   } catch { return list; }
 }
 export async function readPlans(redis) {
-  // The DJ Trial Month is always offered, even when the saved plan list predates it
+  // The Trial Month is always offered, even when the saved plan list predates it
   const withPayg = list => [...DEFAULT_PLANS.filter(d => d.id === 'dj-trial' && !list.some(p => p.id === d.id)), ...list];
   try { let p = JSON.parse(await redis.get('billing_plans') || 'null'); if (Array.isArray(p) && p.length) p = await upgradeVenueTrial(redis, await upgradePlanWording(redis, await upgradeStarterCamera(redis, await upgradeSavedStorage(redis, p)))); return Array.isArray(p) && p.length ? withPayg(p.map(x => { const d = DEFAULT_PLANS.find(z => z.id === x.id) || {}; return { ...x, signupFee: x.signupFee != null ? x.signupFee : (d.signupFee || 0), features: (x.features && x.features.length ? x.features : d.features), cameras: x.cameras != null ? x.cameras : (d.cameras || 0), maxClips: x.maxClips != null ? x.maxClips : (d.maxClips != null ? d.maxClips : 5) }; })) : DEFAULT_PLANS; }
   catch { return DEFAULT_PLANS; }

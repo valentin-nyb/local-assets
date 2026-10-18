@@ -602,6 +602,12 @@
         .tr-offer-dot { width:6px; height:6px; border-radius:50%; background:#85FA4F; box-shadow:0 0 8px #85FA4F; animation:trPulse 2s ease-in-out infinite; }
         @keyframes trPulse { 50% { opacity:.4; } }
         .tr-offer-name { margin:0; font-size:22px; font-weight:700; text-transform:uppercase; letter-spacing:-.005em; color:#fafafa; }
+        /* Who the trial is for: Venue, Artist or Label, picked in the title */
+        .tr-offer-pick { position:relative; display:inline-flex; align-items:center; margin-right:.25em; }
+        .tr-offer-pick select { appearance:none; -webkit-appearance:none; margin:0; padding:0 26px 2px 0; border:0; border-bottom:2px solid #85FA4F; border-radius:0; background:none; font:inherit; letter-spacing:inherit; text-transform:uppercase; color:#85FA4F; cursor:pointer; }
+        .tr-offer-pick select:focus-visible { outline:2px solid #85FA4F; outline-offset:4px; }
+        .tr-offer-pick select option { background:#0a0a0a; color:#fafafa; text-transform:none; }
+        .tr-offer-pick svg { position:absolute; right:2px; width:16px; height:16px; color:#85FA4F; pointer-events:none; }
         .tr-offer-for { margin:6px 0 0; font-size:14px; line-height:1.5; color:#a1a1aa; }
         .tr-offer-feats { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px 18px; }
         .tr-offer-feats li { display:flex; gap:9px; font-size:13px; line-height:1.4; color:#e4e4e7; }
@@ -653,8 +659,8 @@
         <div class="tr-offer">
             <div class="tr-offer-main">
                 <p class="tr-offer-tag"><span class="tr-offer-dot"></span>Special offer · limited time</p>
-                <p class="tr-offer-name">DJ Trial Month</p>
-                <p class="tr-offer-for">For DJs trying it with their own phone or camera.</p>
+                <p class="tr-offer-name"><span class="tr-offer-pick"><select id="tr-offer-type" aria-label="Who the trial is for" onchange="trialType()"><option value="venue">Venue</option><option value="artist" selected>Artist</option><option value="label">Label</option></select><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span>Trial Month</p>
+                <p class="tr-offer-for" id="tr-offer-for">For DJs and live acts trying it with their own phone or camera.</p>
             </div>
             <ul class="tr-offer-feats"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>6 vertical clips per session</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Brand Kit, your logo on every clip</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Camera Control: phone, OBS or your own camera</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Then pay as you go, charged on the 1st</span></li></ul>
             <div class="tr-offer-buy">
@@ -763,7 +769,6 @@
                 d.plans.forEach(function(p) {
                     if (p.id === 'dj-trial') {
                         document.querySelectorAll('.tr-offer-price b').forEach(function(b) { b.textContent = money(p.signupFee); });
-                        document.querySelectorAll('.tr-offer-name').forEach(function(b) { b.textContent = p.name; });
                         document.querySelectorAll('.tr-offer-feats span').forEach(function(sp) { sp.textContent = sp.textContent.replace(/^(\d+|Unlimited) vertical clips/, p.maxClips ? p.maxClips + ' vertical clips' : 'Unlimited vertical clips'); });
                         return;
                     }
@@ -928,13 +933,21 @@
             'starter-distribution': { group: 'Distribution', name: 'Starter', price: '£2,750', feats: ['Camera available as an add-on', '6 vertical clips per session', 'Brand Kit, thumbnails and watermark', 'Up to 8 sets a month', '167 hours of sets stored', 'Your recordings kept safe in your vault'] },
             'liveset-distribution': { group: 'Distribution', name: 'Pro', price: '£3,500', feats: ['1 OBSBOT 4K camera', '12 vertical clips per session', 'Brand Kit, thumbnails and watermark', 'Up to 8 sets a month', '333 hours of sets stored'] },
             'starter-creative': { group: 'Creative & Production', name: 'Starter', price: '£5,500', feats: ['1 OBSBOT 4K camera + Starlink Mini', 'Recording runs on your calendar', '12 vertical clips per session', 'Brand Kit, thumbnails and watermark', '833 hours of sets stored'] },
-            'dj-trial': { group: 'Special offer · limited time', name: 'DJ Trial Month', price: '£55', per: 'to join', type: 'artist', only: 'artist', payg: true, go: 'Continue to payment', feats: ['6 vertical clips per session', 'Brand Kit and Camera Control', 'Then pay as you go, charged on the 1st'] },
+            'dj-trial': { group: 'Special offer · limited time', name: 'Trial Month', price: '£55', per: 'to join', type: 'artist', only: 'artist', payg: true, go: 'Continue to payment', feats: ['6 vertical clips per session', 'Brand Kit and Camera Control', 'Then pay as you go, charged on the 1st'] },
             'liveset-creative': { group: 'Creative & Production', name: 'Live-Set', price: '£7,500', feats: ['2 OBSBOT 4K cameras + Starlink Mini + Mac mini', 'Multi-camera auto-edit', 'Unlimited vertical clips per session', 'Brand Kit, thumbnails and watermark', '1,667 hours of sets stored'] }
         };
         var TIER_NAMES = { 'starter-distribution': 'Distribution · Starter', 'liveset-distribution': 'Distribution · Pro', 'starter-creative': 'Creative & Production · Starter', 'liveset-creative': 'Creative & Production · Live-Set' };
+        // The trial is for a venue, an artist or a label: picked in its title, and the sign-up is for that type
+        var TRIAL_TYPES = { venue: ['Venue', 'For venues trying it with their own phone or camera.'], artist: ['Artist', 'For DJs and live acts trying it with their own phone or camera.'], label: ['Label', 'For record labels trying it with their own phone or camera.'] };
+        function trialType() {
+            var t = (document.getElementById('tr-offer-type') || {}).value || 'artist';
+            var f = document.getElementById('tr-offer-for'); if (f) f.textContent = TRIAL_TYPES[t][1];
+            return t;
+        }
         function selectTier(tierId) {
             var esc = function(v) { return String(v).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
             var T = SIGNUP_TIERS[tierId] || { group: '', name: TIER_NAMES[tierId] || tierId, price: '', feats: [] };
+            if (tierId === 'dj-trial') { var tt = trialType(); T = Object.assign({}, T, { type: tt, only: tt, name: TRIAL_TYPES[tt][0] + ' Trial Month' }); }
             var ICON = {
                 venue: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V9l8-5 8 5v12"/><path d="M9 21v-6h6v6"/></svg>',
                 label: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.5"/><path d="M12 6.5a5.5 5.5 0 0 0-5.5 5.5"/></svg>',

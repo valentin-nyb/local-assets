@@ -30,8 +30,8 @@ export default async function handler(req, res) {
   finally { await redis.quit().catch(() => {}); }
   // The old stand-alone pay-as-you-go plan (now a toggle on every plan) can't be signed up for
   if (!plan || plan.id === 'payg') return res.status(400).json({ error: 'Unknown plan' });
-  // The DJ Trial Month is for artist accounts only
-  if (plan.id === 'dj-trial' && accountType !== 'artist') return res.status(400).json({ error: 'The DJ Trial Month is for artist accounts' });
+  // The Trial Month is for a venue, an artist or a label, and is named for the one signing up
+  if (plan.id === 'dj-trial') plan = { ...plan, name: ({ venue: 'Venue', artist: 'Artist', label: 'Label' }[accountType] || 'Artist') + ' Trial Month' };
   const fee = Number(plan.signupFee) > 0 ? Number(plan.signupFee) : 0;
 
   try {
@@ -53,7 +53,7 @@ export default async function handler(req, res) {
         line_items: [{ quantity: 1, price_data: { currency: 'gbp', unit_amount: Math.round(plan.price * 100), tax_behavior: 'exclusive', recurring: { interval: 'month' }, product_data: { name: `local / assets · ${plan.name}` } } }, ...feeItem],
         subscription_data: { metadata } });
     } else if (fee) {
-      // Pay as you go with a sign-up fee (DJ Trial Month): the fee now, and the card is kept for usage on the 1st
+      // Pay as you go with a sign-up fee (the Trial Month): the fee now, and the card is kept for usage on the 1st
       session = await stripe.checkout.sessions.create({ ...common, mode: 'payment', allow_promotion_codes: true, customer_creation: 'always',
         line_items: feeItem, payment_intent_data: { setup_future_usage: 'off_session', metadata },
         invoice_creation: { enabled: true, invoice_data: { description: `local / assets · ${plan.name}`, metadata } } });
