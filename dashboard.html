@@ -186,6 +186,7 @@
         <div class="flex-1 overflow-y-auto la-page la-page-scroll">
             <div class="dash-head">
                 <h2 id="venue-tier" class="dash-h">ADMIN</h2>
+                <script>(function(){ try { var k = 'la_venue_logo:' + (JSON.parse(localStorage.getItem('la_admin') || '{}').venueSlug || ''), v = JSON.parse(localStorage.getItem(k) || 'null'); if (v && v.mask) { var h = document.getElementById('venue-tier'); h.classList.add('has-logo', 'logo-early'); h.style.setProperty('--logo', 'url("' + v.mask + '")'); h.style.setProperty('--logo-w', Math.round(Math.min(260, Math.max(40, 40 * v.ar))) + 'px'); } } catch (_) {} })();</script>
                 <p class="dash-sub" id="venue-tier-sub">Your sessions, files and channels.</p>
             </div>
             <a id="live-feed-hero" href="/camera.html" class="block cursor-pointer hover:border-primary/50 transition-all duration-500 w-full bg-[#050505] border border-[#27272a] rounded-2xl p-5 md:p-8 relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-4 md:gap-6 shadow-2xl no-underline" style="background:#050505!important">
@@ -2234,18 +2235,51 @@
 
         var _heroTimer = null;
         // The account's own type (from its Brand Kit): a venue's sessions were played there
-        // The page title as the venue's logo, drawn in the text colour (so a black logo shows in dark mode too)
-        function showVenueLogo(url) {
+        // The page title as the venue's logo, drawn in the text colour (so it suits light and dark). A logo on a solid
+        // background has that background taken out and its empty margins cut off first; the result is kept for this
+        // venue so the next page shows it straight away, without the name appearing first.
+        function venueLogoKey() { try { return 'la_venue_logo:' + (JSON.parse(localStorage.getItem('la_admin') || '{}').venueSlug || ''); } catch (_) { return 'la_venue_logo:'; } }
+        function applyVenueLogo(v) {
             var h = document.getElementById('venue-tier');
-            if (!h || h.dataset.logo === url || /^admin$/i.test(h.textContent.trim())) return;
-            var im = new Image();
-            im.onload = function() {
-                var ar = im.naturalWidth / Math.max(1, im.naturalHeight);
-                h.dataset.logo = url; h.classList.add('has-logo');
-                h.style.setProperty('--logo', 'url("' + url.replace(/"/g, '%22') + '")');
-                h.style.setProperty('--logo-w', Math.round(Math.min(280, Math.max(44, 44 * ar))) + 'px');
-            };
-            im.src = url;
+            if (!h || !v || !v.mask || /^admin$/i.test(h.textContent.trim())) return;
+            h.classList.add('has-logo');
+            h.style.setProperty('--logo', 'url("' + v.mask + '")');
+            h.style.setProperty('--logo-w', Math.round(Math.min(260, Math.max(40, 40 * v.ar))) + 'px');
+        }
+        function venueLogoMask(url) {
+            return new Promise(function(res, rej) {
+                var im = new Image(); im.crossOrigin = 'anonymous';
+                im.onload = function() {
+                    try {
+                        var H = 120, W = Math.max(1, Math.min(1200, Math.round(im.naturalWidth * H / Math.max(1, im.naturalHeight))));
+                        var c = document.createElement('canvas'); c.width = W; c.height = H;
+                        var g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(im, 0, 0, W, H);
+                        var id = g.getImageData(0, 0, W, H), d = id.data;
+                        // The background: the colour in the corners (when it's solid)
+                        var cs = [0, W - 1, (H - 1) * W, H * W - 1].map(function(i) { return [d[i * 4], d[i * 4 + 1], d[i * 4 + 2], d[i * 4 + 3]]; });
+                        var bg = [0, 1, 2, 3].map(function(k) { return cs.reduce(function(t, x) { return t + x[k]; }, 0) / 4; });
+                        var solid = bg[3] > 200, x0 = W, y0 = H, x1 = -1, y1 = -1;
+                        for (var y = 0; y < H; y++) for (var x = 0; x < W; x++) {
+                            var i = (y * W + x) * 4, al = d[i + 3];
+                            if (solid) { var diff = Math.abs(d[i] - bg[0]) + Math.abs(d[i + 1] - bg[1]) + Math.abs(d[i + 2] - bg[2]); al = Math.max(0, Math.min(255, (diff - 30) * 2.2)) * al / 255; }
+                            d[i] = d[i + 1] = d[i + 2] = 0; d[i + 3] = al;
+                            if (al > 24) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+                        }
+                        if (x1 < 0) return rej(new Error('empty'));
+                        g.putImageData(id, 0, 0);
+                        var o = document.createElement('canvas'); o.width = x1 - x0 + 1; o.height = y1 - y0 + 1;
+                        o.getContext('2d').drawImage(c, x0, y0, o.width, o.height, 0, 0, o.width, o.height);
+                        res({ url: url, mask: o.toDataURL('image/png'), ar: o.width / o.height });
+                    } catch (e) { rej(e); }
+                };
+                im.onerror = rej; im.src = url;
+            });
+        }
+        function showVenueLogo(url) {
+            var key = venueLogoKey(), have = null;
+            try { have = JSON.parse(localStorage.getItem(key) || 'null'); } catch (_) {}
+            if (have && have.url === url) return applyVenueLogo(have);
+            venueLogoMask(url).then(function(v) { applyVenueLogo(v); try { localStorage.setItem(key, JSON.stringify(v)); } catch (_) {} }).catch(function() {});
         }
         function _orgTypeHero() { return window._heroOrgType || ''; }
         function renderHero() {
@@ -2998,7 +3032,7 @@
                 if (avatar)     avatar.textContent     = (venue || 'C')[0];
             } else {
                 if (breadcrumb) breadcrumb.textContent = 'ADMIN';
-                if (tier)       { tier.textContent = 'ADMIN'; var ts = document.getElementById('venue-tier-sub'); if (ts) ts.textContent = 'Every client account, in one place.'; }
+                if (tier)       { tier.classList.remove('has-logo', 'logo-early'); tier.textContent = 'ADMIN'; var ts = document.getElementById('venue-tier-sub'); if (ts) ts.textContent = 'Every client account, in one place.'; }
                 if (avatar) {
                     var initial = (sess.email || 'A')[0].toUpperCase();
                     avatar.textContent = initial;
@@ -3529,7 +3563,7 @@
         .kpi-platform iconify-icon { font-size:14px; }
         .kpi-muted { color:var(--la-dim); }
         /* Page title as the venue's logo */
-        #venue-tier.has-logo { width:var(--logo-w); height:44px; font-size:0 !important; color:transparent !important; background:var(--la-text); -webkit-mask:var(--logo) left center / contain no-repeat; mask:var(--logo) left center / contain no-repeat; }
+        #venue-tier.has-logo { width:var(--logo-w); height:40px; font-size:0 !important; color:transparent !important; background:var(--la-text); -webkit-mask:var(--logo) left center / contain no-repeat; mask:var(--logo) left center / contain no-repeat; }
         /* Stat cards, like the side menu: Geist, a plain label, a large number, a quiet line under it */
         .kpi { border-radius:12px; padding:20px 22px; background-image:none !important; box-shadow:none !important; }
         .kpi-label { font:500 13px/1.2 'Geist', 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:0; text-transform:none; color:var(--la-sub); }
