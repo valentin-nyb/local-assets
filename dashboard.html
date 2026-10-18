@@ -186,7 +186,7 @@
         <div class="flex-1 overflow-y-auto la-page la-page-scroll">
             <div class="dash-head">
                 <h2 id="venue-tier" class="dash-h">ADMIN</h2>
-                <script>(function(){ try { var a = JSON.parse(localStorage.getItem('la_admin') || '{}'); if (a.venueSlug === 'local-assets-admin' || /^local\s*[\/-]?\s*assets\b/i.test(String(a.venue || '').trim()) || a.role !== 'client') { document.getElementById('venue-tier').classList.add('is-la'); return; } var k = 'la_venue_logo3:' + (a.venueSlug || ''), v = JSON.parse(localStorage.getItem(k) || 'null'); if (a.role === 'client' && a.venueSlug !== 'local-assets-admin' && !/^local\s*[\/-]?\s*assets\b/i.test(String(a.venue || '').trim()) && v && v.mask) { var h = document.getElementById('venue-tier'); h.classList.add('has-logo', 'logo-early'); h.style.setProperty('--logo', 'url("' + v.mask + '")'); h.style.setProperty('--logo-w', Math.round(Math.min(260, Math.max(40, 40 * v.ar))) + 'px'); } } catch (_) {} })();</script>
+                <script>(function(){ try { var a = JSON.parse(localStorage.getItem('la_admin') || '{}'); if (a.venueSlug === 'local-assets-admin' || /^local\s*[\/-]?\s*assets\b/i.test(String(a.venue || '').trim()) || a.role !== 'client') { document.getElementById('venue-tier').classList.add('is-la'); return; } var k = 'la_venue_logo4:' + (a.venueSlug || ''), v = JSON.parse(localStorage.getItem(k) || 'null'); if (a.role === 'client' && a.venueSlug !== 'local-assets-admin' && !/^local\s*[\/-]?\s*assets\b/i.test(String(a.venue || '').trim()) && v && (v.mask || v.img)) { var h = document.getElementById('venue-tier'); h.classList.add('has-logo', 'logo-early'); if (v.img) h.classList.add('logo-img'); h.style.setProperty('--logo', 'url("' + (v.img ? v.url : v.mask) + '")'); h.style.setProperty('--logo-w', Math.round(Math.min(260, Math.max(40, 40 * v.ar))) + 'px'); } } catch (_) {} })();</script>
                 <p class="dash-sub" id="venue-tier-sub">Your sessions, files and channels.</p>
             </div>
             <a id="live-feed-hero" href="/camera.html" class="block cursor-pointer hover:border-primary/50 transition-all duration-500 w-full bg-[#050505] border border-[#27272a] rounded-2xl p-5 md:p-8 relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-4 md:gap-6 shadow-2xl no-underline" style="background:#050505!important">
@@ -655,7 +655,9 @@
                 if (d && d.orgType) { window._heroOrgType = d.orgType; if (typeof renderHero === 'function') renderHero(); }
                 // A venue's own logo (Brand Kit) in place of its name at the top of the page
                 if (d && d.orgType === 'venue') {
-                    var lg = (d.files || []).filter(function(f) { return f.owner === 'venue' && f.category === 'logos' && /\.(png|svg|webp)(\?|$)/i.test(f.name || f.url || ''); })[0];
+                    var lgs = (d.files || []).filter(function(f) { return f.owner === 'venue' && f.category === 'logos' && /\.(png|svg|webp)(\?|$)/i.test(f.name || f.url || ''); });
+                    // A PNG first: phones (Safari) can't always read an SVG logo's pixels
+                    var lg = lgs.filter(function(f) { return !/\.svg(\?|$)/i.test(f.name || f.url || ''); })[0] || lgs[0];
                     if (lg) showVenueLogo(lg.url);
                 }
                 if (d && d.orgType === 'artist' && _brandPhotos.venue) {
@@ -2238,14 +2240,14 @@
         // The page title as the venue's logo, drawn in the text colour (so it suits light and dark). A logo on a solid
         // background has that background taken out and its empty margins cut off first; the result is kept for this
         // venue so the next page shows it straight away, without the name appearing first.
-        function venueLogoKey() { try { return 'la_venue_logo3:' + (JSON.parse(localStorage.getItem('la_admin') || '{}').venueSlug || ''); } catch (_) { return 'la_venue_logo3:'; } }
+        function venueLogoKey() { try { return 'la_venue_logo4:' + (JSON.parse(localStorage.getItem('la_admin') || '{}').venueSlug || ''); } catch (_) { return 'la_venue_logo4:'; } }
         // Only a client account shows its venue's logo (the admin account keeps its name)
         function isClientAcct() { try { var a = JSON.parse(localStorage.getItem('la_admin') || '{}'); return a.role === 'client' && a.venueSlug !== 'local-assets-admin' && !/^local\s*[\/-]?\s*assets\b/i.test(String(a.venue || '').trim()); } catch (_) { return false; } }
         function applyVenueLogo(v) {
             var h = document.getElementById('venue-tier');
-            if (!h || !v || !v.mask || !isClientAcct() || /^admin$/i.test(h.textContent.trim())) return;
-            h.classList.add('has-logo');
-            h.style.setProperty('--logo', 'url("' + v.mask + '")');
+            if (!h || !v || !(v.mask || v.img) || !isClientAcct() || /^admin$/i.test(h.textContent.trim())) return;
+            h.classList.add('has-logo'); h.classList.toggle('logo-img', !!v.img);
+            h.style.setProperty('--logo', 'url("' + (v.img ? v.url : v.mask).replace(/"/g, '%22') + '")');
             h.style.setProperty('--logo-w', Math.round(Math.min(260, Math.max(40, 40 * v.ar))) + 'px');
         }
         function venueLogoMask(url) {
@@ -2292,14 +2294,18 @@
                             d[i] = d[i + 1] = d[i + 2] = 0; d[i + 3] = al;
                             if (al > 24) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
                         }
-                        if (x1 < 0) return rej(new Error('empty'));
+                        // Check the result looks like a logo: almost nothing left (an outline) or a solid block means
+                        // the logo wasn't understood, so the logo itself is shown instead
+                        var on = 0; for (var q2 = 3; q2 < d.length; q2 += 4) if (d[q2] > 24) on++;
+                        var cover = x1 < 0 ? 0 : on / ((x1 - x0 + 1) * (y1 - y0 + 1));
+                        if (x1 < 0 || cover < 0.12 || cover > 0.9) return res({ url: url, img: true, ar: im.naturalWidth && im.naturalHeight ? im.naturalWidth / im.naturalHeight : 3 });
                         g.putImageData(id, 0, 0);
                         var o = document.createElement('canvas'); o.width = x1 - x0 + 1; o.height = y1 - y0 + 1;
                         o.getContext('2d').drawImage(c, x0, y0, o.width, o.height, 0, 0, o.width, o.height);
                         res({ url: url, mask: o.toDataURL('image/png'), ar: o.width / o.height });
-                    } catch (e) { rej(e); }
+                    } catch (e) { res({ url: url, img: true, ar: im.naturalWidth && im.naturalHeight ? im.naturalWidth / im.naturalHeight : 3 }); }
                 };
-                im.onerror = rej; im.src = url;
+                im.onerror = function() { res({ url: url, img: true, ar: 3 }); }; im.src = url;
             });
         }
         function showVenueLogo(url) {
@@ -3593,6 +3599,7 @@
         /* Page title as the venue's logo */
         /* The local / assets admin account: its own logo as the title */
         #venue-tier.is-la { width:256px; max-width:100%; height:32px; font-size:0 !important; color:transparent !important; background:var(--la-text); -webkit-mask:url(/logos/White@2x.png) left center / contain no-repeat; mask:url(/logos/White@2x.png) left center / contain no-repeat; }
+        #venue-tier.has-logo.logo-img { background:var(--logo) left center / contain no-repeat !important; -webkit-mask:none !important; mask:none !important; }
         #venue-tier.has-logo { width:var(--logo-w); height:40px; font-size:0 !important; color:transparent !important; background:var(--la-text); -webkit-mask:var(--logo) left center / contain no-repeat; mask:var(--logo) left center / contain no-repeat; }
         /* Stat cards, like the side menu: Geist, a plain label, a large number, a quiet line under it */
         .kpi { border-radius:12px; padding:20px 22px; background-image:none !important; box-shadow:none !important; }
