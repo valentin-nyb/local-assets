@@ -281,7 +281,7 @@
                         </audio>
                     </div>`;
             } else {
-                container.innerHTML = '<div class="pl-frame"><mux-player playback-id="' + pid + '" stream-type="on-demand" accent-color="#39FF14" autoplay style="width:100%;height:100%;"></mux-player></div>';
+                container.innerHTML = '<div class="pl-frame"><mux-player playback-id="' + pid + '" stream-type="on-demand" accent-color="#39FF14" autoplay preload="auto" thumbnail-time="0" style="width:100%;height:100%;"></mux-player></div>';
             }
             dlLink.href = streamUrl;
             dlLink.classList.remove('hidden');
@@ -289,7 +289,7 @@
 
         // ── PLAIN PLAYBACK ID ─────────────────────────────────────────────
         } else {
-            container.innerHTML = '<div class="pl-frame"><mux-player playback-id="' + pid + '" stream-type="on-demand" accent-color="#39FF14" autoplay style="width:100%;height:100%;"></mux-player></div>';
+            container.innerHTML = '<div class="pl-frame"><mux-player playback-id="' + pid + '" stream-type="on-demand" accent-color="#39FF14" autoplay preload="auto" thumbnail-time="0" style="width:100%;height:100%;"></mux-player></div>';
         }
 
         function downloadClip(url, idx) {
