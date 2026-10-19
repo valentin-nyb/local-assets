@@ -11,13 +11,19 @@ export const DEFAULT_RATES = {
   videoDelivery: 0.0008,   // per minute streamed or downloaded
   videoEncoding: 0,        // per minute of new video (included)
   fileStorage: 0.018,      // per GB of files, per month
-  margin: 0.2,             // added on top of cost
+  margin: 0.5,             // admin costs added on top of cost (50%): every usage price and the estimated invoice include it
   currency: 'gbp',
 };
 
 export async function readRates(redis) {
   try {
     const saved = JSON.parse(await redis.get('billing_rates') || '{}');
+    // Once (19 Oct 2026): 50% admin costs on every usage price
+    if (!(await redis.get('billing_rates_margin_v3'))) {
+      saved.margin = 0.5;
+      await redis.set('billing_rates', JSON.stringify(saved));
+      await redis.set('billing_rates_margin_v3', new Date().toISOString());
+    }
     // Once: storage above a plan's allowance moves to about £120 per TB (it was below Mux's own cost)
     if (saved.videoStorage != null && Number(saved.videoStorage) < DEFAULT_RATES.videoStorage && !(await redis.get('billing_rates_storage_v2'))) {
       saved.videoStorage = DEFAULT_RATES.videoStorage;

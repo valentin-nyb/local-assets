@@ -293,7 +293,7 @@
                                 <optgroup label="Days"><option value="30d">Last 30 days</option><option value="60d">Last 60 days</option><option value="90d">Last 90 days</option><option value="120d">Last 120 days</option></optgroup>
                                 <optgroup label="Cycles"><option value="cycle">Current cycle</option><option value="inv1" selected>Last invoice + current cycle</option><option value="inv2">Last 2 invoices + current cycle</option><option value="inv3">Last 3 invoices + current cycle</option></optgroup>
                             </select>
-                            <div class="bl-seg" role="group" aria-label="Show"><button type="button" data-unit="streamed" class="on">Streamed</button><button type="button" data-unit="stored">Stored</button><button type="button" data-unit="money">£</button></div>
+                            <div class="bl-seg" role="group" aria-label="Show"><button type="button" data-unit="streamed">Streamed</button><button type="button" data-unit="stored" class="on">Stored</button><button type="button" data-unit="money">£</button></div>
                         </div>
                     </div>
                     <div class="bl-chart" id="bl-chart"><p class="bl-chart-empty">Loading usage…</p></div>
@@ -380,7 +380,7 @@
             } catch (e) { err.textContent = 'Could not load billing: ' + e.message; err.classList.remove('hidden'); }
         }
         // Usage over time: day by day, adding up within each billing cycle (calendar month), like the invoice
-        var _chart = null, _unit = 'streamed', _chartAt = 0;
+        var _chart = null, _unit = 'stored', _chartAt = 0;
         async function loadChart() {
             var box = document.getElementById('bl-chart'), range = document.getElementById('bl-chart-range').value;
             try {
