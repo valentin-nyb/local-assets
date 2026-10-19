@@ -106,6 +106,8 @@ function repairJson(raw) {
     // an email that lost a quote in a list: `, name@domain.com"` or `"name@domain.com ,` → quoted on both sides
     .replace(/([,\[]\s*)([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})"/g, '$1"$2"')
     .replace(/"([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})(\s*[,\]])/g, '"$1"$2')
+    // ...or both quotes
+    .replace(/([,\[]\s*)([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})(\s*[,\]])/g, '$1"$2"$3')
     // a comma right before a closing bracket: remove it
     .replace(/,(\s*[}\]])/g, '$1')
     // closing brackets missing at the end (value cut short when pasted)
