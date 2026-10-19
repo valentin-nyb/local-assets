@@ -4,7 +4,7 @@ import { calendarKey, fetchEvents } from './_calendar.js';
 import { pendingKey } from './_camera-recording.js';
 import { sessionSources, startMulticam } from './multicam.js';
 import { listAllAssets } from './_verticals.js';
-import { inSession, openSession, closeSession } from './_cam-sessions.js';
+import { inSession, openSession, closeSession, isManaged } from './_cam-sessions.js';
 
 // Cameras and the venue calendar (Vercel cron, every minute).
 // Every camera's Mux live stream stays open, so Camera Control shows it live whenever it is connected.
@@ -69,7 +69,10 @@ export default async function handler(req, res) {
             changes.push(`${slug}/${cam.name}: live`);
           }
           const was = await inSession(redis, cam.streamId);
-          if (session && !was) { await openSession(redis, auth, cam.streamId); changes.push(`${slug}/${cam.name}: session started${win?.current ? ' (' + win.current.artist + ')' : ''}`); }
+          // A session already recording when cameras first ran this way: kept whole, from its start
+          const since = session && !was && !(await isManaged(redis, cam.streamId))
+            ? (Number(await redis.get(`cam_manual:${cam.streamId}`)) || (win?.current ? win.current.start - BEFORE_MS : now)) : 0;
+          if (session && !was) { await openSession(redis, auth, cam.streamId, since); changes.push(`${slug}/${cam.name}: session started${win?.current ? ' (' + win.current.artist + ')' : ''}`); }
           else if (!session && was) { await closeSession(redis, auth, cam.streamId); changes.push(`${slug}/${cam.name}: session ended`); }
         } catch (e) { console.error('[camera-schedule]', slug, cam.name, e.message); }
       }

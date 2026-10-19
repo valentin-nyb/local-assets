@@ -20,11 +20,15 @@ export async function inSession(redis, streamId) {
   return !!(await redis.exists(openKey(streamId)));
 }
 
-export async function openSession(redis, auth, streamId) {
+// since: a session already running before the stream was run this way (its start, kept with no cut)
+export async function openSession(redis, auth, streamId, since = 0) {
   await redis.set(managedKey(streamId), '1');
-  if (!(await redis.set(openKey(streamId), String(Date.now()), { NX: true, EX: 2 * 86400 }))) return false;
-  await cut(auth, streamId);
+  if (!(await redis.set(openKey(streamId), String(since || Date.now()), { NX: true, EX: 2 * 86400 }))) return false;
+  if (!since) await cut(auth, streamId);
   return true;
+}
+export async function isManaged(redis, streamId) {
+  return !!(await redis.exists(managedKey(streamId)));
 }
 
 export async function closeSession(redis, auth, streamId) {
