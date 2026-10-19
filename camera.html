@@ -539,7 +539,9 @@
         @media (min-width: 1100px) {
             .ctl-full.ctl-inline { display:grid; grid-template-columns:minmax(0,1fr) 420px; column-gap:28px; align-items:start; }
             .ctl-full.ctl-inline > .ctl-head { grid-column:1 / -1; }
-            .ctl-full.ctl-inline > .ctl-stage { grid-column:1; grid-row:2; width:min(100%, calc((100vh - 240px) * 16 / 9)); min-width:0; margin:0; }
+            .ctl-full.ctl-inline { align-content:start; }
+            /* Sized by height (the screen minus the header), width from 16:9: a width tied to the column made the card reserve room for a much taller picture */
+            .ctl-full.ctl-inline > .ctl-stage { grid-column:1; grid-row:2; height:max(240px, min(calc(100vh - 330px), calc((min(100vw - 320px, 1520px) - 498px) * 9 / 16))); width:auto; max-width:100%; aspect-ratio:16/9; min-width:0; margin:0; justify-self:start; }
             .ctl-full.ctl-inline > .ctl-msg, .ctl-full.ctl-inline > .ctl-fine { grid-column:1; }
             .ctl-full.ctl-inline > .ctl-grid { grid-column:2; grid-row:2 / span 3; margin-top:0; grid-template-columns:repeat(2, minmax(0,1fr)) !important; gap:22px 18px !important; }
         }
