@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en" class="dark scroll-smooth">
 <head>
-    <script>try { var _la = JSON.parse(localStorage.getItem('la_admin') || '{}'); if (_la.venueSlug === 'local-assets-admin' || /^local\s*[\/-]?\s*assets\b/i.test(String(_la.venue || '').trim())) location.replace('/dashboard'); } catch (_) {}</script>
+    <script>try { var _la = JSON.parse(localStorage.getItem('la_admin') || '{}'); if (_la.venueSlug === 'local-assets-admin' || (!_la.venueSlug && /^local\s*[\/-]?\s*assets\b/i.test(String(_la.venue || '').trim()))) location.replace('/dashboard'); } catch (_) {}</script>
     <script>
       (function(){
         var s = localStorage.getItem('la_admin');
@@ -37,7 +37,7 @@
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
-    <script src="nav-component.js?v=25"></script>
+    <script src="nav-component.js?v=26"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
         .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }

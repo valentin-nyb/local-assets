@@ -52,7 +52,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const _isClient = _navRole === 'client';
 
     // The local / assets admin account has no Brand Kit (that's for clients)
-    var _isAdminAcct = (function() { try { var a = JSON.parse(localStorage.getItem('la_admin') || '{}'); return a.venueSlug === 'local-assets-admin' || /^local\s*[\/-]?\s*assets\b/i.test(String(a.venue || '').trim()); } catch (_) { return false; } })();
+    var _isAdminAcct = (function() { try { var a = JSON.parse(localStorage.getItem('la_admin') || '{}'); return a.venueSlug === 'local-assets-admin' || (!a.venueSlug && /^local\s*[\/-]?\s*assets\b/i.test(String(a.venue || '').trim())); } catch (_) { return false; } })();
     sidebar.innerHTML = `
         <div id="la-side-head" class="h-20 flex items-center justify-center px-8 border-b border-[#27272a] shrink-0" style="position:relative">
             <a href="/dashboard" class="la-logo-link h-5 w-24 flex" aria-label="local / assets">
