@@ -191,6 +191,8 @@
         document.getElementById('google-btn').addEventListener('click', function() {
             var next = new URLSearchParams(location.search).get('next') || '/dashboard.html';
             sessionStorage.setItem('la_pending_next', next);
+            // A new sign-in replaces any saved session: you're signed in as the Google account you pick, nothing else
+            try { localStorage.removeItem('la_admin'); localStorage.removeItem('la_venue_name'); } catch (_) {}
             // In the Mac app (a™), Google sign-in opens in the browser and the app picks the session up
             if (window.laApp && window.laApp.signIn) {
                 setStatus('Continue in your browser…', '');
