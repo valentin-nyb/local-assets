@@ -611,6 +611,9 @@ header h1.font-mono, header #venue-breadcrumb {
 header h1.font-mono::first-letter, header #venue-breadcrumb::first-letter { text-transform: uppercase; }
 html body header h1.font-mono.font-mono { color: var(--la-text) !important; }
 header #venue-breadcrumb { color: var(--la-sub) !important; }
+/* Client names in capitals ("CAFE 1001 / Cameras"); the local / assets account stays its lowercase wordmark */
+header #venue-breadcrumb { text-transform: uppercase !important; }
+header #venue-breadcrumb.is-la { text-transform: lowercase !important; }
 header #venue-breadcrumb:not(:empty)::after { content: "/"; display: inline-block; margin-left: 10px; color: var(--la-dim); font-weight: 300; }
 
 /* Side menu: an icon and the name in Geist; the page you're on is white on a soft rounded tint */

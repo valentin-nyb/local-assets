@@ -161,7 +161,7 @@ document.addEventListener("DOMContentLoaded", () => {
         var name = window.getVenueName().toUpperCase();
         var breadcrumb = document.getElementById('venue-breadcrumb');
         var tier = document.getElementById('venue-tier');
-        if (breadcrumb) breadcrumb.textContent = name;
+        if (breadcrumb) { breadcrumb.textContent = name; breadcrumb.classList.toggle('is-la', /^local\s*[\/-]?\s*assets\b/i.test(name)); }
         if (tier) tier.textContent = String(name).toUpperCase();
         document.querySelectorAll('[data-venue-label]').forEach(function(el) {
             el.textContent = name;
@@ -309,12 +309,11 @@ document.addEventListener("DOMContentLoaded", () => {
             '.la-acct-check svg{width:15px;height:15px;color:var(--la-accent,#39FF14)}';
         document.head.appendChild(_acs);
     }
-    // Names in normal case: "AMONGST FEW" → "Amongst Few", the local / assets account as its wordmark
+    // Client names in capitals ("CAFE 1001"), the local / assets account as its wordmark
     function _niceName(n) {
         n = String(n || '').trim();
         if (/^local\s*[\/-]?\s*assets\b/i.test(n)) return 'local / assets';
-        if (n !== n.toUpperCase()) return n;
-        return n.toLowerCase().replace(/(^|[\s\-\/(&.])([a-z])/g, function(m, a, b) { return a + b.toUpperCase(); });
+        return n.toUpperCase();
     }
     function _venueSwitcherHtml(session) {
         var venues = (Array.isArray(session.venues) ? session.venues.slice() : [])
