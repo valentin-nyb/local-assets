@@ -205,6 +205,9 @@
         .bl-fold-chev { width:16px; height:16px; transition:transform .2s ease; }
         .bl-fold.folded .bl-fold-chev { transform:rotate(-90deg); }
         .bl-fold.folded > :not(.bl-fold-head) { display:none !important; }
+        /* Kit expenses folded: only the totals row shows */
+        #bl-kit-box.folded > .bl-scroll { display:block !important; }
+        #bl-kit-box.folded #bl-kit thead, #bl-kit-box.folded #bl-kit tbody { display:none; }
         .bl-addon { display:flex; align-items:center; justify-content:space-between; gap:18px; margin:4px 20px 20px; padding:16px 18px; border:1px solid var(--la-line); border-radius:12px; }
         .bl-addon-t { margin:0 0 4px; font-weight:600; color:var(--la-text); }
         @media (max-width:640px) { .bl-addon { flex-direction:column; align-items:stretch; } }
@@ -347,8 +350,8 @@
                         <span class="bl-msg" id="bl-admin-msg"></span>
                     </div>
                 </section>
-                <section class="bl-section hidden" id="bl-kit-box">
-                    <div class="bl-section-head"><h3>Kit expenses</h3><span class="bl-msg">What we buy and ship in the case for Pro and Live-Set, in £. Leave a cost empty until you know it.</span></div>
+                <section class="bl-section hidden bl-fold folded" id="bl-kit-box">
+                    <div class="bl-section-head bl-fold-head" role="button" tabindex="0" aria-expanded="false" onclick="var s=this.parentNode;s.classList.toggle('folded');this.setAttribute('aria-expanded',!s.classList.contains('folded'))" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><h3>Kit expenses <svg class="bl-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h3><span class="bl-msg">What we buy and ship in the case for Pro and Live-Set, in £. Leave a cost empty until you know it.</span></div>
                     <div class="bl-scroll"><table class="bl-table" id="bl-kit"></table></div>
                     <div class="bl-admin-actions" style="padding-top:16px">
                         <button type="button" class="cam-btn ghost" id="bl-add-kit">Add item</button>
