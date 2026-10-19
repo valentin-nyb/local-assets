@@ -204,6 +204,7 @@
         .bl-fold-head h3 { display:inline-flex; align-items:center; gap:8px; }
         .bl-fold-chev { width:16px; height:16px; transition:transform .2s ease; }
         .bl-fold.folded .bl-fold-chev { transform:rotate(-90deg); }
+        .bl-section:not(.bl-fold) .bl-fold-chev { display:none; }
         .bl-fold.folded > :not(.bl-fold-head) { display:none !important; }
         /* Kit expenses folded: only the totals row shows */
         #bl-kit-box.folded > .bl-scroll, #bl-usage-box.folded > .bl-scroll { display:block !important; }
@@ -659,6 +660,13 @@
             }
             ['bl-admin', 'bl-send-box', 'bl-plans-box', 'bl-kit-box', 'bl-overview'].forEach(function(id) { document.getElementById(id).classList.toggle('hidden', !admin); });
             if (admin && !loadOverview.done) { loadOverview.done = true; loadOverview(false); }
+            // A client's own account: Your plan and Usage this month are always open (they fold for local / assets only)
+            if (!admin) ['bl-plans-offer', 'bl-usage-box'].forEach(function(id) {
+                var el = document.getElementById(id), h = el && el.querySelector('.bl-fold-head');
+                if (!el || !h) return;
+                el.classList.remove('bl-fold', 'folded');
+                h.classList.remove('bl-fold-head'); ['role', 'tabindex', 'aria-expanded', 'onclick', 'onkeydown'].forEach(function(a) { h.removeAttribute(a); });
+            });
             if (!admin) return;
             var f = document.getElementById('bl-rates');
             ['videoStorage', 'videoDelivery', 'videoEncoding', 'liveRecording', 'fileStorage'].forEach(function(k) { if (document.activeElement !== f[k]) f[k].value = d.rates[k]; });
