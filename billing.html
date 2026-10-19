@@ -208,6 +208,8 @@
         /* Kit expenses folded: only the totals row shows */
         #bl-kit-box.folded > .bl-scroll, #bl-usage-box.folded > .bl-scroll { display:block !important; }
         #bl-kit-box.folded #bl-kit thead, #bl-kit-box.folded #bl-kit tbody { display:none; }
+        /* All accounts folded: the three totals stay */
+        #bl-overview.folded > .bl-grid { display:grid !important; padding-bottom:20px !important; }
         /* Usage this month folded: only the total */
         #bl-usage-box.folded #bl-lines thead, #bl-usage-box.folded #bl-lines tbody { display:none; }
         .bl-addon { display:flex; align-items:center; justify-content:space-between; gap:18px; margin:4px 20px 20px; padding:16px 18px; border:1px solid var(--la-line); border-radius:12px; }
@@ -236,12 +238,12 @@
                     <p class="bl-sub">Everything local / assets runs for you, billed in one place: your plan, plus what you use of video storage, streaming and file storage. An itemised invoice is sent on the 1st of each month.</p>
                 </div>
                 <p id="bl-error" class="bl-msg hidden" style="color:var(--la-bad)"></p>
-                <section class="bl-section hidden" id="bl-setup">
-                    <div class="bl-section-head"><h3>Finish setup</h3><span class="bl-msg">New sign-ups waiting for their video storage</span></div>
+                <section class="bl-section hidden bl-fold folded" id="bl-setup">
+                    <div class="bl-section-head bl-fold-head" role="button" tabindex="0" aria-expanded="false" onclick="if(event.target.closest('button,select,a,input'))return;var s=this.parentNode;s.classList.toggle('folded');this.setAttribute('aria-expanded',!s.classList.contains('folded'))" onkeydown="if(event.target!==this)return;if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><h3>Finish setup <svg class="bl-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h3><span class="bl-msg">New sign-ups waiting for their video storage</span></div>
                     <div id="bl-setup-list"></div>
                 </section>
                 <section class="bl-section hidden bl-fold folded" id="bl-pool">
-                    <div class="bl-section-head bl-fold-head" role="button" tabindex="0" aria-expanded="false" onclick="var s=this.parentNode;s.classList.toggle('folded');this.setAttribute('aria-expanded',!s.classList.contains('folded'))" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><h3>Ready video storage <svg class="bl-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h3><span class="bl-msg" id="bl-pool-count">Empty Mux environments, given to new sign-ups straight away</span></div>
+                    <div class="bl-section-head bl-fold-head" role="button" tabindex="0" aria-expanded="false" onclick="if(event.target.closest('button,select,a,input'))return;var s=this.parentNode;s.classList.toggle('folded');this.setAttribute('aria-expanded',!s.classList.contains('folded'))" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><h3>Ready video storage <svg class="bl-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h3><span class="bl-msg" id="bl-pool-count">Empty Mux environments, given to new sign-ups straight away</span></div>
                     <div id="bl-pool-list"></div>
                     <div class="bl-setup-item">
                         <ol class="bl-setup-steps">
@@ -258,8 +260,8 @@
                         <div class="bl-admin-actions" style="padding:0"><button type="button" class="cam-btn primary" id="bl-pool-add">Add to ready list</button><span class="bl-msg" id="bl-pool-msg"></span></div>
                     </div>
                 </section>
-                <section class="bl-section hidden" id="bl-overview">
-                    <div class="bl-section-head"><div><h3>All accounts</h3><span class="bl-msg" id="bl-ov-sub">This month so far</span></div><button type="button" class="cam-btn ghost" id="bl-ov-refresh">Refresh</button></div>
+                <section class="bl-section hidden bl-fold folded" id="bl-overview">
+                    <div class="bl-section-head bl-fold-head" role="button" tabindex="0" aria-expanded="false" onclick="if(event.target.closest('button,select,a,input'))return;var s=this.parentNode;s.classList.toggle('folded');this.setAttribute('aria-expanded',!s.classList.contains('folded'))" onkeydown="if(event.target!==this)return;if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><div><h3>All accounts <svg class="bl-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h3><span class="bl-msg" id="bl-ov-sub">This month so far</span></div><button type="button" class="cam-btn ghost" id="bl-ov-refresh">Refresh</button></div>
                     <div class="bl-grid" style="padding:20px 20px 0">
                         <div class="bl-card"><p class="lbl">What it costs us</p><p class="val" id="bl-ov-cost">—</p><p class="note">Video and files, every account's storage</p></div>
                         <div class="bl-card"><p class="lbl">What we bill</p><p class="val" id="bl-ov-billed">—</p><p class="note">Plans plus usage above them</p></div>
@@ -268,7 +270,7 @@
                     <div class="bl-scroll" style="padding-top:12px"><table class="bl-table" id="bl-ov-table"><tbody><tr><td class="bl-empty">Adding up every account…</td></tr></tbody></table></div>
                 </section>
                 <section class="bl-section hidden bl-fold folded" id="bl-send-box">
-                    <div class="bl-section-head bl-fold-head" role="button" tabindex="0" aria-expanded="false" onclick="var s=this.parentNode;s.classList.toggle('folded');this.setAttribute('aria-expanded',!s.classList.contains('folded'))" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><h3>Bill to <svg class="bl-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h3><span class="bl-msg" id="bl-stripe-acct">Choose who to see and invoice: plan price, plus usage above what the plan includes</span></div>
+                    <div class="bl-section-head bl-fold-head" role="button" tabindex="0" aria-expanded="false" onclick="if(event.target.closest('button,select,a,input'))return;var s=this.parentNode;s.classList.toggle('folded');this.setAttribute('aria-expanded',!s.classList.contains('folded'))" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><h3>Bill to <svg class="bl-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h3><span class="bl-msg" id="bl-stripe-acct">Choose who to see and invoice: plan price, plus usage above what the plan includes</span></div>
                     <form id="bl-send-form" class="bl-admin">
                         <label>Account<select name="venue" id="bl-venue"></select></label>
                         <label>Bill to<select name="target" id="bl-target"></select></label>
@@ -314,11 +316,11 @@
                     <div class="bl-legend" id="bl-legend"></div>
                 </section>
                 <section class="bl-section bl-fold folded" id="bl-usage-box">
-                    <div class="bl-section-head bl-fold-head" role="button" tabindex="0" aria-expanded="false" onclick="var s=this.parentNode;s.classList.toggle('folded');this.setAttribute('aria-expanded',!s.classList.contains('folded'))" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><h3>Usage this month <svg class="bl-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h3><span class="bl-msg" id="bl-usage-head"></span></div>
+                    <div class="bl-section-head bl-fold-head" role="button" tabindex="0" aria-expanded="false" onclick="if(event.target.closest('button,select,a,input'))return;var s=this.parentNode;s.classList.toggle('folded');this.setAttribute('aria-expanded',!s.classList.contains('folded'))" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><h3>Usage this month <svg class="bl-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h3><span class="bl-msg" id="bl-usage-head"></span></div>
                     <div class="bl-scroll"><table class="bl-table" id="bl-lines"></table></div>
                 </section>
-                <section class="bl-section hidden" id="bl-plans-offer">
-                    <div class="bl-section-head"><h3>Your plan</h3><span class="bl-msg">Move up for more sets, clips and space. You pay the difference for this month when you switch; moving down leaves a credit.</span></div>
+                <section class="bl-section hidden bl-fold folded" id="bl-plans-offer">
+                    <div class="bl-section-head bl-fold-head" role="button" tabindex="0" aria-expanded="false" onclick="if(event.target.closest('button,select,a,input'))return;var s=this.parentNode;s.classList.toggle('folded');this.setAttribute('aria-expanded',!s.classList.contains('folded'))" onkeydown="if(event.target!==this)return;if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><h3>Your plan <svg class="bl-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h3><span class="bl-msg">Move up for more sets, clips and space. You pay the difference for this month when you switch; moving down leaves a credit.</span></div>
                     <div class="bl-offer" id="bl-offer"></div>
                     <div class="bl-addon"><div><p class="bl-addon-t">Add a PTZ camera</p><p class="bl-msg">£149 a month, 12-month minimum. Set up for you, controlled from Camera Control. The camera goes back when the rental ends.</p></div>
                         <button type="button" class="cam-btn ghost" id="bl-add-camera">Add a camera</button></div>
@@ -328,7 +330,7 @@
                     <div class="bl-scroll" id="bl-invoices"><p class="bl-empty">Loading…</p></div>
                 </section>
                 <section class="bl-section hidden bl-fold folded" id="bl-plans-box">
-                    <div class="bl-section-head bl-fold-head" role="button" tabindex="0" aria-expanded="false" onclick="var s=this.parentNode;s.classList.toggle('folded');this.setAttribute('aria-expanded',!s.classList.contains('folded'))" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><h3>Plans <svg class="bl-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h3><span class="bl-msg">Monthly price and the usage each plan includes</span></div>
+                    <div class="bl-section-head bl-fold-head" role="button" tabindex="0" aria-expanded="false" onclick="if(event.target.closest('button,select,a,input'))return;var s=this.parentNode;s.classList.toggle('folded');this.setAttribute('aria-expanded',!s.classList.contains('folded'))" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><h3>Plans <svg class="bl-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h3><span class="bl-msg">Monthly price and the usage each plan includes</span></div>
                     <table class="bl-table" id="bl-plans"></table>
                     <div class="bl-admin-actions" style="padding-top:16px">
                         <button type="button" class="cam-btn ghost" id="bl-add-plan">Add plan</button>
@@ -337,8 +339,8 @@
                         <span class="bl-msg" id="bl-plans-msg"></span>
                     </div>
                 </section>
-                <section class="bl-section hidden" id="bl-admin">
-                    <div class="bl-section-head"><h3>Usage rates</h3><span class="bl-msg">Your cost per unit, in £, and the margin added on top</span></div>
+                <section class="bl-section hidden bl-fold folded" id="bl-admin">
+                    <div class="bl-section-head bl-fold-head" role="button" tabindex="0" aria-expanded="false" onclick="if(event.target.closest('button,select,a,input'))return;var s=this.parentNode;s.classList.toggle('folded');this.setAttribute('aria-expanded',!s.classList.contains('folded'))" onkeydown="if(event.target!==this)return;if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><h3>Usage rates <svg class="bl-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h3><span class="bl-msg">Your cost per unit, in £, and the margin added on top</span></div>
                     <form id="bl-rates" class="bl-admin">
                         <label>Video storage, per minute per month<input name="videoStorage" inputmode="decimal"></label>
                         <label>Streaming, per minute<input name="videoDelivery" inputmode="decimal"></label>
@@ -353,7 +355,7 @@
                     </div>
                 </section>
                 <section class="bl-section hidden bl-fold folded" id="bl-kit-box">
-                    <div class="bl-section-head bl-fold-head" role="button" tabindex="0" aria-expanded="false" onclick="var s=this.parentNode;s.classList.toggle('folded');this.setAttribute('aria-expanded',!s.classList.contains('folded'))" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><h3>Kit expenses <svg class="bl-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h3><span class="bl-msg">What we buy and ship in the case for Pro and Live-Set, in £. Leave a cost empty until you know it.</span></div>
+                    <div class="bl-section-head bl-fold-head" role="button" tabindex="0" aria-expanded="false" onclick="if(event.target.closest('button,select,a,input'))return;var s=this.parentNode;s.classList.toggle('folded');this.setAttribute('aria-expanded',!s.classList.contains('folded'))" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><h3>Kit expenses <svg class="bl-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h3><span class="bl-msg">What we buy and ship in the case for Pro and Live-Set, in £. Leave a cost empty until you know it.</span></div>
                     <div class="bl-scroll"><table class="bl-table" id="bl-kit"></table></div>
                     <div class="bl-admin-actions" style="padding-top:16px">
                         <button type="button" class="cam-btn ghost" id="bl-add-kit">Add item</button>
@@ -361,8 +363,8 @@
                         <span class="bl-msg" id="bl-kit-msg"></span>
                     </div>
                 </section>
-                <section class="bl-section hidden" id="bl-cancel">
-                    <div class="bl-section-head"><h3>Cancel account</h3></div>
+                <section class="bl-section hidden bl-fold folded" id="bl-cancel">
+                    <div class="bl-section-head bl-fold-head" role="button" tabindex="0" aria-expanded="false" onclick="if(event.target.closest('button,select,a,input'))return;var s=this.parentNode;s.classList.toggle('folded');this.setAttribute('aria-expanded',!s.classList.contains('folded'))" onkeydown="if(event.target!==this)return;if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><h3>Cancel account <svg class="bl-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h3></div>
                     <div class="bl-cancel-body">
                         <p class="bl-msg" id="bl-cancel-text">Your plan stays active until the end of the current billing month. Your recordings, clips and Brand Kit stay downloadable until then.</p>
                         <button type="button" class="cam-btn bl-danger" id="bl-cancel-btn">Cancel account</button>
