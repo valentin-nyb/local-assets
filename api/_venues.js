@@ -103,6 +103,9 @@ function repairJson(raw) {
     .replace(/^[ \t]*\/\/.*$/gm, '')
     // a value or closing bracket at the end of a line, followed by a new key or object: add the comma
     .replace(/("|'|\d|true|false|null|\}|\])([ \t]*\r?\n\s*)(?=[^\s}\],:\/])/g, '$1,$2')
+    // an email that lost a quote in a list: `, name@domain.com"` or `"name@domain.com ,` → quoted on both sides
+    .replace(/([,\[]\s*)([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})"/g, '$1"$2"')
+    .replace(/"([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})(\s*[,\]])/g, '"$1"$2')
     // a comma right before a closing bracket: remove it
     .replace(/,(\s*[}\]])/g, '$1')
     // closing brackets missing at the end (value cut short when pasted)
