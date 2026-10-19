@@ -55,7 +55,7 @@ export default async function handler(req, res) {
     return res.status(200).json({ received: true });
   }
 
-  // ── PTZ CAMERA RENTED (£99/month, 12-month minimum): kept with the account for shipping ─────
+  // ── PTZ CAMERA RENTED (£149/month, 12-month minimum): kept with the account for shipping ─────
   if (event.type === 'checkout.session.completed' && event.data.object.metadata?.kind === 'addon-camera') {
     const cs = event.data.object, slug = cs.metadata.venueSlug;
     const redis = createClient({ url: process.env.REDIS_URL });

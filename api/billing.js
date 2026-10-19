@@ -260,7 +260,7 @@ export default async function handler(req, res) {
         const sub = await stripe.subscriptions.retrieve(subId).catch(() => null);
         const end = sub && (sub.current_period_end || sub.items?.data?.[0]?.current_period_end);
         const ce = sub && sub.metadata && sub.metadata.commitEnd ? Date.parse(sub.metadata.commitEnd + 'T23:59:59Z') : 0;
-        if (sub) subscription = { status: sub.status, cancelAtPeriodEnd: !!(sub.cancel_at_period_end || sub.cancel_at), periodEnd: sub.cancel_at ? sub.cancel_at * 1000 : end ? end * 1000 : null, commitEnd: ce > Date.now() ? ce : null };
+        if (sub) subscription = { status: sub.status, cancelAtPeriodEnd: !!(sub.cancel_at_period_end || sub.cancel_at), periodEnd: sub.cancel_at ? sub.cancel_at * 1000 : end ? end * 1000 : null, commitEnd: ce > Date.now() ? ce : null, tier: sub.metadata?.tier || '' };
       }
       const elapsed = Math.min(1, Math.max(0, (Date.now() - base.start) / (base.end - base.start)));
       return res.status(200).json({
@@ -270,7 +270,10 @@ export default async function handler(req, res) {
         // (pay-as-you-go plans are chosen at sign-up only; an account can move up to a monthly plan from them)
         plansOffered: data.plans.filter(p => p.price > 0 || p.id === ((data.assignments.venue || {}).plan || '')).map(p => planForType(p, data.accountType)).map(p => ({ signupFee: p.signupFee || 0, id: p.id, name: p.name, price: p.price, maxClips: p.maxClips, cameras: p.cameras || 0, features: p.features || [], included: p.included })),
         currentPlan: (data.assignments.venue || {}).plan || '',
-        ...(isAdmin ? { kit: await withRedis(readKit), kitPlans: KIT_PLANS, stripeAccount, venueSlug: slug, venues: billable.map(k => ({ slug: k, name: cfg[k]?.name || k })), rates: data.rates, plans: data.plans, assignments: data.assignments, artists: data.artists, labels: data.labels, bkVenues: data.bkVenues, assignment: a } : {}),
+        ...(isAdmin ? { kit: await withRedis(readKit), kitPlans: KIT_PLANS,
+          // Each kit plan's monthly price for a venue, a record label and an artist (for the kit's share of the first month)
+          kitPrices: Object.fromEntries(KIT_PLANS.map(id => { const p = data.plans.find(x => x.id === id); return [id, p ? { venue: priceForType(p.price, 'venue', id), label: priceForType(p.price, 'label', id), artist: priceForType(p.price, 'artist', id) } : {}]; })),
+          stripeAccount, venueSlug: slug, venues: billable.map(k => ({ slug: k, name: cfg[k]?.name || k })), rates: data.rates, plans: data.plans, assignments: data.assignments, artists: data.artists, labels: data.labels, bkVenues: data.bkVenues, assignment: a } : {}),
       });
     }
 
@@ -279,7 +282,8 @@ export default async function handler(req, res) {
     // or, without a subscription yet, a Stripe checkout starts one
     if (!isAdmin) {
       const body0 = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
-      // Rent a PTZ camera: £99 a month as its own subscription, 12-month minimum (the camera costs us £1,000)
+      // Rent a PTZ camera: £149 a month as its own subscription, 12-month minimum (camera and cable cost us
+      // ~£1,144, and its recordings ~£40 a month in Mux: paid back in about 10 months)
       if (body0.action === 'addCamera') {
         const stripe = stripeClient();
         if (!stripe) return res.status(503).json({ error: 'Payments are not set up yet' });
@@ -289,8 +293,8 @@ export default async function handler(req, res) {
         const checkout = await stripe.checkout.sessions.create({
           mode: 'subscription',
           ...(customer ? { customer } : { customer_email: session.email }),
-          line_items: [{ quantity: 1, price_data: { currency: 'gbp', unit_amount: 9900, tax_behavior: 'exclusive', recurring: { interval: 'month' }, product_data: { name: 'local / assets · PTZ camera (12-month minimum)' } } }],
-          custom_text: { submit: { message: 'PTZ camera, £99 a month for at least 12 months. The camera stays ours and goes back when the rental ends.' } },
+          line_items: [{ quantity: 1, price_data: { currency: 'gbp', unit_amount: 14900, tax_behavior: 'exclusive', recurring: { interval: 'month' }, product_data: { name: 'local / assets · PTZ camera (12-month minimum)' } } }],
+          custom_text: { submit: { message: 'PTZ camera, £149 a month for at least 12 months. The camera stays ours and goes back when the rental ends.' } },
           success_url: 'https://local-assets.com/billing?camera=added', cancel_url: 'https://local-assets.com/billing',
           metadata: meta, subscription_data: { metadata: meta },
         });
@@ -340,7 +344,7 @@ export default async function handler(req, res) {
           const sub = await stripe.subscriptions.retrieve(subId).catch(() => null);
           if (sub && sub.status !== 'canceled' && sub.items.data[0]) {
             const p = await stripe.prices.create({ ...price, product_data: { name: `local / assets · ${plan.name}` } });
-            await stripe.subscriptions.update(subId, { items: [{ id: sub.items.data[0].id, price: p.id }], proration_behavior: 'create_prorations', metadata: { ...sub.metadata, tier: plan.id, ...(commitEndFor(plan.id) && !(sub.metadata.commitEnd > new Date().toISOString().slice(0, 10)) ? { commitEnd: commitEndFor(plan.id), minimumMonths: '12' } : {}) } });
+            await stripe.subscriptions.update(subId, { items: [{ id: sub.items.data[0].id, price: p.id }], proration_behavior: 'create_prorations', metadata: { ...sub.metadata, tier: plan.id, ...(commitEndFor(plan.id, acctType) && !(sub.metadata.commitEnd > new Date().toISOString().slice(0, 10)) ? { commitEnd: commitEndFor(plan.id, acctType), minimumMonths: '12' } : {}) } });
             await redis.hSet(assignKey(slug), 'venue', JSON.stringify({ ...a, plan: plan.id, subscription: true, subscriptionId: subId }));
             console.log('[billing] plan changed', slug, plan.id);
             return { status: 200, changed: true, plan: plan.name };
@@ -358,7 +362,7 @@ export default async function handler(req, res) {
           line_items: [{ quantity: 1, price_data: { ...price, product_data: { name: `local / assets · ${plan.name}` } } }],
           success_url: 'https://local-assets.com/billing?plan=updated', cancel_url: 'https://local-assets.com/billing',
           metadata: { kind: 'upgrade', venueSlug: slug, tier: plan.id, ...(credit ? { trialCredit: '1' } : {}) },
-          subscription_data: { metadata: { kind: 'upgrade', venueSlug: slug, tier: plan.id, ...(commitEndFor(plan.id) ? { commitEnd: commitEndFor(plan.id), minimumMonths: '12' } : {}) } },
+          subscription_data: { metadata: { kind: 'upgrade', venueSlug: slug, tier: plan.id, ...(commitEndFor(plan.id, acctType) ? { commitEnd: commitEndFor(plan.id, acctType), minimumMonths: '12' } : {}) } },
         });
         return { status: 200, url: checkout.url };
       });
@@ -461,7 +465,7 @@ export default async function handler(req, res) {
     if (body.action === 'setRates') {
       const r = body.rates || {};
       const clean = {};
-      for (const k of ['videoStorage', 'videoDelivery', 'videoEncoding', 'fileStorage', 'margin']) {
+      for (const k of ['videoStorage', 'videoDelivery', 'videoEncoding', 'liveRecording', 'fileStorage', 'margin']) {
         const n = Number(r[k]);
         if (Number.isFinite(n) && n >= 0 && n < 1000) clean[k] = n;
       }

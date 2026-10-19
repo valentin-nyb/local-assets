@@ -10,6 +10,7 @@ export const DEFAULT_RATES = {
   videoStorage: 0.01,      // per stored minute, per month (+ margin ≈ £120 per extra TB)
   videoDelivery: 0.0008,   // per minute streamed or downloaded
   videoEncoding: 0,        // per minute of new video (included)
+  liveRecording: 0.04,     // per minute recorded from a camera (Mux live): charged on pay as you go only, plans include it
   fileStorage: 0.018,      // per GB of files, per month
   margin: 0.5,             // admin costs added on top of cost (50%): every usage price and the estimated invoice include it
   currency: 'gbp',
@@ -147,8 +148,11 @@ function trialLikeStarter(list) {
 // (TYPE_PRICE, TYPE_PLAN). Storage above the allowance is charged on the 1st, a set above it as usage.
 // Applied at checkout, on plan changes, on invoices, the billing page and the pricing page (index.html).
 // Plans with hardware we buy (Live-Set: cameras, Mac mini, Starlink Mini) run for at least 12 months
+// Pro too when it includes a camera (every account type but artists, who add a camera separately)
 export const MIN_TERM_PLANS = ['liveset-creative'];
-export const commitEndFor = planId => MIN_TERM_PLANS.includes(planId) ? new Date(Date.now() + 365 * 86400e3).toISOString().slice(0, 10) : '';
+export const MIN_TERM_TYPES = { 'liveset-distribution': ['venue', 'label', 'management'] };
+export const commitEndFor = (planId, type) => MIN_TERM_PLANS.includes(planId) || (MIN_TERM_TYPES[planId] || []).includes(type || 'venue')
+  ? new Date(Date.now() + 365 * 86400e3).toISOString().slice(0, 10) : '';
 export const TYPE_FACTOR = { venue: 1, label: 0.5, artist: 0.25 };
 // Set prices that replace the rule for one plan and type (planId → type → £ a month)
 export const TYPE_PRICE = {
@@ -343,7 +347,7 @@ export async function venueUsage(slug, auth, { start, end }, artist = null, labe
   const only = artist ? String(artist).toUpperCase().trim() : null;
   if (label) auth = null;   // a record label is billed for its brand kit files only
   const ids = new Set();
-  const usage = { storedMinutes: 0, newMinutes: 0, deliveredMinutes: 0, fileBytes: 0, videos: 0, notes: [] };
+  const usage = { storedMinutes: 0, newMinutes: 0, liveMinutes: 0, deliveredMinutes: 0, fileBytes: 0, videos: 0, notes: [] };
   if (auth) {
     // Mux keys that no longer work (environment deleted or keys revoked): bill no video usage, say why
     try { await muxGet(auth, '/video/v1/assets?limit=1&page=1'); }
@@ -359,7 +363,7 @@ export async function venueUsage(slug, auth, { start, end }, artist = null, labe
         const min = (Number(a.duration) || 0) / 60;
         usage.storedMinutes += min; usage.videos++;
         const created = Number(a.created_at) * 1000;
-        if (created >= start && created < end) usage.newMinutes += min;
+        if (created >= start && created < end) { usage.newMinutes += min; if (a.live_stream_id) usage.liveMinutes += min; }
       }
       if ((b.data || []).length < 100) break;
     }
@@ -401,6 +405,8 @@ export function priceUsage(usage, rates, plan) {
     { key: 'videoStorage', label: 'Video storage', quantity: usage.storedMinutes, included: inc.storedMinutes || 0, unit: 'minutes stored', rate: rates.videoStorage },
     { key: 'videoDelivery', label: 'Streaming and downloads', quantity: usage.deliveredMinutes, included: inc.deliveredMinutes || 0, unit: 'minutes delivered', rate: rates.videoDelivery },
     { key: 'videoEncoding', label: 'New video processing', quantity: usage.newMinutes, included: 0, unit: 'minutes added', rate: rates.videoEncoding },
+    // Recording from cameras: in every monthly plan; pay as you go (Trial Month, no plan) pays it per minute
+    { key: 'liveRecording', label: 'Recording from cameras', quantity: usage.liveMinutes || 0, included: plan && Number(plan.price) > 0 ? (usage.liveMinutes || 0) : 0, unit: 'minutes recorded', rate: Number(rates.liveRecording ?? DEFAULT_RATES.liveRecording) || 0 },
     { key: 'fileStorage', label: 'File storage', quantity: gb, included: inc.fileGB || 0, unit: 'GB', rate: rates.fileStorage },
   ].map(l => {
     const billable = Math.max(0, l.quantity - l.included);

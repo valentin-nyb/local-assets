@@ -306,7 +306,7 @@
                 <section class="bl-section hidden" id="bl-plans-offer">
                     <div class="bl-section-head"><h3>Your plan</h3><span class="bl-msg">Upgrade for more clips, storage and streaming. Changes apply straight away, prorated.</span></div>
                     <div class="bl-offer" id="bl-offer"></div>
-                    <div class="bl-addon"><div><p class="bl-addon-t">Add a PTZ camera</p><p class="bl-msg">£99 a month, 12-month minimum. Set up for you, controlled from Camera Control. The camera goes back when the rental ends.</p></div>
+                    <div class="bl-addon"><div><p class="bl-addon-t">Add a PTZ camera</p><p class="bl-msg">£149 a month, 12-month minimum. Set up for you, controlled from Camera Control. The camera goes back when the rental ends.</p></div>
                         <button type="button" class="cam-btn ghost" id="bl-add-camera">Add a camera</button></div>
                 </section>
                 <section class="bl-section">
@@ -329,6 +329,7 @@
                         <label>Video storage, per minute per month<input name="videoStorage" inputmode="decimal"></label>
                         <label>Streaming, per minute<input name="videoDelivery" inputmode="decimal"></label>
                         <label>New video processing, per minute<input name="videoEncoding" inputmode="decimal"></label>
+                        <label>Recording from cameras, per minute (pay as you go)<input name="liveRecording" inputmode="decimal"></label>
                         <label>File storage, per GB per month<input name="fileStorage" inputmode="decimal"></label>
                         <label>Margin, %<input name="marginPct" inputmode="decimal"></label>
                     </form>
@@ -629,14 +630,14 @@
             } else {
                 var ceTxt = sub && sub.commitEnd ? new Date(sub.commitEnd).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
                 ctext.textContent = ceTxt
-                    ? 'Your plan has a 12-month minimum, so it can close on ' + ceTxt + ' at the earliest. The cameras, Mac mini and Starlink go back to us when it ends. Your recordings, clips and Brand Kit stay downloadable until then.'
+                    ? 'Your plan has a 12-month minimum, so it can close on ' + ceTxt + ' at the earliest. The hardware (camera' + (sub.tier === 'liveset-creative' ? 's, Mac mini and Starlink' : '') + ') goes back to us when it ends. Your recordings, clips and Brand Kit stay downloadable until then.'
                     : 'Your plan stays active until the end of the current billing month' + (endTxt ? ' (' + endTxt + ')' : '') + '. Your recordings, clips and Brand Kit stay downloadable until then.';
                 cbtn.textContent = 'Cancel account'; cbtn.classList.add('bl-danger'); cbtn.classList.remove('primary'); cbtn.dataset.mode = 'cancel';
             }
             ['bl-admin', 'bl-send-box', 'bl-plans-box', 'bl-kit-box'].forEach(function(id) { document.getElementById(id).classList.toggle('hidden', !admin); });
             if (!admin) return;
             var f = document.getElementById('bl-rates');
-            ['videoStorage', 'videoDelivery', 'videoEncoding', 'fileStorage'].forEach(function(k) { if (document.activeElement !== f[k]) f[k].value = d.rates[k]; });
+            ['videoStorage', 'videoDelivery', 'videoEncoding', 'liveRecording', 'fileStorage'].forEach(function(k) { if (document.activeElement !== f[k]) f[k].value = d.rates[k]; });
             if (document.activeElement !== f.marginPct) f.marginPct.value = Math.round((d.rates.margin || 0) * 1000) / 10;
             // Venue to bill (admin), then the venue itself, its artists or its record labels
             _venue = d.venueSlug || _venue;
@@ -674,14 +675,14 @@
             sf.country.value = det.country || 'GB';
             document.getElementById('bl-monthly').checked = !!(d.assignment && d.assignment.monthly);
             renderPlans(d.plans);
-            renderKit(d.kit || [], d.kitPlans || [], d.plans);
+            renderKit(d.kit || [], d.kitPlans || [], d.plans, d.kitPrices || {});
         }
         // Kit expenses: one row per item, a quantity per plan; the totals show what one kit costs us
         // and how much of that plan's first month it takes
-        var _kitPlans = [], _kitPlanList = [];
-        function renderKit(kit, kitPlans, plans) {
+        var _kitPlans = [], _kitPlanList = [], _kitPrices = {};
+        function renderKit(kit, kitPlans, plans, prices) {
             var t = document.getElementById('bl-kit');
-            _kitPlans = kitPlans; _kitPlanList = plans || [];
+            _kitPlans = kitPlans; _kitPlanList = plans || []; _kitPrices = prices || {};
             if (t.dataset.editing === '1') { kitTotals(); return; }
             var pname = function(id) { var p = _kitPlanList.filter(function(x) { return x.id === id; })[0]; return p ? p.name : id; };
             t.innerHTML = '<thead><tr><th>Item</th><th class="num">£ each</th>' + kitPlans.map(function(p) { return '<th class="num">' + esc(pname(p)) + '</th>'; }).join('') + '<th></th></tr></thead><tbody>' +
@@ -709,9 +710,12 @@
                 var used = rows.filter(function(r) { return r.name && (r.qty[p] || 0) > 0; });
                 var sum = used.reduce(function(s, r) { return s + (Number(r.cost) || 0) * r.qty[p]; }, 0);
                 var missing = used.filter(function(r) { return r.cost == null || !isFinite(r.cost); }).length;
-                var plan = _kitPlanList.filter(function(x) { return x.id === p; })[0];
-                var share = plan && plan.price > 0 ? Math.round(sum / plan.price * 100) + '% of the first month' : '';
-                return '<td class="num"><b>' + money(sum, 'gbp') + '</b>' + (missing ? '<br><span class="bl-msg">+ ' + missing + ' without a cost</span>' : '') + (share ? '<br><span class="bl-msg">' + share + '</span>' : '') + '</td>';
+                // The kit against the first month's price for each kind of account (artists pay much less, so the share is larger)
+                var pr = _kitPrices[p] || {};
+                var share = ['venue', 'label', 'artist'].filter(function(k) { return pr[k] > 0; }).map(function(k) {
+                    return '<br><span class="bl-msg">' + { venue: 'Venue', label: 'Label', artist: 'Artist' }[k] + ' ' + money(pr[k], 'gbp').replace(/\.00$/, '') + ': ' + Math.round(sum / pr[k] * 100) + '% of the first month</span>';
+                }).join('');
+                return '<td class="num"><b>' + money(sum, 'gbp') + '</b>' + (missing ? '<br><span class="bl-msg">+ ' + missing + ' without a cost</span>' : '') + share + '</td>';
             }).join('');
             foot.innerHTML = '<tr><td><b>Kit per account</b></td><td></td>' + cells + '<td></td></tr>';
         }
@@ -820,7 +824,7 @@
             var msg = document.getElementById('bl-admin-msg'), f = document.getElementById('bl-rates');
             this.disabled = true; msg.textContent = 'Saving…';
             try {
-                await post({ action: 'setRates', rates: { videoStorage: f.videoStorage.value, videoDelivery: f.videoDelivery.value, videoEncoding: f.videoEncoding.value, fileStorage: f.fileStorage.value, margin: Number(f.marginPct.value) / 100 } });
+                await post({ action: 'setRates', rates: { videoStorage: f.videoStorage.value, videoDelivery: f.videoDelivery.value, videoEncoding: f.videoEncoding.value, liveRecording: f.liveRecording.value, fileStorage: f.fileStorage.value, margin: Number(f.marginPct.value) / 100 } });
                 msg.textContent = 'Saved'; await load();
             } catch (e) { msg.textContent = 'Could not save: ' + e.message; }
             this.disabled = false;
@@ -1092,7 +1096,7 @@
             b.disabled = false;
         });
         document.getElementById('bl-add-camera').addEventListener('click', async function() {
-            if (!(await laConfirm({ title: 'Add a PTZ camera?', message: '£99 a month for at least 12 months, charged with your plan. We set it up for you; it goes back when the rental ends.', confirmText: 'Continue to payment' }))) return;
+            if (!(await laConfirm({ title: 'Add a PTZ camera?', message: '£149 a month for at least 12 months, charged with your plan. We set it up for you; it goes back when the rental ends.', confirmText: 'Continue to payment' }))) return;
             var b = this; b.disabled = true; b.textContent = 'Opening checkout…';
             try { var d = await post({ action: 'addCamera' }); if (d.url) location.href = d.url; }
             catch (e) { b.disabled = false; b.textContent = 'Add a camera'; laAlert('Could not open checkout: ' + e.message, { tone: 'error' }); }

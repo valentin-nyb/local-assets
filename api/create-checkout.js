@@ -42,7 +42,7 @@ export default async function handler(req, res) {
     const stripe = new Stripe(sk);
     // Pay as you go (usage above the plan charged to the card on the 1st): chosen at sign-up, always on without a monthly price
     const payg = !(plan.price > 0) || body?.payg === true;
-    const commitEnd = commitEndFor(plan.id);   // Live-Set: 12-month minimum
+    const commitEnd = commitEndFor(plan.id, accountType);   // Live-Set, and Pro with its camera: 12-month minimum
     const metadata = { kind: 'signup', tier: plan.id, tierName: plan.name, accountType, accountName, payg: payg ? '1' : '0', ...(commitEnd ? { commitEnd, minimumMonths: '12' } : {}) };
     const common = {
       success_url: 'https://local-assets.com/?signup=success',
