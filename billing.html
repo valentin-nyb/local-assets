@@ -206,8 +206,10 @@
         .bl-fold.folded .bl-fold-chev { transform:rotate(-90deg); }
         .bl-fold.folded > :not(.bl-fold-head) { display:none !important; }
         /* Kit expenses folded: only the totals row shows */
-        #bl-kit-box.folded > .bl-scroll { display:block !important; }
+        #bl-kit-box.folded > .bl-scroll, #bl-usage-box.folded > .bl-scroll { display:block !important; }
         #bl-kit-box.folded #bl-kit thead, #bl-kit-box.folded #bl-kit tbody { display:none; }
+        /* Usage this month folded: only the total */
+        #bl-usage-box.folded #bl-lines thead, #bl-usage-box.folded #bl-lines tbody { display:none; }
         .bl-addon { display:flex; align-items:center; justify-content:space-between; gap:18px; margin:4px 20px 20px; padding:16px 18px; border:1px solid var(--la-line); border-radius:12px; }
         .bl-addon-t { margin:0 0 4px; font-weight:600; color:var(--la-text); }
         @media (max-width:640px) { .bl-addon { flex-direction:column; align-items:stretch; } }
@@ -311,8 +313,8 @@
                     <div class="bl-chart" id="bl-chart"><p class="bl-chart-empty">Loading usage…</p></div>
                     <div class="bl-legend" id="bl-legend"></div>
                 </section>
-                <section class="bl-section">
-                    <div class="bl-section-head"><h3>Usage this month</h3><span class="bl-msg" id="bl-usage-head"></span></div>
+                <section class="bl-section bl-fold folded" id="bl-usage-box">
+                    <div class="bl-section-head bl-fold-head" role="button" tabindex="0" aria-expanded="false" onclick="var s=this.parentNode;s.classList.toggle('folded');this.setAttribute('aria-expanded',!s.classList.contains('folded'))" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><h3>Usage this month <svg class="bl-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h3><span class="bl-msg" id="bl-usage-head"></span></div>
                     <div class="bl-scroll"><table class="bl-table" id="bl-lines"></table></div>
                 </section>
                 <section class="bl-section hidden" id="bl-plans-offer">
