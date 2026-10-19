@@ -435,8 +435,13 @@
                 // than the clip on iPad, so the player showed black bars above and below); the clip fills it
                 stage.style.cssText = 'width:min(calc(78vh * 9 / 16), calc(100vw - var(--mm-side)));aspect-ratio:9/16;max-width:100%;';
                 // The poster is the clip's first frame (Mux would show a frame from the middle, then jump to the start when it plays)
-                stage.innerHTML = '<mux-player stream-type="on-demand" accent-color="#39FF14" autoplay preload="auto" thumbnail-time="0" style="width:100%;height:100%;--media-object-fit:cover;"></mux-player>';
+                stage.innerHTML = '<mux-player stream-type="on-demand" accent-color="#39FF14" autoplay preload="auto" thumbnail-time="0" style="width:100%;height:100%;--media-object-fit:contain;"></mux-player>';
                 stage.firstChild.setAttribute('playback-id', item.pid);
+                // Once the clip is known, the box takes its exact shape: the whole clip shows, with no black edges
+                stage.firstChild.addEventListener('loadedmetadata', function() {
+                    var w = this.videoWidth || (this.media && this.media.videoWidth), h = this.videoHeight || (this.media && this.media.videoHeight);
+                    if (w > 0 && h > 0) stage.style.cssText = 'width:min(calc(78vh * ' + w + ' / ' + h + '), calc(100vw - var(--mm-side)));aspect-ratio:' + w + '/' + h + ';max-width:100%;';
+                });
             } else {
                 stage.style.cssText = 'max-height:80vh;max-width:calc(100vw - var(--mm-side));';
                 var img = document.createElement('img');
