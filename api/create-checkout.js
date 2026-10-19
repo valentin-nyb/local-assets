@@ -1,6 +1,6 @@
 import Stripe from 'stripe';
 import { createClient } from 'redis';
-import { readPlans } from './_billing.js';
+import { readPlans, planForType } from './_billing.js';
 
 // Sign-up from the home page: a tier, the account type (venue, record label or artist) and its name.
 // Monthly plans are a Stripe subscription; pay as you go saves the card (and takes any sign-up fee,
@@ -34,6 +34,8 @@ export default async function handler(req, res) {
   // ...and its join price is the one for that type: £49 artist, £149 record label, £349 venue
   const TRIAL_FEES = { artist: 49, label: 149, venue: 349 };
   if (plan.id === 'dj-trial') plan = { ...plan, name: ({ venue: 'Venue', artist: 'Artist', label: 'Label' }[accountType] || 'Artist') + ' Trial Month', signupFee: TRIAL_FEES[accountType] || TRIAL_FEES.artist };
+  // A monthly plan at the price for this account type (record labels half, artists a quarter of a venue's)
+  plan = planForType(plan, accountType);
   const fee = Number(plan.signupFee) > 0 ? Number(plan.signupFee) : 0;
 
   try {

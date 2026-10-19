@@ -765,7 +765,7 @@
                         var btn = card.querySelector('[onclick="selectTier(\'' + p.id + '\')"]');
                         if (!btn) return;
                         var nm = card.querySelector('.tr-name'); if (nm) nm.textContent = short(p.name);
-                        var pr = card.querySelector('.tr-price b'); if (pr && p.price) pr.textContent = money(p.price);
+                        var pr = card.querySelector('.tr-price b'); if (pr && p.price) { card.dataset.base = p.price; pr.textContent = money(p.price); if (typeof trialType === 'function') trialType(); }
                         card.querySelectorAll('li span').forEach(function(sp) {
                             var t = sp.textContent;
                             if (/vertical clips/.test(t)) sp.textContent = t.replace(/^(\d+ vertical clips|Unlimited vertical clips)/, p.maxClips ? p.maxClips + ' vertical clips' : 'Unlimited vertical clips');
@@ -921,10 +921,19 @@
         var TRIAL_TYPES = { venue: ['Venue', 'For venues trying it with their own cameras.'], artist: ['Artist', 'For DJs trying it with their own cameras.'], label: ['Label', 'For record labels trying it with their own cameras.'] };
         // To join the Trial Month: £49 for an artist, £149 for a record label, £349 for a venue (as charged at checkout)
         var TRIAL_FEES = { artist: 49, label: 149, venue: 349 };
+        // Monthly plans by type, as charged (api/_billing.js TYPE_FACTOR): record labels half, artists a quarter, to £5
+        var TYPE_FACTOR = { venue: 1, label: 0.5, artist: 0.25 };
+        function typePrice(price, t) { var f = TYPE_FACTOR[t] || 1; return f === 1 ? price : Math.round(price * f / 5) * 5; }
         function trialType() {
             var t = (document.getElementById('tr-offer-type') || {}).value || 'artist';
             var f = document.getElementById('tr-offer-for'); if (f) f.textContent = TRIAL_TYPES[t][1];
             document.querySelectorAll('.tr-offer-price b').forEach(function(b) { b.textContent = '£' + TRIAL_FEES[t]; });
+            // Every monthly plan at this type's price: venues the list price, record labels half, artists a quarter
+            document.querySelectorAll('.tr-card').forEach(function(card) {
+                var b = card.querySelector('.tr-price b'); if (!b) return;
+                if (!card.dataset.base) { var n = parseInt(b.textContent.replace(/[^0-9]/g, ''), 10); if (!n) return; card.dataset.base = n; }
+                b.textContent = '£' + typePrice(Number(card.dataset.base), t).toLocaleString('en-GB');
+            });
             return t;
         }
         // The trial's own dropdown (Venue, Artist or Label), in the site's style rather than the browser's menu
@@ -949,10 +958,18 @@
             });
             document.addEventListener('click', function() { open(false); });
         })();
+        // On load: the plans at the price for the type shown (Artist by default)
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function() { trialType(); }); else trialType();
         function selectTier(tierId) {
             var esc = function(v) { return String(v).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
             var T = SIGNUP_TIERS[tierId] || { group: '', name: TIER_NAMES[tierId] || tierId, price: '', feats: [] };
             if (tierId === 'dj-trial') { var tt = trialType(); T = Object.assign({}, T, { type: tt, only: tt, name: TRIAL_TYPES[tt][0] + ' Trial Month', price: '£' + TRIAL_FEES[tt] }); }
+            else if (SIGNUP_TIERS[tierId]) {
+                // A monthly plan for the type chosen above (Artist, Label or Venue), at that type's price
+                var mt = trialType(), card = document.querySelector('[onclick="selectTier(\'' + tierId + '\')"]'), cc = card && card.closest('.tr-card');
+                var base = cc && cc.dataset.base ? Number(cc.dataset.base) : parseInt(String(T.price).replace(/[^0-9]/g, ''), 10);
+                T = Object.assign({}, T, { type: mt, only: mt, price: '£' + typePrice(base, mt).toLocaleString('en-GB') });
+            }
             var ICON = {
                 venue: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V9l8-5 8 5v12"/><path d="M9 21v-6h6v6"/></svg>',
                 label: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.5"/><path d="M12 6.5a5.5 5.5 0 0 0-5.5 5.5"/></svg>',

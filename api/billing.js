@@ -5,8 +5,7 @@ import { getWebSessionAuth, getVenuesConfig, readRegistryRaw, saveRegistryEntry,
 import { venueAuth } from './_verticals.js';
 import {
   readRates, readPlans, cleanPlans, readAssignments, assignKey, venueUsage, venueArtists, priceUsage,
-  monthRange, stripeClient, invoiceVenue, venueEntries, DEFAULT_RATES, applyDetails, usageByDay,
-} from './_billing.js';
+  monthRange, stripeClient, invoiceVenue, venueEntries, DEFAULT_RATES, applyDetails, usageByDay, planForType, priceForType } from './_billing.js';
 
 // Billing page data and actions.
 //   GET ?target=venue|artist:NAME&plan=ID&period=current|previous   usage, plan and price for one bill-to
@@ -188,7 +187,9 @@ export default async function handler(req, res) {
       });
       const a = data.assignments[target] || {};
       const planId = req.query.plan !== undefined && isAdmin ? String(req.query.plan) : (a.plan || '');
-      const plan = data.plans.find(p => p.id === planId) || null;
+      // The plan at this account's price (venue, record label or artist: see TYPE_FACTOR)
+      const billedType = target.startsWith('artist:') ? 'artist' : target.startsWith('label:') ? 'label' : data.accountType;
+      const plan = planForType(data.plans.find(p => p.id === planId) || null, billedType);
       const priced = priceUsage(data.usage, data.rates, plan);
       let invoices = [];
       const stripe = stripeClient();
@@ -264,7 +265,7 @@ export default async function handler(req, res) {
         usage: data.usage, ...priced, invoices, stripe: !!stripe, isAdmin, subscription, accountType: data.accountType, accountTypeLabel: TYPE_LABEL[data.accountType] || 'Account',
         // Plans a client can move to (name, price, what's included)
         // (pay-as-you-go plans are chosen at sign-up only; an account can move up to a monthly plan from them)
-        plansOffered: data.plans.filter(p => p.price > 0 || p.id === ((data.assignments.venue || {}).plan || '')).map(p => ({ signupFee: p.signupFee || 0, id: p.id, name: p.name, price: p.price, maxClips: p.maxClips, cameras: p.cameras || 0, features: p.features || [], included: p.included })),
+        plansOffered: data.plans.filter(p => p.price > 0 || p.id === ((data.assignments.venue || {}).plan || '')).map(p => ({ signupFee: p.signupFee || 0, id: p.id, name: p.name, price: priceForType(p.price, data.accountType), maxClips: p.maxClips, cameras: p.cameras || 0, features: p.features || [], included: p.included })),
         currentPlan: (data.assignments.venue || {}).plan || '',
         ...(isAdmin ? { stripeAccount, venueSlug: slug, venues: billable.map(k => ({ slug: k, name: cfg[k]?.name || k })), rates: data.rates, plans: data.plans, assignments: data.assignments, artists: data.artists, labels: data.labels, bkVenues: data.bkVenues, assignment: a } : {}),
       });
@@ -303,7 +304,8 @@ export default async function handler(req, res) {
       const stripe = stripeClient();
       if (!stripe) return res.status(503).json({ error: 'Payments are not set up yet' });
       const out = await withRedis(async redis => {
-        const plan = (await readPlans(redis)).find(p => p.id === String(body0.plan || ''));
+        const acctType = (await redis.get(`brand_org_type:${slug}`)) || (await redis.get(`account_type:${slug}`)) || 'venue';
+        const plan = planForType((await readPlans(redis)).find(p => p.id === String(body0.plan || '')), acctType);
         if (!plan || !(plan.price > 0)) return { status: 400, error: 'Unknown plan' };
         const a = (await readAssignments(redis, slug)).venue || {};
         const subId = a.subscriptionId || getVenuesConfig()[slug]?.subscription || '';
