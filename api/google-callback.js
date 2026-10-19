@@ -156,12 +156,16 @@ function parseCookie(cookieHeader) {
   }).filter(([key]) => key));
 }
 
+// The favicon inside the page: opening the app link straight away cancels a favicon still loading,
+// which left the tab with the browser's blank globe
+const FAVICON = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZlcnNpb249IjEuMSIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHdpZHRoPSI2NSIgaGVpZ2h0PSI2NSI+PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZlcnNpb249IjEuMSIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHdpZHRoPSI2NSIgaGVpZ2h0PSI2NSIgdmlld0JveD0iMCAwIDY1IDY1Ij48aW1hZ2Ugd2lkdGg9IjY1IiBoZWlnaHQ9IjY1IiB4bGluazpocmVmPSJkYXRhOmltYWdlL3BuZztiYXNlNjQsaVZCT1J3MEtHZ29BQUFBTlNVaEVVZ0FBQUVFQUFBQkJDQVlBQUFDTzk4bEZBQUFBQ1hCSVdYTUFBQXNTQUFBTEVnSFMzWDc4QUFBRUcwbEVRVlI0bk4yY1FYTGFNQlNHdjNTNkR3dnZ3dzFDOTU2cGU0SnlnNUFUbEo2ZzNLRGtCdTRKUWs1UVo4Yjd3QW1LOTE2RUU2UUxQUk1pTEdOc1BSdjRaanpNS0luMDlQdEplbm9TdVhwN2U2TUxRb0lCTUpKbktKOEZyMEFDTEFGUzhxUVRvNFFyM3lMc2REYml2Y08zTGF0ZFlRUktnRVZLL3RxeXZnOTRFU0VrR0FKamViNjJydkF3VDhBQ1Q0SzBFaUVrbUFBVHV1bTRpeWNnVHNrWFRTdG9KRUpJTUFibXdFM1RoaFhJTURiRngzckhVU0tJMjhmMCsrWVBzY0dJTWE4clJtMFI1TzNId0hWVDZ6b21BeVoxVnBwUGRXcVRzZi9JK1FnQVpxaitGZHNyT2VnSjRnR1BmdXpxalc5VkhsSEhFK2IrYk9tTnVPcUhsU0tJSzUzU0N0Q1VtNnBoY2NnVFpsNU42WmVwNndkT0VVS0NLWmZoQlFXM3NzVHY4Ym1zVUg3NXQ2SkJ6NWg5UUdLVkR6RjdqanVsZGlOSzVvZFNFYWh3blJaa21PRjFLTjZQeFF0ajRMdG5HNFpsaFM0UlJvN3lKbXlBV1VwZWU1VVJrY1lod1J6NDRkR1dxS3l3VnJEVWdneUlqaEZnbDVSOGloazZxbWlLc0FKR0tmbXlaVDNxY1lwTGhMaGx2U3VNQjdUZTY3ZlpJdGVsVklTVVBLYTVHejdqU1lBZE1vOTE3ZUdhR0VuSkk5azNqREVUcFN0RnR1STlSNWdvNVFkVjR4V25DTEIxUlhWM3JNSVY0UGhFZTNYd3dVUzdnWk1XSVNRWUFiKzAyemxaRVdRK1NycG9xM0pPNkpvZVV2ZEFoeUtFQkZGSmNiVHpPYUtuOUoyS0NOTGhNYVp6YlUrZjFQRWlnblM2T0dlTU9MTThSQ01SWk5hZWNDWnYraEJIaVNCNXVpa1gwUEZkYW9rZ2IzN09hWjg4TmVaZ25CQVN6SUFYTGxRQXFQQUV1V2NRNHovRmRYSzRFcTBEVExSMlVXTWZoemRYSlZVdVRRQW5lNTRnTVh0ZlF5RERYTXRaQUd0TWRsaDlOU29iRGpQTkJqRTNTeEpNWjVjMU1sQnhTQkNqZHhieDhWUmFOakQvRk5wWllaYll4bmVNUW9JMUhpTFJsUHpLTHJNOUlXcmJpRVVHVEQwbFMrY29uWXJaRTZQUFE1Y0hUTXJkVjNxdWJlcmVpZTBKdmtSNGtJTVRuMFNlNjl1aWtWbktGQVFBc3pWWHdSWmg2S0ZPNzlscDJidW9MWk8yQ0Q3eUFCb3BlZzNQMm5LeWlkWUNXYmJWWWdRNEF4RTQwM01Ibjhzc0tFNklCYllJR3c5MVRqelVBV3gzcytvYk9Wc0VId0hKcld6Q2ZOREpIVXF0T1NHV1phMHgycHVtWGV5SU1jRlBHdTBhZUFrSi9tQ1d6R1ZLdnE3emg1SytuOU5oUHNNV3dYZDhmaWNQSVVGUlZ0eG5XTXBud1FBekNYWitacUV0UWhuRkd6Nlp4TzJIT1VGY2R0V1BLZjFSTmpFbVhSdlJOMlVpWE1MVmZpZGxwK043SXNpUStOT0JQWDBSMlFXdU9HR21ha2EvUkhhQjZ4N2pHdmlwYkV4ZjdLMUt6b2hSN2lOZjhyRFlVaGsycCtRVCt2V0laK0FlK0NMUFBRb1h2bXQ5TDFJU0d6TTZpdVV4SGpoemhkb3R2Nk81U2NrSHV3WEhma08yQ0cySG1MekJvUElQM2ltTERqZThSNmhyZVJMcW5Vb1Z0a3d4Vy9kalF1MTd1YnU5eGZ1L0RqZ0ZyRmlnZUZtdm1CT3d0ZjM3L3dHTDNoVExzOG9lZ0FBQUFBQkpSVTVFcmtKZ2dnPT0iPjwvaW1hZ2U+PC9zdmc+PHN0eWxlPkBtZWRpYSAocHJlZmVycy1jb2xvci1zY2hlbWU6IGxpZ2h0KSB7IDpyb290IHsgZmlsdGVyOiBub25lOyB9IH0KQG1lZGlhIChwcmVmZXJzLWNvbG9yLXNjaGVtZTogZGFyaykgeyA6cm9vdCB7IGZpbHRlcjogbm9uZTsgfSB9Cjwvc3R5bGU+PC9zdmc+';
+
 // The browser page after signing in for the Mac app, in the login page's style: the wordmark top left,
 // the message in the middle, a quiet footer. It opens the app straight away.
 function appHandoffPage(link) {
   return `<!DOCTYPE html><html lang="en" style="color-scheme:dark"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>local / assets™ — Signed in</title><link rel="icon" href="/favicon/favicon.ico">
+<title>local / assets™ — Signed in</title><link rel="icon" type="image/svg+xml" href="${FAVICON}">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -202,6 +206,6 @@ h1 span{display:inline-block;white-space:nowrap;transition:color .3s,transform .
   <p class="note">Nothing happened? Press Open a™.</p>
 </main>
 <p class="foot">© 2026 local / assets™</p>
-<script>location.href=${JSON.stringify(link)};</script>
+<script>addEventListener('load',function(){setTimeout(function(){location.href=${JSON.stringify(link)};},150);});</script>
 </body></html>`;
 }
