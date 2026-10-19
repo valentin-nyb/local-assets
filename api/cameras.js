@@ -147,7 +147,8 @@ export default async function handler(req, res) {
           calendar.current = cur ? { artist: cur.artist, venue: cur.venue, start: cur.start, end: cur.end } : null;
           // A set stopped early with Stop set: finished, at the time it was stopped
           if (cur) { try { const fin = JSON.parse(await withRedis(r => r.get(`cam_set_end:${slug}`)) || 'null'); if (fin && fin.start === cur.start) calendar.current.endedAt = fin.endedAt; } catch {} }
-          calendar.upcoming = events.filter(e => e.start > now).slice(0, 6).map(e => ({ artist: e.artist, venue: e.venue, start: e.start, end: e.end }));
+          // Every set in the next two months (capped only so a runaway calendar can't flood the page)
+          calendar.upcoming = events.filter(e => e.start > now).slice(0, 200).map(e => ({ artist: e.artist, venue: e.venue, start: e.start, end: e.end }));
           // When the cameras that follow the calendar open and close
           const w = scheduleWindow(events, now);
           calendar.schedule = { open: w.open, closesAt: w.closesAt, opensAt: w.opensAt, nextArtist: w.next?.artist || null, currentArtist: w.current?.artist || null };
