@@ -533,6 +533,16 @@
         .ctl-seg { padding:3px; gap:3px; background:var(--la-chip); border-radius:12px; }
         .ctl-seg button { height:30px; border:0 !important; background:transparent !important; color:var(--la-sub) !important; border-radius:9px !important; }
         .ctl-seg button.on { background:var(--la-surface) !important; color:var(--la-text) !important; box-shadow:0 1px 3px rgba(0,0,0,.28); }
+        /* The example (no camera yet): each choice shows its first option chosen */
+        .ctl-full:has(.ctl-relay.ex) .ctl-seg:not(:has(button.on)) button:first-child { background:var(--la-surface) !important; color:var(--la-text) !important; box-shadow:0 1px 3px rgba(0,0,0,.28); }
+        /* Wide screens: the picture on the left, the controls beside it, all on one screen */
+        @media (min-width: 1100px) {
+            .ctl-full.ctl-inline { display:grid; grid-template-columns:minmax(0,1fr) 420px; column-gap:28px; align-items:start; }
+            .ctl-full.ctl-inline > .ctl-head { grid-column:1 / -1; }
+            .ctl-full.ctl-inline > .ctl-stage { grid-column:1; grid-row:2; width:min(100%, calc((100vh - 240px) * 16 / 9)); min-width:0; margin:0; }
+            .ctl-full.ctl-inline > .ctl-msg, .ctl-full.ctl-inline > .ctl-fine { grid-column:1; }
+            .ctl-full.ctl-inline > .ctl-grid { grid-column:2; grid-row:2 / span 3; margin-top:0; grid-template-columns:repeat(2, minmax(0,1fr)) !important; gap:22px 18px !important; }
+        }
         @media (max-width: 760px) { .ctl-grid { grid-template-columns:repeat(2, minmax(0,1fr)); } }
         @media (max-width: 420px) { .ctl-grid { grid-template-columns:minmax(0,1fr); } }
         .ctl-inline .ctl-head { margin-bottom:12px; }
