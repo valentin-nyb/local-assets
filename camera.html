@@ -2164,6 +2164,19 @@
 
         loadCameras();
         setInterval(loadCameras, 5000);
+        // Camera Control open and in view: the cameras stay live (closed a few minutes after it's left).
+        // Every account shown here (the admin view lists several) is told, once a minute.
+        if (!CAL_VIEW) {
+            var sayViewing = function() {
+                if (document.visibilityState !== 'visible') return;
+                var venues = {}; Object.keys(_camVenue).forEach(function(id) { if (_camVenue[id]) venues[_camVenue[id]] = 1; });
+                camApi({ action: 'viewing' }).catch(function() {});
+                Object.keys(venues).forEach(function(v) { camApi({ action: 'viewing', venue: v }).catch(function() {}); });
+            };
+            sayViewing();
+            setInterval(sayViewing, 60e3);
+            document.addEventListener('visibilitychange', sayViewing);
+        }
         // /camera?add=1 (from Upload Asset → + Add camera): straight to the Add camera form
         if (new URLSearchParams(location.search).get('add') === '1') { history.replaceState({}, '', '/camera'); setTimeout(function() { openCamForm(); }, 400); }
     </script>

@@ -7,8 +7,8 @@ import { listAllAssets } from './_verticals.js';
 import { inSession, openSession, closeSession, isManaged, managedKey } from './_cam-sessions.js';
 
 // Cameras and the venue calendar (Vercel cron, every minute).
-// Every camera's Mux live stream stays open, so Camera Control shows it live whenever it is connected.
-// Sessions are what is kept: a set in the calendar (from shortly before it to shortly after) or one made
+// A camera's Mux live stream is open while Camera Control is open somewhere (so it shows live; Mux bills
+// every minute a stream is open) and during sessions, and closed otherwise. Sessions are what is kept: a set in the calendar (from shortly before it to shortly after) or one made
 // with Create a session. When one starts or ends the broadcast is cut, so every session is its own
 // recording (api/_camera-recording.js saves it for the DJ, and deletes what was streamed outside sessions).
 
@@ -52,6 +52,8 @@ export default async function handler(req, res) {
         try { win = scheduleWindow(await fetchEvents(url, now - 24 * 3600e3, now + 24 * 3600e3), now); }
         catch (e) { console.error('[camera-schedule] calendar', slug, e.message); continue; }   // unreadable calendar: change nothing
       }
+      // Someone has Camera Control open (api/cameras.js "viewing", renewed every minute)
+      const viewing = !!(await redis.exists(`cam_view:${slug}`));
       for (const cam of cams) {
         if (!cam.streamId) continue;
         // A session: a set in the connected calendar (when the camera follows it), or one started with
@@ -62,11 +64,12 @@ export default async function handler(req, res) {
         const ended = follow && win.open && !manual && await redis.exists(`cam_ended:${cam.streamId}`);
         const session = !!(((follow && win.open) || manual) && !ended);
         try {
-          // Always open: live in Camera Control whenever the camera is connected
-          if (await redis.get(stateKey(cam.streamId)) !== 'enabled') {
-            await mux(auth, `/video/v1/live-streams/${encodeURIComponent(cam.streamId)}/enable`, 'PUT');
-            await redis.set(stateKey(cam.streamId), 'enabled');
-            changes.push(`${slug}/${cam.name}: live`);
+          // Open while someone watches in Camera Control, or for a session; closed otherwise
+          const want = session || viewing ? 'enabled' : 'disabled';
+          if (await redis.get(stateKey(cam.streamId)) !== want) {
+            await mux(auth, `/video/v1/live-streams/${encodeURIComponent(cam.streamId)}/${want === 'enabled' ? 'enable' : 'disable'}`, 'PUT');
+            await redis.set(stateKey(cam.streamId), want);
+            changes.push(`${slug}/${cam.name}: ${want === 'enabled' ? 'live' : 'closed'}`);
           }
           const was = await inSession(redis, cam.streamId);
           // A session already recording when cameras first ran this way: kept whole, from its start

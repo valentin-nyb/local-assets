@@ -38,6 +38,8 @@ async function ownIngestReady() {
 const SRT_HOST  = 'srt://global-live.mux.com:6001';
 
 const key = slug => `cameras:${slug}`;
+// How long a camera stays live after Camera Control was last open (the page says so every minute)
+const VIEW_TTL_SEC = 4 * 60;
 // Which venue a Mux live stream belongs to, so the Mux webhook can find the camera when a recording ends
 const STREAM_MAP = 'camera_streams';
 const clean = (v, max) => String(v ?? '').replace(/[\u0000-\u001f]/g, '').trim().slice(0, max);
@@ -256,6 +258,20 @@ export default async function handler(req, res) {
     }
 
     // "Preview now": opens a calendar camera's stream for 10 minutes between sets (api/camera-schedule.js keeps it open)
+    // Camera Control is open: the cameras go live while it is (api/camera-schedule.js closes them a few
+    // minutes after the last viewer leaves). Opened here straight away, so the picture comes in seconds.
+    if (body.action === 'viewing') {
+      return await withRedis(async redis => {
+        await redis.set(`cam_view:${slug}`, String(Date.now()), { EX: VIEW_TTL_SEC });
+        for (const cam of await readCameras(redis, slug)) {
+          if (!cam.streamId || await redis.get(`cam_sched:${cam.streamId}`) === 'enabled') continue;
+          await mux(session.muxAuth, `/video/v1/live-streams/${encodeURIComponent(cam.streamId)}/enable`, { method: 'PUT' }).catch(() => {});
+          await redis.set(`cam_sched:${cam.streamId}`, 'enabled');
+        }
+        return res.status(200).json({ ok: true });
+      });
+    }
+
     if (body.action === 'preview') {
       return await withRedis(async redis => {
         const cam = (await readCameras(redis, slug)).find(c => c.id === body.id);
