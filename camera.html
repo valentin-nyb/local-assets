@@ -1454,8 +1454,10 @@
                     if (conn.frame) return window.laApp.mac.link({ venue: venue, slotId: id, slotName: c.name, kind: 'camera', video: l.video, audio: l.audio, key: conn.streamKey, frame: conn.frame });
                 }).catch(function() {}).then(function() { renderMac.upgrading = false; });
             });
+            // Not while a list is open (the browser's, or the site's own menu): redrawing the row under it
+            // made the pick land on the old list, so it jumped back and needed a second click
             var a = document.activeElement;
-            if (a && a.tagName === 'SELECT' && sec.contains(a)) return;   // not while a list is open
+            if (a && a.tagName === 'SELECT' && sec.contains(a) || sec.querySelector('select.las-open')) return;
             sec.classList.remove('hidden');
             var d = st.devices, all = d.video.concat(d.audio);
             document.getElementById('mac-found').textContent = all.length ? 'Found on this Mac: ' + all.join(' · ') : 'Nothing plugged in yet. Connect a camera by USB, or the mixer\'s USB cable.';
@@ -1464,7 +1466,8 @@
             ms.textContent = sending ? sending + ' sending' : ''; ms.className = 'deck-state' + (sending ? ' on' : '');
             document.getElementById('mac-rows').innerHTML = slots.map(function(c) {
                 var l = _macBusy[c.id] ? { state: 'linking' } : st.links[c.id], deck = c.kind === 'audio';
-                var cur = st.links[c.id] || {};
+                // While linking, the devices just picked (not the old link)
+                var cur = _macBusy[c.id] || st.links[c.id] || {};
                 return '<div class="mac-row' + (deck ? ' deck' : '') + '" data-slot="' + esc(c.id) + '" data-kind="' + (deck ? 'audio' : 'camera') + '" data-name="' + esc(c.name) + '">' +
                     '<div class="mac-name">' + esc(c.name) + '<small>' + (deck ? 'Decks audio' : 'Camera') + '</small></div>' +
                     (deck
@@ -1590,7 +1593,7 @@
             if (e.target.blur) e.target.blur();
             try {
                 if (kind === 'audio' ? !audio : !video) { await window.laApp.mac.unlink(venue, id); return renderMac(); }
-                _macBusy[id] = true; renderMac();
+                _macBusy[id] = { video: video, audio: audio }; renderMac();
                 var conn = await camApi({ action: 'connection', id: id });
                 await window.laApp.mac.link({ venue: venue, slotId: id, slotName: row.dataset.name, kind: kind, video: video, audio: audio, key: conn.streamKey, frame: conn.frame });
             } catch (err) {
@@ -1854,7 +1857,8 @@
                 if (!inApp || !document.body.contains(form)) return;
                 window.laApp.mac.state(macVenue()).then(function(st) {
                     if (!st || !document.body.contains(form)) return;
-                    var keep = function(sel, list, none) { if (!sel) return; var v = sel.value; sel.innerHTML = macOptions(list, v, none); };
+                    // Not while that list is open, or the pick lands on the old options
+                    var keep = function(sel, list, none) { if (!sel || sel.classList.contains('las-open') || document.activeElement === sel) return; var v = sel.value; sel.innerHTML = macOptions(list, v, none); };
                     keep(form.macVideo, st.devices.video, st.devices.video.length ? 'Choose a camera' : 'No camera plugged in yet');
                     keep(form.macAudio, st.devices.audio, 'No sound');
                     keep(form.macMixer, st.devices.audio, 'Stream it another way');
