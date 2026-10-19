@@ -167,8 +167,31 @@ export const TYPE_PLAN = {
   'liveset-distribution': { venue: { sets: 16 }, label: { sets: 24, storedMinutes: 15000, deliveredMinutes: 40000, fileGB: 750 }, artist: { sets: 8, storedMinutes: 6000, deliveredMinutes: 15000, fileGB: 300 } },
   'liveset-creative': { venue: { sets: 0 }, label: { sets: 30, storedMinutes: 50000, deliveredMinutes: 200000, fileGB: 3000 }, artist: { sets: 12, storedMinutes: 20000, deliveredMinutes: 60000, fileGB: 1000 } },
 };
-// "≈ 33 hours of video kept" from stored minutes
-const keptLine = min => `Keeps ${Math.round(min / 60).toLocaleString('en-GB')} hours of video (extra storage charged monthly)`;
+const hours = min => Math.round(min / 60).toLocaleString('en-GB');
+// To join the Trial Month, by type (as charged at checkout, api/create-checkout.js)
+const TRIAL_FEE = { artist: 49, label: 149, management: 149, venue: 349 };
+// What each plan gives, in plain words, for this kind of account. Artists add a camera separately on Pro and
+// get one camera on Live-Set; venues, labels and managements get the cameras the plan comes with.
+function planFeatures(planId, type, t, included, name) {
+  const artist = type === 'artist', word = type === 'venue' ? 'events' : 'sets';
+  const sets = !t ? '' : t.sets === 0 ? `Unlimited ${word} every month` : `Up to ${t.sets} ${word} a month, each checked and stored safely`;
+  const space = `Room for about ${hours(included.storedMinutes || 0)} hours of full sets; more is charged by the month`;
+  const brand = 'Brand Kit: your logo, watermark and thumbnails on everything';
+  if (planId === 'dj-trial' || /venue\s*trial/i.test(String(name || ''))) return [
+    `£${TRIAL_FEE[type] || 49} to join, taken off your first month if you upgrade`,
+    'No monthly fee: you pay only for what you use, on the 1st',
+    '6 vertical clips from every set',
+    brand,
+    'Record with your phone, OBS or your own camera',
+  ];
+  if (planId === 'starter-distribution') return [sets, '6 vertical clips from every set', brand, space, 'Use your own camera, or add one of ours for £149 a month'];
+  if (planId === 'liveset-distribution') return [sets, '12 vertical clips from every set', brand, space,
+    artist ? 'Use your own camera, or add one of ours for £149 a month' : '1 PTZ camera included, set up for you (12-month minimum)'];
+  if (planId === 'liveset-creative') return [sets, 'Unlimited vertical clips from every set', 'Multi-camera auto-edit of the full set, in 4K with HQ audio', brand, space,
+    artist ? '1 PTZ camera, Starlink Mini and Mac mini, set up for you (a second camera £149 a month)' : '2 PTZ cameras, Starlink Mini and Mac mini, set up for you',
+    '12-month minimum; the kit goes back to us when the plan ends', 'Quarterly performance reports'];
+  return null;
+}
 export function priceForType(price, type, planId) {
   if (type === 'management') type = 'label';   // a management company is priced like a record label
   const set = planId && TYPE_PRICE[planId] && TYPE_PRICE[planId][type];
@@ -178,20 +201,15 @@ export function priceForType(price, type, planId) {
   return Math.round(price * f / 5) * 5;
 }
 export function planForType(plan, type) {
-  if (!(plan && plan.price > 0)) return plan;
+  if (!plan) return plan;
+  type = type || 'venue';
   const t = TYPE_PLAN[plan.id]?.[type === 'management' ? 'label' : type];
   const included = { ...(plan.included || {}) };
   for (const k of ['storedMinutes', 'deliveredMinutes', 'fileGB']) if (t && t[k] != null) included[k] = t[k];
-  // The plan's features, with its sets a month and the video it keeps for this kind of account
-  let features = plan.features;
-  if (t && Array.isArray(features)) {
-    const word = type === 'venue' ? 'events' : 'sets';
-    const sets = t.sets === 0 ? `Unlimited ${word} a month` : t.sets ? `Up to ${t.sets} ${word} a month` : '';
-    features = features.filter(f => !/events? processed|sets? (a|per) month|cloud storage|hours of video/i.test(f));
-    const at = Math.max(0, features.findIndex(f => /clips per session/i.test(f)));
-    features = [...features.slice(0, at), ...(sets ? [sets] : []), ...features.slice(at), keptLine(included.storedMinutes || 0)];
-  }
-  return { ...plan, price: priceForType(plan.price, type, plan.id), included, features, setsPerMonth: t ? t.sets : undefined };
+  const features = planFeatures(plan.id, type, t, included, plan.name) || plan.features;
+  const cameras = type === 'artist' ? ({ 'liveset-distribution': 0, 'liveset-creative': 1 }[plan.id] ?? plan.cameras) : plan.cameras;
+  if (!(plan.price > 0)) return { ...plan, features };
+  return { ...plan, price: priceForType(plan.price, type, plan.id), included, features, cameras, setsPerMonth: t ? t.sets : undefined };
 }
 export async function readPlansRaw(redis) {
   // The Trial Month is always offered, even when the saved plan list predates it
