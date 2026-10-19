@@ -265,7 +265,7 @@ export default async function handler(req, res) {
         usage: data.usage, ...priced, invoices, stripe: !!stripe, isAdmin, subscription, accountType: data.accountType, accountTypeLabel: TYPE_LABEL[data.accountType] || 'Account',
         // Plans a client can move to (name, price, what's included)
         // (pay-as-you-go plans are chosen at sign-up only; an account can move up to a monthly plan from them)
-        plansOffered: data.plans.filter(p => p.price > 0 || p.id === ((data.assignments.venue || {}).plan || '')).map(p => ({ signupFee: p.signupFee || 0, id: p.id, name: p.name, price: priceForType(p.price, data.accountType), maxClips: p.maxClips, cameras: p.cameras || 0, features: p.features || [], included: p.included })),
+        plansOffered: data.plans.filter(p => p.price > 0 || p.id === ((data.assignments.venue || {}).plan || '')).map(p => ({ signupFee: p.signupFee || 0, id: p.id, name: p.name, price: priceForType(p.price, data.accountType, p.id), maxClips: p.maxClips, cameras: p.cameras || 0, features: p.features || [], included: p.included })),
         currentPlan: (data.assignments.venue || {}).plan || '',
         ...(isAdmin ? { stripeAccount, venueSlug: slug, venues: billable.map(k => ({ slug: k, name: cfg[k]?.name || k })), rates: data.rates, plans: data.plans, assignments: data.assignments, artists: data.artists, labels: data.labels, bkVenues: data.bkVenues, assignment: a } : {}),
       });

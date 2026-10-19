@@ -139,12 +139,16 @@ function trialLikeStarter(list) {
 // Monthly plan prices by account type: venues pay the list price, record labels half, artists half of that
 // (a quarter, to the nearest £5). Applied at checkout, on plan changes, on the billing page and the pricing page.
 export const TYPE_FACTOR = { venue: 1, label: 0.5, artist: 0.25 };
-export function priceForType(price, type) {
+// Set prices that replace the rule for one plan and type (planId → type → £ a month)
+export const TYPE_PRICE = { 'starter-distribution': { artist: 379 } };
+export function priceForType(price, type, planId) {
+  const set = planId && TYPE_PRICE[planId] && TYPE_PRICE[planId][type];
+  if (set && price > 0) return set;
   const f = TYPE_FACTOR[type];
   if (!(price > 0) || !f || f === 1) return price;
   return Math.round(price * f / 5) * 5;
 }
-export function planForType(plan, type) { return plan && plan.price > 0 ? { ...plan, price: priceForType(plan.price, type) } : plan; }
+export function planForType(plan, type) { return plan && plan.price > 0 ? { ...plan, price: priceForType(plan.price, type, plan.id) } : plan; }
 export async function readPlansRaw(redis) {
   // The Trial Month is always offered, even when the saved plan list predates it
   const withPayg = list => [...DEFAULT_PLANS.filter(d => d.id === 'dj-trial' && !list.some(p => p.id === d.id)), ...list];

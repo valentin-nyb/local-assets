@@ -203,6 +203,17 @@
         .bk-tester-chars { color:var(--la-sub); line-height:1.5 !important; border-top:1px solid var(--la-line-soft); padding-top:12px; }
         .cam-dialog-panel.wide { width:620px; }
         .bk-preview.is-openable { cursor:zoom-in; }
+        .bk-lut canvas { width:100%; height:100%; object-fit:cover; display:block; }
+        .bk-lut .bk-lut-wait { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font:500 10px/1 'JetBrains Mono', monospace; letter-spacing:.16em; text-transform:uppercase; color:var(--la-dim); }
+        .bk-lut-cmp { position:relative; aspect-ratio:16/9; border-radius:10px; overflow:hidden; background:#000; touch-action:none; cursor:ew-resize; user-select:none; --cut:50%; }
+        .bk-lut-cmp canvas { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+        #bk-lut-after { clip-path:inset(0 0 0 var(--cut)); }
+        .bk-lut-line { position:absolute; top:0; bottom:0; left:var(--cut); width:2px; margin-left:-1px; background:#fff; box-shadow:0 0 0 1px rgba(0,0,0,.25); pointer-events:none; }
+        .bk-lut-line::after { content:""; position:absolute; top:50%; left:50%; width:30px; height:30px; margin:-15px 0 0 -15px; border-radius:50%; background:#fff; box-shadow:0 2px 10px rgba(0,0,0,.4); }
+        .bk-lut-lbl { position:absolute; top:12px; padding:5px 9px; border-radius:999px; background:rgba(0,0,0,.6); color:#fff; font:500 10px/1 'JetBrains Mono', monospace; letter-spacing:.16em; text-transform:uppercase; pointer-events:none; }
+        .bk-lut-lbl.l { left:12px; } .bk-lut-lbl.r { right:12px; }
+        .bk-lut-cmp .bk-lut-wait { position:absolute; inset:0; margin:0; display:flex; align-items:center; justify-content:center; color:#a1a1aa; font-size:13px; }
+        .bk-lut-range { width:100%; margin-top:14px; accent-color:var(--la-accent); }
         .bk-file-view { height:auto; min-height:220px; max-height:56vh; border-radius:12px; padding:20px; background-size:16px 16px; background-position:0 0, 0 8px, 8px -8px, -8px 0; }
         .bk-file-view img { max-width:100%; max-height:calc(56vh - 40px); }
         /* Photos and thumbnails open whole, any shape (a vertical thumbnail fits the window) */
@@ -916,7 +927,7 @@
                 if (!date) { var ms = Number(a.created_at) * 1000; if (isNaN(ms)) return; date = new Date(ms).toISOString().slice(0, 10); }
                 if (seen[artist + '|' + date]) return;
                 seen[artist + '|' + date] = true;
-                _sessions.push({ artist: artist, date: date });
+                _sessions.push({ artist: artist, date: date, pid: (a.playback_ids || [])[0] ? a.playback_ids[0].id : '', dur: Number(a.duration) || 0 });
             });
         }
         function fmtSessionDate(d) {
@@ -1199,6 +1210,7 @@
             wrap.querySelectorAll('[data-set-thumb]').forEach(function(b) { b.addEventListener('click', function() { openSetThumbnail(b.dataset.setThumb); }); });
             wrap.querySelectorAll('[data-use-wm]').forEach(function(b) { b.addEventListener('click', function() { useLogoAsWatermark(b.dataset.useWm); }); });
             wrap.querySelectorAll('[data-file-preview]').forEach(function(b) { b.addEventListener('click', function() { openFilePreview(b.dataset.filePreview); }); });
+            wrap.querySelectorAll('.bk-lut[data-lut]').forEach(function(pv) { paintLutCard(pv); pv.classList.add('is-openable'); pv.addEventListener('click', function(e) { if (e.target.closest('.bk-tag')) return; openFilePreview(pv.dataset.lut); }); });
             wrap.querySelectorAll('[data-move]').forEach(function(b) { b.addEventListener('click', function() { openMove(b.dataset.move); }); });
             wrap.querySelectorAll('[data-org]').forEach(function(b) { b.addEventListener('click', openOrgType); });
             wrap.querySelectorAll('[data-edit-owner]').forEach(function(b) { b.addEventListener('click', function() { openOwnerEdit(b.dataset.editOwner); }); });
@@ -1329,11 +1341,98 @@
             unfoldWm(); document.getElementById('bk-wm').scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
+        // ── Colour looks (.cube LUTs): applied in the browser to a frame of the latest session ──
+        var _luts = {}, _lutFrame = null;
+        function loadLut(url) {
+            if (!_luts[url]) _luts[url] = fetch(url).then(function(r) { if (!r.ok) throw new Error(r.status); return r.text(); }).then(function(t) {
+                var n = 0, dmin = [0, 0, 0], dmax = [1, 1, 1], vals = [];
+                t.split(/\r?\n/).forEach(function(line) {
+                    line = line.trim(); if (!line || line[0] === '#') return;
+                    var m;
+                    if ((m = /^LUT_3D_SIZE\s+(\d+)/i.exec(line))) { n = +m[1]; return; }
+                    if ((m = /^DOMAIN_MIN\s+(\S+)\s+(\S+)\s+(\S+)/i.exec(line))) { dmin = [+m[1], +m[2], +m[3]]; return; }
+                    if ((m = /^DOMAIN_MAX\s+(\S+)\s+(\S+)\s+(\S+)/i.exec(line))) { dmax = [+m[1], +m[2], +m[3]]; return; }
+                    if (/^[A-Za-z_]/.test(line)) return;
+                    var p = line.split(/\s+/); if (p.length >= 3) vals.push(+p[0], +p[1], +p[2]);
+                });
+                if (!n || vals.length < n * n * n * 3) throw new Error('Not a 3D LUT');
+                return { n: n, data: new Float32Array(vals), dmin: dmin, dmax: dmax };
+            });
+            return _luts[url];
+        }
+        // Each pixel through the LUT (trilinear, red changing fastest as in .cube files)
+        function applyLut(img, lut) {
+            var d = img.data, n = lut.n, L = lut.data, n1 = n - 1;
+            for (var i = 0; i < d.length; i += 4) {
+                var c = [0, 1, 2].map(function(k) { var v = (d[i + k] / 255 - lut.dmin[k]) / (lut.dmax[k] - lut.dmin[k]); return Math.min(n1, Math.max(0, v * n1)); });
+                var r0 = c[0] | 0, g0 = c[1] | 0, b0 = c[2] | 0, r1 = Math.min(n1, r0 + 1), g1 = Math.min(n1, g0 + 1), b1 = Math.min(n1, b0 + 1);
+                var fr = c[0] - r0, fg = c[1] - g0, fb = c[2] - b0;
+                for (var k = 0; k < 3; k++) {
+                    var at = function(r, g, b) { return L[((b * n + g) * n + r) * 3 + k]; };
+                    var v = (1 - fb) * ((1 - fg) * ((1 - fr) * at(r0, g0, b0) + fr * at(r1, g0, b0)) + fg * ((1 - fr) * at(r0, g1, b0) + fr * at(r1, g1, b0)))
+                          + fb * ((1 - fg) * ((1 - fr) * at(r0, g0, b1) + fr * at(r1, g0, b1)) + fg * ((1 - fr) * at(r0, g1, b1) + fr * at(r1, g1, b1)));
+                    d[i + k] = Math.max(0, Math.min(255, Math.round(v * 255)));
+                }
+            }
+            return img;
+        }
+        // A frame of the newest session (the middle of the set); a neutral test picture when there is none
+        function lutFrame() {
+            if (_lutFrame) return _lutFrame;
+            var s = _sessions.filter(function(x) { return x.pid; })[0];
+            _lutFrame = new Promise(function(res) {
+                var im = new Image(); im.crossOrigin = 'anonymous';
+                im.onload = function() { res(im); };
+                im.onerror = function() { res(null); };
+                im.src = s ? 'https://image.mux.com/' + s.pid + '/thumbnail.jpg?width=1280&time=' + Math.round((s.dur || 120) * 0.45) : '/img/af/session.jpg';
+            });
+            return _lutFrame;
+        }
+        function drawFrame(im, maxW) {
+            var c = document.createElement('canvas'), w = Math.min(maxW, im.naturalWidth), h = Math.round(w * im.naturalHeight / im.naturalWidth);
+            c.width = w; c.height = h; c.getContext('2d').drawImage(im, 0, 0, w, h); return c;
+        }
+        function paintLutCard(pv) {
+            Promise.all([lutFrame(), loadLut(pv.dataset.lut)]).then(function(r) {
+                var im = r[0], lut = r[1], cv = pv.querySelector('canvas'), w = pv.querySelector('.bk-lut-wait');
+                if (!im) { if (w) w.textContent = 'No session to preview yet'; return; }
+                var src = drawFrame(im, 480), g = src.getContext('2d');
+                g.putImageData(applyLut(g.getImageData(0, 0, src.width, src.height), lut), 0, 0);
+                cv.width = src.width; cv.height = src.height; cv.getContext('2d').drawImage(src, 0, 0);
+                if (w) w.remove();
+            }).catch(function() { var w = pv.querySelector('.bk-lut-wait'); if (w) w.textContent = 'This look could not be read'; });
+        }
+        // Before / after: drag the line (or the slider) to compare the frame with and without the look
+        function openLutPreview(f) {
+            openCamDialog(f.name,
+                '<div class="bk-lut-cmp" id="bk-lut-cmp"><canvas id="bk-lut-before"></canvas><canvas id="bk-lut-after"></canvas><span class="bk-lut-line" id="bk-lut-line"></span>' +
+                '<span class="bk-lut-lbl l">Before</span><span class="bk-lut-lbl r">After</span><p class="bk-lut-wait" id="bk-lut-wait">Applying look…</p></div>' +
+                '<input type="range" class="bk-lut-range" id="bk-lut-range" min="0" max="100" value="50" aria-label="Compare before and after">' +
+                '<p class="bk-meta" style="margin-top:10px">Applied to every vertical clip made from now on (your newest look). ' + fmtSize(f.size) + ' · ' + fmtDate(f.uploadedAt) + '</p>');
+            document.querySelector('#cam-dialog .cam-dialog-panel').classList.add('wide');
+            Promise.all([lutFrame(), loadLut(f.url)]).then(function(r) {
+                var im = r[0], lut = r[1];
+                if (!im) { document.getElementById('bk-lut-wait').textContent = 'No session to preview yet'; return; }
+                var before = drawFrame(im, 1280), after = drawFrame(im, 1280), g = after.getContext('2d');
+                g.putImageData(applyLut(g.getImageData(0, 0, after.width, after.height), lut), 0, 0);
+                [['bk-lut-before', before], ['bk-lut-after', after]].forEach(function(p) { var c = document.getElementById(p[0]); c.width = p[1].width; c.height = p[1].height; c.getContext('2d').drawImage(p[1], 0, 0); });
+                document.getElementById('bk-lut-wait').remove();
+                var box = document.getElementById('bk-lut-cmp'), range = document.getElementById('bk-lut-range');
+                var set = function(pct) { pct = Math.max(0, Math.min(100, pct)); box.style.setProperty('--cut', pct + '%'); range.value = pct; };
+                set(50);
+                range.addEventListener('input', function() { set(+range.value); });
+                var drag = function(e) { var rc = box.getBoundingClientRect(); set((e.clientX - rc.left) / rc.width * 100); };
+                box.addEventListener('pointerdown', function(e) { box.setPointerCapture(e.pointerId); drag(e); box.addEventListener('pointermove', drag); });
+                box.addEventListener('pointerup', function() { box.removeEventListener('pointermove', drag); });
+            }).catch(function() { var w = document.getElementById('bk-lut-wait'); if (w) w.textContent = 'This look could not be read'; });
+        }
+
         // A file opened from its card: preview, download, and its local-assets.com share link
         function openFilePreview(url) {
             var f = _files.filter(function(x) { return x.url === url; })[0];
             if (!f) return;
             var link = f.link || f.url;
+            if (/\.cube$/i.test(f.name)) return openLutPreview(f);
             var view = IMG_EXT.test(f.name)
                 ? '<div class="bk-preview bk-file-view' + (f.category === 'logos' ? '' : ' photo') + '"><img src="' + esc(f.url) + '" alt="" crossorigin="anonymous" onload="fitPreviewBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}"></div>'
                 : /pdf$/i.test(f.name)
@@ -1437,6 +1536,8 @@
                     '' +
                     (thumbFile(f) ? '<button type="button" class="bk-use-wm" data-set-thumb="' + esc(f.url) + '" title="Use this image as a session thumbnail, with your watermark">Set as thumbnail</button>' : '') +
                     (wmLogoFile(f) ? '<button type="button" class="bk-use-wm' + (wmUsesLogo(f) ? ' is-on' : '') + '" data-use-wm="' + esc(f.url) + '" title="Stamp this logo bottom left on every vertical clip">' + (wmUsesLogo(f) ? 'Watermark' : 'Use as watermark') + '</button>' : '') + '</div>'
+                : /\.cube$/i.test(f.name)
+                ? '<div class="bk-preview photo bk-lut" data-lut="' + esc(f.url) + '">' + tag + '<canvas class="bk-lut-c"></canvas><span class="bk-lut-wait">Applying look…</span></div>'
                 : FONT_EXT.test(f.name)
                 ? '<div class="bk-preview bk-font" data-font="' + esc(f.url) + '">' + tag +
                     '<div class="bk-font-sample"><span class="aa">Aa</span><span class="line">ABC abc 123</span></div></div>'
