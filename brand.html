@@ -185,7 +185,8 @@
         .bk-preview.photo img { max-width:100%; max-height:100%; width:100%; height:100%; object-fit:cover; }
         button.bk-tag { cursor:pointer; z-index:1; }
         .bk-post-count { position:absolute; top:8px; right:8px; z-index:1; font:500 10px 'JetBrains Mono',monospace; color:#fff; background:rgba(0,0,0,.6); border-radius:999px; padding:2px 8px; }
-        .bk-post-view { position:relative; }
+        .bk-post-view { position:relative; height:56vh; min-height:240px; border-radius:12px; background:var(--la-input); display:flex; align-items:center; justify-content:center; overflow:hidden; }
+        .bk-post-view > img { max-width:calc(100% - 24px); max-height:calc(100% - 24px); object-fit:contain; border-radius:6px; display:block; }
         .bk-post-nav { position:absolute; top:50%; transform:translateY(-50%); z-index:2; width:38px; height:38px; border-radius:50%; border:0; background:var(--la-accent); color:var(--la-accent-ink,#000); font:600 22px/1 system-ui,sans-serif; cursor:pointer; }
         .bk-post-nav.prev { left:10px; } .bk-post-nav.next { right:10px; }
         .bk-post-nav:disabled { opacity:.3; cursor:default; }
@@ -1585,40 +1586,63 @@
                     '<button type="button" class="del" data-del-post="' + esc(f.post) + '" data-owner="' + esc(f.owner) + '" title="Delete post"><iconify-icon icon="solar:trash-bin-minimalistic-linear"></iconify-icon></button>' +
                 '</div></div>';
         }
+        // Opened once; moving between images only swaps the picture (once it has loaded) and the details,
+        // in a box of fixed height, so nothing flashes or jumps
         function openPostPreview(owner, post, idx) {
             var imgs = postImages(owner, post);
             if (!imgs.length) { closeCamDialog(); return; }
             idx = Math.max(0, Math.min(imgs.length - 1, idx || 0));
-            var f = imgs[idx], link = f.link || f.url;
+            var many = imgs.length > 1;
             openCamDialog('Instagram post',
-                '<div class="bk-preview bk-file-view photo bk-post-view">' +
-                    '<img src="' + esc(f.url) + '" alt="" crossorigin="anonymous" onload="fitPreviewBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}">' +
-                    (imgs.length > 1 ? '<button type="button" class="bk-post-nav prev" id="bk-post-prev" aria-label="Previous image"' + (idx ? '' : ' disabled') + '>‹</button><button type="button" class="bk-post-nav next" id="bk-post-next" aria-label="Next image"' + (idx < imgs.length - 1 ? '' : ' disabled') + '>›</button>' : '') +
-                    '<span class="bk-post-count">' + (idx + 1) + ' / ' + imgs.length + '</span></div>' +
-                '<div class="bk-post-strip">' + imgs.map(function(x, i) { return '<button type="button" class="' + (i === idx ? 'on' : '') + '" data-post-i="' + i + '" aria-label="Image ' + (i + 1) + '"><img src="' + esc(x.url) + '" alt="" loading="lazy"></button>'; }).join('') + '</div>' +
-                '<p class="bk-meta" style="margin-top:10px">' + esc(f.name) + ' · ' + fmtSize(f.size) + ' · ' + fmtDate(f.uploadedAt) + '</p>' +
+                '<div class="bk-post-view"><img id="bk-post-img" alt="">' +
+                    (many ? '<button type="button" class="bk-post-nav prev" id="bk-post-prev" aria-label="Previous image">‹</button><button type="button" class="bk-post-nav next" id="bk-post-next" aria-label="Next image">›</button>' : '') +
+                    '<span class="bk-post-count" id="bk-post-count"></span></div>' +
+                (many ? '<div class="bk-post-strip">' + imgs.map(function(x, i) { return '<button type="button" data-post-i="' + i + '" aria-label="Image ' + (i + 1) + '"><img src="' + esc(x.url) + '" alt=""></button>'; }).join('') + '</div>' : '') +
+                '<p class="bk-meta" id="bk-post-meta" style="margin-top:10px"></p>' +
                 '<label class="bk-share-label" for="bk-share-link">Share link</label>' +
-                '<div class="bk-share"><input id="bk-share-link" readonly value="' + esc(link) + '"><button type="button" class="cam-btn ghost" id="bk-share-copy">Copy link</button></div>' +
+                '<div class="bk-share"><input id="bk-share-link" readonly><button type="button" class="cam-btn ghost" id="bk-share-copy">Copy link</button></div>' +
                 '<input id="bk-post-input" type="file" multiple accept=".png,.jpg,.jpeg,.webp" class="hidden">' +
                 '<p id="bk-post-msg" class="bk-meta"></p>' +
                 '<div class="cam-form-actions" style="margin-top:16px">' +
-                    '<button type="button" class="cam-btn ghost" id="bk-post-remove">' + (imgs.length > 1 ? 'Remove this image' : 'Delete post') + '</button>' +
+                    '<button type="button" class="cam-btn ghost" id="bk-post-remove">' + (many ? 'Remove this image' : 'Delete post') + '</button>' +
                     '<button type="button" class="cam-btn ghost" id="bk-post-add">Add images</button>' +
-                    (thumbFile(f) ? '<button type="button" class="cam-btn ghost" id="bk-file-thumb">Set as thumbnail</button>' : '') +
-                    '<a class="cam-btn primary" href="' + esc(f.link ? f.link + '?download' : f.downloadUrl) + '">Download</a></div>');
+                    '<button type="button" class="cam-btn ghost" id="bk-file-thumb">Set as thumbnail</button>' +
+                    '<a class="cam-btn primary" id="bk-post-dl">Download</a></div>');
             document.querySelector('#cam-dialog .cam-dialog-panel').classList.add('wide');
-            var go = function(i) { openPostPreview(owner, post, i); };
+            var pic = document.getElementById('bk-post-img'), want = 0;
+            // The next and previous pictures load in the background, so a step shows straight away
+            imgs.forEach(function(x) { var p = new Image(); p.src = x.url; });
+            function show(i) {
+                idx = Math.max(0, Math.min(imgs.length - 1, i));
+                var f = imgs[idx], link = f.link || f.url, n = ++want;
+                var pre = new Image();
+                pre.onload = pre.onerror = function() { if (n === want) pic.src = f.url; };
+                pre.src = f.url;
+                document.getElementById('bk-post-count').textContent = (idx + 1) + ' / ' + imgs.length;
+                document.getElementById('bk-post-meta').textContent = f.name + ' · ' + fmtSize(f.size) + ' · ' + fmtDate(f.uploadedAt);
+                document.getElementById('bk-share-link').value = link;
+                document.getElementById('bk-post-dl').href = f.link ? f.link + '?download' : f.downloadUrl;
+                document.getElementById('bk-file-thumb').classList.toggle('hidden', !thumbFile(f));
+                var prev = document.getElementById('bk-post-prev'), next = document.getElementById('bk-post-next');
+                if (prev) prev.disabled = idx === 0;
+                if (next) next.disabled = idx === imgs.length - 1;
+                document.querySelectorAll('[data-post-i]').forEach(function(b) { b.classList.toggle('on', +b.dataset.postI === idx); });
+                var on = document.querySelector('[data-post-i].on'); if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+            }
             var prev = document.getElementById('bk-post-prev'), next = document.getElementById('bk-post-next');
-            if (prev) prev.addEventListener('click', function() { go(idx - 1); });
-            if (next) next.addEventListener('click', function() { go(idx + 1); });
-            document.querySelectorAll('[data-post-i]').forEach(function(b) { b.addEventListener('click', function() { go(+b.dataset.postI); }); });
-            var keys = function(e) { if (document.getElementById('cam-dialog').classList.contains('hidden') || !document.getElementById('bk-post-add')) { document.removeEventListener('keydown', keys); return; } if (e.key === 'ArrowLeft' && idx > 0) { document.removeEventListener('keydown', keys); go(idx - 1); } if (e.key === 'ArrowRight' && idx < imgs.length - 1) { document.removeEventListener('keydown', keys); go(idx + 1); } };
+            if (prev) prev.addEventListener('click', function() { show(idx - 1); });
+            if (next) next.addEventListener('click', function() { show(idx + 1); });
+            document.querySelectorAll('[data-post-i]').forEach(function(b) { b.addEventListener('click', function() { show(+b.dataset.postI); }); });
+            var keys = function(e) {
+                if (document.getElementById('cam-dialog').classList.contains('hidden') || !document.getElementById('bk-post-img')) { document.removeEventListener('keydown', keys); return; }
+                if (e.key === 'ArrowLeft') show(idx - 1);
+                if (e.key === 'ArrowRight') show(idx + 1);
+            };
             document.addEventListener('keydown', keys);
-            var setThumb = document.getElementById('bk-file-thumb');
-            if (setThumb) setThumb.addEventListener('click', function() { openSetThumbnail(f.url); });
+            document.getElementById('bk-file-thumb').addEventListener('click', function() { openSetThumbnail(imgs[idx].url); });
             var input = document.getElementById('bk-share-link'), copy = document.getElementById('bk-share-copy');
             input.addEventListener('focus', function() { input.select(); });
-            copy.addEventListener('click', function() { navigator.clipboard.writeText(link).then(function() { copy.textContent = 'Copied'; setTimeout(function() { copy.textContent = 'Copy link'; }, 1500); }).catch(function() { input.select(); }); });
+            copy.addEventListener('click', function() { navigator.clipboard.writeText(input.value).then(function() { copy.textContent = 'Copied'; setTimeout(function() { copy.textContent = 'Copy link'; }, 1500); }).catch(function() { input.select(); }); });
             var pick = document.getElementById('bk-post-input'), msg = document.getElementById('bk-post-msg');
             document.getElementById('bk-post-add').addEventListener('click', function() { pick.click(); });
             pick.addEventListener('change', async function() {
@@ -1631,7 +1655,7 @@
                 if (failed) document.getElementById('bk-post-msg').textContent = failed + ' image' + (failed === 1 ? '' : 's') + ' could not be added';
             });
             document.getElementById('bk-post-remove').addEventListener('click', async function() {
-                var b = this;
+                var b = this, f = imgs[idx];
                 if (imgs.length === 1) { removePost(owner, post, b); return; }
                 if (!(await laConfirm({ title: 'Remove this image?', message: 'It is deleted from the post, and its link stops working. The other images stay.', confirmText: 'Remove', danger: true }))) return;
                 b.disabled = true;
@@ -1641,7 +1665,9 @@
                     await loadBrand(); openPostPreview(owner, post, Math.min(idx, imgs.length - 2));
                 } catch (e) { b.disabled = false; msg.textContent = 'Could not remove it: ' + e.message; }
             });
+            show(idx);
         }
+
         // Uploads images into one post; returns how many failed
         async function uploadToPost(owner, post, list, progress) {
             var slug = session().venueSlug, failed = 0;
