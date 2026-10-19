@@ -396,8 +396,15 @@ export default async function handler(req, res) {
         const cams = await readCameras(redis, slug);
         const cam = cams.find(c => c.id === body.id);
         if (!cam) return res.status(404).json({ error: 'Camera not found' });
-        await mux(session.muxAuth, `/video/v1/live-streams/${encodeURIComponent(cam.streamId)}`, { method: 'DELETE' })
-          .catch(e => { if (!/404/.test(e.message)) throw e; });
+        // A stream that's live can't be deleted: end it first (the camera is disconnected), then delete
+        const sid = encodeURIComponent(cam.streamId);
+        await mux(session.muxAuth, `/video/v1/live-streams/${sid}/disable`, { method: 'PUT' }).catch(() => {});
+        await mux(session.muxAuth, `/video/v1/live-streams/${sid}/complete`, { method: 'PUT' }).catch(() => {});
+        let gone = false;
+        for (let i = 0; i < 6 && !gone; i++) {
+          gone = await mux(session.muxAuth, `/video/v1/live-streams/${sid}`, { method: 'DELETE' }).then(() => true)
+            .catch(e => { if (/404/.test(e.message)) return true; if (!/active/i.test(e.message) || i === 5) throw e; return new Promise(r => setTimeout(() => r(false), 1500)); });
+        }
         await redis.set(key(slug), JSON.stringify(cams.filter(c => c.id !== cam.id)));
         await redis.hDel(STREAM_MAP, cam.streamId);
         return res.status(200).json({ ok: true });

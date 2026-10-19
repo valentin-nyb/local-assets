@@ -657,10 +657,13 @@
                 if (d && d.orgType) { window._heroOrgType = d.orgType; if (typeof renderHero === 'function') renderHero(); }
                 // A venue's own logo (Brand Kit) in place of its name at the top of the page
                 if (d && d.orgType === 'venue') {
+                    // The logo chosen as the profile picture (Brand Kit) first, then the account's own logos
+                    var prof = d.ownerPhotos && d.ownerPhotos.venue;
                     var lgs = (d.files || []).filter(function(f) { return f.owner === 'venue' && f.category === 'logos' && /\.(png|svg|webp)(\?|$)/i.test(f.name || f.url || ''); });
                     // A PNG first: phones (Safari) can't always read an SVG logo's pixels
                     var lg = lgs.filter(function(f) { return !/\.svg(\?|$)/i.test(f.name || f.url || ''); })[0] || lgs[0];
-                    if (lg) showVenueLogo(lg.url);
+                    var pick = prof && /\.(png|svg|webp|jpe?g)(\?|$)/i.test(prof) ? prof : lg && lg.url;
+                    if (pick) showVenueLogo(pick);
                 }
                 if (d && d.orgType === 'artist' && _brandPhotos.venue) {
                     var own = 'artist-' + brandSlug(d.orgName || getVenueName());
