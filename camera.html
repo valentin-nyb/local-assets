@@ -514,6 +514,20 @@
         .ctl-seg button { flex:1; height:32px; padding:0 4px; font-size:10px; }
         .ctl-seg[data-seg="framing"] { flex-wrap:wrap; } .ctl-seg[data-seg="framing"] button { flex:1 1 calc(33% - 4px); }
         .ctl-fine { margin:16px 0 0; font-size:11px; color:var(--la-dim); }
+        /* The camera's picture fits the screen with its controls under it (smaller on short screens) */
+        .ctl-full .ctl-stage { width:min(100%, calc((100vh - 470px) * 16 / 9)); min-width:min(100%, 420px); margin-inline:auto; }
+        /* Controls in the site's style: sentence case, soft outlines; on/off choices as a segmented control */
+        .ctl-grid button { font:500 13px/1 'Helvetica Neue', Helvetica, Arial, sans-serif !important; letter-spacing:0 !important; text-transform:none !important; background:var(--la-surface) !important; color:var(--la-text); border:1px solid color-mix(in srgb, var(--la-text) 14%, transparent) !important; border-radius:10px !important; transition:background .15s, border-color .15s, color .15s; }
+        @media (hover:hover) { .ctl-grid button:hover { border-color:color-mix(in srgb, var(--la-text) 38%, transparent) !important; } }
+        .ctl-grid button:active, .ctl-grid button.on, .ctl-grid button.flash { background:var(--la-text) !important; color:var(--la-bg) !important; border-color:var(--la-text) !important; }
+        .ctl-pad button { font-size:17px !important; }
+        .ctl-pad button.home { font-size:11px !important; letter-spacing:.06em !important; }
+        .ctl-zoom button { font-size:20px !important; }
+        .ctl-presets button.saved, .ctl-grid .ctl-save.on { background:var(--la-accent) !important; color:var(--la-accent-ink) !important; border-color:var(--la-accent) !important; }
+        .ctl-grid .ctl-save { height:26px; padding:0 10px; font-size:12px !important; border-radius:999px !important; }
+        .ctl-seg { padding:3px; gap:3px; background:var(--la-chip); border-radius:12px; }
+        .ctl-seg button { height:30px; border:0 !important; background:transparent !important; color:var(--la-sub) !important; border-radius:9px !important; }
+        .ctl-seg button.on { background:var(--la-surface) !important; color:var(--la-text) !important; box-shadow:0 1px 3px rgba(0,0,0,.28); }
         @media (max-width: 760px) { .ctl-grid { grid-template-columns:repeat(2, minmax(0,1fr)); } }
         @media (max-width: 420px) { .ctl-grid { grid-template-columns:minmax(0,1fr); } }
         .ctl-inline .ctl-head { margin-bottom:12px; }
