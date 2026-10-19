@@ -187,7 +187,7 @@
         <div class="flex-1 overflow-y-auto la-page la-page-scroll">
             <div class="dash-head">
                 <h2 id="venue-tier" class="dash-h">ADMIN</h2>
-                <script>(function(){ try { var a = JSON.parse(localStorage.getItem('la_admin') || '{}'); if (a.venueSlug === 'local-assets-admin' || /^local\s*[\/-]?\s*assets\b/i.test(String(a.venue || '').trim()) || a.role !== 'client') { document.getElementById('venue-tier').classList.add('is-la'); return; } var k = 'la_venue_logo4:' + (a.venueSlug || ''), v = JSON.parse(localStorage.getItem(k) || 'null'); if (a.role === 'client' && a.venueSlug !== 'local-assets-admin' && !/^local\s*[\/-]?\s*assets\b/i.test(String(a.venue || '').trim()) && v && (v.mask || v.img)) { var h = document.getElementById('venue-tier'); h.classList.add('has-logo', 'logo-early'); if (v.img) h.classList.add('logo-img'); h.style.setProperty('--logo', 'url("' + (v.img ? v.url : v.mask) + '")'); h.style.setProperty('--logo-w', Math.round(Math.min(200, Math.max(28, 28 * v.ar))) + 'px'); } } catch (_) {} })();</script>
+                <script>(function(){ try { var a = JSON.parse(localStorage.getItem('la_admin') || '{}'); if (a.venueSlug === 'local-assets-admin' || /^local\s*[\/-]?\s*assets\b/i.test(String(a.venue || '').trim())) { document.getElementById('venue-tier').classList.add('is-la'); return; } var k = 'la_venue_logo4:' + (a.venueSlug || ''), v = JSON.parse(localStorage.getItem(k) || 'null'); if (v && (v.mask || v.img)) { var h = document.getElementById('venue-tier'); h.classList.add('has-logo', 'logo-early'); if (v.img) h.classList.add('logo-img'); h.style.setProperty('--logo', 'url("' + (v.img ? v.url : v.mask) + '")'); h.style.setProperty('--logo-w', Math.round(Math.min(200, Math.max(28, 28 * v.ar))) + 'px'); } } catch (_) {} })();</script>
                 <p class="dash-sub" id="venue-tier-sub">Your sessions, files and channels.</p>
             </div>
             <a id="live-feed-hero" href="/camera.html" class="block cursor-pointer hover:border-primary/50 transition-all duration-500 w-full bg-[#050505] border border-[#27272a] rounded-2xl p-5 md:p-8 relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-4 md:gap-6 shadow-2xl no-underline" style="background:#050505!important">
@@ -2247,7 +2247,7 @@
         // venue so the next page shows it straight away, without the name appearing first.
         function venueLogoKey() { try { return 'la_venue_logo4:' + (JSON.parse(localStorage.getItem('la_admin') || '{}').venueSlug || ''); } catch (_) { return 'la_venue_logo4:'; } }
         // Only a client account shows its venue's logo (the admin account keeps its name)
-        function isClientAcct() { try { var a = JSON.parse(localStorage.getItem('la_admin') || '{}'); return a.role === 'client' && a.venueSlug !== 'local-assets-admin' && !/^local\s*[\/-]?\s*assets\b/i.test(String(a.venue || '').trim()); } catch (_) { return false; } }
+        function isClientAcct() { return !_adminView; }
         function applyVenueLogo(v) {
             var h = document.getElementById('venue-tier');
             if (!h || !v || !(v.mask || v.img) || !isClientAcct() || /^admin$/i.test(h.textContent.trim())) return;
@@ -3065,13 +3065,14 @@
             var tier       = document.getElementById('venue-tier');
             var avatar     = document.getElementById('venue-avatar');
 
-            if (role === 'client') {
+            // Any account other than the local / assets admin account is a client's own (whatever its role says)
+            if (role === 'client' || !_adminView) {
                 if (breadcrumb) breadcrumb.textContent = venue || 'CLIENT';
                 if (tier)       tier.textContent       = String(venue || 'Your account').toUpperCase();
                 if (avatar)     avatar.textContent     = (venue || 'C')[0];
             } else {
                 if (breadcrumb) breadcrumb.textContent = 'ADMIN';
-                if (tier)       { tier.classList.remove('has-logo', 'logo-early'); tier.textContent = 'ADMIN'; var ts = document.getElementById('venue-tier-sub'); if (ts) ts.textContent = 'Every client's sets filmed, clipped and posted, in one place.'; }
+                if (tier)       { tier.classList.remove('has-logo', 'logo-early'); tier.textContent = 'ADMIN'; var ts = document.getElementById('venue-tier-sub'); if (ts) ts.textContent = 'Every client\u2019s sets filmed, clipped and posted, in one place.'; }
                 if (avatar) {
                     var initial = (sess.email || 'A')[0].toUpperCase();
                     avatar.textContent = initial;
