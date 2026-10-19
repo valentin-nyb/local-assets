@@ -618,6 +618,7 @@
         .tr-offer-price { display:flex; align-items:baseline; gap:8px; }
         .tr-offer-price b { font-size:38px; font-weight:800; letter-spacing:-.02em; color:#fff; line-height:1; }
         .tr-offer-price span { font-size:13px; color:#71717a; }
+        .tr-offer-credit { margin:-4px 0 0; font-size:12px; line-height:1.4; color:#a1a1aa; max-width:220px; }
         .tr-offer .tr-btn { margin-top:0 !important; }
         @media (max-width:1000px) { .tr-offer { grid-template-columns:minmax(0,1fr); max-width:520px; gap:18px; padding:24px; } .tr-offer-feats { grid-template-columns:minmax(0,1fr); } }
         .tr-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; align-items:stretch; }
@@ -668,7 +669,8 @@
             </div>
             <ul class="tr-offer-feats"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>6 vertical clips per session</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Brand Kit, your logo on every clip</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Camera Control: phone, OBS or your own camera</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Then pay as you go, charged on the 1st</span></li></ul>
             <div class="tr-offer-buy">
-                <div class="tr-offer-price"><b>£55</b><span>to join</span></div>
+                <div class="tr-offer-price"><b>£49</b><span>to join</span></div>
+                <p class="tr-offer-credit">Comes off your first month if you upgrade within 30 days</p>
                 <button type="button" onclick="selectTier('dj-trial')" class="tr-btn tr-btn-main">Start the trial</button>
             </div>
         </div>
@@ -901,14 +903,14 @@
             'starter-distribution': { group: 'Monthly plan', name: 'Starter', price: '£2,750', feats: ['Camera available as an add-on', '6 vertical clips per session', 'Brand Kit, thumbnails and watermark', 'Up to 8 sets a month', '167 hours of sets stored', 'Your recordings kept safe in your vault'] },
             'liveset-distribution': { group: 'Monthly plan', name: 'Pro', price: '£3,500', feats: ['1 OBSBOT 4K camera', '12 vertical clips per session', 'Brand Kit, thumbnails and watermark', 'Up to 8 sets a month', '333 hours of sets stored'] },
             'starter-creative': { group: 'Creative & Production', name: 'Starter', price: '£5,500', feats: ['1 OBSBOT 4K camera + Starlink Mini', 'Recording runs on your calendar', '12 vertical clips per session', 'Brand Kit, thumbnails and watermark', '833 hours of sets stored'] },
-            'dj-trial': { group: 'Special offer · limited time', name: 'Trial Month', price: '£55', per: 'to join', type: 'artist', only: 'artist', payg: true, go: 'Continue to payment', feats: ['6 vertical clips per session', 'Brand Kit and Camera Control', 'Then pay as you go, charged on the 1st'] },
+            'dj-trial': { group: 'Special offer · limited time', name: 'Trial Month', price: '£49', per: 'to join', type: 'artist', only: 'artist', payg: true, go: 'Continue to payment', feats: ['6 vertical clips per session', 'Brand Kit and Camera Control', 'Then pay as you go, charged on the 1st'] },
             'liveset-creative': { group: 'Monthly plan', name: 'Live-Set', price: '£7,500', feats: ['2 OBSBOT 4K cameras + Starlink Mini + Mac mini', 'Multi-camera auto-edit', 'Unlimited vertical clips per session', 'Brand Kit, thumbnails and watermark', '1,667 hours of sets stored'] }
         };
         var TIER_NAMES = { 'starter-distribution': 'Starter', 'liveset-distribution': 'Pro', 'starter-creative': 'Creative & Production · Starter', 'liveset-creative': 'Live-Set' };
         // The trial is for a venue, an artist or a label: picked in its title, and the sign-up is for that type
         var TRIAL_TYPES = { venue: ['Venue', 'For venues trying it with their own phone or camera.'], artist: ['Artist', 'For DJs trying it with their own phone or camera.'], label: ['Label', 'For record labels trying it with their own phone or camera.'] };
-        // To join the Trial Month: £55 for an artist, £150 for a record label, £350 for a venue (as charged at checkout)
-        var TRIAL_FEES = { artist: 55, label: 150, venue: 350 };
+        // To join the Trial Month: £49 for an artist, £149 for a record label, £349 for a venue (as charged at checkout)
+        var TRIAL_FEES = { artist: 49, label: 149, venue: 349 };
         function trialType() {
             var t = (document.getElementById('tr-offer-type') || {}).value || 'artist';
             var f = document.getElementById('tr-offer-for'); if (f) f.textContent = TRIAL_TYPES[t][1];

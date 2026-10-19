@@ -31,9 +31,9 @@ export async function readRates(redis) {
 
 // Plans: a monthly price with usage included; usage above it is billed as overage
 export const DEFAULT_PLANS = [
-  { id: 'dj-trial', name: 'Trial Month', price: 0, signupFee: 55, maxClips: 6, cameras: 0,
+  { id: 'dj-trial', name: 'Trial Month', price: 0, signupFee: 49, maxClips: 6, cameras: 0,
     included: { storedMinutes: 0, deliveredMinutes: 0, fileGB: 0 },
-    features: ['£55 to join, then pay as you go', '6 vertical social clips per session', 'Brand Kit and watermark', 'Camera Control: phone, OBS or your own camera', 'Distribution History', 'Usage charged to your card on the 1st'] },
+    features: ['From £49 to join (comes off your first month), then pay as you go', '6 vertical social clips per session', 'Brand Kit and watermark', 'Camera Control: phone, OBS or your own camera', 'Distribution History', 'Usage charged to your card on the 1st'] },
   { id: 'starter-distribution', name: 'Starter', price: 2750, maxClips: 6, cameras: 0,
     included: { storedMinutes: 10000, deliveredMinutes: 25000, fileGB: 1000 },
     features: ['Camera available as an add-on', 'Content intake & quality control', 'Up to 8 events processed / month', '6 vertical clips per session', 'Brand Kit, thumbnails & watermark', '1 TB cloud storage'] },

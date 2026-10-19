@@ -62,7 +62,7 @@ export default async function handler(req, res) {
     try {
       await redis.connect();
       const prev = JSON.parse(await redis.hGet(`billing_assign:${slug}`, 'venue') || '{}');
-      await redis.hSet(`billing_assign:${slug}`, 'venue', JSON.stringify({ ...prev, plan: cs.metadata.tier, email: prev.email || cs.customer_details?.email || '', monthly: true, subscription: true, subscriptionId: cs.subscription }));
+      await redis.hSet(`billing_assign:${slug}`, 'venue', JSON.stringify({ ...prev, plan: cs.metadata.tier, email: prev.email || cs.customer_details?.email || '', monthly: true, subscription: true, subscriptionId: cs.subscription, ...(cs.metadata.trialCredit === '1' ? { trialCredited: true } : {}) }));
       if (cs.customer) await redis.set(`billing_customer:${slug}`, cs.customer);
       console.log('[Stripe Webhook] plan started', slug, cs.metadata.tier);
     } catch (e) { console.error('[Stripe Webhook] upgrade', e.message); }
@@ -258,7 +258,9 @@ async function createClientAccount(session, stripe) {
       await redis.set(`brand_org_type:${slug}`, type);
       await redis.set(`brand_org_name:${slug}`, name);
       // Usage is invoiced on the 1st (charged to the saved card); a monthly plan itself is the Stripe subscription
-      await redis.hSet(`billing_assign:${slug}`, 'venue', JSON.stringify({ plan: m.tier || '', email, name, monthly: true, subscription: session.mode === 'subscription', subscriptionId: session.subscription || '', autoCharge: !!card, details }));
+      // The Trial Month's join fee (before VAT) comes off the first monthly plan within 30 days: kept with the account
+      const trial = m.tier === 'dj-trial' ? { trialFee: Math.round(Number(session.amount_subtotal || 0)) / 100, trialAt: Date.now() } : {};
+      await redis.hSet(`billing_assign:${slug}`, 'venue', JSON.stringify({ plan: m.tier || '', email, name, monthly: true, subscription: session.mode === 'subscription', subscriptionId: session.subscription || '', autoCharge: !!card, details, ...trial }));
       if (session.customer) await redis.set(`billing_customer:${slug}`, session.customer);
       storage = await activateFromPool(redis, slug).catch(e => { console.error('[Stripe Webhook] ready storage', e.message); return null; });
       left = await poolSize(redis).catch(() => 0);

@@ -319,12 +319,17 @@ export default async function handler(req, res) {
           }
         }
         const customer = await redis.get(`billing_customer:${slug}`);
+        // Moving on from the Trial Month within 30 days: its join fee comes off the first month (once)
+        const credit = a.trialFee > 0 && a.trialAt && Date.now() - a.trialAt <= 30 * 86400e3 && !a.trialCredited
+          ? await stripe.coupons.create({ amount_off: Math.round(a.trialFee * 100), currency: 'gbp', duration: 'once', max_redemptions: 1, name: 'Trial Month credit' }).catch(e => { console.error('[billing] trial credit', e.message); return null; })
+          : null;
         const checkout = await stripe.checkout.sessions.create({
+          ...(credit ? { discounts: [{ coupon: credit.id }] } : {}),
           mode: 'subscription',
           ...(customer ? { customer } : { customer_email: session.email }),
           line_items: [{ quantity: 1, price_data: { ...price, product_data: { name: `local / assets · ${plan.name}` } } }],
           success_url: 'https://local-assets.com/billing?plan=updated', cancel_url: 'https://local-assets.com/billing',
-          metadata: { kind: 'upgrade', venueSlug: slug, tier: plan.id },
+          metadata: { kind: 'upgrade', venueSlug: slug, tier: plan.id, ...(credit ? { trialCredit: '1' } : {}) },
           subscription_data: { metadata: { kind: 'upgrade', venueSlug: slug, tier: plan.id } },
         });
         return { status: 200, url: checkout.url };
