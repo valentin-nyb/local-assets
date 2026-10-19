@@ -327,8 +327,8 @@
                     <div class="bl-section-head"><h3>Invoices</h3><div class="bl-inv-tools"><select id="bl-inv-filter" class="bl-inv-filter hidden" aria-label="Show invoices for"></select><button type="button" class="cam-btn ghost hidden" id="bl-inv-zip">Download all</button></div></div>
                     <div class="bl-scroll" id="bl-invoices"><p class="bl-empty">Loading…</p></div>
                 </section>
-                <section class="bl-section hidden" id="bl-plans-box">
-                    <div class="bl-section-head"><h3>Plans</h3><span class="bl-msg">Monthly price and the usage each plan includes</span></div>
+                <section class="bl-section hidden bl-fold folded" id="bl-plans-box">
+                    <div class="bl-section-head bl-fold-head" role="button" tabindex="0" aria-expanded="false" onclick="var s=this.parentNode;s.classList.toggle('folded');this.setAttribute('aria-expanded',!s.classList.contains('folded'))" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><h3>Plans <svg class="bl-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h3><span class="bl-msg">Monthly price and the usage each plan includes</span></div>
                     <table class="bl-table" id="bl-plans"></table>
                     <div class="bl-admin-actions" style="padding-top:16px">
                         <button type="button" class="cam-btn ghost" id="bl-add-plan">Add plan</button>
