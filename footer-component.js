@@ -62,10 +62,6 @@
           <span style="font-size:8px;color:#27272a;text-transform:uppercase;letter-spacing:.2em;">
             © 2026 Local Assets · All Rights Reserved
           </span>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span class="la-footer-dot"></span>
-            <span style="font-size:8px;color:#3f3f46;text-transform:uppercase;letter-spacing:.2em;">System Operational</span>
-          </div>
         </div>
 
       </div>

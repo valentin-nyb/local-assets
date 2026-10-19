@@ -710,10 +710,6 @@
             <div class="font-mono text-[9px] text-zinc-500 uppercase tracking-widest">
                 LOCAL / ASSETS v2.4.0 <span class="text-primary/50 mx-2">//</span> Connected
             </div>
-            <div class="flex items-center gap-2">
-                <div class="w-1.5 h-1.5 bg-primary rounded-full animate-pulse shadow-[0_0_8px_#39FF14]"></div>
-                <span class="font-mono text-[9px] text-zinc-500 uppercase tracking-widest">System Operational</span>
-            </div>
         </div>
     </main>
 
@@ -745,7 +741,7 @@
                 if (!tiers()) window.addEventListener('DOMContentLoaded', tiers);
                 d.plans.forEach(function(p) {
                     if (p.id === 'dj-trial') {
-                        document.querySelectorAll('.tr-offer-price b').forEach(function(b) { b.textContent = money(p.signupFee); });
+                        // The join price depends on who it's for (TRIAL_FEES): shown by trialType()
                         document.querySelectorAll('.tr-offer-feats span').forEach(function(sp) { sp.textContent = sp.textContent.replace(/^(\d+|Unlimited) vertical clips/, p.maxClips ? p.maxClips + ' vertical clips' : 'Unlimited vertical clips'); });
                         return;
                     }
@@ -907,9 +903,12 @@
         var TIER_NAMES = { 'starter-distribution': 'Starter', 'liveset-distribution': 'Pro', 'starter-creative': 'Creative & Production · Starter', 'liveset-creative': 'Live-Set' };
         // The trial is for a venue, an artist or a label: picked in its title, and the sign-up is for that type
         var TRIAL_TYPES = { venue: ['Venue', 'For venues trying it with their own phone or camera.'], artist: ['Artist', 'For DJs and live acts trying it with their own phone or camera.'], label: ['Label', 'For record labels trying it with their own phone or camera.'] };
+        // To join the Trial Month: £55 for an artist, £150 for a record label, £350 for a venue (as charged at checkout)
+        var TRIAL_FEES = { artist: 55, label: 150, venue: 350 };
         function trialType() {
             var t = (document.getElementById('tr-offer-type') || {}).value || 'artist';
             var f = document.getElementById('tr-offer-for'); if (f) f.textContent = TRIAL_TYPES[t][1];
+            document.querySelectorAll('.tr-offer-price b').forEach(function(b) { b.textContent = '£' + TRIAL_FEES[t]; });
             return t;
         }
         // The trial's own dropdown (Venue, Artist or Label), in the site's style rather than the browser's menu
@@ -937,7 +936,7 @@
         function selectTier(tierId) {
             var esc = function(v) { return String(v).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
             var T = SIGNUP_TIERS[tierId] || { group: '', name: TIER_NAMES[tierId] || tierId, price: '', feats: [] };
-            if (tierId === 'dj-trial') { var tt = trialType(); T = Object.assign({}, T, { type: tt, only: tt, name: TRIAL_TYPES[tt][0] + ' Trial Month' }); }
+            if (tierId === 'dj-trial') { var tt = trialType(); T = Object.assign({}, T, { type: tt, only: tt, name: TRIAL_TYPES[tt][0] + ' Trial Month', price: '£' + TRIAL_FEES[tt] }); }
             var ICON = {
                 venue: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V9l8-5 8 5v12"/><path d="M9 21v-6h6v6"/></svg>',
                 label: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.5"/><path d="M12 6.5a5.5 5.5 0 0 0-5.5 5.5"/></svg>',

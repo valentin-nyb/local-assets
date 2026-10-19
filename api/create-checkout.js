@@ -31,7 +31,9 @@ export default async function handler(req, res) {
   // The old stand-alone pay-as-you-go plan (now a toggle on every plan) can't be signed up for
   if (!plan || plan.id === 'payg') return res.status(400).json({ error: 'Unknown plan' });
   // The Trial Month is for a venue, an artist or a label, and is named for the one signing up
-  if (plan.id === 'dj-trial') plan = { ...plan, name: ({ venue: 'Venue', artist: 'Artist', label: 'Label' }[accountType] || 'Artist') + ' Trial Month' };
+  // ...and its join price is the one for that type: £55 artist, £150 record label, £350 venue
+  const TRIAL_FEES = { artist: 55, label: 150, venue: 350 };
+  if (plan.id === 'dj-trial') plan = { ...plan, name: ({ venue: 'Venue', artist: 'Artist', label: 'Label' }[accountType] || 'Artist') + ' Trial Month', signupFee: TRIAL_FEES[accountType] || TRIAL_FEES.artist };
   const fee = Number(plan.signupFee) > 0 ? Number(plan.signupFee) : 0;
 
   try {
