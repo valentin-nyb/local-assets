@@ -32,7 +32,7 @@
     <link rel="manifest" href="favicon/site.webmanifest">
 
     <link rel="stylesheet" href="styles/tailwind.css">
-    <link rel="stylesheet" href="styles/theme.css?v=25">
+    <link rel="stylesheet" href="styles/theme.css?v=27">
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
@@ -2125,6 +2125,8 @@
 
         loadCameras();
         setInterval(loadCameras, 5000);
+        // /camera?add=1 (from Upload Asset → + Add camera): straight to the Add camera form
+        if (new URLSearchParams(location.search).get('add') === '1') { history.replaceState({}, '', '/camera'); setTimeout(function() { openCamForm(); }, 400); }
     </script>
     <script>
         if ('serviceWorker' in navigator) {
