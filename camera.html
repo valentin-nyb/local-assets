@@ -1151,15 +1151,20 @@
             stage.innerHTML = camBars('LIVE · Connecting…');
             var mp = document.createElement('mux-player');
             mp.setAttribute('stream-type', 'live'); mp.setAttribute('playback-id', pid);
-            mp.setAttribute('muted', ''); mp.setAttribute('autoplay', 'muted'); mp.setAttribute('accent-color', '#39FF14');
+            mp.setAttribute('muted', ''); mp.setAttribute('autoplay', 'muted'); mp.setAttribute('playsinline', ''); mp.setAttribute('accent-color', '#39FF14');
             mp.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;opacity:0;transition:opacity .4s ease;--media-object-fit:' + fit + ';' + extra;
             var show = function() { mp.style.opacity = '1'; var b = stage.querySelector('.cam-bars'); if (b) setTimeout(function() { b.remove(); }, 450); };
             mp.addEventListener('playing', show);
-            // Stay at the live edge: if playback falls more than a few seconds behind, jump ahead
+            // Stay near the live edge: if playback falls well behind, jump ahead. An iPhone plays live video with
+            // Safari's own player, which always holds several seconds back; jumping at 4 s restarted it every
+            // 3 s so the picture never came. So: only once playing, only when far behind, at most every 20 s.
+            var lastJump = 0;
             var edge = setInterval(function() {
                 if (!mp.isConnected) { clearInterval(edge); return; }
-                try { var sk = mp.seekable; if (sk && sk.length && !mp.paused) { var end = sk.end(sk.length - 1); if (end - mp.currentTime > 4) mp.currentTime = end - 1.5; } } catch (_) {}
-            }, 3000);
+                try { var sk = mp.seekable; if (sk && sk.length && !mp.paused && mp.currentTime > 0 && Date.now() - lastJump > 20000) { var end = sk.end(sk.length - 1); if (end - mp.currentTime > 25) { lastJump = Date.now(); mp.currentTime = end - 8; } } } catch (_) {}
+            }, 5000);
+            // Autoplay blocked (Low Power Mode on a phone): show the player after a while so a tap can start it
+            setTimeout(function() { if (mp.isConnected && mp.style.opacity !== '1') { mp.style.opacity = '1'; mp.style.removeProperty('--controls'); } }, 8000);
             mp.addEventListener('timeupdate', function t() { if (mp.currentTime > 0) { show(); mp.removeEventListener('timeupdate', t); } });
             stage.appendChild(mp);
         }
