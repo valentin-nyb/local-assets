@@ -1203,7 +1203,8 @@
             } else if (isLive) {
                 livePlayer(stage, c.playbackId, 'cover', '');
             } else {
-                stage.innerHTML = c.status === 'missing' ? '<div class="cam-off"><span>This camera\'s stream was deleted from Cloud Storage</span></div>' : camBars('Connecting…');
+                // A missing stream: just the colour bars (the badge already says Stream missing)
+                stage.innerHTML = c.status === 'missing' ? '<div class="cam-bars"></div>' : camBars('Connecting…');
                 if (c.status !== 'missing') webFrames(stage, c.id);
             }
             card.querySelectorAll('[data-act]').forEach(function(b) {
