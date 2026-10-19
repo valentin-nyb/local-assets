@@ -158,7 +158,9 @@ export function findVenuesByEmail(email) {
 // otherwise the first venue it is listed in. Null if it is listed in none.
 export function findVenueByEmail(email, preferredSlug) {
   const venues = findVenuesByEmail(email);
-  const venue = venues.find(v => v.slug === preferredSlug) || venues[0] || null;
+  // A platform admin opens on the local / assets admin account unless another account was chosen
+  const adminHome = platformAdmins().includes(String(email).toLowerCase().trim()) ? venues.find(v => isAdminVenue(v)) : null;
+  const venue = venues.find(v => v.slug === preferredSlug) || adminHome || venues[0] || null;
   if (venue) console.log('[_venues] findVenueByEmail:', email, '→', venue.slug, venues.length > 1 ? `(1 of ${venues.length})` : '');
   else console.error('[_venues] findVenueByEmail: no match for', email, '| venue slugs:', Object.keys(getVenuesConfig()));
   return venue;
