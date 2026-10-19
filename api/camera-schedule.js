@@ -53,18 +53,18 @@ export default async function handler(req, res) {
       }
       for (const cam of cams) {
         if (!cam.streamId) continue;
-        // Open unless this camera follows a connected calendar and no set is on
+        // A camera only records during a session: a set in the connected calendar (when it follows the calendar),
+        // or one started with Record now. Connected with no session on, it stays closed (nothing is recorded).
         const follow = cam.followCalendar !== false && !!win;
-        // "Preview now" keeps a calendar camera open for 10 minutes between sets
-        const preview = follow && !win.open && await redis.exists(`cam_preview:${cam.streamId}`);
+        // "Preview now" opens it for 10 minutes between sessions
+        const preview = !(follow && win.open) && await redis.exists(`cam_preview:${cam.streamId}`);
         // "Record now" in Camera Control keeps it open until Stop
-        const manual = follow && await redis.exists(`cam_manual:${cam.streamId}`);
+        const manual = await redis.exists(`cam_manual:${cam.streamId}`);
         // "Stop set": the set finished early, so the camera stays closed until the set's time is over
         const ended = follow && win.open && !manual && await redis.exists(`cam_ended:${cam.streamId}`);
-        const want = (!follow || win.open || preview || manual) && !ended ? 'enabled' : 'disabled';
+        const want = ((follow && win.open) || preview || manual) && !ended ? 'enabled' : 'disabled';
         const have = await redis.get(stateKey(cam.streamId));
         if (have === want) continue;
-        if (!have && want === 'enabled') { await redis.set(stateKey(cam.streamId), want); continue; }   // streams start open
         try {
           await mux(auth, `/video/v1/live-streams/${encodeURIComponent(cam.streamId)}/${want === 'enabled' ? 'enable' : 'disable'}`, 'PUT');
           await redis.set(stateKey(cam.streamId), want);

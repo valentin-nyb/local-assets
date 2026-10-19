@@ -202,6 +202,9 @@ export default async function handler(req, res) {
           followCalendar: body.followCalendar !== false,
           createdAt: Date.now(),
         };
+        // Closed until a session: connecting the camera records nothing until a set or Record now
+        await mux(session.muxAuth, `/video/v1/live-streams/${encodeURIComponent(stream.id)}/disable`, { method: 'PUT' }).catch(() => {});
+        await redis.set(`cam_sched:${stream.id}`, 'disabled');
         cams.push(cam);
         await redis.set(key(slug), JSON.stringify(cams));
         await redis.hSet(STREAM_MAP, cam.streamId, slug);
@@ -369,7 +372,8 @@ export default async function handler(req, res) {
           await redis.del(`cam_preview:${cam.streamId}`);
           await mux(session.muxAuth, `/video/v1/live-streams/${encodeURIComponent(cam.streamId)}/complete`, { method: 'PUT' }).catch(() => {});
           if (endSet && cam.followCalendar !== false) await redis.set(`cam_ended:${cam.streamId}`, '1', { PX: closesAt - Date.now() + 60e3 });
-          if (cam.followCalendar !== false && calUrl && !open) {
+          // Closed again after Stop, unless a calendar set it follows is still on
+          if (!(cam.followCalendar !== false && calUrl && open)) {
             await mux(session.muxAuth, `/video/v1/live-streams/${encodeURIComponent(cam.streamId)}/disable`, { method: 'PUT' }).catch(() => {});
             await redis.set(`cam_sched:${cam.streamId}`, 'disabled');
           }
