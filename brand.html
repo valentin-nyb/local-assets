@@ -184,6 +184,15 @@
         .bk-file-actions .is-on { color:var(--la-accent) !important; }
         .bk-preview.photo img { max-width:100%; max-height:100%; width:100%; height:100%; object-fit:cover; }
         button.bk-tag { cursor:pointer; z-index:1; }
+        .bk-post-count { position:absolute; top:8px; right:8px; z-index:1; font:500 10px 'JetBrains Mono',monospace; color:#fff; background:rgba(0,0,0,.6); border-radius:999px; padding:2px 8px; }
+        .bk-post-view { position:relative; }
+        .bk-post-nav { position:absolute; top:50%; transform:translateY(-50%); z-index:2; width:38px; height:38px; border-radius:50%; border:0; background:var(--la-accent); color:var(--la-accent-ink,#000); font:600 22px/1 system-ui,sans-serif; cursor:pointer; }
+        .bk-post-nav.prev { left:10px; } .bk-post-nav.next { right:10px; }
+        .bk-post-nav:disabled { opacity:.3; cursor:default; }
+        .bk-post-strip { display:flex; gap:8px; margin-top:10px; overflow-x:auto; }
+        .bk-post-strip button { flex:0 0 auto; width:56px; height:56px; padding:0; border-radius:8px; overflow:hidden; border:2px solid transparent; background:var(--la-input); cursor:pointer; }
+        .bk-post-strip button.on { border-color:var(--la-accent); }
+        .bk-post-strip img { width:100%; height:100%; object-fit:cover; display:block; }
         .bk-tag-caret { font-size:10px !important; opacity:.7; margin-left:1px; }
         @media (hover:hover) { button.bk-tag:hover { color:var(--la-text); border-color:var(--la-sub); } }
         .bk-cat-opt b { display:flex; align-items:center; gap:8px; }
@@ -472,6 +481,8 @@
             { key: 'logos',      label: 'Logos',      icon: 'solar:star-shine-linear', tag: 'Logo' },
             { key: 'covers',     label: 'Album covers', icon: 'solar:vinyl-record-linear', tag: 'Album cover' },
             { key: 'artwork',    label: 'Artwork',    icon: 'solar:gallery-wide-linear', tag: 'Artwork' },
+            // Several images kept together as one post (a carousel)
+            { key: 'posts',      label: 'Instagram posts', icon: 'solar:gallery-linear', tag: 'Instagram post' },
             { key: 'photos',     label: 'Photos',     icon: 'solar:camera-linear', tag: 'Photo' },
             { key: 'guidelines', label: 'Guidelines', icon: 'solar:document-text-linear', tag: 'Guidelines' },
             { key: 'fonts',      label: 'Fonts',      icon: 'solar:text-field-linear', tag: 'Font' },
@@ -1155,7 +1166,14 @@
                     // One grid, ordered logos → guidelines → fonts → other, each card tagged
                     var ordered = [];
                     CATS.forEach(function(c) { files.forEach(function(f) { if (f.category === c.key) ordered.push(f); }); });
-                    body = '<div class="bk-files">' + ordered.map(fileCard).join('') + '</div>';
+                    // An Instagram post's images make one card
+                    var seenPost = {};
+                    body = '<div class="bk-files">' + ordered.map(function(f) {
+                        if (!f.post) return fileCard(f);
+                        if (seenPost[f.post]) return '';
+                        seenPost[f.post] = 1;
+                        return postCard(postImages(f.owner, f.post));
+                    }).join('') + '</div>';
                 }
                 var open = bkIsOpen(o);
                 return heading + '<section class="bk-owner' + (o.parent ? ' bk-sub' : '') + (open ? '' : ' is-closed') + '" data-owner="' + esc(o.key) + '">' +
@@ -1202,7 +1220,7 @@
             });
             // Clicking a card's preview opens it, like the eye button
             wrap.querySelectorAll('.bk-file').forEach(function(card) {
-                var pv = card.querySelector('.bk-preview'), open = card.querySelector('[data-file-preview],[data-font-preview]');
+                var pv = card.querySelector('.bk-preview'), open = card.querySelector('[data-file-preview],[data-font-preview],[data-post-preview]');
                 if (!pv || !open) return;
                 pv.classList.add('is-openable');
                 pv.addEventListener('click', function(e) { if (!e.target.closest('button')) open.click(); });
@@ -1210,6 +1228,8 @@
             wrap.querySelectorAll('[data-set-thumb]').forEach(function(b) { b.addEventListener('click', function() { openSetThumbnail(b.dataset.setThumb); }); });
             wrap.querySelectorAll('[data-use-wm]').forEach(function(b) { b.addEventListener('click', function() { useLogoAsWatermark(b.dataset.useWm); }); });
             wrap.querySelectorAll('[data-file-preview]').forEach(function(b) { b.addEventListener('click', function() { openFilePreview(b.dataset.filePreview); }); });
+            wrap.querySelectorAll('[data-post-preview]').forEach(function(b) { b.addEventListener('click', function() { openPostPreview(b.dataset.owner, b.dataset.postPreview, 0); }); });
+            wrap.querySelectorAll('[data-del-post]').forEach(function(b) { b.addEventListener('click', function() { removePost(b.dataset.owner, b.dataset.delPost, b); }); });
             wrap.querySelectorAll('.bk-lut[data-lut]').forEach(function(pv) { paintLutCard(pv); pv.classList.add('is-openable'); pv.addEventListener('click', function(e) { if (e.target.closest('.bk-tag,[data-use-lut]')) return; openFilePreview(pv.dataset.lut); }); });
             // Use as LUT: one look for every vertical clip; pressing the one in use turns grading off
             wrap.querySelectorAll('[data-use-lut]').forEach(function(b) { b.addEventListener('click', function(e) { e.stopPropagation(); useLut(_lut === b.dataset.useLut ? '' : b.dataset.useLut); }); });
@@ -1444,6 +1464,7 @@
             var f = _files.filter(function(x) { return x.url === url; })[0];
             if (!f) return;
             var link = f.link || f.url;
+            if (f.post) return openPostPreview(f.owner, f.post, postImages(f.owner, f.post).indexOf(f));
             if (/\.cube$/i.test(f.name)) return openLutPreview(f);
             var view = IMG_EXT.test(f.name)
                 ? '<div class="bk-preview bk-file-view' + (f.category === 'logos' ? '' : ' photo') + '"><img src="' + esc(f.url) + '" alt="" crossorigin="anonymous" onload="fitPreviewBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}"></div>'
@@ -1456,6 +1477,7 @@
                 '<label class="bk-share-label" for="bk-share-link">Share link</label>' +
                 '<div class="bk-share"><input id="bk-share-link" readonly value="' + esc(link) + '"><button type="button" class="cam-btn ghost" id="bk-share-copy">Copy link</button></div>' +
                 '<div class="cam-form-actions" style="margin-top:16px">' +
+                    (/\.(png|jpe?g|webp)$/i.test(f.name) ? '<button type="button" class="cam-btn ghost" id="bk-file-post">Make Instagram post</button>' : '') +
                     (thumbFile(f) ? '<button type="button" class="cam-btn ghost" id="bk-file-thumb">Set as thumbnail</button>' : '') +
                     (wmLogoFile(f) ? '<button type="button" class="cam-btn ghost" id="bk-file-wm">' + (wmUsesLogo(f) ? 'Used as watermark' : 'Use as watermark') + '</button>' : '') +
                     '<a class="cam-btn primary" href="' + esc(f.link ? f.link + '?download' : f.downloadUrl) + '">Download</a></div>');
@@ -1463,6 +1485,16 @@
             if (useWm) useWm.addEventListener('click', function() { useLogoAsWatermark(f.url); });
             var setThumb = document.getElementById('bk-file-thumb');
             if (setThumb) setThumb.addEventListener('click', function() { openSetThumbnail(f.url); });
+            var makePost = document.getElementById('bk-file-post');
+            if (makePost) makePost.addEventListener('click', async function() {
+                makePost.disabled = true; makePost.textContent = 'Making post…';
+                try {
+                    var r = await laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'move', url: f.url, category: 'posts' }) });
+                    var d = await r.json(); if (!r.ok) throw new Error(d.error || r.status);
+                    await loadBrand();
+                    openPostPreview(f.owner, d.post, 0);
+                } catch (e) { makePost.disabled = false; makePost.textContent = 'Make Instagram post'; alert('Could not make the post: ' + e.message); }
+            });
             document.querySelector('#cam-dialog .cam-dialog-panel').classList.add('wide');
             var input = document.getElementById('bk-share-link'), copy = document.getElementById('bk-share-copy');
             input.addEventListener('focus', function() { input.select(); });
@@ -1534,6 +1566,109 @@
             }).catch(function() {
                 document.getElementById('bk-tester-status').textContent = 'This font file could not be previewed in the browser.';
             });
+        }
+
+        // ── Instagram posts: several images under one file, shown as one card and opened as a carousel ──
+        function postImages(owner, post) {
+            return _files.filter(function(x) { return x.owner === owner && x.post === post; })
+                .sort(function(a, b) { return new Date(a.uploadedAt) - new Date(b.uploadedAt); });
+        }
+        function postCard(imgs) {
+            var f = imgs[0], size = imgs.reduce(function(n, x) { return n + (x.size || 0); }, 0);
+            return '<div class="bk-file">' +
+                '<div class="bk-preview photo"><span class="bk-tag">Instagram post</span>' +
+                    '<img src="' + esc(f.url) + '" alt="" loading="lazy">' +
+                    (imgs.length > 1 ? '<span class="bk-post-count">1 / ' + imgs.length + '</span>' : '') + '</div>' +
+                '<div class="bk-info"><p class="bk-name">' + imgs.length + ' image' + (imgs.length === 1 ? '' : 's') + '</p><p class="bk-meta">' + fmtSize(size) + ' · ' + fmtDate(f.uploadedAt) + '</p></div>' +
+                '<div class="bk-file-actions">' +
+                    '<button type="button" data-post-preview="' + esc(f.post) + '" data-owner="' + esc(f.owner) + '" title="Open"><iconify-icon icon="solar:eye-linear"></iconify-icon></button>' +
+                    '<button type="button" class="del" data-del-post="' + esc(f.post) + '" data-owner="' + esc(f.owner) + '" title="Delete post"><iconify-icon icon="solar:trash-bin-minimalistic-linear"></iconify-icon></button>' +
+                '</div></div>';
+        }
+        function openPostPreview(owner, post, idx) {
+            var imgs = postImages(owner, post);
+            if (!imgs.length) { closeCamDialog(); return; }
+            idx = Math.max(0, Math.min(imgs.length - 1, idx || 0));
+            var f = imgs[idx], link = f.link || f.url;
+            openCamDialog('Instagram post',
+                '<div class="bk-preview bk-file-view photo bk-post-view">' +
+                    '<img src="' + esc(f.url) + '" alt="" crossorigin="anonymous" onload="fitPreviewBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}">' +
+                    (imgs.length > 1 ? '<button type="button" class="bk-post-nav prev" id="bk-post-prev" aria-label="Previous image"' + (idx ? '' : ' disabled') + '>‹</button><button type="button" class="bk-post-nav next" id="bk-post-next" aria-label="Next image"' + (idx < imgs.length - 1 ? '' : ' disabled') + '>›</button>' : '') +
+                    '<span class="bk-post-count">' + (idx + 1) + ' / ' + imgs.length + '</span></div>' +
+                '<div class="bk-post-strip">' + imgs.map(function(x, i) { return '<button type="button" class="' + (i === idx ? 'on' : '') + '" data-post-i="' + i + '" aria-label="Image ' + (i + 1) + '"><img src="' + esc(x.url) + '" alt="" loading="lazy"></button>'; }).join('') + '</div>' +
+                '<p class="bk-meta" style="margin-top:10px">' + esc(f.name) + ' · ' + fmtSize(f.size) + ' · ' + fmtDate(f.uploadedAt) + '</p>' +
+                '<label class="bk-share-label" for="bk-share-link">Share link</label>' +
+                '<div class="bk-share"><input id="bk-share-link" readonly value="' + esc(link) + '"><button type="button" class="cam-btn ghost" id="bk-share-copy">Copy link</button></div>' +
+                '<input id="bk-post-input" type="file" multiple accept=".png,.jpg,.jpeg,.webp" class="hidden">' +
+                '<p id="bk-post-msg" class="bk-meta"></p>' +
+                '<div class="cam-form-actions" style="margin-top:16px">' +
+                    '<button type="button" class="cam-btn ghost" id="bk-post-remove">' + (imgs.length > 1 ? 'Remove this image' : 'Delete post') + '</button>' +
+                    '<button type="button" class="cam-btn ghost" id="bk-post-add">Add images</button>' +
+                    (thumbFile(f) ? '<button type="button" class="cam-btn ghost" id="bk-file-thumb">Set as thumbnail</button>' : '') +
+                    '<a class="cam-btn primary" href="' + esc(f.link ? f.link + '?download' : f.downloadUrl) + '">Download</a></div>');
+            document.querySelector('#cam-dialog .cam-dialog-panel').classList.add('wide');
+            var go = function(i) { openPostPreview(owner, post, i); };
+            var prev = document.getElementById('bk-post-prev'), next = document.getElementById('bk-post-next');
+            if (prev) prev.addEventListener('click', function() { go(idx - 1); });
+            if (next) next.addEventListener('click', function() { go(idx + 1); });
+            document.querySelectorAll('[data-post-i]').forEach(function(b) { b.addEventListener('click', function() { go(+b.dataset.postI); }); });
+            var keys = function(e) { if (document.getElementById('cam-dialog').classList.contains('hidden') || !document.getElementById('bk-post-add')) { document.removeEventListener('keydown', keys); return; } if (e.key === 'ArrowLeft' && idx > 0) { document.removeEventListener('keydown', keys); go(idx - 1); } if (e.key === 'ArrowRight' && idx < imgs.length - 1) { document.removeEventListener('keydown', keys); go(idx + 1); } };
+            document.addEventListener('keydown', keys);
+            var setThumb = document.getElementById('bk-file-thumb');
+            if (setThumb) setThumb.addEventListener('click', function() { openSetThumbnail(f.url); });
+            var input = document.getElementById('bk-share-link'), copy = document.getElementById('bk-share-copy');
+            input.addEventListener('focus', function() { input.select(); });
+            copy.addEventListener('click', function() { navigator.clipboard.writeText(link).then(function() { copy.textContent = 'Copied'; setTimeout(function() { copy.textContent = 'Copy link'; }, 1500); }).catch(function() { input.select(); }); });
+            var pick = document.getElementById('bk-post-input'), msg = document.getElementById('bk-post-msg');
+            document.getElementById('bk-post-add').addEventListener('click', function() { pick.click(); });
+            pick.addEventListener('change', async function() {
+                var list = Array.prototype.slice.call(pick.files).filter(function(x) { return x.size > 0; });
+                if (!list.length) return;
+                var add = document.getElementById('bk-post-add'); add.disabled = true;
+                var failed = await uploadToPost(owner, post, list, function(i, n) { msg.textContent = 'Uploading ' + (i + 1) + ' of ' + n + '…'; });
+                await loadBrand();
+                openPostPreview(owner, post, postImages(owner, post).length - 1);
+                if (failed) document.getElementById('bk-post-msg').textContent = failed + ' image' + (failed === 1 ? '' : 's') + ' could not be added';
+            });
+            document.getElementById('bk-post-remove').addEventListener('click', async function() {
+                var b = this;
+                if (imgs.length === 1) { removePost(owner, post, b); return; }
+                if (!(await laConfirm({ title: 'Remove this image?', message: 'It is deleted from the post, and its link stops working. The other images stay.', confirmText: 'Remove', danger: true }))) return;
+                b.disabled = true;
+                try {
+                    var r = await laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete', url: f.url }) });
+                    if (!r.ok) throw new Error((await r.json()).error || r.status);
+                    await loadBrand(); openPostPreview(owner, post, Math.min(idx, imgs.length - 2));
+                } catch (e) { b.disabled = false; msg.textContent = 'Could not remove it: ' + e.message; }
+            });
+        }
+        // Uploads images into one post; returns how many failed
+        async function uploadToPost(owner, post, list, progress) {
+            var slug = session().venueSlug, failed = 0;
+            _uploading = true;
+            for (var i = 0; i < list.length; i++) {
+                var f = list[i];
+                if (progress) progress(i, list.length);
+                var safe = f.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^-+/, '').slice(-120) || 'image.jpg';
+                try {
+                    await window.blobUpload('brand/' + slug + '/' + owner + '/posts/' + post + '/' + safe, f, { access: 'public', handleUploadUrl: '/api/brand', headers: { Authorization: 'Bearer ' + session().webToken }, multipart: f.size > 50 * 1024 * 1024 });
+                } catch (e) { failed++; }
+            }
+            _uploading = false;
+            return failed;
+        }
+        function newPostId() { return Math.random().toString(36).slice(2, 8) + Date.now().toString(36); }
+        async function removePost(owner, post, btn) {
+            var imgs = postImages(owner, post);
+            if (!(await laConfirm({ title: 'Delete this Instagram post?', message: 'All ' + imgs.length + ' image' + (imgs.length === 1 ? '' : 's') + ' are removed from the brand kit, and their links stop working. This can\'t be undone.', confirmText: 'Delete permanently', danger: true }))) return;
+            btn.disabled = true;
+            try {
+                for (var i = 0; i < imgs.length; i++) {
+                    var r = await laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete', url: imgs[i].url }) });
+                    if (!r.ok) throw new Error((await r.json()).error || r.status);
+                }
+                closeCamDialog(); await loadBrand();
+            } catch (e) { btn.disabled = false; alert('Could not delete the post: ' + e.message); }
         }
 
         function fileCard(f) {
@@ -1649,11 +1784,13 @@
                 var btn = form.querySelector('[type=submit]'); btn.disabled = true; btn.textContent = 'Uploading…';
                 _uploading = true;
                 var failed = 0;
+                // Instagram post: everything picked becomes one post
+                var postId = form.category.value === 'posts' ? newPostId() : '';
                 for (var i = 0; i < picked.length; i++) {
                     var f = picked[i], row = document.getElementById('bkq-' + i);
                     var safe = f.name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^-+/, '').slice(-120) || 'file';
                     try {
-                        var up = await window.blobUpload('brand/' + slug + '/' + owner + '/' + form.category.value + '/' + safe, f, {
+                        var up = await window.blobUpload('brand/' + slug + '/' + owner + '/' + form.category.value + '/' + (postId ? postId + '/' : '') + safe, f, {
                             access: 'public',
                             handleUploadUrl: '/api/brand',
                             headers: { Authorization: 'Bearer ' + session().webToken },
@@ -1839,7 +1976,7 @@
                 var used = {};
                 var entries = await Promise.all(files.map(async function(f) {
                     var r = await fetch(f.url); if (!r.ok) throw new Error(f.name + ': ' + r.status);
-                    var name = folder + '/' + f.category + '/' + f.name;
+                    var name = folder + '/' + f.category + '/' + (f.post ? f.post + '/' : '') + f.name;
                     while (used[name]) name = name.replace(/(\.[^.\/]+)?$/, '-2$1');
                     used[name] = 1;
                     return { name: name, input: await r.blob() };
