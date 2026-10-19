@@ -188,6 +188,8 @@
         .bk-preview.photo img { max-width:100%; max-height:100%; width:100%; height:100%; object-fit:cover; }
         button.bk-tag { cursor:pointer; z-index:1; }
         .bk-post-count { position:absolute; top:8px; right:8px; z-index:1; font:500 10px 'JetBrains Mono',monospace; color:#fff; background:rgba(0,0,0,.6); border-radius:999px; padding:2px 8px; }
+        .bk-post-share { height:30px; padding:0 14px; border-radius:999px; border:0; background:var(--la-accent); color:var(--la-accent-ink, #000); font:600 12px Inter,ui-sans-serif,system-ui,sans-serif; cursor:pointer; margin:0 8px 0 auto; }
+        .bk-post-share:disabled { opacity:.6; cursor:default; }
         .bk-post-view { position:relative; height:56vh; min-height:240px; border-radius:12px; background:var(--la-input); display:flex; align-items:center; justify-content:center; overflow:hidden; }
         .bk-post-view > img { max-width:calc(100% - 24px); max-height:calc(100% - 24px); object-fit:contain; border-radius:6px; display:block; }
         .bk-post-nav { position:absolute; top:50%; transform:translateY(-50%); z-index:2; width:38px; height:38px; border-radius:50%; border:0; background:var(--la-accent); color:var(--la-accent-ink,#000); font:600 22px/1 system-ui,sans-serif; cursor:pointer; }
@@ -472,6 +474,7 @@
         function session() { try { return JSON.parse(localStorage.getItem('la_admin') || '{}'); } catch (_) { return {}; } }
         function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
         function openCamDialog(title, html) {
+            var oldShare = document.getElementById('bk-post-share'); if (oldShare) oldShare.remove();
             document.getElementById('cam-dialog-title').textContent = title;
             document.getElementById('cam-dialog-body').innerHTML = html;
             document.getElementById('cam-dialog').classList.remove('hidden');
@@ -1609,8 +1612,25 @@
                 '<div class="cam-form-actions" style="margin-top:16px">' +
                     '<button type="button" class="cam-btn ghost" id="bk-post-remove">' + (many ? 'Remove this image' : 'Delete post') + '</button>' +
                     '<button type="button" class="cam-btn ghost" id="bk-post-add">Add images</button>' +
-                    '<button type="button" class="cam-btn ghost" id="bk-file-thumb">Set as thumbnail</button>' +
-                    '<a class="cam-btn primary" id="bk-post-dl">Download</a></div>');
+                    '<button type="button" class="cam-btn primary" id="bk-post-dl">' + (many ? 'Download all' : 'Download') + '</button></div>');
+            // Share, at the top like the Social Pack verticals: on a phone or tablet every image goes to the share
+            // sheet together (Instagram makes them one carousel post); on a computer the link is copied
+            var head = document.querySelector('#cam-dialog .cam-dialog-head');
+            head.lastElementChild.insertAdjacentHTML('beforebegin', '<button type="button" class="bk-post-share" id="bk-post-share">Share</button>');
+            var shareBtn = document.getElementById('bk-post-share'), shareFiles = null;
+            var touch = (function() { try { return window.matchMedia('(pointer: coarse)').matches && navigator.canShare && navigator.canShare({ files: [new File([''], 'x.jpg', { type: 'image/jpeg' })] }); } catch (_) { return false; } })();
+            var fileOf = function(x, i) { return fetch(x.url).then(function(r) { if (!r.ok) throw new Error(r.status); return r.blob(); }).then(function(b) { return new File([b], String(i + 1).padStart(2, '0') + '-' + x.name, { type: b.type || 'image/jpeg' }); }); };
+            if (touch) {
+                // Prepared on opening, so the tap itself can open the share sheet (iPhone needs that)
+                shareBtn.disabled = true; shareBtn.textContent = 'Preparing…';
+                Promise.all(imgs.map(fileOf)).then(function(list) { shareFiles = list; shareBtn.disabled = false; shareBtn.textContent = 'Share'; })
+                    .catch(function() { shareBtn.disabled = false; shareBtn.textContent = 'Share'; });
+            }
+            shareBtn.addEventListener('click', function() {
+                if (touch && shareFiles) { navigator.share({ files: shareFiles }).catch(function() {}); return; }
+                var link = document.getElementById('bk-share-link').value;
+                navigator.clipboard.writeText(link).then(function() { shareBtn.textContent = 'Link copied'; setTimeout(function() { shareBtn.textContent = 'Share'; }, 1500); }).catch(function() {});
+            });
             document.querySelector('#cam-dialog .cam-dialog-panel').classList.add('wide');
             var pic = document.getElementById('bk-post-img'), want = 0;
             // The next and previous pictures load in the background, so a step shows straight away
@@ -1624,8 +1644,6 @@
                 document.getElementById('bk-post-count').textContent = (idx + 1) + ' / ' + imgs.length;
                 document.getElementById('bk-post-meta').textContent = f.name + ' · ' + fmtSize(f.size) + ' · ' + fmtDate(f.uploadedAt);
                 document.getElementById('bk-share-link').value = link;
-                document.getElementById('bk-post-dl').href = f.link ? f.link + '?download' : f.downloadUrl;
-                document.getElementById('bk-file-thumb').classList.toggle('hidden', !thumbFile(f));
                 var prev = document.getElementById('bk-post-prev'), next = document.getElementById('bk-post-next');
                 if (prev) prev.disabled = idx === 0;
                 if (next) next.disabled = idx === imgs.length - 1;
@@ -1642,7 +1660,20 @@
                 if (e.key === 'ArrowRight') show(idx + 1);
             };
             document.addEventListener('keydown', keys);
-            document.getElementById('bk-file-thumb').addEventListener('click', function() { openSetThumbnail(imgs[idx].url); });
+            // Download all: every image of the post in one ZIP, numbered in order
+            document.getElementById('bk-post-dl').addEventListener('click', async function() {
+                var b = this, label = b.textContent;
+                if (!many) { location.href = imgs[0].link ? imgs[0].link + '?download' : imgs[0].downloadUrl; return; }
+                if (!window.downloadZip) return;
+                b.disabled = true; b.textContent = 'Preparing…';
+                try {
+                    var files = await Promise.all(imgs.map(fileOf));
+                    var blob = await window.downloadZip(files.map(function(x) { return { name: x.name, input: x }; })).blob();
+                    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Instagram post ' + fmtDate(imgs[0].uploadedAt) + '.zip'; a.click();
+                    setTimeout(function() { URL.revokeObjectURL(a.href); }, 10000);
+                } catch (e) { msg.textContent = 'Could not prepare the download: ' + e.message; }
+                b.disabled = false; b.textContent = label;
+            });
             var input = document.getElementById('bk-share-link'), copy = document.getElementById('bk-share-copy');
             input.addEventListener('focus', function() { input.select(); });
             copy.addEventListener('click', function() { navigator.clipboard.writeText(input.value).then(function() { copy.textContent = 'Copied'; setTimeout(function() { copy.textContent = 'Copy link'; }, 1500); }).catch(function() { input.select(); }); });
