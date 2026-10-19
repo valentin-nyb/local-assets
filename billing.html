@@ -253,8 +253,17 @@
                         <div class="bl-admin-actions" style="padding:0"><button type="button" class="cam-btn primary" id="bl-pool-add">Add to ready list</button><span class="bl-msg" id="bl-pool-msg"></span></div>
                     </div>
                 </section>
-                <section class="bl-section hidden" id="bl-send-box">
-                    <div class="bl-section-head"><h3>Bill to</h3><span class="bl-msg" id="bl-stripe-acct">Choose who to see and invoice: plan price, plus usage above what the plan includes</span></div>
+                <section class="bl-section hidden" id="bl-overview">
+                    <div class="bl-section-head"><div><h3>All accounts</h3><span class="bl-msg" id="bl-ov-sub">This month so far</span></div><button type="button" class="cam-btn ghost" id="bl-ov-refresh">Refresh</button></div>
+                    <div class="bl-grid" style="padding:20px 20px 0">
+                        <div class="bl-card"><p class="lbl">What it costs us</p><p class="val" id="bl-ov-cost">—</p><p class="note">Video and files, every account's storage</p></div>
+                        <div class="bl-card"><p class="lbl">What we bill</p><p class="val" id="bl-ov-billed">—</p><p class="note">Plans plus usage above them</p></div>
+                        <div class="bl-card"><p class="lbl">Left for us</p><p class="val" id="bl-ov-left">—</p><p class="note" id="bl-ov-left-note"></p></div>
+                    </div>
+                    <div class="bl-scroll" style="padding-top:12px"><table class="bl-table" id="bl-ov-table"><tbody><tr><td class="bl-empty">Adding up every account…</td></tr></tbody></table></div>
+                </section>
+                <section class="bl-section hidden bl-fold folded" id="bl-send-box">
+                    <div class="bl-section-head bl-fold-head" role="button" tabindex="0" aria-expanded="false" onclick="var s=this.parentNode;s.classList.toggle('folded');this.setAttribute('aria-expanded',!s.classList.contains('folded'))" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><h3>Bill to <svg class="bl-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h3><span class="bl-msg" id="bl-stripe-acct">Choose who to see and invoice: plan price, plus usage above what the plan includes</span></div>
                     <form id="bl-send-form" class="bl-admin">
                         <label>Account<select name="venue" id="bl-venue"></select></label>
                         <label>Bill to<select name="target" id="bl-target"></select></label>
@@ -641,7 +650,8 @@
                     : 'Your plan stays active until the end of the current billing month' + (endTxt ? ' (' + endTxt + ')' : '') + '. Your recordings, clips and Brand Kit stay downloadable until then.';
                 cbtn.textContent = 'Cancel account'; cbtn.classList.add('bl-danger'); cbtn.classList.remove('primary'); cbtn.dataset.mode = 'cancel';
             }
-            ['bl-admin', 'bl-send-box', 'bl-plans-box', 'bl-kit-box'].forEach(function(id) { document.getElementById(id).classList.toggle('hidden', !admin); });
+            ['bl-admin', 'bl-send-box', 'bl-plans-box', 'bl-kit-box', 'bl-overview'].forEach(function(id) { document.getElementById(id).classList.toggle('hidden', !admin); });
+            if (admin && !loadOverview.done) { loadOverview.done = true; loadOverview(false); }
             if (!admin) return;
             var f = document.getElementById('bl-rates');
             ['videoStorage', 'videoDelivery', 'videoEncoding', 'liveRecording', 'fileStorage'].forEach(function(k) { if (document.activeElement !== f[k]) f[k].value = d.rates[k]; });
@@ -684,6 +694,33 @@
             renderPlans(d.plans);
             renderKit(d.kit || [], d.kitPlans || [], d.plans, d.kitPrices || {});
         }
+        // All accounts (admin): what every account's video and files cost us this month, next to what we bill
+        async function loadOverview(fresh) {
+            var t = document.getElementById('bl-ov-table'), btn = document.getElementById('bl-ov-refresh');
+            btn.disabled = true; if (fresh) t.innerHTML = '<tbody><tr><td class="bl-empty">Adding up every account…</td></tr></tbody>';
+            try {
+                var r = await laFetch('/api/billing?overview=1' + (fresh ? '&fresh=1' : '')), d = await r.json();
+                if (!r.ok) throw new Error(d.error || r.status);
+                var cur = d.currency, h = function(n) { return (Math.round(n * 10) / 10).toLocaleString('en-GB') + ' h'; };
+                document.getElementById('bl-ov-sub').textContent = d.period + ' so far · ' + d.rows.length + ' accounts · updated ' + new Date(d.at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                document.getElementById('bl-ov-cost').textContent = money(d.totals.cost, cur);
+                document.getElementById('bl-ov-billed').textContent = money(d.totals.billed, cur);
+                var left = d.totals.billed - d.totals.cost;
+                document.getElementById('bl-ov-left').textContent = money(left, cur);
+                document.getElementById('bl-ov-left-note').textContent = d.totals.billed > 0 ? Math.round(left / d.totals.billed * 100) + '% of what we bill' : 'Nothing billed yet';
+                var TYPE = { venue: 'Venue', label: 'Record label', artist: 'Artist', management: 'Management', admin: 'local / assets' };
+                t.innerHTML = '<thead><tr><th>Account</th><th>Plan</th><th class="num">Video kept</th><th class="num">Watched</th><th class="num">Recorded</th><th class="num">Files</th><th class="num">Costs us</th><th class="num">We bill</th></tr></thead><tbody>' +
+                    d.rows.map(function(x) {
+                        if (x.error) return '<tr><td data-l="Account">' + esc(x.name) + '</td><td colspan="7" class="bl-msg">Could not read: ' + esc(x.error) + '</td></tr>';
+                        return '<tr><td data-l="Account"><b>' + esc(x.name) + '</b><br><span class="bl-msg">' + (TYPE[x.type] || x.type) + (x.shared ? ' · shares its video storage with another account' : '') + '</span></td>' +
+                            '<td data-l="Plan">' + esc(x.plan) + '</td><td class="num" data-l="Video kept">' + h(x.storedHours) + '</td><td class="num" data-l="Watched">' + h(x.streamedHours) + '</td>' +
+                            '<td class="num" data-l="Recorded">' + h(x.recordedHours) + '</td><td class="num" data-l="Files">' + (Math.round(x.fileGB * 10) / 10) + ' GB</td>' +
+                            '<td class="num" data-l="Costs us">' + money(x.cost, cur) + '</td><td class="num" data-l="We bill">' + (x.type === 'admin' ? '—' : money(x.billed, cur)) + '</td></tr>';
+                    }).join('') + '</tbody><tfoot><tr><td><b>Total</b></td><td></td><td class="num">' + h(d.totals.storedHours) + '</td><td class="num">' + h(d.totals.streamedHours) + '</td><td class="num">' + h(d.totals.recordedHours) + '</td><td class="num">' + (Math.round(d.totals.fileGB * 10) / 10) + ' GB</td><td class="num"><b>' + money(d.totals.cost, cur) + '</b></td><td class="num"><b>' + money(d.totals.billed, cur) + '</b></td></tr></tfoot>';
+            } catch (e) { t.innerHTML = '<tbody><tr><td class="bl-empty">Could not add up the accounts: ' + esc(e.message) + '</td></tr></tbody>'; }
+            btn.disabled = false;
+        }
+        document.getElementById('bl-ov-refresh').addEventListener('click', function() { loadOverview(true); });
         // Kit expenses: one row per item, a quantity per plan; the totals show what one kit costs us
         // and how much of that plan's first month it takes
         var _kitPlans = [], _kitPlanList = [], _kitPrices = {};
@@ -717,10 +754,13 @@
                 var used = rows.filter(function(r) { return r.name && (r.qty[p] || 0) > 0; });
                 var sum = used.reduce(function(s, r) { return s + (Number(r.cost) || 0) * r.qty[p]; }, 0);
                 var missing = used.filter(function(r) { return r.cost == null || !isFinite(r.cost); }).length;
-                // The kit against the first month's price for each kind of account (artists pay much less, so the share is larger)
+                // How many months of the plan's price it takes to pay for the kit, for each kind of account
                 var pr = _kitPrices[p] || {};
                 var share = ['venue', 'label', 'artist'].filter(function(k) { return pr[k] > 0; }).map(function(k) {
-                    return '<br><span class="bl-msg">' + { venue: 'Venue', label: 'Label', artist: 'Artist' }[k] + ' ' + money(pr[k], 'gbp').replace(/\.00$/, '') + ': ' + Math.round(sum / pr[k] * 100) + '% of the first month</span>';
+                    // Artists on Pro get no camera from us (they add one for £149 a month)
+                    if (k === 'artist' && p === 'liveset-distribution') return '<br><span class="bl-msg">Artists get no kit (camera is an add-on)</span>';
+                    var mo = Math.max(1, Math.ceil(sum / pr[k]));
+                    return '<br><span class="bl-msg">' + { venue: 'Venues', label: 'Labels', artist: 'Artists' }[k] + ' pay it back in ' + (mo === 1 ? 'the first month' : mo + ' months') + '</span>';
                 }).join('');
                 return '<td class="num"><b>' + money(sum, 'gbp') + '</b>' + (missing ? '<br><span class="bl-msg">+ ' + missing + ' without a cost</span>' : '') + share + '</td>';
             }).join('');

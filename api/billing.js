@@ -114,6 +114,45 @@ export default async function handler(req, res) {
       res.setHeader('Content-Type', 'application/pdf');
       return res.status(200).send(Buffer.from(await r.arrayBuffer()));
     }
+    // Admin: every account at once, this month so far: what its video and files cost us (all their Cloud
+    // Storage environments, and the local / assets one) and what it is billed. Kept 10 minutes (?fresh=1 to redo).
+    if (req.method === 'GET' && req.query.overview) {
+      if (!isAdmin) return res.status(403).json({ error: 'Admin only' });
+      const period = monthRange();
+      const out = await withRedis(async redis => {
+        const cacheKey = `billing_overview:${period.key}`;
+        if (!req.query.fresh) { const c = await redis.get(cacheKey).catch(() => null); if (c) return JSON.parse(c); }
+        const [rates, plans] = await Promise.all([readRates(redis), readPlans(redis)]);
+        const seenEnv = new Set(), rows = [];
+        const entries = venueEntries();
+        for (const { slug: s, cfg: c, auth: a } of entries) {
+          const own = isAdminEntry(s);
+          const type = own ? 'admin' : await accountTypeOf(redis, s);
+          // Accounts sharing one environment: its video is counted once (on the first), files for each
+          const shared = !!(a && seenEnv.has(a));
+          if (a) seenEnv.add(a);
+          let usage;
+          try { usage = await venueUsage(s, shared ? null : a, period); }
+          catch (e) { rows.push({ slug: s, name: c?.name || s, type, error: e.message }); continue; }
+          const gb = usage.fileBytes / 1e9;
+          const cost = usage.storedMinutes * rates.videoStorage + usage.deliveredMinutes * rates.videoDelivery + usage.newMinutes * rates.videoEncoding
+            + (usage.liveMinutes || 0) * (Number(rates.liveRecording) || 0) + gb * rates.fileStorage;
+          const asg = (await readAssignments(redis, s)).venue || {};
+          const plan = own ? null : planForType(plans.find(p => p.id === asg.plan) || null, type);
+          const billed = own ? 0 : priceUsage(usage, rates, plan).total;
+          rows.push({ slug: s, name: c?.name || s, type, plan: plan?.name || (own ? 'local / assets' : 'No plan'), shared, notes: usage.notes,
+            storedHours: usage.storedMinutes / 60, streamedHours: usage.deliveredMinutes / 60, newHours: usage.newMinutes / 60, recordedHours: (usage.liveMinutes || 0) / 60, fileGB: gb,
+            cost: Math.round(cost * 100) / 100, billed: Math.round(billed * 100) / 100 });
+        }
+        rows.sort((x, y) => y.cost - x.cost);
+        const sum = k => Math.round(rows.reduce((t, r) => t + (r[k] || 0), 0) * 100) / 100;
+        const result = { period: period.label, at: Date.now(), rows, totals: { cost: sum('cost'), billed: sum('billed'), storedHours: sum('storedHours'), streamedHours: sum('streamedHours'), recordedHours: sum('recordedHours'), fileGB: sum('fileGB') }, currency: rates.currency || 'gbp' };
+        await redis.set(cacheKey, JSON.stringify(result), { EX: 600 }).catch(() => {});
+        return result;
+      });
+      return res.status(200).json(out);
+    }
+
     // The usage chart: day-by-day usage over a range, with the billing cycles (calendar months) it covers
     if (req.method === 'GET' && req.query.usageDays) {
       const target = isAdmin ? cleanTarget(req.query.target) : 'venue';
