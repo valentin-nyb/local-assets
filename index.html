@@ -44,19 +44,24 @@
         @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 
         /* ── Dashboard / Sign in button ── */
+        /* Like the site's main buttons (Start the trial): green; on hover black slides in from the left and the text turns green */
         .la-dashboard-btn {
+          position: relative; overflow: hidden; isolation: isolate;
           display: inline-flex; align-items: center; gap: 8px;
           height: 42px; padding: 0 18px 0 20px; border-radius: 9999px;
           font: 600 14px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing: -.005em; text-transform: none;
-          text-decoration: none; color: #000; background: #85FA4F; border: 1px solid #85FA4F;
-          box-shadow: 0 0 0 0 rgba(133,250,79,.0), 0 6px 24px rgba(133,250,79,.18);
-          transition: background .2s ease, box-shadow .2s ease, transform .15s ease;
+          text-decoration: none; color: #000; background: #39FF14; border: 1px solid #39FF14;
+          transition: color .3s cubic-bezier(.65,0,.35,1), transform .15s ease;
           white-space: nowrap; -webkit-user-select: none; user-select: none;
         }
-        .la-dashboard-btn svg { width: 16px; height: 16px; transition: transform .2s ease; }
-        .la-dashboard-btn:hover { background: #9dff6e; box-shadow: 0 0 0 4px rgba(133,250,79,.16), 0 8px 30px rgba(133,250,79,.28); }
-        .la-dashboard-btn:hover svg { transform: translateX(3px); }
-        .la-dashboard-btn:focus-visible { outline: 2px solid #85FA4F; outline-offset: 3px; }
+        .la-dashboard-btn::before { content: ""; position: absolute; inset: -1px; z-index: -1; border-radius: inherit; background: #0a0a0a; transform: scaleX(0); transform-origin: right center; transition: transform .42s cubic-bezier(.65,0,.35,1); }
+        .la-dashboard-btn svg { width: 16px; height: 16px; transition: transform .25s ease; }
+        @media (hover:hover) {
+          .la-dashboard-btn:hover { color: #39FF14; }
+          .la-dashboard-btn:hover::before { transform: scaleX(1); transform-origin: left center; }
+          .la-dashboard-btn:hover svg { transform: translateX(3px); }
+        }
+        .la-dashboard-btn:focus-visible { outline: 2px solid #39FF14; outline-offset: 3px; }
         /* Small phones: the header keeps a 16px gutter and the button stays inside the screen */
         @media (max-width:420px) { main > section > nav { padding-left:16px !important; padding-right:16px !important; } .la-dashboard-btn { height:38px; padding:0 14px 0 16px; font-size:13px; } }
         .la-dashboard-btn:active {
