@@ -3284,7 +3284,16 @@
                 if (!loc) { card.classList.remove('kpi-link'); card.onclick = card.onkeydown = null; card.removeAttribute('role'); card.removeAttribute('tabindex'); return; }
                 const url = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(loc);
                 card.classList.add('kpi-link'); card.setAttribute('role', 'link'); card.tabIndex = 0; card.setAttribute('aria-label', 'Open ' + loc + ' in Maps');
-                card.onclick = () => window.open(url, '_blank', 'noopener');
+                // iPhone / iPad: straight to the Google Maps app (Apple Maps when it isn't installed), so no empty
+                // browser page is left behind in the app. Computers: Google Maps in a new tab.
+                const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+                card.onclick = () => {
+                    if (!ios) { window.open(url, '_blank', 'noopener'); return; }
+                    let left = false; const away = () => { left = true; };
+                    window.addEventListener('pagehide', away, { once: true }); document.addEventListener('visibilitychange', away, { once: true });
+                    location.href = 'comgooglemaps://?q=' + encodeURIComponent(loc);
+                    setTimeout(() => { if (!left && !document.hidden) location.href = 'https://maps.apple.com/?q=' + encodeURIComponent(loc); }, 800);
+                };
                 card.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); card.onclick(); } };
             };
             try {
@@ -3796,13 +3805,13 @@
         /* Connected platforms, like the side menu: Geist, one quiet row per platform, the account and its numbers as text */
         #revenue-modal .pm-panel { width:480px; border-radius:14px; font-family:'Geist', 'Helvetica Neue', Helvetica, Arial, sans-serif; }
         #revenue-modal .pm-panel * { font-family:inherit; }
-        #revenue-modal .pm-eyebrow { font:500 12px 'Geist', 'Helvetica Neue', Helvetica, Arial, sans-serif !important; color:var(--pm-dim); }
-        #revenue-modal .pm-title { font:600 19px/1.2 'Geist', 'Helvetica Neue', Helvetica, Arial, sans-serif !important; letter-spacing:-.015em !important; }
-        #revenue-modal .pm-lead { font-size:13.5px; }
+        #revenue-modal .pm-eyebrow { font:500 10px/1 'JetBrains Mono', monospace !important; letter-spacing:.22em !important; text-transform:uppercase !important; color:var(--pm-dim); }
+        #revenue-modal .pm-title { margin-top:10px; font:700 22px/1.15 'Helvetica Neue', Helvetica, Arial, sans-serif !important; letter-spacing:-.005em !important; text-transform:uppercase !important; }
+        #revenue-modal .pm-lead { font-size:13.5px; margin-top:8px; }
         #revenue-modal .pm-list { border-color:color-mix(in srgb, var(--pm-text) 12%, transparent); border-radius:10px; }
         #revenue-modal .pm-list .pm-card { padding:14px 16px; }
         #revenue-modal .pm-brand { width:32px; height:32px; border-radius:8px; }
-        #revenue-modal .pm-name { font-size:14.5px; font-weight:600; letter-spacing:-.005em; }
+        #revenue-modal .pm-name { font:700 13.5px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.02em; text-transform:uppercase; }
         #revenue-modal .pm-status { font-size:12.5px; }
         #revenue-modal .pm-account { margin:6px 0 0 44px; padding:0; border:0; gap:0; }
         #revenue-modal .pm-avatar { width:20px !important; height:20px !important; margin-right:8px; font-size:10px; align-self:center; }
