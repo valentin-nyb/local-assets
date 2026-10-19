@@ -1,6 +1,8 @@
 import Stripe from 'stripe';
 import { list } from '@vercel/blob';
 import { getVenuesConfig, getMuxAuthForVenue } from './_venues.js';
+import { Resend } from 'resend';
+import { invoiceEmail } from './_emails.js';
 
 // Usage-based billing: each venue's real usage of the services it runs on (Mux video, Vercel Blob
 // files), priced at cost plus the local / assets margin, invoiced monthly through Stripe.
@@ -491,6 +493,20 @@ export async function accountTypeOf(redis, slug) {
   return (await redis.get(`brand_org_type:${slug}`)) || (await redis.get(`account_type:${slug}`)) || cfg?.type || (/team$/i.test(String(cfg?.name || '')) ? 'management' : 'venue');
 }
 
+export async function sendInvoiceEmail(to, data) {
+  if (!process.env.RESEND_API_KEY) throw new Error('Email is not set up (RESEND_API_KEY)');
+  const m = invoiceEmail(data);
+  const r = await new Resend(process.env.RESEND_API_KEY).emails.send({ from: 'local / assets <billing@local-assets.com>', replyTo: 'info@local-assets.com', to, subject: m.subject, html: m.html, text: m.text });
+  if (r?.error) throw new Error(r.error.message || 'Email not sent');
+  return r;
+}
+// Who an account's invoice goes to: the address in Bill to, else its first sign-in email
+export function billingEmailFor(slug, assignment) {
+  const cfg = getVenuesConfig()[slug] || {};
+  const list = Array.isArray(cfg.emails) ? cfg.emails : typeof cfg.emails === 'string' ? cfg.emails.split(/[\s,;]+/) : [];
+  return (assignment?.email || list.map(e => String(e).trim()).find(e => /@/.test(e)) || '').toLowerCase();
+}
+
 // Creates and sends the invoice for one venue and one month (once)
 export async function invoiceVenue(redis, stripe, { slug, auth, email, name, target = 'venue', planId }, period) {
   const doneKey = `billing_invoiced:${slug}:${target}:${period.key}`;
@@ -506,8 +522,10 @@ export async function invoiceVenue(redis, stripe, { slug, auth, email, name, tar
   const usage = await venueUsage(slug, auth, period, artist, label);
   const priced = priceUsage(usage, rates, plan);
   if (priced.total < 0.3) { await redis.set(doneKey, 'none'); return { skipped: true, reason: 'Nothing to bill' }; }
-  const details = (await readAssignments(redis, slug))[target]?.details || null;
-  if (!details?.legalName || !details?.line1) { await redis.del(doneKey); return { skipped: true, reason: 'Billing details missing: add the legal name and address in Bill to' }; }
+  // Billed every month even before the legal name and address are filled in Bill to: the account's name stands in
+  // (and Stripe keeps any address the client gave at checkout)
+  const saved = (await readAssignments(redis, slug))[target]?.details || null;
+  const details = saved?.legalName ? saved : { ...(saved || {}), legalName: name };
   const customer = await venueCustomer(stripe, redis, target === 'venue' ? slug : `${slug}:${target}`, { email, name, details });
   const currency = priced.currency;
   // Accounts from a sign-up pay the plan through their Stripe subscription: invoice the usage above it only
@@ -537,5 +555,8 @@ export async function invoiceVenue(redis, stripe, { slug, auth, email, name, tar
     await stripe.invoices.sendInvoice(sent.id).catch(() => {});
   }
   await redis.set(doneKey, sent.id);
+  // Our own email too, with the month line by line and the link (Stripe only emails invoices sent to pay)
+  if (email) await sendInvoiceEmail(email, { name, period: period.label, plan: priced.planAmount && !viaSubscription ? { name: plan.name, amount: priced.planAmount } : null, lines: priced.lines, total: priced.total, url: sent.hosted_invoice_url, charged: card ? sent.status === 'paid' : false })
+    .catch(e => console.error('[billing] invoice email', slug, e.message));
   return { invoice: sent.id, total: priced.total, url: sent.hosted_invoice_url || null, livemode: !!sent.livemode, charged: card ? sent.status === 'paid' : undefined };
 }

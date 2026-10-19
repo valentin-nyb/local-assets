@@ -1,11 +1,11 @@
 import { listPool, addToPool, removeFromPool, activateFromPool, poolSize } from './_mux-pool.js';
 import { unpaidKey, readUnpaid } from './_suspend.js';
 import { createClient } from 'redis';
-import { getWebSessionAuth, getVenuesConfig, readRegistryRaw, saveRegistryEntry, sealSecret, freshVenues } from './_venues.js';
+import { getWebSessionAuth, getVenuesConfig, readRegistryRaw, saveRegistryEntry, sealSecret, freshVenues, isAdminVenue } from './_venues.js';
 import { venueAuth } from './_verticals.js';
 import {
   readRates, readPlans, cleanPlans, readAssignments, assignKey, venueUsage, venueArtists, priceUsage,
-  monthRange, stripeClient, invoiceVenue, venueEntries, DEFAULT_RATES, applyDetails, usageByDay, planForType, priceForType, commitEndFor, readKit, cleanKit, KIT_PLANS, accountTypeOf } from './_billing.js';
+  monthRange, stripeClient, invoiceVenue, venueEntries, DEFAULT_RATES, applyDetails, usageByDay, planForType, priceForType, commitEndFor, readKit, cleanKit, KIT_PLANS, accountTypeOf, sendInvoiceEmail, billingEmailFor } from './_billing.js';
 
 // Billing page data and actions.
 //   GET ?target=venue|artist:NAME&plan=ID&period=current|previous   usage, plan and price for one bill-to
@@ -42,7 +42,8 @@ export default async function handler(req, res) {
   await freshVenues();
   res.setHeader('Cache-Control', 'no-store');
 
-  // Monthly run: every bill-to marked monthly, for last month
+  // Monthly run, on the 1st: every client account is invoiced for last month (and any artist or label in it
+  // marked to be billed monthly), emailed to the address in Bill to or the account's sign-in email
   if (req.method === 'GET' && req.query.cron) {
     const secret = process.env.CRON_SECRET;
     const ok = secret ? req.headers.authorization === `Bearer ${secret}` : /vercel-cron/i.test(req.headers['user-agent'] || '');
@@ -53,9 +54,12 @@ export default async function handler(req, res) {
     const results = await withRedis(async redis => {
       const out = [];
       for (const v of venueEntries()) {
-        const assigned = Object.entries(await readAssignments(redis, v.slug)).filter(([, a]) => a.monthly);
+        if (isAdminVenue({ slug: v.slug, ...v.cfg })) continue;   // local / assets itself is never billed
+        const all = await readAssignments(redis, v.slug);
+        const assigned = Object.entries(all).filter(([target, a]) => target === 'venue' || a.monthly);
+        if (!all.venue) assigned.unshift(['venue', {}]);
         for (const [target, a] of assigned) {
-          try { out.push({ slug: v.slug, target, ...(await invoiceVenue(redis, stripe, { slug: v.slug, auth: v.auth, email: a.email, name: a.name || v.cfg.name || v.slug, target, planId: a.plan || null }, period)) }); }
+          try { out.push({ slug: v.slug, target, ...(await invoiceVenue(redis, stripe, { slug: v.slug, auth: v.auth, email: billingEmailFor(v.slug, target === 'venue' ? a : { email: a.email }), name: a.name || v.cfg.name || v.slug, target, planId: a.plan || null }, period)) }); }
           catch (e) { console.error('[billing] invoice', v.slug, target, e.message); out.push({ slug: v.slug, target, error: e.message }); }
         }
       }
@@ -553,6 +557,24 @@ export default async function handler(req, res) {
         return out;
       });
       return res.status(200).json({ rows });
+    }
+
+    // An example of the email a client gets on the 1st, for the account chosen in Bill to (this month so far),
+    // sent to the address given. Nothing is invoiced or charged.
+    if (body.action === 'exampleInvoiceEmail') {
+      const to = String(body.to || '').trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return res.status(400).json({ error: 'Enter the email to send the example to' });
+      const data = await withRedis(async redis => {
+        const [rates, plans] = await Promise.all([readRates(redis), readPlans(redis)]);
+        const a = (await readAssignments(redis, slug)).venue || {};
+        const plan = planForType(plans.find(p => p.id === a.plan) || null, await accountTypeOf(redis, slug));
+        const usage = await venueUsage(slug, auth, monthRange());
+        const priced = priceUsage(usage, rates, plan);
+        if (a.subscription) priced.total = priced.usageTotal;
+        return { name: a.name || venueName, period: monthRange().label, plan: priced.planAmount && !a.subscription ? { name: plan.name, amount: priced.planAmount } : null, lines: priced.lines, total: priced.total, url: 'https://local-assets.com/billing', charged: false, example: true };
+      });
+      await sendInvoiceEmail(to, data);
+      return res.status(200).json({ ok: true, to, total: data.total });
     }
 
     if (body.action === 'setKit') {

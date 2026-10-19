@@ -201,6 +201,8 @@
         @media (hover:hover) { .bl-pay:hover { opacity:.85; } }
         /* Foldable sections (Ready video storage starts folded): only the heading until opened */
         .bl-fold-head { cursor:pointer; user-select:none; }
+        .bl-example-to { height:38px; border-radius:999px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 14px; font-size:13px; outline:none; min-width:200px; }
+        .bl-example-to:focus { border-color:var(--la-accent); }
         /* No outline after a click; a clear one when moving with the keyboard */
         .bl-fold-head:focus { outline:none; }
         .bl-fold-head:focus-visible { outline:2px solid var(--la-accent); outline-offset:-2px; border-radius:16px 16px 0 0; }
@@ -274,6 +276,8 @@
                         <label class="bl-check"><input type="checkbox" id="bl-monthly"> Bill monthly on the 1st</label>
                         <button type="button" class="cam-btn ghost" id="bl-save-assign">Save</button>
                         <button type="button" class="cam-btn ghost" id="bl-preview">Preview</button>
+                        <input type="email" id="bl-example-to" class="bl-example-to" placeholder="Email for an example" aria-label="Email to send an example invoice to">
+                        <button type="button" class="cam-btn ghost" id="bl-example">Email an example</button>
                         <button type="button" class="cam-btn primary" id="bl-send">Send invoice</button>
                         <span class="bl-msg" id="bl-send-msg"></span>
                         <button type="button" class="cam-btn bl-danger" id="bl-delete-acct" style="margin-left:auto">Delete account</button>
@@ -714,6 +718,8 @@
             ['legalName', 'line1', 'line2', 'city', 'postcode', 'vat'].forEach(function(k) { if (document.activeElement !== sf[k]) sf[k].value = det[k] || ''; });
             sf.country.value = det.country || 'GB';
             document.getElementById('bl-monthly').checked = !!(d.assignment && d.assignment.monthly);
+            // The account itself is always invoiced on the 1st; the choice is for an artist or label billed on their own
+            document.getElementById('bl-monthly').closest('label').hidden = (d.target || 'venue') === 'venue';
             renderPlans(d.plans);
             renderKit(d.kit || [], d.kitPlans || [], d.plans, d.kitPrices || {});
         }
@@ -744,6 +750,15 @@
             btn.disabled = false;
         }
         document.getElementById('bl-ov-refresh').addEventListener('click', function() { loadOverview(true); });
+        // The email this account gets on the 1st, sent as an example (nothing is charged)
+        document.getElementById('bl-example').addEventListener('click', async function() {
+            var b = this, to = document.getElementById('bl-example-to'), msg = document.getElementById('bl-send-msg');
+            if (!to.value.trim()) { to.focus(); return; }
+            b.disabled = true; msg.textContent = 'Sending the example…';
+            try { var d = await post({ action: 'exampleInvoiceEmail', to: to.value.trim() }); msg.textContent = 'Example sent to ' + d.to + ' (' + money(d.total, 'gbp') + ')'; }
+            catch (e) { msg.textContent = 'Could not send: ' + e.message; }
+            b.disabled = false;
+        });
         // Kit expenses: one row per item, a quantity per plan; the totals show what one kit costs us
         // and how much of that plan's first month it takes
         var _kitPlans = [], _kitPlanList = [], _kitPrices = {};

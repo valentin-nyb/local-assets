@@ -82,3 +82,62 @@ export function welcomeEmail({ name, email, type, plan, ready }) {
 
   return { subject: `Welcome to local / assets, ${name}`, html, text };
 }
+
+// The monthly invoice, sent on the 1st with Stripe's invoice: what the month cost, line by line, and the link
+// to view or pay it. charged: the saved card was charged (a receipt); otherwise it's due in 14 days.
+export function invoiceEmail({ name, period, plan, lines, total, url, charged, example }) {
+  const money = n => '£' + Number(n || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const rows = [
+    ...(plan && plan.amount > 0 ? [[plan.name, 'Monthly plan', plan.amount]] : []),
+    ...lines.filter(l => l.amount >= 0.01).map(l => [l.label, `${Number(l.quantity).toLocaleString('en-GB')} ${l.unit}${l.included ? ` · ${Number(l.billable).toLocaleString('en-GB')} over the ${Number(l.included).toLocaleString('en-GB')} included` : ''}`, l.amount]),
+  ];
+  const status = charged ? `Paid with your card on file. Thank you.` : `Due within 14 days. Pay by card or bank transfer from the invoice.`;
+  const preheader = `${period}: ${money(total)}. ${charged ? 'Paid with your card.' : 'Due within 14 days.'}`;
+  const html = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark"><title>Your local / assets invoice</title></head>
+<body style="margin:0;padding:0;background:#070905;-webkit-text-size-adjust:100%">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#070905">${esc(preheader)}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#070905">
+<tr><td align="center" style="padding:48px 16px">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px">
+    <tr><td style="padding:0 4px 40px"><img src="${SITE}/logos/Green@2x.png" width="150" alt="local / assets" style="display:block;width:150px;height:auto;border:0"></td></tr>
+    ${example ? `<tr><td style="padding:0 4px 20px"><p style="margin:0;padding:10px 14px;border:1px dashed #3f3f46;border-radius:10px;font:400 13px/1.5 ${FONT};color:#a1a1aa">Example only: this is what ${esc(name)} receives on the 1st. Nothing was charged.</p></td></tr>` : ''}
+    <tr><td style="padding:0 4px">
+      <p style="margin:0 0 14px;font:500 11px/1 ${MONO};letter-spacing:.3em;text-transform:uppercase;color:${GREEN}">Invoice · ${esc(period)}</p>
+      <h1 style="margin:0;font:700 48px/1 ${FONT};letter-spacing:-.01em;color:#fafafa">${money(total)}</h1>
+      <p style="margin:16px 0 0;font:400 16px/1.6 ${FONT};color:#a1a1aa">${esc(name)}: your local / assets plan and usage for ${esc(period)}. ${status}</p>
+    </td></tr>
+    <tr><td style="padding:32px 4px 0">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #23261f;border-radius:14px">
+        ${rows.map(([t, d, a], i) => `<tr><td style="padding:16px 22px;${i ? 'border-top:1px solid #1b1e18;' : ''}"><p style="margin:0;font:600 15px/1.4 ${FONT};color:#fafafa">${esc(t)}</p><p style="margin:3px 0 0;font:400 13px/1.5 ${FONT};color:#71717a">${esc(d)}</p></td>
+          <td align="right" valign="top" style="padding:16px 22px;${i ? 'border-top:1px solid #1b1e18;' : ''}font:600 15px/1.4 ${FONT};color:#fafafa;white-space:nowrap">${money(a)}</td></tr>`).join('')}
+        <tr><td style="padding:16px 22px;border-top:1px solid #23261f;font:600 15px/1.4 ${FONT};color:#fafafa">Total</td><td align="right" style="padding:16px 22px;border-top:1px solid #23261f;font:700 17px/1.4 ${FONT};color:${GREEN};white-space:nowrap">${money(total)}</td></tr>
+      </table>
+    </td></tr>
+    <tr><td style="padding:28px 4px 0">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td style="border-radius:999px;background:${GREEN}">
+        <a href="${esc(url || SITE + '/billing')}" style="display:inline-block;padding:15px 34px;font:600 14px/1 ${FONT};color:#000;text-decoration:none;border-radius:999px">${charged ? 'View the invoice' : 'View and pay the invoice'}</a>
+      </td><td width="12"></td><td style="border-radius:999px;border:1px solid #3f3f46">
+        <a href="${SITE}/billing" style="display:inline-block;padding:14px 28px;font:600 14px/1 ${FONT};color:#fafafa;text-decoration:none;border-radius:999px">Your billing</a>
+      </td></tr></table>
+    </td></tr>
+    <tr><td style="padding:44px 4px 0">
+      <p style="margin:0;font:400 13px/1.6 ${FONT};color:#71717a">Every invoice is also in your account under Billing, with its PDF. Questions? Reply to this email or write to <a href="mailto:info@local-assets.com" style="color:#d4d4d8;text-decoration:underline">info@local-assets.com</a>.</p>
+    </td></tr>
+    <tr><td style="padding:40px 4px 0">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #1b1e18"><tr>
+        <td style="padding:20px 0 0;font:500 10px/1.6 ${MONO};letter-spacing:.2em;text-transform:uppercase;color:#52525b">local / assets&trade; &middot; London</td>
+        <td align="right" style="padding:20px 0 0"><img src="${SITE}/logos/a-white.png" width="18" alt="" style="display:inline-block;width:18px;height:auto;border:0;opacity:.7"></td>
+      </tr></table>
+    </td></tr>
+  </table>
+</td></tr>
+</table>
+</body></html>`;
+  const text = [
+    `${example ? '[Example] ' : ''}local / assets invoice · ${period}`, '', `${name}: ${money(total)}. ${status}`, '',
+    ...rows.map(([t, d, a]) => `${t} (${d}): ${money(a)}`), `Total: ${money(total)}`, '',
+    `${charged ? 'View' : 'View and pay'} the invoice: ${url || SITE + '/billing'}`, 'Questions? Reply to this email or write to info@local-assets.com.',
+  ].join('\n');
+  return { subject: `${example ? '[Example] ' : ''}Your local / assets invoice for ${period}: ${money(total)}`, html, text };
+}
