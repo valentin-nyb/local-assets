@@ -275,12 +275,15 @@ export function run(args) {
   });
 }
 
-// The venue's colour look (Brand Kit → Colour looks: a .cube LUT). The newest one is applied to every vertical
-// clip, so all clips have the same grade. Downloaded for the cut; none → the clip keeps its own colours.
-async function colourLook(slug) {
+// The account's colour look (Brand Kit → Colour looks, chosen with Use as LUT) is applied to every vertical clip,
+// so all clips have the same grade. Downloaded for the cut; none chosen → the clip keeps its own colours.
+async function colourLook(redis, slug) {
   try {
-    const { blobs } = await listBlobs({ prefix: `brand/${slug}/venue/looks/`, limit: 100 });
-    const cube = blobs.filter(b => /\.cube$/i.test(b.pathname)).sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt))[0];
+    // The look chosen with "Use as LUT" in Brand Kit; none chosen → no grade
+    const chosen = await redis.get(`brand_lut:${slug}`);
+    if (!chosen) return null;
+    const { blobs } = await listBlobs({ prefix: `brand/${slug}/`, limit: 1000 });
+    const cube = blobs.find(b => b.url === chosen && /\.cube$/i.test(b.pathname));
     if (!cube) return null;
     const r = await fetch(cube.url, { signal: AbortSignal.timeout(15000) });
     if (!r.ok) return null;
@@ -301,7 +304,7 @@ export async function cutVertical(redis, auth, job) {
     // never has to jump into the middle of the stream (which fails on recordings stored as fMP4).
     // If that comes out empty, fall back to the downloadable MP4 when it exists.
     const len = Math.max(1, job.end - job.start);
-    const look = await colourLook(job.slug);
+    const look = await colourLook(redis, job.slug);
     if (look) setTimeout(() => fs.rm(look, { force: true }, () => {}), 600e3);
     const tail = ['-vf', 'crop=trunc(ih*9/16/2)*2:ih,scale=1080:1920:flags=lanczos,setsar=1,fps=30' + (look ? ',lut3d=file=' + look : ''),
       '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p',

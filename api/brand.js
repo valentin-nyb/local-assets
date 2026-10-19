@@ -86,7 +86,8 @@ export default async function handler(req, res) {
       for (const [owner, url] of Object.entries(pinned || {})) {
         if (files.some(f => f.url === url)) { ownerPhotos[owner] = url; ownerPhotosPicked.push(owner); }
       }
-      return res.status(200).json({ files, orgType: ORG_TYPES.includes(orgType) ? orgType : 'venue', orgName: orgName || '', ownerNames: ownerNames || {}, ownerPhotos, ownerPhotosPicked, ownerGenres: ownerGenres || {}, ownerLinks: ownerLinks || {}, watermark, labelArtists: labelArtists || {}, hiddenOwners: hiddenOwners || [] });
+      const lut = await withRedis(r => r.get(`brand_lut:${slug}`)).catch(() => null);
+      return res.status(200).json({ lut: lut || '', files, orgType: ORG_TYPES.includes(orgType) ? orgType : 'venue', orgName: orgName || '', ownerNames: ownerNames || {}, ownerPhotos, ownerPhotosPicked, ownerGenres: ownerGenres || {}, ownerLinks: ownerLinks || {}, watermark, labelArtists: labelArtists || {}, hiddenOwners: hiddenOwners || [] });
     }
 
     if (req.method !== 'POST') return res.status(405).end();
@@ -153,6 +154,17 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, removed });
     }
 
+    // The colour look (.cube) used on every vertical clip; an empty url turns it off
+    if (body.action === 'setLut') {
+      const url = String(body.url || '');
+      if (!url) { await withRedis(r => r.del(`brand_lut:${slug}`)); return res.status(200).json({ lut: '' }); }
+      let pathname = '';
+      try { pathname = decodeURIComponent(new URL(url).pathname.slice(1)); } catch {}
+      const meta = pathname.startsWith(prefixFor(slug)) ? parsePath(pathname, slug) : null;
+      if (!meta || meta.category !== 'looks' || !/\.cube$/i.test(pathname)) return res.status(400).json({ error: 'Pick one of your colour looks (.cube)' });
+      await withRedis(r => r.set(`brand_lut:${slug}`, url));
+      return res.status(200).json({ lut: url });
+    }
     if (body.action === 'setPhoto') {
       const url = String(body.url || '');
       let pathname = '';

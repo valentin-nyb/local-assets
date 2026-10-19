@@ -481,7 +481,7 @@
         ];
         var IMG_EXT = /\.(png|jpe?g|svg|webp|gif)$/i;
         var FONT_EXT = /\.(otf|ttf|woff2?)$/i;
-        var _files = [], _owners = [], _uploading = false, _orgType = 'venue', _orgName = '', _ownerPhotos = {}, _photoPicked = {}, _ownerGenres = {}, _ownerLinks = {}, _labelArtists = {};
+        var _lut = '', _files = [], _owners = [], _uploading = false, _orgType = 'venue', _orgName = '', _ownerPhotos = {}, _photoPicked = {}, _ownerGenres = {}, _ownerLinks = {}, _labelArtists = {};
         var ORG_LABELS = { venue: 'Venue', artist: 'Artist', label: 'Record label', management: 'Management' };
 
         function slugify(name) {
@@ -1055,7 +1055,7 @@
                     laFetch('/api/brand').then(function(r) { return r.json().then(function(d) { if (!r.ok) throw new Error(d.error || r.status); return d; }); }),
                     laFetch('/api/list-assets').then(function(r) { return r.ok ? r.json() : []; }).catch(function() { return []; }),
                 ]);
-                _files = res[0].files || [];
+                _files = res[0].files || []; _lut = res[0].lut || '';
                 _orgType = res[0].orgType || 'venue';
                 _orgName = res[0].orgName || '';
                 _ownerPhotos = res[0].ownerPhotos || {};
@@ -1210,7 +1210,9 @@
             wrap.querySelectorAll('[data-set-thumb]').forEach(function(b) { b.addEventListener('click', function() { openSetThumbnail(b.dataset.setThumb); }); });
             wrap.querySelectorAll('[data-use-wm]').forEach(function(b) { b.addEventListener('click', function() { useLogoAsWatermark(b.dataset.useWm); }); });
             wrap.querySelectorAll('[data-file-preview]').forEach(function(b) { b.addEventListener('click', function() { openFilePreview(b.dataset.filePreview); }); });
-            wrap.querySelectorAll('.bk-lut[data-lut]').forEach(function(pv) { paintLutCard(pv); pv.classList.add('is-openable'); pv.addEventListener('click', function(e) { if (e.target.closest('.bk-tag')) return; openFilePreview(pv.dataset.lut); }); });
+            wrap.querySelectorAll('.bk-lut[data-lut]').forEach(function(pv) { paintLutCard(pv); pv.classList.add('is-openable'); pv.addEventListener('click', function(e) { if (e.target.closest('.bk-tag,[data-use-lut]')) return; openFilePreview(pv.dataset.lut); }); });
+            // Use as LUT: one look for every vertical clip; pressing the one in use turns grading off
+            wrap.querySelectorAll('[data-use-lut]').forEach(function(b) { b.addEventListener('click', function(e) { e.stopPropagation(); useLut(_lut === b.dataset.useLut ? '' : b.dataset.useLut); }); });
             wrap.querySelectorAll('[data-move]').forEach(function(b) { b.addEventListener('click', function() { openMove(b.dataset.move); }); });
             wrap.querySelectorAll('[data-org]').forEach(function(b) { b.addEventListener('click', openOrgType); });
             wrap.querySelectorAll('[data-edit-owner]').forEach(function(b) { b.addEventListener('click', function() { openOwnerEdit(b.dataset.editOwner); }); });
@@ -1341,6 +1343,16 @@
             unfoldWm(); document.getElementById('bk-wm').scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
+        function useLut(url) {
+            var prev = _lut; _lut = url; paintLutButtons();
+            laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setLut', url: url }) })
+                .then(function(r) { return r.json().then(function(d) { if (!r.ok) throw new Error(d.error || r.status); return d; }); })
+                .then(function() { laToast(url ? 'This look grades every new vertical clip' : 'Colour grading off'); })
+                .catch(function(e) { _lut = prev; paintLutButtons(); laAlert('Could not save: ' + e.message, { tone: 'error' }); });
+        }
+        function paintLutButtons() {
+            document.querySelectorAll('[data-use-lut]').forEach(function(b) { var on = _lut === b.dataset.useLut; b.classList.toggle('is-on', on); b.textContent = on ? 'LUT in use' : 'Use as LUT'; });
+        }
         // ── Colour looks (.cube LUTs): applied in the browser to a frame of the latest session ──
         var _luts = {}, _lutFrame = null;
         function loadLut(url) {
@@ -1408,7 +1420,7 @@
                 '<div class="bk-lut-cmp" id="bk-lut-cmp"><canvas id="bk-lut-before"></canvas><canvas id="bk-lut-after"></canvas><span class="bk-lut-line" id="bk-lut-line"></span>' +
                 '<span class="bk-lut-lbl l">Before</span><span class="bk-lut-lbl r">After</span><p class="bk-lut-wait" id="bk-lut-wait">Applying look…</p></div>' +
                 '<input type="range" class="bk-lut-range" id="bk-lut-range" min="0" max="100" value="50" aria-label="Compare before and after">' +
-                '<p class="bk-meta" style="margin-top:10px">Applied to every vertical clip made from now on (your newest look). ' + fmtSize(f.size) + ' · ' + fmtDate(f.uploadedAt) + '</p>');
+                '<p class="bk-meta" style="margin-top:10px">' + (_lut === f.url ? 'In use: grades every new vertical clip. ' : 'Not in use: choose Use as LUT on its card to grade every new vertical clip. ') + fmtSize(f.size) + ' · ' + fmtDate(f.uploadedAt) + '</p>');
             document.querySelector('#cam-dialog .cam-dialog-panel').classList.add('wide');
             Promise.all([lutFrame(), loadLut(f.url)]).then(function(r) {
                 var im = r[0], lut = r[1];
@@ -1537,7 +1549,8 @@
                     (thumbFile(f) ? '<button type="button" class="bk-use-wm" data-set-thumb="' + esc(f.url) + '" title="Use this image as a session thumbnail, with your watermark">Set as thumbnail</button>' : '') +
                     (wmLogoFile(f) ? '<button type="button" class="bk-use-wm' + (wmUsesLogo(f) ? ' is-on' : '') + '" data-use-wm="' + esc(f.url) + '" title="Stamp this logo bottom left on every vertical clip">' + (wmUsesLogo(f) ? 'Watermark' : 'Use as watermark') + '</button>' : '') + '</div>'
                 : /\.cube$/i.test(f.name)
-                ? '<div class="bk-preview photo bk-lut" data-lut="' + esc(f.url) + '">' + tag + '<canvas class="bk-lut-c"></canvas><span class="bk-lut-wait">Applying look…</span></div>'
+                ? '<div class="bk-preview photo bk-lut" data-lut="' + esc(f.url) + '">' + tag + '<canvas class="bk-lut-c"></canvas><span class="bk-lut-wait">Applying look…</span>' +
+                    '<button type="button" class="bk-use-wm' + (_lut === f.url ? ' is-on' : '') + '" data-use-lut="' + esc(f.url) + '" title="Grade every vertical clip with this look">' + (_lut === f.url ? 'LUT in use' : 'Use as LUT') + '</button></div>'
                 : FONT_EXT.test(f.name)
                 ? '<div class="bk-preview bk-font" data-font="' + esc(f.url) + '">' + tag +
                     '<div class="bk-font-sample"><span class="aa">Aa</span><span class="line">ABC abc 123</span></div></div>'
