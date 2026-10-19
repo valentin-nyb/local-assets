@@ -319,6 +319,7 @@
                     <div class="bl-admin-actions" style="padding-top:16px">
                         <button type="button" class="cam-btn ghost" id="bl-add-plan">Add plan</button>
                         <button type="button" class="cam-btn primary" id="bl-save-plans">Save plans</button>
+                        <button type="button" class="cam-btn ghost" id="bl-reprice">Update subscriptions to these prices</button>
                         <span class="bl-msg" id="bl-plans-msg"></span>
                     </div>
                 </section>
@@ -738,6 +739,22 @@
         document.getElementById('bl-plans').addEventListener('input', function() { this.dataset.editing = '1'; });
         document.getElementById('bl-plans').addEventListener('click', function(e) { var b = e.target.closest('[data-del-plan]'); if (b) { this.dataset.editing = '1'; b.closest('tr').remove(); } });
         document.getElementById('bl-add-plan').addEventListener('click', function() { var t = document.getElementById('bl-plans'); t.dataset.editing = '1'; t.querySelector('tbody').insertAdjacentHTML('beforeend', planRow()); });
+        // Subscriptions keep the price they started at: list those that differ from their plan's price today, then move them
+        document.getElementById('bl-reprice').addEventListener('click', async function() {
+            var b = this, msg = document.getElementById('bl-plans-msg');
+            b.disabled = true; msg.textContent = 'Checking subscriptions…';
+            try {
+                var d = await post({ action: 'repriceSubscriptions' });
+                if (!d.rows.length) { msg.textContent = 'Every subscription is already at its plan\'s price'; b.disabled = false; return; }
+                var list = d.rows.map(function(r) { return r.name + ' (' + r.plan + '): ' + money(r.from, 'gbp') + ' → ' + money(r.to, 'gbp'); }).join('\n');
+                msg.textContent = '';
+                if (!(await laConfirm({ title: 'Update ' + d.rows.length + ' subscription' + (d.rows.length === 1 ? '' : 's') + '?', message: list + '\n\nFrom each one\'s next invoice, with no charge or credit for this month.', confirmText: 'Update prices' }))) { b.disabled = false; return; }
+                msg.textContent = 'Updating…';
+                var done = await post({ action: 'repriceSubscriptions', apply: true });
+                msg.textContent = done.rows.filter(function(r) { return r.done; }).length + ' updated';
+            } catch (e) { msg.textContent = 'Could not update: ' + e.message; }
+            b.disabled = false;
+        });
         document.getElementById('bl-save-plans').addEventListener('click', async function() {
             var msg = document.getElementById('bl-plans-msg'), t = document.getElementById('bl-plans');
             var plans = Array.prototype.map.call(t.querySelectorAll('tbody tr'), function(tr) {

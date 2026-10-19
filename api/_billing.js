@@ -142,22 +142,53 @@ function trialLikeStarter(list) {
     features: [...feats, 'Pay as you go: every set, upload, GB of storage and stream charged on the 1st'],
     included: { storedMinutes: 0, deliveredMinutes: 0, fileGB: 0 }, maxClips: starter.maxClips, cameras: starter.cameras || 0 });
 }
-// Monthly plan prices by account type: venues pay the list price, record labels half, artists half of that
-// (a quarter, to the nearest £5). Applied at checkout, on plan changes, on the billing page and the pricing page.
+// Monthly plans by account type: what each pays and what it includes, by sets (or events) a month and the
+// video it keeps. Venues pay the list price; record labels and artists have their own prices and allowances
+// (TYPE_PRICE, TYPE_PLAN). Storage above the allowance is charged on the 1st, a set above it as usage.
+// Applied at checkout, on plan changes, on invoices, the billing page and the pricing page (index.html).
 // Plans with hardware we buy (Live-Set: cameras, Mac mini, Starlink Mini) run for at least 12 months
 export const MIN_TERM_PLANS = ['liveset-creative'];
 export const commitEndFor = planId => MIN_TERM_PLANS.includes(planId) ? new Date(Date.now() + 365 * 86400e3).toISOString().slice(0, 10) : '';
 export const TYPE_FACTOR = { venue: 1, label: 0.5, artist: 0.25 };
 // Set prices that replace the rule for one plan and type (planId → type → £ a month)
-export const TYPE_PRICE = { 'starter-distribution': { artist: 379 } };
+export const TYPE_PRICE = {
+  'starter-distribution': { artist: 79, label: 249 },
+  'liveset-distribution': { artist: 199, label: 599 },
+  'liveset-creative': { artist: 895, label: 1995 },
+};
+// What each plan includes by type: sets (events for a venue) a month, 0 = unlimited; the video it keeps
+// (stored minutes), minutes streamed and GB of files. Venues keep the plan's own allowances.
+export const TYPE_PLAN = {
+  'starter-distribution': { venue: { sets: 8 }, label: { sets: 12, storedMinutes: 6000, deliveredMinutes: 15000, fileGB: 300 }, artist: { sets: 4, storedMinutes: 2000, deliveredMinutes: 5000, fileGB: 100 } },
+  'liveset-distribution': { venue: { sets: 16 }, label: { sets: 24, storedMinutes: 15000, deliveredMinutes: 40000, fileGB: 750 }, artist: { sets: 8, storedMinutes: 6000, deliveredMinutes: 15000, fileGB: 300 } },
+  'liveset-creative': { venue: { sets: 0 }, label: { sets: 30, storedMinutes: 50000, deliveredMinutes: 200000, fileGB: 3000 }, artist: { sets: 12, storedMinutes: 20000, deliveredMinutes: 60000, fileGB: 1000 } },
+};
+// "≈ 33 hours of video kept" from stored minutes
+const keptLine = min => `Keeps ${Math.round(min / 60).toLocaleString('en-GB')} hours of video (extra storage charged monthly)`;
 export function priceForType(price, type, planId) {
+  if (type === 'management') type = 'label';   // a management company is priced like a record label
   const set = planId && TYPE_PRICE[planId] && TYPE_PRICE[planId][type];
   if (set && price > 0) return set;
   const f = TYPE_FACTOR[type];
   if (!(price > 0) || !f || f === 1) return price;
   return Math.round(price * f / 5) * 5;
 }
-export function planForType(plan, type) { return plan && plan.price > 0 ? { ...plan, price: priceForType(plan.price, type, plan.id) } : plan; }
+export function planForType(plan, type) {
+  if (!(plan && plan.price > 0)) return plan;
+  const t = TYPE_PLAN[plan.id]?.[type === 'management' ? 'label' : type];
+  const included = { ...(plan.included || {}) };
+  for (const k of ['storedMinutes', 'deliveredMinutes', 'fileGB']) if (t && t[k] != null) included[k] = t[k];
+  // The plan's features, with its sets a month and the video it keeps for this kind of account
+  let features = plan.features;
+  if (t && Array.isArray(features)) {
+    const word = type === 'venue' ? 'events' : 'sets';
+    const sets = t.sets === 0 ? `Unlimited ${word} a month` : t.sets ? `Up to ${t.sets} ${word} a month` : '';
+    features = features.filter(f => !/events? processed|sets? (a|per) month|cloud storage|hours of video/i.test(f));
+    const at = Math.max(0, features.findIndex(f => /clips per session/i.test(f)));
+    features = [...features.slice(0, at), ...(sets ? [sets] : []), ...features.slice(at), keptLine(included.storedMinutes || 0)];
+  }
+  return { ...plan, price: priceForType(plan.price, type, plan.id), included, features, setsPerMonth: t ? t.sets : undefined };
+}
 export async function readPlansRaw(redis) {
   // The Trial Month is always offered, even when the saved plan list predates it
   const withPayg = list => [...DEFAULT_PLANS.filter(d => d.id === 'dj-trial' && !list.some(p => p.id === d.id)), ...list];
@@ -431,6 +462,11 @@ export function venueEntries() {
   return Object.entries(getVenuesConfig()).map(([slug, cfg]) => ({ slug, cfg, auth: getMuxAuthForVenue({ slug, ...cfg }) }));
 }
 
+export async function accountTypeOf(redis, slug) {
+  const cfg = getVenuesConfig()[slug];
+  return (await redis.get(`brand_org_type:${slug}`)) || (await redis.get(`account_type:${slug}`)) || cfg?.type || (/team$/i.test(String(cfg?.name || '')) ? 'management' : 'venue');
+}
+
 // Creates and sends the invoice for one venue and one month (once)
 export async function invoiceVenue(redis, stripe, { slug, auth, email, name, target = 'venue', planId }, period) {
   const doneKey = `billing_invoiced:${slug}:${target}:${period.key}`;
@@ -438,9 +474,11 @@ export async function invoiceVenue(redis, stripe, { slug, auth, email, name, tar
   if (existing) return { skipped: true, invoice: existing };
   const rates = await readRates(redis);
   const plans = await readPlans(redis);
-  const plan = planId !== undefined ? (plans.find(p => p.id === planId) || null) : await readPlan(redis, slug, target);
   const artist = target.startsWith('artist:') ? target.slice(7) : null;
   const label = target.startsWith('label:') ? target.slice(6) : null;
+  // At the price and allowances of what is billed: an artist, a record label, or the account's own type
+  const type = artist ? 'artist' : label ? 'label' : await accountTypeOf(redis, slug);
+  const plan = planForType(planId !== undefined ? (plans.find(p => p.id === planId) || null) : await readPlan(redis, slug, target), type);
   const usage = await venueUsage(slug, auth, period, artist, label);
   const priced = priceUsage(usage, rates, plan);
   if (priced.total < 0.3) { await redis.set(doneKey, 'none'); return { skipped: true, reason: 'Nothing to bill' }; }

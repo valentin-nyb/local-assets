@@ -5,7 +5,7 @@ import { getWebSessionAuth, getVenuesConfig, readRegistryRaw, saveRegistryEntry,
 import { venueAuth } from './_verticals.js';
 import {
   readRates, readPlans, cleanPlans, readAssignments, assignKey, venueUsage, venueArtists, priceUsage,
-  monthRange, stripeClient, invoiceVenue, venueEntries, DEFAULT_RATES, applyDetails, usageByDay, planForType, priceForType, commitEndFor, readKit, cleanKit, KIT_PLANS } from './_billing.js';
+  monthRange, stripeClient, invoiceVenue, venueEntries, DEFAULT_RATES, applyDetails, usageByDay, planForType, priceForType, commitEndFor, readKit, cleanKit, KIT_PLANS, accountTypeOf } from './_billing.js';
 
 // Billing page data and actions.
 //   GET ?target=venue|artist:NAME&plan=ID&period=current|previous   usage, plan and price for one bill-to
@@ -13,6 +13,7 @@ import {
 //   POST { action: 'setRates', rates }                           admin
 //   POST { action: 'setPlans', plans }                           admin
 //   POST { action: 'setKit', kit }                               admin: kit expenses for Pro and Live-Set
+//   POST { action: 'repriceSubscriptions', apply }               admin: subscriptions to their plan's current price
 //   POST { action: 'assign', target, plan, email, name, monthly } admin: who pays which plan
 //   POST { action: 'invoiceNow', target, plan, email, name, period } admin: send an invoice now
 
@@ -267,7 +268,7 @@ export default async function handler(req, res) {
         usage: data.usage, ...priced, invoices, stripe: !!stripe, isAdmin, subscription, accountType: data.accountType, accountTypeLabel: TYPE_LABEL[data.accountType] || 'Account',
         // Plans a client can move to (name, price, what's included)
         // (pay-as-you-go plans are chosen at sign-up only; an account can move up to a monthly plan from them)
-        plansOffered: data.plans.filter(p => p.price > 0 || p.id === ((data.assignments.venue || {}).plan || '')).map(p => ({ signupFee: p.signupFee || 0, id: p.id, name: p.name, price: priceForType(p.price, data.accountType, p.id), maxClips: p.maxClips, cameras: p.cameras || 0, features: p.features || [], included: p.included })),
+        plansOffered: data.plans.filter(p => p.price > 0 || p.id === ((data.assignments.venue || {}).plan || '')).map(p => planForType(p, data.accountType)).map(p => ({ signupFee: p.signupFee || 0, id: p.id, name: p.name, price: p.price, maxClips: p.maxClips, cameras: p.cameras || 0, features: p.features || [], included: p.included })),
         currentPlan: (data.assignments.venue || {}).plan || '',
         ...(isAdmin ? { kit: await withRedis(readKit), kitPlans: KIT_PLANS, stripeAccount, venueSlug: slug, venues: billable.map(k => ({ slug: k, name: cfg[k]?.name || k })), rates: data.rates, plans: data.plans, assignments: data.assignments, artists: data.artists, labels: data.labels, bkVenues: data.bkVenues, assignment: a } : {}),
       });
@@ -466,6 +467,39 @@ export default async function handler(req, res) {
       }
       await withRedis(redis => redis.set('billing_rates', JSON.stringify({ ...DEFAULT_RATES, ...clean })));
       return res.status(200).json({ ok: true });
+    }
+
+    // Subscriptions keep the price they were started at: this lists the ones that differ from their plan's
+    // price today (by account type) and, with apply, moves them to it from their next invoice (no proration)
+    if (body.action === 'repriceSubscriptions') {
+      const stripe = stripeClient();
+      if (!stripe) return res.status(503).json({ error: 'Payments are not set up yet' });
+      const rows = await withRedis(async redis => {
+        const plans = await readPlans(redis), out = [];
+        for (const s of billable) {
+          const a = (await readAssignments(redis, s)).venue || {};
+          const subId = a.subscriptionId || cfg[s]?.subscription || '';
+          if (!subId || !a.plan) continue;
+          const type = await accountTypeOf(redis, s);
+          const plan = planForType(plans.find(p => p.id === a.plan) || null, type);
+          if (!plan || !(plan.price > 0)) continue;
+          const sub = await stripe.subscriptions.retrieve(subId).catch(() => null);
+          const item = sub && !['canceled', 'incomplete_expired'].includes(sub.status) ? sub.items.data[0] : null;
+          if (!item) continue;
+          const from = (item.price?.unit_amount || 0) / 100, to = Math.round(plan.price * 100) / 100;
+          if (Math.abs(from - to) < 0.01) continue;
+          const row = { slug: s, name: cfg[s]?.name || s, type, plan: plan.name, from, to };
+          if (body.apply) {
+            const p = await stripe.prices.create({ currency: 'gbp', unit_amount: Math.round(to * 100), recurring: { interval: 'month' }, product_data: { name: `local / assets · ${plan.name}` } });
+            await stripe.subscriptions.update(subId, { items: [{ id: item.id, price: p.id }], proration_behavior: 'none' });
+            console.log('[billing] repriced', s, from, '→', to);
+            row.done = true;
+          }
+          out.push(row);
+        }
+        return out;
+      });
+      return res.status(200).json({ rows });
     }
 
     if (body.action === 'setKit') {
