@@ -782,6 +782,16 @@
             }));
         }
         var _sessionMetaReady = loadSessionMeta();
+        // The venue a session without one of its own was at: the account it belongs to. In the admin view
+        // that's the client's account (from the artist), not the admin's own saved name
+        function accountVenueName(artistName) {
+            if (_adminView) {
+                var slug = _venueOfArtist[String(artistName).toUpperCase().trim()];
+                var acct = slug && (function() { try { return (JSON.parse(localStorage.getItem('la_admin') || '{}').venues || []).filter(function(v) { return v && v.slug === slug; })[0]; } catch (_) { return null; } })();
+                return acct ? String(acct.name || acct.slug).toUpperCase() : '';
+            }
+            return getVenueName();
+        }
         function sessionMeta(artistName, date) {
             var m = Object.assign({}, _sessionMeta[String(artistName).toUpperCase().trim() + '|' + date] || {});
             if (/^\d{4}-\d{2}-\d{2}$/.test(m.title || '')) { m.date = m.date || m.title; m.title = ''; }
@@ -918,7 +928,7 @@
                 '<p class="se-sub">' + escHtml(artist) + '</p>' +
                 '<label>Session name<input name="sname" maxlength="80" placeholder="e.g. Friday Night Session" value="' + escHtml(meta.title || '') + '"><small>Optional. Leave empty to show the date.</small></label>' +
                 '<label>Date<input name="sdate" type="date" value="' + escHtml(meta.shownDate) + '"><small>When the set happened.</small></label>' +
-                '<label>Venue<input name="svenue" maxlength="60" list="se-venues" placeholder="' + escHtml(getVenueName()) + '" value="' + escHtml(meta.venue || '') + '">' +
+                '<label>Venue<input name="svenue" maxlength="60" list="se-venues" placeholder="' + escHtml(accountVenueName(artist)) + '" value="' + escHtml(meta.venue || '') + '">' +
                 '<datalist id="se-venues">' + venues.map(function(v) { return '<option value="' + escHtml(v) + '">'; }).join('') + '</datalist>' +
                 '<small>' + (venues.length ? 'Pick one of your Brand Kit venues or type a new one.' : 'Type the venue name. Venues added in Brand Kit appear here.') + '</small></label>' +
                 '<label>Record label<input name="slabel" maxlength="60" list="se-labels" placeholder="Optional" value="' + escHtml(meta.label || '') + '">' +
@@ -1278,7 +1288,7 @@
                         id: 'artist_' + String(ai + 1).padStart(2, '0') + '_d_' + String(di + 1).padStart(2, '0'),
                         name: aName,
                         date: dates[di],
-                        venue: sessionMeta(aName, dates[di]).venue || getVenueName(),
+                        venue: sessionMeta(aName, dates[di]).venue || accountVenueName(aName),
                         assets: assetTypes.slice()
                     });
                 }
@@ -1739,14 +1749,14 @@
                     // A session without a venue of its own was at the account's venue
                     var sVenueName = sessionMeta(artist.name, dateStr).venue || '';
                     var sVenueKey = sVenueName ? 'venue-' + brandSlug(sVenueName) : 'venue';
-                    html += '<div class="w-8 h-8 bg-[#050505] border border-border/50 flex items-center justify-center rounded-lg overflow-hidden" data-venue-logo="' + sVenueKey + '" data-venue-name="' + escHtml(sVenueName || getVenueName()) + '">';
+                    html += '<div class="w-8 h-8 bg-[#050505] border border-border/50 flex items-center justify-center rounded-lg overflow-hidden" data-venue-logo="' + sVenueKey + '" data-venue-name="' + escHtml(sVenueName || accountVenueName(artist.name)) + '">';
                     html += '';
                     html += '</div>';
                     html += '<div class="sess-text">';
                     var sMeta = sessionMeta(artist.name, dateStr);
                     html += '<p class="text-xs font-bold text-zinc-300 uppercase tracking-tight">' + escHtml(sMeta.title || sMeta.shownDate) + '</p>';
-                    html += '<p class="text-[8px] font-mono text-zinc-600 uppercase tracking-widest"><span class="sess-venue"' + (sMeta.venue ? '' : ' data-venue-label') + '>' +
-                        escHtml(sMeta.venue || getVenueName()) + '</span>' + (sMeta.label ? ' · <span class="sess-label">' + escHtml(sMeta.label) + '</span>' : '') + (sMeta.title ? ' · ' + sMeta.shownDate : '') + '</p>';
+                    html += '<p class="text-[8px] font-mono text-zinc-600 uppercase tracking-widest"><span class="sess-venue"' + (sMeta.venue || _adminView ? '' : ' data-venue-label') + '>' +
+                        escHtml(sMeta.venue || accountVenueName(artist.name)) + '</span>' + (sMeta.label ? ' · <span class="sess-label">' + escHtml(sMeta.label) + '</span>' : '') + (sMeta.title ? ' · ' + sMeta.shownDate : '') + '</p>';
                     html += '</div>';
                     html += '</div>';
                     html += '<div class="sess-acts flex items-center gap-2">';
@@ -2774,7 +2784,7 @@
         function pdLongDate(d) { var t = new Date(d + 'T12:00:00Z'); return isNaN(t) ? d : t.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }); }
         function publishDefaults(platform, artist, date) {
             var meta = sessionMeta(artist, date), info = window._brandInfo || {};
-            var venue = meta.venue || getVenueName(), label = meta.label || '', shown = meta.shownDate || date;
+            var venue = meta.venue || accountVenueName(artist), label = meta.label || '', shown = meta.shownDate || date;
             var g = info.ownerGenres || {}, l = info.ownerLinks || {};
             var aKey = 'artist-' + brandSlug(artist), vKey = meta.venue ? 'venue-' + brandSlug(meta.venue) : 'venue';
             var genres = g[aKey] || (info.orgType === 'artist' ? g.venue : '') || '';
