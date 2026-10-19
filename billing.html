@@ -311,24 +311,6 @@
                     <div class="bl-section-head bl-fold-head" role="button" tabindex="0" aria-expanded="false" onclick="if(event.target.closest('button,select,a,input'))return;var s=this.parentNode;s.classList.toggle('folded');this.setAttribute('aria-expanded',!s.classList.contains('folded'))" onkeydown="if(event.target!==this)return;if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><h3>Finish setup <svg class="bl-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h3><span class="bl-msg">New sign-ups waiting for their video storage</span></div>
                     <div id="bl-setup-list"></div>
                 </section>
-                <section class="bl-section hidden bl-fold folded" id="bl-pool">
-                    <div class="bl-section-head bl-fold-head" role="button" tabindex="0" aria-expanded="false" onclick="if(event.target.closest('button,select,a,input'))return;var s=this.parentNode;s.classList.toggle('folded');this.setAttribute('aria-expanded',!s.classList.contains('folded'))" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><h3>Ready video storage <svg class="bl-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h3><span class="bl-msg" id="bl-pool-count">Empty Mux environments, given to new sign-ups straight away</span></div>
-                    <div id="bl-pool-list"></div>
-                    <div class="bl-setup-item">
-                        <ol class="bl-setup-steps">
-                            <li>In Mux, <b>Create environment</b> (Production). Name it anything, e.g. <code>client-07</code>.</li>
-                            <li>In that environment: <b>Settings → Access Tokens → Generate new token</b> with Mux Video read and write.</li>
-                            <li><b>Settings → Webhooks</b>: add <code>https://local-assets.com/api/mux-webhook</code>, then copy its <b>signing secret</b>.</li>
-                        </ol>
-                        <form class="bl-admin" id="bl-pool-form" style="padding:0;grid-template-columns:repeat(2,minmax(0,1fr))" autocomplete="off">
-                            <label>Name<input name="label" maxlength="60" placeholder="client-07"></label>
-                            <label>Access token ID<input name="tokenId" autocomplete="off"></label>
-                            <label>Secret key<input name="tokenSecret" type="password" autocomplete="new-password"></label>
-                            <label>Webhook signing secret<input name="webhookSecret" type="password" autocomplete="new-password"></label>
-                        </form>
-                        <div class="bl-admin-actions" style="padding:0"><button type="button" class="cam-btn primary" id="bl-pool-add">Add to ready list</button><span class="bl-msg" id="bl-pool-msg"></span></div>
-                    </div>
-                </section>
                 <section class="bl-section hidden bl-fold folded" id="bl-plans-box">
                     <div class="bl-section-head bl-fold-head" role="button" tabindex="0" aria-expanded="false" onclick="if(event.target.closest('button,select,a,input'))return;var s=this.parentNode;s.classList.toggle('folded');this.setAttribute('aria-expanded',!s.classList.contains('folded'))" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><h3>Plans <svg class="bl-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h3><span class="bl-msg">Monthly price and the usage each plan includes</span></div>
                     <table class="bl-table" id="bl-plans"></table>
@@ -368,6 +350,24 @@
                     <div class="bl-cancel-body">
                         <p class="bl-msg" id="bl-cancel-text">Your plan stays active until the end of the current billing month. Your recordings, clips and Brand Kit stay downloadable until then.</p>
                         <button type="button" class="cam-btn bl-danger" id="bl-cancel-btn">Cancel account</button>
+                    </div>
+                </section>
+                <section class="bl-section hidden bl-fold folded" id="bl-pool">
+                    <div class="bl-section-head bl-fold-head" role="button" tabindex="0" aria-expanded="false" onclick="if(event.target.closest('button,select,a,input'))return;var s=this.parentNode;s.classList.toggle('folded');this.setAttribute('aria-expanded',!s.classList.contains('folded'))" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><h3>Ready video storage <svg class="bl-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h3><span class="bl-msg" id="bl-pool-count">Empty Mux environments, given to new sign-ups straight away</span></div>
+                    <div id="bl-pool-list"></div>
+                    <div class="bl-setup-item">
+                        <ol class="bl-setup-steps">
+                            <li>In Mux, <b>Create environment</b> (Production). Name it anything, e.g. <code>client-07</code>.</li>
+                            <li>In that environment: <b>Settings → Access Tokens → Generate new token</b> with Mux Video read and write.</li>
+                            <li><b>Settings → Webhooks</b>: add <code>https://local-assets.com/api/mux-webhook</code>, then copy its <b>signing secret</b>.</li>
+                        </ol>
+                        <form class="bl-admin" id="bl-pool-form" style="padding:0;grid-template-columns:repeat(2,minmax(0,1fr))" autocomplete="off">
+                            <label>Name<input name="label" maxlength="60" placeholder="client-07"></label>
+                            <label>Access token ID<input name="tokenId" autocomplete="off"></label>
+                            <label>Secret key<input name="tokenSecret" type="password" autocomplete="new-password"></label>
+                            <label>Webhook signing secret<input name="webhookSecret" type="password" autocomplete="new-password"></label>
+                        </form>
+                        <div class="bl-admin-actions" style="padding:0"><button type="button" class="cam-btn primary" id="bl-pool-add">Add to ready list</button><span class="bl-msg" id="bl-pool-msg"></span></div>
                     </div>
                 </section>
             </div>
