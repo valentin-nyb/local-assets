@@ -1,5 +1,7 @@
 // Mux live streams for a venue (one per camera). Stream keys are never returned.
-export async function listLiveStreams(muxAuth) {
+// includeDisabled: also streams switched off between sessions (the camera page's own cameras: closed until a set
+// or Record now, they still exist and must not read as missing), shown with status 'idle'
+export async function listLiveStreams(muxAuth, { includeDisabled = false } = {}) {
   const res = await fetch('https://api.mux.com/video/v1/live-streams?limit=100', {
     headers: { Authorization: muxAuth },
     signal: AbortSignal.timeout(10000),
@@ -8,11 +10,12 @@ export async function listLiveStreams(muxAuth) {
   const { data = [] } = await res.json();
 
   const streams = data
-    .filter(s => s.status !== 'disabled')
+    .filter(s => includeDisabled || s.status !== 'disabled')
     .map(s => ({
       id:          s.id,
       name:        s.passthrough || '',
-      status:      s.status,                       // 'active' while the camera is sending video
+      status:      s.status === 'disabled' ? 'idle' : s.status,   // 'active' while the camera is sending video
+      disabled:    s.status === 'disabled',
       playbackId:  (s.playback_ids || []).find(p => p.policy === 'public')?.id || null,
       activeAssetId: s.active_asset_id || null,
       recording:   !!s.new_asset_settings,          // saved as an asset when the broadcast ends

@@ -98,7 +98,7 @@ export default async function handler(req, res) {
   const venueCameras = async (vslug, auth) => {
     const [saved, streams] = await Promise.all([
       withRedis(r => readCameras(r, vslug)),
-      listLiveStreams(auth),
+      listLiveStreams(auth, { includeDisabled: true }),
     ]);
     if (saved.length) {
       await withRedis(r => r.hSet(STREAM_MAP, Object.fromEntries(saved.map(c => [c.streamId, vslug])))).catch(() => {});
@@ -115,6 +115,7 @@ export default async function handler(req, res) {
     });
     // Streams created directly in Mux still show up, without camera details.
     for (const s of byId.values()) {
+      if (s.disabled) continue;
       cameras.push({ id: s.id, streamId: s.id, name: s.name || 'Camera', model: '', ndiName: '', ip: '', status: s.status, playbackId: s.playbackId, liveSince: s.liveSince || null, recording: s.recording, external: true });
     }
     return cameras;

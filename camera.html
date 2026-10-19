@@ -1586,6 +1586,8 @@
             if (!row) return;
             var venue = macVenue(), id = row.dataset.slot, kind = row.dataset.kind;
             var video = (row.querySelector('[data-mac=video]') || {}).value || '', audio = (row.querySelector('[data-mac=audio]') || {}).value || '';
+            // Let go of the list, or the row skips redrawing while it has focus and keeps saying Not linked
+            if (e.target.blur) e.target.blur();
             try {
                 if (kind === 'audio' ? !audio : !video) { await window.laApp.mac.unlink(venue, id); return renderMac(); }
                 _macBusy[id] = true; renderMac();
