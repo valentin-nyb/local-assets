@@ -55,6 +55,19 @@ export default async function handler(req, res) {
     return res.status(200).json({ received: true });
   }
 
+  // ── PTZ CAMERA RENTED (£99/month, 12-month minimum): kept with the account for shipping ─────
+  if (event.type === 'checkout.session.completed' && event.data.object.metadata?.kind === 'addon-camera') {
+    const cs = event.data.object, slug = cs.metadata.venueSlug;
+    const redis = createClient({ url: process.env.REDIS_URL });
+    try {
+      await redis.connect();
+      await redis.hSet(`billing_cameras:${slug}`, cs.subscription || cs.id, JSON.stringify({ at: Date.now(), commitEnd: cs.metadata.commitEnd, email: cs.customer_details?.email || '' }));
+      console.log('[Stripe Webhook] PTZ camera rented', slug, cs.subscription);
+    } catch (e) { console.error('[Stripe Webhook] camera rental', e.message); }
+    finally { await redis.quit().catch(() => {}); }
+    return res.status(200).json({ received: true });
+  }
+
   // ── PLAN CHOSEN FROM THE BILLING PAGE (no subscription before) ─────
   if (event.type === 'checkout.session.completed' && event.data.object.metadata?.kind === 'upgrade') {
     const cs = event.data.object, slug = cs.metadata.venueSlug;

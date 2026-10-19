@@ -205,6 +205,9 @@
         .bl-fold-chev { width:16px; height:16px; transition:transform .2s ease; }
         .bl-fold.folded .bl-fold-chev { transform:rotate(-90deg); }
         .bl-fold.folded > :not(.bl-fold-head) { display:none !important; }
+        .bl-addon { display:flex; align-items:center; justify-content:space-between; gap:18px; margin:4px 20px 20px; padding:16px 18px; border:1px solid var(--la-line); border-radius:12px; }
+        .bl-addon-t { margin:0 0 4px; font-weight:600; color:var(--la-text); }
+        @media (max-width:640px) { .bl-addon { flex-direction:column; align-items:stretch; } }
 </style>
 </head>
 <body class="font-sans antialiased bg-background text-foreground overflow-hidden h-screen w-screen flex selection:bg-primary selection:text-black">
@@ -303,6 +306,8 @@
                 <section class="bl-section hidden" id="bl-plans-offer">
                     <div class="bl-section-head"><h3>Your plan</h3><span class="bl-msg">Upgrade for more clips, storage and streaming. Changes apply straight away, prorated.</span></div>
                     <div class="bl-offer" id="bl-offer"></div>
+                    <div class="bl-addon"><div><p class="bl-addon-t">Add a PTZ camera</p><p class="bl-msg">£99 a month, 12-month minimum. Set up for you, controlled from Camera Control. The camera goes back when the rental ends.</p></div>
+                        <button type="button" class="cam-btn ghost" id="bl-add-camera">Add a camera</button></div>
                 </section>
                 <section class="bl-section">
                     <div class="bl-section-head"><h3>Invoices</h3><div class="bl-inv-tools"><select id="bl-inv-filter" class="bl-inv-filter hidden" aria-label="Show invoices for"></select><button type="button" class="cam-btn ghost hidden" id="bl-inv-zip">Download all</button></div></div>
@@ -1005,6 +1010,13 @@
             } catch (e) { msg.textContent = e.message; }
             b.disabled = false;
         });
+        document.getElementById('bl-add-camera').addEventListener('click', async function() {
+            if (!(await laConfirm({ title: 'Add a PTZ camera?', message: '£99 a month for at least 12 months, charged with your plan. We set it up for you; it goes back when the rental ends.', confirmText: 'Continue to payment' }))) return;
+            var b = this; b.disabled = true; b.textContent = 'Opening checkout…';
+            try { var d = await post({ action: 'addCamera' }); if (d.url) location.href = d.url; }
+            catch (e) { b.disabled = false; b.textContent = 'Add a camera'; laAlert('Could not open checkout: ' + e.message, { tone: 'error' }); }
+        });
+        if (new URLSearchParams(location.search).get('camera') === 'added') { history.replaceState({}, '', '/billing'); setTimeout(function() { laToast('Camera added. We\'ll be in touch to set it up'); }, 800); }
         if (new URLSearchParams(location.search).get('plan') === 'updated') { history.replaceState({}, '', '/billing'); setTimeout(function() { laToast('Your plan is active'); }, 800); }
         document.getElementById('bl-cancel-btn').addEventListener('click', async function() {
             var b = this, resume = b.dataset.mode === 'resume';

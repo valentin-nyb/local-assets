@@ -276,6 +276,23 @@ export default async function handler(req, res) {
     // or, without a subscription yet, a Stripe checkout starts one
     if (!isAdmin) {
       const body0 = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+      // Rent a PTZ camera: £99 a month as its own subscription, 12-month minimum (the camera costs us £1,000)
+      if (body0.action === 'addCamera') {
+        const stripe = stripeClient();
+        if (!stripe) return res.status(503).json({ error: 'Payments are not set up yet' });
+        const customer = await withRedis(r => r.get(`billing_customer:${slug}`));
+        const commitEnd = new Date(Date.now() + 365 * 86400e3).toISOString().slice(0, 10);
+        const meta = { kind: 'addon-camera', venueSlug: slug, minimumMonths: '12', commitEnd };
+        const checkout = await stripe.checkout.sessions.create({
+          mode: 'subscription',
+          ...(customer ? { customer } : { customer_email: session.email }),
+          line_items: [{ quantity: 1, price_data: { currency: 'gbp', unit_amount: 9900, tax_behavior: 'exclusive', recurring: { interval: 'month' }, product_data: { name: 'local / assets · PTZ camera (12-month minimum)' } } }],
+          custom_text: { submit: { message: 'PTZ camera, £99 a month for at least 12 months. The camera stays ours and goes back when the rental ends.' } },
+          success_url: 'https://local-assets.com/billing?camera=added', cancel_url: 'https://local-assets.com/billing',
+          metadata: meta, subscription_data: { metadata: meta },
+        });
+        return res.status(200).json({ url: checkout.url });
+      }
       if (body0.action === 'cancelPlan' || body0.action === 'resumePlan') {
         const out = await withRedis(async redis => {
           const a = (await readAssignments(redis, slug)).venue || {};
