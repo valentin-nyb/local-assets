@@ -486,7 +486,7 @@
             { key: 'covers',     label: 'Album covers', icon: 'solar:vinyl-record-linear', tag: 'Album cover' },
             { key: 'artwork',    label: 'Artwork',    icon: 'solar:gallery-wide-linear', tag: 'Artwork' },
             // Several images kept together as one post (a carousel)
-            { key: 'posts',      label: 'Instagram posts', icon: 'solar:gallery-linear', tag: 'Instagram post' },
+            { key: 'posts',      label: 'Instagram posts', icon: 'solar:gallery-linear', tag: 'Instagram' },
             { key: 'photos',     label: 'Photos',     icon: 'solar:camera-linear', tag: 'Photo' },
             { key: 'guidelines', label: 'Guidelines', icon: 'solar:document-text-linear', tag: 'Guidelines' },
             { key: 'fonts',      label: 'Fonts',      icon: 'solar:text-field-linear', tag: 'Font' },
@@ -1580,7 +1580,7 @@
         function postCard(imgs) {
             var f = imgs[0], size = imgs.reduce(function(n, x) { return n + (x.size || 0); }, 0);
             return '<div class="bk-file">' +
-                '<div class="bk-preview photo"><span class="bk-tag is-post">Instagram post</span>' +
+                '<div class="bk-preview photo"><span class="bk-tag is-post">Instagram</span>' +
                     '<img src="' + esc(f.url) + '" alt="" loading="lazy">' +
                     (imgs.length > 1 ? '<span class="bk-post-count">1 / ' + imgs.length + '</span>' : '') + '</div>' +
                 '<div class="bk-info"><p class="bk-name">' + imgs.length + ' image' + (imgs.length === 1 ? '' : 's') + '</p><p class="bk-meta">' + fmtSize(size) + ' · ' + fmtDate(f.uploadedAt) + '</p></div>' +
