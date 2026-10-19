@@ -4,7 +4,7 @@ import os from 'os';
 import path from 'path';
 import { spawn } from 'child_process';
 import ffmpegPath from 'ffmpeg-static';
-import { put, del as delBlob } from '@vercel/blob';
+import { put, del as delBlob, list as listBlobs } from '@vercel/blob';
 import { getVenuesConfig, getMuxAuthForVenue } from './_venues.js';
 import { planMaxClips } from './_billing.js';
 
@@ -275,7 +275,22 @@ export function run(args) {
   });
 }
 
-// Cuts one vertical original: 9:16 centre crop of the full recording, 1080×1920, 30fps
+// The venue's colour look (Brand Kit → Colour looks: a .cube LUT). The newest one is applied to every vertical
+// clip, so all clips have the same grade. Downloaded for the cut; none → the clip keeps its own colours.
+async function colourLook(slug) {
+  try {
+    const { blobs } = await listBlobs({ prefix: `brand/${slug}/venue/looks/`, limit: 100 });
+    const cube = blobs.filter(b => /\.cube$/i.test(b.pathname)).sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt))[0];
+    if (!cube) return null;
+    const r = await fetch(cube.url, { signal: AbortSignal.timeout(15000) });
+    if (!r.ok) return null;
+    const file = path.join(os.tmpdir(), `look-${String(slug).replace(/[^A-Za-z0-9-]/g, '')}-${Date.now()}.cube`);
+    fs.writeFileSync(file, Buffer.from(await r.arrayBuffer()));
+    return file;
+  } catch (e) { console.error('[verticals] colour look', e.message); return null; }
+}
+
+// Cuts one vertical original: 9:16 centre crop of the full recording, 1080×1920, 30fps (with the venue's colour look)
 export async function cutVertical(redis, auth, job) {
   const lock = `v_lock:${job.masterId}:${job.n}`;
   if (!(await redis.set(lock, '1', { NX: true, EX: 900 }))) return { skipped: 'already cutting' };
@@ -286,7 +301,9 @@ export async function cutVertical(redis, auth, job) {
     // never has to jump into the middle of the stream (which fails on recordings stored as fMP4).
     // If that comes out empty, fall back to the downloadable MP4 when it exists.
     const len = Math.max(1, job.end - job.start);
-    const tail = ['-vf', 'crop=trunc(ih*9/16/2)*2:ih,scale=1080:1920:flags=lanczos,setsar=1,fps=30',
+    const look = await colourLook(job.slug);
+    if (look) setTimeout(() => fs.rm(look, { force: true }, () => {}), 600e3);
+    const tail = ['-vf', 'crop=trunc(ih*9/16/2)*2:ih,scale=1080:1920:flags=lanczos,setsar=1,fps=30' + (look ? ',lut3d=file=' + look : ''),
       '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p',
       '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', out];
     const encode = ['-map', '0:v:0', '-map', '0:a:0?', ...tail];

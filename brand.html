@@ -383,7 +383,7 @@
             <div class="la-page">
                 <div class="cam-toolbar bk-toolbar">
                     <div class="min-w-0">
-                        <p class="cam-eyebrow">Logos · Covers · Artwork · Photos · Guidelines · Fonts</p>
+                        <p class="cam-eyebrow">Logos · Covers · Artwork · Photos · Guidelines · Fonts · Colour</p>
                         <h2 class="cam-h">Brand kit</h2>
                         <p class="bk-lead">Keep your own, each venue's and each artist's brand files in one place, so the team always downloads the right logo and guidelines.</p>
                     </div>
@@ -464,6 +464,8 @@
             { key: 'photos',     label: 'Photos',     icon: 'solar:camera-linear', tag: 'Photo' },
             { key: 'guidelines', label: 'Guidelines', icon: 'solar:document-text-linear', tag: 'Guidelines' },
             { key: 'fonts',      label: 'Fonts',      icon: 'solar:text-field-linear', tag: 'Font' },
+            // A .cube LUT: the venue's newest one is applied to every vertical clip (same colours on every clip)
+            { key: 'looks',      label: 'Colour looks (LUT)', icon: 'solar:pallete-2-linear', tag: 'Colour look' },
             { key: 'other',      label: 'Other…',     icon: 'solar:folder-linear', tag: 'Other' },
         ];
         var IMG_EXT = /\.(png|jpe?g|svg|webp|gif)$/i;
@@ -1469,8 +1471,8 @@
                 '<label id="bk-other-wrap" class="hidden">What is it?<input name="otherLabel" maxlength="40" placeholder="e.g. Press kit, Tech rider, Stage plot"><small>Shown on the file instead of "Other".</small></label>' +
                 '<label id="bk-label-artist-wrap" class="hidden">Artist<select name="labelArtist">' + artistOpts + '</select><small>The record label\'s brand kit is kept under this artist.</small></label>' +
                 '<div id="bk-drop" class="bk-drop" tabindex="0">Drop files here or <b>browse</b>' +
-                    '<small>Logos, covers, artwork, photos, PDFs, AI/EPS, fonts or ZIP · up to 200 MB each</small></div>' +
-                '<input id="bk-input" type="file" multiple class="hidden" accept=".png,.jpg,.jpeg,.svg,.webp,.gif,.pdf,.ai,.eps,.psd,.zip,.ttf,.otf,.woff,.woff2,.txt">' +
+                    '<small>Logos, covers, artwork, photos, PDFs, AI/EPS, fonts, colour looks (.cube) or ZIP · up to 200 MB each</small></div>' +
+                '<input id="bk-input" type="file" multiple class="hidden" accept=".png,.jpg,.jpeg,.svg,.webp,.gif,.pdf,.ai,.eps,.psd,.zip,.ttf,.otf,.woff,.woff2,.txt,.cube">' +
                 '<div id="bk-queue" class="bk-queue"></div>' +
                 '<p id="bk-form-error" class="cam-form-error"></p>' +
                 '<div class="cam-form-actions"><button type="button" class="cam-btn ghost" onclick="closeCamDialog()">Cancel</button>' +
@@ -1493,6 +1495,7 @@
                 if (picked.length && !catTouched) {
                     var p0 = picked[0];
                     if (/\.(ttf|otf|woff2?)$/i.test(p0.name)) form.category.value = 'fonts';
+                    else if (/\.cube$/i.test(p0.name)) form.category.value = 'looks';
                     else if (/pdf/.test(p0.type)) form.category.value = 'guidelines';
                     else if (/^image\//.test(p0.type)) form.category.value =
                         /cover|album|release|single|\bep\b/i.test(p0.name) ? 'covers'

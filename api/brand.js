@@ -11,7 +11,7 @@ import { cleanWatermark, readWatermark, watermarkKey } from './_watermark.js';
 // (large PDFs and font packs exceed the 4.5 MB function body limit); this route
 // only hands out upload tokens for the signed-in venue's own folder.
 
-const CATEGORIES = ['logos', 'covers', 'artwork', 'photos', 'guidelines', 'fonts', 'other'];
+const CATEGORIES = ['logos', 'covers', 'artwork', 'photos', 'guidelines', 'fonts', 'looks', 'other'];
 const MAX_BYTES  = 200 * 1024 * 1024;
 // "venue" is the account itself; artist-<slug> and venue-<slug> are artists and venues it works with
 const OWNER      = /^(venue|(?:artist|venue|label)-[a-z0-9]+(?:-[a-z0-9]+)*)$/;
