@@ -609,13 +609,20 @@
                 document.querySelectorAll('[data-plan]').forEach(function(b) {
                     b.addEventListener('click', async function() {
                         var p = d.plansOffered.filter(function(x) { return x.id === b.dataset.plan; })[0];
-                        if (!(await laConfirm({ title: 'Move to ' + p.name + '?', message: 'Your plan becomes ' + money(p.price, 'gbp') + ' a month. The change applies straight away; this month is prorated on your next invoice.', confirmText: 'Confirm' }))) return;
+                        if (!(await laConfirm({ title: 'Move to ' + p.name + '?', message: 'Your plan becomes ' + money(p.price, 'gbp') + ' a month. The difference for the rest of this month is charged to your card now, and the new plan starts as soon as it\'s paid. Moving to a cheaper plan leaves a credit on your next invoice.', confirmText: 'Pay and switch' }))) return;
                         b.disabled = true; b.textContent = 'Updating…';
                         try {
                             var r = await laFetch('/api/billing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'changePlan', plan: p.id }) });
-                            var out = await r.json(); if (!r.ok) throw new Error(out.error || r.status);
+                            var out = await r.json();
+                            // Not paid yet: the plan stays as it is until the invoice is paid
+                            if (r.status === 402 && out.payUrl) {
+                                b.disabled = false; b.textContent = 'Upgrade';
+                                if (await laConfirm({ title: 'Payment needed', message: out.error, confirmText: 'Pay now' })) window.open(out.payUrl, '_blank', 'noopener');
+                                return;
+                            }
+                            if (!r.ok) throw new Error(out.error || r.status);
                             if (out.url) { location.href = out.url; return; }
-                            laToast('Plan changed to ' + out.plan); load();
+                            laToast('Paid. Your plan is now ' + out.plan); load();
                         } catch (e) { b.disabled = false; b.textContent = 'Upgrade'; laAlert('Could not change the plan: ' + e.message, { tone: 'error' }); }
                     });
                 });

@@ -31,6 +31,28 @@ export default async function handler(req, res) {
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
+  // ── PLAN CHANGE PAID LATER: the card was declined or needed confirming when the plan was changed
+  // (api/billing.js changePlan), so the switch waited; now its invoice is paid, Stripe applies it and so do we ─
+  // (newer Stripe API versions name the subscription under parent.subscription_details)
+  const paidSub = event.type === 'invoice.paid' ? (event.data.object.subscription || event.data.object.parent?.subscription_details?.subscription) : null;
+  if (paidSub) {
+    const subId = typeof paidSub === 'string' ? paidSub : paidSub.id;
+    const redis = createClient({ url: process.env.REDIS_URL });
+    try {
+      await redis.connect();
+      const pending = JSON.parse(await redis.get(`billing_pending_plan:${subId}`) || 'null');
+      if (pending?.slug) {
+        await stripe.subscriptions.update(subId, { metadata: pending.metadata || {} }).catch(e => console.error('[Stripe Webhook] pending plan metadata', e.message));
+        const prev = JSON.parse(await redis.hGet(`billing_assign:${pending.slug}`, 'venue') || '{}');
+        await redis.hSet(`billing_assign:${pending.slug}`, 'venue', JSON.stringify({ ...prev, plan: pending.plan, subscription: true, subscriptionId: subId }));
+        await redis.del(`billing_pending_plan:${subId}`);
+        console.log('[Stripe Webhook] plan changed after payment', pending.slug, pending.plan);
+      }
+    } catch (e) { console.error('[Stripe Webhook] pending plan', e.message); }
+    finally { await redis.quit().catch(() => {}); }
+    if (!event.data.object.metadata?.venueSlug) return res.status(200).json({ received: true });
+  }
+
   // ── USAGE INVOICES: paid lifts a pause; written off as uncollectible pauses the account ─
   if ((event.type === 'invoice.paid' || event.type === 'invoice.marked_uncollectible') && event.data.object.metadata?.venueSlug) {
     const inv = event.data.object, slug = inv.metadata.venueSlug;

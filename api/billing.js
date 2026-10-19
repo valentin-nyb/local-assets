@@ -344,9 +344,19 @@ export default async function handler(req, res) {
           const sub = await stripe.subscriptions.retrieve(subId).catch(() => null);
           if (sub && sub.status !== 'canceled' && sub.items.data[0]) {
             const p = await stripe.prices.create({ ...price, product_data: { name: `local / assets · ${plan.name}` } });
-            await stripe.subscriptions.update(subId, { items: [{ id: sub.items.data[0].id, price: p.id }], proration_behavior: 'create_prorations', metadata: { ...sub.metadata, tier: plan.id, ...(commitEndFor(plan.id, acctType) && !(sub.metadata.commitEnd > new Date().toISOString().slice(0, 10)) ? { commitEnd: commitEndFor(plan.id, acctType), minimumMonths: '12' } : {}) } });
+            // Paid before it's switched: the difference for the rest of this month is invoiced and charged now
+            // (pending_if_incomplete): if the card is declined or needs confirming, the plan stays as it was until paid
+            const updated = await stripe.subscriptions.update(subId, { items: [{ id: sub.items.data[0].id, price: p.id }], proration_behavior: 'always_invoice', payment_behavior: 'pending_if_incomplete', expand: ['latest_invoice'] });
+            const metadata = { ...sub.metadata, tier: plan.id, ...(commitEndFor(plan.id, acctType) && !(sub.metadata.commitEnd > new Date().toISOString().slice(0, 10)) ? { commitEnd: commitEndFor(plan.id, acctType), minimumMonths: '12' } : {}) };
+            if (updated.pending_update) {
+              // Applied by api/stripe-webhook.js when that invoice is paid (Stripe drops the change after 23 hours)
+              await redis.set(`billing_pending_plan:${subId}`, JSON.stringify({ slug, plan: plan.id, metadata }), { EX: 23 * 3600 });
+              const inv = updated.latest_invoice;
+              return { status: 402, error: 'The payment for ' + plan.name + ' didn\'t go through, so your plan hasn\'t changed yet. Pay the invoice to switch.', payUrl: inv?.hosted_invoice_url || '' };
+            }
+            await stripe.subscriptions.update(subId, { metadata });
             await redis.hSet(assignKey(slug), 'venue', JSON.stringify({ ...a, plan: plan.id, subscription: true, subscriptionId: subId }));
-            console.log('[billing] plan changed', slug, plan.id);
+            console.log('[billing] plan changed (paid)', slug, plan.id);
             return { status: 200, changed: true, plan: plan.name };
           }
         }
