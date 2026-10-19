@@ -4,12 +4,13 @@ import { calendarKey, fetchEvents } from './_calendar.js';
 import { pendingKey } from './_camera-recording.js';
 import { sessionSources, startMulticam } from './multicam.js';
 import { listAllAssets } from './_verticals.js';
+import { inSession, openSession, closeSession } from './_cam-sessions.js';
 
-// Cameras start and stop with the venue calendar (Vercel cron, every minute).
-// A camera's Mux live stream is opened shortly before each set and closed shortly after it, so the
-// camera (left streaming all night) is only recorded while a set is on, and every set ends as its own
-// recording (api/_camera-recording.js then saves it for the DJ in the calendar).
-// Cameras with "Start and stop with the calendar" turned off, or venues without a calendar, are left open.
+// Cameras and the venue calendar (Vercel cron, every minute).
+// Every camera's Mux live stream stays open, so Camera Control shows it live whenever it is connected.
+// Sessions are what is kept: a set in the calendar (from shortly before it to shortly after) or one made
+// with Create a session. When one starts or ends the broadcast is cut, so every session is its own
+// recording (api/_camera-recording.js saves it for the DJ, and deletes what was streamed outside sessions).
 
 const BEFORE_MS = 2 * 60e3;   // open 2 min before a set
 const AFTER_MS = 2 * 60e3;    // close 2 min after it ends
@@ -53,22 +54,23 @@ export default async function handler(req, res) {
       }
       for (const cam of cams) {
         if (!cam.streamId) continue;
-        // A camera only records during a session: a set in the connected calendar (when it follows the calendar),
-        // or one started with Record now. Connected with no session on, it stays closed (nothing is recorded).
+        // A session: a set in the connected calendar (when the camera follows it), or one started with
+        // Create a session / Record now, until Stop
         const follow = cam.followCalendar !== false && !!win;
-        // "Preview now" opens it for 10 minutes between sessions
-        const preview = !(follow && win.open) && await redis.exists(`cam_preview:${cam.streamId}`);
-        // "Record now" in Camera Control keeps it open until Stop
         const manual = await redis.exists(`cam_manual:${cam.streamId}`);
-        // "Stop set": the set finished early, so the camera stays closed until the set's time is over
+        // "Stop set": the set finished early, so nothing more is kept until the set's time is over
         const ended = follow && win.open && !manual && await redis.exists(`cam_ended:${cam.streamId}`);
-        const want = ((follow && win.open) || preview || manual) && !ended ? 'enabled' : 'disabled';
-        const have = await redis.get(stateKey(cam.streamId));
-        if (have === want) continue;
+        const session = !!(((follow && win.open) || manual) && !ended);
         try {
-          await mux(auth, `/video/v1/live-streams/${encodeURIComponent(cam.streamId)}/${want === 'enabled' ? 'enable' : 'disable'}`, 'PUT');
-          await redis.set(stateKey(cam.streamId), want);
-          changes.push(`${slug}/${cam.name}: ${want}${win?.current ? ' (' + win.current.artist + ')' : ''}`);
+          // Always open: live in Camera Control whenever the camera is connected
+          if (await redis.get(stateKey(cam.streamId)) !== 'enabled') {
+            await mux(auth, `/video/v1/live-streams/${encodeURIComponent(cam.streamId)}/enable`, 'PUT');
+            await redis.set(stateKey(cam.streamId), 'enabled');
+            changes.push(`${slug}/${cam.name}: live`);
+          }
+          const was = await inSession(redis, cam.streamId);
+          if (session && !was) { await openSession(redis, auth, cam.streamId); changes.push(`${slug}/${cam.name}: session started${win?.current ? ' (' + win.current.artist + ')' : ''}`); }
+          else if (!session && was) { await closeSession(redis, auth, cam.streamId); changes.push(`${slug}/${cam.name}: session ended`); }
         } catch (e) { console.error('[camera-schedule]', slug, cam.name, e.message); }
       }
     }

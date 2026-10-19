@@ -3,6 +3,7 @@ import { createClient } from 'redis';
 import { getVenuesConfig, getMuxAuthForVenue } from './_venues.js';
 import { venueEvents } from './_calendar.js';
 import { startAudioOnly } from './_verticals.js';
+import { sessionSeconds } from './_cam-sessions.js';
 
 // When a camera's broadcast ends, Mux has saved it as an asset. This turns that recording
 // into dashboard sessions: one per artist who was "on stage" (set on the Camera page),
@@ -98,6 +99,13 @@ export async function processCameraRecording(event) {
     const camLabel = isAudio ? 'AUDIO' : recording[0]?.streamId === streamId ? 'MASTER' : camName.replace(/\s*\/\/\s*/g, ' - ').replace(/[^A-Z0-9 \-]/g, '').trim().slice(0, 30) || 'CAMERA';
     const multi = !isAudio && recording.length >= 2;
     const startMs = Number(asset.created_at) * 1000;
+    // Cameras stay live between sessions: what was streamed outside every session isn't kept
+    const inSess = await sessionSeconds(redis, streamId, startMs, startMs + duration * 1000);
+    if (inSess !== null && inSess < MIN_RECORDING_SEC) {
+      await muxReq(auth, `/video/v1/assets/${encodeURIComponent(assetId)}`, { method: 'DELETE' }).catch(() => {});
+      console.log(`[camera-rec] ${slug} ${camName}: ${Math.round(duration)}s streamed outside a session, not kept`);
+      return;
+    }
     // The date set in "On stage" (no calendar), else the day it was recorded
     const date    = cam.stageDate || londonDate(startMs);
     const markers = (await redis.lRange(`cam_markers:${streamId}`, 0, -1)).map(m => { try { return JSON.parse(m); } catch { return null; } }).filter(Boolean);

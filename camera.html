@@ -930,7 +930,7 @@
                 camCount(live, camsOnly.length);
 
                 // Only rebuild when something changed, so playing video isn't interrupted
-                var key = JSON.stringify(_cams.map(function(c) { return [c.id, c.status, c.name, c.ndiName, c.ip, c.artist, c.autoClips, c.recording, c.followCalendar]; }).concat([_calNow && _calNow.artist, _calSched]));
+                var key = JSON.stringify(_cams.map(function(c) { return [c.id, c.status, c.name, c.ndiName, c.ip, c.artist, c.autoClips, c.recording, c.inSession, c.followCalendar]; }).concat([_calNow && _calNow.artist, _calSched]));
                 if (key === _camKey) return;
                 _camKey = key;
                 grid.innerHTML = '';
@@ -1172,7 +1172,7 @@
             var card = document.createElement('div');
             card.className = 'cam-card';
             var isLive = c.status === 'active' && c.playbackId;
-            var pill = isLive ? '<span class="cam-pill on">' + (c.recording ? 'LIVE · REC' : 'LIVE') + '</span>'
+            var pill = isLive ? '<span class="cam-pill on">' + (c.inSession ? 'LIVE · REC' : 'LIVE') + '</span>'
                 : c.status === 'missing' ? '<span class="cam-pill warn">STREAM MISSING</span>'
                 : '<span class="cam-pill">OFFLINE</span>';
             var chips = '';
@@ -1196,7 +1196,7 @@
                     // The calendar's current set wins over the name typed on the card
                     '<span style="min-width:0"><span class="lbl">ON STAGE</span><span class="val' + (_calNow || c.artist ? '' : ' empty') + '">' + esc(_calNow ? _calNow.artist : (c.artist || 'Set the artist')) + '</span></span>' +
                     '<span class="go">' + (c.kind === 'audio' ? 'Saved as HQ audio' : _calNow ? 'From calendar' : c.autoClips === false ? 'Recording only' : 'Recording + clips') + '</span></button>' +
-                    (_calSched && c.followCalendar !== false ? '<div class="cam-sched' + (_calSched.open && isLive ? ' on' : '') + '"><span>' + (_calSched.open ? (isLive ? 'Recording ' : 'Waiting for the camera · ') + esc(_calSched.currentArtist || 'this set') + ' · stops ' + fmtTime(_calSched.closesAt) : _calSched.opensAt ? 'Starts ' + fmtDay(_calSched.opensAt) + ' ' + fmtTime(_calSched.opensAt) + (_calSched.nextArtist ? ' · ' + esc(_calSched.nextArtist) : '') : 'No sets coming up in the calendar') + '</span>' + (_calSched.open ? '<span class="lbl">Calendar</span>' : '<button type="button" class="cam-preview" data-act="preview">Preview now</button>') + '</div>' : '') +
+                    (_calSched && c.followCalendar !== false ? '<div class="cam-sched' + (_calSched.open && isLive ? ' on' : '') + '"><span>' + (_calSched.open ? (isLive ? 'Recording ' : 'Waiting for the camera · ') + esc(_calSched.currentArtist || 'this set') + ' · stops ' + fmtTime(_calSched.closesAt) : _calSched.opensAt ? 'Starts ' + fmtDay(_calSched.opensAt) + ' ' + fmtTime(_calSched.opensAt) + (_calSched.nextArtist ? ' · ' + esc(_calSched.nextArtist) : '') : 'No sets coming up in the calendar') + '</span>' + '<span class="lbl">' + (_calSched.open ? 'Calendar' : 'Records then') + '</span>' + '</div>' : '') +
                     (c.recording === false && c.status !== 'missing' ? '<div class="cam-recoff"><span>Recording is off for this camera</span><button type="button" data-act="rec">Turn on</button></div>' : '')) +
                 (actions ? '<div class="cam-row-actions">' + actions + '</div>' : '');
             var stage = card.querySelector('.cam-stage');
@@ -1303,7 +1303,7 @@
                 '<div class="ls-sec"><p class="ls-h">Recording</p>' + (slots.length ? slots.map(function(c) {
                     var live = c.status === 'active', m = linked[c.id];
                     return '<div class="ls-row"><span>' + esc(c.name) + ' <small>' + (c.kind === 'audio' ? 'Decks · HQ audio' : 'Camera') + (m ? ' · this Mac' : '') + '</small></span>' +
-                        '<span class="' + (live ? 'ls-ok' : 'ls-warn') + '">' + (live ? (c.recording === false ? 'Live, not recording' : 'Live · recording') : 'No signal') + '</span></div>';
+                        '<span class="' + (live ? 'ls-ok' : 'ls-warn') + '">' + (live ? (c.recording === false || !c.inSession ? 'Live, not recording' : 'Live · recording') : 'No signal') + '</span></div>';
                 }).join('') : '<p class="ls-empty">No camera follows the calendar.</p>') + '</div>' +
                 '<div class="ls-sec"><p class="ls-h">After the set</p>' +
                 '<div class="ls-row"><span>Saved to Distribution History</span><small>' + esc(artist) + (start ? ' · ' + fmtDay(start) : '') + '</small></div>' +
