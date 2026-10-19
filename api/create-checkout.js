@@ -1,6 +1,6 @@
 import Stripe from 'stripe';
 import { createClient } from 'redis';
-import { readPlans, planForType } from './_billing.js';
+import { readPlans, planForType, commitEndFor } from './_billing.js';
 
 // Sign-up from the home page: a tier, the account type (venue, record label or artist) and its name.
 // Monthly plans are a Stripe subscription; pay as you go saves the card (and takes any sign-up fee,
@@ -42,7 +42,8 @@ export default async function handler(req, res) {
     const stripe = new Stripe(sk);
     // Pay as you go (usage above the plan charged to the card on the 1st): chosen at sign-up, always on without a monthly price
     const payg = !(plan.price > 0) || body?.payg === true;
-    const metadata = { kind: 'signup', tier: plan.id, tierName: plan.name, accountType, accountName, payg: payg ? '1' : '0' };
+    const commitEnd = commitEndFor(plan.id);   // Live-Set: 12-month minimum
+    const metadata = { kind: 'signup', tier: plan.id, tierName: plan.name, accountType, accountName, payg: payg ? '1' : '0', ...(commitEnd ? { commitEnd, minimumMonths: '12' } : {}) };
     const common = {
       success_url: 'https://local-assets.com/?signup=success',
       cancel_url: 'https://local-assets.com/?signup=cancelled',

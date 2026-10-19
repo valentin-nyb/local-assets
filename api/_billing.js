@@ -138,6 +138,9 @@ function trialLikeStarter(list) {
 }
 // Monthly plan prices by account type: venues pay the list price, record labels half, artists half of that
 // (a quarter, to the nearest £5). Applied at checkout, on plan changes, on the billing page and the pricing page.
+// Plans with hardware we buy (Live-Set: cameras, Mac mini, Starlink Mini) run for at least 12 months
+export const MIN_TERM_PLANS = ['liveset-creative'];
+export const commitEndFor = planId => MIN_TERM_PLANS.includes(planId) ? new Date(Date.now() + 365 * 86400e3).toISOString().slice(0, 10) : '';
 export const TYPE_FACTOR = { venue: 1, label: 0.5, artist: 0.25 };
 // Set prices that replace the rule for one plan and type (planId → type → £ a month)
 export const TYPE_PRICE = { 'starter-distribution': { artist: 379 } };

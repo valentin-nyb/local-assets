@@ -5,7 +5,7 @@ import { getWebSessionAuth, getVenuesConfig, readRegistryRaw, saveRegistryEntry,
 import { venueAuth } from './_verticals.js';
 import {
   readRates, readPlans, cleanPlans, readAssignments, assignKey, venueUsage, venueArtists, priceUsage,
-  monthRange, stripeClient, invoiceVenue, venueEntries, DEFAULT_RATES, applyDetails, usageByDay, planForType, priceForType } from './_billing.js';
+  monthRange, stripeClient, invoiceVenue, venueEntries, DEFAULT_RATES, applyDetails, usageByDay, planForType, priceForType, commitEndFor } from './_billing.js';
 
 // Billing page data and actions.
 //   GET ?target=venue|artist:NAME&plan=ID&period=current|previous   usage, plan and price for one bill-to
@@ -257,7 +257,8 @@ export default async function handler(req, res) {
       if (stripe && subId && target === 'venue') {
         const sub = await stripe.subscriptions.retrieve(subId).catch(() => null);
         const end = sub && (sub.current_period_end || sub.items?.data?.[0]?.current_period_end);
-        if (sub) subscription = { status: sub.status, cancelAtPeriodEnd: !!sub.cancel_at_period_end, periodEnd: end ? end * 1000 : null };
+        const ce = sub && sub.metadata && sub.metadata.commitEnd ? Date.parse(sub.metadata.commitEnd + 'T23:59:59Z') : 0;
+        if (sub) subscription = { status: sub.status, cancelAtPeriodEnd: !!(sub.cancel_at_period_end || sub.cancel_at), periodEnd: sub.cancel_at ? sub.cancel_at * 1000 : end ? end * 1000 : null, commitEnd: ce > Date.now() ? ce : null };
       }
       const elapsed = Math.min(1, Math.max(0, (Date.now() - base.start) / (base.end - base.start)));
       return res.status(200).json({
@@ -299,10 +300,16 @@ export default async function handler(req, res) {
           const subId = a.subscriptionId || getVenuesConfig()[slug]?.subscription || '';
           const stripe = stripeClient();
           if (stripe && subId) {
-            const sub = await stripe.subscriptions.update(subId, { cancel_at_period_end: body0.action === 'cancelPlan' });
-            const end = sub.current_period_end || sub.items?.data?.[0]?.current_period_end;
-            console.log('[billing]', body0.action, slug, subId);
-            return { ok: true, cancelAtPeriodEnd: !!sub.cancel_at_period_end, periodEnd: end ? end * 1000 : null };
+            // A plan with a 12-month minimum closes when the minimum ends, not at the end of this month
+            const cur = await stripe.subscriptions.retrieve(subId);
+            const ce = cur.metadata && cur.metadata.commitEnd ? Math.floor(Date.parse(cur.metadata.commitEnd + 'T23:59:59Z') / 1000) : 0;
+            const cancel = body0.action === 'cancelPlan';
+            const sub = await stripe.subscriptions.update(subId, cancel
+              ? (ce > Date.now() / 1000 ? { cancel_at: ce } : { cancel_at_period_end: true })
+              : { cancel_at_period_end: false, cancel_at: '' });
+            const end = sub.cancel_at || sub.current_period_end || sub.items?.data?.[0]?.current_period_end;
+            console.log('[billing]', body0.action, slug, subId, ce > Date.now() / 1000 ? 'minimum until ' + cur.metadata.commitEnd : '');
+            return { ok: true, cancelAtPeriodEnd: !!(sub.cancel_at_period_end || sub.cancel_at), periodEnd: end ? end * 1000 : null, commitEnd: ce > Date.now() / 1000 ? ce * 1000 : null };
           }
           // No subscription (account set up by hand): local / assets is told and closes it
           if (body0.action === 'cancelPlan') {
@@ -331,7 +338,7 @@ export default async function handler(req, res) {
           const sub = await stripe.subscriptions.retrieve(subId).catch(() => null);
           if (sub && sub.status !== 'canceled' && sub.items.data[0]) {
             const p = await stripe.prices.create({ ...price, product_data: { name: `local / assets · ${plan.name}` } });
-            await stripe.subscriptions.update(subId, { items: [{ id: sub.items.data[0].id, price: p.id }], proration_behavior: 'create_prorations', metadata: { ...sub.metadata, tier: plan.id } });
+            await stripe.subscriptions.update(subId, { items: [{ id: sub.items.data[0].id, price: p.id }], proration_behavior: 'create_prorations', metadata: { ...sub.metadata, tier: plan.id, ...(commitEndFor(plan.id) && !(sub.metadata.commitEnd > new Date().toISOString().slice(0, 10)) ? { commitEnd: commitEndFor(plan.id), minimumMonths: '12' } : {}) } });
             await redis.hSet(assignKey(slug), 'venue', JSON.stringify({ ...a, plan: plan.id, subscription: true, subscriptionId: subId }));
             console.log('[billing] plan changed', slug, plan.id);
             return { status: 200, changed: true, plan: plan.name };
@@ -349,7 +356,7 @@ export default async function handler(req, res) {
           line_items: [{ quantity: 1, price_data: { ...price, product_data: { name: `local / assets · ${plan.name}` } } }],
           success_url: 'https://local-assets.com/billing?plan=updated', cancel_url: 'https://local-assets.com/billing',
           metadata: { kind: 'upgrade', venueSlug: slug, tier: plan.id, ...(credit ? { trialCredit: '1' } : {}) },
-          subscription_data: { metadata: { kind: 'upgrade', venueSlug: slug, tier: plan.id } },
+          subscription_data: { metadata: { kind: 'upgrade', venueSlug: slug, tier: plan.id, ...(commitEndFor(plan.id) ? { commitEnd: commitEndFor(plan.id), minimumMonths: '12' } : {}) } },
         });
         return { status: 200, url: checkout.url };
       });

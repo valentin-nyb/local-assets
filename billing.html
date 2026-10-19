@@ -615,7 +615,10 @@
                 ctext.innerHTML = 'Your account is set to close on <b>' + esc(endTxt) + '</b>. Until then everything keeps working, and your files stay downloadable.';
                 cbtn.textContent = 'Keep my plan'; cbtn.classList.remove('bl-danger'); cbtn.classList.add('primary'); cbtn.dataset.mode = 'resume';
             } else {
-                ctext.textContent = 'Your plan stays active until the end of the current billing month' + (endTxt ? ' (' + endTxt + ')' : '') + '. Your recordings, clips and Brand Kit stay downloadable until then.';
+                var ceTxt = sub && sub.commitEnd ? new Date(sub.commitEnd).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+                ctext.textContent = ceTxt
+                    ? 'Your plan has a 12-month minimum, so it can close on ' + ceTxt + ' at the earliest. The cameras, Mac mini and Starlink go back to us when it ends. Your recordings, clips and Brand Kit stay downloadable until then.'
+                    : 'Your plan stays active until the end of the current billing month' + (endTxt ? ' (' + endTxt + ')' : '') + '. Your recordings, clips and Brand Kit stay downloadable until then.';
                 cbtn.textContent = 'Cancel account'; cbtn.classList.add('bl-danger'); cbtn.classList.remove('primary'); cbtn.dataset.mode = 'cancel';
             }
             ['bl-admin', 'bl-send-box', 'bl-plans-box'].forEach(function(id) { document.getElementById(id).classList.toggle('hidden', !admin); });
