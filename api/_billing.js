@@ -125,13 +125,16 @@ async function upgradeThreePlans(redis, list) {
     return out;
   } catch { return list; }
 }
-// A Venue Trial plan always gives exactly what Starter gives (features, storage, clips, cameras), kept in step
-// whenever Starter changes; it keeps its own name and price
+// A Venue Trial plan gives what Starter gives (clips, Brand Kit, cameras) but no included usage: every set,
+// upload, GB of storage and minute streamed is pay as you go, charged on the 1st. Kept in step with Starter;
+// it keeps its own name and price.
 function trialLikeStarter(list) {
   const starter = list.find(x => x.id === 'starter-distribution');
   if (!starter) return list;
+  const feats = (starter.features || []).filter(f => !/cloud storage|events? processed|sets? (a|per) month|included/i.test(f));
   return list.map(x => !/venue\s*trial/i.test(String(x.name || '')) ? x : { ...x,
-    features: [...(starter.features || [])], included: { ...(starter.included || {}) }, maxClips: starter.maxClips, cameras: starter.cameras || 0 });
+    features: [...feats, 'Pay as you go: every set, upload, GB of storage and stream charged on the 1st'],
+    included: { storedMinutes: 0, deliveredMinutes: 0, fileGB: 0 }, maxClips: starter.maxClips, cameras: starter.cameras || 0 });
 }
 export async function readPlansRaw(redis) {
   // The Trial Month is always offered, even when the saved plan list predates it

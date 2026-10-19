@@ -14,6 +14,7 @@ export function welcomeEmail({ name, email, type, plan, ready }) {
     ['Sign in', `Use Google with ${esc(email)}. There is no password to remember.`],
     ['Set up your Brand Kit', 'Add your logo and fonts. Your watermark goes on every clip and thumbnail.'],
     ['Connect a camera', 'In Camera Control, add a phone, OBS or an OBSBOT. Scan the QR code and press record.'],
+    ['Get a™ for Mac', `The app for your Mac: Camera Control, uploads, and recording from a camera plugged into it. <a href="${SITE}/download" style="color:#fafafa;text-decoration:underline">Download it here</a> (sign in first).`],
     ['Film your first set', ready
       ? 'Each set lands in Distribution History, with vertical clips ready to post.'
       : 'We’re preparing your private video storage and will email you the moment recordings can be saved.'],
@@ -51,6 +52,8 @@ export function welcomeEmail({ name, email, type, plan, ready }) {
     <tr><td style="padding:28px 4px 0">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td style="border-radius:999px;background:${GREEN}">
         <a href="${SITE}/login.html" style="display:inline-block;padding:15px 34px;font:600 14px/1 ${FONT};color:#000;text-decoration:none;border-radius:999px">Sign in to your workspace</a>
+      </td><td width="12"></td><td style="border-radius:999px;border:1px solid #3f3f46">
+        <a href="${SITE}/download" style="display:inline-block;padding:14px 28px;font:600 14px/1 ${FONT};color:#fafafa;text-decoration:none;border-radius:999px">Download a™ for Mac</a>
       </td></tr></table>
     </td></tr>
     <tr><td style="padding:44px 4px 0">
@@ -71,8 +74,9 @@ export function welcomeEmail({ name, email, type, plan, ready }) {
     `Welcome to local / assets, ${name}.`, '',
     `Your ${who} account is ${ready ? 'ready' : 'set up'}.`,
     `Plan: ${plan.name}${plan.line ? ' (' + plan.line + ')' : ''}`, '',
-    ...steps.map(([t, d], i) => `0${i + 1}  ${t}: ${d.replace(/&[a-z]+;|&#\d+;/g, ' ')}`), '',
-    `Sign in: ${SITE}/login.html`, '',
+    ...steps.map(([t, d], i) => `0${i + 1}  ${t}: ${d.replace(/<[^>]+>/g, '').replace(/&[a-z]+;|&#\d+;/g, ' ')}`), '',
+    `Sign in: ${SITE}/login.html`,
+    `Download a™ for Mac: ${SITE}/download`, '',
     'Questions? Reply to this email or write to info@local-assets.com.',
   ].join('\n');
 

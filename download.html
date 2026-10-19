@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en" style="color-scheme:dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>local / assets™ — a™ for Mac</title>
+    <meta name="robots" content="noindex">
+    <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- The a™ installer, for signed-in customers only (api/download.js hands out the file) -->
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root { --green: #39FF14; --bg: #070905; --fg: #fafafa; --mono: 'JetBrains Mono', ui-monospace, monospace; --display: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+        html, body { min-height: 100%; background: var(--bg); color: var(--fg); -webkit-font-smoothing: antialiased; font-family: var(--display); }
+        body { min-height: 100dvh; display: flex; align-items: center; justify-content: center; padding: 96px 24px 48px; }
+        .wordmark { position: fixed; top: 40px; left: 24px; width: 128px; aspect-ratio: 1328 / 165; background: url(/logos/Green@2x.png) left center / contain no-repeat; }
+        .wrap { width: min(100%, 480px); }
+        .eyebrow { font-family: var(--mono); font-size: 10px; letter-spacing: .24em; text-transform: uppercase; color: #7c8178; margin-bottom: 18px; }
+        h1 { font-weight: 700; font-size: clamp(30px, 8vw, 44px); line-height: .98; letter-spacing: -.02em; text-transform: uppercase; }
+        .lead { margin-top: 16px; font-size: 15px; line-height: 1.55; color: #a1a1aa; }
+        .btns { display: flex; flex-direction: column; gap: 12px; margin-top: 34px; }
+        .btn { position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; height: 56px; padding: 0 22px;
+               border-radius: 999px; border: 1px solid rgba(250,250,250,.28); background: transparent; color: var(--fg); font: 500 15px/1 var(--display); text-decoration: none; cursor: pointer;
+               transition: color .3s cubic-bezier(.65,0,.35,1), border-color .3s, transform .15s; }
+        .btn small { font: 400 12px/1 var(--display); color: inherit; opacity: .6; }
+        .btn::before { content: ""; position: absolute; inset: -1px; z-index: -1; border-radius: inherit; background: #fafafa; transform: scaleX(0); transform-origin: right center; transition: transform .42s cubic-bezier(.65,0,.35,1); }
+        .btn.main { background: var(--green); border-color: var(--green); color: #000; }
+        .btn.main::before { background: #0a0a0a; }
+        @media (hover: hover) { .btn:hover { color: #000; border-color: #fafafa; } .btn:hover::before { transform: scaleX(1); transform-origin: left center; } .btn.main:hover { color: var(--green); border-color: var(--green); } }
+        .btn:active { transform: scale(.98); }
+        .btn.busy { opacity: .6; pointer-events: none; }
+        .note { margin-top: 28px; padding-top: 20px; border-top: 1px solid rgba(250,250,250,.1); font-size: 13px; line-height: 1.6; color: #8b8f87; }
+        .note b { color: #d4d4d8; font-weight: 600; }
+        .err { margin-top: 14px; font-size: 13px; color: #f87171; min-height: 1em; }
+    </style>
+</head>
+<body>
+    <a class="wordmark" href="/" aria-label="local / assets"></a>
+    <main class="wrap">
+        <p class="eyebrow">a™ for Mac</p>
+        <h1>Download the app</h1>
+        <p class="lead">Camera Control, uploads and your Brand Kit on your Mac. Record every set from a camera plugged into it.</p>
+        <div class="btns" id="btns"></div>
+        <p class="err" id="err"></p>
+        <p class="note" id="note"><b>First time you open it:</b> macOS may say it can't check the app. Open <b>System Settings → Privacy &amp; Security</b> and choose <b>Open Anyway</b>. You only need to do this once.</p>
+    </main>
+    <script>
+        (function() {
+            var btns = document.getElementById('btns'), err = document.getElementById('err');
+            var sess = null; try { sess = JSON.parse(localStorage.getItem('la_admin') || 'null'); } catch (_) {}
+            if (!sess || !sess.webToken) {
+                btns.innerHTML = '<a class="btn main" href="/login?next=/download"><span>Sign in to download</span><small>For local / assets customers</small></a>';
+                return;
+            }
+            // Apple silicon (M1 and later) reports an Apple GPU; Intel Macs report Intel or AMD
+            var apple = true;
+            try { var gl = document.createElement('canvas').getContext('webgl'), ext = gl && gl.getExtension('WEBGL_debug_renderer_info'); var r = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : ''; if (/intel|amd|radeon|nvidia/i.test(r)) apple = false; } catch (_) {}
+            var opts = [['arm64', 'Download for Apple silicon', 'M1 and later'], ['x64', 'Download for Intel', 'Older Macs']];
+            if (!apple) opts.reverse();
+            btns.innerHTML = opts.map(function(o, i) { return '<button type="button" class="btn' + (i ? '' : ' main') + '" data-arch="' + o[0] + '"><span>' + o[1] + '</span><small>' + o[2] + '</small></button>'; }).join('');
+            btns.addEventListener('click', function(e) {
+                var b = e.target.closest('[data-arch]'); if (!b) return;
+                b.classList.add('busy'); err.textContent = '';
+                fetch('/api/download?arch=' + b.dataset.arch, { headers: { Authorization: 'Bearer ' + sess.webToken } })
+                    .then(function(r) { return r.json().then(function(d) { if (r.status === 401) { location.href = '/login?next=/download'; throw new Error(''); } if (!r.ok) throw new Error(d.error || r.status); return d; }); })
+                    .then(function(d) { location.href = d.url; setTimeout(function() { b.classList.remove('busy'); }, 1500); })
+                    .catch(function(x) { b.classList.remove('busy'); if (x.message) err.textContent = 'Could not start the download: ' + x.message; });
+            });
+        })();
+    </script>
+</body>
+</html>
