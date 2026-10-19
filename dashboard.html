@@ -41,7 +41,7 @@
     <script src="/la-djframe.js?v=2"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-    <script src="nav-component.js?v=26"></script>
+    <script src="nav-component.js?v=27"></script>
     <style>
         /* Standardized sidebar styles used by the JS component */
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
@@ -187,7 +187,7 @@
         <div class="flex-1 overflow-y-auto la-page la-page-scroll">
             <div class="dash-head">
                 <h2 id="venue-tier" class="dash-h">ADMIN</h2>
-                <script>(function(){ try { var a = JSON.parse(localStorage.getItem('la_admin') || '{}'); if (a.venueSlug === 'local-assets-admin' || (!a.venueSlug && /^local\s*[\/-]?\s*assets\b/i.test(String(a.venue || '').trim()))) { document.getElementById('venue-tier').classList.add('is-la'); return; } var k = 'la_venue_logo4:' + (a.venueSlug || ''), v = JSON.parse(localStorage.getItem(k) || 'null'); if (v && (v.mask || v.img)) { var h = document.getElementById('venue-tier'); h.classList.add('has-logo', 'logo-early'); if (v.img) h.classList.add('logo-img'); h.style.setProperty('--logo', 'url("' + (v.img ? v.url : v.mask) + '")'); h.style.setProperty('--logo-w', Math.round(Math.min(200, Math.max(28, 28 * v.ar))) + 'px'); } } catch (_) {} })();</script>
+                <script>(function(){ try { var a = JSON.parse(localStorage.getItem('la_admin') || '{}'); if ((a.venueSlug === 'local-assets-admin' || (function(c){ return /^local\s*[\/-]?\s*assets\b/i.test(String(c ? c.name : (a.venue || '')).trim()); })((a.venues || []).filter(function(v){ return v && v.slug === a.venueSlug; })[0]))) { document.getElementById('venue-tier').classList.add('is-la'); return; } var k = 'la_venue_logo4:' + (a.venueSlug || ''), v = JSON.parse(localStorage.getItem(k) || 'null'); if (v && (v.mask || v.img)) { var h = document.getElementById('venue-tier'); h.classList.add('has-logo', 'logo-early'); if (v.img) h.classList.add('logo-img'); h.style.setProperty('--logo', 'url("' + (v.img ? v.url : v.mask) + '")'); h.style.setProperty('--logo-w', Math.round(Math.min(200, Math.max(28, 28 * v.ar))) + 'px'); } } catch (_) {} })();</script>
                 <p class="dash-sub" id="venue-tier-sub">Your sessions, files and channels.</p>
             </div>
             <a id="live-feed-hero" href="/camera.html" class="block cursor-pointer hover:border-primary/50 transition-all duration-500 w-full bg-[#050505] border border-[#27272a] rounded-2xl p-5 md:p-8 relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-4 md:gap-6 shadow-2xl no-underline" style="background:#050505!important">
@@ -293,7 +293,7 @@
         // Wraps fetch() — injects Authorization (webToken) + X-User-Email for venue isolation
         // Admin account: Distribution History shows every client. Which client an asset or artist belongs to,
         // so actions on it are done in that client's own account (X-LA-Venue).
-        var _adminView = (function() { try { var a = JSON.parse(localStorage.getItem('la_admin') || '{}'); return a.venueSlug === 'local-assets-admin' || (!a.venueSlug && /^local\s*[\/-]?\s*assets\b/i.test(String(a.venue || '').trim())); } catch (_) { return false; } })();
+        var _adminView = (function() { try { var a = JSON.parse(localStorage.getItem('la_admin') || '{}'); return (a.venueSlug === 'local-assets-admin' || (function(c){ return /^local\s*[\/-]?\s*assets\b/i.test(String(c ? c.name : (a.venue || '')).trim()); })((a.venues || []).filter(function(v){ return v && v.slug === a.venueSlug; })[0])); } catch (_) { return false; } })();
         var _venueOfAsset = {}, _venueOfArtist = {}, _adminVenues = {};
         function venueForRequest(url, opts) {
             if (!_adminView) return '';
