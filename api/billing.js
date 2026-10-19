@@ -5,13 +5,14 @@ import { getWebSessionAuth, getVenuesConfig, readRegistryRaw, saveRegistryEntry,
 import { venueAuth } from './_verticals.js';
 import {
   readRates, readPlans, cleanPlans, readAssignments, assignKey, venueUsage, venueArtists, priceUsage,
-  monthRange, stripeClient, invoiceVenue, venueEntries, DEFAULT_RATES, applyDetails, usageByDay, planForType, priceForType, commitEndFor } from './_billing.js';
+  monthRange, stripeClient, invoiceVenue, venueEntries, DEFAULT_RATES, applyDetails, usageByDay, planForType, priceForType, commitEndFor, readKit, cleanKit, KIT_PLANS } from './_billing.js';
 
 // Billing page data and actions.
 //   GET ?target=venue|artist:NAME&plan=ID&period=current|previous   usage, plan and price for one bill-to
 //   GET ?cron=1                            (Vercel cron, the 1st) invoices last month for every monthly bill-to
 //   POST { action: 'setRates', rates }                           admin
 //   POST { action: 'setPlans', plans }                           admin
+//   POST { action: 'setKit', kit }                               admin: kit expenses for Pro and Live-Set
 //   POST { action: 'assign', target, plan, email, name, monthly } admin: who pays which plan
 //   POST { action: 'invoiceNow', target, plan, email, name, period } admin: send an invoice now
 
@@ -268,7 +269,7 @@ export default async function handler(req, res) {
         // (pay-as-you-go plans are chosen at sign-up only; an account can move up to a monthly plan from them)
         plansOffered: data.plans.filter(p => p.price > 0 || p.id === ((data.assignments.venue || {}).plan || '')).map(p => ({ signupFee: p.signupFee || 0, id: p.id, name: p.name, price: priceForType(p.price, data.accountType, p.id), maxClips: p.maxClips, cameras: p.cameras || 0, features: p.features || [], included: p.included })),
         currentPlan: (data.assignments.venue || {}).plan || '',
-        ...(isAdmin ? { stripeAccount, venueSlug: slug, venues: billable.map(k => ({ slug: k, name: cfg[k]?.name || k })), rates: data.rates, plans: data.plans, assignments: data.assignments, artists: data.artists, labels: data.labels, bkVenues: data.bkVenues, assignment: a } : {}),
+        ...(isAdmin ? { kit: await withRedis(readKit), kitPlans: KIT_PLANS, stripeAccount, venueSlug: slug, venues: billable.map(k => ({ slug: k, name: cfg[k]?.name || k })), rates: data.rates, plans: data.plans, assignments: data.assignments, artists: data.artists, labels: data.labels, bkVenues: data.bkVenues, assignment: a } : {}),
       });
     }
 
@@ -465,6 +466,12 @@ export default async function handler(req, res) {
       }
       await withRedis(redis => redis.set('billing_rates', JSON.stringify({ ...DEFAULT_RATES, ...clean })));
       return res.status(200).json({ ok: true });
+    }
+
+    if (body.action === 'setKit') {
+      const kit = cleanKit(body.kit);
+      await withRedis(redis => redis.set('billing_kit', JSON.stringify(kit)));
+      return res.status(200).json({ kit });
     }
 
     if (body.action === 'setPlans') {

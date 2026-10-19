@@ -174,6 +174,34 @@ export function cleanPlans(list) {
   }).filter(Boolean);
 }
 
+// Kit expenses (admin): the hardware we buy and ship in the rolling case for Pro and Live-Set, with what
+// each item costs us and how many of it each plan gets. Saved over in Redis (billing_kit) from the Billing page.
+// cost null = not entered yet.
+export const KIT_PLANS = ['liveset-distribution', 'liveset-creative'];
+export const DEFAULT_KIT = [
+  { id: 'camera', name: 'OBSBOT Tail 2 camera', cost: null, qty: { 'liveset-distribution': 1, 'liveset-creative': 2 } },
+  { id: 'usb-cable', name: 'Fibre optic USB-C cable, 9 m (GeoHN.G)', cost: 65.99, qty: { 'liveset-distribution': 1, 'liveset-creative': 2 } },
+  { id: 'mac-mini', name: 'Mac mini', cost: null, qty: { 'liveset-distribution': 0, 'liveset-creative': 1 } },
+  { id: 'starlink-mini', name: 'Starlink Mini', cost: null, qty: { 'liveset-distribution': 0, 'liveset-creative': 1 } },
+  { id: 'starlink-cover', name: 'Starlink Mini cover, orange (Joinfworld)', cost: 20.99, qty: { 'liveset-distribution': 0, 'liveset-creative': 1 } },
+  { id: 'starlink-case', name: 'Starlink Mini hard case, orange (Joinfworld)', cost: 59.99, qty: { 'liveset-distribution': 0, 'liveset-creative': 1 } },
+  { id: 'rolling-case', name: 'Rolling hard case, pick-and-pluck foam (Reflex)', cost: 109.99, qty: { 'liveset-distribution': 1, 'liveset-creative': 1 } },
+];
+export async function readKit(redis) {
+  try { const saved = JSON.parse(await redis.get('billing_kit') || 'null'); if (Array.isArray(saved)) return saved; } catch {}
+  return DEFAULT_KIT;
+}
+export function cleanKit(list) {
+  return (Array.isArray(list) ? list : []).slice(0, 40).map((k, i) => {
+    const name = String(k?.name || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 80);
+    const c = k?.cost === '' || k?.cost == null ? null : Number(k.cost);
+    const qty = {};
+    for (const p of KIT_PLANS) { const n = Number(k?.qty?.[p]); qty[p] = Number.isFinite(n) && n >= 0 ? Math.min(20, Math.round(n)) : 0; }
+    const id = String(k?.id || '').replace(/[^a-z0-9-]/g, '').slice(0, 40) || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `item-${i + 1}`;
+    return name ? { id, name, cost: Number.isFinite(c) && c >= 0 ? Math.round(c * 100) / 100 : null, qty } : null;
+  }).filter(Boolean);
+}
+
 // Who an invoice is for: the venue itself ("venue") or one of its artists ("artist:DJ TENNIS")
 export const assignKey = slug => `billing_assign:${slug}`;   // hash target → JSON { plan, email, name, monthly }
 export async function readAssignments(redis, slug) {

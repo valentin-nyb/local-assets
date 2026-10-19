@@ -336,6 +336,15 @@
                         <span class="bl-msg" id="bl-admin-msg"></span>
                     </div>
                 </section>
+                <section class="bl-section hidden" id="bl-kit-box">
+                    <div class="bl-section-head"><h3>Kit expenses</h3><span class="bl-msg">What we buy and ship in the case for Pro and Live-Set, in £. Leave a cost empty until you know it.</span></div>
+                    <div class="bl-scroll"><table class="bl-table" id="bl-kit"></table></div>
+                    <div class="bl-admin-actions" style="padding-top:16px">
+                        <button type="button" class="cam-btn ghost" id="bl-add-kit">Add item</button>
+                        <button type="button" class="cam-btn primary" id="bl-save-kit">Save kit</button>
+                        <span class="bl-msg" id="bl-kit-msg"></span>
+                    </div>
+                </section>
                 <section class="bl-section hidden" id="bl-cancel">
                     <div class="bl-section-head"><h3>Cancel account</h3></div>
                     <div class="bl-cancel-body">
@@ -621,7 +630,7 @@
                     : 'Your plan stays active until the end of the current billing month' + (endTxt ? ' (' + endTxt + ')' : '') + '. Your recordings, clips and Brand Kit stay downloadable until then.';
                 cbtn.textContent = 'Cancel account'; cbtn.classList.add('bl-danger'); cbtn.classList.remove('primary'); cbtn.dataset.mode = 'cancel';
             }
-            ['bl-admin', 'bl-send-box', 'bl-plans-box'].forEach(function(id) { document.getElementById(id).classList.toggle('hidden', !admin); });
+            ['bl-admin', 'bl-send-box', 'bl-plans-box', 'bl-kit-box'].forEach(function(id) { document.getElementById(id).classList.toggle('hidden', !admin); });
             if (!admin) return;
             var f = document.getElementById('bl-rates');
             ['videoStorage', 'videoDelivery', 'videoEncoding', 'fileStorage'].forEach(function(k) { if (document.activeElement !== f[k]) f[k].value = d.rates[k]; });
@@ -662,7 +671,57 @@
             sf.country.value = det.country || 'GB';
             document.getElementById('bl-monthly').checked = !!(d.assignment && d.assignment.monthly);
             renderPlans(d.plans);
+            renderKit(d.kit || [], d.kitPlans || [], d.plans);
         }
+        // Kit expenses: one row per item, a quantity per plan; the totals show what one kit costs us
+        // and how much of that plan's first month it takes
+        var _kitPlans = [], _kitPlanList = [];
+        function renderKit(kit, kitPlans, plans) {
+            var t = document.getElementById('bl-kit');
+            _kitPlans = kitPlans; _kitPlanList = plans || [];
+            if (t.dataset.editing === '1') { kitTotals(); return; }
+            var pname = function(id) { var p = _kitPlanList.filter(function(x) { return x.id === id; })[0]; return p ? p.name : id; };
+            t.innerHTML = '<thead><tr><th>Item</th><th class="num">£ each</th>' + kitPlans.map(function(p) { return '<th class="num">' + esc(pname(p)) + '</th>'; }).join('') + '<th></th></tr></thead><tbody>' +
+                kit.map(kitRow).join('') + '</tbody><tfoot id="bl-kit-foot"></tfoot>';
+            kitTotals();
+        }
+        function kitRow(k) {
+            k = k || { id: '', name: '', cost: null, qty: {} };
+            var inp = function(key, v, num) { return '<input class="bl-plan-in" data-k="' + key + '"' + (num ? ' inputmode="decimal"' : '') + ' value="' + esc(v == null ? '' : v) + '"' + (key === 'cost' ? ' placeholder="Add cost"' : '') + '>'; };
+            return '<tr data-id="' + esc(k.id) + '"><td data-l="Item">' + inp('name', k.name) + '</td><td data-l="£ each">' + inp('cost', k.cost, 1) + '</td>' +
+                _kitPlans.map(function(p) { return '<td data-l="' + esc(p) + '">' + inp('qty:' + p, (k.qty || {})[p] || 0, 1) + '</td>'; }).join('') +
+                '<td><button type="button" class="cam-btn ghost" data-del-kit>Remove</button></td></tr>';
+        }
+        function readKitRows() {
+            return Array.prototype.map.call(document.querySelectorAll('#bl-kit tbody tr'), function(tr) {
+                var v = function(k) { var el = tr.querySelector('[data-k="' + k + '"]'); return el ? el.value.trim() : ''; };
+                var qty = {}; _kitPlans.forEach(function(p) { qty[p] = Number(v('qty:' + p)) || 0; });
+                return { id: tr.dataset.id, name: v('name'), cost: v('cost') === '' ? null : Number(v('cost')), qty: qty };
+            });
+        }
+        function kitTotals() {
+            var foot = document.getElementById('bl-kit-foot'); if (!foot) return;
+            var rows = readKitRows();
+            var cells = _kitPlans.map(function(p) {
+                var used = rows.filter(function(r) { return r.name && (r.qty[p] || 0) > 0; });
+                var sum = used.reduce(function(s, r) { return s + (Number(r.cost) || 0) * r.qty[p]; }, 0);
+                var missing = used.filter(function(r) { return r.cost == null || !isFinite(r.cost); }).length;
+                var plan = _kitPlanList.filter(function(x) { return x.id === p; })[0];
+                var share = plan && plan.price > 0 ? Math.round(sum / plan.price * 100) + '% of the first month' : '';
+                return '<td class="num"><b>' + money(sum, 'gbp') + '</b>' + (missing ? '<br><span class="bl-msg">+ ' + missing + ' without a cost</span>' : '') + (share ? '<br><span class="bl-msg">' + share + '</span>' : '') + '</td>';
+            }).join('');
+            foot.innerHTML = '<tr><td><b>Kit per account</b></td><td></td>' + cells + '<td></td></tr>';
+        }
+        document.getElementById('bl-kit').addEventListener('input', function() { this.dataset.editing = '1'; kitTotals(); });
+        document.getElementById('bl-kit').addEventListener('click', function(e) { var b = e.target.closest('[data-del-kit]'); if (b) { this.dataset.editing = '1'; b.closest('tr').remove(); kitTotals(); } });
+        document.getElementById('bl-add-kit').addEventListener('click', function() { var t = document.getElementById('bl-kit'); t.dataset.editing = '1'; t.querySelector('tbody').insertAdjacentHTML('beforeend', kitRow()); kitTotals(); });
+        document.getElementById('bl-save-kit').addEventListener('click', async function() {
+            var msg = document.getElementById('bl-kit-msg'), t = document.getElementById('bl-kit');
+            this.disabled = true; msg.textContent = 'Saving…';
+            try { await post({ action: 'setKit', kit: readKitRows() }); t.dataset.editing = ''; msg.textContent = 'Saved'; await load(); }
+            catch (e) { msg.textContent = 'Could not save: ' + e.message; }
+            this.disabled = false;
+        });
         function renderPlans(plans) {
             var t = document.getElementById('bl-plans');
             if (t.dataset.editing === '1') return;
