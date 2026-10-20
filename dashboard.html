@@ -2393,9 +2393,20 @@
                 }
                 l1.textContent = 'Duration';
                 v1.textContent = fmtDuration(a.duration);
-                setImg('');            // no still: the banner is only the muted video
-                focusHeroImage(a);
-                playHeroLoop(a);
+                // The artist's own photo (Brand Kit) when there is one, so the banner shows the DJ, not whatever
+                // the camera caught (the street, the room); otherwise the muted video around the DJ or the peak
+                var artistPhoto = _brandPhotos && _brandPhotos['artist-' + brandSlug(latest.meta.artist || '')];
+                if (artistPhoto) {
+                    var wrapEl = document.getElementById('live-feed-player-wrap');
+                    if (wrapEl) { wrapEl.style.opacity = '0'; wrapEl.innerHTML = ''; }
+                    _heroLoop = null;
+                    img.style.objectPosition = '50% 30%';
+                    setImg(artistPhoto);
+                } else {
+                    setImg('');            // no still: the banner is only the muted video
+                    focusHeroImage(a);
+                    playHeroLoop(a);
+                }
             } else if (_health.loaded) {
                 badge.className = 'hidden';
                 sub.textContent = '';
