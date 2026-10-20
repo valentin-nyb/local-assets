@@ -186,7 +186,7 @@ export function ownerLimit(type, planId, kind) {
 }
 function whoLine(type, planId) {
   const n = v => v === Infinity ? 'unlimited' : 'up to ' + v;
-  if (type === 'artist') return 'One artist (you), with any number of record labels and venues';
+  if (type === 'artist') return 'One artist, with any number of record labels and venues';
   if (type === 'label' || type === 'management') return `One ${type === 'management' ? 'management company' : 'record label'}, ${n(ownerLimit(type, planId, 'artist'))} artists, on any venue`;
   const a = ownerLimit('venue', planId, 'artist'), l = ownerLimit('venue', planId, 'label');
   return a === Infinity && l === Infinity ? 'One venue, with unlimited artists and record labels' : `One venue, ${n(a)} artists and ${n(l)} record labels`;

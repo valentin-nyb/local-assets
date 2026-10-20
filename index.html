@@ -962,6 +962,11 @@
             var t = (document.getElementById('tr-offer-type') || {}).value || 'artist';
             document.querySelectorAll('.tr-who-seg button').forEach(function(b) { b.setAttribute('aria-checked', b.dataset.t === t ? 'true' : 'false'); });
             var txt = document.getElementById('tr-who-txt'); if (txt) txt.innerHTML = WHO_TEXT[t] || '';
+            // Each card's one line for this kind of account, straight away (before the plan list loads)
+            document.querySelectorAll('.tr-card').forEach(function(card) {
+                var pb = card.querySelector('[onclick^="selectTier("]'), pid = pb ? (/selectTier\('([^']+)'/.exec(pb.getAttribute('onclick')) || [])[1] : '';
+                var forEl = card.querySelector('.tr-for'); if (forEl && WHO_FOR[t] && WHO_FOR[t][pid]) forEl.textContent = WHO_FOR[t][pid];
+            });
             var list = (window._plansByType || {})[t];
             if (!list) return;
             var tick = (document.querySelector('.tr-card li svg') || {}).outerHTML || '';
@@ -969,7 +974,6 @@
             document.querySelectorAll('.tr-card').forEach(function(card) {
                 var pb = card.querySelector('[onclick^="selectTier("]'), pid = pb ? (/selectTier\('([^']+)'/.exec(pb.getAttribute('onclick')) || [])[1] : '';
                 var p = list.filter(function(x) { return x.id === pid; })[0];
-                var forEl = card.querySelector('.tr-for'); if (forEl && WHO_FOR[t] && WHO_FOR[t][pid]) forEl.textContent = WHO_FOR[t][pid];
                 if (!p || !p.features.length) return;
                 card.querySelectorAll('.tr-h, ul, .tr-stats').forEach(function(el) { el.remove(); });
                 var ul = document.createElement('ul'); ul.className = 'tr-feats';
