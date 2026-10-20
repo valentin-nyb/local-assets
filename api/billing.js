@@ -168,43 +168,70 @@ export default async function handler(req, res) {
       const from = m ? today - (Math.min(120, Number(m[1])) - 1) * 86400e3
         : Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - (inv ? Number(inv[1]) : 0), 1);
       const to = today + 86400e3;
-      const out = await withRedis(async redis => {
-        const [rates, plans, assignments] = await Promise.all([readRates(redis), readPlans(redis), readAssignments(redis, slug)]);
-        const planId = req.query.plan !== undefined && isAdmin ? String(req.query.plan) : (assignments[target]?.plan || '');
-        const plan = plans.find(p => p.id === planId) || null;
+      // One account's day-by-day usage, priced with its own plan (by its type)
+      const accountDays = async (redis, rates, plans, aSlug, aAuth, aTarget, planOverride) => {
+        const assignments = await readAssignments(redis, aSlug);
+        const planId = planOverride !== undefined ? planOverride : (assignments[aTarget]?.plan || '');
+        const type = aTarget.startsWith('artist:') ? 'artist' : aTarget.startsWith('label:') ? 'label' : await accountTypeOf(redis, aSlug);
+        const plan = planForType(plans.find(p => p.id === planId) || null, type);
         // From the start of the first cycle, so a range starting mid-cycle carries that cycle's running total
         const fd = new Date(from), cycleFrom = Date.UTC(fd.getUTCFullYear(), fd.getUTCMonth(), 1);
-        const u = await usageByDay(redis, slug, auth, { from: cycleFrom, to }, artist, label);
-        return { rates, plan, ...u };
-      });
+        const u = await usageByDay(redis, aSlug, aAuth, { from: cycleFrom, to }, aTarget.startsWith('artist:') ? aTarget.slice(7) : null, aTarget.startsWith('label:') ? aTarget.slice(6) : null);
+        return pointsFor({ rates, plan, ...u });
+      };
       // Each day's point is what the invoice would say if the cycle ended that day: the same quantities
       // (minutes stored, minutes streamed this cycle, minutes added this cycle, file storage) priced by the
       // same priceUsage, plan allowance included, so today's point equals "Usage so far" exactly
-      const DAY = 86400e3, nowMs = Date.now();
-      let cyc = -1, streamed = 0;
-      const points = out.days.map(d => {
-        const dt = new Date(d.start), c = Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth(), 1);
-        if (c !== cyc) { cyc = c; streamed = 0; }
-        streamed += d.delivered;
-        const end = Math.min(d.start + DAY, nowMs);
-        const usage = {
-          storedMinutes: out.vids.reduce((s, v) => s + (v.at < end ? v.min : 0), 0),
-          newMinutes: out.vids.reduce((s, v) => s + (v.at >= c && v.at < end ? v.min : 0), 0),
-          deliveredMinutes: streamed,
-          fileBytes: out.files.reduce((s, f) => s + (f.at < end ? f.bytes : 0), 0),
-          videos: 0, notes: [],
-        };
-        const p = priceUsage(usage, out.rates, out.plan);
-        // That day on its own too (for the daily bars): minutes streamed, minutes of video added; and video stored by its end
-        const added = out.vids.reduce((s, v) => s + (v.at >= d.start && v.at < end ? v.min : 0), 0);
-        return { t: d.start, end, cycle: c, amount: p.usageTotal, mins: Math.round(streamed * 100) / 100,
-          daily: Math.round(d.delivered * 100) / 100, stored: Math.round(usage.storedMinutes), added: Math.round(added),
-          lines: p.lines.map(l => ({ label: l.label, quantity: l.quantity, unit: l.unit, amount: l.amount })) };
-      });
+      const pointsFor = out => {
+        const DAY = 86400e3, nowMs = Date.now();
+        let cyc = -1, streamed = 0;
+        return { plan: out.plan, notes: out.notes, points: out.days.map(d => {
+          const dt = new Date(d.start), c = Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth(), 1);
+          if (c !== cyc) { cyc = c; streamed = 0; }
+          streamed += d.delivered;
+          const end = Math.min(d.start + DAY, nowMs);
+          const usage = {
+            storedMinutes: out.vids.reduce((s, v) => s + (v.at < end ? v.min : 0), 0),
+            newMinutes: out.vids.reduce((s, v) => s + (v.at >= c && v.at < end ? v.min : 0), 0),
+            deliveredMinutes: streamed,
+            fileBytes: out.files.reduce((s, f) => s + (f.at < end ? f.bytes : 0), 0),
+            videos: 0, notes: [],
+          };
+          const p = priceUsage(usage, out.rates, out.plan);
+          // That day on its own too (for the daily bars): minutes streamed, minutes of video added; and video stored by its end
+          const added = out.vids.reduce((s, v) => s + (v.at >= d.start && v.at < end ? v.min : 0), 0);
+          return { t: d.start, end, cycle: c, amount: p.usageTotal, mins: Math.round(streamed * 100) / 100,
+            daily: Math.round(d.delivered * 100) / 100, stored: Math.round(usage.storedMinutes), added: Math.round(added),
+            lines: p.lines.map(l => ({ label: l.label, quantity: l.quantity, unit: l.unit, amount: l.amount })) };
+        }) };
+      };
+      const rates = await withRedis(readRates);
+      let result;
+      if (isAdmin && req.query.venue === 'all') {
+        // Admin: every client account added up, day by day (each at its own plan)
+        const per = await withRedis(async redis => {
+          const plans = await readPlans(redis), out = [];
+          for (const s0 of billable) { try { out.push(await accountDays(redis, rates, plans, s0, venueAuth(s0), 'venue')); } catch (e) { console.error('[billing] usage days', s0, e.message); } }
+          return out;
+        });
+        const base = per.find(x => x.points.length) || { points: [] };
+        const points = base.points.map((pt, k) => {
+          const all = per.map(x => x.points[k]).filter(Boolean);
+          const sum = f => Math.round(all.reduce((t, x) => t + (x[f] || 0), 0) * 100) / 100;
+          const lines = {};
+          all.forEach(x => x.lines.forEach(l => { const o = lines[l.label] || (lines[l.label] = { label: l.label, quantity: 0, unit: l.unit, amount: 0 }); o.quantity += l.quantity; o.amount += l.amount; }));
+          return { t: pt.t, end: pt.end, cycle: pt.cycle, amount: sum('amount'), mins: sum('mins'), daily: sum('daily'), stored: sum('stored'), added: sum('added'),
+            lines: Object.values(lines).map(l => ({ ...l, quantity: Math.round(l.quantity * 100) / 100, amount: Math.round(l.amount * 100) / 100 })) };
+        });
+        result = { plan: 'All accounts', points, notes: per.flatMap(x => x.notes || []) };
+      } else {
+        const one = await withRedis(async redis => accountDays(redis, rates, await readPlans(redis), slug, auth, target, req.query.plan !== undefined && isAdmin ? String(req.query.plan) : undefined));
+        result = { plan: one.plan ? one.plan.name : null, points: one.points, notes: one.notes };
+      }
       const cycles = [];
       for (let y = new Date(from).getUTCFullYear(), mo = new Date(from).getUTCMonth(); Date.UTC(y, mo, 1) < to; mo++) cycles.push(Date.UTC(y, mo, 1));
-      return res.status(200).json({ range, from, to, today, cycles, currency: out.rates.currency || 'gbp',
-        plan: out.plan ? out.plan.name : null, points, notes: out.notes });
+      return res.status(200).json({ range, from, to, today, cycles, currency: rates.currency || 'gbp',
+        plan: result.plan, points: result.points, notes: result.notes });
     }
     if (req.method === 'GET') {
       const target = isAdmin ? cleanTarget(req.query.target) : 'venue';

@@ -36,7 +36,7 @@
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
-    <script src="nav-component.js?v=28"></script>
+    <script src="nav-component.js?v=29"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
         .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
@@ -292,7 +292,7 @@
                     </div>
                     <div class="bl-scroll" style="padding-top:12px"><table class="bl-table" id="bl-ov-table"><tbody><tr><td class="bl-empty">Adding up every account…</td></tr></tbody></table></div>
                 </section>
-                <div class="bl-grid">
+                <div class="bl-grid" id="bl-cards">
                     <div class="bl-card"><p class="lbl">Estimated invoice</p><p class="val" id="bl-total">—</p><p class="note" id="bl-total-note">Loading usage…</p><div class="bl-bar"><i id="bl-bar" style="width:0"></i></div></div>
                     <div class="bl-card"><p class="lbl">Plan</p><p class="val" id="bl-plan">—</p><p class="note" id="bl-plan-note"></p></div>
                     <div class="bl-card"><p class="lbl" id="bl-usage-lbl">Usage so far</p><p class="val" id="bl-usage">—</p><p class="note" id="bl-usage-note"></p><div class="bl-bar" id="bl-usage-bar" hidden><i style="width:0"></i></div></div>
@@ -300,6 +300,7 @@
                 <section class="bl-section" id="bl-chart-box">
                     <div class="bl-section-head"><div><h3>Usage over time</h3><span class="bl-msg" id="bl-chart-sum"></span></div>
                         <div class="bl-chart-tools">
+                            <select id="bl-chart-acct" class="bl-chart-range hidden" aria-label="Account"></select>
                             <select id="bl-chart-range" class="bl-chart-range" aria-label="Range">
                                 <optgroup label="Days"><option value="30d">Last 30 days</option><option value="60d">Last 60 days</option><option value="90d">Last 90 days</option><option value="120d">Last 120 days</option></optgroup>
                                 <optgroup label="Cycles"><option value="cycle">Current cycle</option><option value="inv1" selected>Last invoice + current cycle</option><option value="inv2">Last 2 invoices + current cycle</option><option value="inv3">Last 3 invoices + current cycle</option></optgroup>
@@ -392,6 +393,7 @@
             if (sidebar.classList.contains('-translate-x-full')) { sidebar.classList.remove('-translate-x-full'); overlay.classList.remove('hidden'); setTimeout(function() { overlay.classList.add('opacity-100'); }, 10); }
             else { sidebar.classList.add('-translate-x-full'); overlay.classList.add('opacity-0'); setTimeout(function() { overlay.classList.add('hidden'); }, 300); }
         }
+        var _chartVenue = 'all';
         function laFetch(url, opts) {
             var sess = {}; try { sess = JSON.parse(localStorage.getItem('la_admin') || '{}'); } catch (_) {}
             opts = Object.assign({}, opts); opts.headers = Object.assign({}, opts.headers);
@@ -424,7 +426,9 @@
         async function loadChart() {
             var box = document.getElementById('bl-chart'), range = document.getElementById('bl-chart-range').value;
             try {
-                var r = await laFetch('/api/billing?usageDays=1&range=' + encodeURIComponent(range) + '&venue=' + encodeURIComponent(_venue) + '&target=' + encodeURIComponent(_target) + (_planOverride !== undefined ? '&plan=' + encodeURIComponent(_planOverride) : ''));
+                // Admin: every account added up, or the one chosen above the chart
+                var cv = _data && _data.isAdmin ? _chartVenue : _venue;
+                var r = await laFetch('/api/billing?usageDays=1&range=' + encodeURIComponent(range) + '&venue=' + encodeURIComponent(cv) + '&target=' + encodeURIComponent(cv === 'all' ? 'venue' : _target) + (_planOverride !== undefined && cv !== 'all' ? '&plan=' + encodeURIComponent(_planOverride) : ''));
                 var d = await r.json();
                 if (!r.ok) throw new Error(d.error || r.status);
                 _chart = d; _chartAt = Date.now(); drawChart();
@@ -671,6 +675,14 @@
                 cbtn.textContent = 'Cancel account'; cbtn.classList.add('bl-danger'); cbtn.classList.remove('primary'); cbtn.dataset.mode = 'cancel';
             }
             ['bl-admin', 'bl-send-box', 'bl-plans-box', 'bl-kit-box', 'bl-overview'].forEach(function(id) { document.getElementById(id).classList.toggle('hidden', !admin); });
+            // Admin: no invoice cards (they'd read as our own bill; All accounts has the totals), and the chart
+            // shows every account added up or the one picked
+            var cards = document.getElementById('bl-cards'); if (cards) cards.classList.toggle('hidden', !!admin);
+            var ca = document.getElementById('bl-chart-acct');
+            if (admin && d.venues) {
+                ca.classList.remove('hidden');
+                if (ca.dataset.n !== String(d.venues.length)) { ca.dataset.n = String(d.venues.length); ca.innerHTML = '<option value="all">All accounts</option>' + d.venues.map(function(v) { return '<option value="' + esc(v.slug) + '">' + esc(v.name) + '</option>'; }).join(''); ca.value = _chartVenue; }
+            }
             if (admin && !loadOverview.done) { loadOverview.done = true; loadOverview(false); }
             // A client's own account: Usage this month starts open (it folds to its total); Your plan is always open
             if (!admin && !render.usageOpened) { render.usageOpened = true; var ub = document.getElementById('bl-usage-box'); if (ub) { ub.classList.remove('folded'); var uh = ub.querySelector('.bl-fold-head'); if (uh) uh.setAttribute('aria-expanded', 'true'); } }
@@ -751,6 +763,7 @@
             btn.disabled = false;
         }
         document.getElementById('bl-ov-refresh').addEventListener('click', function() { loadOverview(true); });
+        document.getElementById('bl-chart-acct').addEventListener('change', function() { _chartVenue = this.value; if (typeof loadChart === 'function') loadChart(); });
         // The email this account gets on the 1st, sent as an example (nothing is charged)
         document.getElementById('bl-example').addEventListener('click', async function() {
             var b = this, to = document.getElementById('bl-example-to'), msg = document.getElementById('bl-send-msg');
