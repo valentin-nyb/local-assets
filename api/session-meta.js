@@ -1,5 +1,5 @@
 import { createClient } from 'redis';
-import { getWebSessionAuth } from './_venues.js';
+import { getWebSessionAuth, sameArtist } from './_venues.js';
 
 // Editable session details (name, venue and record label) for Distribution History.
 // Stored per account in Redis hash session_meta:<venueSlug>, keyed "ARTIST|YYYY-MM-DD".
@@ -23,7 +23,10 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       const raw = await withRedis(r => r.hGetAll(key));
       const sessions = {};
-      for (const [k, v] of Object.entries(raw || {})) { try { sessions[k] = JSON.parse(v); } catch {} }
+      for (const [k, v] of Object.entries(raw || {})) {
+        if (session.member && !sameArtist(k.split('|')[0], session.member.name)) continue;   // an artist: only theirs
+        try { sessions[k] = JSON.parse(v); } catch {}
+      }
       return res.status(200).json({ sessions });
     }
     if (req.method !== 'POST') return res.status(405).end();

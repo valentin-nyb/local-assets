@@ -4,6 +4,7 @@
 <!DOCTYPE html>
 <html lang="en" class="dark scroll-smooth">
 <head>
+    <script>try { if (JSON.parse(localStorage.getItem('la_admin') || '{}').member) document.documentElement.classList.add('la-member'); } catch (_) {}</script>
     <script>
       (function(){
         var s = localStorage.getItem('la_admin');
@@ -41,7 +42,7 @@
     <script src="/la-djframe.js?v=3"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-    <script src="nav-component.js?v=29"></script>
+    <script src="nav-component.js?v=30"></script>
     <style>
         /* Standardized sidebar styles used by the JS component */
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
@@ -223,12 +224,12 @@
                     <div id="live-asset-total" class="kpi-value">—</div>
                     <div class="kpi-sub"><span id="growth-pct"></span></div>
                 </div>
-                <div class="kpi">
+                <div class="kpi kpi-account">
                     <div class="kpi-head"><span class="kpi-label">Cloud storage</span></div>
                     <div id="live-storage-usage" class="kpi-value">—</div>
                     <div class="kpi-sub"><span id="storage-files"></span></div>
                 </div>
-                <div class="kpi">
+                <div class="kpi kpi-account">
                     <div class="kpi-head">
                         <span class="kpi-label">Revenue</span>
                         <button id="revenue-indicators" type="button" onclick="openRevenueSettings()" class="kpi-action hidden">Manage</button>
@@ -3625,6 +3626,8 @@
         @media (max-width: 560px)  { .kpi-grid { grid-template-columns:1fr; gap:12px; } }
         .kpi { background:var(--la-surface); border:1px solid var(--la-line); border-radius:14px; padding:18px 20px; display:flex; flex-direction:column; min-width:0; }
         .kpi-today { color:var(--la-accent); font-weight:600; }
+        /* An artist with access to a venue's or label's account: not the account's storage or revenue */
+        html.la-member .kpi-account { display:none !important; }
         .kpi-head { display:flex; align-items:center; justify-content:space-between; gap:8px; height:22px; }
         .kpi-label { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--la-dim); }
         .kpi-icon { font-size:16px; color:var(--la-dim); }

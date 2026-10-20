@@ -1,4 +1,4 @@
-import { getWebSessionAuth, getVenuesConfig, getMuxAuthForVenue, isAdminVenue, platformAdmins } from './_venues.js';
+import { getWebSessionAuth, getVenuesConfig, getMuxAuthForVenue, isAdminVenue, platformAdmins, artistOf, sameArtist } from './_venues.js';
 import { listThumbnailAssets } from './_thumbnails.js';
 import crypto from 'crypto';
 
@@ -88,6 +88,8 @@ export default async function handler(req, res) {
       if (e.status) { console.error('[list-assets] Mux error', e.status, e.body); return res.status(e.status).json({ error: e.body || e.message }); }
       throw e;
     }
+    // An artist with access sees only their own sets, clips and thumbnails
+    if (session.member) allAssets = allAssets.filter(a => sameArtist(artistOf(a), session.member.name));
     console.error('[list-assets] total assets returned:', allAssets.length);
     return res.status(200).json(allAssets);
   } catch (e) {

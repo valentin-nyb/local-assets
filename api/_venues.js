@@ -7,7 +7,10 @@ import { createClient } from 'redis';
 //   muxWebhook: <encrypted signing secret of the environment's webhook> }.
 // Read into a cache when a function starts and refreshed in the background, so lookups stay synchronous.
 const REGISTRY_KEY = 'la_venues';
-let _registry = {}, _registryAt = 0, _registryLoading = null, _deleted = new Set();
+let _registry = {}, _registryAt = 0, _registryLoading = null, _deleted = new Set(), _members = {};
+// Artists given access by a venue or record label (Brand Kit → Give access): email → [{ slug, owner, name }].
+// They sign in to that account but only see their own sets and Brand Kit folder (see memberAllowed).
+export const MEMBERS_KEY = 'la_artist_members';
 const encKey = () => crypto.createHash('sha256').update(process.env.LOCAL_ASSETS_API_KEY || 'dev-secret-change-me').digest();
 export function sealSecret(text) {
   const iv = crypto.randomBytes(12), c = crypto.createCipheriv('aes-256-gcm', encKey(), iv);
@@ -35,6 +38,7 @@ export async function refreshRegistry(redis = null) {
       } catch {}
     }
     _deleted = new Set(await redis.sMembers('la_deleted').catch(() => []));   // accounts deleted by the admin
+    _members = Object.fromEntries(Object.entries(await redis.hGetAll(MEMBERS_KEY).catch(() => ({})) || {}).map(([e, v]) => { try { return [e, JSON.parse(v)]; } catch { return [e, []]; } }));
     _registry = out; _registryAt = Date.now();
   } catch (e) { console.error('[_venues] registry:', e.message); }
   finally { if (own && redis) await redis.quit().catch(() => {}); }
@@ -149,9 +153,14 @@ export function findVenuesByEmail(email) {
   if (!email) return [];
   const lower = email.toLowerCase().trim();
   const admin = platformAdmins().includes(lower);
-  return Object.entries(getVenuesConfig())
+  const cfgs = getVenuesConfig();
+  const full = Object.entries(cfgs)
     .filter(([, cfg]) => admin || venueEmails(cfg).includes(lower))
     .map(([slug, cfg]) => ({ slug, ...cfg }));
+  // Accounts this email can open as one of their artists (full access to the same account wins)
+  const asArtist = (_members[lower] || []).filter(m => cfgs[m.slug] && !full.some(v => v.slug === m.slug))
+    .map(m => ({ slug: m.slug, ...cfgs[m.slug], member: { owner: m.owner, name: m.name } }));
+  return full.concat(asArtist);
 }
 
 // The venue to use for this email: `preferredSlug` if the email belongs to it,
@@ -186,7 +195,7 @@ export async function venueChoicesTyped(email) {
 export function venueChoices(email) {
   // The local / assets admin account first, then the clients A–Z
   const isAdmin = v => v.slug === (process.env.BILLING_ADMIN_VENUE || 'local-assets-admin') || /^local\s*[\/-]?\s*assets\b/i.test(String(v.name || '').trim());
-  return findVenuesByEmail(email).map(v => ({ slug: v.slug, name: v.name || v.slug }))
+  return findVenuesByEmail(email).map(v => ({ slug: v.slug, name: v.name || v.slug, ...(v.member ? { member: v.member.name } : {}) }))
     .sort((a, b) => (isAdmin(b) - isAdmin(a)) || a.name.localeCompare(b.name));
 }
 
@@ -274,6 +283,31 @@ export function getWebSessionAuth(req) {
     if (cfg) venue = { slug: asVenue, ...cfg, actingAdmin: true };
   }
   const muxAuth = getMuxAuthForVenue(venue); // null if no venue-specific creds
+  // An artist with access to a venue's or label's account reaches only what memberAllowed lets through
+  const member = venue?.member || null;
+  if (member && !memberAllowed(req)) {
+    console.error('[_venues] artist access: not allowed', email, req.method, String(req.url || '').split('?')[0]);
+    return null;
+  }
 
-  return { email, venueSlug: venue?.slug || '', venue, muxAuth };
+  return { email, venueSlug: venue?.slug || '', venue, muxAuth, member };
 }
+
+// What an artist with access can reach: their sets, clips and downloads (Overview), the calendar, and Brand Kit
+// (their own folder; api/brand.js checks the rest). Everything else (cameras, uploads, billing) is refused.
+const MEMBER_GET = ['list-assets', 'assets', 'asset', 'get-asset', 'download', 'session-meta', 'next-event', 'cameras', 'brand',
+  'peak-moment', 'list-thumbnails', 'most-watched-thumbnails', 'vertical-clips', 'camera-frame', 'system-health', 'client-profile'];
+const MEMBER_POST = ['brand', 'switch-venue', 'peak-moment'];
+export function memberAllowed(req) {
+  const u = new URL(String(req.url || '/'), 'https://x');
+  const name = u.pathname.replace(/^\/api\//, '').replace(/\/$/, '');
+  if (req.method === 'GET' || req.method === 'HEAD') return MEMBER_GET.includes(name) || (name === 'billing' && u.searchParams.has('status'));
+  return MEMBER_POST.includes(name);
+}
+// The artist of a recording, clip or thumbnail, from its label (passthrough): JSON { artist } or "ARTIST // …"
+export function artistOf(a) {
+  const pt = String(a?.passthrough || '').trim();
+  try { const o = JSON.parse(pt); if (o && o.artist) return String(o.artist).toUpperCase().trim(); } catch {}
+  return pt.split(' // ')[0].toUpperCase().trim();
+}
+export const sameArtist = (a, b) => String(a || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '') === String(b || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '');

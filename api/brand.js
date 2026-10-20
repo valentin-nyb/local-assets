@@ -2,7 +2,9 @@ import { pausedBy, sendPaused } from './_suspend.js';
 import { list, del, copy } from '@vercel/blob';
 import { createClient } from 'redis';
 import { handleUpload } from '@vercel/blob/client';
-import { getWebSessionAuth } from './_venues.js';
+import { getWebSessionAuth, MEMBERS_KEY, refreshRegistry, getVenuesConfig } from './_venues.js';
+import { Resend } from 'resend';
+import { accessInviteEmail } from './_emails.js';
 import { cleanWatermark, readWatermark, watermarkKey } from './_watermark.js';
 import { ownerLimit, accountTypeOf, readAssignments } from './_billing.js';
 
@@ -94,11 +96,63 @@ export default async function handler(req, res) {
         if (files.some(f => f.url === url)) { ownerPhotos[owner] = url; ownerPhotosPicked.push(owner); }
       }
       const lut = await withRedis(r => r.get(`brand_lut:${slug}`)).catch(() => null);
-      return res.status(200).json({ lut: lut || '', files, orgType: ORG_TYPES.includes(orgType) ? orgType : 'venue', orgName: orgName || '', ownerNames: ownerNames || {}, ownerPhotos, ownerPhotosPicked, ownerGenres: ownerGenres || {}, ownerLinks: ownerLinks || {}, watermark, labelArtists: labelArtists || {}, hiddenOwners: hiddenOwners || [] });
+      // An artist with access: only their own folder, and the account's logos to download
+      if (session.member) {
+        const own = session.member.owner;
+        const mine = files.filter(f => f.owner === own || (f.owner === 'venue' && f.category === 'logos'));
+        return res.status(200).json({ lut: '', files: mine, orgType: ORG_TYPES.includes(orgType) ? orgType : 'venue', orgName: orgName || '', member: { owner: own, name: session.member.name },
+          ownerNames: { [own]: (ownerNames || {})[own] || session.member.name }, ownerPhotos: ownerPhotos[own] ? { [own]: ownerPhotos[own] } : {}, ownerPhotosPicked: ownerPhotosPicked.filter(o => o === own),
+          ownerGenres: { [own]: (ownerGenres || {})[own] || '' }, ownerLinks: { [own]: (ownerLinks || {})[own] || '' }, watermark: cleanWatermark(), labelArtists: {}, hiddenOwners: [] });
+      }
+      // Who has been given access to each artist's folder (Give access)
+      const access = await withRedis(r => r.hGetAll(`artist_access:${slug}`)).then(m => Object.fromEntries(Object.entries(m || {}).map(([k, v]) => { try { return [k, JSON.parse(v)]; } catch { return [k, []]; } }))).catch(() => ({}));
+      return res.status(200).json({ access, lut: lut || '', files, orgType: ORG_TYPES.includes(orgType) ? orgType : 'venue', orgName: orgName || '', ownerNames: ownerNames || {}, ownerPhotos, ownerPhotosPicked, ownerGenres: ownerGenres || {}, ownerLinks: ownerLinks || {}, watermark, labelArtists: labelArtists || {}, hiddenOwners: hiddenOwners || [] });
     }
 
     if (req.method !== 'POST') return res.status(405).end();
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+
+    // An artist with access changes only their own folder: its files, photo and details, and uploads into it
+    if (session.member) {
+      const own = session.member.owner;
+      const ownFile = u => { try { const p = decodeURIComponent(new URL(String(u || '')).pathname.slice(1)); return parsePath(p, slug)?.owner === own; } catch { return false; } };
+      const ok = !body.action ? true
+        : ['setPhoto', 'move', 'setFileLabel', 'delete'].includes(body.action) ? ownFile(body.url)
+        : body.action === 'setOwnerDetails' ? body.owner === own : false;
+      if (!ok) return res.status(403).json({ error: 'Artists can change only their own Brand Kit folder' });
+    }
+
+    // Give an artist access to the account (venues and record labels): they sign in with Google using this email,
+    // and see only their own sets, the calendar and their Brand Kit folder
+    if (body.action === 'grantAccess' || body.action === 'revokeAccess') {
+      const owner = String(body.owner || ''), email = String(body.email || '').trim().toLowerCase();
+      if (!/^artist-[a-z0-9-]+$/.test(owner)) return res.status(400).json({ error: 'Choose an artist' });
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Enter the artist\'s email' });
+      const out = await withRedis(async r => {
+        const type = (await r.get(`brand_org_type:${slug}`)) || (await r.get(`account_type:${slug}`)) || 'venue';
+        if (type === 'artist') return { status: 400, error: 'An artist account is one artist: there is no one to give access to' };
+        const name = (await r.hGet(`brand_owner_names:${slug}`, owner)) || owner.slice(7).replace(/-/g, ' ').toUpperCase();
+        const acc = JSON.parse(await r.hGet(`artist_access:${slug}`, owner) || '[]').filter(e => e !== email);
+        const mem = JSON.parse(await r.hGet(MEMBERS_KEY, email) || '[]').filter(m => !(m.slug === slug && m.owner === owner));
+        if (body.action === 'grantAccess') { acc.push(email); mem.push({ slug, owner, name }); }
+        acc.length ? await r.hSet(`artist_access:${slug}`, owner, JSON.stringify(acc)) : await r.hDel(`artist_access:${slug}`, owner);
+        mem.length ? await r.hSet(MEMBERS_KEY, email, JSON.stringify(mem)) : await r.hDel(MEMBERS_KEY, email);
+        await refreshRegistry(r);
+        return { status: 200, access: acc, name };
+      });
+      if (out.status !== 200) return res.status(out.status).json({ error: out.error });
+      // The invite, from the account (an email that can't be sent doesn't undo the access)
+      let emailed = false;
+      if (body.action === 'grantAccess') {
+        const key = process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY;
+        if (key) {
+          const m = accessInviteEmail({ artist: out.name, account: getVenuesConfig()[slug]?.name || slug, email });
+          const r = await new Resend(key).emails.send({ from: 'local / assets <noreply@local-assets.com>', replyTo: session.email, to: email, subject: m.subject, html: m.html, text: m.text }).catch(e => ({ error: e }));
+          emailed = !r?.error;
+        }
+      }
+      return res.status(200).json({ access: out.access, emailed });
+    }
 
     if (body.action === 'setOrg') {
       if (!ORG_TYPES.includes(body.orgType)) return res.status(400).json({ error: 'Unknown type' });
@@ -248,6 +302,7 @@ export default async function handler(req, res) {
         if (!pathname.startsWith(prefixFor(slug)) || !parsePath(pathname, slug)) {
           throw new Error('Invalid upload location');
         }
+        if (session.member && parsePath(pathname, slug).owner !== session.member.owner) throw new Error('Artists upload only to their own folder');
         return {
           allowedContentTypes: ALLOWED_TYPES,
           maximumSizeInBytes: MAX_BYTES,

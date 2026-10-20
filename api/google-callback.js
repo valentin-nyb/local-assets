@@ -108,6 +108,8 @@ export default async function handler(req, res) {
       venueSlug,
       venues:   venueChoices(email),
       role:     venue?.role     || 'admin',
+      // An artist with access to a venue's or label's account (only their own sets, Calendar, Brand Kit)
+      member:   venue?.member   || null,
       ts:       Date.now(),
     });
 

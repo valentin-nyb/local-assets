@@ -1,5 +1,5 @@
 import { createClient } from 'redis';
-import { getWebSessionAuth } from './_venues.js';
+import { getWebSessionAuth, sameArtist } from './_venues.js';
 import { calendarKey, fetchEvents } from './_calendar.js';
 
 export const artKey = slug => `event_art:${slug}`;
@@ -53,6 +53,8 @@ export default async function handler(req, res) {
     const art = await readArt(session.venueSlug);
     const events = (await fetchEvents(calUrl, now, now + 60 * 86400e3))
       .filter(ev => ev.end > now)
+      // An artist with access: only their own sets
+      .filter(ev => !session?.member || sameArtist(ev.artist, session.member.name))
       .slice(0, req.query?.all ? 200 : 3)
       .map(ev => ({
         key: eventKey(ev),

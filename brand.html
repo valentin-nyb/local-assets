@@ -37,7 +37,7 @@
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
-    <script src="nav-component.js?v=29"></script>
+    <script src="nav-component.js?v=30"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
         .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
@@ -188,6 +188,10 @@
         .bk-preview.photo img { max-width:100%; max-height:100%; width:100%; height:100%; object-fit:cover; }
         button.bk-tag { cursor:pointer; z-index:1; }
         .bk-post-count { position:absolute; top:8px; right:8px; z-index:1; font:500 10px 'JetBrains Mono',monospace; color:#fff; background:rgba(0,0,0,.6); border-radius:999px; padding:2px 8px; }
+        .bk-acc-list { display:flex; flex-direction:column; gap:8px; margin-top:12px; }
+        .bk-acc { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 8px 8px 14px; border:1px solid var(--la-line); border-radius:12px; font-size:13px; color:var(--la-text); }
+        /* An artist with access: their folder only; nothing that changes the account */
+        body.bk-member #bk-wm, body.bk-member [data-org], body.bk-member [data-del-owner], body.bk-member [data-edit-owner], body.bk-member [data-use-lut], body.bk-member [data-use-wm] { display:none !important; }
         .bk-ev-list { display:flex; flex-direction:column; gap:6px; max-height:56vh; overflow:auto; margin-top:10px; }
         .bk-ev { display:flex; align-items:center; gap:12px; width:100%; padding:8px 12px 8px 8px; border:1px solid var(--la-line); border-radius:12px; background:var(--la-input); color:var(--la-text); text-align:left; cursor:pointer; }
         .bk-ev:hover:not(:disabled) { border-color:var(--la-accent); }
@@ -508,6 +512,7 @@
         ];
         var IMG_EXT = /\.(png|jpe?g|svg|webp|gif)$/i;
         var FONT_EXT = /\.(otf|ttf|woff2?)$/i;
+        var _access = {}, _member = null;
         var _lut = '', _files = [], _owners = [], _uploading = false, _orgType = 'venue', _orgName = '', _ownerPhotos = {}, _photoPicked = {}, _ownerGenres = {}, _ownerLinks = {}, _labelArtists = {};
         var ORG_LABELS = { venue: 'Venue', artist: 'Artist', label: 'Record label', management: 'Management' };
 
@@ -1089,6 +1094,9 @@
                 _photoPicked = {}; (res[0].ownerPhotosPicked || []).forEach(function(k) { _photoPicked[k] = true; });
                 _ownerGenres = res[0].ownerGenres || {}; _ownerLinks = res[0].ownerLinks || {};
                 _labelArtists = res[0].labelArtists || {};
+                // Who has access to each artist's folder; and whether the person signed in is one of those artists
+                _access = res[0].access || {}; _member = res[0].member || null;
+                document.body.classList.toggle('bk-member', !!_member);
                 var hidden = res[0].hiddenOwners || [];
                 _wm = res[0].watermark || { enabled: true, logo: 'auto', position: 'bl', size: 'm', opacity: 0.9 };
                 // One-time move to the current layout: logo bottom left, name bottom right
@@ -1197,6 +1205,8 @@
                     '<div class="min-w-0"><p class="bk-owner-name">' + esc(o.name) + '</p><p class="bk-owner-meta"><span class="bk-kind-' + (/label/i.test(o.kind) ? 'label' : /artist/i.test(o.kind) ? 'artist' : 'venue') + '">' + esc(o.kind) + '</span> · ' + files.length + ' file' + (files.length !== 1 ? 's' : '') +
                         ' · <button type="button" class="bk-org-edit" ' + (o.org ? 'data-org' : 'data-edit-owner="' + esc(o.key) + '"') + '>Edit</button></p></div>' +
                     '<div class="bk-owner-actions">' +
+                        // A venue or label gives the artist access: they see only their sets, the calendar and this folder
+                        (!_member && _orgType !== 'artist' && o.key.indexOf('artist-') === 0 ? '<button type="button" class="cam-btn ghost" data-access="' + esc(o.key) + '"><span>' + ((_access[o.key] || []).length ? 'Access · ' + _access[o.key].length : 'Give access') + '</span></button>' : '') +
                         '<button type="button" class="cam-btn ghost" data-zip="' + esc(o.key) + '"' + (files.length ? '' : ' disabled title="No files yet"') + '><span>Download all</span></button>' +
                         '<button type="button" class="cam-btn ghost" data-up="' + esc(o.key) + '"><span>Upload</span></button>' +
                     '</div></div>' +
@@ -1252,6 +1262,7 @@
             wrap.querySelectorAll('[data-move]').forEach(function(b) { b.addEventListener('click', function() { openMove(b.dataset.move); }); });
             wrap.querySelectorAll('[data-org]').forEach(function(b) { b.addEventListener('click', openOrgType); });
             wrap.querySelectorAll('[data-edit-owner]').forEach(function(b) { b.addEventListener('click', function() { openOwnerEdit(b.dataset.editOwner); }); });
+            wrap.querySelectorAll('[data-access]').forEach(function(b) { b.addEventListener('click', function() { openAccess(b.dataset.access); }); });
             wrap.querySelectorAll('[data-del-owner]').forEach(function(b) { b.addEventListener('click', function() { deleteOwner(b.dataset.delOwner, b); }); });
             wrap.querySelectorAll('[data-zip]').forEach(function(b) { b.addEventListener('click', function() { downloadAll(b.dataset.zip, b); }); });
             wrap.querySelectorAll('[data-del]').forEach(function(b) { b.addEventListener('click', function() { removeFile(b.dataset.del, b); }); });
@@ -1571,6 +1582,37 @@
             }).catch(function() {
                 document.getElementById('bk-tester-status').textContent = 'This font file could not be previewed in the browser.';
             });
+        }
+
+        // ── Give access: an artist signs in to this account with their email and sees only their own sets,
+        // the calendar and their Brand Kit folder ──
+        function openAccess(key) {
+            var o = _owners.filter(function(x) { return x.key === key; })[0] || { name: key };
+            var paint = function(msg) {
+                var list = _access[key] || [];
+                openCamDialog('Access for ' + o.name,
+                    '<p class="cam-dialog-text">They sign in with Google using this email and see only their own sets and clips, the calendar, and their Brand Kit folder, which they can keep up to date. Nothing else in your account.</p>' +
+                    (list.length ? '<div class="bk-acc-list">' + list.map(function(e) { return '<div class="bk-acc"><span>' + esc(e) + '</span><button type="button" class="cam-btn ghost" data-rm="' + esc(e) + '">Remove</button></div>'; }).join('') + '</div>' : '') +
+                    '<form id="bk-acc-form" class="cam-form" style="margin-top:14px"><label>Their email<input name="email" type="email" required placeholder="artist@example.com" autocomplete="off"></label>' +
+                    '<p id="bk-acc-msg" class="cam-form-error" style="color:var(--la-sub)">' + esc(msg || '') + '</p>' +
+                    '<div class="cam-form-actions"><button type="button" class="cam-btn ghost" onclick="closeCamDialog()">Done</button><button type="submit" class="cam-btn primary">Give access</button></div></form>');
+                var send = async function(action, email) {
+                    var r = await laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: action, owner: key, email: email }) });
+                    var d = await r.json(); if (!r.ok) throw new Error(d.error || r.status);
+                    _access[key] = d.access; render(); return d;
+                };
+                document.querySelectorAll('[data-rm]').forEach(function(b) { b.addEventListener('click', async function() {
+                    b.disabled = true;
+                    try { await send('revokeAccess', b.dataset.rm); paint(b.dataset.rm + ' no longer has access'); } catch (e) { b.disabled = false; document.getElementById('bk-acc-msg').textContent = 'Could not remove: ' + e.message; }
+                }); });
+                document.getElementById('bk-acc-form').addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    var email = this.email.value.trim(), btn = this.querySelector('[type=submit]'); btn.disabled = true; btn.textContent = 'Giving access…';
+                    try { var d = await send('grantAccess', email); paint(d.emailed ? 'Invite sent to ' + email : email + ' has access. Ask them to sign in at local-assets.com with Google using that email.'); }
+                    catch (er) { btn.disabled = false; btn.textContent = 'Give access'; document.getElementById('bk-acc-msg').textContent = 'Could not give access: ' + er.message; }
+                });
+            };
+            paint();
         }
 
         // ── Add to event: this image becomes the artwork of a set in the calendar (Calendar page, Next event) ──

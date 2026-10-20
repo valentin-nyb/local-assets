@@ -1,6 +1,6 @@
 import { pausedBy, sendPaused } from './_suspend.js';
 import { createClient } from 'redis';
-import { getWebSessionAuth, getVenuesConfig, getMuxAuthForVenue, platformAdmins, isAdminVenue, framePass } from './_venues.js';
+import { getWebSessionAuth, getVenuesConfig, getMuxAuthForVenue, platformAdmins, isAdminVenue, framePass, sameArtist } from './_venues.js';
 import { calendarKey, cleanCalendarUrl, fetchEvents } from './_calendar.js';
 import { listLiveStreams } from './_live.js';
 import crypto from 'crypto';
@@ -161,6 +161,14 @@ export default async function handler(req, res) {
           const w = scheduleWindow(events, now);
           calendar.schedule = { open: w.open, closesAt: w.closesAt, opensAt: w.opensAt, nextArtist: w.next?.artist || null, currentArtist: w.current?.artist || null };
         } catch (e) { console.error('[cameras] calendar', slug, e.message); calendar.error = e.message || 'The calendar could not be read'; }
+      }
+      // An artist with access: no cameras, and only their own sets in the calendar
+      if (session.member) {
+        const mine = e => e && sameArtist(e.artist, session.member.name);
+        if (calendar.current && !mine(calendar.current)) calendar.current = null;
+        if (calendar.upcoming) calendar.upcoming = calendar.upcoming.filter(mine);
+        delete calendar.schedule;
+        return res.status(200).json({ venue: slug, cameras: [], calendar, relay: null, member: session.member });
       }
       const relay = await withRedis(r => relayStatus(r, slug)).catch(() => null);
       return res.status(200).json({ venue: slug, cameras, calendar, relay });

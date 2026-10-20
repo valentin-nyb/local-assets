@@ -141,3 +141,29 @@ export function invoiceEmail({ name, period, plan, lines, total, url, charged, e
   ].join('\n');
   return { subject: `${example ? '[Example] ' : ''}Your local / assets invoice for ${period}: ${money(total)}`, html, text };
 }
+
+// An artist given access to a venue's or record label's account (Brand Kit → Give access)
+export function accessInviteEmail({ artist, account, email }) {
+  const html = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>Your access to ${esc(account)}</title></head>
+<body style="margin:0;padding:0;background:#070905">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#070905"><tr><td align="center" style="padding:48px 16px">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px">
+    <tr><td style="padding:0 4px 40px"><img src="${SITE}/logos/Green@2x.png" width="150" alt="local / assets" style="display:block;width:150px;height:auto;border:0"></td></tr>
+    <tr><td style="padding:0 4px">
+      <p style="margin:0 0 14px;font:500 11px/1 ${MONO};letter-spacing:.3em;text-transform:uppercase;color:${GREEN}">You have access</p>
+      <h1 style="margin:0;font:700 40px/1 ${FONT};letter-spacing:-.01em;text-transform:uppercase;color:#fafafa">${esc(artist)}</h1>
+      <p style="margin:20px 0 0;font:400 16px/1.6 ${FONT};color:#a1a1aa">${esc(account)} gave you access to your sets on local / assets: every recording, vertical clip and thumbnail of yours, the calendar, and your Brand Kit to keep your logo and photos up to date.</p>
+      <p style="margin:16px 0 0;font:400 14px/1.6 ${FONT};color:#71717a">Sign in with Google using ${esc(email)}. There is no password.</p>
+    </td></tr>
+    <tr><td style="padding:28px 4px 0"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td style="border-radius:999px;background:${GREEN}">
+      <a href="${SITE}/login.html" style="display:inline-block;padding:15px 34px;font:600 14px/1 ${FONT};color:#000;text-decoration:none;border-radius:999px">Sign in</a>
+    </td></tr></table></td></tr>
+    <tr><td style="padding:40px 4px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #1b1e18"><tr>
+      <td style="padding:20px 0 0;font:500 10px/1.6 ${MONO};letter-spacing:.2em;text-transform:uppercase;color:#52525b">local / assets&trade; &middot; London</td></tr></table></td></tr>
+  </table>
+</td></tr></table>
+</body></html>`;
+  const text = `${account} gave you access to your sets on local / assets (${artist}): your recordings, clips, thumbnails, the calendar and your Brand Kit.\n\nSign in with Google using ${email}: ${SITE}/login.html`;
+  return { subject: `${account} gave you access on local / assets`, html, text };
+}
