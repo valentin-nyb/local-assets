@@ -331,6 +331,8 @@
         .cal-date span { font:700 10px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.08em; text-transform:uppercase; color:var(--la-dim); }
         .cal-date b { font:700 13px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; text-transform:uppercase; color:var(--la-text); }
         .cal-dj { display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 10px; min-width:0; }
+        /* The set's artwork (Add to event, in Brand Kit) */
+        .cal-art { width:36px; height:36px; border-radius:6px; object-fit:cover; align-self:center; flex-shrink:0; }
         .cal-dj b { font:700 14px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif; text-transform:uppercase; color:var(--la-text); }
         .cal-dj span { font:500 11px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.04em; text-transform:uppercase; color:var(--la-sub); }
         .cal-tag { align-self:center; font:700 9px/1 'Helvetica Neue', Helvetica, Arial, sans-serif !important; letter-spacing:.08em !important; padding:4px 7px; border-radius:5px; border:1px solid var(--la-line); color:var(--la-dim) !important; }
@@ -858,7 +860,7 @@
                 var tag = e.now ? (e.endedAt ? '<span class="cal-tag done">Finished</span>' : '<span class="cal-tag on">On now</span>') : i === (cal.current ? 1 : 0) ? '<span class="cal-tag">Next</span>' : '';
                 return '<div class="cal-row' + (e.now ? ' now' : '') + '">' +
                     '<div class="cal-date"><span>' + wd + '</span><b>' + dm + '</b>' + tag + '</div>' +
-                    '<div class="cal-dj"><b>' + esc(e.artist) + '</b>' + (e.venue ? '<span>' + esc(e.venue) + '</span>' : '') + '</div>' +
+                    '<div class="cal-dj">' + (e.art ? '<img class="cal-art" src="' + esc(e.art) + '" alt="" loading="lazy">' : '') + '<b>' + esc(e.artist) + '</b>' + (e.venue ? '<span>' + esc(e.venue) + '</span>' : '') + '</div>' +
                     '<div class="cal-time">' + fmtTime(e.start) + ' – ' + fmtTime(e.endedAt || e.end) + '</div>' +
                     '<div class="cal-time rec">' + fmtTime(e.start - 120e3) + ' – ' + fmtTime(e.endedAt || (e.end + 120e3)) + '</div>' +
                 '</div>';

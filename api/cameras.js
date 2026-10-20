@@ -9,6 +9,7 @@ import { viscaFor, isContinuous, privateHost } from './_visca.js';
 import { relayKeyHash, cmdsKey, seenKey, tokenKey } from './camera-relay.js';
 import { scheduleWindow } from './camera-schedule.js';
 import { inSession, openSession, closeSession, managedKey } from './_cam-sessions.js';
+import { readArt, eventKey } from './next-event.js';
 
 // The venue relay is online when it polled in the last 45 s
 async function relayStatus(redis, slug) {
@@ -153,7 +154,9 @@ export default async function handler(req, res) {
           // A set stopped early with Stop set: finished, at the time it was stopped
           if (cur) { try { const fin = JSON.parse(await withRedis(r => r.get(`cam_set_end:${slug}`)) || 'null'); if (fin && fin.start === cur.start) calendar.current.endedAt = fin.endedAt; } catch {} }
           // Every set in the next two months (capped only so a runaway calendar can't flood the page)
-          calendar.upcoming = events.filter(e => e.start > now).slice(0, 200).map(e => ({ artist: e.artist, venue: e.venue, start: e.start, end: e.end }));
+          // With each set's artwork, when one was added from Brand Kit
+          const art = await readArt(slug);
+          calendar.upcoming = events.filter(e => e.start > now).slice(0, 200).map(e => ({ artist: e.artist, venue: e.venue, start: e.start, end: e.end, art: art[eventKey(e)] || null }));
           // When the cameras that follow the calendar open and close
           const w = scheduleWindow(events, now);
           calendar.schedule = { open: w.open, closesAt: w.closesAt, opensAt: w.opensAt, nextArtist: w.next?.artist || null, currentArtist: w.current?.artist || null };
