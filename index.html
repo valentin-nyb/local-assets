@@ -650,6 +650,10 @@
         .tr-who-seg button { padding:9px 18px; border:0; border-radius:999px; background:none; color:#a1a1aa; font:600 14px 'Helvetica Neue', Helvetica, Arial, sans-serif; cursor:pointer; }
         .tr-who-seg button[aria-checked="true"] { background:#fafafa; color:#000; }
         .tr-who-txt { font-size:15px; line-height:1.55; color:#d4d4d8; }
+        .tr-who-seg button:focus { outline:none; }
+        .tr-who-seg button:focus-visible { outline:2px solid #39FF14; outline-offset:2px; }
+        /* The features: clear of the price and the line under it, with a thin rule between */
+        .tr-card ul.tr-feats { margin-top:22px; padding-top:22px; border-top:1px solid #1f1f22; gap:12px; margin-bottom:28px; }
         .tr-who-txt b { color:#fff; }
         .tr-stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
         .tr-stats div { padding:10px; border:1px solid #1f1f22; border-radius:10px; }
@@ -943,6 +947,12 @@
         var TYPE_PRICE = { 'starter-distribution': { artist: 79, label: 249 }, 'liveset-distribution': { artist: 199, label: 599 }, 'liveset-creative': { artist: 895, label: 1995 } };   // as api/_billing.js
         function typePrice(price, t, planId) { if (planId && TYPE_PRICE[planId] && TYPE_PRICE[planId][t]) return TYPE_PRICE[planId][t]; var f = TYPE_FACTOR[t] || 1; return f === 1 ? price : Math.round(price * f / 5) * 5; }
         // Who the account is for, in words, and every plan's features for that kind of account
+        // Each plan's one line, for this kind of account
+        var WHO_FOR = {
+            artist: { 'starter-distribution': 'For artists who want every set on social media.', 'liveset-distribution': 'For artists posting every week.', 'liveset-creative': 'For artists filming every set, from every angle.' },
+            label: { 'starter-distribution': 'For labels starting to film their artists.', 'liveset-distribution': 'For labels posting every week.', 'liveset-creative': 'For labels filming every showcase, from every angle.' },
+            venue: { 'starter-distribution': 'For venues that want their sets on social media.', 'liveset-distribution': 'For venues posting every week.', 'liveset-creative': 'For venues filming every night, from every angle.' },
+        };
         var WHO_TEXT = {
             artist: '<b>An artist account is you: one artist.</b> Tag any record labels you release on and any venues you play. Every set, clip and file is under your name.',
             label: '<b>A record label account is one label.</b> Upload sets for your artists, how many depends on the plan, played at any venue.',
@@ -959,6 +969,7 @@
             document.querySelectorAll('.tr-card').forEach(function(card) {
                 var pb = card.querySelector('[onclick^="selectTier("]'), pid = pb ? (/selectTier\('([^']+)'/.exec(pb.getAttribute('onclick')) || [])[1] : '';
                 var p = list.filter(function(x) { return x.id === pid; })[0];
+                var forEl = card.querySelector('.tr-for'); if (forEl && WHO_FOR[t] && WHO_FOR[t][pid]) forEl.textContent = WHO_FOR[t][pid];
                 if (!p || !p.features.length) return;
                 card.querySelectorAll('.tr-h, ul, .tr-stats').forEach(function(el) { el.remove(); });
                 var ul = document.createElement('ul'); ul.className = 'tr-feats';
