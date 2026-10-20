@@ -159,7 +159,9 @@ export default async function handler(req, res) {
 
   // The DJ seen from the front (found in the browser by la-djframe.js): kept per recording
   if (req.method === 'GET' && req.query.dj) {
-    try { return res.status(200).json({ dj: await withRedis(async r => JSON.parse(await r.get(`djframe2:${assetId}`) || 'null')) }); }
+    // Kept per version of the finder (la-djframe.js), so a better one looks again
+    const ver = /^[2-9]$/.test(String(req.query.dj)) ? String(req.query.dj) : '2';
+    try { return res.status(200).json({ dj: await withRedis(async r => JSON.parse(await r.get(`djframe${ver}:${assetId}`) || 'null')) }); }
     catch (e) { return res.status(200).json({ dj: null }); }
   }
   if (req.method === 'POST') {
@@ -169,7 +171,8 @@ export default async function handler(req, res) {
     const ar = await fetch(`https://api.mux.com/video/v1/assets/${assetId}`, { headers: { Authorization: session.muxAuth }, signal: AbortSignal.timeout(10000) }).catch(() => null);
     if (!ar?.ok) return res.status(404).json({ error: 'Asset not found' });
     const v = { time: Math.round(Number(dj.time)), focus: { x: Math.round(Number(dj.focus.x)), y: Math.round(Number(dj.focus.y)) } };
-    await withRedis(r => r.set(`djframe2:${assetId}`, JSON.stringify(v)));
+    const ver = /^[2-9]$/.test(String(body?.v || '')) ? String(body.v) : '2';
+    await withRedis(r => r.set(`djframe${ver}:${assetId}`, JSON.stringify(v)));
     return res.status(200).json({ ok: true });
   }
 

@@ -27,9 +27,16 @@
         return new Promise(function (res, rej) { var i = new Image(); i.crossOrigin = 'anonymous'; i.onload = function () { res(i); }; i.onerror = rej; i.src = src; });
     }
 
-    // Look at 16 moments of the recording (8% to 92%) and keep the best view of one person
+    // Look at 16 moments of the recording (8% to 92%) and keep the best view of the DJ. The DJ stays in one
+    // place for the whole set while people in the room or walking past move around, so a person seen in
+    // the same spot in many of the frames counts far more than one big person in a single frame.
+    function iou(a, b) {
+        var x1 = Math.max(a.x, b.x), y1 = Math.max(a.y, b.y), x2 = Math.min(a.x + a.w, b.x + b.w), y2 = Math.min(a.y + a.h, b.y + b.h);
+        var inter = Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
+        return inter / (a.w * a.h + b.w * b.h - inter || 1);
+    }
     async function find(pid, dur) {
-        var d = await detectors(), best = null;
+        var d = await detectors(), frames = [];
         for (var i = 0; i < 16; i++) {
             var t = Math.round(dur * (0.08 + 0.84 * i / 15));
             var img;
@@ -38,7 +45,7 @@
             var ppl = d.people.detect(img).detections || [];
             var fcs = d.faces ? (d.faces.detect(img).detections || []) : [];
             var crowd = 1 + 0.2 * Math.max(0, ppl.length - 2);
-            ppl.forEach(function (p) {
+            frames.push({ t: t, people: ppl.map(function (p) {
                 var b = p.boundingBox, area = b.width * b.height / (W * H);
                 var cx = (b.originX + b.width / 2) / W;
                 var middle = 1 - Math.min(1, Math.abs(cx - 0.5) * 1.6);
@@ -46,28 +53,40 @@
                 // Seen from the front, the head is near the top of the picture; from above (the decks camera) only arms and
                 // shoulders show, starting low down
                 var top = b.originY / H, upright = top < 0.3 ? 1 : top < 0.45 ? 0.55 : 0.2;
-                var score = (p.categories[0] ? p.categories[0].score : 0.5) * Math.sqrt(area) * (0.4 + 0.6 * middle) * upright * (face ? 1.8 : 1) / crowd;
-                // Centred on the head and shoulders
-                if (!best || score > best.score) best = { time: t, score: score, focus: { x: Math.round(cx * 100), y: Math.round((b.originY + b.height * 0.3) / H * 100) } };
-            });
+                return {
+                    box: { x: b.originX / W, y: b.originY / H, w: b.width / W, h: b.height / H },
+                    score: (p.categories[0] ? p.categories[0].score : 0.5) * Math.sqrt(area) * (0.4 + 0.6 * middle) * upright * (face ? 1.8 : 1) / crowd,
+                    // Centred on the head and shoulders
+                    focus: { x: Math.round(cx * 100), y: Math.round((b.originY + b.height * 0.3) / H * 100) },
+                };
+            }) });
         }
+        var best = null, others = Math.max(1, frames.length - 1);
+        frames.forEach(function (f) {
+            f.people.forEach(function (p) {
+                // In how many other frames someone stands in the same place
+                var seen = frames.filter(function (g) { return g !== f && g.people.some(function (q) { return iou(p.box, q.box) > 0.3; }); }).length;
+                var score = p.score * (seen >= 3 ? 0.3 + seen / others : 0.15);
+                if (!best || score > best.score) best = { time: f.t, score: score, focus: p.focus };
+            });
+        });
         return best ? { time: best.time, focus: best.focus } : null;
     }
 
     // asset: a Mux asset ({ id, duration, playback_ids }). Resolves to { time, focus } or null.
     window.laDjSpot = function (asset) {
         if (!asset || !asset.id || !asset.playback_ids || !asset.playback_ids[0]) return Promise.resolve(null);
-        var key = 'la_dj2:' + asset.id;
+        var key = 'la_dj3:' + asset.id;
         try { var c = JSON.parse(localStorage.getItem(key) || 'null'); if (c) return Promise.resolve(c.time != null ? c : null); } catch (_) {}
         if (inflight[asset.id]) return inflight[asset.id];
         var fetchFn = window.laFetch || fetch;
         var keep = function (v) { try { localStorage.setItem(key, JSON.stringify(v || { none: true })); } catch (_) {} return v; };
-        inflight[asset.id] = fetchFn('/api/peak-moment?dj=2&assetId=' + encodeURIComponent(asset.id))
+        inflight[asset.id] = fetchFn('/api/peak-moment?dj=3&assetId=' + encodeURIComponent(asset.id))
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (s) {
                 if (s && s.dj) return keep(s.dj);
                 return find(asset.playback_ids[0].id, Number(asset.duration) || 0).then(function (v) {
-                    if (v) fetchFn('/api/peak-moment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ assetId: asset.id, dj: v }) }).catch(function () {});
+                    if (v) fetchFn('/api/peak-moment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ assetId: asset.id, dj: v, v: 3 }) }).catch(function () {});
                     return keep(v);
                 });
             })

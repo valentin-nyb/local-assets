@@ -38,7 +38,7 @@
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
-    <script src="/la-djframe.js?v=2"></script>
+    <script src="/la-djframe.js?v=3"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="nav-component.js?v=28"></script>
@@ -2393,20 +2393,9 @@
                 }
                 l1.textContent = 'Duration';
                 v1.textContent = fmtDuration(a.duration);
-                // The artist's own photo (Brand Kit) when there is one, so the banner shows the DJ, not whatever
-                // the camera caught (the street, the room); otherwise the muted video around the DJ or the peak
-                var artistPhoto = _brandPhotos && _brandPhotos['artist-' + brandSlug(latest.meta.artist || '')];
-                if (artistPhoto) {
-                    var wrapEl = document.getElementById('live-feed-player-wrap');
-                    if (wrapEl) { wrapEl.style.opacity = '0'; wrapEl.innerHTML = ''; }
-                    _heroLoop = null;
-                    img.style.objectPosition = '50% 30%';
-                    setImg(artistPhoto);
-                } else {
-                    setImg('');            // no still: the banner is only the muted video
-                    focusHeroImage(a);
-                    playHeroLoop(a);
-                }
+                setImg('');            // no still: the banner is only the muted video, around the moment the DJ is seen
+                focusHeroImage(a);
+                playHeroLoop(a);
             } else if (_health.loaded) {
                 badge.className = 'hidden';
                 sub.textContent = '';
