@@ -1179,6 +1179,8 @@
             renderVideoHealth(muxAssets);
             showOrphanClips();
             setLatestSession(muxAssets);
+            // Again once the session dates set in Distribution History are in (they decide which set is latest)
+            if (typeof _sessionMetaReady !== 'undefined') _sessionMetaReady.then(function() { setLatestSession(muxAssets); });
 
             // Build a lookup: passthrough (uppercase) → array of assets
             // JSON passthrough and no-passthrough assets are also indexed by artist name.
@@ -2236,6 +2238,10 @@
             renderSystemStatus();
         }
 
+        function sessionDay(a, meta) {
+            var date = meta.date || new Date(Number(a.created_at) * 1000).toISOString().slice(0, 10);
+            try { return (sessionMeta(meta.artist || '', date).shownDate || date); } catch (_) { return date; }
+        }
         function setLatestSession(assets) {
             var latest = null;
             assets.forEach(function(a) {
@@ -2245,7 +2251,10 @@
                 var isSub = ['AUDIO', 'SOCIAL', 'THUMB'].indexOf(cam) >= 0 ||
                     (typeof a.passthrough === 'string' && a.passthrough.indexOf(' // ') >= 0 && !/^\s*\{/.test(a.passthrough));
                 if (isSub) return;
-                if (!latest || Number(a.created_at) > Number(latest.a.created_at)) latest = { a: a, meta: meta };
+                // The most recent set by its own date (as shown in Distribution History), not by when it was uploaded;
+                // the upload time only decides between sets on the same day
+                var day = sessionDay(a, meta);
+                if (!latest || day > latest.day || (day === latest.day && Number(a.created_at) > Number(latest.a.created_at))) latest = { a: a, meta: meta, day: day };
             });
             _health.latest = latest;
             renderHero();
