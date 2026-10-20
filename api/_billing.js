@@ -177,7 +177,7 @@ const LIMIT_PLAN = id => ({ 'starter-distribution': 'starter', 'liveset-distribu
 export const OWNER_LIMITS = {
   artist: { artist: { trial: 0, starter: 0, pro: 0, liveset: 0 }, label: { trial: Infinity, starter: Infinity, pro: Infinity, liveset: Infinity }, venue: { trial: Infinity, starter: Infinity, pro: Infinity, liveset: Infinity } },
   label: { artist: { trial: 3, starter: 5, pro: 15, liveset: 40 }, label: { trial: 0, starter: 0, pro: 0, liveset: 0 }, venue: { trial: Infinity, starter: Infinity, pro: Infinity, liveset: Infinity } },
-  venue: { artist: { trial: 10, starter: 30, pro: 75, liveset: Infinity }, label: { trial: 3, starter: 5, pro: 15, liveset: Infinity }, venue: { trial: 0, starter: 0, pro: 0, liveset: 0 } },
+  venue: { artist: { trial: 10, starter: 15, pro: 30, liveset: Infinity }, label: { trial: 3, starter: 5, pro: 15, liveset: Infinity }, venue: { trial: 0, starter: 0, pro: 0, liveset: 0 } },
 };
 // How many artists, labels or venues (kind) this type of account can add on this plan
 export function ownerLimit(type, planId, kind) {
