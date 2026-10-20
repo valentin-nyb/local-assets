@@ -276,8 +276,8 @@
                         <label class="bl-check"><input type="checkbox" id="bl-monthly"> Bill monthly on the 1st</label>
                         <button type="button" class="cam-btn ghost" id="bl-save-assign">Save</button>
                         <button type="button" class="cam-btn ghost" id="bl-preview">Preview</button>
-                        <input type="email" id="bl-example-to" class="bl-example-to" placeholder="Email for an example" aria-label="Email to send an example invoice to">
-                        <button type="button" class="cam-btn ghost" id="bl-example">Email an example</button>
+                        <input type="email" id="bl-example-to" class="bl-example-to" placeholder="Send the invoice to…" aria-label="Email to send the invoice to">
+                        <button type="button" class="cam-btn ghost" id="bl-example">Email invoice</button>
                         <button type="button" class="cam-btn primary" id="bl-send">Send invoice</button>
                         <span class="bl-msg" id="bl-send-msg"></span>
                         <button type="button" class="cam-btn bl-danger" id="bl-delete-acct" style="margin-left:auto">Delete account</button>
@@ -754,8 +754,8 @@
         document.getElementById('bl-example').addEventListener('click', async function() {
             var b = this, to = document.getElementById('bl-example-to'), msg = document.getElementById('bl-send-msg');
             if (!to.value.trim()) { to.focus(); return; }
-            b.disabled = true; msg.textContent = 'Sending the example…';
-            try { var d = await post({ action: 'exampleInvoiceEmail', to: to.value.trim() }); msg.textContent = 'Example sent to ' + d.to + ' (' + money(d.total, 'gbp') + ')'; }
+            b.disabled = true; msg.textContent = 'Sending the invoice…';
+            try { var d = await post({ action: 'exampleInvoiceEmail', to: to.value.trim() }); msg.textContent = 'Invoice sent to ' + d.to + ' (' + money(d.total, 'gbp') + ')'; }
             catch (e) { msg.textContent = 'Could not send: ' + e.message; }
             b.disabled = false;
         });
