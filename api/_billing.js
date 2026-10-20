@@ -158,8 +158,8 @@ export const commitEndFor = (planId, type) => MIN_TERM_PLANS.includes(planId) ||
 export const TYPE_FACTOR = { venue: 1, label: 0.5, artist: 0.25 };
 // Set prices that replace the rule for one plan and type (planId → type → £ a month)
 export const TYPE_PRICE = {
-  'starter-distribution': { artist: 79, label: 249 },
-  'liveset-distribution': { artist: 199, label: 599 },
+  'starter-distribution': { artist: 79, label: 599 },
+  'liveset-distribution': { artist: 199, label: 1299 },
   'liveset-creative': { artist: 895, label: 1995 },
 };
 // What each plan includes by type: sets (events for a venue) a month, 0 = unlimited; the video it keeps

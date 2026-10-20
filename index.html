@@ -944,7 +944,7 @@
         var TRIAL_FEES = { artist: 49, label: 149, venue: 349 };
         // Monthly plans by type, as charged (api/_billing.js TYPE_PRICE): venues the list price, record labels and artists their own
         var TYPE_FACTOR = { venue: 1, label: 0.5, artist: 0.25 };
-        var TYPE_PRICE = { 'starter-distribution': { artist: 79, label: 249 }, 'liveset-distribution': { artist: 199, label: 599 }, 'liveset-creative': { artist: 895, label: 1995 } };   // as api/_billing.js
+        var TYPE_PRICE = { 'starter-distribution': { artist: 79, label: 599 }, 'liveset-distribution': { artist: 199, label: 1299 }, 'liveset-creative': { artist: 895, label: 1995 } };   // as api/_billing.js
         function typePrice(price, t, planId) { if (planId && TYPE_PRICE[planId] && TYPE_PRICE[planId][t]) return TYPE_PRICE[planId][t]; var f = TYPE_FACTOR[t] || 1; return f === 1 ? price : Math.round(price * f / 5) * 5; }
         // Who the account is for, in words, and every plan's features for that kind of account
         // Each plan's one line, for this kind of account
