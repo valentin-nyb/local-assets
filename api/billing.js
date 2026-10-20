@@ -363,9 +363,9 @@ export default async function handler(req, res) {
           // No subscription (account set up by hand): local / assets is told and closes it
           if (body0.action === 'cancelPlan') {
             await redis.hSet(`billing_cancel_requests`, slug, JSON.stringify({ email: session.email, at: new Date().toISOString(), reason: String(body0.reason || '').slice(0, 500) }));
-            if (process.env.RESEND_API_KEY) {
+            if ((process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY)) {
               const { Resend } = await import('resend');
-              await new Resend(process.env.RESEND_API_KEY).emails.send({ from: 'local / assets <noreply@local-assets.com>', to: process.env.ORDERS_EMAIL || 'info@local-assets.com', subject: `Cancellation request: ${venueName}`, html: `<p>${venueName} (${session.email}) asked to cancel their account.</p><p>${String(body0.reason || '').replace(/[<>]/g, '')}</p>` }).catch(() => {});
+              await new Resend((process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY)).emails.send({ from: 'local / assets <noreply@local-assets.com>', to: process.env.ORDERS_EMAIL || 'info@local-assets.com', subject: `Cancellation request: ${venueName}`, html: `<p>${venueName} (${session.email}) asked to cancel their account.</p><p>${String(body0.reason || '').replace(/[<>]/g, '')}</p>` }).catch(() => {});
             }
             return { ok: true, requested: true };
           }
