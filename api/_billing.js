@@ -498,6 +498,7 @@ export async function sendInvoiceEmail(to, data) {
   const m = invoiceEmail(data);
   const r = await new Resend(process.env.RESEND_API_KEY).emails.send({ from: 'local / assets <billing@local-assets.com>', replyTo: 'info@local-assets.com', to, subject: m.subject, html: m.html, text: m.text });
   if (r?.error) throw new Error(r.error.message || 'Email not sent');
+  console.log('[billing] invoice email accepted', to, r?.data?.id || '');
   return r;
 }
 // Who an account's invoice goes to: the address in Bill to, else its first sign-in email
