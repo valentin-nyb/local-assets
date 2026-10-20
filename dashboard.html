@@ -3302,13 +3302,6 @@
             const timeEl = document.getElementById('next-event-time');
             // With an address, the card opens it in Maps (the phone's maps app, or Google Maps on a computer)
             const card = document.getElementById('next-event-card');
-            // The set's artwork (Add to event, in Brand Kit), at the right of the card
-            const showEventArt = url => {
-                let img = card.querySelector('.kpi-event-art');
-                if (!url) { if (img) img.remove(); card.classList.remove('has-art'); return; }
-                if (!img) { img = document.createElement('img'); img.className = 'kpi-event-art'; img.alt = ''; card.appendChild(img); }
-                img.src = url; card.classList.add('has-art');
-            };
             const linkMaps = loc => {
                 if (!loc) { card.classList.remove('kpi-link'); card.onclick = card.onkeydown = null; card.removeAttribute('role'); card.removeAttribute('tabindex'); return; }
                 const url = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(loc);
@@ -3343,7 +3336,6 @@
                 const ev = data.events[0];
                 if (ev.onNow) {
                     titleEl.textContent = ev.artist || ev.title;
-                    showEventArt(ev.art);
                     const until = new Date(ev.end).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
                     timeEl.innerHTML = '<span class="kpi-today">On now</span>, until ' + until + (ev.location ? ' · ' + ev.location.replace(/&/g, '&amp;').replace(/</g, '&lt;') : '');
                     titleEl.title = ev.title; timeEl.title = timeEl.textContent;
@@ -3358,7 +3350,6 @@
                 const time = start.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
                 titleEl.textContent = ev.artist || ev.title;
-                showEventArt(ev.art);
 
                 if (isToday) {
                     timeEl.textContent = 'Today, ' + time;
@@ -3625,9 +3616,6 @@
         @media (max-width: 560px)  { .kpi-grid { grid-template-columns:1fr; gap:12px; } }
         .kpi { background:var(--la-surface); border:1px solid var(--la-line); border-radius:14px; padding:18px 20px; display:flex; flex-direction:column; min-width:0; }
         .kpi-today { color:var(--la-accent); font-weight:600; }
-        #next-event-card { position:relative; }
-        #next-event-card.has-art { padding-right:108px; }
-        .kpi-event-art { position:absolute; right:16px; top:50%; transform:translateY(-50%); width:76px; height:76px; border-radius:10px; object-fit:cover; }
         .kpi-head { display:flex; align-items:center; justify-content:space-between; gap:8px; height:22px; }
         .kpi-label { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--la-dim); }
         .kpi-icon { font-size:16px; color:var(--la-dim); }

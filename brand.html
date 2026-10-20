@@ -1575,7 +1575,7 @@
 
         // ── Add to event: this image becomes the artwork of a set in the calendar (Calendar page, Next event) ──
         async function openAddToEvent(f) {
-            openCamDialog('Add to event', '<p class="cam-dialog-text">Choose the set this artwork is for.</p><div id="bk-ev-list" class="bk-ev-list"><p class="bk-meta">Loading your calendar…</p></div><p id="bk-ev-error" class="cam-form-error"></p>');
+            openCamDialog('Add to event', '<p class="cam-dialog-text">Choose the set this artwork is for. It shows when you open the event on the Calendar page.</p><div id="bk-ev-list" class="bk-ev-list"><p class="bk-meta">Loading your calendar…</p></div><p id="bk-ev-error" class="cam-form-error"></p>');
             var list = document.getElementById('bk-ev-list');
             try {
                 var r = await laFetch('/api/next-event?all=1'), d = await r.json();
@@ -1583,21 +1583,21 @@
                 if (!(d.events || []).length) { list.innerHTML = '<p class="bk-meta">No sets in the next two months.</p>'; return; }
                 var day = function(iso) { return new Date(iso).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/London' }) + ' · ' + new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' }); };
                 list.innerHTML = d.events.map(function(ev) {
-                    var on = ev.art === f.url;
+                    var art = ev.art || [], on = art.indexOf(f.url) >= 0;
                     return '<button type="button" class="bk-ev' + (on ? ' on' : '') + '" data-key="' + esc(ev.key) + '">' +
-                        (ev.art ? '<img src="' + esc(ev.art) + '" alt="">' : '<span class="bk-ev-none"></span>') +
-                        '<span class="bk-ev-t"><b>' + esc(ev.artist || ev.title) + '</b><small>' + esc(day(ev.start)) + (ev.art && !on ? ' · has artwork' : '') + '</small></span>' +
-                        '<span class="bk-ev-act">' + (on ? 'Added' : ev.art ? 'Replace' : 'Add') + '</span></button>';
+                        '<img src="' + esc(f.url) + '" alt="" style="' + (on ? '' : 'opacity:.35') + '">' +
+                        '<span class="bk-ev-t"><b>' + esc(ev.artist || ev.title) + '</b><small>' + esc(day(ev.start)) + (art.length ? ' · ' + art.length + ' artwork' + (art.length === 1 ? '' : 's') : '') + '</small></span>' +
+                        '<span class="bk-ev-act">' + (on ? 'Added · remove' : 'Add') + '</span></button>';
                 }).join('');
                 list.querySelectorAll('.bk-ev').forEach(function(b) {
                     b.addEventListener('click', async function() {
                         var on = b.classList.contains('on');
                         b.disabled = true; b.querySelector('.bk-ev-act').textContent = on ? 'Removing…' : 'Adding…';
                         try {
-                            var rr = await laFetch('/api/next-event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: b.dataset.key, url: on ? '' : f.url }) });
+                            var rr = await laFetch('/api/next-event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: b.dataset.key, url: f.url, remove: on }) });
                             var dd = await rr.json(); if (!rr.ok) throw new Error(dd.error || rr.status);
                             closeCamDialog(); laToast(on ? 'Artwork removed from the event' : 'Added to ' + b.querySelector('b').textContent);
-                        } catch (e) { b.disabled = false; b.querySelector('.bk-ev-act').textContent = on ? 'Added' : 'Add'; document.getElementById('bk-ev-error').textContent = 'Could not add it: ' + e.message; }
+                        } catch (e) { b.disabled = false; b.querySelector('.bk-ev-act').textContent = on ? 'Added · remove' : 'Add'; document.getElementById('bk-ev-error').textContent = 'Could not add it: ' + e.message; }
                     });
                 });
             } catch (e) { list.innerHTML = '<p class="bk-meta">Could not read the calendar: ' + esc(e.message) + '</p>'; }

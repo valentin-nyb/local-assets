@@ -156,7 +156,7 @@ export default async function handler(req, res) {
           // Every set in the next two months (capped only so a runaway calendar can't flood the page)
           // With each set's artwork, when one was added from Brand Kit
           const art = await readArt(slug);
-          calendar.upcoming = events.filter(e => e.start > now).slice(0, 200).map(e => ({ artist: e.artist, venue: e.venue, start: e.start, end: e.end, art: art[eventKey(e)] || null }));
+          calendar.upcoming = events.filter(e => e.start > now).slice(0, 200).map(e => ({ artist: e.artist, venue: e.venue, start: e.start, end: e.end, art: art[eventKey(e)] || [] }));
           // When the cameras that follow the calendar open and close
           const w = scheduleWindow(events, now);
           calendar.schedule = { open: w.open, closesAt: w.closesAt, opensAt: w.opensAt, nextArtist: w.next?.artist || null, currentArtist: w.current?.artist || null };

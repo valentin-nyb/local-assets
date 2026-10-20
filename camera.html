@@ -331,8 +331,23 @@
         .cal-date span { font:700 10px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.08em; text-transform:uppercase; color:var(--la-dim); }
         .cal-date b { font:700 13px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; text-transform:uppercase; color:var(--la-text); }
         .cal-dj { display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 10px; min-width:0; }
-        /* The set's artwork (Add to event, in Brand Kit) */
-        .cal-art { width:36px; height:36px; border-radius:6px; object-fit:cover; align-self:center; flex-shrink:0; }
+        /* A set opens its details (artwork, logos, times) */
+        .cal-row[data-cal-i] { cursor:pointer; }
+        .cal-row[data-cal-i]:hover { background:color-mix(in srgb, var(--la-text) 4%, transparent); }
+        .ev-sub { margin:2px 0 16px; font-size:13px; line-height:1.5; color:var(--la-sub); }
+        .ev-facts { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; margin-bottom:18px; }
+        .ev-facts div { border:1px solid var(--la-line); border-radius:10px; padding:10px 12px; }
+        .ev-facts small { display:block; font:500 10px/1 'JetBrains Mono',monospace; letter-spacing:.14em; text-transform:uppercase; color:var(--la-dim); margin-bottom:6px; }
+        .ev-facts b { font-weight:600; font-size:13px; color:var(--la-text); }
+        .ev-h { display:flex; align-items:center; justify-content:space-between; margin:16px 0 8px; font:500 10px/1 'JetBrains Mono',monospace; letter-spacing:.16em; text-transform:uppercase; color:var(--la-dim); }
+        .ev-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px; }
+        .ev-file { border:1px solid var(--la-line); border-radius:10px; overflow:hidden; background:var(--la-input); display:flex; flex-direction:column; }
+        .ev-file .pv { aspect-ratio:1; display:flex; align-items:center; justify-content:center; background:var(--la-raised); }
+        .ev-file .pv img { width:100%; height:100%; object-fit:cover; }
+        .ev-file.logo .pv img { object-fit:contain; padding:14px; }
+        .ev-file .nm { padding:8px 10px 0; font-size:12px; color:var(--la-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .ev-file a { margin:6px 10px 10px; font-size:12px; font-weight:600; color:var(--la-accent); text-decoration:none; }
+        .ev-empty { font-size:13px; color:var(--la-sub); line-height:1.5; }
         .cal-dj b { font:700 14px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif; text-transform:uppercase; color:var(--la-text); }
         .cal-dj span { font:500 11px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.04em; text-transform:uppercase; color:var(--la-sub); }
         .cal-tag { align-self:center; font:700 9px/1 'Helvetica Neue', Helvetica, Arial, sans-serif !important; letter-spacing:.08em !important; padding:4px 7px; border-radius:5px; border:1px solid var(--la-line); color:var(--la-dim) !important; }
@@ -858,14 +873,15 @@
                 var wd = d.toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'Europe/London' });
                 var dm = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'Europe/London' });
                 var tag = e.now ? (e.endedAt ? '<span class="cal-tag done">Finished</span>' : '<span class="cal-tag on">On now</span>') : i === (cal.current ? 1 : 0) ? '<span class="cal-tag">Next</span>' : '';
-                return '<div class="cal-row' + (e.now ? ' now' : '') + '">' +
+                return '<div class="cal-row' + (e.now ? ' now' : '') + '" data-cal-i="' + i + '" role="button" tabindex="0" aria-label="' + esc(e.artist) + ': event details">' +
                     '<div class="cal-date"><span>' + wd + '</span><b>' + dm + '</b>' + tag + '</div>' +
-                    '<div class="cal-dj">' + (e.art ? '<img class="cal-art" src="' + esc(e.art) + '" alt="" loading="lazy">' : '') + '<b>' + esc(e.artist) + '</b>' + (e.venue ? '<span>' + esc(e.venue) + '</span>' : '') + '</div>' +
+                    '<div class="cal-dj"><b>' + esc(e.artist) + '</b>' + (e.venue ? '<span>' + esc(e.venue) + '</span>' : '') + '</div>' +
                     '<div class="cal-time">' + fmtTime(e.start) + ' – ' + fmtTime(e.endedAt || e.end) + '</div>' +
                     '<div class="cal-time rec">' + fmtTime(e.start - 120e3) + ' – ' + fmtTime(e.endedAt || (e.end + 120e3)) + '</div>' +
                 '</div>';
             });
             document.getElementById('cal-list').innerHTML = rows.join('');
+            _calSets = sets;
             document.getElementById('cal-sched').hidden = !ok || !rows.length;
             var note = document.getElementById('cal-note');
             note.hidden = !(cal.connected && !cal.error && !rows.length);
@@ -1782,6 +1798,65 @@
             closeCamDialog = function() { cleanup(); panel.classList.remove('ctl', 'ctl-off'); closeCamDialog = close; close(); };
             // Check the relay now
             if (!demo) camApi(Object.assign({ action: 'relayStatus' }, _camVenue[c.id] ? { venue: _camVenue[c.id] } : {})).then(function(d) { _relay = d.relay; paintRelay(); if (c.ip) relayState(d.relay && d.relay.online); }).catch(function() {});
+        }
+
+        // ── An event in the calendar: its times, place, and every file for it (artwork added from Brand Kit,
+        // the account's and the artist's logos and photos), each to download ──
+        var _calSets = [];
+        document.addEventListener('click', function(e) { var r = e.target.closest('[data-cal-i]'); if (r && _calSets[+r.dataset.calI]) openEventInfo(_calSets[+r.dataset.calI]); });
+        document.addEventListener('keydown', function(e) { var r = e.target.closest && e.target.closest('[data-cal-i]'); if (r && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); r.click(); } });
+        async function openEventInfo(ev) {
+            var end = ev.endedAt || ev.end;
+            openCamDialog(ev.artist,
+                '<p class="ev-sub">' + esc(fmtDay(ev.start)) + ' · ' + fmtTime(ev.start) + '–' + fmtTime(end) + (ev.venue ? ' · ' + esc(ev.venue) : '') + '</p>' +
+                '<div class="ev-facts"><div><small>Date</small><b>' + esc(new Date(ev.start).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/London' })) + '</b></div>' +
+                    '<div><small>Set</small><b>' + fmtTime(ev.start) + ' – ' + fmtTime(end) + '</b></div>' +
+                    '<div><small>Cameras record</small><b>' + fmtTime(ev.start - 120e3) + ' – ' + fmtTime(ev.endedAt || (ev.end + 120e3)) + '</b></div>' +
+                    (ev.venue ? '<div><small>Where</small><b>' + esc(ev.venue) + '</b></div>' : '') + '</div>' +
+                '<div id="ev-files"><p class="ev-empty">Loading the files…</p></div>');
+            document.querySelector('#cam-dialog .cam-dialog-panel').classList.add('wide');
+            var box = document.getElementById('ev-files');
+            var card = function(f, logo) {
+                var dl = f.link ? f.link + '?download' : (f.downloadUrl || f.url);
+                return '<div class="ev-file' + (logo ? ' logo' : '') + '"><div class="pv"><img src="' + esc(f.url) + '" alt="" loading="lazy"></div><p class="nm" title="' + esc(f.name) + '">' + esc(f.name) + '</p><a href="' + esc(dl) + '" download>Download</a></div>';
+            };
+            try {
+                var r = await laFetch('/api/brand'), d = await r.json();
+                if (!r.ok) throw new Error(d.error || r.status);
+                var files = d.files || [], names = d.ownerNames || {};
+                var norm = function(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ''); };
+                var IMG = /\.(png|jpe?g|svg|webp|gif)$/i;
+                // The artist's own folder in Brand Kit: named like the DJ in the calendar
+                var artistOwner = Object.keys(names).filter(function(k) { return k.indexOf('artist-') === 0 && norm(names[k]) === norm(ev.artist); })[0]
+                    || ('artist-' + String(ev.artist || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''));
+                var art = (ev.art || []).map(function(u) { return files.filter(function(f) { return f.url === u; })[0] || { url: u, name: decodeURIComponent(u.split('/').pop()).replace(/-[A-Za-z0-9]{20,40}(\.[^.]+)$/, '$1') }; });
+                var logos = files.filter(function(f) { return f.category === 'logos' && IMG.test(f.name) && (f.owner === 'venue' || f.owner === artistOwner); });
+                var photos = files.filter(function(f) { return f.owner === artistOwner && f.category === 'photos' && IMG.test(f.name); });
+                var all = art.concat(logos, photos);
+                var section = function(title, list, logo, empty) {
+                    return '<p class="ev-h"><span>' + title + '</span></p>' + (list.length ? '<div class="ev-grid">' + list.map(function(f) { return card(f, logo); }).join('') + '</div>' : '<p class="ev-empty">' + empty + '</p>');
+                };
+                box.innerHTML = section('Artwork for this event', art, false, 'No artwork yet. In Brand Kit, open an image and press <b>Add to event</b>.') +
+                    section('Logos', logos, true, 'No logos in Brand Kit yet.') +
+                    (photos.length ? section('Artist photos', photos, false, '') : '') +
+                    (all.length > 1 ? '<div class="cam-form-actions" style="margin-top:18px"><button type="button" class="cam-btn primary" id="ev-dl-all">Download all (' + all.length + ')</button></div>' : '');
+                var dlAll = document.getElementById('ev-dl-all');
+                if (dlAll) dlAll.addEventListener('click', async function() {
+                    var b = this; b.disabled = true; b.textContent = 'Preparing…';
+                    try {
+                        var JSZip = await loadZip(), z = new JSZip(), used = {};
+                        await Promise.all(all.map(async function(f) {
+                            var rr = await fetch(f.url); if (!rr.ok) throw new Error(f.name + ': ' + rr.status);
+                            var n = f.name; while (used[n]) n = n.replace(/(\.[^.]+)?$/, '-2$1'); used[n] = 1;
+                            z.file(n, await rr.blob());
+                        }));
+                        var blob = await z.generateAsync({ type: 'blob' });
+                        var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = (ev.artist + ' ' + new Date(ev.start).toISOString().slice(0, 10)).replace(/[^\w .-]+/g, '') + '.zip'; a.click();
+                        setTimeout(function() { URL.revokeObjectURL(a.href); }, 10000);
+                    } catch (e) { laAlert('Could not prepare the download: ' + e.message, { tone: 'error' }); }
+                    b.disabled = false; b.textContent = 'Download all (' + all.length + ')';
+                });
+            } catch (e) { box.innerHTML = '<p class="ev-empty">Could not load the Brand Kit files: ' + esc(e.message) + '</p>'; }
         }
 
         function openCamDialog(title, html) {
