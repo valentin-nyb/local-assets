@@ -150,9 +150,9 @@ function trialLikeStarter(list) {
 // (TYPE_PRICE, TYPE_PLAN). Storage above the allowance is charged on the 1st, a set above it as usage.
 // Applied at checkout, on plan changes, on invoices, the billing page and the pricing page (index.html).
 // Plans with hardware we buy (Live-Set: cameras, Mac mini, Starlink Mini) run for at least 12 months
-// Pro too when it includes a camera (every account type but artists, who add a camera separately)
+// Pro too when it includes a camera (record labels and managements; artists and venues add one for £149 a month)
 export const MIN_TERM_PLANS = ['liveset-creative'];
-export const MIN_TERM_TYPES = { 'liveset-distribution': ['venue', 'label', 'management'] };
+export const MIN_TERM_TYPES = { 'liveset-distribution': ['label', 'management'] };   // Pro with its included camera
 export const commitEndFor = (planId, type) => MIN_TERM_PLANS.includes(planId) || (MIN_TERM_TYPES[planId] || []).includes(type || 'venue')
   ? new Date(Date.now() + 365 * 86400e3).toISOString().slice(0, 10) : '';
 export const TYPE_FACTOR = { venue: 1, label: 0.5, artist: 0.25 };
@@ -210,8 +210,9 @@ function planFeatures(planId, type, t, included, name) {
     'Record with your phone, OBS or your own camera',
   ];
   if (planId === 'starter-distribution') return [who, sets, '6 vertical clips from every set', brand, space, 'Use your own camera, or add one of ours for £149 a month'];
+  // Pro: artists and venues add our PTZ camera for £149 a month; record labels get one included
   if (planId === 'liveset-distribution') return [who, sets, '12 vertical clips from every set', brand, space,
-    artist ? 'Use your own camera, or add one of ours for £149 a month' : '1 PTZ camera included, set up for you (12-month minimum)'];
+    artist || type === 'venue' ? 'Use your own camera, or add one of ours for £149 a month' : '1 PTZ camera included, set up for you (12-month minimum)'];
   if (planId === 'liveset-creative') return [who, sets, 'Unlimited vertical clips from every set', 'Multi-camera auto-edit of the full set, in 4K with HQ audio', brand, space,
     artist ? '1 PTZ camera, Starlink Mini and Mac mini, set up for you (a second camera £149 a month)' : '2 PTZ cameras, Starlink Mini and Mac mini, set up for you',
     '12-month minimum; the kit goes back to us when the plan ends', 'Quarterly performance reports'];
@@ -232,7 +233,8 @@ export function planForType(plan, type) {
   const included = { ...(plan.included || {}) };
   for (const k of ['storedMinutes', 'deliveredMinutes', 'fileGB']) if (t && t[k] != null) included[k] = t[k];
   const features = planFeatures(plan.id, type, t, included, plan.name) || plan.features;
-  const cameras = type === 'artist' ? ({ 'liveset-distribution': 0, 'liveset-creative': 1 }[plan.id] ?? plan.cameras) : plan.cameras;
+  const cameras = type === 'artist' ? ({ 'liveset-distribution': 0, 'liveset-creative': 1 }[plan.id] ?? plan.cameras)
+    : type === 'venue' && plan.id === 'liveset-distribution' ? 0 : plan.cameras;
   if (!(plan.price > 0)) return { ...plan, features };
   return { ...plan, price: priceForType(plan.price, type, plan.id), included, features, cameras, setsPerMonth: t ? t.sets : undefined };
 }

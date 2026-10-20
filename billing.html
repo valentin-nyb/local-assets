@@ -796,8 +796,8 @@
                 // How many months of the plan's price it takes to pay for the kit, for each kind of account
                 var pr = _kitPrices[p] || {};
                 var share = ['venue', 'label', 'artist'].filter(function(k) { return pr[k] > 0; }).map(function(k) {
-                    // Artists on Pro get no camera from us (they add one for £149 a month)
-                    if (k === 'artist' && p === 'liveset-distribution') return '<br><span class="bl-msg">Artists get no kit (camera is an add-on)</span>';
+                    // Artists and venues on Pro get no camera from us (they add one for £149 a month)
+                    if ((k === 'artist' || k === 'venue') && p === 'liveset-distribution') return '<br><span class="bl-msg">' + (k === 'artist' ? 'Artists' : 'Venues') + ' get no kit (camera is an add-on)</span>';
                     var mo = Math.max(1, Math.ceil(sum / pr[k]));
                     return '<br><span class="bl-msg">' + { venue: 'Venues', label: 'Labels', artist: 'Artists' }[k] + ' pay it back in ' + (mo === 1 ? 'the first month' : mo + ' months') + '</span>';
                 }).join('');
