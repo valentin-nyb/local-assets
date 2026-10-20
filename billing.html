@@ -672,8 +672,9 @@
             }
             ['bl-admin', 'bl-send-box', 'bl-plans-box', 'bl-kit-box', 'bl-overview'].forEach(function(id) { document.getElementById(id).classList.toggle('hidden', !admin); });
             if (admin && !loadOverview.done) { loadOverview.done = true; loadOverview(false); }
-            // A client's own account: Your plan and Usage this month are always open (they fold for local / assets only)
-            if (!admin) ['bl-plans-offer', 'bl-usage-box'].forEach(function(id) {
+            // A client's own account: Usage this month starts open (it folds to its total); Your plan is always open
+            if (!admin && !render.usageOpened) { render.usageOpened = true; var ub = document.getElementById('bl-usage-box'); if (ub) { ub.classList.remove('folded'); var uh = ub.querySelector('.bl-fold-head'); if (uh) uh.setAttribute('aria-expanded', 'true'); } }
+            if (!admin) ['bl-plans-offer'].forEach(function(id) {
                 var el = document.getElementById(id), h = el && el.querySelector('.bl-fold-head');
                 if (!el || !h) return;
                 el.classList.remove('bl-fold', 'folded');
