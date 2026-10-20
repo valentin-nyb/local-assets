@@ -170,6 +170,27 @@ export const TYPE_PLAN = {
   'liveset-creative': { venue: { sets: 0 }, label: { sets: 30, storedMinutes: 50000, deliveredMinutes: 200000, fileGB: 3000 }, artist: { sets: 12, storedMinutes: 20000, deliveredMinutes: 60000, fileGB: 1000 } },
 };
 const hours = min => Math.round(min / 60).toLocaleString('en-GB');
+// Who an account can upload for, by type and plan: an artist account is one artist (any labels and venues);
+// a record label is one label with up to N artists, on any venue; a venue is one venue with up to N artists
+// and M labels. Infinity = no limit. Management companies follow labels. Checked in api/brand.js.
+const LIMIT_PLAN = id => ({ 'starter-distribution': 'starter', 'liveset-distribution': 'pro', 'liveset-creative': 'liveset' }[id] || 'trial');
+export const OWNER_LIMITS = {
+  artist: { artist: { trial: 0, starter: 0, pro: 0, liveset: 0 }, label: { trial: Infinity, starter: Infinity, pro: Infinity, liveset: Infinity }, venue: { trial: Infinity, starter: Infinity, pro: Infinity, liveset: Infinity } },
+  label: { artist: { trial: 3, starter: 5, pro: 15, liveset: 40 }, label: { trial: 0, starter: 0, pro: 0, liveset: 0 }, venue: { trial: Infinity, starter: Infinity, pro: Infinity, liveset: Infinity } },
+  venue: { artist: { trial: 10, starter: 30, pro: 75, liveset: Infinity }, label: { trial: 3, starter: 5, pro: 15, liveset: Infinity }, venue: { trial: 0, starter: 0, pro: 0, liveset: 0 } },
+};
+// How many artists, labels or venues (kind) this type of account can add on this plan
+export function ownerLimit(type, planId, kind) {
+  const t = OWNER_LIMITS[type === 'management' ? 'label' : type] || OWNER_LIMITS.venue;
+  return t[kind]?.[LIMIT_PLAN(planId)] ?? Infinity;
+}
+function whoLine(type, planId) {
+  const n = v => v === Infinity ? 'unlimited' : 'up to ' + v;
+  if (type === 'artist') return 'One artist (you), with any number of record labels and venues';
+  if (type === 'label' || type === 'management') return `One ${type === 'management' ? 'management company' : 'record label'}, ${n(ownerLimit(type, planId, 'artist'))} artists, on any venue`;
+  const a = ownerLimit('venue', planId, 'artist'), l = ownerLimit('venue', planId, 'label');
+  return a === Infinity && l === Infinity ? 'One venue, with unlimited artists and record labels' : `One venue, ${n(a)} artists and ${n(l)} record labels`;
+}
 // To join the Trial Month, by type (as charged at checkout, api/create-checkout.js)
 const TRIAL_FEE = { artist: 49, label: 149, management: 149, venue: 349 };
 // What each plan gives, in plain words, for this kind of account. Artists add a camera separately on Pro and
@@ -179,17 +200,19 @@ function planFeatures(planId, type, t, included, name) {
   const sets = !t ? '' : t.sets === 0 ? `Unlimited ${word} every month` : `Up to ${t.sets} ${word} a month, each checked and stored safely`;
   const space = `Room for about ${hours(included.storedMinutes || 0)} hours of full sets; more is charged by the month`;
   const brand = 'Brand Kit: your logo, watermark and thumbnails on everything';
+  const who = whoLine(type, planId);
   if (planId === 'dj-trial' || /venue\s*trial/i.test(String(name || ''))) return [
+    who,
     `£${TRIAL_FEE[type] || 49} to join, taken off your first month if you upgrade`,
     'No monthly fee: you pay only for what you use, on the 1st',
     '6 vertical clips from every set',
     brand,
     'Record with your phone, OBS or your own camera',
   ];
-  if (planId === 'starter-distribution') return [sets, '6 vertical clips from every set', brand, space, 'Use your own camera, or add one of ours for £149 a month'];
-  if (planId === 'liveset-distribution') return [sets, '12 vertical clips from every set', brand, space,
+  if (planId === 'starter-distribution') return [who, sets, '6 vertical clips from every set', brand, space, 'Use your own camera, or add one of ours for £149 a month'];
+  if (planId === 'liveset-distribution') return [who, sets, '12 vertical clips from every set', brand, space,
     artist ? 'Use your own camera, or add one of ours for £149 a month' : '1 PTZ camera included, set up for you (12-month minimum)'];
-  if (planId === 'liveset-creative') return [sets, 'Unlimited vertical clips from every set', 'Multi-camera auto-edit of the full set, in 4K with HQ audio', brand, space,
+  if (planId === 'liveset-creative') return [who, sets, 'Unlimited vertical clips from every set', 'Multi-camera auto-edit of the full set, in 4K with HQ audio', brand, space,
     artist ? '1 PTZ camera, Starlink Mini and Mac mini, set up for you (a second camera £149 a month)' : '2 PTZ cameras, Starlink Mini and Mac mini, set up for you',
     '12-month minimum; the kit goes back to us when the plan ends', 'Quarterly performance reports'];
   return null;

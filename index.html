@@ -644,6 +644,13 @@
         .tr-card ul { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:9px; }
         .tr-card li { display:flex; gap:10px; font-size:14px; line-height:1.4; color:#e4e4e7; }
         .tr-card li svg { width:16px; height:16px; flex-shrink:0; margin-top:1px; color:#39FF14; }
+        .tr-who { display:flex; flex-direction:column; align-items:center; gap:12px; margin:0 auto 28px; max-width:720px; text-align:center; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; }
+        .tr-who-q { font-size:11px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:#71717a; }
+        .tr-who-seg { display:inline-flex; padding:4px; border:1px solid #27272a; border-radius:999px; background:#0a0a0a; }
+        .tr-who-seg button { padding:9px 18px; border:0; border-radius:999px; background:none; color:#a1a1aa; font:600 14px 'Helvetica Neue', Helvetica, Arial, sans-serif; cursor:pointer; }
+        .tr-who-seg button[aria-checked="true"] { background:#fafafa; color:#000; }
+        .tr-who-txt { font-size:15px; line-height:1.55; color:#d4d4d8; }
+        .tr-who-txt b { color:#fff; }
         .tr-stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
         .tr-stats div { padding:10px; border:1px solid #1f1f22; border-radius:10px; }
         .tr-stats b { display:block; font-size:16px; font-weight:700; color:#fff; }
@@ -687,6 +694,14 @@
     </div>
 
     <div class="max-w-7xl mx-auto reveal delay-200 active">
+        <!-- Who the account is for: changes every plan's price and what it includes -->
+        <div class="tr-who" id="tr-who">
+            <p class="tr-who-q">I'm signing up as</p>
+            <div class="tr-who-seg" role="radiogroup" aria-label="Account type">
+                <button type="button" role="radio" data-t="artist">Artist</button><button type="button" role="radio" data-t="label">Record label</button><button type="button" role="radio" data-t="venue">Venue</button>
+            </div>
+            <p class="tr-who-txt" id="tr-who-txt"></p>
+        </div>
         <div id="pricing-plans" class="grid tr-grid">
             <div class="tr-card">
                 
@@ -738,6 +753,8 @@
             var short = function(name) { var i = name.lastIndexOf('·'); return (i >= 0 ? name.slice(i + 1) : name).trim(); };
             fetch('/api/plans').then(function(r) { return r.ok ? r.json() : null; }).then(function(d) {
                 if (!d || !d.plans) return;
+                // Every plan's features in words, as each kind of account gets them (the same lines as Billing)
+                if (d.byType) { window._plansByType = d.byType; if (typeof paintWho === 'function') paintWho(); }
                 // The sign-up window's plan details (defined further down the page, so applied once it exists)
                 var tiers = function() {
                     if (typeof SIGNUP_TIERS === 'undefined') return false;
@@ -925,6 +942,41 @@
         var TYPE_FACTOR = { venue: 1, label: 0.5, artist: 0.25 };
         var TYPE_PRICE = { 'starter-distribution': { artist: 79, label: 249 }, 'liveset-distribution': { artist: 199, label: 599 }, 'liveset-creative': { artist: 895, label: 1995 } };   // as api/_billing.js
         function typePrice(price, t, planId) { if (planId && TYPE_PRICE[planId] && TYPE_PRICE[planId][t]) return TYPE_PRICE[planId][t]; var f = TYPE_FACTOR[t] || 1; return f === 1 ? price : Math.round(price * f / 5) * 5; }
+        // Who the account is for, in words, and every plan's features for that kind of account
+        var WHO_TEXT = {
+            artist: '<b>An artist account is you: one artist.</b> Tag any record labels you release on and any venues you play. Every set, clip and file is under your name.',
+            label: '<b>A record label account is one label.</b> Upload sets for your artists, how many depends on the plan, played at any venue.',
+            venue: '<b>A venue account is one venue.</b> Upload every artist who plays there and the record labels they come with, how many depends on the plan.',
+        };
+        function paintWho() {
+            var t = (document.getElementById('tr-offer-type') || {}).value || 'artist';
+            document.querySelectorAll('.tr-who-seg button').forEach(function(b) { b.setAttribute('aria-checked', b.dataset.t === t ? 'true' : 'false'); });
+            var txt = document.getElementById('tr-who-txt'); if (txt) txt.innerHTML = WHO_TEXT[t] || '';
+            var list = (window._plansByType || {})[t];
+            if (!list) return;
+            var tick = (document.querySelector('.tr-card li svg') || {}).outerHTML || '';
+            var esc = function(v) { return String(v).replace(/[&<>"]/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+            document.querySelectorAll('.tr-card').forEach(function(card) {
+                var pb = card.querySelector('[onclick^="selectTier("]'), pid = pb ? (/selectTier\('([^']+)'/.exec(pb.getAttribute('onclick')) || [])[1] : '';
+                var p = list.filter(function(x) { return x.id === pid; })[0];
+                if (!p || !p.features.length) return;
+                card.querySelectorAll('.tr-h, ul, .tr-stats').forEach(function(el) { el.remove(); });
+                var ul = document.createElement('ul'); ul.className = 'tr-feats';
+                ul.innerHTML = p.features.map(function(f) { return '<li>' + tick + '<span>' + esc(f) + '</span></li>'; }).join('');
+                var after = card.querySelector('.tr-for') || card.querySelector('.tr-price');
+                after.insertAdjacentElement('afterend', ul);
+            });
+            // The trial's own list: the same lines, without the join price (shown beside it)
+            var trial = list.filter(function(x) { return x.id === 'dj-trial'; })[0], tf = document.querySelector('.tr-offer-feats');
+            if (trial && tf) tf.innerHTML = trial.features.filter(function(f) { return !/^£/.test(f); }).map(function(f) { return '<li>' + tick + '<span>' + esc(f) + '</span></li>'; }).join('');
+        }
+        document.addEventListener('click', function(e) {
+            var b = e.target.closest('.tr-who-seg button'); if (!b) return;
+            var t = b.dataset.t, li = document.querySelector('#tr-offer-menu li[data-v="' + t + '"]');
+            document.getElementById('tr-offer-type').value = t;
+            if (li) { document.querySelectorAll('#tr-offer-menu li').forEach(function(x) { x.setAttribute('aria-selected', x === li ? 'true' : 'false'); }); document.getElementById('tr-offer-type-name').textContent = li.querySelector('b').textContent; }
+            trialType();
+        });
         function trialType() {
             var t = (document.getElementById('tr-offer-type') || {}).value || 'artist';
             var f = document.getElementById('tr-offer-for'); if (f) f.textContent = TRIAL_TYPES[t][1];
@@ -938,6 +990,7 @@
                 var pb = card.querySelector('[onclick^="selectTier("]'), pid = pb ? (/selectTier\('([^']+)'/.exec(pb.getAttribute('onclick')) || [])[1] : '';
                 b.textContent = '£' + typePrice(Number(card.dataset.base), t, pid).toLocaleString('en-GB');
             });
+            paintWho();
             return t;
         }
         // The trial's own dropdown (Venue, Artist or Label), in the site's style rather than the browser's menu

@@ -4,6 +4,7 @@ import { createClient } from 'redis';
 import { handleUpload } from '@vercel/blob/client';
 import { getWebSessionAuth } from './_venues.js';
 import { cleanWatermark, readWatermark, watermarkKey } from './_watermark.js';
+import { ownerLimit, accountTypeOf, readAssignments } from './_billing.js';
 
 // Brand kit: logos, guidelines, fonts and other brand files for a venue and its artists.
 // Files live in Vercel Blob under brand/<venueSlug>/<owner>/<category>/<file>, where
@@ -133,6 +134,20 @@ export default async function handler(req, res) {
       const owner = String(body.owner || '');
       const name  = String(body.name ?? '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 60);
       if (owner === 'venue' || !OWNER.test(owner) || !name) return res.status(400).json({ error: 'Invalid name' });
+      // A new artist, record label or venue counts against what the account's type and plan allow
+      const refused = await withRedis(async r => {
+        const names = await r.hGetAll(`brand_owner_names:${slug}`) || {};
+        if (names[owner]) return null;
+        const kind = owner.split('-')[0];
+        const type = await accountTypeOf(r, slug), plan = (await readAssignments(r, slug)).venue?.plan || '';
+        const limit = ownerLimit(type, plan, kind), have = Object.keys(names).filter(k => k.startsWith(kind + '-')).length;
+        if (have < limit) return null;
+        const what = { artist: 'artists', label: 'record labels', venue: 'venues' }[kind];
+        return limit === 0
+          ? (type === 'artist' && kind === 'artist' ? 'An artist account is for one artist: you. To manage several artists, use a record label or venue account.' : `This kind of account doesn't add other ${what}.`)
+          : `Your plan includes up to ${limit} ${what}. Move to a bigger plan in Billing to add more.`;
+      }).catch(() => null);
+      if (refused) return res.status(403).json({ error: refused });
       // A record label's brand kit sits under the artist it belongs to
       const artist = String(body.artist || '');
       await withRedis(r => Promise.all([

@@ -1865,7 +1865,9 @@
                     if (!slugify(nm)) { errEl.textContent = 'Enter the ' + (kindNew === 'label' ? 'record label' : kindNew) + ' name'; return; }
                     owner = kindNew + '-' + slugify(nm);
                     // Save the name as typed, so the brand kit shows "Café 1001" rather than "CAFE 1001"
-                    await laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setOwnerName', owner: owner, name: nm, artist: kindNew === 'label' ? form.labelArtist.value : undefined }) }).catch(function() {});
+                    // A new artist, label or venue counts against the plan: stop here if it's over what the plan allows
+                    var made = await laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setOwnerName', owner: owner, name: nm, artist: kindNew === 'label' ? form.labelArtist.value : undefined }) }).catch(function() { return null; });
+                    if (made && made.status === 403) { errEl.textContent = (await made.json().catch(function() { return {}; })).error || 'Your plan doesn\'t include another one'; return; }
                 }
                 var slug = session().venueSlug;
                 if (!slug) { errEl.textContent = 'Sign in again to upload'; return; }
