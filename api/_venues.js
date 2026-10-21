@@ -7,7 +7,7 @@ import { createClient } from 'redis';
 //   muxWebhook: <encrypted signing secret of the environment's webhook> }.
 // Read into a cache when a function starts and refreshed in the background, so lookups stay synchronous.
 const REGISTRY_KEY = 'la_venues';
-let _registry = {}, _registryAt = 0, _registryLoading = null, _deleted = new Set(), _members = {};
+let _registry = {}, _registryAt = 0, _registryLoading = null, _deleted = new Set(), _members = {}, _artistsOf = {};
 // Artists given access by a venue or record label (Brand Kit → Give access): email → [{ slug, owner, name }].
 // They sign in to that account but only see their own sets and Brand Kit folder (see memberAllowed).
 export const MEMBERS_KEY = 'la_artist_members';
@@ -40,6 +40,15 @@ export async function refreshRegistry(redis = null) {
     _deleted = new Set(await redis.sMembers('la_deleted').catch(() => []));   // accounts deleted by the admin
     _members = Object.fromEntries(Object.entries(await redis.hGetAll(MEMBERS_KEY).catch(() => ({})) || {}).map(([e, v]) => { try { return [e, JSON.parse(v)]; } catch { return [e, []]; } }));
     _registry = out; _registryAt = Date.now();
+    // Each account's artists (its artist logins and Brand Kit artist folders), for the admin's account menu
+    const artists = {};
+    const add = (slug, owner, name) => { if (!owner || !name) return; const l = artists[slug] || (artists[slug] = []); if (!l.some(a => a.owner === owner)) l.push({ owner, name: String(name).toUpperCase() }); };
+    for (const list of Object.values(_members)) for (const m of list || []) add(m.slug, m.owner, m.name);
+    const slugs = Object.keys(getVenuesConfig());
+    const names = await Promise.all(slugs.map(s => redis.hGetAll(`brand_owner_names:${s}`).catch(() => ({}))));
+    slugs.forEach((s, i) => { for (const [k, v] of Object.entries(names[i] || {})) if (k.startsWith('artist-')) add(s, k, v); });
+    for (const l of Object.values(artists)) l.sort((a, b) => a.name.localeCompare(b.name));
+    _artistsOf = artists;
   } catch (e) { console.error('[_venues] registry:', e.message); }
   finally { if (own && redis) await redis.quit().catch(() => {}); }
   return _registry;
@@ -160,7 +169,9 @@ export function findVenuesByEmail(email) {
   // Accounts this email can open as one of their artists (full access to the same account wins)
   const asArtist = (_members[lower] || []).filter(m => cfgs[m.slug] && !full.some(v => v.slug === m.slug))
     .map(m => ({ slug: m.slug, ...cfgs[m.slug], member: { owner: m.owner, name: m.name } }));
-  return full.concat(asArtist);
+  // local / assets admins can also open any client account as one of its artists (to see what they see)
+  const adminAs = admin ? full.filter(v => !isAdminVenue(v)).flatMap(v => (_artistsOf[v.slug] || []).map(a => ({ ...v, member: { owner: a.owner, name: a.name } }))) : [];
+  return full.concat(asArtist, adminAs);
 }
 
 // The venue to use for this email: `preferredSlug` if the email belongs to it,

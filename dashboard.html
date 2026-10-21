@@ -37,14 +37,14 @@
     <link rel="manifest" href="favicon/site.webmanifest">
     
     <link rel="stylesheet" href="styles/tailwind.css">
-    <link rel="stylesheet" href="styles/theme.css?v=30">
+    <link rel="stylesheet" href="styles/theme.css?v=31">
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
     <script src="/la-djframe.js?v=3"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-    <script src="nav-component.js?v=34"></script>
+    <script src="nav-component.js?v=35"></script>
     <style>
         /* Standardized sidebar styles used by the JS component */
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
@@ -3898,6 +3898,8 @@
         .hp-chip img { height:24px; width:40px; object-fit:cover; border-radius:999px; }
         .hero-pick { position:absolute; right:16px; bottom:14px; z-index:20; height:28px; padding:0 12px; border-radius:999px; border:1px solid rgba(255,255,255,.25); background:rgba(0,0,0,.45); color:#fff; font:600 11px 'Helvetica Neue', Helvetica, Arial, sans-serif; cursor:pointer; opacity:0; transition:opacity .2s; }
         #live-feed-hero:hover .hero-pick, .hero-pick:focus-visible { opacity:1; }
+        /* The banner keeps its shape as the window widens: taller in proportion, not just longer */
+        @media (min-width: 768px) { #live-feed-hero { aspect-ratio: 8 / 1; } }
         @media (hover:none) { .hero-pick { opacity:1; } }
         .hp-panel { max-width:860px !important; width:calc(100vw - 32px); }
         .hp-sub { font-size:13px; color:var(--la-sub); margin:4px 0 14px; }

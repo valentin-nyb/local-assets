@@ -320,6 +320,8 @@ document.addEventListener("DOMContentLoaded", () => {
             '.la-acct-row svg{flex-shrink:0;color:var(--la-sub,#a1a1aa)}' +
             '.la-acct-row:hover:not(:disabled){background:color-mix(in srgb,var(--la-text,#fafafa) 6%,transparent)}' +
             '.la-acct-row.cur{cursor:default}' +
+            '.la-acct-row.sub{padding-left:42px;font-size:.92em;color:var(--la-sub,#a1a1aa)}' +
+            '.la-acct-row.sub svg{width:15px;height:15px}' +
             '.la-acct-row span{flex:1;min-width:0}' +
             '.la-acct-check{display:flex;margin-left:auto}' +
             '.la-acct-check svg{width:15px;height:15px;color:var(--la-accent,#39FF14)}';
@@ -340,12 +342,20 @@ document.addEventListener("DOMContentLoaded", () => {
                 return (bb - aa) || String(a.name || '').localeCompare(String(b.name || ''));
             });
         if (venues.length < 2) return '';
+        // An account's artists sit under it (the admin's menu); an artist's own choices stay as they are
+        var parents = {}; venues.forEach(function(v) { if (!v.as) parents[v.slug] = true; });
+        var ordered = [];
+        venues.filter(function(v) { return !v.as || !parents[v.slug]; }).forEach(function(v) {
+            ordered.push(v);
+            if (!v.as) venues.filter(function(c) { return c.as && c.slug === v.slug; }).sort(function(a, b) { return String(a.name).localeCompare(String(b.name)); }).forEach(function(c) { ordered.push(Object.assign({ sub: true }, c)); });
+        });
+        venues = ordered;
         var html = '<div data-la-switcher class="la-acct-group">';
         venues.forEach(function(v) {
             var current = v.slug === session.venueSlug && (!v.as || (session.member && session.member.owner === v.as));
             // Icon by what the account is: an artist, a venue, a record label, management, or local / assets itself
             var kind = v.type || (/^local\s*[\/-]?\s*assets\b/i.test(String(v.name || '')) || v.slug === 'local-assets-admin' ? 'admin' : 'venue');
-            html += '<button type="button" class="la-acct-row' + (current ? ' cur' : '') + '" data-venue-slug="' + _esc(v.slug) + '" data-as="' + _esc(v.as || '') + '" onclick="window.LA_SWITCH_VENUE(this.dataset.venueSlug, this.dataset.as)"' + (current ? ' disabled aria-current="true"' : '') + '>' +
+            html += '<button type="button" class="la-acct-row' + (v.sub ? ' sub' : '') + (current ? ' cur' : '') + '" data-venue-slug="' + _esc(v.slug) + '" data-as="' + _esc(v.as || '') + '" onclick="window.LA_SWITCH_VENUE(this.dataset.venueSlug, this.dataset.as)"' + (current ? ' disabled aria-current="true"' : '') + '>' +
                 (_LA_ICON[kind] || _LA_ICON.venue) + '<span>' + _esc(_niceName(v.name)) + '</span>' + (current ? '<i class="la-acct-check">' + _LA_ICON.check + '</i>' : '') + '</button>';
         });
         return html + '</div>';
