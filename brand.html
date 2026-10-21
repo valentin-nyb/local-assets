@@ -719,12 +719,12 @@
                               fontSelect('title', _wm.text.font) +
                               seg('textpos', WM_TEXT_POS, _wm.text.position) +
                               seg('textcolor', WM_TEXT_COLOR, _wm.text.color === 'black' ? 'black' : 'white') +
-                              (_wm.text.source === 'artist' ? '<div class="bk-wm-textmeta"><span class="bk-wm-font">Each clip shows the name of the artist on stage.</span></div>' : _wm.text.pick ? '<div class="bk-wm-textmeta"><span class="bk-wm-font">Every clip shows ' + esc(_wm.text.value) + '.</span></div>' : '') + '</div>' +
+                              (_wm.text.source === 'artist' ? '<div class="bk-wm-textmeta"><span class="bk-wm-font">Each clip shows the name of the artist on stage.</span></div>' : _wm.text.pick ? '<div class="bk-wm-textmeta"><span class="bk-wm-font">' + (_member ? 'Every clip shows ' + esc(_wm.text.value) + '.' : 'Previewing ' + esc(_wm.text.value) + '. Every clip still shows the name of its own artist.') + '</span></div>' : '') + '</div>' +
                               '<span class="bk-wm-label">Subtitle</span>' + (_wm.text.sub
                                 ? '<div class="bk-wm-textrow">' + wmSubSelect() +
                                   (_wm.text.sub.source === 'session' || _wm.text.sub.pick ? '' : '<input id="bk-wm-sub-input" value="' + esc(_wm.text.sub.value) + '" maxlength="80" placeholder="e.g. Disco, Jazz-funk, Soulful House" aria-label="Subtitle">') +
                                   fontSelect('sub', _wm.text.sub.font) + '<button type="button" class="bk-wm-link" id="bk-wm-sub-remove">Remove</button>' +
-                                  (_wm.text.sub.source === 'session' ? '<div class="bk-wm-textmeta"><span class="bk-wm-font">Each session shows its own name (set with Edit session). Sessions without a name show no subtitle.</span></div>' : '') + '</div>'
+                                  (_wm.text.sub.source === 'session' ? '<div class="bk-wm-textmeta"><span class="bk-wm-font">Each session shows its own name (set with Edit session). Sessions without a name show no subtitle.</span></div>' : _wm.text.sub.pick && !_member ? '<div class="bk-wm-textmeta"><span class="bk-wm-font">Previewing this session. Every clip still shows the name of its own session.</span></div>' : '') + '</div>'
                                 : '<div class="bk-wm-textrow"><button type="button" class="cam-btn ghost" id="bk-wm-sub-add">Add session name</button><span class="bk-wm-font">A smaller second line under the artist name: each session\'s name, in its own font.</span></div>'))
                             : wmTextFonts().length
                             ? '<div class="bk-wm-textrow"><button type="button" class="cam-btn ghost" id="bk-wm-text-artist">Add artist name</button><span class="bk-wm-font">Or preview a font, type your text and choose Use as watermark.</span></div>'
@@ -761,7 +761,7 @@
             if (addArtist) addArtist.addEventListener('click', function() {
                 // By default: the artist's name, with each session's name under it
                 var fs = wmTextFonts(), subFont = (fs[1] || fs[0]).url;
-                _wm.text = { source: 'artist', value: '', font: fs[0].url, position: 'br', sub: { source: 'session', value: '', font: subFont } };
+                _wm.text = { source: 'artist', value: '', font: fs[0].url, position: 'bl', size: 'xl', color: 'white', sub: { source: 'session', value: '', font: subFont } };
                 renderWatermark(); saveWatermark();
             });
             box.querySelectorAll('[data-wmfont]').forEach(function(sel) {
@@ -1218,6 +1218,15 @@
             });
         }
         var _wmSaveT;
+        // The venue's watermark is saved as "Artist name" and "Session name", so every clip shows its own.
+        // An artist or session chosen in the menus only changes the preview (and Export).
+        function wmToSave() {
+            if (_member || !_wm.text) return _wm;
+            var w = JSON.parse(JSON.stringify(_wm)), t = w.text;
+            if (t.pick) { t.source = 'artist'; t.value = ''; delete t.pick; }
+            if (t.sub && t.sub.pick) { t.sub.source = 'session'; t.sub.value = ''; delete t.sub.pick; }
+            return w;
+        }
         function saveWatermark() {
             // Keep the logo cards' "Use as watermark" buttons in step with the panel
             document.querySelectorAll('[data-use-wm]').forEach(function(b) {
@@ -1228,7 +1237,7 @@
             clearTimeout(_wmSaveT);
             _wmSaveT = setTimeout(function() {
                 var st = document.getElementById('bk-wm-status');
-                laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setWatermark', watermark: _wm }) })
+                laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setWatermark', watermark: wmToSave() }) })
                     .then(function(r) { if (!r.ok) throw new Error(r.status); if (st) st.textContent = 'Saved'; })
                     .catch(function() { if (st) st.textContent = 'Could not save. Try again.'; });
             }, 350);
@@ -1253,7 +1262,7 @@
                 var titlesP = loadSessionTitles();
                 document.body.classList.toggle('bk-member', !!_member);
                 var hidden = res[0].hiddenOwners || [];
-                _wm = res[0].watermark || { enabled: true, logo: 'auto', position: 'bl', size: 'm', opacity: 0.9 };
+                _wm = res[0].watermark || { enabled: true, logo: 'auto', position: 'tr', size: 'm', opacity: 0.9 };
                 // An artist: their own name (not the venue's text), and a typed subtitle becomes each session's name
                 if (_member && _wm.text) {
                     if (_wm.text.source !== 'artist') { _wm.text.source = 'custom'; _wm.text.pick = _member.owner; _wm.text.value = String(_member.name).toUpperCase(); }
