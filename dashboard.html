@@ -154,7 +154,7 @@
         .wm-restore:disabled { opacity:.6; cursor:default; }
         .wm-restore.hidden, .wm-apply.hidden, #recent-sets-list .wm-restore.hidden, #recent-sets-list .wm-apply.hidden { display:none !important; }
         /* An artist with access only watches and downloads: cutting, watermarking, posting, editing and uploading are the account's */
-        html.la-member .wm-restore, html.la-member .wm-apply, html.la-member .wm-master, html.la-member .yt-dist-btn, html.la-member .sc-dist-btn, html.la-member .se-edit, html.la-member [data-la-upload] { display:none !important; }
+        html.la-member .wm-restore, html.la-member .wm-apply, html.la-member .wm-master, html.la-member .yt-dist-btn, html.la-member .sc-dist-btn, html.la-member .se-edit, html.la-member .aud-del, html.la-member [data-la-upload] { display:none !important; }
         @media (hover:hover) { .wm-restore:not(:disabled):hover { color:var(--la-text); border-color:var(--la-text); } }
         .wm-apply.is-remove { color:var(--la-bad, #ef4444); border-color:color-mix(in srgb, var(--la-bad, #ef4444) 45%, transparent); }
         @media (hover:hover) { .wm-apply:not(:disabled):not(.is-remove):hover { border-color:var(--la-accent); color:var(--la-accent); } .wm-apply.is-remove:hover { background:color-mix(in srgb, var(--la-bad, #ef4444) 12%, transparent); } }
@@ -862,7 +862,7 @@
             var isBlob = /^blob:/.test(btn.dataset.delId || '');
             var tile = btn.closest('.tile-wrap');
             var img = tile && tile.querySelector('img');
-            var kind = /clip/i.test(label) ? 'clip' : 'thumbnail';
+            var kind = btn.dataset.delKind || (/clip/i.test(label) ? 'clip' : 'thumbnail');
             var m = document.createElement('div');
             m.className = 'se-backdrop';
             m.innerHTML = '<div class="se-panel del-panel" role="alertdialog" aria-modal="true" aria-labelledby="del-title">' +
@@ -895,7 +895,7 @@
                         body: JSON.stringify({ id: btn.dataset.delId, url: btn.dataset.delUrl || '' }) });
                     var d = await r.json(); if (!r.ok) throw new Error(d.error || r.status);
                     close();
-                    laToast((kind === 'clip' ? 'Clip' : 'Thumbnail') + ' deleted');
+                    laToast(kind.charAt(0).toUpperCase() + kind.slice(1) + ' deleted');
                     fetchRecentUploads();
                 } catch (e) {
                     busy = false; go.disabled = false; m.querySelector('[data-cancel]').disabled = false;
@@ -1454,6 +1454,10 @@
                             html += '</button>';
                         }
                         if (isAudioAsset) {
+                            // Delete the HQ audio, so a new one can be uploaded in its place (the account only)
+                            html += '<button type="button" class="aud-del w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-500/10 transition-colors" title="Delete this audio to upload a new one" data-del-id="' + escHtml(linkedMuxAsset.id) + '" data-del-kind="audio" data-del-label="' + escHtml(sessionName + ' HQ audio') + '" onclick="deleteAsset(this)">';
+                            html += '<iconify-icon icon="solar:trash-bin-minimalistic-linear" class="text-red-500"></iconify-icon>';
+                            html += '</button>';
                             html += '<button id="sc-dist-' + uid + '" class="sc-dist-btn hidden" style="display:none;align-items:center;justify-content:center;gap:6px;height:34px;padding:0 16px;border-radius:999px;border:1px solid #FF5500;background:transparent;color:#FF5500;font:500 13px/1 \'Helvetica Neue\',Helvetica,Arial,sans-serif;cursor:pointer;white-space:nowrap;transition:background .25s ease,color .25s ease;" onclick="distributeSoundCloud(\'' + pid + '\', \'' + dlFile + '\', \'' + safeName + '\', \'' + uid + '\', \'' + jsq(sessionDate) + '\')" onmouseover="this.style.background=\'#FF5500\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'#FF5500\'">';
                             html += 'SoundCloud';
                             html += '</button>';
