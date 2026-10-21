@@ -683,3 +683,11 @@ header #venue-breadcrumb + * , header #venue-breadcrumb ~ h1 { min-width: 0; }
 
 /* Full screen on iPhone (home-screen app and the iOS app): the side menu's logo clears the notch */
 #la-side-head { padding-top: env(safe-area-inset-top); height: calc(5rem + env(safe-area-inset-top)) !important; box-sizing: border-box; }
+
+/* The app fills the whole screen on every device. Installed on an iPhone or iPad (home screen, status bar over
+   the page), the "full height" Safari reports leaves out the status bar, so the page came up short and an
+   empty band showed under the footer: pinned to all four edges instead. */
+html { background: var(--la-bg, #050505); }
+body.h-screen { position: fixed; inset: 0; width: auto !important; height: auto !important; }
+/* The footer: one compact line on every screen, just clear of the home indicator */
+.la-statusbar.la-statusbar { height: auto !important; min-height: 0 !important; padding-top: 12px !important; padding-bottom: calc(env(safe-area-inset-bottom) + 12px) !important; }
