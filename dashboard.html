@@ -3515,7 +3515,9 @@
             _pipelineTimer = setInterval(fetchPipelineStatus, 3000);
         }
 
-        startPipelinePolling();
+        // The pipeline and new-upload checks are the account's: an artist's login can't use them
+        var _isMemberView = document.documentElement.classList.contains('la-member');
+        if (!_isMemberView) startPipelinePolling();
 
         // New uploads start their vertical clips once Mux has the recording ready
         async function checkIntakes() {
@@ -3525,8 +3527,7 @@
                 if (j.started) setTimeout(function () { fetchRecentUploads(); }, 4000);
             } catch (e) {}
         }
-        checkIntakes();
-        setInterval(checkIntakes, 30000);
+        if (!_isMemberView) { checkIntakes(); setInterval(checkIntakes, 30000); }
 
         var _contactsSig = null;
         async function fetchContacts() {
