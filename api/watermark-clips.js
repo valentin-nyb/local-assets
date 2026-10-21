@@ -45,7 +45,7 @@ function cleanCheck(assets, marked = new Set()) {
 }
 
 // Takes the watermark off a session: every clip back to a clean one, missing clips cut again
-async function removeWatermark(redis, slug, auth, artist, date) {
+async function removeWatermark(redis, slug, auth, artist, date, only = null) {
   const assets = await listAllAssets(auth);
   const isClean = cleanCheck(assets, await markedSet(redis, slug));
   const originals = new Set(await redis.sMembers(originalsKey(slug)));
@@ -57,6 +57,7 @@ async function removeWatermark(redis, slug, auth, artist, date) {
   const numbers = new Set([...clipTimes(Number(master.duration)).map(t => t.n), ...shown.keys()]);
   for (const n of [...numbers].sort((a, b) => a - b)) {
     const cur = shown.get(n);
+    if (only && (!cur || !only.has(cur.id))) continue;   // just the clips chosen
     if (cur && (isClean(cur) || pendingOld.has(cur.id))) continue;
     const spare = hidden.get(n) || [];
     // The kept vertical original (cut once from the full recording)
@@ -278,7 +279,8 @@ export default async function handler(req, res) {
     if (body.action === 'remove' || body.action === 'restore') {
       const artist = String(body.artist || '').toUpperCase().trim();
       if (!artist) return res.status(400).json({ error: 'Choose a session' });
-      const out = await removeWatermark(redis, slug, auth, artist, String(body.date || ''));
+      const only = Array.isArray(body.clipIds) && body.clipIds.length ? new Set(body.clipIds.map(String).slice(0, 60)) : null;
+      const out = await removeWatermark(redis, slug, auth, artist, String(body.date || ''), only);
       if (out.error) return res.status(400).json(out);
       return res.status(200).json(out);
     }
