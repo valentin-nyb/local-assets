@@ -561,6 +561,40 @@
             downloadAllThumbs(JSON.parse(el.dataset.urls), el.dataset.title);
         }
 
+        // Every ready vertical clip in one zip (MP4s are stored, not compressed again)
+        async function dlClips(el) {
+            var pids = (el.dataset.pids || '').split(',').filter(Boolean);
+            if (!pids.length || el.disabled) return;
+            var base = (el.dataset.title || 'Clips').replace(/[^a-zA-Z0-9_\- ]/g, '').trim().replace(/\s+/g, '_');
+            var origHtml = el.innerHTML;
+            el.disabled = true;
+            el.innerHTML = '<iconify-icon icon="solar:refresh-bold" class="text-yellow-500 animate-spin"></iconify-icon>';
+            try {
+                var zip = new JSZip();
+                var folder = zip.folder(base + '_Verticals');
+                for (var i = 0; i < pids.length; i++) {
+                    var resp = null;
+                    for (var n of ['highest.mp4', 'capped-1080p.mp4', 'high.mp4', 'medium.mp4']) {
+                        var r = await fetch('https://stream.mux.com/' + pids[i] + '/' + n);
+                        if (r.ok) { resp = r; break; }
+                    }
+                    if (!resp) throw new Error('clip ' + (i + 1) + ' is not ready to download yet. Try again in a few minutes.');
+                    folder.file('Vertical_' + String(i + 1).padStart(2, '0') + '.mp4', await resp.blob());
+                }
+                var zipBlob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
+                var a = document.createElement('a');
+                a.href = URL.createObjectURL(zipBlob);
+                a.download = base + '_Verticals.zip';
+                a.click();
+                setTimeout(function() { URL.revokeObjectURL(a.href); }, 10000);
+            } catch (e) {
+                alert('Download failed: ' + e.message);
+            } finally {
+                el.innerHTML = origHtml;
+                el.disabled = false;
+            }
+        }
+
         function formatSizeReadable(bytes) {
             const num = Number(bytes) || 0;
             if (num < 1024 * 1024 * 10) return (num / (1024 * 1024)).toFixed(1) + ' MB';
@@ -1600,6 +1634,14 @@
                 var silent = mAsset && hasSound(mAsset) && clips.some(function(c) { return c.status === 'ready' && c.tracks && !hasSound(c); }) ? 1 : 0;
                 html += '<button type="button" class="wm-restore' + (missing || silent ? '' : ' hidden') + '" data-silent="' + silent + '" data-missing="' + missing + '" data-wm-artist="' + escHtml(name) + '" data-wm-date="' + escHtml(sessionDate) + '" data-wm-clips="' + escHtml(clips.map(function(c) { return c.id; }).join(',')) + '" title="Cut the vertical clips once from the full recording">Make vertical clips</button>';
                 html += '<button type="button" class="wm-apply" data-wm-artist="' + escHtml(name) + '" data-wm-date="' + escHtml(sessionDate) + '" data-wm-clips="' + escHtml(clips.map(function(c) { return c.id; }).join(',')) + '" title="Put the Brand Kit watermark on these clips">Apply watermark</button>';
+                // Download all clips (zip) and preview, like the other rows
+                var clipsOn = allPids.length > 0;
+                html += '<button class="w-8 h-8 flex items-center justify-center rounded-full transition-colors ' + (clipsOn ? 'hover:bg-primary/10' : 'opacity-30') + '"' + (clipsOn ? '' : ' disabled') + ' title="' + (clipsOn ? 'Download all clips' : 'Processing') + '" data-pids="' + pidsAttr + '" data-title="' + escAttr(name + ' ' + sessionDate) + '" onclick="dlClips(this)">';
+                html += '<iconify-icon icon="solar:download-minimalistic-linear" class="' + (clipsOn ? 'text-primary' : 'text-zinc-500') + '"></iconify-icon>';
+                html += '</button>';
+                html += '<button class="w-8 h-8 flex items-center justify-center rounded-full transition-colors ' + (clipsOn ? 'hover:bg-primary/10' : 'opacity-30') + '"' + (clipsOn ? '' : ' disabled') + ' title="' + (clipsOn ? 'Preview' : 'Processing') + '" data-pids="' + pidsAttr + '" data-idx="0" data-title="' + titleAttr + '" onclick="openClipModal(this)">';
+                html += '<iconify-icon icon="solar:play-linear" class="' + (clipsOn ? 'text-primary' : 'text-zinc-500') + '"></iconify-icon>';
+                html += '</button>';
                 html += '</div>';
                 html += '</div>';
 
