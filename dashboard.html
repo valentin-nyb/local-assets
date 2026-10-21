@@ -1,6 +1,3 @@
-
-
-
 <!DOCTYPE html>
 <html lang="en" class="dark scroll-smooth">
 <head>
@@ -43,7 +40,7 @@
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
     <script src="/la-djframe.js?v=3"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player@3"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="nav-component.js?v=35"></script>
     <style>
@@ -157,7 +154,7 @@
         .wm-restore:disabled { opacity:.6; cursor:default; }
         .wm-restore.hidden, .wm-apply.hidden, #recent-sets-list .wm-restore.hidden, #recent-sets-list .wm-apply.hidden { display:none !important; }
         /* An artist with access only watches and downloads: cutting, watermarking, posting, editing and uploading are the account's */
-        html.la-member .wm-restore, html.la-member .wm-apply, html.la-member .wm-master, html.la-member .yt-dist-btn, html.la-member .sc-dist-btn, html.la-member .se-edit, html.la-member .aud-del, html.la-member [data-la-upload] { display:none !important; }
+        html.la-member .wm-restore, html.la-member .wm-apply, html.la-member .wm-master, html.la-member .yt-dist-btn, html.la-member .sc-dist-btn, html.la-member .se-edit, html.la-member .aud-del, html.la-member .tile-x, html.la-member [data-la-upload] { display:none !important; }
         @media (hover:hover) { .wm-restore:not(:disabled):hover { color:var(--la-text); border-color:var(--la-text); } }
         .wm-apply.is-remove { color:var(--la-bad, #ef4444); border-color:color-mix(in srgb, var(--la-bad, #ef4444) 45%, transparent); }
         @media (hover:hover) { .wm-apply:not(:disabled):not(.is-remove):hover { border-color:var(--la-accent); color:var(--la-accent); } .wm-apply.is-remove:hover { background:color-mix(in srgb, var(--la-bad, #ef4444) 12%, transparent); } }
@@ -324,6 +321,14 @@
             return fetch(url, opts);
         }
 
+        document.addEventListener('keydown', function(e) {
+            if (e.key !== 'Escape') return;
+            var rm = document.getElementById('revenue-modal');
+            if (rm && !rm.classList.contains('hidden')) { closeRevenueSettings(); return; }
+            var all = document.querySelectorAll('.se-backdrop'), top = all[all.length - 1];
+            if (top) top.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        });
+
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebar-overlay');
@@ -337,10 +342,6 @@
                 overlay.classList.remove('hidden');
                 setTimeout(() => overlay.classList.add('opacity-100'), 10);
             }
-        }
-
-        async function fetchLiveMetrics() {
-            // Storage + asset count updated by fetchRecentUploads()
         }
 
         function formatDateReadable(dateStr) {
@@ -853,14 +854,6 @@
 
         // Delete one clip or thumbnail (from Mux, or from storage for uploaded thumbnails),
         // after a styled confirmation that shows exactly what will be removed.
-        function showToast(text) {
-            var t = document.getElementById('la-toast');
-            if (!t) { t = document.createElement('div'); t.id = 'la-toast'; t.className = 'la-toast'; document.body.appendChild(t); }
-            t.innerHTML = '<span></span>';
-            t.querySelector('span').textContent = text;
-            t.classList.add('show');
-            clearTimeout(t._h); t._h = setTimeout(function() { t.classList.remove('show'); }, 2600);
-        }
         // Deleted ids → when, hidden from the list for 2 minutes while the storage catches up
         var _justDeleted = {};
         function markDeleted(id) {
@@ -965,7 +958,8 @@
             var artist = btn.dataset.artist, date = btn.dataset.date, meta = sessionMeta(artist, date);
             var venues = [], labels = [];
             try {
-                var b = await laFetch('/api/brand').then(function(r) { return r.ok ? r.json() : {}; });
+                var bv = _adminView ? (_venueOfArtist[String(artist).toUpperCase().trim()] || '') : '';
+                var b = await laFetch('/api/brand', bv ? { headers: { 'X-LA-Venue': bv } } : {}).then(function(r) { return r.ok ? r.json() : {}; });
                 var names = b.ownerNames || {};
                 (b.files || []).forEach(function(f) { if (f.owner.indexOf('venue-') === 0 && !names[f.owner]) names[f.owner] = f.owner.slice(6).replace(/-/g, ' ').toUpperCase(); });
                 venues = Object.keys(names).filter(function(k) { return k.indexOf('venue-') === 0; }).map(function(k) { return names[k]; }).sort();
@@ -1258,7 +1252,7 @@
         }
         setTimeout(sweepWatermarks, 4000);
         // Admin: one-off check of the configured Mux accounts (logged on the server)
-        try { if (!sessionStorage.getItem('la_muxchk2')) { sessionStorage.setItem('la_muxchk2', '1'); laFetch('/api/mux-accounts').catch(function() {}); } } catch (_) {}
+        try { if (_adminView && !sessionStorage.getItem('la_muxchk2')) { sessionStorage.setItem('la_muxchk2', '1'); laFetch('/api/mux-accounts').catch(function() {}); } } catch (_) {}
 
         // While new clips are processing, the list refreshes itself so they appear when ready
         var _clipsProcessing = false, _clipsPollT;
@@ -1299,7 +1293,6 @@
             const nowTs = Date.now() / 1000;
             const thirtyDaysAgo = nowTs - (30 * 86400);
             const recentCount = muxAssets.filter(a => a.created_at > thirtyDaysAgo).length;
-            const olderCount = muxAssets.length - recentCount;
             const pctEl = document.getElementById('growth-pct');
             if (pctEl) pctEl.innerHTML = recentCount > 0
                 ? '<span class="kpi-up">+' + recentCount + ' in the last 30 days</span>'
@@ -1454,11 +1447,6 @@
                 }
             }
             window._dashboardSessions = allSessions;
-
-            const _isClientUser = (() => {
-                try { return JSON.parse(localStorage.getItem('la_admin') || 'null')?.role === 'client'; }
-                catch(_) { return false; }
-            })();
 
             function buildAssetRow(asset, uid, sessionName, sessionDate) {
                 var accept = asset.type === 'MASTER' ? 'video/*' : asset.type === 'AUDIO' ? 'audio/*' : asset.type === 'SOCIAL' ? 'video/*' : 'image/*';
@@ -1655,12 +1643,6 @@
 
                 var accent = 'var(--la-accent)';  // follows the theme without a re-render
 
-                // Check if clips are still processing (no playback IDs)
-                var readyCount = 0;
-                for (var pi = 0; pi < clips.length; pi++) {
-                    if (clips[pi].status === 'ready' && clips[pi].playback_ids && clips[pi].playback_ids[0]) readyCount++;
-                }
-                var statusText = readyCount === clips.length ? clips.length + ' CLIPS — IN VAULT' : clips.length + ' CLIPS — ' + readyCount + ' READY, ' + (clips.length - readyCount) + ' PROCESSING';
 
                 // Build comma-separated PID list for gallery URL
                 var allPids = [];
@@ -2282,31 +2264,22 @@
             const origHtml = btnEl.innerHTML;
             btnEl.innerHTML = '<iconify-icon icon="solar:refresh-bold" class="text-yellow-500 animate-spin"></iconify-icon>';
             btnEl.disabled = true;
-
-            const name = sessionName.toUpperCase().trim();
-            const label = assetLabel.replace(/\s+/g, '_');
-            const zipName = name + '_' + label + '_' + sessionDate.replace(/\s+/g, '_');
-            let filename = label + '.' + ext;
-
+            const name = (sessionName.toUpperCase().trim() + '_' + assetLabel.replace(/\s+/g, '_') + '_' + sessionDate).replace(/[^A-Za-z0-9_-]+/g, '_');
             try {
-                // The file named on the recording, else the other names Mux gives downloads (audio, then video):
-                // a missing one was saved before as a tiny error page inside the zip
-                const tries = [dlFile].concat(['audio.m4a', 'highest.mp4', 'capped-1080p.mp4', 'high.mp4', 'medium.mp4'].filter(function(n) { return n !== dlFile; }));
-                let resp = null;
+                // The file named on the recording, else the other names Mux gives downloads (audio, then video).
+                // Found with a HEAD request; the browser then downloads it straight to disk, so even a multi-GB
+                // 4K long form never has to fit in the page's memory.
+                const tries = [dlFile].concat(['audio.m4a', 'highest.mp4', 'capped-1080p.mp4', 'high.mp4', 'medium.mp4', 'low.mp4'].filter(function(n) { return n !== dlFile; }));
+                let found = null;
                 for (const n of tries) {
-                    const r = await fetch('https://stream.mux.com/' + pid + '/' + n);
-                    if (r.ok) { resp = r; filename = label + '.' + n.split('.').pop(); break; }
+                    const r = await fetch('https://stream.mux.com/' + pid + '/' + n, { method: 'HEAD' }).catch(function() { return null; });
+                    if (r && r.ok) { found = n; break; }
                 }
-                if (!resp) throw new Error('the file is not ready to download yet. Try again in a few minutes.');
-                const blob = await resp.blob();
-                const zip = new JSZip();
-                zip.file(filename, blob);
-                const zipBlob = await zip.generateAsync({ type: 'blob' });
+                if (!found) throw new Error('the file is not ready to download yet. Try again in a few minutes.');
                 const a = document.createElement('a');
-                a.href = URL.createObjectURL(zipBlob);
-                a.download = zipName + '.zip';
-                a.click();
-                URL.revokeObjectURL(a.href);
+                a.href = 'https://stream.mux.com/' + pid + '/' + found + '?download=' + encodeURIComponent(name);
+                a.rel = 'noopener';
+                document.body.appendChild(a); a.click(); a.remove();
             } catch (e) {
                 alert('Download failed: ' + e.message);
             } finally {
@@ -2854,6 +2827,7 @@
 
         // ── Revenue (YouTube Analytics + SoundCloud plays) ──────────────
         async function fetchRevenue() {
+            if (document.documentElement.classList.contains('la-member')) return;
             const CACHE_KEY = 'la_revenue_cache_v2';
             const CACHE_TTL = 24 * 60 * 60 * 1000;
             try {
@@ -3130,7 +3104,7 @@
                 btn.style.background = '#FF5500';
                 setTimeout(function() {
                     var row = document.getElementById('sc-dist-' + uid);
-                    if (row) row.outerHTML = '<a id="sc-dist-' + uid + '" href="' + (data.url || '#') + '" target="_blank" style="display:inline-flex;align-items:center;gap:4px;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#39FF14;text-decoration:none;">&#x2713; On SoundCloud</a>';
+                    if (row) row.outerHTML = '<a id="sc-dist-' + uid + '" href="' + escHtml(/^https:\/\//.test(data.url || '') ? data.url : '#') + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#39FF14;text-decoration:none;">&#x2713; On SoundCloud</a>';
                 }, 400);
             } catch(e) {
                 clearInterval(timer);
@@ -3234,7 +3208,7 @@
                 btn.style.background = '#FF0000';
                 setTimeout(function() {
                     var row = document.getElementById('yt-dist-' + uid);
-                    if (row) row.outerHTML = '<a id="yt-dist-' + uid + '" href="' + (data.url || '#') + '" target="_blank" style="display:inline-flex;align-items:center;gap:4px;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#39FF14;text-decoration:none;">&#x2713; On YouTube</a>';
+                    if (row) row.outerHTML = '<a id="yt-dist-' + uid + '" href="' + escHtml(/^https:\/\//.test(data.url || '') ? data.url : '#') + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#39FF14;text-decoration:none;">&#x2713; On YouTube</a>';
                 }, 400);
             } catch(e) {
                 resetBtn();
@@ -3337,9 +3311,8 @@
         })();
 
         fetchSystemHealth();
-        setInterval(fetchSystemHealth, 30000);
+        setInterval(function() { if (!document.hidden) fetchSystemHealth(); }, 30000);
 
-        fetchLiveMetrics();
         fetchRecentUploads();
         fetchNextEvent();
         // An artist's dashboard shows the venue's contacts (set on the Contacts page), checked every few seconds
@@ -3413,7 +3386,7 @@
                         waiting:    'WAITING FOR CLOUD STORAGE',
                         processing: procLabel,
                         done:       job.uploaded != null ? job.uploaded + ' CLIPS UPLOADED' : 'COMPLETE',
-                        error:      (job.error ? job.error.slice(0, 60) : 'ERROR')
+                        error:      (job.error ? escHtml(String(job.error).slice(0, 60)) : 'ERROR')
                     }[job.status] || job.status.toUpperCase();
 
                     var accentColor = isError ? '#ef4444' : barColor;
@@ -3513,7 +3486,7 @@
         function startPipelinePolling() {
             fetchPipelineStatus();
             if (_pipelineTimer) clearInterval(_pipelineTimer);
-            _pipelineTimer = setInterval(fetchPipelineStatus, 3000);
+            _pipelineTimer = setInterval(function() { if (!document.hidden) fetchPipelineStatus(); }, 3000);
         }
 
         // The pipeline and new-upload checks are the account's: an artist's login can't use them
@@ -3528,7 +3501,7 @@
                 if (j.started) setTimeout(function () { fetchRecentUploads(); }, 4000);
             } catch (e) {}
         }
-        if (!_isMemberView) { checkIntakes(); setInterval(checkIntakes, 30000); }
+        if (!_isMemberView) { checkIntakes(); setInterval(function() { if (!document.hidden) checkIntakes(); }, 30000); }
 
         var _contactsSig = null;
         async function fetchContacts() {
@@ -3634,9 +3607,6 @@
             }
         }
 
-        // Track uploaded asset info for download
-        const uploadedAssets = {};
-
         async function downloadAllThumbs(urls, title) {
             if (!urls.length) return;
             if (urls.length === 1) {
@@ -3649,7 +3619,7 @@
                     a.href = URL.createObjectURL(blob);
                     a.download = thumbFileName(url, 1);
                     a.click();
-                    URL.revokeObjectURL(a.href);
+                    setTimeout(function() { URL.revokeObjectURL(a.href); }, 10000);
                 } catch (e) { window.open(url, '_blank'); }
                 return;
             }
@@ -3666,7 +3636,7 @@
             a.href = URL.createObjectURL(zipBlob);
             a.download = title.replace(/[^a-zA-Z0-9_\- ]/g, '') + '_Thumbnails.zip';
             a.click();
-            URL.revokeObjectURL(a.href);
+            setTimeout(function() { URL.revokeObjectURL(a.href); }, 10000);
         }
 
         async function handleAssetUpload(uid, input, sessionName, sessionDate) {
@@ -3788,7 +3758,8 @@
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ artist: sessionName, date: sessionDate, camera: assetType })
                         });
-                        const data = await response.json();
+                        const data = await response.json().catch(function() { return {}; });
+                        if (!response.ok || !data.url) throw new Error(data.error || ('could not start the upload (' + response.status + ')'));
 
                         const xhr = new XMLHttpRequest();
                         xhr.open('PUT', data.url);
@@ -3803,8 +3774,8 @@
                         };
 
                         xhr.onload = () => {
+                            if (xhr.status < 200 || xhr.status >= 300) { reject(new Error('Upload failed (' + xhr.status + '): ' + file.name)); return; }
                             completed++;
-                            uploadedAssets[uid + '_' + idx] = { id: data.id, name: file.name, size: file.size };
                             // A new 4K long form cuts its vertical clips once it's ready
                             if (assetType === 'MASTER' && data.id) laFetch('/api/pipeline-trigger', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ uploadId: data.id, artistName: sessionName }) }).catch(function () {});
                             resolve();
