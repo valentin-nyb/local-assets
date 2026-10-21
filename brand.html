@@ -606,9 +606,9 @@
         var WM_TEXT_COLOR = [['white', 'White'], ['black', 'Black']];
         // The text has its own size; until one is chosen it follows the logo's
         // Large in the horizontal frame is a little smaller (as on the clips, api/_watermark-render.js)
-        function wmTextPx(L) { var sz = wmTextSize(); return L && L.W > L.H && sz === 'l' ? 92 : L && L.W > L.H && sz === 'xl' ? 120 : WM_TEXT_PX[sz] || WM_TEXT_PX.m; }
+        function wmTextPx(L) { var sz = wmTextSize(); return L && L.W > L.H && sz === 'l' ? 92 : L && L.W > L.H && sz === 'xl' ? 106 : WM_TEXT_PX[sz] || WM_TEXT_PX.m; }
         function wmTextSize() { return (_wm.text && WM_TEXT_PX[_wm.text.size]) ? _wm.text.size : (_wm.size || 'm'); }
-        var WM_TEXT_PX = { s: 48, m: 66, l: 102, xl: 130 };
+        var WM_TEXT_PX = { s: 48, m: 66, l: 102, xl: 118 };
         // The clip worker draws watermark text from these font files (not WOFF2)
         var WM_TEXT_FONT = /\.(ttf|otf|woff)$/i;
         function wmLogos() { return _files.filter(function(f) { return f.category === 'logos' && /\.(png|svg|webp|jpe?g|gif)$/i.test(f.name); }); }
@@ -725,7 +725,7 @@
                                   (_wm.text.sub.source === 'session' || _wm.text.sub.pick ? '' : '<input id="bk-wm-sub-input" value="' + esc(_wm.text.sub.value) + '" maxlength="80" placeholder="e.g. Disco, Jazz-funk, Soulful House" aria-label="Subtitle">') +
                                   fontSelect('sub', _wm.text.sub.font) + '<button type="button" class="bk-wm-link" id="bk-wm-sub-remove">Remove</button>' +
                                   (_wm.text.sub.source === 'session' ? '<div class="bk-wm-textmeta"><span class="bk-wm-font">Each session shows its own name (set with Edit session). Sessions without a name show no subtitle.</span></div>' : '') + '</div>'
-                                : '<div class="bk-wm-textrow"><button type="button" class="cam-btn ghost" id="bk-wm-sub-add">Add session name</button><span class="bk-wm-font">A smaller second line under the artist name: each session's name, in its own font.</span></div>'))
+                                : '<div class="bk-wm-textrow"><button type="button" class="cam-btn ghost" id="bk-wm-sub-add">Add session name</button><span class="bk-wm-font">A smaller second line under the artist name: each session\'s name, in its own font.</span></div>'))
                             : wmTextFonts().length
                             ? '<div class="bk-wm-textrow"><button type="button" class="cam-btn ghost" id="bk-wm-text-artist">Add artist name</button><span class="bk-wm-font">Or preview a font, type your text and choose Use as watermark.</span></div>'
                             : '<p class="bk-wm-hint">Upload a font (TTF, OTF or WOFF) to add the artist\'s name or a line of text.</p>') +
