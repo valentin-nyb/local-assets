@@ -210,6 +210,34 @@ export async function startVerticals(redis, slug, master, artist, origin, retry 
   return todo.length;
 }
 
+// Clips cut at moments picked by hand (seconds into the recording): moment i replaces clip i+1.
+// The clip it replaces stops being an original, so finishVerticals deletes it once the new cut is ready.
+export async function startMoments(redis, slug, master, artist, origin, moments) {
+  const pid = (master.playback_ids || [])[0]?.id;
+  if (!pid) throw new Error('The full recording has no playback ID yet');
+  const dur = Number(master.duration) || 0;
+  const seg = Math.min(45, dur);
+  const done = await redis.hGetAll(doneKey(master.id));
+  const jobs = moments.map((t, i) => {
+    const start = Math.max(0, Math.min(Number(t) || 0, dur - seg));
+    return { n: i + 1, start, end: Math.min(start + seg, dur) };
+  });
+  for (const j of jobs) {
+    const old = done[j.n];
+    if (old) await redis.sRem(originalsKey(slug), old);
+    await redis.hDel(doneKey(master.id), String(j.n));
+    await redis.hDel(failKey(master.id), String(j.n));
+    await redis.hDel(failedKey(slug), `${master.id}:${j.n}`);
+  }
+  await Promise.all(jobs.map(t => fetch(`${origin}/api/vertical-clips`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'cut', job: signJob({ slug, masterId: master.id, pid, artist, n: t.n, start: t.start, end: t.end }) }),
+    signal: AbortSignal.timeout(20000),
+  }).catch(e => console.error('[verticals] moment', t.n, e.message))));
+  return jobs.length;
+}
+
 // The best video rendition and the separate sound rendition of an HLS stream (absolute URLs)
 async function streamParts(url) {
   const r = await fetch(url, { signal: AbortSignal.timeout(15000) });

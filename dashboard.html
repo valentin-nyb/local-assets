@@ -1057,7 +1057,8 @@
             if (!count) return;
             btn.disabled = true; btn.textContent = 'Starting…';
             try {
-                var r = await laFetch('/api/vertical-clips', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'start', artist: btn.dataset.wmArtist, date: btn.dataset.wmDate, count: count }) });
+                // A number: cut at the usual times. A list of moments: cut from each one picked.
+                var r = await laFetch('/api/vertical-clips', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(count.times ? { action: 'moments', artist: btn.dataset.wmArtist, date: btn.dataset.wmDate, times: count.times } : { action: 'start', artist: btn.dataset.wmArtist, date: btn.dataset.wmDate, count: count }) });
                 var d = await r.json().catch(function() { return {}; });
                 if (!r.ok) throw new Error(d.error || r.status);
                 _cutting[sessionKey(btn)] = Date.now();
@@ -1080,14 +1081,60 @@
                     '<p style="font-size:13px;line-height:1.55;color:var(--la-sub)">Each clip is cut once from the 4K long form at 1080 × 1920 (9:16) and kept as the original. ' + (lim.unlimited ? 'Your plan includes <b>unlimited</b> clips; this recording is long enough for ' + max : 'Your plan allows up to <b>' + lim.planMax + '</b> per session' + (max < lim.planMax ? '; this recording is long enough for ' + max : '')) + '.' + (lim.unlimited ? '' : ' <a href="/billing" style="color:var(--la-text);text-decoration:underline">Upgrade for more</a>') + '</p>' +
                     '<label style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--la-dim)">How many clips' +
                         '<div style="display:flex;align-items:center;gap:12px"><input type="range" name="n" min="1" max="' + max + '" value="' + def + '" style="flex:1;accent-color:var(--la-accent)"><b data-n style="min-width:28px;text-align:right;font:700 18px/1 \'Helvetica Neue\',Helvetica,Arial,sans-serif;color:var(--la-text)">' + def + '</b></div></label>' +
-                    '<div class="se-actions" style="display:flex;justify-content:flex-end;gap:8px"><button type="button" class="se-btn" data-cancel>Cancel</button><button type="submit" class="se-btn primary">Make clips</button></div>' +
+                    '<div class="se-actions" style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap">' + (lim.pid && lim.duration ? '<button type="button" class="se-btn" data-moments style="margin-right:auto">Choose moments</button>' : '') + '<button type="button" class="se-btn" data-cancel>Cancel</button><button type="submit" class="se-btn primary">Make clips</button></div>' +
                 '</form>';
                 document.body.appendChild(m);
+                var mb = m.querySelector('[data-moments]');
+                if (mb) mb.addEventListener('click', function() { m.remove(); pickClipMoments(lim).then(resolve); });
                 var f = m.querySelector('form'), out = m.querySelector('[data-n]');
                 f.n.addEventListener('input', function() { out.textContent = f.n.value; });
                 var done = function(v) { m.remove(); resolve(v); };
                 m.addEventListener('click', function(e) { if (e.target === m || e.target.closest('[data-cancel]')) done(0); });
                 f.addEventListener('submit', function(e) { e.preventDefault(); done(Number(f.n.value)); });
+            });
+        }
+        // Choose the moments for the vertical clips: frames from across the set (or exact times); each becomes a 45 s clip from there
+        function pickClipMoments(lim) {
+            return new Promise(function(resolve) {
+                var pid = lim.pid, dur = lim.duration, max = Math.max(1, lim.max || 5), picked = [];
+                var times = []; for (var i = 0; i < 16; i++) times.push(Math.round(dur * (0.04 + 0.86 * i / 15)));
+                var fmt = function(t) { var mm = Math.floor(t / 60), ss = Math.round(t % 60); return mm + ':' + (ss < 10 ? '0' : '') + ss; };
+                var thumb = function(t, w) { return 'https://image.mux.com/' + pid + '/thumbnail.jpg?time=' + t + '&width=' + w; };
+                var m = document.createElement('div'); m.className = 'se-backdrop';
+                m.innerHTML = '<div class="se-panel hp-panel" role="dialog" aria-modal="true"><p class="se-title">Choose the clip moments</p>' +
+                    '<p class="hp-sub">Pick up to ' + max + ' frames where the DJ is playing. Each clip runs 45 seconds from there, replacing the current clips in order.</p>' +
+                    '<div class="hp-grid">' + times.map(function(t) { return '<button type="button" class="hp-frame" data-t="' + t + '"><img src="' + thumb(t, 360) + '" alt="" loading="lazy"><span>' + fmt(t) + '</span></button>'; }).join('') + '</div>' +
+                    '<form class="hp-time"><label>Or a time<input name="t" placeholder="27:27" inputmode="numeric"></label><img alt="" class="hp-time-pv hidden"><button type="submit" class="se-btn">Add moment</button></form>' +
+                    '<div class="hp-picked"></div><p class="se-error"></p>' +
+                    '<div class="del-actions"><button type="button" class="se-btn ghost" data-cancel>Cancel</button><button type="button" class="se-btn primary" data-go disabled>Make clips</button></div></div>';
+                document.body.appendChild(m);
+                var err = m.querySelector('.se-error'), go = m.querySelector('[data-go]'), list = m.querySelector('.hp-picked');
+                var paint = function() {
+                    picked.sort(function(a, b) { return a - b; });
+                    m.querySelectorAll('.hp-frame').forEach(function(fb) { fb.classList.toggle('on', picked.indexOf(Number(fb.dataset.t)) >= 0); });
+                    list.innerHTML = picked.map(function(t) { return '<button type="button" class="hp-chip" data-rm="' + t + '"><img src="' + thumb(t, 120) + '" alt="">' + fmt(t) + ' ×</button>'; }).join('');
+                    go.disabled = !picked.length;
+                    go.textContent = picked.length ? 'Make ' + picked.length + ' clip' + (picked.length > 1 ? 's' : '') : 'Make clips';
+                    err.textContent = '';
+                };
+                var toggle = function(t) {
+                    var at = picked.indexOf(t);
+                    if (at >= 0) picked.splice(at, 1);
+                    else if (picked.length >= max) { err.textContent = 'Your plan allows ' + max + ' clips for this session. Remove one first.'; return; }
+                    else picked.push(t);
+                    paint();
+                };
+                var done = function(v) { m.remove(); resolve(v); };
+                m.addEventListener('click', function(ev) {
+                    if (ev.target === m || ev.target.closest('[data-cancel]')) return done(0);
+                    var rm = ev.target.closest('[data-rm]'); if (rm) return toggle(Number(rm.dataset.rm));
+                    var fb = ev.target.closest('.hp-frame'); if (fb) return toggle(Number(fb.dataset.t));
+                    if (ev.target.closest('[data-go]') && picked.length) done({ times: picked.slice() });
+                });
+                var parseT = function(s) { var p = String(s || '').trim().split(':').map(Number); if (p.some(isNaN) || !p.length || p.length > 3) return null; var t = p.reduce(function(a, x) { return a * 60 + x; }, 0); return t >= 0 && t < dur ? t : null; };
+                var tf = m.querySelector('.hp-time'), tpv = m.querySelector('.hp-time-pv');
+                tf.t.addEventListener('input', function() { var t = parseT(tf.t.value); tpv.classList.toggle('hidden', t == null); if (t != null) tpv.src = thumb(t, 240); });
+                tf.addEventListener('submit', function(ev) { ev.preventDefault(); var t = parseT(tf.t.value); if (t == null) { err.textContent = 'Type a time in the set, like 27:27'; return; } if (picked.indexOf(t) < 0) toggle(t); tf.t.value = ''; tpv.classList.add('hidden'); });
             });
         }
         // Finishes swaps whose watermarked copy is ready and refreshes the buttons; checks again while any are pending
@@ -2122,10 +2169,18 @@
             const name = sessionName.toUpperCase().trim();
             const label = assetLabel.replace(/\s+/g, '_');
             const zipName = name + '_' + label + '_' + sessionDate.replace(/\s+/g, '_');
-            const filename = label + '.' + ext;
+            let filename = label + '.' + ext;
 
             try {
-                const resp = await fetch('https://stream.mux.com/' + pid + '/' + dlFile);
+                // The file named on the recording, else the other names Mux gives downloads (audio, then video):
+                // a missing one was saved before as a tiny error page inside the zip
+                const tries = [dlFile].concat(['audio.m4a', 'highest.mp4', 'capped-1080p.mp4', 'high.mp4', 'medium.mp4'].filter(function(n) { return n !== dlFile; }));
+                let resp = null;
+                for (const n of tries) {
+                    const r = await fetch('https://stream.mux.com/' + pid + '/' + n);
+                    if (r.ok) { resp = r; filename = label + '.' + n.split('.').pop(); break; }
+                }
+                if (!resp) throw new Error('the file is not ready to download yet. Try again in a few minutes.');
                 const blob = await resp.blob();
                 const zip = new JSZip();
                 zip.file(filename, blob);
@@ -2436,19 +2491,29 @@
             e.preventDefault(); e.stopPropagation();
             var a = _heroAsset; if (!a || !a.playback_ids || !a.playback_ids[0]) return;
             var pid = a.playback_ids[0].id, dur = Number(a.duration) || 0, cur = (_djSpot[a.id] || {}).time;
-            var times = []; for (var i = 0; i < 16; i++) times.push(Math.round(dur * (0.04 + 0.92 * i / 15)));
+            // Frames from across the set, none in its last moments (often black, no frame to show)
+            var times = []; for (var i = 0; i < 16; i++) times.push(Math.round(dur * (0.04 + 0.86 * i / 15)));
+            // Only the frame nearest the chosen moment is marked
+            var near = cur == null ? null : times.reduce(function(b, t) { return Math.abs(t - cur) < Math.abs(b - cur) ? t : b; }, times[0]);
+            var fmt = function(t) { var mm = Math.floor(t / 60), ss = Math.round(t % 60); return mm + ':' + (ss < 10 ? '0' : '') + ss; };
             var m = document.createElement('div'); m.className = 'se-backdrop';
             m.innerHTML = '<div class="se-panel hp-panel" role="dialog" aria-modal="true"><p class="se-title">Choose the banner moment</p>' +
                 '<p class="hp-sub">Pick a frame where the DJ is playing. The banner loops a few seconds from there.</p>' +
                 '<div class="hp-grid">' + times.map(function(t) {
-                    var mm = Math.floor(t / 60), ss = t % 60;
-                    return '<button type="button" class="hp-frame' + (cur != null && Math.abs(cur - t) < dur / 30 ? ' on' : '') + '" data-t="' + t + '"><img src="https://image.mux.com/' + pid + '/thumbnail.jpg?time=' + t + '&width=360" alt="" loading="lazy"><span>' + mm + ':' + (ss < 10 ? '0' : '') + ss + '</span></button>';
-                }).join('') + '</div><p class="se-error"></p><div class="del-actions"><button type="button" class="se-btn ghost" data-cancel>Cancel</button></div></div>';
+                    return '<button type="button" class="hp-frame' + (t === near && Math.abs(cur - t) < 5 ? ' on' : '') + '" data-t="' + t + '"><img src="https://image.mux.com/' + pid + '/thumbnail.jpg?time=' + t + '&width=360" alt="" loading="lazy"><span>' + fmt(t) + '</span></button>';
+                }).join('') + '</div>' +
+                // Or an exact time, e.g. 27:27
+                '<form class="hp-time"><label>Or a time<input name="t" placeholder="27:27" inputmode="numeric" value="' + (cur != null && times.indexOf(cur) < 0 ? fmt(cur) : '') + '"></label><img alt="" class="hp-time-pv hidden"><button type="submit" class="se-btn">Use this moment</button></form>' +
+                '<p class="se-error"></p><div class="del-actions"><button type="button" class="se-btn ghost" data-cancel>Cancel</button></div></div>';
             document.body.appendChild(m);
             var close = function() { m.remove(); };
             m.addEventListener('click', function(ev) { if (ev.target === m || ev.target.closest('[data-cancel]')) close(); });
-            m.querySelectorAll('.hp-frame').forEach(function(fb) { fb.addEventListener('click', function() {
-                var spot = { time: Number(fb.dataset.t), focus: { x: 50, y: 45 } };
+            var parseT = function(s) { var p = String(s || '').trim().split(':').map(Number); if (p.some(isNaN) || !p.length || p.length > 3) return null; var t = p.reduce(function(a, x) { return a * 60 + x; }, 0); return t >= 0 && (!dur || t < dur) ? t : null; };
+            var tf = m.querySelector('.hp-time'), tpv = m.querySelector('.hp-time-pv');
+            tf.t.addEventListener('input', function() { var t = parseT(tf.t.value); tpv.classList.toggle('hidden', t == null); if (t != null) tpv.src = 'https://image.mux.com/' + pid + '/thumbnail.jpg?time=' + t + '&width=240'; });
+            tf.addEventListener('submit', function(ev) { ev.preventDefault(); var t = parseT(tf.t.value); if (t == null) { m.querySelector('.se-error').textContent = 'Type a time in the set, like 27:27'; return; } pickAt(t); });
+            var pickAt = function(t) {
+                var spot = { time: t, focus: { x: 50, y: 45 } };
                 m.querySelectorAll('.hp-frame').forEach(function(x) { x.disabled = true; });
                 laFetch('/api/peak-moment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ assetId: a.id, dj: spot, v: 3 }) })
                     .then(function(r) { if (!r.ok) throw new Error(r.status); })
@@ -2457,7 +2522,8 @@
                         _djSpot[a.id] = spot; _heroLoop = null; close(); renderHero();
                     })
                     .catch(function(er) { m.querySelector('.se-error').textContent = 'Could not save it: ' + er.message; m.querySelectorAll('.hp-frame').forEach(function(x) { x.disabled = false; }); });
-            }); });
+            };
+            m.querySelectorAll('.hp-frame').forEach(function(fb) { fb.addEventListener('click', function() { pickAt(Number(fb.dataset.t)); }); });
         });
         function djSpot(a) {
             if (!(a.id in _djSpot) && window.laDjSpot) { _djSpot[a.id] = undefined; window.laDjSpot(a).then(function(s) { _djSpot[a.id] = s || null; if (s) renderHero(); }); }
@@ -3659,6 +3725,14 @@
         @media (max-width: 560px)  { .kpi-grid { grid-template-columns:1fr; gap:12px; } }
         .kpi { background:var(--la-surface); border:1px solid var(--la-line); border-radius:14px; padding:18px 20px; display:flex; flex-direction:column; min-width:0; }
         .kpi-today { color:var(--la-accent); font-weight:600; }
+        .hp-time { display:flex; align-items:flex-end; gap:10px; margin-top:14px; flex-wrap:wrap; }
+        .hp-time label { display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--la-sub); }
+        .hp-time input { width:110px; height:38px; padding:0 12px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input, transparent); color:var(--la-text); font:500 14px 'JetBrains Mono', monospace; }
+        .hp-time-pv { height:38px; border-radius:6px; }
+        .hp-picked { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
+        .hp-picked:empty { display:none; }
+        .hp-chip { display:inline-flex; align-items:center; gap:6px; height:30px; padding:0 10px 0 3px; border-radius:999px; border:1px solid var(--la-line); background:var(--la-chip); color:var(--la-text); font:500 12px 'JetBrains Mono', monospace; cursor:pointer; }
+        .hp-chip img { height:24px; width:40px; object-fit:cover; border-radius:999px; }
         .hero-pick { position:absolute; right:16px; bottom:14px; z-index:20; height:28px; padding:0 12px; border-radius:999px; border:1px solid rgba(255,255,255,.25); background:rgba(0,0,0,.45); color:#fff; font:600 11px 'Helvetica Neue', Helvetica, Arial, sans-serif; cursor:pointer; opacity:0; transition:opacity .2s; }
         #live-feed-hero:hover .hero-pick, .hero-pick:focus-visible { opacity:1; }
         @media (hover:none) { .hero-pick { opacity:1; } }

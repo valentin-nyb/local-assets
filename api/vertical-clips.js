@@ -2,11 +2,12 @@ import { pausedBy, sendPaused } from './_suspend.js';
 import { createClient } from 'redis';
 import { waitUntil } from '@vercel/functions';
 import { getWebSessionAuth } from './_venues.js';
-import { listAllAssets, sessionClips, startVerticals, cutVertical, verifyJob, venueAuth, finishVerticals, processIntakes } from './_verticals.js';
+import { listAllAssets, sessionClips, startVerticals, startMoments, cutVertical, verifyJob, venueAuth, finishVerticals, processIntakes } from './_verticals.js';
 import { planMaxClips } from './_billing.js';
 
 // Vertical originals for a session, cut once from its full recording.
 //   POST { action: 'start', artist, date }   (signed-in venue) starts the clips that aren't cut yet
+//   POST { action: 'moments', artist, date, times } cuts clips at the moments picked (seconds), replacing clips 1…n
 //   POST { action: 'cut', job }              (signed job from 'start' or the Mux webhook) cuts one clip
 
 export default async function handler(req, res) {
@@ -35,7 +36,7 @@ export default async function handler(req, res) {
     return res.status(202).json({ started: true });
   }
 
-  if (body.action !== 'start' && body.action !== 'limits' && body.action !== 'intake') return res.status(400).json({ error: 'Unknown action' });
+  if (body.action !== 'start' && body.action !== 'moments' && body.action !== 'limits' && body.action !== 'intake') return res.status(400).json({ error: 'Unknown action' });
   const session = getWebSessionAuth(req);
   if (!session?.email) return res.status(401).json({ error: 'Not authenticated' });
   if (body.action === 'limits') {
@@ -45,7 +46,8 @@ export default async function handler(req, res) {
       const max = await planMaxClips(r0, session.venueSlug);
       const { master } = session.muxAuth ? sessionClips(await listAllAssets(session.muxAuth), String(body.artist || '').toUpperCase().trim(), String(body.date || '')) : {};
       const fits = master ? Math.max(1, Math.floor(Number(master.duration) / 30)) : max;
-      return res.status(200).json({ max: Math.min(max, fits), planMax: max, unlimited: max >= 60 });
+      // The recording itself, so the moments can be picked from its frames
+      return res.status(200).json({ max: Math.min(max, fits), planMax: max, unlimited: max >= 60, pid: (master?.playback_ids || [])[0]?.id || null, duration: Number(master?.duration) || 0 });
     } finally { await r0.quit().catch(() => {}); }
   }
   if (body.action === 'intake') {
@@ -73,6 +75,12 @@ export default async function handler(req, res) {
     // Finish or clear earlier attempts first, so a retry always starts the clips that are still missing
     await finishVerticals(redis, session.venueSlug, session.muxAuth, await listAllAssets(session.muxAuth)).catch(e => console.error('[vertical-clips] finish', e.message));
     const max = await planMaxClips(redis, session.venueSlug);
+    if (body.action === 'moments') {
+      const times = (Array.isArray(body.times) ? body.times : []).map(Number).filter(t => isFinite(t) && t >= 0).slice(0, max);
+      if (!times.length) return res.status(400).json({ error: 'Pick at least one moment' });
+      const started = await startMoments(redis, session.venueSlug, master, artist, `https://${req.headers.host}`, times);
+      return res.status(200).json({ started });
+    }
     const count = Math.min(max, Math.max(1, Math.round(Number(body.count) || max)));
     const started = await startVerticals(redis, session.venueSlug, master, artist, `https://${req.headers.host}`, true, count);
     console.log('[vertical-clips] start', session.venueSlug, artist, master.id, 'started', started, 'status', master.status, 'policy', (master.playback_ids || [])[0]?.policy);

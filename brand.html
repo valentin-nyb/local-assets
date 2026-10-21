@@ -1267,6 +1267,8 @@
                 Object.keys(saved).forEach(function(k) { names[k] = saved[k]; });
                 // Deleted brand kits stay out unless files were added since
                 hidden.forEach(function(k) { if (!_files.some(function(f) { return f.owner === k; })) delete names[k]; });
+                // An artist with access sees only their own artist folder (not the venue's other artists)
+                if (_member) Object.keys(names).forEach(function(k) { if (k.indexOf('artist-') === 0 && k !== _member.owner) delete names[k]; });
                 var group = function(prefix, kind, label) {
                     return Object.keys(names).filter(function(k) { return k.indexOf(prefix) === 0; })
                         .sort(function(a, b) { return names[a].localeCompare(names[b]); })
@@ -1296,8 +1298,8 @@
                     while (at < artists.length && artists[at].parent === parentKey) at++;
                     artists.splice(at, 0, org);
                     _owners = group('venue-', 'Venue brand kit', 'Venues').concat(artists, loose);
-                } else if (_member) {
-                    // An artist with access: their own folder first, then the venue, then the record labels
+                } else if (_orgType !== 'artist') {
+                    // Artists first, then the venue, then the record labels
                     _owners = artists.concat([org], ownLabels, group('venue-', 'Venue brand kit', 'Venues'), loose);
                 } else {
                     _owners = [org].concat(ownLabels, group('venue-', 'Venue brand kit', 'Venues'), artists, loose);
