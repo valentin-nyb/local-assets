@@ -6,7 +6,7 @@ import { handleUpload } from '@vercel/blob/client';
 import { getWebSessionAuth, MEMBERS_KEY, refreshRegistry, getVenuesConfig } from './_venues.js';
 import { Resend } from 'resend';
 import { accessInviteEmail } from './_emails.js';
-import { cleanWatermark, readWatermark, watermarkKey, readArtistWatermark, artistWatermarkKey, resolveWatermark } from './_watermark.js';
+import { cleanWatermark, readWatermark, watermarkKey, readArtistWatermark, artistWatermarkKey, resolveWatermark, newestWatermark } from './_watermark.js';
 import { renderWatermarkPng, VERTICAL, HORIZONTAL } from './_watermark-render.js';
 import { ownerLimit, accountTypeOf, readAssignments } from './_billing.js';
 
@@ -133,8 +133,8 @@ export default async function handler(req, res) {
           ownerNames: { ...pick(ownerNames), [own]: (ownerNames || {})[own] || session.member.name }, // their own photo, and the account's chosen logo so the dashboard shows the venue's or label's logo
           ownerPhotos: pick(ownerPhotos), ownerPhotosPicked: ownerPhotosPicked.filter(o => seen.includes(o)),
           ownerGenres: pick(ownerGenres), ownerLinks: pick(ownerLinks), hiddenOwners: [],
-          // Their own watermark if they set one, else the account's (which they start from)
-          watermark: (await withRedis(r => readArtistWatermark(r, slug, own)).catch(() => null)) || watermark || cleanWatermark() });
+          // Their own watermark or the account's (which they start from), whichever was saved last
+          watermark: newestWatermark(await withRedis(r => readArtistWatermark(r, slug, own)).catch(() => null), watermark) || cleanWatermark() });
       }
       // Who has been given access to each artist's folder (Give access)
       const access = await withRedis(r => r.hGetAll(`artist_access:${slug}`)).then(m => Object.fromEntries(Object.entries(m || {}).map(([k, v]) => { try { return [k, JSON.parse(v)]; } catch { return [k, []]; } }))).catch(() => ({}));
@@ -228,7 +228,7 @@ export default async function handler(req, res) {
     }
 
     if (body.action === 'setWatermark') {
-      const watermark = cleanWatermark(body.watermark);
+      const watermark = { ...cleanWatermark(body.watermark), at: Date.now() };
       // An artist with access: their own watermark, with only their name (or each clip's artist), their own
       // sessions (or each session's name) and the account's or a record label's logos
       if (session.member) {

@@ -27,6 +27,8 @@ export function cleanWatermark(input = {}) {
   if (typeof input.enabled === 'boolean') w.enabled = input.enabled;
   if (POSITIONS.includes(input.position)) w.position = input.position;
   if (SIZES.includes(input.size)) w.size = input.size;
+  // When it was saved: an artist's own watermark and the account's, the newer one is used
+  if (Number.isFinite(input.at) && input.at > 0) w.at = Math.round(input.at);
   const op = Number(input.opacity);
   if (op >= 0.3 && op <= 1) w.opacity = Math.round(op * 100) / 100;
   // "auto" = the artist's logo, else the account's; "account" = always the account's; or one file's URL
@@ -58,11 +60,19 @@ export async function readArtistWatermark(redis, slug, owner) {
   try { const raw = await redis.get(artistWatermarkKey(slug, owner)); return raw ? cleanWatermark(JSON.parse(raw)) : null; } catch { return null; }
 }
 
+// The artist's own watermark or the account's: whichever was saved last (one saved before saving
+// times were kept counts as the oldest)
+export function newestWatermark(own, account) {
+  if (!own) return account;
+  if (!account) return own;
+  return (account.at || 0) > (own.at || 0) ? account : own;
+}
+
 // The logo and text to stamp on an artist's clips, or null when watermarks are off or there is nothing to stamp.
 export async function resolveWatermark(redis, slug, artist, date = null) {
-  // The artist's own watermark (set by them with access), else the account's
+  // The artist's own watermark (set by them with access) or the account's, whichever was saved last
   const own = artist ? await readArtistWatermark(redis, slug, 'artist-' + String(artist).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')) : null;
-  const w = own || await readWatermark(redis, slug);
+  const w = newestWatermark(own, await readWatermark(redis, slug));
   if (!w.enabled) return null;
 
   const prefix = `brand/${slug}/`;
