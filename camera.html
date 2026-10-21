@@ -2,6 +2,7 @@
 <!DOCTYPE html>
 <html lang="en" class="dark scroll-smooth">
 <head>
+    <script>try { if (JSON.parse(localStorage.getItem('la_admin') || '{}').member) document.documentElement.classList.add('la-member'); } catch (_) {}</script>
     <script>
       (function(){
         var s = localStorage.getItem('la_admin');
@@ -38,7 +39,7 @@
     <script src="/la-dialogs.js?v=2"></script>
     <script src="/la-djframe.js?v=3"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
-    <script src="nav-component.js?v=30"></script>
+    <script src="nav-component.js?v=31"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
         .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
@@ -333,6 +334,9 @@
         .cal-dj { display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 10px; min-width:0; }
         /* A set opens its details (artwork, logos, times) */
         .cal-row[data-cal-i] { cursor:pointer; }
+        /* An artist with access: the calendar is the venue's, followed as it is (no link to change, nothing to set up) */
+        html.la-member #cal-change, html.la-member #cal-remove, html.la-member #cal-form, html.la-member #cal-find, html.la-member .cal-how, html.la-member #cal-expand { display:none !important; }
+        html.la-member .cal-panel.folded .cal-sched:not([hidden]) { display:block !important; }
         .cal-row[data-cal-i]:hover { background:color-mix(in srgb, var(--la-text) 4%, transparent); }
         .ev-facts { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:1px; margin:2px 0 22px; border:1px solid var(--la-line); border-radius:12px; overflow:hidden; background:var(--la-line); }
         .ev-facts div { background:var(--la-raised, #0a0a0a); padding:12px 14px; min-width:0; }

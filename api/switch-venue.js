@@ -27,7 +27,7 @@ export default async function handler(req, res) {
   console.log('[switch-venue]', session.email, '→', venue.slug);
   return res.status(200).json({
     webToken:  signWebToken(session.email, venue.slug),
-    venue:     venue.name || venue.slug,
+    venue:     venue.member ? venue.member.name : (venue.name || venue.slug),
     venueSlug: venue.slug,
     member:    venue.member || null,
     venues:    await venueChoicesTyped(session.email),

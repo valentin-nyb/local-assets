@@ -57,6 +57,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!(location.pathname === '/camera' && new URLSearchParams(location.search).get('view') === 'calendar')) location.replace('/dashboard');
     }
     var _memberHide = _isMember ? 'display:none !important' : '';
+    // An artist with access: their own name at the top and in the account menu (also for a sign-in from before)
+    (function() { try { var a = JSON.parse(localStorage.getItem('la_admin') || '{}'); if (a.member && a.member.name) { var n = String(a.member.name).toUpperCase(); if (a.venue !== n) { a.venue = n; localStorage.setItem('la_admin', JSON.stringify(a)); } localStorage.setItem('la_venue_name', n); } } catch (_) {} })();
     // The local / assets admin account has no Brand Kit (that's for clients)
     var _isAdminAcct = (function() { try { var a = JSON.parse(localStorage.getItem('la_admin') || '{}'); return (a.venueSlug === 'local-assets-admin' || (function(c){ return /^local\s*[\/-]?\s*assets\b/i.test(String(c ? c.name : (a.venue || '')).trim()); })((a.venues || []).filter(function(v){ return v && v.slug === a.venueSlug; })[0])); } catch (_) { return false; } })();
     sidebar.innerHTML = `

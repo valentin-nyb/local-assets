@@ -99,12 +99,17 @@ export default async function handler(req, res) {
       // An artist with access: only their own folder, and the account's logos to download
       if (session.member) {
         const own = session.member.owner;
-        const pickedVenue = ownerPhotos.venue;
-        const mine = files.filter(f => f.owner === own || (f.owner === 'venue' && (f.category === 'logos' || f.url === pickedVenue)));
-        return res.status(200).json({ lut: '', files: mine, orgType: ORG_TYPES.includes(orgType) ? orgType : 'venue', orgName: orgName || '', member: { owner: own, name: session.member.name },
-          ownerNames: { [own]: (ownerNames || {})[own] || session.member.name }, // their own photo, and the account's chosen logo so the dashboard shows the venue's or label's logo
-          ownerPhotos: Object.fromEntries(Object.entries(ownerPhotos).filter(([o]) => o === own || o === 'venue')), ownerPhotosPicked: ownerPhotosPicked.filter(o => o === own || o === 'venue'),
-          ownerGenres: { [own]: (ownerGenres || {})[own] || '' }, ownerLinks: { [own]: (ownerLinks || {})[own] || '' }, watermark: cleanWatermark(), labelArtists: {}, hiddenOwners: [] });
+        // Their own folder (to change), the account's own (venue or label) and any record label linked to
+        // them (to view and download)
+        const labels = Object.entries(labelArtists || {}).filter(([, a]) => a === own).map(([l]) => l);
+        const seen = [own, 'venue', ...labels];
+        const mine = files.filter(f => seen.includes(f.owner));
+        const pick = obj => Object.fromEntries(Object.entries(obj || {}).filter(([o]) => seen.includes(o)));
+        return res.status(200).json({ lut: '', files: mine, orgType: ORG_TYPES.includes(orgType) ? orgType : 'venue', orgName: orgName || '', member: { owner: own, name: session.member.name, readOnly: seen.filter(o => o !== own) },
+          labelArtists: Object.fromEntries(labels.map(l => [l, own])),
+          ownerNames: { ...pick(ownerNames), [own]: (ownerNames || {})[own] || session.member.name }, // their own photo, and the account's chosen logo so the dashboard shows the venue's or label's logo
+          ownerPhotos: pick(ownerPhotos), ownerPhotosPicked: ownerPhotosPicked.filter(o => seen.includes(o)),
+          ownerGenres: pick(ownerGenres), ownerLinks: pick(ownerLinks), watermark: cleanWatermark(), hiddenOwners: [] });
       }
       // Who has been given access to each artist's folder (Give access)
       const access = await withRedis(r => r.hGetAll(`artist_access:${slug}`)).then(m => Object.fromEntries(Object.entries(m || {}).map(([k, v]) => { try { return [k, JSON.parse(v)]; } catch { return [k, []]; } }))).catch(() => ({}));

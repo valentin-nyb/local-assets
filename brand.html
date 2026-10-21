@@ -37,7 +37,7 @@
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=2"></script>
-    <script src="nav-component.js?v=30"></script>
+    <script src="nav-component.js?v=31"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
         .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
@@ -191,6 +191,10 @@
         .bk-acc-list { display:flex; flex-direction:column; gap:8px; margin-top:12px; }
         .bk-acc { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 8px 8px 14px; border:1px solid var(--la-line); border-radius:12px; font-size:13px; color:var(--la-text); }
         /* An artist with access: their folder only; nothing that changes the account */
+        /* Folders that aren't theirs (the venue's, a record label's): to view and download only */
+        body.bk-member .bk-owner:not([data-mine]) [data-up], body.bk-member .bk-owner:not([data-mine]) .del, body.bk-member .bk-owner:not([data-mine]) [data-photo],
+        body.bk-member .bk-owner:not([data-mine]) [data-set-thumb], body.bk-member #bk-file-event, body.bk-member .bk-empty-owner button { display:none !important; }
+        body.bk-member .bk-owner:not([data-mine]) .bk-tag { pointer-events:none; }
         body.bk-member #bk-wm, body.bk-member [data-org], body.bk-member [data-del-owner], body.bk-member [data-edit-owner], body.bk-member [data-use-lut], body.bk-member [data-use-wm] { display:none !important; }
         .bk-ev-list { display:flex; flex-direction:column; gap:6px; max-height:56vh; overflow:auto; margin-top:10px; }
         .bk-ev { display:flex; align-items:center; gap:12px; width:100%; padding:8px 12px 8px 8px; border:1px solid var(--la-line); border-radius:12px; background:var(--la-input); color:var(--la-text); text-align:left; cursor:pointer; }
@@ -1200,7 +1204,7 @@
                     }).join('') + '</div>';
                 }
                 var open = bkIsOpen(o);
-                return heading + '<section class="bk-owner' + (o.parent ? ' bk-sub' : '') + (open ? '' : ' is-closed') + '" data-owner="' + esc(o.key) + '">' +
+                return heading + '<section class="bk-owner' + (o.parent ? ' bk-sub' : '') + (open ? '' : ' is-closed') + '" data-owner="' + esc(o.key) + '"' + (_member && _member.owner === o.key ? ' data-mine' : '') + '>' +
                     '<div class="bk-owner-head"><button type="button" class="bk-fold" aria-expanded="' + open + '" aria-label="' + (open ? 'Close ' : 'Open ') + esc(o.name) + '"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button><div class="bk-avatar">' + avatar + '</div>' +
                     '<div class="min-w-0"><p class="bk-owner-name">' + esc(o.name) + '</p><p class="bk-owner-meta"><span class="bk-kind-' + (/label/i.test(o.kind) ? 'label' : /artist/i.test(o.kind) ? 'artist' : 'venue') + '">' + esc(o.kind) + '</span> · ' + files.length + ' file' + (files.length !== 1 ? 's' : '') +
                         ' · <button type="button" class="bk-org-edit" ' + (o.org ? 'data-org' : 'data-edit-owner="' + esc(o.key) + '"') + '>Edit</button></p></div>' +
@@ -1833,15 +1837,17 @@
         }
 
         function openUpload(ownerKey) {
+            // An artist with access uploads only to their own folder
+            if (_member) ownerKey = _member.owner;
             // "__newLabel:artist-x" opens it for a new record label under that artist
             var labelFor = /^__newLabel:/.test(ownerKey || '') ? ownerKey.slice(11) : '';
             if (labelFor) ownerKey = '__newLabel';
             var artistOpts = _owners.filter(function(o) { return o.key.indexOf('artist-') === 0 || (o.org && _orgType === 'artist'); })
                 .map(function(o) { return '<option value="' + esc(o.key) + '"' + (o.key === labelFor ? ' selected' : '') + '>' + esc(o.name) + '</option>'; }).join('');
-            var opts = _owners.map(function(o) { return '<option value="' + esc(o.key) + '"' + (o.key === ownerKey ? ' selected' : '') + '>' + esc(o.name) + (o.key === 'venue' ? ' (' + ORG_LABELS[_orgType].toLowerCase() + ')' : '') + '</option>'; }).join('') +
-                '<option value="__newVenue"' + (ownerKey === '__newVenue' ? ' selected' : '') + '>+ New venue…</option>' +
+            var opts = (_member ? _owners.filter(function(o) { return o.key === _member.owner; }) : _owners).map(function(o) { return '<option value="' + esc(o.key) + '"' + (o.key === ownerKey ? ' selected' : '') + '>' + esc(o.name) + (o.key === 'venue' ? ' (' + ORG_LABELS[_orgType].toLowerCase() + ')' : '') + '</option>'; }).join('') +
+                (_member ? '' : '<option value="__newVenue"' + (ownerKey === '__newVenue' ? ' selected' : '') + '>+ New venue…</option>' +
                 '<option value="__newArtist"' + (ownerKey === '__newArtist' ? ' selected' : '') + '>+ New artist…</option>' +
-                (artistOpts ? '<option value="__newLabel"' + (ownerKey === '__newLabel' ? ' selected' : '') + '>+ New record label…</option>' : '');
+                (artistOpts ? '<option value="__newLabel"' + (ownerKey === '__newLabel' ? ' selected' : '') + '>+ New record label…</option>' : ''));
             openCamDialog('Upload brand files',
                 '<form id="bk-form" class="cam-form">' +
                 '<div class="bk-row2"><label>For<select name="owner">' + opts + '</select></label>' +

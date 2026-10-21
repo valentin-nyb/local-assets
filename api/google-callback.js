@@ -104,7 +104,8 @@ export default async function handler(req, res) {
       webToken,
       name:     payload.name    || '',
       picture:  payload.picture || '',
-      venue:    venue?.name     || 'Admin',
+      // An artist with access sees their own name at the top, not the venue's or label's
+      venue:    venue?.member ? venue.member.name : (venue?.name || 'Admin'),
       venueSlug,
       venues:   venueChoices(email),
       role:     venue?.role     || 'admin',
