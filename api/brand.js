@@ -101,12 +101,14 @@ export default async function handler(req, res) {
         const own = session.member.owner;
         // Their own folder (to change), the account's own (venue or label) and any record label linked to
         // them (to view and download)
-        const labels = Object.entries(labelArtists || {}).filter(([, a]) => a === own).map(([l]) => l);
+        // Every record label in the account (and any linked to the artist)
+        const labels = [...new Set([...files.map(f => f.owner), ...Object.keys(ownerNames || {}), ...Object.keys(labelArtists || {})].filter(o => /^label-/.test(o)))];
         const seen = [own, 'venue', ...labels];
         const mine = files.filter(f => seen.includes(f.owner));
         const pick = obj => Object.fromEntries(Object.entries(obj || {}).filter(([o]) => seen.includes(o)));
-        return res.status(200).json({ lut: '', files: mine, orgType: ORG_TYPES.includes(orgType) ? orgType : 'venue', orgName: orgName || '', member: { owner: own, name: session.member.name, readOnly: seen.filter(o => o !== own) },
-          labelArtists: Object.fromEntries(labels.map(l => [l, own])),
+        // The account's own folder keeps the account's name (the page would otherwise show the artist's)
+        return res.status(200).json({ lut: '', files: mine, orgType: ORG_TYPES.includes(orgType) ? orgType : 'venue', orgName: orgName || getVenuesConfig()[slug]?.name || '', member: { owner: own, name: session.member.name, readOnly: seen.filter(o => o !== own) },
+          labelArtists: Object.fromEntries(labels.map(l => [l, (labelArtists || {})[l] === own ? own : 'venue'])),
           ownerNames: { ...pick(ownerNames), [own]: (ownerNames || {})[own] || session.member.name }, // their own photo, and the account's chosen logo so the dashboard shows the venue's or label's logo
           ownerPhotos: pick(ownerPhotos), ownerPhotosPicked: ownerPhotosPicked.filter(o => seen.includes(o)),
           ownerGenres: pick(ownerGenres), ownerLinks: pick(ownerLinks), watermark: cleanWatermark(), hiddenOwners: [] });
