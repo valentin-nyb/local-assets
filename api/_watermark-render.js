@@ -6,9 +6,9 @@ import opentype from 'opentype.js';
 // Mux puts it over a clip as an overlay covering the whole frame.
 
 const BOX = { s: [180, 120], m: [260, 180], l: [380, 270] };
-const TEXT_PX = { s: 48, m: 66, l: 128 };
-// Large in the horizontal frame is a little smaller (same height, wider frame: 128 looked too big there)
-const textPx = (size, L) => (size === 'l' && L && L.W > L.H ? 100 : TEXT_PX[size] || TEXT_PX.m);
+const TEXT_PX = { s: 48, m: 66, l: 110 };
+// Large in the horizontal frame is a little smaller (same height, wider frame)
+const textPx = (size, L) => (size === 'l' && L && L.W > L.H ? 86 : TEXT_PX[size] || TEXT_PX.m);
 const TEXT_MAX_WIDTH = 760;
 const STACK_GAP = 24;
 export const VERTICAL = { W: 1080, H: 1920, mx: 60, top: 140, bottom: 120 };

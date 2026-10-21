@@ -604,9 +604,9 @@
         var WM_TEXT_COLOR = [['white', 'White'], ['black', 'Black']];
         // The text has its own size; until one is chosen it follows the logo's
         // Large in the horizontal frame is a little smaller (as on the clips, api/_watermark-render.js)
-        function wmTextPx(L) { var sz = wmTextSize(); return sz === 'l' && L && L.W > L.H ? 100 : WM_TEXT_PX[sz] || WM_TEXT_PX.m; }
+        function wmTextPx(L) { var sz = wmTextSize(); return sz === 'l' && L && L.W > L.H ? 86 : WM_TEXT_PX[sz] || WM_TEXT_PX.m; }
         function wmTextSize() { return (_wm.text && WM_TEXT_PX[_wm.text.size]) ? _wm.text.size : (_wm.size || 'm'); }
-        var WM_TEXT_PX = { s: 48, m: 66, l: 128 };
+        var WM_TEXT_PX = { s: 48, m: 66, l: 110 };
         // The clip worker draws watermark text from these font files (not WOFF2)
         var WM_TEXT_FONT = /\.(ttf|otf|woff)$/i;
         function wmLogos() { return _files.filter(function(f) { return f.category === 'logos' && /\.(png|svg|webp|jpe?g|gif)$/i.test(f.name); }); }
