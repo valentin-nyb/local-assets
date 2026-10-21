@@ -172,7 +172,9 @@ export default async function handler(req, res) {
     if (!ar?.ok) return res.status(404).json({ error: 'Asset not found' });
     const v = { time: Math.round(Number(dj.time)), focus: { x: Math.round(Number(dj.focus.x)), y: Math.round(Number(dj.focus.y)) } };
     const ver = /^[2-9]$/.test(String(body?.v || '')) ? String(body.v) : '2';
-    await withRedis(r => r.set(`djframe${ver}:${assetId}`, JSON.stringify(v)));
+    // The banner moment is the account's to choose: an artist with access only saves the one found automatically, never over it
+    const saved = await withRedis(async r => (session.member ? await r.set(`djframe${ver}:${assetId}`, JSON.stringify(v), { NX: true }) : await r.set(`djframe${ver}:${assetId}`, JSON.stringify(v))));
+    if (!saved) return res.status(403).json({ error: 'Only the account can change the banner moment' });
     return res.status(200).json({ ok: true });
   }
 
