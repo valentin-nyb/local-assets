@@ -857,6 +857,12 @@
             t.classList.add('show');
             clearTimeout(t._h); t._h = setTimeout(function() { t.classList.remove('show'); }, 2600);
         }
+        // Deleted ids → when, hidden from the list for 2 minutes while the storage catches up
+        var _justDeleted = {};
+        function markDeleted(id) {
+            _justDeleted[id] = Date.now();
+            setTimeout(function() { delete _justDeleted[id]; }, 120000);
+        }
         function deleteAsset(btn) {
             var label = btn.dataset.delLabel || 'this file';
             var isBlob = /^blob:/.test(btn.dataset.delId || '');
@@ -894,6 +900,7 @@
                     var r = await laFetch('/api/delete-asset', { method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ id: btn.dataset.delId, url: btn.dataset.delUrl || '' }) });
                     var d = await r.json(); if (!r.ok) throw new Error(d.error || r.status);
+                    markDeleted(btn.dataset.delId);
                     close();
                     laToast(kind.charAt(0).toUpperCase() + kind.slice(1) + ' deleted');
                     fetchRecentUploads();
@@ -937,7 +944,7 @@
                 if (v) h['X-LA-Venue'] = v;
                 try {
                     var r = await laFetch('/api/delete-asset', { method: 'POST', headers: h, body: JSON.stringify(files[i]) });
-                    if (!r.ok && r.status !== 404) failed++;
+                    if (!r.ok && r.status !== 404) failed++; else markDeleted(files[i].id);
                 } catch (_) { failed++; }
             }
             if (!failed) {
@@ -1222,6 +1229,8 @@
                 const data = await res.json();
                 if (res.ok) {
                     muxAssets = Array.isArray(data) ? data : (data.data || []);
+                    // Files just deleted can still be listed for a little while: they stay hidden
+                    muxAssets = muxAssets.filter(function(a) { return !_justDeleted[a.id]; });
                     // Admin view: remember each asset's and artist's client account
                     muxAssets.forEach(function(a) {
                         if (!a._venue) return;
