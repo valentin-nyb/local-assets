@@ -51,6 +51,8 @@
                     background: url(/logos/Green@2x.png) left center / contain no-repeat; }
 
         .eyebrow { font-family: var(--mono); font-size: 10px; letter-spacing: .24em; text-transform: uppercase; color: #7c8178; margin-bottom: 18px; }
+        h1 .l1, h1 .l2 { display:block; width:max-content; white-space:nowrap; }
+        h1 .l2 { line-height:.9; }
         h1 { font-family: var(--display); font-weight: 700; font-size: clamp(28px, 8.6vw, 44px); line-height: .96; letter-spacing: -0.02em; text-transform: uppercase; color: var(--fg); }
         h1 span { display: inline-block; white-space: nowrap; cursor: default; transition: color .3s, transform .3s; }
         @media (hover: hover) { h1 span:hover { color: var(--green); transform: translateX(6px); } }
@@ -98,7 +100,17 @@
 
     <main class="wrap">
         <p class="eyebrow">Welcome back</p>
-        <h1><span>Log in to</span><br><span>your workspace</span></h1>
+        <h1 id="lg-title"><span class="l1">Log in to your</span><span class="l2">Workspace™</span></h1>
+        <script>
+            // The second line is drawn at the size that makes it exactly as wide as the first
+            (function() {
+                var h = document.getElementById('lg-title'), a = h.querySelector('.l1'), b = h.querySelector('.l2');
+                function fit() { b.style.fontSize = ''; var w1 = a.getBoundingClientRect().width, w2 = b.getBoundingClientRect().width; if (w1 && w2) b.style.fontSize = (parseFloat(getComputedStyle(b).fontSize) * w1 / w2) + 'px'; }
+                fit();
+                if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+                window.addEventListener('resize', fit);
+            })();
+        </script>
         <p class="lead">Your sessions, brand kit and channels, in one place.</p>
 
         <button id="google-btn" type="button">
