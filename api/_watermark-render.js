@@ -7,6 +7,8 @@ import opentype from 'opentype.js';
 
 const BOX = { s: [180, 120], m: [260, 180], l: [380, 270] };
 const TEXT_PX = { s: 48, m: 66, l: 128 };
+// Large in the horizontal frame is a little smaller (same height, wider frame: 128 looked too big there)
+const textPx = (size, L) => (size === 'l' && L && L.W > L.H ? 100 : TEXT_PX[size] || TEXT_PX.m);
 const TEXT_MAX_WIDTH = 760;
 const STACK_GAP = 24;
 export const VERTICAL = { W: 1080, H: 1920, mx: 60, top: 140, bottom: 120 };
@@ -54,13 +56,13 @@ async function logoLayer(wm, s = 1) {
 // The title, and the subtitle under it in its own font (smaller), as one block lined up on the side
 // of its corner. Both shrink together when the block is wider than maxWidth.
 export const SUB_SCALE = 0.6, SUB_GAP = 0.2;
-async function textLayer(text, size, maxWidth, s = 1, align = 'l') {
+async function textLayer(text, size, maxWidth, s = 1, align = 'l', L = null) {
   const lines = [{ font: opentype.parse(new Uint8Array(await download(text.font)).buffer), value: text.value, k: 1 }];
   if (text.sub?.value && text.sub.font) {
     try { lines.push({ font: opentype.parse(new Uint8Array(await download(text.sub.font)).buffer), value: text.sub.value, k: SUB_SCALE }); }
     catch (e) { console.error('[watermark-render] subtitle:', e.message); }
   }
-  let px = (TEXT_PX[size] || TEXT_PX.m) * s;
+  let px = textPx(size, L) * s;
   const measure = () => lines.map(l => l.font.getPath(l.value, 0, 0, px * l.k).getBoundingBox());
   let bbs = measure(), width = Math.max(...bbs.map(b => b.x2 - b.x1));
   if (width > maxWidth) { px = px * maxWidth / width; bbs = measure(); width = Math.max(...bbs.map(b => b.x2 - b.x1)); }
@@ -137,7 +139,7 @@ async function compose(wm, L, width, movingLogo) {
     // Both in the middle: side by side, the text then the logo, centred together
     const besides = logo && tPos === 'cc' && position === 'cc', G = 32 * s;
     const room = besides ? Math.min(TEXT_MAX_WIDTH * s, L.W - 2 * L.mx - logo.w - G) : sameRow ? Math.min(TEXT_MAX_WIDTH * s, L.W - 2 * L.mx - logo.w - 48 * s) : TEXT_MAX_WIDTH * s;
-    const t = await textLayer(wm.text, wm.text.size || wm.size, room, s, besides ? 'l' : tPos[1]).catch(e => { console.error('[watermark-render] text:', e.message); return null; });
+    const t = await textLayer(wm.text, wm.text.size || wm.size, room, s, besides ? 'l' : tPos[1], L).catch(e => { console.error('[watermark-render] text:', e.message); return null; });
     if (t && besides) {
       const lg = layers[0], left = Math.round((L.W - (t.w + G + logo.w)) / 2);
       layers.push({ ...t, left, top: Math.round((L.H - t.h) / 2) });

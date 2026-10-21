@@ -327,7 +327,7 @@
             background-color:var(--la-chip); background-image:linear-gradient(45deg, rgba(128,128,128,.12) 25%, transparent 25%), linear-gradient(-45deg, rgba(128,128,128,.12) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(128,128,128,.12) 75%), linear-gradient(-45deg, transparent 75%, rgba(128,128,128,.12) 75%);
             background-size:16px 16px; background-position:0 0, 0 8px, 8px -8px, -8px 0; }
         .bk-wm-preview img.logo { position:absolute; object-fit:contain; transition:all .15s; }
-        .bk-wm-preview .text { position:absolute; color:#fff; white-space:nowrap; line-height:1; transition:all .15s; display:flex; flex-direction:column; }
+        .bk-wm-preview .text { position:absolute; width:max-content; color:#fff; white-space:nowrap; line-height:1; transition:all .15s; display:flex; flex-direction:column; }
         .bk-wm-preview .text .t2 { font-size:.6em; }
         .bk-wm-textrow { display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; min-width:0; }
         .bk-wm-textrow input { height:36px; flex:1 1 200px; max-width:260px; min-width:0; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 10px; font-size:13px; outline:none; }
@@ -603,6 +603,8 @@
         var WM_TEXT_SRC = [['artist', 'Artist name'], ['custom', 'Custom']];
         var WM_TEXT_COLOR = [['white', 'White'], ['black', 'Black']];
         // The text has its own size; until one is chosen it follows the logo's
+        // Large in the horizontal frame is a little smaller (as on the clips, api/_watermark-render.js)
+        function wmTextPx(L) { var sz = wmTextSize(); return sz === 'l' && L && L.W > L.H ? 100 : WM_TEXT_PX[sz] || WM_TEXT_PX.m; }
         function wmTextSize() { return (_wm.text && WM_TEXT_PX[_wm.text.size]) ? _wm.text.size : (_wm.size || 'm'); }
         var WM_TEXT_PX = { s: 48, m: 66, l: 128 };
         // The clip worker draws watermark text from these font files (not WOFF2)
@@ -888,12 +890,12 @@
                     var tp = _wm.text.position;
                     // Same corner as the logo: text sits next to it, further from the edge
                     var lhClip = url && img.complete && img.naturalWidth ? Math.min((WM_BOX[_wm.size] || WM_BOX.m)[1], (WM_BOX[_wm.size] || WM_BOX.m)[0] * img.naturalHeight / img.naturalWidth) : 0;
-                    txt.style.fontSize = Math.round(WM_TEXT_PX[wmTextSize()] * k) + 'px';
+                    txt.style.fontSize = Math.round(wmTextPx(L) * k) + 'px';
                     txt.style.maxWidth = 'none';
                     // On the same row as the logo, the text keeps clear of it (as on the clips)
                     var lwClip = lhClip ? lhClip * img.naturalWidth / img.naturalHeight : 0;
                     var room = besides && lhClip ? Math.min(760, L.W - 2 * L.mx - lwClip - 32) : lhClip && tp !== p && tp[0] === p[0] ? Math.min(760, L.W - 2 * L.mx - lwClip - 48) : 760;
-                    if (txt.offsetWidth / k > room) txt.style.fontSize = (WM_TEXT_PX[wmTextSize()] * room / (txt.offsetWidth / k)) * k + 'px';
+                    if (txt.offsetWidth / k > room) txt.style.fontSize = (wmTextPx(L) * room / (txt.offsetWidth / k)) * k + 'px';
                     txt.style.gap = (parseFloat(txt.style.fontSize) * WM_SUB_GAP * 0.5) + 'px';
                     var thClip = txt.offsetHeight / k;
                     // Same corner as the logo: next to it. Same row, other side: lined up with the middle of the logo.
@@ -1022,7 +1024,7 @@
                 }
                 if (tf && family) {
                     // The title, and the subtitle under it in its own font, laid out as on the clips
-                    var px = WM_TEXT_PX[wmTextSize()] || WM_TEXT_PX.m, pad = 12;
+                    var px = wmTextPx(L), pad = 12;
                     var room = besides ? Math.min(760, W - 2 * L.mx - lw - 32) : logo && tp !== p && tp[0] === p[0] ? Math.min(760, W - 2 * L.mx - lh * ar - 48) : 760;
                     var lines = [{ fam: family, v: wmTextValue(), k: 1 }];
                     if (r[2]) lines.push({ fam: r[2], v: wmSub().value, k: WM_SUB_SCALE });
