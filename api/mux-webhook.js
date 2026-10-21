@@ -225,8 +225,17 @@ export default async function handler(req, res) {
         if (!data.live_stream_id && !multiCam && artist && duration > 10 && playbackId) {
             console.log(`[Pipeline] MASTER "${artist}" (${Math.round(duration)}s) — generating audio + clips + thumbs...`);
 
+            // Once per recording (Mux can send "ready" again), and only when the recording has sound
+            const hasSound = (data.tracks || []).some(t => t.type === 'audio');
+            let firstReady = true;
+            try {
+                const rc = createClient({ url: process.env.REDIS_URL }); await rc.connect();
+                try { firstReady = !!(await rc.set(`pipe_ready:${assetId}`, '1', { NX: true, EX: 30 * 86400 })); } finally { await rc.quit().catch(() => {}); }
+            } catch (e) { console.error('[Pipeline] dedupe', e.message); }
+            if (!firstReady) { console.log(`[Pipeline] "${artist}" ${assetId} already handled`); return res.status(200).send('OK'); }
+            if (!hasSound) console.log(`[Audio] "${artist}" ${assetId} has no sound: no HQ audio made from it`);
             const results = await Promise.allSettled([
-                createAudioAsset(auth, assetId, artist),
+                hasSound ? createAudioAsset(auth, assetId, artist) : Promise.resolve(null),
                 createSocialClips(auth, found, assetId, artist, duration),
                 createThumbnails(auth, assetId, artist, playbackId, duration),
             ]);

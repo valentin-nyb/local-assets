@@ -1326,7 +1326,14 @@
                 return new Date(a.created_at * 1000).toISOString().slice(0, 10) === sessionDate;
             }
             function findLinked(key, sessionDate) {
-                const candidates = muxByKey[key] || [];
+                let candidates = muxByKey[key] || [];
+                // HQ audio: never a file without sound (a copy made from a recording that had none). The one
+                // uploaded for this session's date comes first, then other uploads, then copies made from the recording.
+                if (/ \/\/ AUDIO$/.test(key)) {
+                    const sounds = a => !(a.tracks && a.tracks.length) || a.tracks.some(t => t.type === 'audio');
+                    const rank = a => { let o = null; try { o = JSON.parse(a.passthrough); } catch (e) {} return o && o.date === sessionDate ? 0 : o ? 1 : 2; };
+                    candidates = candidates.filter(sounds).slice().sort((a, b) => rank(a) - rank(b) || Number(b.created_at) - Number(a.created_at));
+                }
                 const match = candidates.find(a => dateMatches(a, sessionDate));
                 if (match) return match;
                 // A master ("NAME") must never fall back to its sub-assets ("NAME // THUMB …")
