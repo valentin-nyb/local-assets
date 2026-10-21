@@ -51,10 +51,18 @@ export async function readWatermark(redis, slug) {
   try { return cleanWatermark(JSON.parse(await redis.get(watermarkKey(slug)) || '{}')); }
   catch { return { ...WATERMARK_DEFAULTS }; }
 }
+// An artist with access can set their own watermark (their name, their sessions, the account's logos):
+// used on their clips instead of the account's. owner: artist-<slug>
+export const artistWatermarkKey = (slug, owner) => `watermark_artist:${slug}:${owner}`;
+export async function readArtistWatermark(redis, slug, owner) {
+  try { const raw = await redis.get(artistWatermarkKey(slug, owner)); return raw ? cleanWatermark(JSON.parse(raw)) : null; } catch { return null; }
+}
 
 // The logo and text to stamp on an artist's clips, or null when watermarks are off or there is nothing to stamp.
 export async function resolveWatermark(redis, slug, artist, date = null) {
-  const w = await readWatermark(redis, slug);
+  // The artist's own watermark (set by them with access), else the account's
+  const own = artist ? await readArtistWatermark(redis, slug, 'artist-' + String(artist).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')) : null;
+  const w = own || await readWatermark(redis, slug);
   if (!w.enabled) return null;
 
   const prefix = `brand/${slug}/`;

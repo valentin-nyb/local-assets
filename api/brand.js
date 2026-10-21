@@ -5,7 +5,7 @@ import { handleUpload } from '@vercel/blob/client';
 import { getWebSessionAuth, MEMBERS_KEY, refreshRegistry, getVenuesConfig } from './_venues.js';
 import { Resend } from 'resend';
 import { accessInviteEmail } from './_emails.js';
-import { cleanWatermark, readWatermark, watermarkKey } from './_watermark.js';
+import { cleanWatermark, readWatermark, watermarkKey, readArtistWatermark, artistWatermarkKey } from './_watermark.js';
 import { ownerLimit, accountTypeOf, readAssignments } from './_billing.js';
 
 // Brand kit: logos, guidelines, fonts and other brand files for a venue and its artists.
@@ -111,7 +111,9 @@ export default async function handler(req, res) {
           labelArtists: Object.fromEntries(labels.map(l => [l, (labelArtists || {})[l] === own ? own : 'venue'])),
           ownerNames: { ...pick(ownerNames), [own]: (ownerNames || {})[own] || session.member.name }, // their own photo, and the account's chosen logo so the dashboard shows the venue's or label's logo
           ownerPhotos: pick(ownerPhotos), ownerPhotosPicked: ownerPhotosPicked.filter(o => seen.includes(o)),
-          ownerGenres: pick(ownerGenres), ownerLinks: pick(ownerLinks), watermark: watermark || cleanWatermark(), hiddenOwners: [] });   // the account's watermark, to see
+          ownerGenres: pick(ownerGenres), ownerLinks: pick(ownerLinks), hiddenOwners: [],
+          // Their own watermark if they set one, else the account's (which they start from)
+          watermark: (await withRedis(r => readArtistWatermark(r, slug, own)).catch(() => null)) || watermark || cleanWatermark() });
       }
       // Who has been given access to each artist's folder (Give access)
       const access = await withRedis(r => r.hGetAll(`artist_access:${slug}`)).then(m => Object.fromEntries(Object.entries(m || {}).map(([k, v]) => { try { return [k, JSON.parse(v)]; } catch { return [k, []]; } }))).catch(() => ({}));
@@ -126,6 +128,7 @@ export default async function handler(req, res) {
       const own = session.member.owner;
       const ownFile = u => { try { const p = decodeURIComponent(new URL(String(u || '')).pathname.slice(1)); return parsePath(p, slug)?.owner === own; } catch { return false; } };
       const ok = !body.action ? true
+        : body.action === 'setWatermark' ? true
         : ['setPhoto', 'move', 'setFileLabel', 'delete'].includes(body.action) ? ownFile(body.url)
         : body.action === 'setOwnerDetails' ? body.owner === own : false;
       if (!ok) return res.status(403).json({ error: 'Artists can change only their own Brand Kit folder' });
@@ -175,6 +178,21 @@ export default async function handler(req, res) {
 
     if (body.action === 'setWatermark') {
       const watermark = cleanWatermark(body.watermark);
+      // An artist with access: their own watermark, with only their name (or each clip's artist), their own
+      // sessions (or each session's name) and the account's or a record label's logos
+      if (session.member) {
+        const own = session.member.owner, name = String(session.member.name || '').toUpperCase().trim();
+        const logoOk = u => { try { const o = parsePath(decodeURIComponent(new URL(u).pathname.slice(1)), slug)?.owner; return o === 'venue' || /^label-/.test(o || ''); } catch { return false; } };
+        if (watermark.logo && watermark.logo.startsWith('https://') && !logoOk(watermark.logo)) watermark.logo = 'account';
+        if (watermark.logo === 'auto') watermark.logo = 'account';
+        if (watermark.text) {
+          if (watermark.text.source !== 'artist') { watermark.text.source = 'custom'; watermark.text.value = name; watermark.text.pick = own; }
+          const sub = watermark.text.sub;
+          if (sub && sub.source !== 'session' && !(sub.pick && sub.pick.split('|')[0].toUpperCase().trim() === name)) delete watermark.text.sub;
+        }
+        await withRedis(r => r.set(artistWatermarkKey(slug, own), JSON.stringify(watermark)));
+        return res.status(200).json({ watermark });
+      }
       await withRedis(r => r.set(watermarkKey(slug), JSON.stringify(watermark)));
       return res.status(200).json({ watermark });
     }
