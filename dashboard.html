@@ -1154,7 +1154,9 @@
             // How many clips: up to the account's plan limit (and what the recording is long enough for)
             var lim = { max: 5, planMax: 5 };
             try { var lr = await laFetch('/api/vertical-clips', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'limits', artist: btn.dataset.wmArtist, date: btn.dataset.wmDate }) }); if (lr.ok) lim = await lr.json(); } catch (_) {}
-            var count = await askClipCount(lim);
+            // Adding back deleted clips: straight to choosing the moment of the set to clip, one per free place
+            var adding = !!(btn.dataset.wmClips && lim.free > 0 && lim.pid && lim.duration && btn.dataset.silent !== '1');
+            var count = adding ? await pickClipMoments(Object.assign({}, lim, { max: lim.free })) : await askClipCount(lim);
             if (!count) return;
             btn.disabled = true; btn.textContent = 'Starting…';
             try {
@@ -1202,8 +1204,8 @@
                 var fmt = function(t) { var mm = Math.floor(t / 60), ss = Math.round(t % 60); return mm + ':' + (ss < 10 ? '0' : '') + ss; };
                 var thumb = function(t, w) { return 'https://image.mux.com/' + pid + '/thumbnail.jpg?time=' + t + '&width=' + w; };
                 var m = document.createElement('div'); m.className = 'se-backdrop';
-                m.innerHTML = '<div class="se-panel hp-panel" role="dialog" aria-modal="true"><p class="se-title">Choose the clip moments</p>' +
-                    '<p class="hp-sub">Pick up to ' + max + ' frames where the DJ is playing. Each clip runs 45 seconds from there. ' + (lim.free ? 'The first ' + (lim.free === 1 ? 'one fills the free place' : lim.free + ' fill the ' + lim.free + ' free places') + '; any more replace the current clips in order.' : 'They replace the current clips in order.') + '</p>' +
+                m.innerHTML = '<div class="se-panel hp-panel" role="dialog" aria-modal="true"><p class="se-title">' + (max === 1 ? 'Choose the moment to clip' : 'Choose the moments to clip') + '</p>' +
+                    '<p class="hp-sub">Choose ' + (max === 1 ? 'the moment of the set to clip' : 'up to ' + max + ' moments of the set to clip') + ': tap a point in the set or type a time. Each clip runs 45 seconds from there. ' + (lim.free ? (lim.free >= max ? (max === 1 ? 'It goes in the free place.' : 'They go in the free places.') : 'The first ' + (lim.free === 1 ? 'one fills the free place' : lim.free + ' fill the free places') + '; any more replace the current clips in order.') : 'They replace the current clips in order.') + '</p>' +
                     '<div class="hp-grid">' + times.map(function(t) { return '<button type="button" class="hp-frame" data-t="' + t + '"><img src="' + thumb(t, 360) + '" alt="" loading="lazy"><span>' + fmt(t) + '</span></button>'; }).join('') + '</div>' +
                     '<form class="hp-time"><label>Or a time<input name="t" placeholder="27:27" inputmode="numeric"></label><img alt="" class="hp-time-pv hidden"><button type="submit" class="se-btn">Add moment</button></form>' +
                     '<div class="hp-picked"></div><p class="se-error"></p>' +
