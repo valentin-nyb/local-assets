@@ -3901,8 +3901,8 @@
         .hero-pick { position:absolute; right:16px; bottom:14px; z-index:20; height:28px; padding:0 12px; border-radius:999px; border:1px solid rgba(255,255,255,.25); background:rgba(0,0,0,.45); color:#fff; font:600 11px 'Helvetica Neue', Helvetica, Arial, sans-serif; cursor:pointer; opacity:0; transition:opacity .2s; }
         #live-feed-hero:hover .hero-pick, .hero-pick:focus-visible { opacity:1; }
         /* The banner keeps its shape as the window widens: taller in proportion, not just longer */
-        /* (a height that grows with the width; never less than its text needs, so nothing is cut) */
-        @media (min-width: 768px) { #live-feed-hero { min-height: calc((100vw - 16rem - 64px) / 8); } }
+        /* (it only ever grows: taller on wider windows or when its text needs it, never below its normal 184px) */
+        @media (min-width: 768px) { #live-feed-hero { min-height: max(184px, calc((100vw - 16rem - 64px) / 8)); } }
         @media (hover:none) { .hero-pick { opacity:1; } }
         .hp-panel { max-width:860px !important; width:calc(100vw - 32px); }
         .hp-sub { font-size:13px; color:var(--la-sub); margin:4px 0 14px; }
