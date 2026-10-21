@@ -1044,7 +1044,7 @@
             document.querySelectorAll('.wm-apply').forEach(function(btn) {
                 var ids = (btn.dataset.wmClips || '').split(',').filter(Boolean);
                 var pending = ids.some(function(id) { return _wmState.pendingIds.indexOf(id) >= 0; });
-                var marked = ids.some(function(id) { return _wmState.watermarked.indexOf(id) >= 0; });
+                var marked = ids.length > 0 && ids.every(function(id) { return _wmState.watermarked.indexOf(id) >= 0; });
                 var horizontal = ids.some(function(id) { return _wmState.horizontal.indexOf(id) >= 0; });
                 // Hidden only while new vertical clips are being made for this session
                 btn.classList.toggle('hidden', !marked && !pending && isCutting(btn));
@@ -1063,15 +1063,60 @@
                 btn.textContent = cutting ? 'Making vertical clips…' : !ids.length ? 'Make vertical clips' : horizontal ? 'Make vertical (9:16)' : silent ? 'Re-cut with sound' : 'Cut missing clips';
             });
         }
+        // The vertical clips to watermark: all ticked to start with; clips already watermarked are shown as done
+        function pickWatermarkClips(ids, pids) {
+            return new Promise(function(resolve) {
+                var m = document.createElement('div');
+                m.className = 'se-backdrop';
+                m.innerHTML = '<form class="se-panel wp-panel" role="dialog" aria-modal="true" aria-labelledby="wp-title">' +
+                    '<div class="se-head"><p id="wp-title" class="se-title">Apply the watermark</p><button type="button" class="se-x" data-cancel aria-label="Close">&times;</button></div>' +
+                    '<p class="wp-help">Choose the vertical clips. Watermarked copies are shown in their place; the originals are kept, so you can remove it later.</p>' +
+                    '<div class="wp-grid">' + ids.map(function(id, i) {
+                        var done = _wmState.watermarked.indexOf(id) >= 0, pid = pids[i];
+                        return '<label class="wp-clip' + (done ? ' done' : '') + '">' +
+                            '<input type="checkbox" value="' + escHtml(id) + '"' + (done ? ' disabled' : ' checked') + '>' +
+                            (pid ? '<img src="https://image.mux.com/' + escHtml(pid) + '/thumbnail.png?width=180&height=320&fit_mode=smartcrop&time=5" alt="" loading="lazy">' : '<span class="wp-ph">Processing</span>') +
+                            '<span class="wp-num">' + String(i + 1).padStart(2, '0') + (done ? ' · Watermarked' : '') + '</span></label>';
+                    }).join('') + '</div>' +
+                    '<div class="wp-bar"><button type="button" class="se-btn ghost" data-all>Select all</button><span class="wp-count"></span></div>' +
+                    '<div class="se-actions"><button type="button" class="se-btn ghost" data-cancel>Cancel</button><button type="submit" class="se-btn primary">Apply watermark</button></div>' +
+                '</form>';
+                document.body.appendChild(m);
+                var form = m.querySelector('form'), boxes = Array.prototype.slice.call(form.querySelectorAll('input[type=checkbox]:not(:disabled)'));
+                var go = form.querySelector('[type=submit]'), count = form.querySelector('.wp-count'), all = form.querySelector('[data-all]');
+                var paint = function() {
+                    var n = boxes.filter(function(b) { return b.checked; }).length;
+                    count.textContent = n + ' of ' + boxes.length + ' selected';
+                    go.disabled = !n; go.textContent = n ? 'Apply to ' + n + ' clip' + (n !== 1 ? 's' : '') : 'Apply watermark';
+                    all.textContent = n === boxes.length ? 'Select none' : 'Select all';
+                    all.disabled = !boxes.length;
+                };
+                var done = function(v) { m.remove(); document.removeEventListener('keydown', onKey); resolve(v); };
+                var onKey = function(e) { if (e.key === 'Escape') done(null); };
+                document.addEventListener('keydown', onKey);
+                m.addEventListener('click', function(e) { if (e.target === m) done(null); });
+                m.querySelectorAll('[data-cancel]').forEach(function(b) { b.onclick = function() { done(null); }; });
+                boxes.forEach(function(b) { b.onchange = paint; });
+                all.onclick = function() { var on = boxes.some(function(b) { return !b.checked; }); boxes.forEach(function(b) { b.checked = on; }); paint(); };
+                form.onsubmit = function(e) { e.preventDefault(); var v = boxes.filter(function(b) { return b.checked; }).map(function(b) { return b.value; }); if (v.length) done(v); };
+                paint();
+                go.focus();
+            });
+        }
         document.addEventListener('click', async function(e) {
             var btn = e.target.closest('.wm-apply');
             if (!btn) return;
             e.stopPropagation();
             var ids = (btn.dataset.wmClips || '').split(',').filter(Boolean);
             var removing = btn.classList.contains('is-remove');
-            var ok = await laConfirm(removing
-                ? { title: 'Remove the watermark?', message: 'The watermarked copies are deleted and the original vertical clips are shown again, ready for a new watermark.', confirmText: 'Remove watermark', danger: true }
-                : { title: 'Apply the watermark?', message: 'Watermarked copies of these ' + ids.length + ' vertical clips are shown in their place. The originals are kept, so you can remove it or change it later.', confirmText: 'Apply watermark' });
+            var ok;
+            if (removing) ok = await laConfirm({ title: 'Remove the watermark?', message: 'The watermarked copies are deleted and the original vertical clips are shown again, ready for a new watermark.', confirmText: 'Remove watermark', danger: true });
+            else {
+                // Choose which clips get the watermark
+                var picked = await pickWatermarkClips(ids, (btn.dataset.wmPids || '').split(','));
+                if (!picked) return;
+                ids = picked; ok = true;
+            }
             if (!ok) return;
             btn.disabled = true; btn.textContent = removing ? 'Removing…' : 'Applying…';
             try {
@@ -1654,7 +1699,7 @@
                 var hasSound = function(a) { return (a.tracks || []).some(function(t) { return t.type === 'audio'; }); };
                 var silent = mAsset && hasSound(mAsset) && clips.some(function(c) { return c.status === 'ready' && c.tracks && !hasSound(c); }) ? 1 : 0;
                 html += '<button type="button" class="wm-restore' + (missing || silent ? '' : ' hidden') + '" data-silent="' + silent + '" data-missing="' + missing + '" data-wm-artist="' + escHtml(name) + '" data-wm-date="' + escHtml(sessionDate) + '" data-wm-clips="' + escHtml(clips.map(function(c) { return c.id; }).join(',')) + '" title="Cut the vertical clips once from the full recording">Make vertical clips</button>';
-                html += '<button type="button" class="wm-apply" data-wm-artist="' + escHtml(name) + '" data-wm-date="' + escHtml(sessionDate) + '" data-wm-clips="' + escHtml(clips.map(function(c) { return c.id; }).join(',')) + '" title="Put the Brand Kit watermark on these clips">Apply watermark</button>';
+                html += '<button type="button" class="wm-apply" data-wm-artist="' + escHtml(name) + '" data-wm-date="' + escHtml(sessionDate) + '" data-wm-pids="' + escHtml(clips.map(function(c) { return c.status === 'ready' && c.playback_ids && c.playback_ids[0] ? c.playback_ids[0].id : ''; }).join(',')) + '" data-wm-clips="' + escHtml(clips.map(function(c) { return c.id; }).join(',')) + '" title="Put the Brand Kit watermark on these clips">Apply watermark</button>';
                 // Download all clips (zip) and preview, like the other rows
                 var clipsOn = allPids.length > 0;
                 html += '<button class="w-8 h-8 flex items-center justify-center rounded-full transition-colors ' + (clipsOn ? 'hover:bg-primary/10' : 'opacity-30') + '"' + (clipsOn ? '' : ' disabled') + ' title="' + (clipsOn ? 'Download all clips' : 'Processing') + '" data-pids="' + pidsAttr + '" data-title="' + escAttr(name + ' ' + sessionDate) + '" onclick="dlClips(this)">';
@@ -3951,6 +3996,20 @@
         .se-btn.primary { background:var(--la-accent); color:var(--la-accent-ink); }
         .se-btn.ghost { background:none; color:var(--la-text); border-color:var(--la-line); }
         .se-btn:disabled { opacity:.6; }
+        /* Apply watermark: choose the clips */
+        .wp-panel { width:640px; max-height:calc(100vh - 32px); overflow:auto; }
+        .wp-help { font-size:13px; line-height:1.5; color:var(--la-sub); margin-top:-6px; }
+        .wp-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(88px, 1fr)); gap:10px; }
+        .wp-clip { position:relative; display:flex; flex-direction:column; gap:6px; cursor:pointer; }
+        .wp-clip img, .wp-clip .wp-ph { width:100%; aspect-ratio:9/16; object-fit:cover; border-radius:8px; border:2px solid var(--la-line); background:var(--la-chip); transition:border-color .15s, opacity .15s; }
+        .wp-clip .wp-ph { display:flex; align-items:center; justify-content:center; font:500 8px/1 'JetBrains Mono', monospace; letter-spacing:.12em; text-transform:uppercase; color:var(--la-dim); }
+        .wp-clip input { position:absolute; top:6px; left:6px; width:18px; height:18px; accent-color:var(--la-accent); z-index:1; }
+        .wp-clip:has(input:checked) img, .wp-clip:has(input:checked) .wp-ph { border-color:var(--la-accent); }
+        .wp-clip:has(input:not(:checked)) img { opacity:.55; }
+        .wp-clip.done { cursor:default; } .wp-clip.done img { opacity:.45; }
+        .wp-num { font:500 9px/1.3 'JetBrains Mono', monospace; letter-spacing:.1em; text-transform:uppercase; color:var(--la-sub); text-align:center; }
+        .wp-bar { display:flex; align-items:center; gap:12px; }
+        .wp-count { font-size:12px; color:var(--la-dim); }
         /* Publish details */
         .pd-panel { width:560px; max-height:calc(100vh - 32px); overflow:auto; }
         .pd-panel textarea { min-height:150px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:10px 12px; font:400 13px/1.5 'Helvetica Neue', Helvetica, Arial, sans-serif; outline:none; resize:vertical; }
