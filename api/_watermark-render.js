@@ -145,8 +145,9 @@ async function compose(wm, L, width, movingLogo) {
       layers.push({ ...t, left, top: Math.round((L.H - t.h) / 2) });
       lg.left = Math.round(left + t.w + G); lg.top = Math.round((L.H - logo.h) / 2);
     } else if (t) {
-      // Same corner: next to the logo. Same row, other side: lined up with the middle of the logo.
-      const shift = !logo ? 0 : tPos === position ? logo.h + STACK_GAP * s : sameRow ? (logo.h - t.h) / 2 : 0;
+      // Same corner: next to the logo. Same row, other side: on the same edge margin as the logo,
+      // so a text size never moves where the text starts.
+      const shift = !logo ? 0 : tPos === position ? logo.h + STACK_GAP * s : 0;
       layers.push({ ...t, ...place(tPos, t.w, t.h, shift) });
     }
   }

@@ -900,8 +900,8 @@
                     if (txt.offsetWidth / k > room) txt.style.fontSize = (wmTextPx(L) * room / (txt.offsetWidth / k)) * k + 'px';
                     txt.style.gap = (parseFloat(txt.style.fontSize) * WM_SUB_GAP * 0.5) + 'px';
                     var thClip = txt.offsetHeight / k;
-                    // Same corner as the logo: next to it. Same row, other side: lined up with the middle of the logo.
-                    var shift = !lhClip ? 0 : tp === p ? lhClip + 24 : tp[0] === p[0] ? (lhClip - thClip) / 2 : 0;
+                    // Same corner as the logo: next to it. Same row, other side: on the logo's edge margin (sizes never move it).
+                    var shift = !lhClip ? 0 : tp === p ? lhClip + 24 : 0;
                     txt.style.opacity = _wm.opacity;
                     if (tp === 'cc') {
                         // Middle: centred, under the logo when that's in the middle too
