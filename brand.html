@@ -195,7 +195,11 @@
         body.bk-member .bk-owner:not([data-mine]) [data-up], body.bk-member .bk-owner:not([data-mine]) .del, body.bk-member .bk-owner:not([data-mine]) [data-photo],
         body.bk-member .bk-owner:not([data-mine]) [data-set-thumb], body.bk-member #bk-file-event, body.bk-member .bk-empty-owner button { display:none !important; }
         body.bk-member .bk-owner:not([data-mine]) .bk-tag { pointer-events:none; }
-        body.bk-member #bk-wm, body.bk-member [data-org], body.bk-member [data-del-owner], body.bk-member [data-edit-owner], body.bk-member [data-use-lut], body.bk-member [data-use-wm] { display:none !important; }
+        /* The account's watermark: shown to the artist as it is, not to change */
+        body.bk-member .bk-wm-rows, body.bk-member [data-wm="enabled"] { pointer-events:none; }
+        body.bk-member .bk-wm-rows select, body.bk-member .bk-wm-rows input, body.bk-member .bk-wm-rows button { opacity:.75; }
+        body.bk-member #bk-wm-sub-remove, body.bk-member #bk-wm-sub-add, body.bk-member #bk-wm-text-artist { display:none !important; }
+        body.bk-member [data-org], body.bk-member [data-del-owner], body.bk-member [data-edit-owner], body.bk-member [data-use-lut], body.bk-member [data-use-wm] { display:none !important; }
         .bk-ev-list { display:flex; flex-direction:column; gap:6px; max-height:56vh; overflow:auto; margin-top:10px; }
         .bk-ev { display:flex; align-items:center; gap:12px; width:100%; padding:8px 12px 8px 8px; border:1px solid var(--la-line); border-radius:12px; background:var(--la-input); color:var(--la-text); text-align:left; cursor:pointer; }
         .bk-ev:hover:not(:disabled) { border-color:var(--la-accent); }
@@ -686,7 +690,7 @@
             box.innerHTML =
                 '<div>' +
                     '<div class="bk-wm-head"><div><button type="button" class="bk-wm-fold" id="bk-wm-fold" aria-expanded="' + !box.classList.contains('folded') + '" aria-controls="bk-wm"><p class="bk-wm-title">Watermark</p><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>' +
-                    '<p class="bk-wm-sub">Adds your logo, and text in one of your fonts, to every vertical clip and thumbnail, drawn sharp at each clip\'s full resolution. Applies to clips made from now on.</p></div>' +
+                    '<p class="bk-wm-sub">' + (_member ? 'The watermark ' + esc(_orgName || 'the venue') + ' puts on every vertical clip and thumbnail of your sets. Only they can change it.' : 'Adds your logo, and text in one of your fonts, to every vertical clip and thumbnail, drawn sharp at each clip\'s full resolution. Applies to clips made from now on.') + '</p></div>' +
                     '</div>' +
                     '<div class="bk-wm-rows' + (_wm.enabled ? '' : ' off') + '">' +
                         '<span class="bk-wm-label">Logo</span><select data-wm="logo"' + (noLogo ? ' disabled' : '') + '>' + logoOpts + '</select>' +
@@ -1171,6 +1175,7 @@
         }
         var _wmSaveT;
         function saveWatermark() {
+            if (_member) return;   // an artist sees the account's watermark but doesn't change it
             // Keep the logo cards' "Use as watermark" buttons in step with the panel
             document.querySelectorAll('[data-use-wm]').forEach(function(b) {
                 var on = _wm.enabled && wmPreviewLogoRaw() === b.dataset.useWm;

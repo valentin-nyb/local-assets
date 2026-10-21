@@ -111,7 +111,7 @@ export default async function handler(req, res) {
           labelArtists: Object.fromEntries(labels.map(l => [l, (labelArtists || {})[l] === own ? own : 'venue'])),
           ownerNames: { ...pick(ownerNames), [own]: (ownerNames || {})[own] || session.member.name }, // their own photo, and the account's chosen logo so the dashboard shows the venue's or label's logo
           ownerPhotos: pick(ownerPhotos), ownerPhotosPicked: ownerPhotosPicked.filter(o => seen.includes(o)),
-          ownerGenres: pick(ownerGenres), ownerLinks: pick(ownerLinks), watermark: cleanWatermark(), hiddenOwners: [] });
+          ownerGenres: pick(ownerGenres), ownerLinks: pick(ownerLinks), watermark: watermark || cleanWatermark(), hiddenOwners: [] });   // the account's watermark, to see
       }
       // Who has been given access to each artist's folder (Give access)
       const access = await withRedis(r => r.hGetAll(`artist_access:${slug}`)).then(m => Object.fromEntries(Object.entries(m || {}).map(([k, v]) => { try { return [k, JSON.parse(v)]; } catch { return [k, []]; } }))).catch(() => ({}));
