@@ -137,7 +137,7 @@ async function compose(wm, L, width, movingLogo) {
     // Both in the middle: side by side, the text then the logo, centred together
     const besides = logo && tPos === 'cc' && position === 'cc', G = 32 * s;
     const room = besides ? Math.min(TEXT_MAX_WIDTH * s, L.W - 2 * L.mx - logo.w - G) : sameRow ? Math.min(TEXT_MAX_WIDTH * s, L.W - 2 * L.mx - logo.w - 48 * s) : TEXT_MAX_WIDTH * s;
-    const t = await textLayer(wm.text, wm.text.size || wm.size, room, s, besides ? 'r' : tPos[1]).catch(e => { console.error('[watermark-render] text:', e.message); return null; });
+    const t = await textLayer(wm.text, wm.text.size || wm.size, room, s, besides ? 'l' : tPos[1]).catch(e => { console.error('[watermark-render] text:', e.message); return null; });
     if (t && besides) {
       const lg = layers[0], left = Math.round((L.W - (t.w + G + logo.w)) / 2);
       layers.push({ ...t, left, top: Math.round((L.H - t.h) / 2) });

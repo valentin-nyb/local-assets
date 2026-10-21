@@ -822,7 +822,7 @@
                     t2.style.display = sub ? '' : 'none';
                     // Both in the middle: the text sits beside the logo, on its left, lines right-aligned
                     var besides = _wm.text.position === 'cc' && p === 'cc' && !!url;
-                    txt.style.alignItems = besides ? 'flex-end' : _wm.text.position === 'cc' ? 'center' : _wm.text.position[1] === 'r' ? 'flex-end' : 'flex-start';
+                    txt.style.alignItems = besides ? 'flex-start' : _wm.text.position === 'cc' ? 'center' : _wm.text.position[1] === 'r' ? 'flex-end' : 'flex-start';
                     if (sub) loadBrandFont(sub.font).then(function(family) { if (t2.dataset.family !== family) { t2.dataset.family = family; t2.style.fontFamily = family; positionPreview(); } }).catch(function() {});
                     var blackText = _wm.text.color === 'black';
                     txt.style.color = blackText ? '#000' : '#fff';
@@ -897,7 +897,7 @@
             if (p === 'cc' && _wm.text && _wm.text.position === 'cc' && pv) {
                 var tx = document.getElementById('bk-wm-text');
                 if (tx && tx.style.display !== 'none') {
-                    tx.style.alignItems = 'flex-end';
+                    tx.style.alignItems = 'flex-start';   // the name and session line up on the left
                     var iw = parseFloat(img.style.width) || img.offsetWidth, ih = parseFloat(img.style.height) || img.offsetHeight;
                     var tw = tx.offsetWidth, th = tx.offsetHeight, gap = 32 * k, W = pv.clientWidth, H = pv.clientHeight;
                     var x0 = (W - (tw + gap + iw)) / 2;
