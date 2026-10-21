@@ -124,6 +124,8 @@
         }
         #recent-sets-list button.w-8.h-8.rounded-full { width:34px !important; height:34px !important; border-radius:999px !important; border:1px solid color-mix(in srgb, var(--la-text) 18%, transparent); transition:background .2s ease, border-color .2s ease; }
         #recent-sets-list button.w-8.h-8.rounded-full iconify-icon { color:var(--la-text) !important; font-size:15px; }
+        /* Download and play: always the last two buttons on the right of a row (watermark, YouTube, SoundCloud and delete come first) */
+        #recent-sets-list .flex.items-center.gap-2 > button.w-8.h-8.rounded-full:not(.aud-del) { order:10; }
         @media (hover:hover) { #recent-sets-list button.w-8.h-8.rounded-full:hover:not(:disabled) { background:color-mix(in srgb, var(--la-text) 10%, transparent) !important; border-color:color-mix(in srgb, var(--la-text) 40%, transparent); } }
         /* Phones: the assets use the full width (no indent), and buttons wrap under their title instead of overlapping */
         /* Every screen: the assets start in line with the session above (no indent, no empty icon box) */
@@ -1037,7 +1039,17 @@
         function sessionKey(btn) { return btn.dataset.wmArtist + '|' + btn.dataset.wmDate; }
         // "Working" only while cuts are running: a few minutes after starting, or while the server reports new clips processing
         function isCutting(btn) { var t = _cutting[sessionKey(btn)]; return !!t && Date.now() - t < 4 * 60e3; }
+        // The plan's vertical clips per session (asked once), so a session with a clip deleted offers to add it back
+        var _clipPlanMax = 0, _clipPlanAsked = false;
+        function loadClipPlanMax() {
+            if (_clipPlanAsked || document.documentElement.classList.contains('la-member')) return;
+            var b = document.querySelector('.wm-restore[data-dur]'); if (!b) return;
+            _clipPlanAsked = true;
+            laFetch('/api/vertical-clips', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'limits', artist: b.dataset.wmArtist, date: b.dataset.wmDate }) })
+                .then(function(r) { return r.ok ? r.json() : null; }).then(function(d) { if (d && d.planMax) { _clipPlanMax = d.planMax; paintWatermarkButtons(); } }).catch(function() {});
+        }
         function paintWatermarkButtons() {
+            loadClipPlanMax();
             // Two buttons per session: Apply (while any clip has no watermark) and Remove (while any clip has one)
             document.querySelectorAll('.wm-apply').forEach(function(btn) {
                 var ids = (btn.dataset.wmClips || '').split(',').filter(Boolean);
@@ -1060,9 +1072,11 @@
                 var horizontal = ids.some(function(id) { return _wmState.horizontal.indexOf(id) >= 0; });
                 var cutting = isCutting(btn);
                 var silent = btn.dataset.silent === '1';
-                btn.classList.toggle('hidden', !(horizontal || silent || Number(btn.dataset.missing) > 0) && !cutting);
+                var missing = Number(btn.dataset.missing) || 0;
+                if (btn.dataset.dur && _clipPlanMax) missing = Math.max(0, Math.min(Math.floor(Number(btn.dataset.dur) / 30), _clipPlanMax) - (Number(btn.dataset.count) || 0));
+                btn.classList.toggle('hidden', !(horizontal || silent || missing > 0) && !cutting);
                 btn.disabled = cutting;
-                btn.textContent = cutting ? 'Making vertical clips…' : !ids.length ? 'Make vertical clips' : horizontal ? 'Make vertical (9:16)' : silent ? 'Re-cut with sound' : 'Cut missing clips';
+                btn.textContent = cutting ? 'Making vertical clips…' : !ids.length ? 'Make vertical clips' : horizontal ? 'Make vertical (9:16)' : silent ? 'Re-cut with sound' : 'Add ' + missing + ' clip' + (missing !== 1 ? 's' : '');
             });
         }
         // The vertical clips to watermark: all ticked to start with; clips already watermarked are shown as done
@@ -1162,7 +1176,7 @@
             return new Promise(function(resolve) {
                 var m = document.createElement('div');
                 m.className = 'se-backdrop';
-                var max = Math.max(1, lim.max || 5), def = max;
+                var max = Math.max(1, lim.max || 5), def = max;   // the session's total: deleted clips are cut again within it
                 m.innerHTML = '<form class="se-panel" role="dialog" aria-modal="true">' +
                     '<p class="se-title">Make vertical clips</p>' +
                     '<p style="font-size:13px;line-height:1.55;color:var(--la-sub)">Each clip is cut once from the 4K long form at 1080 × 1920 (9:16) and kept as the original. ' + (lim.unlimited ? 'Your plan includes <b>unlimited</b> clips; this recording is long enough for ' + max : 'Your plan allows up to <b>' + lim.planMax + '</b> per session' + (max < lim.planMax ? '; this recording is long enough for ' + max : '')) + '.' + (lim.unlimited ? '' : ' <a href="/billing" style="color:var(--la-text);text-decoration:underline">Upgrade for more</a>') + '</p>' +
@@ -1189,7 +1203,7 @@
                 var thumb = function(t, w) { return 'https://image.mux.com/' + pid + '/thumbnail.jpg?time=' + t + '&width=' + w; };
                 var m = document.createElement('div'); m.className = 'se-backdrop';
                 m.innerHTML = '<div class="se-panel hp-panel" role="dialog" aria-modal="true"><p class="se-title">Choose the clip moments</p>' +
-                    '<p class="hp-sub">Pick up to ' + max + ' frames where the DJ is playing. Each clip runs 45 seconds from there, replacing the current clips in order.</p>' +
+                    '<p class="hp-sub">Pick up to ' + max + ' frames where the DJ is playing. Each clip runs 45 seconds from there. ' + (lim.free ? 'The first ' + (lim.free === 1 ? 'one fills the free place' : lim.free + ' fill the ' + lim.free + ' free places') + '; any more replace the current clips in order.' : 'They replace the current clips in order.') + '</p>' +
                     '<div class="hp-grid">' + times.map(function(t) { return '<button type="button" class="hp-frame" data-t="' + t + '"><img src="' + thumb(t, 360) + '" alt="" loading="lazy"><span>' + fmt(t) + '</span></button>'; }).join('') + '</div>' +
                     '<form class="hp-time"><label>Or a time<input name="t" placeholder="27:27" inputmode="numeric"></label><img alt="" class="hp-time-pv hidden"><button type="submit" class="se-btn">Add moment</button></form>' +
                     '<div class="hp-picked"></div><p class="se-error"></p>' +
@@ -1684,7 +1698,7 @@
                 // Clips cut without the recording's sound are cut again
                 var hasSound = function(a) { return (a.tracks || []).some(function(t) { return t.type === 'audio'; }); };
                 var silent = mAsset && hasSound(mAsset) && clips.some(function(c) { return c.status === 'ready' && c.tracks && !hasSound(c); }) ? 1 : 0;
-                html += '<button type="button" class="wm-restore' + (missing || silent ? '' : ' hidden') + '" data-silent="' + silent + '" data-missing="' + missing + '" data-wm-artist="' + escHtml(name) + '" data-wm-date="' + escHtml(sessionDate) + '" data-wm-clips="' + escHtml(clips.map(function(c) { return c.id; }).join(',')) + '" title="Cut the vertical clips once from the full recording">Make vertical clips</button>';
+                html += '<button type="button" class="wm-restore' + (missing || silent ? '' : ' hidden') + '" data-silent="' + silent + '" data-missing="' + missing + '" data-count="' + clips.length + '" data-dur="' + (mAsset ? Math.round(Number(mAsset.duration) || 0) : 0) + '" data-wm-artist="' + escHtml(name) + '" data-wm-date="' + escHtml(sessionDate) + '" data-wm-clips="' + escHtml(clips.map(function(c) { return c.id; }).join(',')) + '" title="Cut the vertical clips once from the full recording">Make vertical clips</button>';
                 html += '<button type="button" class="wm-apply" data-wm-artist="' + escHtml(name) + '" data-wm-date="' + escHtml(sessionDate) + '" data-wm-pids="' + escHtml(clips.map(function(c) { return c.status === 'ready' && c.playback_ids && c.playback_ids[0] ? c.playback_ids[0].id : ''; }).join(',')) + '" data-wm-clips="' + escHtml(clips.map(function(c) { return c.id; }).join(',')) + '" title="Put the Brand Kit watermark on these clips">Apply watermark</button>';
                 html += '<button type="button" class="wm-apply wm-rm is-remove hidden" data-wm-artist="' + escHtml(name) + '" data-wm-date="' + escHtml(sessionDate) + '" data-wm-pids="' + escHtml(clips.map(function(c) { return c.status === 'ready' && c.playback_ids && c.playback_ids[0] ? c.playback_ids[0].id : ''; }).join(',')) + '" data-wm-clips="' + escHtml(clips.map(function(c) { return c.id; }).join(',')) + '" title="Take the watermark off these clips">Remove watermark</button>';
                 // Download all clips (zip) and preview, like the other rows

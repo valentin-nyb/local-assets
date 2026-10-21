@@ -45,10 +45,12 @@ export default async function handler(req, res) {
     const r0 = createClient({ url: process.env.REDIS_URL }); await r0.connect();
     try {
       const max = await planMaxClips(r0, session.venueSlug);
-      const { master } = session.muxAuth ? sessionClips(await listAllAssets(session.muxAuth), String(body.artist || '').toUpperCase().trim(), String(body.date || '')) : {};
+      const { master, shown } = session.muxAuth ? sessionClips(await listAllAssets(session.muxAuth), String(body.artist || '').toUpperCase().trim(), String(body.date || '')) : {};
       const fits = master ? Math.max(1, Math.floor(Number(master.duration) / 30)) : max;
-      // The recording itself, so the moments can be picked from its frames
-      return res.status(200).json({ max: Math.min(max, fits), planMax: max, unlimited: max >= 60, pid: (master?.playback_ids || [])[0]?.id || null, duration: Number(master?.duration) || 0 });
+      const have = shown ? shown.size : 0;
+      // The recording itself, so the moments can be picked from its frames; and the places still free (a clip deleted)
+      return res.status(200).json({ max: Math.min(max, fits), planMax: max, unlimited: max >= 60, have, free: Math.max(0, Math.min(max, fits) - have),
+        pid: (master?.playback_ids || [])[0]?.id || null, duration: Number(master?.duration) || 0 });
     } finally { await r0.quit().catch(() => {}); }
   }
   if (body.action === 'intake') {
@@ -71,7 +73,7 @@ export default async function handler(req, res) {
   const redis = createClient({ url: process.env.REDIS_URL });
   await redis.connect();
   try {
-    const { master } = sessionClips(await listAllAssets(session.muxAuth), artist, String(body.date || ''));
+    const { master, shown } = sessionClips(await listAllAssets(session.muxAuth), artist, String(body.date || ''));
     if (!master) return res.status(400).json({ error: 'The full recording of this session is not in Cloud Storage.' });
     // Finish or clear earlier attempts first, so a retry always starts the clips that are still missing
     await finishVerticals(redis, session.venueSlug, session.muxAuth, await listAllAssets(session.muxAuth)).catch(e => console.error('[vertical-clips] finish', e.message));
@@ -79,7 +81,7 @@ export default async function handler(req, res) {
     if (body.action === 'moments') {
       const times = (Array.isArray(body.times) ? body.times : []).map(Number).filter(t => isFinite(t) && t >= 0).slice(0, max);
       if (!times.length) return res.status(400).json({ error: 'Pick at least one moment' });
-      const started = await startMoments(redis, session.venueSlug, master, artist, `https://${req.headers.host}`, times);
+      const started = await startMoments(redis, session.venueSlug, master, artist, `https://${req.headers.host}`, times, [...shown.keys()], max);
       return res.status(200).json({ started });
     }
     const count = Math.min(max, Math.max(1, Math.round(Number(body.count) || max)));

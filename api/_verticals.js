@@ -210,17 +210,24 @@ export async function startVerticals(redis, slug, master, artist, origin, retry 
   return todo.length;
 }
 
-// Clips cut at moments picked by hand (seconds into the recording): moment i replaces clip i+1.
-// The clip it replaces stops being an original, so finishVerticals deletes it once the new cut is ready.
-export async function startMoments(redis, slug, master, artist, origin, moments) {
+// Clips cut at moments picked by hand (seconds into the recording). A clip a moment replaces stops being an
+// original, so finishVerticals deletes it once the new cut is ready.
+// Each moment becomes a clip: first in the places that have no clip (one was deleted), then in place of the
+// session's clips in order. taken: the clip numbers the session shows now; cap: the plan's clips per session.
+export async function startMoments(redis, slug, master, artist, origin, moments, taken = [], cap = moments.length) {
   const pid = (master.playback_ids || [])[0]?.id;
   if (!pid) throw new Error('The full recording has no playback ID yet');
   const dur = Number(master.duration) || 0;
   const seg = Math.min(45, dur);
   const done = await redis.hGetAll(doneKey(master.id));
+  const have = new Set(taken.map(Number));
+  const limit = Math.max(cap, moments.length);
+  const slots = [];
+  for (let n = 1; n <= limit; n++) if (!have.has(n)) slots.push(n);
+  [...have].sort((a, b) => a - b).forEach(n => slots.push(n));
   const jobs = moments.map((t, i) => {
     const start = Math.max(0, Math.min(Number(t) || 0, dur - seg));
-    return { n: i + 1, start, end: Math.min(start + seg, dur) };
+    return { n: slots[i] || i + 1, start, end: Math.min(start + seg, dur) };
   });
   for (const j of jobs) {
     const old = done[j.n];
