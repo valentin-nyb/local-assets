@@ -351,6 +351,7 @@
                     <form id="bl-rates" class="bl-admin bl-rates">
                         <label><b>Video storage</b><small>£ per minute, each month</small><input name="videoStorage" inputmode="decimal"></label>
                         <label><b>Streaming</b><small>£ per minute watched</small><input name="videoDelivery" inputmode="decimal"></label>
+                        <label><b>Streaming in 4K</b><small>£ per minute watched in 4K</small><input name="videoDelivery4K" inputmode="decimal"></label>
                         <label><b>New video</b><small>£ per minute processed</small><input name="videoEncoding" inputmode="decimal"></label>
                         <label><b>Camera recording</b><small>£ per minute, pay as you go</small><input name="liveRecording" inputmode="decimal"></label>
                         <label><b>File storage</b><small>£ per GB, each month</small><input name="fileStorage" inputmode="decimal"></label>
@@ -696,7 +697,7 @@
             });
             if (!admin) return;
             var f = document.getElementById('bl-rates');
-            ['videoStorage', 'videoDelivery', 'videoEncoding', 'liveRecording', 'fileStorage'].forEach(function(k) { if (document.activeElement !== f[k]) f[k].value = d.rates[k]; });
+            ['videoStorage', 'videoDelivery', 'videoDelivery4K', 'videoEncoding', 'liveRecording', 'fileStorage'].forEach(function(k) { if (document.activeElement !== f[k]) f[k].value = d.rates[k]; });
             if (document.activeElement !== f.marginPct) f.marginPct.value = Math.round((d.rates.margin || 0) * 1000) / 10;
             // Venue to bill (admin), then the venue itself, its artists or its record labels
             _venue = d.venueSlug || _venue;
@@ -925,7 +926,7 @@
             var msg = document.getElementById('bl-admin-msg'), f = document.getElementById('bl-rates');
             this.disabled = true; msg.textContent = 'Saving…';
             try {
-                await post({ action: 'setRates', rates: { videoStorage: f.videoStorage.value, videoDelivery: f.videoDelivery.value, videoEncoding: f.videoEncoding.value, liveRecording: f.liveRecording.value, fileStorage: f.fileStorage.value, margin: Number(f.marginPct.value) / 100 } });
+                await post({ action: 'setRates', rates: { videoStorage: f.videoStorage.value, videoDelivery: f.videoDelivery.value, videoDelivery4K: f.videoDelivery4K.value, videoEncoding: f.videoEncoding.value, liveRecording: f.liveRecording.value, fileStorage: f.fileStorage.value, margin: Number(f.marginPct.value) / 100 } });
                 msg.textContent = 'Saved'; await load();
             } catch (e) { msg.textContent = 'Could not save: ' + e.message; }
             this.disabled = false;

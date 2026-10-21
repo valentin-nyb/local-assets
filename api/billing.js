@@ -139,7 +139,7 @@ export default async function handler(req, res) {
           try { usage = await venueUsage(s, shared ? null : a, period); }
           catch (e) { rows.push({ slug: s, name: c?.name || s, type, error: e.message }); continue; }
           const gb = usage.fileBytes / 1e9;
-          const cost = usage.storedMinutes * rates.videoStorage + usage.deliveredMinutes * rates.videoDelivery + usage.newMinutes * rates.videoEncoding
+          const cost = usage.storedMinutes * rates.videoStorage + (usage.deliveredMinutes - (usage.delivered4KMinutes || 0)) * rates.videoDelivery + (usage.delivered4KMinutes || 0) * (Number(rates.videoDelivery4K) || 0) + usage.newMinutes * rates.videoEncoding
             + (usage.liveMinutes || 0) * (Number(rates.liveRecording) || 0) + gb * rates.fileStorage;
           const asg = (await readAssignments(redis, s)).venue || {};
           const plan = own ? null : planForType(plans.find(p => p.id === asg.plan) || null, type);
@@ -545,7 +545,7 @@ export default async function handler(req, res) {
     if (body.action === 'setRates') {
       const r = body.rates || {};
       const clean = {};
-      for (const k of ['videoStorage', 'videoDelivery', 'videoEncoding', 'liveRecording', 'fileStorage', 'margin']) {
+      for (const k of ['videoStorage', 'videoDelivery', 'videoDelivery4K', 'videoEncoding', 'liveRecording', 'fileStorage', 'margin']) {
         const n = Number(r[k]);
         if (Number.isFinite(n) && n >= 0 && n < 1000) clean[k] = n;
       }

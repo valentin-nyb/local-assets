@@ -11,6 +11,7 @@ import { invoiceEmail } from './_emails.js';
 export const DEFAULT_RATES = {
   videoStorage: 0.01,      // per stored minute, per month (+ margin ≈ £120 per extra TB)
   videoDelivery: 0.0008,   // per minute streamed or downloaded
+  videoDelivery4K: 0.0025, // per minute streamed or downloaded in 4K (Mux charges about 3.2× its 1080p price)
   videoEncoding: 0,        // per minute of new video (included)
   liveRecording: 0.04,     // per minute recorded from a camera (Mux live): charged on pay as you go only, plans include it
   fileStorage: 0.018,      // per GB of files, per month
@@ -392,7 +393,7 @@ export async function venueUsage(slug, auth, { start, end }, artist = null, labe
   const only = artist ? String(artist).toUpperCase().trim() : null;
   if (label) auth = null;   // a record label is billed for its brand kit files only
   const ids = new Set();
-  const usage = { storedMinutes: 0, newMinutes: 0, liveMinutes: 0, deliveredMinutes: 0, fileBytes: 0, videos: 0, notes: [] };
+  const usage = { storedMinutes: 0, newMinutes: 0, liveMinutes: 0, deliveredMinutes: 0, delivered4KMinutes: 0, fileBytes: 0, videos: 0, notes: [] };
   if (auth) {
     // Mux keys that no longer work (environment deleted or keys revoked): bill no video usage, say why
     try { await muxGet(auth, '/video/v1/assets?limit=1&page=1'); }
@@ -419,7 +420,11 @@ export async function venueUsage(slug, auth, { start, end }, artist = null, labe
       try {
         for (let page = 1; page <= 30; page++) {
           const b = await muxGet(auth, `/video/v1/delivery-usage?limit=100&page=${page}&timeframe[]=${Math.floor(start / 1000)}&timeframe[]=${Math.floor(to / 1000)}`);
-          for (const r of b.data || []) if (!only || ids.has(r.asset_id)) usage.deliveredMinutes += (Number(r.delivered_seconds) || 0) / 60;
+          for (const r of b.data || []) if (!only || ids.has(r.asset_id)) {
+            usage.deliveredMinutes += (Number(r.delivered_seconds) || 0) / 60;
+            // The part watched in 4K (Mux reports it by resolution), priced at the 4K rate
+            usage.delivered4KMinutes += (Number(r.delivered_seconds_by_resolution?.tier_2160p) || 0) / 60;
+          }
           if ((b.data || []).length < 100) break;
         }
       } catch (e) { usage.notes.push('Streaming figures unavailable: ' + e.message); }
@@ -442,13 +447,22 @@ const round2 = n => Math.round(n * 100) / 100;
 
 // Invoice lines: each service's usage, its cost and the price with the margin
 // Each service's usage; with a plan, only what is above the plan's included amount is charged
+// Streaming: minutes in HD and in 4K, each at its own rate. A plan's included minutes cover both together;
+// what's above them is split between the two in proportion.
+function deliveryLines(usage, inc, rates) {
+  const total = usage.deliveredMinutes || 0, k4 = Math.min(total, usage.delivered4KMinutes || 0), hd = total - k4;
+  const share = total > 0 ? Math.min(1, (inc.deliveredMinutes || 0) / total) : 0;
+  const lines = [{ key: 'videoDelivery', label: 'Streaming and downloads', quantity: hd, included: hd * share, unit: 'minutes delivered', rate: rates.videoDelivery }];
+  if (k4 > 0) lines.push({ key: 'videoDelivery4K', label: 'Streaming and downloads in 4K', quantity: k4, included: k4 * share, unit: 'minutes delivered in 4K', rate: Number(rates.videoDelivery4K ?? DEFAULT_RATES.videoDelivery4K) || 0 });
+  return lines;
+}
 export function priceUsage(usage, rates, plan) {
   const m = 1 + (Number(rates.margin) || 0);
   const gb = usage.fileBytes / 1e9;
   const inc = plan?.included || {};
   const lines = [
     { key: 'videoStorage', label: 'Video storage', quantity: usage.storedMinutes, included: inc.storedMinutes || 0, unit: 'minutes stored', rate: rates.videoStorage },
-    { key: 'videoDelivery', label: 'Streaming and downloads', quantity: usage.deliveredMinutes, included: inc.deliveredMinutes || 0, unit: 'minutes delivered', rate: rates.videoDelivery },
+    ...deliveryLines(usage, inc, rates),
     { key: 'videoEncoding', label: 'New video processing', quantity: usage.newMinutes, included: 0, unit: 'minutes added', rate: rates.videoEncoding },
     // Recording from cameras: in every monthly plan; pay as you go (Trial Month, no plan) pays it per minute
     { key: 'liveRecording', label: 'Recording from cameras', quantity: usage.liveMinutes || 0, included: plan && Number(plan.price) > 0 ? (usage.liveMinutes || 0) : 0, unit: 'minutes recorded', rate: Number(rates.liveRecording ?? DEFAULT_RATES.liveRecording) || 0 },
