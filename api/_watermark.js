@@ -5,13 +5,13 @@ import { list } from '@vercel/blob';
 // so the clip worker never needs Redis or Blob access of its own.
 
 export const WATERMARK_DEFAULTS = { enabled: true, logo: 'auto', position: 'bl', size: 'm', opacity: 0.9, text: null };
-const POSITIONS = ['br', 'bl', 'tr', 'tl'];
+const POSITIONS = ['br', 'bl', 'tr', 'tl', 'cc'];   // cc: in the middle
 const SIZES = ['s', 'm', 'l'];
 // ffmpeg reads these; SVG is rasterised by the worker
 const LOGO_FILE = /\.(png|svg|webp|jpe?g|gif)$/i;   // a GIF logo moves on the clips
 // The worker draws watermark text with opentype.js, which reads these (not WOFF2)
 export const TEXT_FONT_FILE = /\.(ttf|otf|woff)$/i;
-const TEXT_POSITIONS = ['br', 'bl', 'tr', 'tl'];
+const TEXT_POSITIONS = ['br', 'bl', 'tr', 'tl', 'cc'];
 const BLOB_URL = /^https:\/\/[a-z0-9]+\.public\.blob\.vercel-storage\.com\//;
 
 export const watermarkKey = slug => `brand_watermark:${slug}`;
@@ -37,12 +37,12 @@ export function cleanWatermark(input = {}) {
   const source = t?.source === 'artist' ? 'artist' : 'custom';
   const value = t && String(t.value ?? '').replace(/[\u0000-\u001f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 60);
   if ((value || source === 'artist') && typeof t.font === 'string' && BLOB_URL.test(t.font) && TEXT_FONT_FILE.test(new URL(t.font).pathname)) {
-    w.text = { source, value: value || '', font: t.font, position: TEXT_POSITIONS.includes(t.position) ? t.position : 'br', color: t.color === 'black' ? 'black' : 'white', ...(['s', 'm', 'l'].includes(t.size) ? { size: t.size } : {}), ...(t.off === true ? { off: true } : {}) };
+    w.text = { source, value: value || '', font: t.font, ...(/^artist-[a-z0-9-]+$/.test(String(t.pick || '')) && source === 'custom' ? { pick: t.pick } : {}), position: TEXT_POSITIONS.includes(t.position) ? t.position : 'br', color: t.color === 'black' ? 'black' : 'white', ...(['s', 'm', 'l'].includes(t.size) ? { size: t.size } : {}), ...(t.off === true ? { off: true } : {}) };
     // A second, smaller line under the title (e.g. the genres), in a font of its own
     // …a fixed line, or each session's own name ("Session name")
     const sv = t.sub && String(t.sub.value ?? '').replace(/[\u0000-\u001f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 80);
     const subSession = t.sub?.source === 'session';
-    if ((sv || subSession) && typeof t.sub.font === 'string' && BLOB_URL.test(t.sub.font) && TEXT_FONT_FILE.test(new URL(t.sub.font).pathname)) w.text.sub = { value: sv || '', font: t.sub.font, ...(subSession ? { source: 'session' } : {}) };
+    if ((sv || subSession) && typeof t.sub.font === 'string' && BLOB_URL.test(t.sub.font) && TEXT_FONT_FILE.test(new URL(t.sub.font).pathname)) w.text.sub = { value: sv || '', font: t.sub.font, ...(subSession ? { source: 'session' } : {}), ...(!subSession && /^[^<>|]{1,80}\|\d{4}-\d{2}-\d{2}$/.test(String(t.sub.pick || '')) ? { pick: t.sub.pick } : {}) };
   }
   return w;
 }

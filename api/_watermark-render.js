@@ -70,7 +70,7 @@ async function textLayer(text, size, maxWidth, s = 1, align = 'l') {
   lines.forEach((l, i) => {
     const b = bbs[i], lw = b.x2 - b.x1;
     if (!(lw > 0)) return;
-    const x = (align === 'r' ? pad + width - lw : pad) - b.x1;
+    const x = (align === 'r' ? pad + width - lw : align === 'c' ? pad + (width - lw) / 2 : pad) - b.x1;
     paths += `<path d="${l.font.getPath(l.value, x, y - b.y1, px * l.k).toPathData(2)}"/>`;
     y += (b.y2 - b.y1) + gap;
   });
@@ -123,10 +123,13 @@ async function compose(wm, L, width, movingLogo) {
   let logo = null;
   if (movingLogo) logo = { input: null, w: movingLogo.w, h: movingLogo.h, moving: true };
   else if (wm.url) logo = await logoLayer(wm, s).catch(e => { console.error('[watermark-render] logo:', e.message); return null; });
-  const place = (pos, w, h, shift) => ({
-    left: Math.round(pos[1] === 'l' ? L.mx : L.W - L.mx - w),
-    top: Math.round(pos[0] === 't' ? L.top + shift : L.H - L.bottom - shift - h),
-  });
+  // cc: centred in the frame (text set in the middle too goes under the logo)
+  const place = (pos, w, h, shift) => pos === 'cc'
+    ? { left: Math.round((L.W - w) / 2), top: Math.round((L.H - h) / 2 + shift) }
+    : {
+      left: Math.round(pos[1] === 'l' ? L.mx : L.W - L.mx - w),
+      top: Math.round(pos[0] === 't' ? L.top + shift : L.H - L.bottom - shift - h),
+    };
   if (logo) layers.push({ ...logo, ...place(position, logo.w, logo.h, 0) });
   if (wm.text?.value && wm.text.font) {
     const tPos = wm.text.position || 'br';

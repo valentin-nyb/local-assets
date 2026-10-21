@@ -542,7 +542,7 @@
 
         // ── Watermark on vertical clips ──
         var _wm = null;
-        var WM_POS = [['bl', 'Bottom left'], ['br', 'Bottom right'], ['tl', 'Top left'], ['tr', 'Top right']];
+        var WM_POS = [['tl', 'Top left'], ['tr', 'Top right'], ['bl', 'Bottom left'], ['br', 'Bottom right'], ['cc', 'Middle']];
         var WM_SIZE = [['s', 'Small'], ['m', 'Medium'], ['l', 'Large']];
         // Largest logo box per size, in px on a 1080×1920 clip (same as the clip worker)
         var WM_BOX = { s: [180, 120], m: [260, 180], l: [380, 270] };
@@ -550,7 +550,40 @@
         var WM_FRAMES = [['horizontal', 'Horizontal'], ['vertical', 'Vertical']];
         var _wmFrame = 'horizontal';   // the preview opens on the horizontal frame
         function frameCaption() { return _wmFrame === 'horizontal' ? 'Horizontal · 1920 × 1080' : 'Vertical · 1080 × 1920'; }
-        var WM_TEXT_POS = [['bl', 'Bottom left'], ['br', 'Bottom right'], ['tl', 'Top left'], ['tr', 'Top right']];
+        var WM_TEXT_POS = [['tl', 'Top left'], ['tr', 'Top right'], ['bl', 'Bottom left'], ['br', 'Bottom right'], ['cc', 'Middle']];
+        // Session names (Edit session in Distribution History), for the subtitle: "ARTIST|date" → title
+        var _sessionTitles = {};
+        function loadSessionTitles() {
+            laFetch('/api/session-meta').then(function(r) { return r.ok ? r.json() : null; }).then(function(d) {
+                _sessionTitles = {};
+                Object.keys((d && d.sessions) || {}).forEach(function(k) { if (d.sessions[k].title) _sessionTitles[k] = d.sessions[k].title; });
+                if (_wm) renderWatermark();
+            }).catch(function() {});
+        }
+        // The watermark's title: each clip's artist, one artist from Brand Kit, or any text
+        function wmTitleSelect() {
+            var t = _wm.text, cur = t.source === 'artist' ? 'auto' : t.pick ? t.pick : 'custom';
+            var artists = _owners.filter(function(o) { return o.key.indexOf('artist-') === 0; });
+            return '<select data-wm="textpick" aria-label="Watermark title">' +
+                '<option value="auto"' + (cur === 'auto' ? ' selected' : '') + '>Each clip\'s artist (automatic)</option>' +
+                (artists.length ? '<optgroup label="Always this artist">' + artists.map(function(o) { return '<option value="' + esc(o.key) + '"' + (cur === o.key ? ' selected' : '') + '>' + esc(o.name) + '</option>'; }).join('') + '</optgroup>' : '') +
+                '<option value="custom"' + (cur === 'custom' ? ' selected' : '') + '>Custom text…</option></select>';
+        }
+        // The subtitle: each clip's session name, one named session (only that artist's when one is chosen), or any text
+        function wmSubSelect() {
+            var t = _wm.text, s = t.sub, cur = s.source === 'session' ? 'auto' : s.pick ? 'ses:' + s.pick : 'custom';
+            var artistName = t.pick ? ((_owners.filter(function(o) { return o.key === t.pick; })[0] || {}).name || '') : '';
+            var norm = function(v) { return String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ''); };
+            var keys = Object.keys(_sessionTitles).filter(function(k) { return !artistName || norm(k.split('|')[0]) === norm(artistName); })
+                .sort(function(a, b) { return b.split('|')[1].localeCompare(a.split('|')[1]); });
+            return '<select data-wm="subpick" aria-label="Watermark subtitle">' +
+                '<option value="auto"' + (cur === 'auto' ? ' selected' : '') + '>Each clip\'s session name (automatic)</option>' +
+                (keys.length ? '<optgroup label="' + esc(artistName ? 'Sessions of ' + artistName : 'Always this session') + '">' + keys.map(function(k) {
+                    var p = k.split('|');
+                    return '<option value="ses:' + esc(k) + '"' + (cur === 'ses:' + k ? ' selected' : '') + '>' + esc(_sessionTitles[k]) + ' · ' + esc(artistName ? p[1] : p[0] + ' · ' + p[1]) + '</option>';
+                }).join('') + '</optgroup>' : '') +
+                '<option value="custom"' + (cur === 'custom' ? ' selected' : '') + '>Custom text…</option></select>';
+        }
         var WM_TEXT_SRC = [['artist', 'Artist name'], ['custom', 'Custom']];
         var WM_TEXT_COLOR = [['white', 'White'], ['black', 'Black']];
         // The text has its own size; until one is chosen it follows the logo's
@@ -659,15 +692,15 @@
                         '<span class="bk-wm-label">Text</span>' + (wmTextFile()
                             ? '<div class="bk-wm-textrow">' + seg('texton', [['on', 'On'], ['off', 'Off']], _wm.text.off ? 'off' : 'on') + '</div>' +
                               (_wm.text.off ? '' : '<span class="bk-wm-label"></span>' +
-                              '<div class="bk-wm-textrow">' + seg('textsrc', WM_TEXT_SRC, _wm.text.source === 'artist' ? 'artist' : 'custom') +
-                              (_wm.text.source === 'artist' ? '' : '<input id="bk-wm-text-input" value="' + esc(_wm.text.value) + '" maxlength="60" aria-label="Watermark text">') +
+                              '<div class="bk-wm-textrow">' + wmTitleSelect() +
+                              (_wm.text.source === 'artist' || _wm.text.pick ? '' : '<input id="bk-wm-text-input" value="' + esc(_wm.text.value) + '" maxlength="60" aria-label="Watermark text">') +
                               fontSelect('title', _wm.text.font) +
                               seg('textpos', WM_TEXT_POS, _wm.text.position) +
                               seg('textcolor', WM_TEXT_COLOR, _wm.text.color === 'black' ? 'black' : 'white') +
-                              (_wm.text.source === 'artist' ? '<div class="bk-wm-textmeta"><span class="bk-wm-font">Each clip shows the name of the artist on stage.</span></div>' : '') + '</div>' +
+                              (_wm.text.source === 'artist' ? '<div class="bk-wm-textmeta"><span class="bk-wm-font">Each clip shows the name of the artist on stage.</span></div>' : _wm.text.pick ? '<div class="bk-wm-textmeta"><span class="bk-wm-font">Every clip shows ' + esc(_wm.text.value) + '.</span></div>' : '') + '</div>' +
                               '<span class="bk-wm-label">Subtitle</span>' + (_wm.text.sub
-                                ? '<div class="bk-wm-textrow">' + seg('subsrc', [['custom', 'Custom'], ['session', 'Session name']], _wm.text.sub.source === 'session' ? 'session' : 'custom') +
-                                  (_wm.text.sub.source === 'session' ? '' : '<input id="bk-wm-sub-input" value="' + esc(_wm.text.sub.value) + '" maxlength="80" placeholder="e.g. Disco, Jazz-funk, Soulful House" aria-label="Subtitle">') +
+                                ? '<div class="bk-wm-textrow">' + wmSubSelect() +
+                                  (_wm.text.sub.source === 'session' || _wm.text.sub.pick ? '' : '<input id="bk-wm-sub-input" value="' + esc(_wm.text.sub.value) + '" maxlength="80" placeholder="e.g. Disco, Jazz-funk, Soulful House" aria-label="Subtitle">') +
                                   fontSelect('sub', _wm.text.sub.font) + '<button type="button" class="bk-wm-link" id="bk-wm-sub-remove">Remove</button>' +
                                   (_wm.text.sub.source === 'session' ? '<div class="bk-wm-textmeta"><span class="bk-wm-font">Each session shows its own name (set with Edit session). Sessions without a name show no subtitle.</span></div>' : '') + '</div>'
                                 : '<div class="bk-wm-textrow"><button type="button" class="cam-btn ghost" id="bk-wm-sub-add">Add subtitle</button><span class="bk-wm-font">A smaller second line under the title, in its own font.</span></div>'))
@@ -733,6 +766,22 @@
                 var apply = function(v) {
                     // The frame only changes the preview and export, it isn't saved
                     if (key === 'frame') { _wmFrame = v; renderWatermark(); return; }
+                    if (key === 'textpick') {
+                        var t = _wm.text;
+                        if (v === 'auto') { t.source = 'artist'; delete t.pick; }
+                        else if (v === 'custom') { t.source = 'custom'; if (t.pick) t.value = ''; delete t.pick; if (!t.value) t.value = _orgName || venueName(); }
+                        else { t.source = 'custom'; t.pick = v; t.value = ((_owners.filter(function(o) { return o.key === v; })[0] || {}).name || '').toUpperCase(); }
+                        // A session chosen for another artist no longer fits
+                        if (t.sub && t.sub.pick && t.pick) { var sa = t.sub.pick.split('|')[0]; if (String(sa).toUpperCase() !== String(t.value).toUpperCase()) { delete t.sub.pick; t.sub.source = 'session'; } }
+                        renderWatermark(); saveWatermark(); return;
+                    }
+                    if (key === 'subpick') {
+                        var sb = _wm.text.sub;
+                        if (v === 'auto') { sb.source = 'session'; delete sb.pick; }
+                        else if (v === 'custom') { delete sb.source; if (sb.pick) sb.value = ''; delete sb.pick; }
+                        else { delete sb.source; sb.pick = v.slice(4); sb.value = _sessionTitles[sb.pick] || ''; }
+                        renderWatermark(); saveWatermark(); return;
+                    }
                     if (key === 'subsrc') { if (v === 'session') _wm.text.sub.source = 'session'; else delete _wm.text.sub.source; renderWatermark(); saveWatermark(); return; }
                     if (key === 'texton') { _wm.text.off = v === 'off'; renderWatermark(); saveWatermark(); return; }
                     if (key === 'textsrc') { _wm.text.source = v; if (v === 'custom' && !_wm.text.value) _wm.text.value = _orgName || venueName(); renderWatermark(); saveWatermark(); return; }
@@ -770,7 +819,7 @@
                     t1.textContent = wmTextValue();
                     t2.textContent = sub ? sub.value : '';
                     t2.style.display = sub ? '' : 'none';
-                    txt.style.alignItems = _wm.text.position[1] === 'r' ? 'flex-end' : 'flex-start';
+                    txt.style.alignItems = _wm.text.position === 'cc' ? 'center' : _wm.text.position[1] === 'r' ? 'flex-end' : 'flex-start';
                     if (sub) loadBrandFont(sub.font).then(function(family) { if (t2.dataset.family !== family) { t2.dataset.family = family; t2.style.fontFamily = family; positionPreview(); } }).catch(function() {});
                     var blackText = _wm.text.color === 'black';
                     txt.style.color = blackText ? '#000' : '#fff';
@@ -792,10 +841,17 @@
                     // Same corner as the logo: next to it. Same row, other side: lined up with the middle of the logo.
                     var shift = !lhClip ? 0 : tp === p ? lhClip + 24 : tp[0] === p[0] ? (lhClip - thClip) / 2 : 0;
                     txt.style.opacity = _wm.opacity;
+                    if (tp === 'cc') {
+                        // Middle: centred, under the logo when that's in the middle too
+                        txt.style.right = 'auto'; txt.style.bottom = 'auto';
+                        txt.style.left = Math.round((L.W * k - txt.offsetWidth) / 2) + 'px';
+                        txt.style.top = Math.round(((L.H - thClip) / 2 + (p === 'cc' && lhClip ? lhClip + 24 : 0)) * k) + 'px';
+                    } else {
                     txt.style.left = tp[1] === 'l' ? Math.round(L.mx * k) + 'px' : 'auto';
                     txt.style.right = tp[1] === 'r' ? Math.round(L.mx * k) + 'px' : 'auto';
                     txt.style.top = tp[0] === 't' ? Math.round((L.top + shift) * k) + 'px' : 'auto';
                     txt.style.bottom = tp[0] === 'b' ? Math.round((L.bottom + shift) * k) + 'px' : 'auto';
+                    }
                 }
             }
             var sharpNote = document.getElementById('bk-wm-sharp');
@@ -815,10 +871,16 @@
             img.style.width = Math.round(lw * k) + 'px';
             img.style.height = Math.round(lw / ar * k) + 'px';
             img.style.opacity = _wm.opacity;
+            if (p === 'cc') {
+                img.style.right = 'auto'; img.style.bottom = 'auto';
+                img.style.left = Math.round((L.W - lw) / 2 * k) + 'px';
+                img.style.top = Math.round((L.H - lw / ar) / 2 * k) + 'px';
+            } else {
             img.style.left = p[1] === 'l' ? Math.round(L.mx * k) + 'px' : 'auto';
             img.style.right = p[1] === 'r' ? Math.round(L.mx * k) + 'px' : 'auto';
             img.style.top = p[0] === 't' ? Math.round(L.top * k) + 'px' : 'auto';
             img.style.bottom = p[0] === 'b' ? Math.round(L.bottom * k) + 'px' : 'auto';
+            }
         }
         // Where the watermark sits in each frame, in px: close to the edge and low, same sizes in both frames
         var WM_LAYOUT = {
@@ -1100,6 +1162,7 @@
                 _labelArtists = res[0].labelArtists || {};
                 // Who has access to each artist's folder; and whether the person signed in is one of those artists
                 _access = res[0].access || {}; _member = res[0].member || null;
+                loadSessionTitles();
                 document.body.classList.toggle('bk-member', !!_member);
                 var hidden = res[0].hiddenOwners || [];
                 _wm = res[0].watermark || { enabled: true, logo: 'auto', position: 'bl', size: 'm', opacity: 0.9 };
