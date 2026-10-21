@@ -581,7 +581,7 @@
             var t = _wm.text, cur = t.source === 'artist' ? 'auto' : t.pick ? t.pick : 'custom';
             var artists = _owners.filter(function(o) { return o.key.indexOf('artist-') === 0 && (!_member || o.key === _member.owner); });
             return '<select data-wm="textpick" aria-label="Watermark title">' +
-                '<option value="auto"' + (cur === 'auto' ? ' selected' : '') + '>Artist</option>' +
+                '<option value="auto"' + (cur === 'auto' ? ' selected' : '') + '>Artist name</option>' +
                 (artists.length ? '<optgroup label="Always this artist">' + artists.map(function(o) { return '<option value="' + esc(o.key) + '"' + (cur === o.key ? ' selected' : '') + '>' + esc(o.name) + '</option>'; }).join('') + '</optgroup>' : '') +
                 (_member ? '' : '<option value="custom"' + (cur === 'custom' ? ' selected' : '') + '>Custom text…</option>') + '</select>';
         }
@@ -593,7 +593,7 @@
             var keys = Object.keys(_sessionTitles).filter(function(k) { return !artistName || norm(k.split('|')[0]) === norm(artistName); })
                 .sort(function(a, b) { return b.split('|')[1].localeCompare(a.split('|')[1]); });
             return '<select data-wm="subpick" aria-label="Watermark subtitle">' +
-                '<option value="none">No subtitle</option>' +
+                '<option value="none">No session name</option>' +
                 '<option value="auto"' + (cur === 'auto' ? ' selected' : '') + '>Session name</option>' +
                 (keys.length ? '<optgroup label="' + esc(artistName ? 'Sessions of ' + artistName : 'Always this session') + '">' + keys.map(function(k) {
                     var p = k.split('|');
@@ -606,9 +606,9 @@
         var WM_TEXT_COLOR = [['white', 'White'], ['black', 'Black']];
         // The text has its own size; until one is chosen it follows the logo's
         // Large in the horizontal frame is a little smaller (as on the clips, api/_watermark-render.js)
-        function wmTextPx(L) { var sz = wmTextSize(); return L && L.W > L.H && sz === 'l' ? 81 : L && L.W > L.H && sz === 'xl' ? 150 : WM_TEXT_PX[sz] || WM_TEXT_PX.m; }
+        function wmTextPx(L) { var sz = wmTextSize(); return L && L.W > L.H && sz === 'l' ? 92 : L && L.W > L.H && sz === 'xl' ? 120 : WM_TEXT_PX[sz] || WM_TEXT_PX.m; }
         function wmTextSize() { return (_wm.text && WM_TEXT_PX[_wm.text.size]) ? _wm.text.size : (_wm.size || 'm'); }
-        var WM_TEXT_PX = { s: 48, m: 66, l: 102, xl: 150 };
+        var WM_TEXT_PX = { s: 48, m: 66, l: 102, xl: 130 };
         // The clip worker draws watermark text from these font files (not WOFF2)
         var WM_TEXT_FONT = /\.(ttf|otf|woff)$/i;
         function wmLogos() { return _files.filter(function(f) { return f.category === 'logos' && /\.(png|svg|webp|jpe?g|gif)$/i.test(f.name); }); }
@@ -652,7 +652,8 @@
         // The text shown in previews: the latest session's artist when the text is "Artist name"
         function wmTextValue() {
             if (!_wm.text) return '';
-            if (_wm.text.source === 'artist') return (_sessions[0] && _sessions[0].artist) || 'DJ NAME';
+            // "Artist name": each clip's own artist; the preview says so (an artist sees their own name)
+            if (_wm.text.source === 'artist') return _member ? String(_member.name).toUpperCase() : 'ARTIST NAME';
             return _wm.text.value || '';
         }
         // Fonts the clip worker can draw text with
@@ -670,7 +671,7 @@
             if (!t || (!t.value && t.source !== 'session')) return null;
             if (!_files.some(function(f) { return f.url === t.font; })) return null;
             // "Session name": each session's own; the preview shows an example
-            return t.source === 'session' ? { value: 'Friday Night Session', font: t.font, source: 'session' } : t;
+            return t.source === 'session' ? { value: 'Session Name', font: t.font, source: 'session' } : t;
         }
         function unfoldWm() { var b = document.getElementById('bk-wm'), f = document.getElementById('bk-wm-fold'); if (b) b.classList.remove('folded'); if (f) f.setAttribute('aria-expanded', 'true'); try { localStorage.setItem('la_bk_wm_folded', ''); } catch (_) {} }
         var _wmResize = null;
@@ -724,7 +725,7 @@
                                   (_wm.text.sub.source === 'session' || _wm.text.sub.pick ? '' : '<input id="bk-wm-sub-input" value="' + esc(_wm.text.sub.value) + '" maxlength="80" placeholder="e.g. Disco, Jazz-funk, Soulful House" aria-label="Subtitle">') +
                                   fontSelect('sub', _wm.text.sub.font) + '<button type="button" class="bk-wm-link" id="bk-wm-sub-remove">Remove</button>' +
                                   (_wm.text.sub.source === 'session' ? '<div class="bk-wm-textmeta"><span class="bk-wm-font">Each session shows its own name (set with Edit session). Sessions without a name show no subtitle.</span></div>' : '') + '</div>'
-                                : '<div class="bk-wm-textrow"><button type="button" class="cam-btn ghost" id="bk-wm-sub-add">Add subtitle</button><span class="bk-wm-font">A smaller second line under the title, in its own font.</span></div>'))
+                                : '<div class="bk-wm-textrow"><button type="button" class="cam-btn ghost" id="bk-wm-sub-add">Add session name</button><span class="bk-wm-font">A smaller second line under the artist name: each session's name, in its own font.</span></div>'))
                             : wmTextFonts().length
                             ? '<div class="bk-wm-textrow"><button type="button" class="cam-btn ghost" id="bk-wm-text-artist">Add artist name</button><span class="bk-wm-font">Or preview a font, type your text and choose Use as watermark.</span></div>'
                             : '<p class="bk-wm-hint">Upload a font (TTF, OTF or WOFF) to add the artist\'s name or a line of text.</p>') +
@@ -758,7 +759,9 @@
             if (window.ResizeObserver && pvBox) { _wmResize = new ResizeObserver(function() { if (pvBox.offsetWidth) positionPreview(); }); _wmResize.observe(pvBox); }
             var addArtist = document.getElementById('bk-wm-text-artist');
             if (addArtist) addArtist.addEventListener('click', function() {
-                _wm.text = { source: 'artist', value: '', font: wmTextFonts()[0].url, position: 'br' };
+                // By default: the artist's name, with each session's name under it
+                var fs = wmTextFonts(), subFont = (fs[1] || fs[0]).url;
+                _wm.text = { source: 'artist', value: '', font: fs[0].url, position: 'br', sub: { source: 'session', value: '', font: subFont } };
                 renderWatermark(); saveWatermark();
             });
             box.querySelectorAll('[data-wmfont]').forEach(function(sel) {
@@ -770,9 +773,8 @@
             var subAdd = document.getElementById('bk-wm-sub-add');
             if (subAdd) subAdd.addEventListener('click', function() {
                 var fonts = wmTextFonts(), other = fonts.filter(function(f) { return f.url !== _wm.text.font; })[0] || fonts[0];
-                _wm.text.sub = { value: '', font: other.url };
-                renderWatermark();
-                var si = document.getElementById('bk-wm-sub-input'); if (si) si.focus();
+                _wm.text.sub = { source: 'session', value: '', font: other.url };
+                renderWatermark(); saveWatermark();
             });
             var subIn = document.getElementById('bk-wm-sub-input');
             if (subIn) {
