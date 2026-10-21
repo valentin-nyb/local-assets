@@ -820,9 +820,9 @@
                     t1.textContent = wmTextValue();
                     t2.textContent = sub ? sub.value : '';
                     t2.style.display = sub ? '' : 'none';
-                    // Both in the middle: the text sits beside the logo, lines left-aligned
+                    // Both in the middle: the text sits beside the logo, on its left, lines right-aligned
                     var besides = _wm.text.position === 'cc' && p === 'cc' && !!url;
-                    txt.style.alignItems = besides ? 'flex-start' : _wm.text.position === 'cc' ? 'center' : _wm.text.position[1] === 'r' ? 'flex-end' : 'flex-start';
+                    txt.style.alignItems = besides ? 'flex-end' : _wm.text.position === 'cc' ? 'center' : _wm.text.position[1] === 'r' ? 'flex-end' : 'flex-start';
                     if (sub) loadBrandFont(sub.font).then(function(family) { if (t2.dataset.family !== family) { t2.dataset.family = family; t2.style.fontFamily = family; positionPreview(); } }).catch(function() {});
                     var blackText = _wm.text.color === 'black';
                     txt.style.color = blackText ? '#000' : '#fff';
@@ -849,7 +849,7 @@
                         txt.style.right = 'auto'; txt.style.bottom = 'auto';
                         var twClip = txt.offsetWidth / k;
                         if (besides && lhClip) {
-                            txt.style.left = Math.round(((L.W - (lwClip + 32 + twClip)) / 2 + lwClip + 32) * k) + 'px';
+                            txt.style.left = Math.round((L.W - (lwClip + 32 + twClip)) / 2 * k) + 'px';
                             txt.style.top = Math.round((L.H - thClip) / 2 * k) + 'px';
                         } else {
                             txt.style.left = Math.round((L.W * k - txt.offsetWidth) / 2) + 'px';
@@ -884,7 +884,7 @@
                 img.style.right = 'auto'; img.style.bottom = 'auto';
                 // Text in the middle too: the logo then the text, centred together
                 var tEl = document.getElementById('bk-wm-text'), tw = _wm.text && _wm.text.position === 'cc' && tEl && tEl.style.display !== 'none' ? tEl.offsetWidth / k : 0;
-                img.style.left = Math.round((tw ? (L.W - (lw + 32 + tw)) / 2 : (L.W - lw) / 2) * k) + 'px';
+                img.style.left = Math.round((tw ? (L.W - (lw + 32 + tw)) / 2 + tw + 32 : (L.W - lw) / 2) * k) + 'px';
                 img.style.top = Math.round((L.H - lw / ar) / 2 * k) + 'px';
             } else {
             img.style.left = p[1] === 'l' ? Math.round(L.mx * k) + 'px' : 'auto';
