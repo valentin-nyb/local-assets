@@ -1,0 +1,217 @@
+
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+<head>
+    <script>
+      (function(){
+        var s = localStorage.getItem('la_admin');
+        if (!s) { window.location.replace('/login.html'); return; }
+        try {
+          var d = JSON.parse(s);
+          if (!d.ts || Date.now() - d.ts > 10 * 60 * 1000) {
+            localStorage.removeItem('la_admin');
+            window.location.replace('/login.html');
+          }
+        } catch(e) {
+          localStorage.removeItem('la_admin');
+          window.location.replace('/login.html');
+        }
+      })();
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="a™">
+    <meta name="theme-color" content="#000000">
+    <title>local / assets™ - Contacts</title>
+    <link rel="icon" type="image/x-icon" href="favicon/favicon.ico">
+    <link rel="icon" type="image/svg+xml" href="favicon/favicon.svg">
+    <link rel="apple-touch-icon" href="favicon/apple-touch-icon.png">
+    <link rel="manifest" href="favicon/site.webmanifest">
+
+    <link rel="stylesheet" href="styles/tailwind.css">
+    <link rel="stylesheet" href="styles/theme.css?v=30">
+    <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <script src="/la-dialogs.js?v=2"></script>
+    <script src="nav-component.js?v=33"></script>
+    <style>
+        .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
+        .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
+        .nav-link:hover:not(.active) { background: rgba(255, 255, 255, 0.03); color: white; }
+        body { background-color: #050505; color: #ffffff; -webkit-font-smoothing: antialiased; }
+        .nav-link.active { background-color: rgba(255, 255, 255, 0.05); border: 1px solid #27272a; color: white; }
+        ::-webkit-scrollbar { display: none; }
+        @media (max-width: 767px) { #sidebar { position: fixed; z-index: 50; height: 100vh; } }
+        .ct-eyebrow { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--la-dim); }
+        .ct-h { font-size:26px; line-height:1.2; color:var(--la-text); margin-top:6px; }
+        .ct-sub { font-size:13px; line-height:1.6; color:var(--la-sub); margin-top:6px; max-width:640px; }
+        .ct-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:16px; }
+        .ct-card { border:1px solid var(--la-line); background:var(--la-surface); border-radius:16px; padding:20px; min-width:0; display:flex; flex-direction:column; gap:6px; }
+        .ct-role { font:500 10px/1.3 'JetBrains Mono', monospace; letter-spacing:.16em; text-transform:uppercase; color:var(--la-dim); }
+        .ct-name { font-size:20px; font-weight:500; color:var(--la-text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .ct-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+        .ct-btn { display:inline-flex; align-items:center; gap:8px; height:36px; padding:0 14px; border-radius:999px; border:1px solid var(--la-line); color:var(--la-text); font-size:13px; text-decoration:none; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .ct-btn.call { border-color:var(--la-accent); color:var(--la-accent); }
+        @media (hover:hover) { .ct-btn:hover { border-color:var(--la-accent); color:var(--la-accent); } .ct-btn.call:hover { background:var(--la-accent); color:var(--la-accent-ink); } }
+        .ct-empty { border:1px dashed var(--la-line); border-radius:16px; padding:28px 20px; font-size:13px; line-height:1.6; color:var(--la-sub); }
+        .cam-btn { display:inline-flex; align-items:center; gap:8px; height:36px; padding:0 14px; border-radius:10px; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; border:1px solid transparent; }
+        .cam-btn.primary { background:var(--la-accent); color:var(--la-accent-ink); }
+        .cam-btn.ghost { background:transparent; color:var(--la-text); border-color:var(--la-line); }
+        .cam-btn:disabled { opacity:.5; cursor:default; }
+        .ct-head { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+        html.la-member .ct-owner { display:none !important; }
+        /* Editor */
+        .ct-form { display:flex; flex-direction:column; gap:14px; }
+        .ct-row { border:1px solid var(--la-line); background:var(--la-surface); border-radius:16px; padding:16px; margin:0; display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:8px; }
+        .ct-row legend { padding:0 6px; font:500 10px/1 'JetBrains Mono', monospace; letter-spacing:.16em; text-transform:uppercase; color:var(--la-dim); }
+        .ct-row input { height:40px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 12px; font-size:14px; outline:none; min-width:0; }
+        .ct-row input:focus { border-color:var(--la-accent); }
+        @media (max-width: 900px) { .ct-row { grid-template-columns:1fr 1fr; } }
+        @media (max-width: 520px) { .ct-row { grid-template-columns:1fr; } }
+        .ct-msg { font-size:12px; color:var(--la-sub); }
+        .ct-msg.bad { color:var(--la-bad); }
+        .ct-bar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+</style>
+</head>
+<body class="font-sans antialiased bg-background text-foreground overflow-hidden h-screen w-screen flex selection:bg-primary selection:text-black">
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/90 z-40 hidden backdrop-blur-md opacity-0 transition-opacity duration-300"></div>
+    <aside id="sidebar" class="w-64 border-r border-[#27272a] bg-[#0a0a0a] flex flex-col transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 shrink-0 h-full"></aside>
+    <main class="flex-1 flex flex-col overflow-hidden relative w-full bg-[#050505]">
+        <header class="la-topbar h-16 flex items-center px-4 md:px-8 border-b border-[#27272a] bg-[#050505] shrink-0 justify-between w-full z-40">
+            <div class="flex items-center gap-2 md:gap-3 min-w-0"><button type="button" onclick="toggleSidebar()" class="la-menu-btn" aria-label="Open menu"><iconify-icon icon="solar:hamburger-menu-linear"></iconify-icon></button>
+                <span id="venue-breadcrumb" class="text-zinc-600 text-[10px] font-mono uppercase tracking-[0.3em] hidden md:inline"></span>
+                <h1 class="text-[10px] font-mono uppercase tracking-[0.2em] md:tracking-[0.3em] text-[#39FF14] font-bold m-0 truncate">CONTACTS</h1>
+            </div>
+            <div class="flex items-center gap-4 shrink-0">
+                <button id="venue-avatar" class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center font-bold text-xs shrink-0"></button>
+            </div>
+        </header>
+        <div class="flex-1 w-full overflow-y-auto no-scrollbar">
+            <div class="la-page">
+                <div class="ct-head">
+                    <div>
+                        <p class="ct-eyebrow">Who to call</p>
+                        <h2 class="ct-h">Contacts</h2>
+                        <p class="ct-sub" id="ct-sub">The people to call or email about your sessions: venue manager, sound engineer, bookings.</p>
+                    </div>
+                    <button type="button" class="cam-btn ghost ct-owner" id="ct-edit">Edit contacts</button>
+                </div>
+                <div class="ct-grid" id="ct-list"></div>
+                <form class="ct-form hidden ct-owner" id="ct-form"></form>
+            </div>
+        </div>
+    </main>
+    <script>
+        function toggleSidebar() {
+            var sidebar = document.getElementById('sidebar'), overlay = document.getElementById('sidebar-overlay');
+            if (sidebar.classList.contains('-translate-x-full')) { sidebar.classList.remove('-translate-x-full'); overlay.classList.remove('hidden'); setTimeout(function() { overlay.classList.add('opacity-100'); }, 10); }
+            else { sidebar.classList.add('-translate-x-full'); overlay.classList.add('opacity-0'); setTimeout(function() { overlay.classList.add('hidden'); }, 300); }
+        }
+        function laFetch(url, opts) {
+            var sess = {}; try { sess = JSON.parse(localStorage.getItem('la_admin') || '{}'); } catch (_) {}
+            opts = Object.assign({}, opts); opts.headers = Object.assign({}, opts.headers);
+            if (sess.webToken) opts.headers['Authorization'] = 'Bearer ' + sess.webToken;
+            return fetch(url, opts);
+        }
+        function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+        var _member = false;
+        (function() {
+            try { var s = JSON.parse(localStorage.getItem('la_admin') || '{}'); var v = (s.venue || '').toUpperCase(); _member = !!s.member;
+                if (_member) document.documentElement.classList.add('la-member');
+                document.getElementById('venue-breadcrumb').textContent = v; document.getElementById('venue-avatar').textContent = (v || '?').charAt(0); } catch (_) {}
+        })();
+
+        // The account's contacts. Artists' pages check again every few seconds and whenever the tab comes back,
+        // so a change the venue saves shows straight away.
+        var _contacts = [], _sig = '', _editing = false;
+        async function load() {
+            try {
+                var r = await laFetch('/api/venue-contacts?t=' + Date.now(), { cache: 'no-store' });
+                var d = await r.json();
+                if (!r.ok) throw new Error(d.error || r.status);
+                var list = Array.isArray(d.contacts) ? d.contacts : [];
+                var sig = JSON.stringify(list);
+                if (sig === _sig) return;
+                _sig = sig; _contacts = list;
+                render();
+            } catch (e) {
+                if (!_sig) document.getElementById('ct-list').innerHTML = '<p class="ct-empty">Could not load the contacts. Try again in a moment.</p>';
+            }
+        }
+        function render() {
+            var list = document.getElementById('ct-list');
+            document.getElementById('ct-edit').textContent = _contacts.length ? 'Edit contacts' : 'Add contacts';
+            if (!_contacts.length) {
+                list.innerHTML = '<p class="ct-empty" style="grid-column:1/-1">' + (_member
+                    ? 'No contacts yet. The venue adds the numbers to call here.'
+                    : 'No contacts yet. Add the numbers your artists can call or email: venue manager, sound engineer, bookings. Every artist with access sees them here.') + '</p>';
+                return;
+            }
+            list.innerHTML = _contacts.map(function(c) {
+                var tel = String(c.phone || '').replace(/[^\d+]/g, '');
+                return '<div class="ct-card">' +
+                    (c.role ? '<span class="ct-role">' + esc(c.role) + '</span>' : '') +
+                    '<span class="ct-name">' + esc(c.name || c.role || 'Contact') + '</span>' +
+                    '<div class="ct-actions">' +
+                        (c.phone ? '<a class="ct-btn call" href="tel:' + esc(tel) + '">Call ' + esc(c.phone) + '</a>' : '') +
+                        (c.email ? '<a class="ct-btn" href="mailto:' + esc(c.email) + '">' + esc(c.email) + '</a>' : '') +
+                    '</div>' +
+                '</div>';
+            }).join('');
+        }
+        function openEditor() {
+            if (_member) return;
+            _editing = true;
+            var rows = _contacts.slice(0, 4); while (rows.length < 4) rows.push({});
+            var f = document.getElementById('ct-form');
+            f.innerHTML = rows.map(function(c, i) {
+                return '<fieldset class="ct-row"><legend>Contact ' + (i + 1) + '</legend>' +
+                    '<input name="role" maxlength="40" placeholder="Role, e.g. Venue manager" value="' + esc(c.role || '') + '" aria-label="Role">' +
+                    '<input name="name" maxlength="60" placeholder="Name" value="' + esc(c.name || '') + '" aria-label="Name">' +
+                    '<input name="phone" type="tel" maxlength="30" placeholder="Phone" value="' + esc(c.phone || '') + '" aria-label="Phone">' +
+                    '<input name="email" type="email" maxlength="120" placeholder="Email" value="' + esc(c.email || '') + '" aria-label="Email">' +
+                '</fieldset>';
+            }).join('') +
+            '<div class="ct-bar"><button type="submit" class="cam-btn primary">Save</button><button type="button" class="cam-btn ghost" id="ct-cancel">Cancel</button><span class="ct-msg" id="ct-msg">Leave a row empty to leave it out. Each contact needs a phone number or an email.</span></div>';
+            f.classList.remove('hidden');
+            document.getElementById('ct-list').classList.add('hidden');
+            document.getElementById('ct-edit').classList.add('hidden');
+            document.getElementById('ct-cancel').onclick = closeEditor;
+            var first = f.querySelector('input'); if (first) first.focus();
+        }
+        function closeEditor() {
+            _editing = false;
+            document.getElementById('ct-form').classList.add('hidden');
+            document.getElementById('ct-list').classList.remove('hidden');
+            document.getElementById('ct-edit').classList.remove('hidden');
+        }
+        document.getElementById('ct-edit').addEventListener('click', openEditor);
+        document.getElementById('ct-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            var f = this, msg = document.getElementById('ct-msg'), btn = f.querySelector('[type=submit]');
+            var rows = Array.prototype.slice.call(f.querySelectorAll('.ct-row'));
+            var val = function(fs, n) { return fs.querySelector('[name=' + n + ']').value.trim(); };
+            if (rows.some(function(fs) { return ['role', 'name', 'phone', 'email'].some(function(n) { return val(fs, n); }) && !val(fs, 'phone') && !val(fs, 'email'); })) {
+                msg.className = 'ct-msg bad'; msg.textContent = 'Each contact needs a phone number or an email.'; return;
+            }
+            var contacts = rows.map(function(fs) { return { role: val(fs, 'role'), name: val(fs, 'name'), phone: val(fs, 'phone'), email: val(fs, 'email') }; })
+                .filter(function(c) { return c.phone || c.email; });
+            btn.disabled = true; btn.textContent = 'Saving…'; msg.className = 'ct-msg'; msg.textContent = '';
+            try {
+                var r = await laFetch('/api/venue-contacts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contacts: contacts }) });
+                var d = await r.json(); if (!r.ok) throw new Error(d.error || r.status);
+                _contacts = d.contacts || []; _sig = JSON.stringify(_contacts);
+                render(); closeEditor();
+            } catch (ex) { btn.disabled = false; btn.textContent = 'Save'; msg.className = 'ct-msg bad'; msg.textContent = 'Could not save: ' + ex.message; }
+        });
+
+        load();
+        setInterval(function() { if (!document.hidden && !_editing) load(); }, 5000);
+        document.addEventListener('visibilitychange', function() { if (!document.hidden && !_editing) load(); });
+        window.addEventListener('focus', function() { if (!_editing) load(); });
+    </script>
+</body>
+</html>

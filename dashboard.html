@@ -42,7 +42,7 @@
     <script src="/la-djframe.js?v=3"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-    <script src="nav-component.js?v=32"></script>
+    <script src="nav-component.js?v=33"></script>
     <style>
         /* Standardized sidebar styles used by the JS component */
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
@@ -251,10 +251,6 @@
                     <div class="kpi-head"><span class="kpi-label">Next event</span><button id="next-event-map" type="button" class="kpi-action" tabindex="-1">Open map</button></div>
                     <div id="next-event-title" class="kpi-value kpi-value-text">—</div>
                     <div class="kpi-sub"><span id="next-event-time"></span></div>
-                </div>
-                <div id="contacts-card" class="kpi kpi-contacts">
-                    <div class="kpi-head"><span class="kpi-label">Contacts</span><button id="contacts-edit" type="button" class="kpi-action" onclick="openContactsEdit()">Edit</button></div>
-                    <div id="contacts-list" class="kpi-contacts-list"></div>
                 </div>
             </div>
 
@@ -3288,7 +3284,6 @@
         fetchLiveMetrics();
         fetchRecentUploads();
         fetchNextEvent();
-        fetchContacts();
 
         // ── Pipeline progress polling ────────────────────────────────
         var _pipelineTimer = null;
@@ -3469,86 +3464,6 @@
         }
         checkIntakes();
         setInterval(checkIntakes, 30000);
-
-        // Contacts: numbers and emails the artists can reach (the account adds them, its artists see them)
-        var _contacts = [];
-        async function fetchContacts() {
-            try {
-                var r = await laFetch('/api/venue-contacts?t=' + Date.now());
-                var d = await r.json();
-                _contacts = r.ok && Array.isArray(d.contacts) ? d.contacts : [];
-            } catch (e) { _contacts = []; }
-            renderContacts();
-        }
-        function renderContacts() {
-            var list = document.getElementById('contacts-list'), edit = document.getElementById('contacts-edit');
-            if (!list) return;
-            var member = document.documentElement.classList.contains('la-member');
-            if (edit) { edit.classList.toggle('hidden', member); edit.textContent = _contacts.length ? 'Edit' : 'Add'; }
-            if (!_contacts.length) {
-                list.innerHTML = '<p class="kpi-muted kpi-contacts-empty">' + (member
-                    ? 'No contacts yet. The venue can add the numbers to call here.'
-                    : 'Add the numbers your artists can call or email: venue manager, sound engineer, bookings. They show here for every artist.') + '</p>';
-                return;
-            }
-            list.innerHTML = _contacts.map(function(c) {
-                var tel = String(c.phone || '').replace(/[^\d+]/g, '');
-                return '<div class="kc">' +
-                    (c.role ? '<span class="kc-role">' + escHtml(c.role) + '</span>' : '') +
-                    (c.name ? '<span class="kc-name">' + escHtml(c.name) + '</span>' : '') +
-                    (c.phone ? '<a class="kc-link" href="tel:' + escHtml(tel) + '">' + escHtml(c.phone) + '</a>' : '') +
-                    (c.email ? '<a class="kc-link kc-email" href="mailto:' + escHtml(c.email) + '">' + escHtml(c.email) + '</a>' : '') +
-                '</div>';
-            }).join('');
-        }
-        function openContactsEdit() {
-            var rows = _contacts.slice(0, 4);
-            while (rows.length < 4) rows.push({});
-            var m = document.createElement('div');
-            m.className = 'se-backdrop';
-            m.innerHTML = '<form class="se-panel kc-panel" role="dialog" aria-modal="true" aria-labelledby="kc-title">' +
-                '<div class="se-head"><p id="kc-title" class="se-title">Contacts</p><button type="button" class="se-x" data-cancel aria-label="Close">&times;</button></div>' +
-                '<p class="kc-help">Your artists see these on their dashboard. Leave a row empty to leave it out.</p>' +
-                rows.map(function(c, i) {
-                    return '<fieldset class="kc-row"><legend class="se-sub">Contact ' + (i + 1) + '</legend>' +
-                        '<input name="role" maxlength="40" placeholder="Role, e.g. Venue manager" value="' + escHtml(c.role || '') + '" aria-label="Role">' +
-                        '<input name="name" maxlength="60" placeholder="Name" value="' + escHtml(c.name || '') + '" aria-label="Name">' +
-                        '<input name="phone" type="tel" maxlength="30" placeholder="Phone" value="' + escHtml(c.phone || '') + '" aria-label="Phone">' +
-                        '<input name="email" type="email" maxlength="120" placeholder="Email" value="' + escHtml(c.email || '') + '" aria-label="Email">' +
-                    '</fieldset>';
-                }).join('') +
-                '<p class="se-error"></p>' +
-                '<div class="se-actions"><button type="button" class="se-btn ghost" data-cancel>Cancel</button><button type="submit" class="se-btn primary">Save</button></div>' +
-            '</form>';
-            document.body.appendChild(m);
-            var close = function() { m.remove(); document.removeEventListener('keydown', onKey); };
-            var onKey = function(e) { if (e.key === 'Escape') close(); };
-            document.addEventListener('keydown', onKey);
-            m.addEventListener('click', function(e) { if (e.target === m) close(); });
-            m.querySelectorAll('[data-cancel]').forEach(function(b) { b.onclick = close; });
-            var form = m.querySelector('form');
-            var first = form.querySelector('input'); if (first) first.focus();
-            form.onsubmit = async function(e) {
-                e.preventDefault();
-                var contacts = Array.prototype.map.call(form.querySelectorAll('.kc-row'), function(fs) {
-                    var v = function(n) { return fs.querySelector('[name=' + n + ']').value.trim(); };
-                    return { role: v('role'), name: v('name'), phone: v('phone'), email: v('email') };
-                }).filter(function(c) { return c.phone || c.email; });
-                var err = form.querySelector('.se-error'), btn = form.querySelector('[type=submit]');
-                var half = Array.prototype.some.call(form.querySelectorAll('.kc-row'), function(fs) {
-                    var any = Array.prototype.some.call(fs.querySelectorAll('input'), function(i) { return i.value.trim(); });
-                    return any && !fs.querySelector('[name=phone]').value.trim() && !fs.querySelector('[name=email]').value.trim();
-                });
-                if (half) { err.textContent = 'Each contact needs a phone number or an email.'; return; }
-                btn.disabled = true; btn.textContent = 'Saving…'; err.textContent = '';
-                try {
-                    var r = await laFetch('/api/venue-contacts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contacts: contacts }) });
-                    var d = await r.json(); if (!r.ok) throw new Error(d.error || r.status);
-                    _contacts = d.contacts || [];
-                    renderContacts(); close(); laToast('Contacts saved');
-                } catch (ex) { btn.disabled = false; btn.textContent = 'Save'; err.textContent = 'Could not save: ' + ex.message; }
-            };
-        }
 
         async function fetchNextEvent() {
             const titleEl = document.getElementById('next-event-title');
@@ -3865,22 +3780,6 @@
         }
         /* KPI cards: label row, one value, one detail line */
         .kpi-grid { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:16px; }
-        /* Contacts: a full row for the account (its 5th card); beside Next event for an artist */
-        .kpi-contacts { grid-column:1 / -1; }
-        @media (min-width: 1101px) { html.la-member .kpi-contacts { grid-column:span 2; } }
-        .kpi-contacts-list { margin-top:14px; display:grid; grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:14px 20px; }
-        .kpi-contacts-empty { grid-column:1 / -1; font-size:13px; line-height:1.5; }
-        .kc { display:flex; flex-direction:column; gap:3px; min-width:0; }
-        .kc-role { font:500 10px/1.3 'JetBrains Mono', monospace; letter-spacing:.14em; text-transform:uppercase; color:var(--la-dim); }
-        .kc-name { font-size:15px; font-weight:500; color:var(--la-text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-        .kc-link { font-size:13px; color:var(--la-accent); text-decoration:none; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-        .kc-email { color:var(--la-sub); }
-        @media (hover:hover) { .kc-link:hover { text-decoration:underline; } }
-        .kc-panel { width:520px; max-height:calc(100vh - 32px); overflow:auto; }
-        .kc-help { font-size:13px; line-height:1.5; color:var(--la-sub); margin-top:-6px; }
-        .kc-row { border:0; padding:0; margin:0; display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-        .kc-row legend { margin:0 0 8px; padding:0; }
-        @media (max-width: 560px) { .kc-row { grid-template-columns:1fr; } }
         @media (max-width: 1100px) { .kpi-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
         @media (max-width: 560px)  { .kpi-grid { grid-template-columns:1fr; gap:12px; } }
         .kpi { background:var(--la-surface); border:1px solid var(--la-line); border-radius:14px; padding:18px 20px; display:flex; flex-direction:column; min-width:0; }

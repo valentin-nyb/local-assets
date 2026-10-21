@@ -6,7 +6,7 @@
     if (document.querySelector('script[type=speculationrules]')) return;
     var sr = document.createElement('script');
     sr.type = 'speculationrules';
-    sr.textContent = JSON.stringify({ prerender: [{ where: { href_matches: ['/dashboard', '/camera', '/brand', '/assets', '/billing'] }, eagerness: 'moderate' }] });
+    sr.textContent = JSON.stringify({ prerender: [{ where: { href_matches: ['/dashboard', '/camera', '/brand', '/assets', '/billing', '/contacts'] }, eagerness: 'moderate' }] });
     document.head.appendChild(sr);
 })();
 (function () { if (document.querySelector('script[data-la-select]')) return; var sc = document.createElement('script'); sc.src = '/la-select.js?v=5'; sc.defer = true; sc.setAttribute('data-la-select', ''); document.head.appendChild(sc); })();
@@ -85,6 +85,9 @@ document.addEventListener("DOMContentLoaded", () => {
             </a>
             <a href="/brand" style="${_isAdminAcct ? 'display:none !important' : ''}" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('/brand')}">
                 <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5a8.5 8.5 0 1 0 0 17c1.2 0 1.8-.8 1.8-1.8 0-.5-.2-.9-.5-1.3-.3-.3-.5-.8-.5-1.3 0-1 .8-1.8 1.8-1.8h2.1a3.8 3.8 0 0 0 3.8-3.8C20.5 6.9 16.7 3.5 12 3.5z"/><circle cx="7.6" cy="11.2" r="1"/><circle cx="10.4" cy="7.4" r="1"/><circle cx="15" cy="7.6" r="1"/></svg><span>Brand Kit</span>
+            </a>
+            <a href="/contacts" style="${_isAdminAcct ? 'display:none !important' : ''}" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('/contacts')}">
+                <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h3.2l1.6 4-2 1.3a11 11 0 0 0 4.9 4.9l1.3-2 4 1.6V17a2 2 0 0 1-2 2A15 15 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg><span>Contacts</span>
             </a>
             <a href="/billing" style="${_memberHide}" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('/billing')}">
                 <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6.5 15h4"/></svg><span>Billing</span>
