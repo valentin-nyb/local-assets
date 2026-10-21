@@ -1154,9 +1154,15 @@
             // How many clips: up to the account's plan limit (and what the recording is long enough for)
             var lim = { max: 5, planMax: 5 };
             try { var lr = await laFetch('/api/vertical-clips', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'limits', artist: btn.dataset.wmArtist, date: btn.dataset.wmDate }) }); if (lr.ok) lim = await lr.json(); } catch (_) {}
-            // Adding back deleted clips: straight to choosing the moment of the set to clip, one per free place
-            var adding = !!(btn.dataset.wmClips && lim.free > 0 && lim.pid && lim.duration && btn.dataset.silent !== '1');
-            var count = adding ? await pickClipMoments(Object.assign({}, lim, { max: lim.free })) : await askClipCount(lim);
+            // Re-cutting the session's clips (with their sound, or as 9:16) keeps their moments: it just starts.
+            // Otherwise: choose the moments of the set to clip, up to what's allowed (the free places, or the plan's
+            // clips per session for a new session).
+            var recut = btn.dataset.silent === '1' || (btn.dataset.wmClips || '').split(',').filter(Boolean).some(function(id) { return _wmState.horizontal.indexOf(id) >= 0; });
+            var allowed = (btn.dataset.wmClips ? lim.free : lim.max) || 0;
+            var count;
+            if (recut || !lim.pid || !lim.duration) count = lim.max || 5;
+            else if (allowed < 1) { laAlert('This session already has the ' + (lim.planMax || lim.max) + ' clips your plan allows. Delete one to choose another moment.', { tone: 'info' }); return; }
+            else count = await pickClipMoments(Object.assign({}, lim, { max: allowed, free: btn.dataset.wmClips ? allowed : 0 }));
             if (!count) return;
             btn.disabled = true; btn.textContent = 'Starting…';
             try {
@@ -1174,28 +1180,6 @@
                 laAlert('Could not make the vertical clips: ' + er.message, { tone: 'error' });
             }
         });
-        function askClipCount(lim) {
-            return new Promise(function(resolve) {
-                var m = document.createElement('div');
-                m.className = 'se-backdrop';
-                var max = Math.max(1, lim.max || 5), def = max;   // the session's total: deleted clips are cut again within it
-                m.innerHTML = '<form class="se-panel" role="dialog" aria-modal="true">' +
-                    '<p class="se-title">Make vertical clips</p>' +
-                    '<p style="font-size:13px;line-height:1.55;color:var(--la-sub)">Each clip is cut once from the 4K long form at 1080 × 1920 (9:16) and kept as the original. ' + (lim.unlimited ? 'Your plan includes <b>unlimited</b> clips; this recording is long enough for ' + max : 'Your plan allows up to <b>' + lim.planMax + '</b> per session' + (max < lim.planMax ? '; this recording is long enough for ' + max : '')) + '.' + (lim.unlimited ? '' : ' <a href="/billing" style="color:var(--la-text);text-decoration:underline">Upgrade for more</a>') + '</p>' +
-                    '<label style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--la-dim)">How many clips' +
-                        '<div style="display:flex;align-items:center;gap:12px"><input type="range" name="n" min="1" max="' + max + '" value="' + def + '" style="flex:1;accent-color:var(--la-accent)"><b data-n style="min-width:28px;text-align:right;font:700 18px/1 \'Helvetica Neue\',Helvetica,Arial,sans-serif;color:var(--la-text)">' + def + '</b></div></label>' +
-                    '<div class="se-actions" style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap">' + (lim.pid && lim.duration ? '<button type="button" class="se-btn" data-moments style="margin-right:auto">Choose moments</button>' : '') + '<button type="button" class="se-btn" data-cancel>Cancel</button><button type="submit" class="se-btn primary">Make clips</button></div>' +
-                '</form>';
-                document.body.appendChild(m);
-                var mb = m.querySelector('[data-moments]');
-                if (mb) mb.addEventListener('click', function() { m.remove(); pickClipMoments(lim).then(resolve); });
-                var f = m.querySelector('form'), out = m.querySelector('[data-n]');
-                f.n.addEventListener('input', function() { out.textContent = f.n.value; });
-                var done = function(v) { m.remove(); resolve(v); };
-                m.addEventListener('click', function(e) { if (e.target === m || e.target.closest('[data-cancel]')) done(0); });
-                f.addEventListener('submit', function(e) { e.preventDefault(); done(Number(f.n.value)); });
-            });
-        }
         // Choose the moments for the vertical clips: frames from across the set (or exact times); each becomes a 45 s clip from there
         function pickClipMoments(lim) {
             return new Promise(function(resolve) {
@@ -1205,7 +1189,7 @@
                 var thumb = function(t, w) { return 'https://image.mux.com/' + pid + '/thumbnail.jpg?time=' + t + '&width=' + w; };
                 var m = document.createElement('div'); m.className = 'se-backdrop';
                 m.innerHTML = '<div class="se-panel hp-panel" role="dialog" aria-modal="true"><p class="se-title">' + (max === 1 ? 'Choose the moment to clip' : 'Choose the moments to clip') + '</p>' +
-                    '<p class="hp-sub">Choose ' + (max === 1 ? 'the moment of the set to clip' : 'up to ' + max + ' moments of the set to clip') + ': tap a point in the set or type a time. Each clip runs 45 seconds from there. ' + (lim.free ? (lim.free >= max ? (max === 1 ? 'It goes in the free place.' : 'They go in the free places.') : 'The first ' + (lim.free === 1 ? 'one fills the free place' : lim.free + ' fill the free places') + '; any more replace the current clips in order.') : 'They replace the current clips in order.') + '</p>' +
+                    '<p class="hp-sub">Choose ' + (max === 1 ? 'the moment of the set to clip' : 'up to ' + max + ' moments of the set to clip') + ': tap a point in the set or type a time. Each clip runs 45 seconds from there' + (lim.free ? (max === 1 ? ' and goes in the free place' : ' and they go in the free places') : '') + '.</p>' +
                     '<div class="hp-grid">' + times.map(function(t) { return '<button type="button" class="hp-frame" data-t="' + t + '"><img src="' + thumb(t, 360) + '" alt="" loading="lazy"><span>' + fmt(t) + '</span></button>'; }).join('') + '</div>' +
                     '<form class="hp-time"><label>Or a time<input name="t" placeholder="27:27" inputmode="numeric"></label><img alt="" class="hp-time-pv hidden"><button type="submit" class="se-btn">Add moment</button></form>' +
                     '<div class="hp-picked"></div><p class="se-error"></p>' +
