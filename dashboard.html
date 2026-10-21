@@ -1041,16 +1041,21 @@
         // "Working" only while cuts are running: a few minutes after starting, or while the server reports new clips processing
         function isCutting(btn) { var t = _cutting[sessionKey(btn)]; return !!t && Date.now() - t < 4 * 60e3; }
         function paintWatermarkButtons() {
+            // Two buttons per session: Apply (while any clip has no watermark) and Remove (while any clip has one)
             document.querySelectorAll('.wm-apply').forEach(function(btn) {
                 var ids = (btn.dataset.wmClips || '').split(',').filter(Boolean);
                 var pending = ids.some(function(id) { return _wmState.pendingIds.indexOf(id) >= 0; });
-                var marked = ids.length > 0 && ids.every(function(id) { return _wmState.watermarked.indexOf(id) >= 0; });
-                var horizontal = ids.some(function(id) { return _wmState.horizontal.indexOf(id) >= 0; });
-                // Hidden only while new vertical clips are being made for this session
-                btn.classList.toggle('hidden', !marked && !pending && isCutting(btn));
-                btn.classList.toggle('is-remove', !pending && !!marked);
+                var some = ids.some(function(id) { return _wmState.watermarked.indexOf(id) >= 0; });
+                var all = ids.length > 0 && ids.every(function(id) { return _wmState.watermarked.indexOf(id) >= 0; });
+                if (btn.classList.contains('wm-rm')) {
+                    btn.classList.toggle('hidden', pending || !some);
+                    btn.textContent = 'Remove watermark';
+                    return;
+                }
+                // Hidden once every clip has it, and while new vertical clips are being made for this session
+                btn.classList.toggle('hidden', !pending && (all || isCutting(btn)));
                 btn.disabled = pending;
-                btn.textContent = pending ? 'Watermarking…' : marked ? 'Remove watermark' : 'Apply watermark';
+                btn.textContent = pending ? 'Watermarking…' : 'Apply watermark';
             });
             // Make vertical originals: when the clips aren't vertical yet, or some are missing
             document.querySelectorAll('.wm-restore').forEach(function(btn) {
@@ -1700,6 +1705,7 @@
                 var silent = mAsset && hasSound(mAsset) && clips.some(function(c) { return c.status === 'ready' && c.tracks && !hasSound(c); }) ? 1 : 0;
                 html += '<button type="button" class="wm-restore' + (missing || silent ? '' : ' hidden') + '" data-silent="' + silent + '" data-missing="' + missing + '" data-wm-artist="' + escHtml(name) + '" data-wm-date="' + escHtml(sessionDate) + '" data-wm-clips="' + escHtml(clips.map(function(c) { return c.id; }).join(',')) + '" title="Cut the vertical clips once from the full recording">Make vertical clips</button>';
                 html += '<button type="button" class="wm-apply" data-wm-artist="' + escHtml(name) + '" data-wm-date="' + escHtml(sessionDate) + '" data-wm-pids="' + escHtml(clips.map(function(c) { return c.status === 'ready' && c.playback_ids && c.playback_ids[0] ? c.playback_ids[0].id : ''; }).join(',')) + '" data-wm-clips="' + escHtml(clips.map(function(c) { return c.id; }).join(',')) + '" title="Put the Brand Kit watermark on these clips">Apply watermark</button>';
+                html += '<button type="button" class="wm-apply wm-rm is-remove hidden" data-wm-artist="' + escHtml(name) + '" data-wm-date="' + escHtml(sessionDate) + '" data-wm-clips="' + escHtml(clips.map(function(c) { return c.id; }).join(',')) + '" title="Take the watermark off these clips">Remove watermark</button>';
                 // Download all clips (zip) and preview, like the other rows
                 var clipsOn = allPids.length > 0;
                 html += '<button class="w-8 h-8 flex items-center justify-center rounded-full transition-colors ' + (clipsOn ? 'hover:bg-primary/10' : 'opacity-30') + '"' + (clipsOn ? '' : ' disabled') + ' title="' + (clipsOn ? 'Download all clips' : 'Processing') + '" data-pids="' + pidsAttr + '" data-title="' + escAttr(name + ' ' + sessionDate) + '" onclick="dlClips(this)">';
