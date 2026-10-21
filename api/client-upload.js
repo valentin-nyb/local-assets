@@ -31,7 +31,8 @@ export default async function handler(req, res) {
           playback_policies: ['public'],
           passthrough: artistName,
           name: videoTitle,
-          static_renditions: [{ resolution: isAudio ? 'audio-only' : 'highest' }]
+          static_renditions: [{ resolution: isAudio ? 'audio-only' : 'highest' }],
+          ...(isAudio ? {} : { max_resolution_tier: '2160p' })   // kept in 4K when the file is 4K
         },
         cors_origin: '*'
       })

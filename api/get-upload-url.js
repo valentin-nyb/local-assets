@@ -56,6 +56,8 @@ export default async function handler(req, res) {
           passthrough: passthrough,
           meta: { title: videoTitle.slice(0, 512) },
           static_renditions: [{ resolution: isAudio ? 'audio-only' : 'highest' }],
+          // 4K uploads are kept in 4K (else Mux stores 1080p), so vertical clips cut from them stay sharp
+          ...(isAudio ? {} : { max_resolution_tier: '2160p' }),
         },
         cors_origin: 'https://local-assets.com',
       }),
