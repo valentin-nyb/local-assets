@@ -577,6 +577,7 @@
             var keys = Object.keys(_sessionTitles).filter(function(k) { return !artistName || norm(k.split('|')[0]) === norm(artistName); })
                 .sort(function(a, b) { return b.split('|')[1].localeCompare(a.split('|')[1]); });
             return '<select data-wm="subpick" aria-label="Watermark subtitle">' +
+                '<option value="none">No subtitle</option>' +
                 '<option value="auto"' + (cur === 'auto' ? ' selected' : '') + '>Session name</option>' +
                 (keys.length ? '<optgroup label="' + esc(artistName ? 'Sessions of ' + artistName : 'Always this session') + '">' + keys.map(function(k) {
                     var p = k.split('|');
@@ -756,8 +757,10 @@
             var subIn = document.getElementById('bk-wm-sub-input');
             if (subIn) {
                 subIn.addEventListener('input', function() { _wm.text.sub.value = subIn.value.replace(/\s+/g, ' ').trim(); positionPreview(); if (_wm.text.sub.value) saveWatermark(); });
-                document.getElementById('bk-wm-sub-remove').addEventListener('click', function() { delete _wm.text.sub; renderWatermark(); saveWatermark(); });
             }
+            // Remove the subtitle, whatever it shows (a typed line, a session, or each session's name)
+            var subRm = document.getElementById('bk-wm-sub-remove');
+            if (subRm) subRm.addEventListener('click', function() { delete _wm.text.sub; renderWatermark(); saveWatermark(); });
             var tIn = document.getElementById('bk-wm-text-input');
             if (tIn) {
                 tIn.addEventListener('input', function() { if (tIn.value.trim()) { _wm.text.value = tIn.value.trim(); positionPreview(); saveWatermark(); } });
@@ -778,6 +781,7 @@
                     }
                     if (key === 'subpick') {
                         var sb = _wm.text.sub;
+                        if (v === 'none') { delete _wm.text.sub; renderWatermark(); saveWatermark(); return; }
                         if (v === 'auto') { sb.source = 'session'; delete sb.pick; }
                         else if (v === 'custom') { delete sb.source; if (sb.pick) sb.value = ''; delete sb.pick; }
                         else { delete sb.source; sb.pick = v.slice(4); sb.value = _sessionTitles[sb.pick] || ''; }
