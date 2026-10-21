@@ -63,6 +63,12 @@
         .bl-section { border:1px solid var(--la-line); background:var(--la-surface); border-radius:16px; overflow:hidden; }
         .bl-section-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:18px 20px; border-bottom:1px solid var(--la-line-soft); }
         .bl-section-head h3 { font-size:14px; color:var(--la-text); }
+        .bl-soon-body { display:flex; align-items:center; justify-content:space-between; gap:20px; padding:20px; }
+        .bl-soon-tag { display:inline-flex; height:22px; align-items:center; padding:0 10px; border-radius:999px; border:1px solid color-mix(in srgb, var(--la-accent) 50%, transparent); color:var(--la-accent); font:500 10px/1 'JetBrains Mono', monospace; letter-spacing:.14em; text-transform:uppercase; }
+        .bl-soon h3 { margin-top:10px; font-size:16px; color:var(--la-text); }
+        .bl-soon-text { margin-top:6px; max-width:640px; font-size:13px; line-height:1.6; color:var(--la-sub); }
+        .bl-soon .cam-btn { flex-shrink:0; text-decoration:none; }
+        @media (max-width:640px) { .bl-soon-body { flex-direction:column; align-items:stretch; } }
         .bl-table { width:100%; border-collapse:collapse; font-size:13px; }
         .bl-table th { text-align:left; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--la-dim); font-weight:500; padding:12px 20px; border-bottom:1px solid var(--la-line-soft); }
         .bl-table td { padding:14px 20px; border-bottom:1px solid var(--la-line-soft); color:var(--la-text-2); vertical-align:top; }
@@ -299,6 +305,17 @@
                     <div class="bl-card"><p class="lbl">Plan</p><p class="val" id="bl-plan">—</p><p class="note" id="bl-plan-note"></p></div>
                     <div class="bl-card"><p class="lbl" id="bl-usage-lbl">Usage so far</p><p class="val" id="bl-usage">—</p><p class="note" id="bl-usage-note"></p><div class="bl-bar" id="bl-usage-bar" hidden><i style="width:0"></i></div></div>
                 </div>
+                <!-- Coming soon, for venues and record labels: pay the DJs for their gigs (Stripe Connect) -->
+                <section class="bl-section bl-soon hidden" id="bl-pay-djs" aria-labelledby="bl-pay-djs-h">
+                    <div class="bl-soon-body">
+                        <div>
+                            <p class="bl-soon-tag">Coming soon</p>
+                            <h3 id="bl-pay-djs-h">Pay your DJs</h3>
+                            <p class="bl-soon-text">Pay each artist for their gig straight from local / assets: choose the session, enter the fee and it lands in their bank in a few days, with a receipt for both of you. Artists set up their payouts once, securely with Stripe.</p>
+                        </div>
+                        <a class="cam-btn ghost" href="mailto:hello@local-assets.com?subject=Pay%20your%20DJs">Tell me when it's ready</a>
+                    </div>
+                </section>
                 <section class="bl-section" id="bl-chart-box">
                     <div class="bl-section-head"><div><h3>Usage over time</h3><span class="bl-msg" id="bl-chart-sum"></span></div>
                         <div class="bl-chart-tools">
@@ -533,6 +550,8 @@
             document.getElementById('bl-plan').textContent = d.plan ? money(d.planAmount, cur) : 'None';
             document.getElementById('bl-plan-note').textContent = d.plan ? d.plan.name + ' · monthly' : 'Usage only';
             document.getElementById('bl-usage').textContent = money(d.usageTotal, cur);
+            // Pay your DJs (coming soon): for venues and record labels, not artists
+            document.getElementById('bl-pay-djs').classList.toggle('hidden', !/^(venue|label|management)$/.test(d.accountType || 'venue') || (admin && d.target && d.target !== 'venue'));
             document.getElementById('bl-usage-note').textContent = d.plan ? 'Above what the plan includes' : qty(d.usage.videos) + ' videos · ' + qty(d.usage.fileBytes / 1e9) + ' GB of files';
             document.getElementById('bl-usage-head').textContent = (d.usage.notes || []).join(' ');
             // With a plan: how much of what it includes has been used (stored and streamed), and what's above it
