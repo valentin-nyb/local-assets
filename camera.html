@@ -334,19 +334,41 @@
         /* A set opens its details (artwork, logos, times) */
         .cal-row[data-cal-i] { cursor:pointer; }
         .cal-row[data-cal-i]:hover { background:color-mix(in srgb, var(--la-text) 4%, transparent); }
-        .ev-sub { margin:2px 0 16px; font-size:13px; line-height:1.5; color:var(--la-sub); }
-        .ev-facts { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; margin-bottom:18px; }
-        .ev-facts div { border:1px solid var(--la-line); border-radius:10px; padding:10px 12px; }
-        .ev-facts small { display:block; font:500 10px/1 'JetBrains Mono',monospace; letter-spacing:.14em; text-transform:uppercase; color:var(--la-dim); margin-bottom:6px; }
-        .ev-facts b { font-weight:600; font-size:13px; color:var(--la-text); }
-        .ev-h { display:flex; align-items:center; justify-content:space-between; margin:16px 0 8px; font:500 10px/1 'JetBrains Mono',monospace; letter-spacing:.16em; text-transform:uppercase; color:var(--la-dim); }
-        .ev-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px; }
-        .ev-file { border:1px solid var(--la-line); border-radius:10px; overflow:hidden; background:var(--la-input); display:flex; flex-direction:column; }
-        .ev-file .pv { aspect-ratio:1; display:flex; align-items:center; justify-content:center; background:var(--la-raised); }
-        .ev-file .pv img { width:100%; height:100%; object-fit:cover; }
-        .ev-file.logo .pv img { object-fit:contain; padding:14px; }
-        .ev-file .nm { padding:8px 10px 0; font-size:12px; color:var(--la-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        .ev-file a { margin:6px 10px 10px; font-size:12px; font-weight:600; color:var(--la-accent); text-decoration:none; }
+        .ev-facts { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:1px; margin:2px 0 22px; border:1px solid var(--la-line); border-radius:12px; overflow:hidden; background:var(--la-line); }
+        .ev-facts div { background:var(--la-raised, #0a0a0a); padding:12px 14px; min-width:0; }
+        .ev-facts small { display:block; font:500 10px/1 'JetBrains Mono',monospace; letter-spacing:.14em; text-transform:uppercase; color:var(--la-dim); margin-bottom:7px; }
+        .ev-facts b { display:block; font-weight:600; font-size:14px; line-height:1.3; color:var(--la-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .ev-link { display:flex; align-items:center; flex-wrap:wrap; gap:10px 14px; margin:-8px 0 20px; }
+        .ev-link-l { font:500 10px/1 'JetBrains Mono',monospace; letter-spacing:.14em; text-transform:uppercase; color:var(--la-dim); }
+        .ev-link select { min-width:220px; }
+        .ev-link-n { font-size:12px; color:var(--la-sub); }
+        .ev-sec + .ev-sec { margin-top:14px; border-top:1px solid var(--la-line); padding-top:14px; }
+        .ev-sec-h { display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; margin:0 0 12px; padding:0; border:0; background:none; color:var(--la-dim); font:500 10px/1 'JetBrains Mono',monospace; letter-spacing:.16em; text-transform:uppercase; text-align:left; }
+        .ev-sec-h i { font-style:normal; color:var(--la-sub); margin-left:6px; }
+        button.ev-sec-h { cursor:pointer; }
+        button.ev-sec-h:hover { color:var(--la-text); }
+        .ev-fold.folded > .ev-sec-h { margin-bottom:0; }
+        .ev-fold.folded > .ev-grid { display:none; }
+        .ev-chev { transition:transform .2s ease; }
+        .ev-fold.folded .ev-chev { transform:rotate(-90deg); }
+        .ev-dl-all { height:34px; padding:0 16px; font-size:12px; letter-spacing:0; text-transform:none; font-family:inherit; }
+        .ev-grid { display:grid; gap:10px; }
+        .ev-grid.arts { grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); }
+        .ev-grid.logos { grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); }
+        .ev-grid.photos { grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); }
+        .ev-file { border:1px solid var(--la-line); border-radius:12px; overflow:hidden; background:var(--la-input); display:flex; flex-direction:column; min-width:0; }
+        .ev-file .pv { display:flex; align-items:center; justify-content:center; background:var(--la-raised, #0a0a0a); }
+        .ev-file.art .pv { aspect-ratio:4/5; }
+        .ev-file.photo .pv { aspect-ratio:1; }
+        .ev-file.logo .pv { aspect-ratio:3/2; padding:14px; }
+        .ev-file.logo .pv.light { background:#f4f4f5; }
+        .ev-file.logo .pv.dark { background:#18181b; }
+        .ev-file .pv img { width:100%; height:100%; object-fit:cover; display:block; }
+        .ev-file.logo .pv img { object-fit:contain; }
+        .ev-file .ft { display:flex; align-items:center; gap:8px; padding:8px 8px 8px 12px; }
+        .ev-file .nm { flex:1; min-width:0; font-size:12px; color:var(--la-sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .ev-file .ft a { flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:999px; color:var(--la-accent); border:1px solid var(--la-line); }
+        .ev-file .ft a:hover { border-color:var(--la-accent); }
         .ev-empty { font-size:13px; color:var(--la-sub); line-height:1.5; }
         .cal-dj b { font:700 14px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif; text-transform:uppercase; color:var(--la-text); }
         .cal-dj span { font:500 11px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.04em; text-transform:uppercase; color:var(--la-sub); }
@@ -1807,18 +1829,21 @@
         document.addEventListener('keydown', function(e) { var r = e.target.closest && e.target.closest('[data-cal-i]'); if (r && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); r.click(); } });
         async function openEventInfo(ev) {
             var end = ev.endedAt || ev.end;
+            var fact = function(k, v) { return '<div><small>' + k + '</small><b>' + v + '</b></div>'; };
             openCamDialog(ev.artist,
-                '<p class="ev-sub">' + esc(fmtDay(ev.start)) + ' · ' + fmtTime(ev.start) + '–' + fmtTime(end) + (ev.venue ? ' · ' + esc(ev.venue) : '') + '</p>' +
-                '<div class="ev-facts"><div><small>Date</small><b>' + esc(new Date(ev.start).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/London' })) + '</b></div>' +
-                    '<div><small>Set</small><b>' + fmtTime(ev.start) + ' – ' + fmtTime(end) + '</b></div>' +
-                    '<div><small>Cameras record</small><b>' + fmtTime(ev.start - 120e3) + ' – ' + fmtTime(ev.endedAt || (ev.end + 120e3)) + '</b></div>' +
-                    (ev.venue ? '<div><small>Where</small><b>' + esc(ev.venue) + '</b></div>' : '') + '</div>' +
+                '<div class="ev-facts">' + fact('Date', esc(new Date(ev.start).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Europe/London' }))) +
+                    fact('Set', fmtTime(ev.start) + ' – ' + fmtTime(end)) +
+                    fact('Cameras record', fmtTime(ev.start - 120e3) + ' – ' + fmtTime(ev.endedAt || (ev.end + 120e3))) +
+                    (ev.venue ? fact('Where', esc(ev.venue)) : '') + '</div>' +
                 '<div id="ev-files"><p class="ev-empty">Loading the files…</p></div>');
             document.querySelector('#cam-dialog .cam-dialog-panel').classList.add('wide');
             var box = document.getElementById('ev-files');
-            var card = function(f, logo) {
+            var DL = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 11l5 5 5-5"/><path d="M5 20h14"/></svg>';
+            var CHEV = '<svg class="ev-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+            var card = function(f, kind) {
                 var dl = f.link ? f.link + '?download' : (f.downloadUrl || f.url);
-                return '<div class="ev-file' + (logo ? ' logo' : '') + '"><div class="pv"><img src="' + esc(f.url) + '" alt="" loading="lazy"></div><p class="nm" title="' + esc(f.name) + '">' + esc(f.name) + '</p><a href="' + esc(dl) + '" download>Download</a></div>';
+                return '<div class="ev-file ' + kind + '"><div class="pv"><img src="' + esc(f.url) + '" alt="" loading="lazy"' + (kind === 'logo' ? ' crossorigin="anonymous" data-tone' : '') + '></div>' +
+                    '<div class="ft"><span class="nm" title="' + esc(f.name) + '">' + esc(f.name) + '</span><a href="' + esc(dl) + '" download title="Download ' + esc(f.name) + '" aria-label="Download ' + esc(f.name) + '">' + DL + '</a></div></div>';
             };
             try {
                 var r = await laFetch('/api/brand'), d = await r.json();
@@ -1826,20 +1851,56 @@
                 var files = d.files || [], names = d.ownerNames || {};
                 var norm = function(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ''); };
                 var IMG = /\.(png|jpe?g|svg|webp|gif)$/i;
-                // The artist's own folder in Brand Kit: named like the DJ in the calendar
-                var artistOwner = Object.keys(names).filter(function(k) { return k.indexOf('artist-') === 0 && norm(names[k]) === norm(ev.artist); })[0]
+                // The artist's folder in Brand Kit: the one linked to this event, else the one named like the DJ in the calendar
+                var artists = Object.keys(names).filter(function(k) { return k.indexOf('artist-') === 0; }).sort(function(a, b) { return String(names[a]).localeCompare(String(names[b])); });
+                var byName = artists.filter(function(k) { return norm(names[k]) === norm(ev.artist); })[0];
+                var artistOwner = ev.artistOwner || byName
                     || ('artist-' + String(ev.artist || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''));
+                var isMember = !!d.member;
                 var art = (ev.art || []).map(function(u) { return files.filter(function(f) { return f.url === u; })[0] || { url: u, name: decodeURIComponent(u.split('/').pop()).replace(/-[A-Za-z0-9]{20,40}(\.[^.]+)$/, '$1') }; });
                 var logos = files.filter(function(f) { return f.category === 'logos' && IMG.test(f.name) && (f.owner === 'venue' || f.owner === artistOwner); });
                 var photos = files.filter(function(f) { return f.owner === artistOwner && f.category === 'photos' && IMG.test(f.name); });
                 var all = art.concat(logos, photos);
-                var section = function(title, list, logo, empty) {
-                    return '<p class="ev-h"><span>' + title + '</span></p>' + (list.length ? '<div class="ev-grid">' + list.map(function(f) { return card(f, logo); }).join('') + '</div>' : '<p class="ev-empty">' + empty + '</p>');
+                var fold = function(title, list, kind) {
+                    if (!list.length) return '';
+                    return '<section class="ev-sec ev-fold folded"><button type="button" class="ev-sec-h" aria-expanded="false"><span>' + title + ' <i>' + list.length + '</i></span>' + CHEV + '</button>' +
+                        '<div class="ev-grid ' + kind + 's">' + list.map(function(f) { return card(f, kind); }).join('') + '</div></section>';
                 };
-                box.innerHTML = section('Artwork for this event', art, false, 'No artwork yet. In Brand Kit, open an image and press <b>Add to event</b>.') +
-                    section('Logos', logos, true, 'No logos in Brand Kit yet.') +
-                    (photos.length ? section('Artist photos', photos, false, '') : '') +
-                    (all.length > 1 ? '<div class="cam-form-actions" style="margin-top:18px"><button type="button" class="cam-btn primary" id="ev-dl-all">Download all (' + all.length + ')</button></div>' : '');
+                // Which Brand Kit artist this event is for (saved with the event): their logos and photos show here
+                var linkRow = isMember || !ev.key ? '' : '<div class="ev-link"><span class="ev-link-l">Artist</span><select id="ev-artist" aria-label="Brand Kit artist for this event">' +
+                    '<option value="">' + (byName ? 'Matched by name: ' + esc(names[byName]) : 'Not linked to a Brand Kit artist') + '</option>' +
+                    artists.map(function(k) { return '<option value="' + esc(k) + '"' + (ev.artistOwner === k ? ' selected' : '') + '>' + esc(names[k]) + '</option>'; }).join('') + '</select>' +
+                    '<span class="ev-link-n">' + (ev.artistOwner ? 'Linked to this event' : byName ? 'Found by the name in the calendar' : 'Choose their folder to show their logos and photos') + '</span></div>';
+                box.innerHTML = linkRow +
+                    '<section class="ev-sec"><div class="ev-sec-h static"><span>Artwork for this event' + (art.length ? ' <i>' + art.length + '</i>' : '') + '</span>' +
+                        (all.length > 1 ? '<button type="button" class="cam-btn primary ev-dl-all" id="ev-dl-all">Download all (' + all.length + ')</button>' : '') + '</div>' +
+                        (art.length ? '<div class="ev-grid arts">' + art.map(function(f) { return card(f, 'art'); }).join('') + '</div>'
+                            : '<p class="ev-empty">No artwork yet. In Brand Kit, open an image and press <b>Add to event</b>.</p>') + '</section>' +
+                    fold('Logos', logos, 'logo') + fold('Artist photos', photos, 'photo') +
+                    (!logos.length ? '<p class="ev-empty" style="margin-top:14px">No logos in Brand Kit yet.</p>' : '');
+                var sel = document.getElementById('ev-artist');
+                if (sel) sel.addEventListener('change', async function() {
+                    sel.disabled = true;
+                    try {
+                        var rr = await laFetch('/api/next-event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: ev.key, artistOwner: sel.value }) });
+                        var dd = await rr.json(); if (!rr.ok) throw new Error(dd.error || rr.status);
+                        ev.artistOwner = dd.artistOwner; openEventInfo(ev);
+                    } catch (e) { sel.disabled = false; laAlert('Could not link the artist: ' + e.message, { tone: 'error' }); }
+                });
+                box.querySelectorAll('.ev-fold > .ev-sec-h').forEach(function(h) { h.addEventListener('click', function() { var sec = h.parentNode, open = sec.classList.toggle('folded') === false; h.setAttribute('aria-expanded', open); }); });
+                // Each logo on a background it shows against: light for a dark logo, dark for a light one
+                box.querySelectorAll('img[data-tone]').forEach(function(im) {
+                    var tone = function() {
+                        try {
+                            var c = document.createElement('canvas'), n = 24; c.width = n; c.height = n;
+                            var g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(im, 0, 0, n, n);
+                            var px = g.getImageData(0, 0, n, n).data, sum = 0, cnt = 0;
+                            for (var k = 0; k < px.length; k += 4) { if (px[k + 3] < 40) continue; sum += (0.2126 * px[k] + 0.7152 * px[k + 1] + 0.0722 * px[k + 2]) / 255; cnt++; }
+                            if (cnt) im.parentNode.classList.add(sum / cnt < 0.45 ? 'light' : 'dark');
+                        } catch (_) {}
+                    };
+                    if (im.complete && im.naturalWidth) tone(); else im.addEventListener('load', tone, { once: true });
+                });
                 var dlAll = document.getElementById('ev-dl-all');
                 if (dlAll) dlAll.addEventListener('click', async function() {
                     var b = this; b.disabled = true; b.textContent = 'Preparing…';

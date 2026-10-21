@@ -9,7 +9,7 @@ import { viscaFor, isContinuous, privateHost } from './_visca.js';
 import { relayKeyHash, cmdsKey, seenKey, tokenKey } from './camera-relay.js';
 import { scheduleWindow } from './camera-schedule.js';
 import { inSession, openSession, closeSession, managedKey } from './_cam-sessions.js';
-import { readArt, eventKey } from './next-event.js';
+import { readArt, eventKey, readLinks } from './next-event.js';
 
 // The venue relay is online when it polled in the last 45 s
 async function relayStatus(redis, slug) {
@@ -155,8 +155,11 @@ export default async function handler(req, res) {
           if (cur) { try { const fin = JSON.parse(await withRedis(r => r.get(`cam_set_end:${slug}`)) || 'null'); if (fin && fin.start === cur.start) calendar.current.endedAt = fin.endedAt; } catch {} }
           // Every set in the next two months (capped only so a runaway calendar can't flood the page)
           // With each set's artwork, when one was added from Brand Kit
-          const art = await readArt(slug);
-          calendar.upcoming = events.filter(e => e.start > now).slice(0, 200).map(e => ({ artist: e.artist, venue: e.venue, start: e.start, end: e.end, art: art[eventKey(e)] || [] }));
+          // With each set's artwork and the Brand Kit artist it's linked to (from the event's details)
+          const [art, links] = await Promise.all([readArt(slug), readLinks(slug)]);
+          const extra = e => ({ key: eventKey(e), art: art[eventKey(e)] || [], artistOwner: links[eventKey(e)] || null });
+          calendar.upcoming = events.filter(e => e.start > now).slice(0, 200).map(e => ({ artist: e.artist, venue: e.venue, start: e.start, end: e.end, ...extra(e) }));
+          if (calendar.current && cur) Object.assign(calendar.current, extra(cur));
           // When the cameras that follow the calendar open and close
           const w = scheduleWindow(events, now);
           calendar.schedule = { open: w.open, closesAt: w.closesAt, opensAt: w.opensAt, nextArtist: w.next?.artist || null, currentArtist: w.current?.artist || null };
@@ -164,7 +167,8 @@ export default async function handler(req, res) {
       }
       // An artist with access: no cameras, and only their own sets in the calendar
       if (session.member) {
-        const mine = e => e && sameArtist(e.artist, session.member.name);
+        // Theirs: named like them in the calendar, or linked to their Brand Kit folder in the event's details
+        const mine = e => e && (sameArtist(e.artist, session.member.name) || e.artistOwner === session.member.owner);
         if (calendar.current && !mine(calendar.current)) calendar.current = null;
         if (calendar.upcoming) calendar.upcoming = calendar.upcoming.filter(mine);
         delete calendar.schedule;

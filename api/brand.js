@@ -99,9 +99,11 @@ export default async function handler(req, res) {
       // An artist with access: only their own folder, and the account's logos to download
       if (session.member) {
         const own = session.member.owner;
-        const mine = files.filter(f => f.owner === own || (f.owner === 'venue' && f.category === 'logos'));
+        const pickedVenue = ownerPhotos.venue;
+        const mine = files.filter(f => f.owner === own || (f.owner === 'venue' && (f.category === 'logos' || f.url === pickedVenue)));
         return res.status(200).json({ lut: '', files: mine, orgType: ORG_TYPES.includes(orgType) ? orgType : 'venue', orgName: orgName || '', member: { owner: own, name: session.member.name },
-          ownerNames: { [own]: (ownerNames || {})[own] || session.member.name }, ownerPhotos: ownerPhotos[own] ? { [own]: ownerPhotos[own] } : {}, ownerPhotosPicked: ownerPhotosPicked.filter(o => o === own),
+          ownerNames: { [own]: (ownerNames || {})[own] || session.member.name }, // their own photo, and the account's chosen logo so the dashboard shows the venue's or label's logo
+          ownerPhotos: Object.fromEntries(Object.entries(ownerPhotos).filter(([o]) => o === own || o === 'venue')), ownerPhotosPicked: ownerPhotosPicked.filter(o => o === own || o === 'venue'),
           ownerGenres: { [own]: (ownerGenres || {})[own] || '' }, ownerLinks: { [own]: (ownerLinks || {})[own] || '' }, watermark: cleanWatermark(), labelArtists: {}, hiddenOwners: [] });
       }
       // Who has been given access to each artist's folder (Give access)
