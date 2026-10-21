@@ -580,7 +580,8 @@
                 '<option value="auto"' + (cur === 'auto' ? ' selected' : '') + '>Session name</option>' +
                 (keys.length ? '<optgroup label="' + esc(artistName ? 'Sessions of ' + artistName : 'Always this session') + '">' + keys.map(function(k) {
                     var p = k.split('|');
-                    return '<option value="ses:' + esc(k) + '"' + (cur === 'ses:' + k ? ' selected' : '') + '>' + esc(_sessionTitles[k]) + ' · ' + esc(artistName ? p[1] : p[0] + ' · ' + p[1]) + '</option>';
+                    // Just the session's name (the artist and date in the tooltip)
+                    return '<option value="ses:' + esc(k) + '" title="' + esc(p[0] + ' · ' + p[1]) + '"' + (cur === 'ses:' + k ? ' selected' : '') + '>' + esc(_sessionTitles[k]) + '</option>';
                 }).join('') + '</optgroup>' : '') +
                 '<option value="custom"' + (cur === 'custom' ? ' selected' : '') + '>Custom text…</option></select>';
         }
