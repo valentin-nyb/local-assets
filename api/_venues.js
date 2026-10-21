@@ -298,7 +298,7 @@ export function getWebSessionAuth(req) {
 // What an artist with access can reach: their sets, clips and downloads (Overview), the calendar, and Brand Kit
 // (their own folder; api/brand.js checks the rest). Everything else (cameras, uploads, billing) is refused.
 const MEMBER_GET = ['list-assets', 'assets', 'asset', 'get-asset', 'download', 'session-meta', 'next-event', 'cameras', 'brand',
-  'peak-moment', 'list-thumbnails', 'most-watched-thumbnails', 'vertical-clips', 'camera-frame', 'system-health', 'client-profile'];
+  'peak-moment', 'list-thumbnails', 'most-watched-thumbnails', 'vertical-clips', 'camera-frame', 'system-health', 'client-profile', 'venue-contacts'];
 const MEMBER_POST = ['brand', 'switch-venue', 'peak-moment'];
 export function memberAllowed(req) {
   const u = new URL(String(req.url || '/'), 'https://x');

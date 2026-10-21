@@ -252,6 +252,7 @@
                     <div id="next-event-title" class="kpi-value kpi-value-text">—</div>
                     <div class="kpi-sub"><span id="next-event-time"></span></div>
                 </div>
+                <div id="contacts-list" class="kpi-contacts"></div>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6" style="align-items:start">
@@ -3284,6 +3285,12 @@
         fetchLiveMetrics();
         fetchRecentUploads();
         fetchNextEvent();
+        // An artist's dashboard shows the venue's contacts (set on the Contacts page), checked every few seconds
+        if (document.documentElement.classList.contains('la-member')) {
+            fetchContacts();
+            setInterval(function() { if (!document.hidden) fetchContacts(); }, 5000);
+            document.addEventListener('visibilitychange', function() { if (!document.hidden) fetchContacts(); });
+        }
 
         // ── Pipeline progress polling ────────────────────────────────
         var _pipelineTimer = null;
@@ -3464,6 +3471,31 @@
         }
         checkIntakes();
         setInterval(checkIntakes, 30000);
+
+        var _contactsSig = null;
+        async function fetchContacts() {
+            var list = document.getElementById('contacts-list');
+            if (!list) return;
+            try {
+                var r = await laFetch('/api/venue-contacts?t=' + Date.now(), { cache: 'no-store' });
+                var d = await r.json(); if (!r.ok) return;
+                var contacts = Array.isArray(d.contacts) ? d.contacts : [], sig = JSON.stringify(contacts);
+                if (sig === _contactsSig) return;
+                _contactsSig = sig;
+                // One card per contact, up to 2 beside Next event (all of them on the Contacts page)
+                list.innerHTML = contacts.length ? contacts.slice(0, 2).map(function(c) {
+                    var tel = String(c.phone || '').replace(/[^\d+]/g, '');
+                    return '<div class="kpi kc">' +
+                        (c.role ? '<span class="kc-role">' + escHtml(c.role) + '</span>' : '') +
+                        '<span class="kc-name">' + escHtml(c.name || c.role || 'Contact') + '</span>' +
+                        '<div class="kc-actions">' +
+                            (c.phone ? '<a class="kc-btn call" href="tel:' + escHtml(tel) + '">Call ' + escHtml(c.phone) + '</a>' : '') +
+                            (c.email ? '<a class="kc-btn" href="mailto:' + escHtml(c.email) + '">' + escHtml(c.email) + '</a>' : '') +
+                        '</div>' +
+                    '</div>';
+                }).join('') : '<a class="kpi kc" href="/contacts"><span class="kc-role">Contacts</span><span class="kpi-muted" style="font-size:13px;line-height:1.5;margin-top:6px">No contacts yet. The venue adds the numbers to call here.</span></a>';
+            } catch (e) {}
+        }
 
         async function fetchNextEvent() {
             const titleEl = document.getElementById('next-event-title');
@@ -3780,6 +3812,16 @@
         }
         /* KPI cards: label row, one value, one detail line */
         .kpi-grid { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:16px; }
+        /* Contacts: only on an artist's dashboard, one card each beside Next event */
+        .kpi-contacts { display:none; }
+        html.la-member .kpi-contacts { display:contents; }
+        .kc { display:flex; flex-direction:column; gap:6px; min-width:0; text-decoration:none; color:inherit; }
+        .kc-role { font:500 11px/1.3 'JetBrains Mono', monospace; letter-spacing:.16em; text-transform:uppercase; color:var(--la-dim); }
+        .kc-name { font-size:22px; font-weight:400; color:var(--la-text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .kc-actions { display:flex; flex-direction:column; align-items:flex-start; gap:8px; margin-top:12px; }
+        .kc-btn { display:inline-flex; align-items:center; height:40px; padding:0 16px; border-radius:999px; border:1px solid var(--la-line); color:var(--la-text); font-size:14px; text-decoration:none; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; transition:background .15s, color .15s, border-color .15s; }
+        .kc-btn.call { border-color:var(--la-accent); color:var(--la-accent); }
+        @media (hover:hover) { .kc-btn:hover { border-color:var(--la-accent); color:var(--la-accent); } .kc-btn.call:hover { background:var(--la-accent); color:var(--la-accent-ink); } }
         @media (max-width: 1100px) { .kpi-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
         @media (max-width: 560px)  { .kpi-grid { grid-template-columns:1fr; gap:12px; } }
         .kpi { background:var(--la-surface); border:1px solid var(--la-line); border-radius:14px; padding:18px 20px; display:flex; flex-direction:column; min-width:0; }
