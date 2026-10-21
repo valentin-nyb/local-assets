@@ -4,7 +4,9 @@
 <!DOCTYPE html>
 <html lang="en" class="dark scroll-smooth">
 <head>
-    <script>try { if (JSON.parse(localStorage.getItem('la_admin') || '{}').member) document.documentElement.classList.add('la-member'); } catch (_) {}</script>
+    <script>try { var _la = JSON.parse(localStorage.getItem('la_admin') || '{}'); if (_la.member) document.documentElement.classList.add('la-member');
+        var _lc = (_la.venues || []).filter(function(v) { return v && v.slug === _la.venueSlug; })[0];
+        if (!_la.member && (_la.venueSlug === 'local-assets-admin' || /^local\s*[\/-]?\s*assets\b/i.test(String(_lc ? _lc.name : (_la.venue || '')).trim()))) document.documentElement.classList.add('la-admin-acct'); } catch (_) {}</script>
     <script>
       (function(){
         var s = localStorage.getItem('la_admin');
@@ -3905,7 +3907,9 @@
         .hp-frame span { position:absolute; left:6px; bottom:6px; font:500 10px 'JetBrains Mono',monospace; color:#fff; background:rgba(0,0,0,.6); padding:2px 6px; border-radius:6px; }
         .hp-frame:hover, .hp-frame.on { border-color:var(--la-accent); }
         /* An artist with access to a venue's or label's account: not the account's storage or revenue */
-        html.la-member .kpi-account, html.la-member #hero-pick { display:none !important; }
+        html.la-member .kpi-account { display:none !important; }
+        /* Choose banner moment: only on the local / assets admin account */
+        html:not(.la-admin-acct) #hero-pick { display:none !important; }
         .kpi-head { display:flex; align-items:center; justify-content:space-between; gap:8px; height:22px; }
         .kpi-label { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--la-dim); }
         .kpi-icon { font-size:16px; color:var(--la-dim); }

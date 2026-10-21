@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import ffmpegPath from 'ffmpeg-static';
 import { createClient } from 'redis';
-import { getWebSessionAuth } from './_venues.js';
+import { getWebSessionAuth, platformAdmins } from './_venues.js';
 
 // Finds the peak moment of a set for the dashboard banner: among the stretches with the most bass
 // energy (the drops, measured on the smallest HLS rendition), the one where the picture shows someone
@@ -172,9 +172,10 @@ export default async function handler(req, res) {
     if (!ar?.ok) return res.status(404).json({ error: 'Asset not found' });
     const v = { time: Math.round(Number(dj.time)), focus: { x: Math.round(Number(dj.focus.x)), y: Math.round(Number(dj.focus.y)) } };
     const ver = /^[2-9]$/.test(String(body?.v || '')) ? String(body.v) : '2';
-    // The banner moment is the account's to choose: an artist with access only saves the one found automatically, never over it
-    const saved = await withRedis(async r => (session.member ? await r.set(`djframe${ver}:${assetId}`, JSON.stringify(v), { NX: true }) : await r.set(`djframe${ver}:${assetId}`, JSON.stringify(v))));
-    if (!saved) return res.status(403).json({ error: 'Only the account can change the banner moment' });
+    // The banner moment is chosen by local / assets: everyone else only saves the one found automatically, never over it
+    const admin = platformAdmins().includes(String(session.email || '').toLowerCase());
+    const saved = await withRedis(async r => (admin ? await r.set(`djframe${ver}:${assetId}`, JSON.stringify(v)) : await r.set(`djframe${ver}:${assetId}`, JSON.stringify(v), { NX: true })));
+    if (!saved) return res.status(403).json({ error: 'Only local / assets can change the banner moment' });
     return res.status(200).json({ ok: true });
   }
 
