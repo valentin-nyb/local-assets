@@ -197,7 +197,7 @@ export function venueChoices(email) {
   // The local / assets admin account first, then the clients A–Z
   const isAdmin = v => v.slug === (process.env.BILLING_ADMIN_VENUE || 'local-assets-admin') || /^local\s*[\/-]?\s*assets\b/i.test(String(v.name || '').trim());
   // An artist with access: one choice per artist (the same account can appear once for each)
-  return findVenuesByEmail(email).map(v => ({ slug: v.slug, name: v.member ? `${v.member.name} · ${v.name || v.slug}` : (v.name || v.slug), ...(v.member ? { member: v.member.name, as: v.member.owner } : {}) }))
+  return findVenuesByEmail(email).map(v => ({ slug: v.slug, name: v.member ? v.member.name : (v.name || v.slug), ...(v.member ? { member: v.member.name, as: v.member.owner } : {}) }))
     .sort((a, b) => (isAdmin(b) - isAdmin(a)) || a.name.localeCompare(b.name));
 }
 
