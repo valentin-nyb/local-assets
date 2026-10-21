@@ -17,6 +17,13 @@ import {
 //   POST { action: 'assign', target, plan, email, name, monthly } admin: who pays which plan
 //   POST { action: 'invoiceNow', target, plan, email, name, period } admin: send an invoice now
 
+// The admin overview of every account (cached 10 minutes): dropped when rates, plans or assignments change,
+// so the next look shows the new prices straight away
+async function clearOverview(redis) {
+  const keys = [];
+  for await (const batch of redis.scanIterator({ MATCH: 'billing_overview:*', COUNT: 200 })) keys.push(...[].concat(batch));
+  if (keys.length) await redis.del(keys);
+}
 const admins = () => (process.env.BILLING_ADMINS || 'info@local-assets.com').split(/[\s,]+/).map(s => s.toLowerCase()).filter(Boolean);
 // Who is billed: the account itself ("venue"), or one of its artists, record labels, venues or managements by name
 const cleanTarget = t => (t === 'venue' || /^(artist|label|venue|management):[^<>]{1,60}$/.test(String(t || ''))) ? String(t).replace(/^(\w+):\s*/, '$1:').trim() : 'venue';
@@ -549,7 +556,7 @@ export default async function handler(req, res) {
         const n = Number(r[k]);
         if (Number.isFinite(n) && n >= 0 && n < 1000) clean[k] = n;
       }
-      await withRedis(redis => redis.set('billing_rates', JSON.stringify({ ...DEFAULT_RATES, ...clean })));
+      await withRedis(async redis => { await redis.set('billing_rates', JSON.stringify({ ...DEFAULT_RATES, ...clean })); await clearOverview(redis); });
       return res.status(200).json({ ok: true });
     }
 
@@ -605,12 +612,14 @@ export default async function handler(req, res) {
     }
 
     if (body.action === 'setKit') {
+      await withRedis(clearOverview).catch(() => {});   // every account's figures are worked out again
       const kit = cleanKit(body.kit);
       await withRedis(redis => redis.set('billing_kit', JSON.stringify(kit)));
       return res.status(200).json({ kit });
     }
 
     if (body.action === 'setPlans') {
+      await withRedis(clearOverview).catch(() => {});   // every account's figures are worked out again
       const plans = cleanPlans(body.plans);
       if (!plans.length) return res.status(400).json({ error: 'Add at least one plan' });
       await withRedis(redis => redis.set('billing_plans', JSON.stringify(plans)));
@@ -618,6 +627,7 @@ export default async function handler(req, res) {
     }
 
     if (body.action === 'assign') {
+      await withRedis(clearOverview).catch(() => {});   // every account's figures are worked out again
       const target = cleanTarget(body.target);
       const rec = { plan: cleanText(body.plan, 40), email: cleanText(body.email, 120), name: cleanText(body.name, 80), monthly: !!body.monthly, details: cleanDetails(body.details) };
       if (rec.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rec.email)) return res.status(400).json({ error: 'Enter a valid email' });
@@ -636,6 +646,7 @@ export default async function handler(req, res) {
     }
 
     if (body.action === 'setAccountType') {
+      await withRedis(clearOverview).catch(() => {});   // every account's figures are worked out again
       const t = String(body.accountType || '');
       if (!TYPE_LABEL[t]) return res.status(400).json({ error: 'Unknown type' });
       // One type for the account, shared with its Brand Kit
