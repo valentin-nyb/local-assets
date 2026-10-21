@@ -265,10 +265,12 @@ export default async function handler(req, res) {
       const pendingIds = Object.values(await redis.hGetAll(swapsKey(slug))).map(v => parseSwap(v).old).concat(Object.keys(anim));
       // Shown clips that aren't vertical originals yet (or watermarked copies of them): these get cut once
       const originals = new Set(await redis.sMembers(originalsKey(slug)));
+      // Already portrait (e.g. a copy drawn with a moving logo, which is a new upload with no source)
+      const portrait = a => (a.tracks || []).some(t => t.type === 'video' && Number(t.max_height) > Number(t.max_width));
       const horizontal = assets.filter(a => {
         const info = socialInfo(a);
         if (!info || info.hidden) return false;
-        return !originals.has(a.id) && !originals.has(a.source_asset_id);
+        return !originals.has(a.id) && !originals.has(a.source_asset_id) && !portrait(a);
       }).map(a => a.id);
       return res.status(200).json({ done: done + v.done, pending: pending + v.pending, verticalsPending: v.pending, watermarked, horizontal, pendingIds });
     }
