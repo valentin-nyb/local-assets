@@ -563,11 +563,15 @@
         var WM_TEXT_POS = [['tl', 'Top left'], ['tr', 'Top right'], ['bl', 'Bottom left'], ['br', 'Bottom right'], ['cc', 'Middle']];
         // Session names (Edit session in Distribution History), for the subtitle: "ARTIST|date" → title
         var _sessionTitles = {};
+        // Session names: the watermark is first drawn once they're in (at most 1.5 s), so it isn't drawn twice on load
+        var _titlesIn = false;
         function loadSessionTitles() {
-            laFetch('/api/session-meta').then(function(r) { return r.ok ? r.json() : null; }).then(function(d) {
+            return laFetch('/api/session-meta').then(function(r) { return r.ok ? r.json() : null; }).then(function(d) {
+                var before = JSON.stringify(_sessionTitles);
                 _sessionTitles = {};
                 Object.keys((d && d.sessions) || {}).forEach(function(k) { if (d.sessions[k].title) _sessionTitles[k] = d.sessions[k].title; });
-                if (_wm) renderWatermark();
+                var late = _titlesIn; _titlesIn = true;
+                if (_wm && late && JSON.stringify(_sessionTitles) !== before) renderWatermark();
             }).catch(function() {});
         }
         // The watermark's title: each clip's artist, one artist from Brand Kit, or any text
@@ -834,7 +838,11 @@
         // The preview waits (hidden) until the title and subtitle fonts and the logo are loaded, at most 3 s
         function previewReady() {
             // Only the first time the page draws it (after that its fonts and logo are already loaded)
-            var pv = document.getElementById('bk-wm-preview'); if (!pv || previewReady.shown) return;
+            // Also whenever it's drawn again while the logo or a font is still loading (the page loads the brand kit twice)
+            var pv = document.getElementById('bk-wm-preview'); if (!pv) return;
+            var lg = document.getElementById('bk-wm-logo');
+            var loading = (lg && lg.getAttribute('src') && !(lg.complete && lg.naturalWidth)) || (document.fonts && document.fonts.status === 'loading');
+            if (previewReady.shown && !loading) return;
             pv.classList.add('wm-wait');
             var t = _wm && _wm.text, waits = [];
             if (t && t.font) waits.push(loadBrandFont(t.font).catch(function() {}));
@@ -845,7 +853,7 @@
             // Placed with no transitions, twice a frame apart (sizes settle), then faded in
             var done = false, show = function() { if (done) return; done = true; positionPreview(); layoutMiddle();
                 requestAnimationFrame(function() { positionPreview(); layoutMiddle(); requestAnimationFrame(function() { previewReady.shown = true; var cur = document.getElementById('bk-wm-preview'); if (cur) cur.classList.remove('wm-wait'); }); }); };
-            Promise.all(waits).then(function() { setTimeout(show, 60); });
+            Promise.all(waits).then(function() { setTimeout(show, 30); });
             setTimeout(show, 3000);
         }
         function positionPreview() {
@@ -1236,7 +1244,7 @@
                 _labelArtists = res[0].labelArtists || {};
                 // Who has access to each artist's folder; and whether the person signed in is one of those artists
                 _access = res[0].access || {}; _member = res[0].member || null;
-                loadSessionTitles();
+                var titlesP = loadSessionTitles();
                 document.body.classList.toggle('bk-member', !!_member);
                 var hidden = res[0].hiddenOwners || [];
                 _wm = res[0].watermark || { enabled: true, logo: 'auto', position: 'bl', size: 'm', opacity: 0.9 };
@@ -1306,7 +1314,9 @@
                 }
                 err.classList.add('hidden');
                 render();
-                renderWatermark();
+                // Once the session names are in (or after 1.5 s): a late answer draws it again only if names changed
+                if (_titlesIn) renderWatermark();
+                else Promise.race([titlesP, new Promise(function(r) { setTimeout(r, 1500); })]).then(function() { _titlesIn = true; renderWatermark(); });
             } catch (e) {
                 err.textContent = 'Could not load the brand kit — ' + e.message;
                 err.classList.remove('hidden');
