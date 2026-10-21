@@ -185,6 +185,8 @@
         .bk-tag.is-post { color:#C084FC; border-color:color-mix(in srgb, #C084FC 50%, transparent); }
         html:not(.dark) .bk-tag.is-post { color:#7E22CE; border-color:color-mix(in srgb, #7E22CE 45%, transparent); }
         .bk-file-actions .is-on { color:var(--la-accent) !important; }
+        .bk-preview.bk-video video { width:100%; height:100%; object-fit:cover; display:block; }
+        .bk-file-view video { max-width:100%; max-height:56vh; border-radius:6px; display:block; margin:0 auto; background:#000; }
         .bk-preview.photo img { max-width:100%; max-height:100%; width:100%; height:100%; object-fit:cover; }
         button.bk-tag { cursor:pointer; z-index:1; }
         .bk-post-count { position:absolute; top:8px; right:8px; z-index:1; font:500 10px 'JetBrains Mono',monospace; color:#fff; background:rgba(0,0,0,.6); border-radius:999px; padding:2px 8px; }
@@ -320,7 +322,7 @@
         .bk-wm-status { font-size:12px; color:var(--la-dim); margin-top:16px; min-height:16px; }
         /* Hidden until its fonts and logo have arrived, then faded in where it belongs (no jumping after a refresh) */
         .bk-wm-preview .logo, .bk-wm-preview .text { transition:opacity .25s ease; }
-        .bk-wm-preview.wm-wait .logo, .bk-wm-preview.wm-wait .text { opacity:0 !important; }
+        .bk-wm-preview.wm-wait .logo, .bk-wm-preview.wm-wait .text { opacity:0 !important; transition:none !important; }
         .bk-wm-preview { position:relative; width:160px; aspect-ratio:9/16; transition:width .2s; border-radius:12px; overflow:hidden; align-self:start;
             background-color:var(--la-chip); background-image:linear-gradient(45deg, rgba(128,128,128,.12) 25%, transparent 25%), linear-gradient(-45deg, rgba(128,128,128,.12) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(128,128,128,.12) 75%), linear-gradient(-45deg, transparent 75%, rgba(128,128,128,.12) 75%);
             background-size:16px 16px; background-position:0 0, 0 8px, 8px -8px, -8px 0; }
@@ -513,6 +515,8 @@
             // Several images kept together as one post (a carousel)
             { key: 'posts',      label: 'Instagram posts', icon: 'solar:gallery-linear', tag: 'Instagram' },
             { key: 'photos',     label: 'Photos',     icon: 'solar:camera-linear', tag: 'Photo' },
+            // Promos and teasers: each gets a copy with the watermark burned in
+            { key: 'videos',     label: 'Videos',     icon: 'solar:videocamera-record-linear', tag: 'Video' },
             { key: 'guidelines', label: 'Guidelines', icon: 'solar:document-text-linear', tag: 'Guidelines' },
             { key: 'fonts',      label: 'Fonts',      icon: 'solar:text-field-linear', tag: 'Font' },
             // A .cube LUT: the venue's newest one is applied to every vertical clip (same colours on every clip)
@@ -520,6 +524,7 @@
             { key: 'other',      label: 'Other…',     icon: 'solar:folder-linear', tag: 'Other' },
         ];
         var IMG_EXT = /\.(png|jpe?g|svg|webp|gif)$/i;
+        var VID_EXT = /\.(mp4|mov|m4v|webm)$/i;
         var FONT_EXT = /\.(otf|ttf|woff2?)$/i;
         var _access = {}, _member = null;
         var _lut = '', _files = [], _owners = [], _uploading = false, _orgType = 'venue', _orgName = '', _ownerPhotos = {}, _photoPicked = {}, _ownerGenres = {}, _ownerLinks = {}, _labelArtists = {};
@@ -595,7 +600,7 @@
         var WM_TEXT_COLOR = [['white', 'White'], ['black', 'Black']];
         // The text has its own size; until one is chosen it follows the logo's
         function wmTextSize() { return (_wm.text && WM_TEXT_PX[_wm.text.size]) ? _wm.text.size : (_wm.size || 'm'); }
-        var WM_TEXT_PX = { s: 48, m: 66, l: 92 };
+        var WM_TEXT_PX = { s: 48, m: 66, l: 128 };
         // The clip worker draws watermark text from these font files (not WOFF2)
         var WM_TEXT_FONT = /\.(ttf|otf|woff)$/i;
         function wmLogos() { return _files.filter(function(f) { return f.category === 'logos' && /\.(png|svg|webp|jpe?g|gif)$/i.test(f.name); }); }
@@ -829,8 +834,7 @@
         // The preview waits (hidden) until the title and subtitle fonts and the logo are loaded, at most 3 s
         function previewReady() {
             // Only the first time the page draws it (after that its fonts and logo are already loaded)
-            var pv = document.getElementById('bk-wm-preview'); if (!pv || previewReady.done) return;
-            previewReady.done = true;
+            var pv = document.getElementById('bk-wm-preview'); if (!pv || previewReady.shown) return;
             pv.classList.add('wm-wait');
             var t = _wm && _wm.text, waits = [];
             if (t && t.font) waits.push(loadBrandFont(t.font).catch(function() {}));
@@ -838,7 +842,9 @@
             var img = document.getElementById('bk-wm-logo');
             if (img && img.getAttribute('src') && !img.complete) waits.push(new Promise(function(res) { img.addEventListener('load', res, { once: true }); img.addEventListener('error', res, { once: true }); }));
             if (document.fonts && document.fonts.ready) waits.push(document.fonts.ready);
-            var done = false, show = function() { if (done) return; done = true; positionPreview(); layoutMiddle(); requestAnimationFrame(function() { var cur = document.getElementById('bk-wm-preview'); if (cur) cur.classList.remove('wm-wait'); }); };
+            // Placed with no transitions, twice a frame apart (sizes settle), then faded in
+            var done = false, show = function() { if (done) return; done = true; positionPreview(); layoutMiddle();
+                requestAnimationFrame(function() { positionPreview(); layoutMiddle(); requestAnimationFrame(function() { previewReady.shown = true; var cur = document.getElementById('bk-wm-preview'); if (cur) cur.classList.remove('wm-wait'); }); }); };
             Promise.all(waits).then(function() { setTimeout(show, 60); });
             setTimeout(show, 3000);
         }
@@ -1290,6 +1296,9 @@
                     while (at < artists.length && artists[at].parent === parentKey) at++;
                     artists.splice(at, 0, org);
                     _owners = group('venue-', 'Venue brand kit', 'Venues').concat(artists, loose);
+                } else if (_member) {
+                    // An artist with access: their own folder first, then the venue, then the record labels
+                    _owners = artists.concat([org], ownLabels, group('venue-', 'Venue brand kit', 'Venues'), loose);
                 } else {
                     _owners = [org].concat(ownLabels, group('venue-', 'Venue brand kit', 'Venues'), artists, loose);
                 }
@@ -1391,6 +1400,10 @@
                 pv.classList.add('is-openable');
                 pv.addEventListener('click', function(e) { if (!e.target.closest('button')) open.click(); });
             });
+            wrap.querySelectorAll('[data-wm-video]').forEach(function(b) { b.addEventListener('click', function() { b.disabled = true; b.textContent = 'Watermarking…'; watermarkVideo(b.dataset.wmVideo).then(loadBrand).catch(function(e) { alert('Could not watermark the video: ' + e.message); b.disabled = false; b.textContent = 'Watermark it'; }); }); });
+            // Videos still being watermarked: look again in a while
+            clearTimeout(render._vt);
+            if (_files.some(function(f) { return f.watermarked && !f.watermarked.ready && !f.watermarked.error; })) render._vt = setTimeout(function() { if (!_uploading) loadBrand(); }, 20000);
             wrap.querySelectorAll('[data-set-thumb]').forEach(function(b) { b.addEventListener('click', function() { openSetThumbnail(b.dataset.setThumb); }); });
             wrap.querySelectorAll('[data-use-wm]').forEach(function(b) { b.addEventListener('click', function() { useLogoAsWatermark(b.dataset.useWm); }); });
             wrap.querySelectorAll('[data-file-preview]').forEach(function(b) { b.addEventListener('click', function() { openFilePreview(b.dataset.filePreview); }); });
@@ -1635,6 +1648,8 @@
             if (/\.cube$/i.test(f.name)) return openLutPreview(f);
             var view = IMG_EXT.test(f.name)
                 ? '<div class="bk-preview bk-file-view' + (f.category === 'logos' ? '' : ' photo') + '"><img src="' + esc(f.url) + '" alt="" crossorigin="anonymous" onload="fitPreviewBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}"></div>'
+                : VID_EXT.test(f.name)
+                ? '<div class="bk-file-view"><video src="' + esc(f.watermarked && f.watermarked.ready ? f.watermarked.url.replace(/\?download=.*$/, '') : f.url) + '" controls playsinline autoplay muted></video></div>'
                 : /pdf$/i.test(f.name)
                 ? '<iframe class="bk-file-pdf" src="' + esc(f.url) + '" title="' + esc(f.name) + '"></iframe>'
                 : '<p class="bk-meta">This file can\'t be shown in the browser. Download it to open it.</p>';
@@ -1941,6 +1956,22 @@
             } catch (e) { btn.disabled = false; alert('Could not delete the post: ' + e.message); }
         }
 
+        // A video's size from the browser, then the server has Mux burn the watermark into a copy
+        function videoSize(url) {
+            return new Promise(function(res) {
+                var v = document.createElement('video'); v.muted = true; v.preload = 'metadata';
+                var t = setTimeout(function() { res({}); }, 15000);
+                v.onloadedmetadata = function() { clearTimeout(t); res({ w: v.videoWidth, h: v.videoHeight }); };
+                v.onerror = function() { clearTimeout(t); res({}); };
+                v.src = url;
+            });
+        }
+        async function watermarkVideo(url) {
+            var sz = await videoSize(url);
+            var r = await laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'watermarkVideo', url: url, w: sz.w, h: sz.h }) });
+            var d = await r.json().catch(function() { return {}; });
+            if (!r.ok) throw new Error(d.error || r.status);
+        }
         function fileCard(f) {
             var ext = (f.name.split('.').pop() || 'file').slice(0, 5);
             var cat = CATS.filter(function(c) { return c.key === f.category; })[0] || CATS[CATS.length - 1];
@@ -1953,6 +1984,11 @@
                     '' +
                     (thumbFile(f) ? '<button type="button" class="bk-use-wm" data-set-thumb="' + esc(f.url) + '" title="Use this image as a session thumbnail, with your watermark">Set as thumbnail</button>' : '') +
                     (wmLogoFile(f) ? '<button type="button" class="bk-use-wm' + (wmUsesLogo(f) ? ' is-on' : '') + '" data-use-wm="' + esc(f.url) + '" title="Stamp this logo bottom left on every vertical clip">' + (wmUsesLogo(f) ? 'Watermark' : 'Use as watermark') + '</button>' : '') + '</div>'
+                : VID_EXT.test(f.name)
+                ? '<div class="bk-preview photo bk-video">' + tag + '<video src="' + esc(f.url) + '#t=0.5" muted playsinline preload="metadata"></video>' +
+                    (f.watermarked ? (f.watermarked.ready ? '<a class="bk-use-wm is-on" href="' + esc(f.watermarked.url) + '" title="Download the copy with your watermark">Watermarked</a>'
+                        : '<span class="bk-use-wm">' + (f.watermarked.error ? 'Watermark failed' : 'Watermarking…') + '</span>')
+                        : '<button type="button" class="bk-use-wm" data-wm-video="' + esc(f.url) + '" title="Make a copy with your watermark">Watermark it</button>') + '</div>'
                 : /\.cube$/i.test(f.name)
                 ? '<div class="bk-preview photo bk-lut" data-lut="' + esc(f.url) + '">' + tag + '<canvas class="bk-lut-c"></canvas><span class="bk-lut-wait">Applying look…</span>' +
                     '<button type="button" class="bk-use-wm' + (_lut === f.url ? ' is-on' : '') + '" data-use-lut="' + esc(f.url) + '" title="Grade every vertical clip with this look">' + (_lut === f.url ? 'LUT in use' : 'Use as LUT') + '</button></div>'
@@ -1992,8 +2028,8 @@
                 '<label id="bk-other-wrap" class="hidden">What is it?<input name="otherLabel" maxlength="40" placeholder="e.g. Press kit, Tech rider, Stage plot"><small>Shown on the file instead of "Other".</small></label>' +
                 '<label id="bk-label-artist-wrap" class="hidden">Artist<select name="labelArtist">' + artistOpts + '</select><small>The record label\'s brand kit is kept under this artist.</small></label>' +
                 '<div id="bk-drop" class="bk-drop" tabindex="0">Drop files here or <b>browse</b>' +
-                    '<small>Logos, covers, artwork, photos, PDFs, AI/EPS, fonts, colour looks (.cube) or ZIP · up to 200 MB each</small></div>' +
-                '<input id="bk-input" type="file" multiple class="hidden" accept=".png,.jpg,.jpeg,.svg,.webp,.gif,.pdf,.ai,.eps,.psd,.zip,.ttf,.otf,.woff,.woff2,.txt,.cube">' +
+                    '<small>Logos, covers, artwork, photos, videos, PDFs, AI/EPS, fonts, colour looks (.cube) or ZIP · up to 200 MB each</small></div>' +
+                '<input id="bk-input" type="file" multiple class="hidden" accept=".png,.jpg,.jpeg,.svg,.webp,.gif,.pdf,.ai,.eps,.psd,.zip,.ttf,.otf,.woff,.woff2,.txt,.cube,.mp4,.mov,.m4v,.webm">' +
                 '<div id="bk-queue" class="bk-queue"></div>' +
                 '<p id="bk-form-error" class="cam-form-error"></p>' +
                 '<div class="cam-form-actions"><button type="button" class="cam-btn ghost" onclick="closeCamDialog()">Cancel</button>' +
@@ -2018,6 +2054,7 @@
                     if (/\.(ttf|otf|woff2?)$/i.test(p0.name)) form.category.value = 'fonts';
                     else if (/\.cube$/i.test(p0.name)) form.category.value = 'looks';
                     else if (/pdf/.test(p0.type)) form.category.value = 'guidelines';
+                    else if (/^video\//.test(p0.type) || VID_EXT.test(p0.name)) form.category.value = 'videos';
                     else if (/^image\//.test(p0.type)) form.category.value =
                         /cover|album|release|single|\bep\b/i.test(p0.name) ? 'covers'
                         : /artwork|poster|flyer|visual|graphic/i.test(p0.name) ? 'artwork'
@@ -2073,6 +2110,11 @@
                         });
                         if (form.category.value === 'other' && form.otherLabel.value.trim() && up && up.url) {
                             await laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setFileLabel', url: up.url, label: form.otherLabel.value.trim() }) }).catch(function() {});
+                        }
+                        // A video: a watermarked copy is made straight away (shown as "Watermarking…" until it's ready)
+                        if (form.category.value === 'videos' && VID_EXT.test(safe) && up && up.url) {
+                            row.querySelector('.st').textContent = 'Watermarking…';
+                            await watermarkVideo(up.url).catch(function(er) { errEl.textContent = 'Uploaded, but the watermark failed: ' + er.message; });
                         }
                         row.querySelector('i').style.width = '100%'; row.querySelector('.st').textContent = 'Done';
                     } catch (er) {

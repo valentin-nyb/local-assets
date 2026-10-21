@@ -1,11 +1,13 @@
 import { pausedBy, sendPaused } from './_suspend.js';
-import { list, del, copy } from '@vercel/blob';
+import { list, del, copy, put } from '@vercel/blob';
+import crypto from 'crypto';
 import { createClient } from 'redis';
 import { handleUpload } from '@vercel/blob/client';
 import { getWebSessionAuth, MEMBERS_KEY, refreshRegistry, getVenuesConfig } from './_venues.js';
 import { Resend } from 'resend';
 import { accessInviteEmail } from './_emails.js';
-import { cleanWatermark, readWatermark, watermarkKey, readArtistWatermark, artistWatermarkKey } from './_watermark.js';
+import { cleanWatermark, readWatermark, watermarkKey, readArtistWatermark, artistWatermarkKey, resolveWatermark } from './_watermark.js';
+import { renderWatermarkPng, VERTICAL, HORIZONTAL } from './_watermark-render.js';
 import { ownerLimit, accountTypeOf, readAssignments } from './_billing.js';
 
 // Brand kit: logos, guidelines, fonts and other brand files for a venue and its artists.
@@ -15,7 +17,9 @@ import { ownerLimit, accountTypeOf, readAssignments } from './_billing.js';
 // only hands out upload tokens for the signed-in venue's own folder.
 
 // "posts" are Instagram posts: several images kept together as one, under posts/<post id>/<image>
-const CATEGORIES = ['logos', 'covers', 'artwork', 'posts', 'photos', 'guidelines', 'fonts', 'looks', 'other'];
+// "videos": short videos (promos, teasers); each gets a copy with the watermark burned in (Mux, MP4)
+const CATEGORIES = ['logos', 'covers', 'artwork', 'posts', 'photos', 'videos', 'guidelines', 'fonts', 'looks', 'other'];
+const videoWmKey = slug => `brand_video_wm:${slug}`;   // pathname → { assetId, pid, ready }
 const POST_ID = /^[a-z0-9]{6,24}$/;
 const newPostId = () => Math.random().toString(36).slice(2, 8) + Date.now().toString(36);
 const MAX_BYTES  = 200 * 1024 * 1024;
@@ -28,6 +32,7 @@ const ALLOWED_TYPES = [
   'font/ttf', 'font/otf', 'font/woff', 'font/woff2', 'application/font-woff',
   'application/x-font-ttf', 'application/x-font-otf', 'application/vnd.ms-opentype',
   'text/plain', 'application/octet-stream',
+  'video/mp4', 'video/quicktime', 'video/webm', 'video/x-m4v',
 ];
 
 const prefixFor = slug => `brand/${slug}/`;
@@ -81,6 +86,22 @@ export default async function handler(req, res) {
         r.sMembers(`brand_hidden_owners:${slug}`),
         r.hGetAll(`brand_owner_genres:${slug}`), r.hGetAll(`brand_owner_links:${slug}`),
       ])).catch(() => [null, null, {}, {}, cleanWatermark(), {}, {}, [], {}, {}]);
+      // Videos: their watermarked copy in Cloud Storage (Mux), and whether it's ready to download
+      const vids = files.filter(f => f.category === 'videos');
+      if (vids.length) {
+        const map = await withRedis(r => r.hGetAll(videoWmKey(slug))).catch(() => ({}));
+        await Promise.all(vids.map(async f => {
+          const key = decodeURIComponent(new URL(f.url).pathname.slice(1));
+          let v = null; try { v = JSON.parse(map?.[key] || 'null'); } catch {}
+          if (!v) return;
+          if (!v.ready && session.muxAuth) {
+            const a = await fetch(`https://api.mux.com/video/v1/assets/${encodeURIComponent(v.assetId)}`, { headers: { Authorization: session.muxAuth }, signal: AbortSignal.timeout(8000) }).then(r => r.ok ? r.json() : null).then(d => d?.data).catch(() => null);
+            if (a?.status === 'errored') v.error = true;
+            if (a && (a.static_renditions?.status === 'ready' || (a.static_renditions?.files || []).some(x => x.status === 'ready'))) { v.ready = true; await withRedis(r => r.hSet(videoWmKey(slug), key, JSON.stringify(v))).catch(() => {}); }
+          }
+          f.watermarked = { ready: !!v.ready, error: !!v.error, url: v.ready ? `https://stream.mux.com/${v.pid}/highest.mp4?download=${encodeURIComponent(f.name.replace(/\.[^.]+$/, '') + '-watermarked')}` : null, play: `https://stream.mux.com/${v.pid}.m3u8` };
+        }));
+      }
       // "Other" files carry what they are, as typed when uploading ("Press kit", "Tech rider")
       for (const f of files) {
         const key = decodeURIComponent(new URL(f.url).pathname.slice(1));
@@ -129,7 +150,7 @@ export default async function handler(req, res) {
       const ownFile = u => { try { const p = decodeURIComponent(new URL(String(u || '')).pathname.slice(1)); return parsePath(p, slug)?.owner === own; } catch { return false; } };
       const ok = !body.action ? true
         : body.action === 'setWatermark' ? true
-        : ['setPhoto', 'move', 'setFileLabel', 'delete'].includes(body.action) ? ownFile(body.url)
+        : ['setPhoto', 'move', 'setFileLabel', 'delete', 'watermarkVideo'].includes(body.action) ? ownFile(body.url)
         : body.action === 'setOwnerDetails' ? body.owner === own : false;
       if (!ok) return res.status(403).json({ error: 'Artists can change only their own Brand Kit folder' });
     }
@@ -174,6 +195,36 @@ export default async function handler(req, res) {
         orgName ? r.set(`brand_org_name:${slug}`, orgName) : r.del(`brand_org_name:${slug}`),
       ]));
       return res.status(200).json({ orgType: body.orgType, orgName });
+    }
+
+    // A video in Brand Kit: a copy with the watermark burned in, made by Mux (the original stays as it is).
+    // The artist's own watermark for an artist's folder, else the account's; w × h: the video's size (from the browser)
+    if (body.action === 'watermarkVideo') {
+      const url = String(body.url || '');
+      let pathname = ''; try { pathname = decodeURIComponent(new URL(url).pathname.slice(1)); } catch {}
+      const meta = pathname.startsWith(prefixFor(slug)) ? parsePath(pathname, slug) : null;
+      if (!meta || meta.category !== 'videos' || !/\.public\.blob\.vercel-storage\.com$/.test(new URL(url).hostname)) return res.status(403).json({ error: 'Not one of your videos' });
+      if (!session.muxAuth) return res.status(409).json({ error: 'Your video storage is still being set up' });
+      const w = Math.round(Number(body.w)) || 1920, h = Math.round(Number(body.h)) || 1080;
+      const out = await withRedis(async r => {
+        const artist = meta.owner.startsWith('artist-') ? ((await r.hGet(`brand_owner_names:${slug}`, meta.owner)) || meta.owner.slice(7).replace(/-/g, ' ')) : null;
+        const wm = await resolveWatermark(r, slug, artist);
+        if (!wm) return { status: 400, error: 'Your watermark is off or has nothing to add: set it up in Watermark first' };
+        // The overlay at the video's own size and shape
+        const base = h > w ? VERTICAL : HORIZONTAL, L = { ...base, H: Math.round(base.W * h / w) };
+        const png = await renderWatermarkPng(wm, L, Math.max(base.W, w));
+        if (!png) return { status: 400, error: 'Nothing to stamp' };
+        const overlay = await put(`watermarks/${slug}/${crypto.randomBytes(6).toString('hex')}.png`, png, { access: 'public', contentType: 'image/png', addRandomSuffix: false });
+        const mr = await fetch('https://api.mux.com/video/v1/assets', { method: 'POST', headers: { Authorization: session.muxAuth, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(15000),
+          body: JSON.stringify({ input: [{ url }, { url: overlay.url, overlay_settings: { vertical_align: 'top', horizontal_align: 'left', width: '100%', opacity: '100%' } }],
+            playback_policy: ['public'], static_renditions: [{ resolution: 'highest' }], passthrough: `BRANDKIT // VIDEO // ${meta.name}`.slice(0, 255) }) });
+        const d = await mr.json().catch(() => ({}));
+        if (!mr.ok || !d.data) return { status: 502, error: d?.error?.messages?.[0] || 'Cloud Storage refused the video' };
+        const v = { assetId: d.data.id, pid: d.data.playback_ids?.[0]?.id, ready: false };
+        await r.hSet(videoWmKey(slug), pathname, JSON.stringify(v));
+        return { status: 200, v };
+      });
+      return res.status(out.status).json(out.status === 200 ? { ok: true } : { error: out.error });
     }
 
     if (body.action === 'setWatermark') {
@@ -318,6 +369,12 @@ export default async function handler(req, res) {
       }
       await del(url);
       await withRedis(r => r.hDel(`brand_file_label:${slug}`, pathname)).catch(() => {});
+      // A video's watermarked copy goes with it
+      const vw = await withRedis(r => r.hGet(videoWmKey(slug), pathname)).catch(() => null);
+      if (vw) {
+        try { const v = JSON.parse(vw); if (v.assetId && session.muxAuth) await fetch(`https://api.mux.com/video/v1/assets/${encodeURIComponent(v.assetId)}`, { method: 'DELETE', headers: { Authorization: session.muxAuth } }).catch(() => {}); } catch {}
+        await withRedis(r => r.hDel(videoWmKey(slug), pathname)).catch(() => {});
+      }
       return res.status(200).json({ ok: true });
     }
 

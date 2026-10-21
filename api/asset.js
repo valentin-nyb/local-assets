@@ -4,7 +4,7 @@ import { head } from '@vercel/blob';
 // (rewritten here as ?path=brand/...). Opening a link shows the file on a local-assets.com page,
 // so the address bar never shows the storage URL. ?download downloads it; ?raw redirects to the file.
 // Only brand-kit files are reachable this way.
-const PATH = /^brand\/[A-Za-z0-9-]+\/(venue|(?:artist|venue|label)-[a-z0-9]+(?:-[a-z0-9]+)*)\/(?:(logos|covers|artwork|photos|guidelines|fonts|looks|other)|posts\/[a-z0-9]{6,24})\/[A-Za-z0-9._-]+$/;
+const PATH = /^brand\/[A-Za-z0-9-]+\/(venue|(?:artist|venue|label)-[a-z0-9]+(?:-[a-z0-9]+)*)\/(?:(logos|covers|artwork|photos|videos|guidelines|fonts|looks|other)|posts\/[a-z0-9]{6,24})\/[A-Za-z0-9._-]+$/;
 const IMAGE = /\.(png|jpe?g|gif|webp|svg)$/i;
 const PDF = /\.pdf$/i;
 
