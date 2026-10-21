@@ -592,8 +592,6 @@
         @media (hover:hover) { .tr-toggle button:not(.on):hover { color:#fafafa; } }
         .tr-offer { position:relative; display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1.4fr) auto; gap:28px; align-items:center; margin:0 auto 28px; padding:26px 30px; border-radius:18px; border:1px dashed rgba(133,250,79,.55); background:linear-gradient(100deg, rgba(133,250,79,.07), rgba(133,250,79,0) 60%), #0a0a0a; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; }
         .tr-offer-tag { display:inline-flex; align-items:center; gap:8px; margin:0 0 10px; font:500 10px/1 'JetBrains Mono', ui-monospace, monospace; letter-spacing:.24em; text-transform:uppercase; color:#85FA4F; }
-        .tr-offer-dot { width:6px; height:6px; border-radius:50%; background:#85FA4F; box-shadow:0 0 8px #85FA4F; animation:trPulse 2s ease-in-out infinite; }
-        @keyframes trPulse { 50% { opacity:.4; } }
         .tr-offer-name { margin:0; font-size:22px; font-weight:700; text-transform:uppercase; letter-spacing:-.005em; color:#fafafa; }
         /* Who the trial is for: Venue, Artist or Label, picked in the title */
         .tr-offer-pick { position:relative; display:inline-flex; margin-right:.25em; vertical-align:baseline; }
@@ -684,7 +682,7 @@
     <div class="max-w-7xl mx-auto reveal active" style="position:relative;z-index:20">
         <div class="tr-offer">
             <div class="tr-offer-main">
-                <p class="tr-offer-tag"><span class="tr-offer-dot"></span>Special offer · limited time</p>
+                <p class="tr-offer-tag">Special offer · limited time</p>
                 <div class="tr-offer-name"><span class="tr-offer-pick"><input type="hidden" id="tr-offer-type" value="artist"><button type="button" id="tr-offer-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Who the trial is for"><span id="tr-offer-type-name">Artist</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><ul class="tr-offer-menu" id="tr-offer-menu" role="listbox" aria-label="Who the trial is for"><li role="option" data-v="artist" tabindex="-1" aria-selected="true"><span><b>Artist</b><small>DJ</small></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></li><li role="option" data-v="label" tabindex="-1" aria-selected="false"><span><b>Label</b><small>Releases music for its artists</small></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></li><li role="option" data-v="venue" tabindex="-1" aria-selected="false"><span><b>Venue</b><small>Club, bar or event space</small></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></li></ul></span>Trial Month</div>
                 <p class="tr-offer-for" id="tr-offer-for">For DJs trying it with their own cameras.</p>
             </div>
