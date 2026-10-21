@@ -550,6 +550,8 @@
                 bar.hidden = false; bar.querySelector('i').style.width = Math.min(100, Math.max(used > 0 ? 2 : 0, Math.round(used * 100))) + '%';
                 bar.title = Math.round(used * 100) + '% of the plan used';
             } else { document.getElementById('bl-usage-lbl').textContent = 'Usage so far'; bar.hidden = true; }
+            // A discount from local / assets on this account's usage prices
+            if (d.discount) document.getElementById('bl-usage-lbl').textContent += ' · ' + d.discount + '% off';
             var rows = d.lines.map(function(l) {
                 var inc = l.included ? '<span class="unit">' + qty(l.included) + ' included · ' + qty(l.billable) + ' over</span>' : '<span class="unit">' + esc(l.unit) + '</span>';
                 return '<tr><td class="svc">' + esc(l.label) + '</td><td class="num">' + qty(l.quantity) + inc + '</td>' +

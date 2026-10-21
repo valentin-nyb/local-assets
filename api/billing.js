@@ -5,7 +5,7 @@ import { getWebSessionAuth, getVenuesConfig, readRegistryRaw, saveRegistryEntry,
 import { venueAuth } from './_verticals.js';
 import {
   readRates, readPlans, cleanPlans, readAssignments, assignKey, venueUsage, venueArtists, priceUsage,
-  monthRange, stripeClient, invoiceVenue, venueEntries, DEFAULT_RATES, applyDetails, usageByDay, planForType, priceForType, commitEndFor, readKit, cleanKit, KIT_PLANS, accountTypeOf, sendInvoiceEmail, billingEmailFor } from './_billing.js';
+  monthRange, stripeClient, invoiceVenue, venueEntries, DEFAULT_RATES, applyDetails, usageByDay, planForType, priceForType, commitEndFor, readKit, cleanKit, KIT_PLANS, accountTypeOf, sendInvoiceEmail, billingEmailFor, readDiscount } from './_billing.js';
 
 // Billing page data and actions.
 //   GET ?target=venue|artist:NAME&plan=ID&period=current|previous   usage, plan and price for one bill-to
@@ -150,7 +150,7 @@ export default async function handler(req, res) {
             + (usage.liveMinutes || 0) * (Number(rates.liveRecording) || 0) + gb * rates.fileStorage;
           const asg = (await readAssignments(redis, s)).venue || {};
           const plan = own ? null : planForType(plans.find(p => p.id === asg.plan) || null, type);
-          const billed = own ? 0 : priceUsage(usage, rates, plan).total;
+          const billed = own ? 0 : priceUsage(usage, rates, plan, await readDiscount(redis, s)).total;
           rows.push({ slug: s, name: c?.name || s, type, plan: plan?.name || (own ? 'local / assets' : 'No plan'), shared, notes: usage.notes,
             storedHours: usage.storedMinutes / 60, streamedHours: usage.deliveredMinutes / 60, newHours: usage.newMinutes / 60, recordedHours: (usage.liveMinutes || 0) / 60, fileGB: gb,
             cost: Math.round(cost * 100) / 100, billed: Math.round(billed * 100) / 100 });
@@ -184,7 +184,7 @@ export default async function handler(req, res) {
         // From the start of the first cycle, so a range starting mid-cycle carries that cycle's running total
         const fd = new Date(from), cycleFrom = Date.UTC(fd.getUTCFullYear(), fd.getUTCMonth(), 1);
         const u = await usageByDay(redis, aSlug, aAuth, { from: cycleFrom, to }, aTarget.startsWith('artist:') ? aTarget.slice(7) : null, aTarget.startsWith('label:') ? aTarget.slice(6) : null);
-        return pointsFor({ rates, plan, ...u });
+        return pointsFor({ rates, plan, discount: await readDiscount(redis, aSlug), ...u });
       };
       // Each day's point is what the invoice would say if the cycle ended that day: the same quantities
       // (minutes stored, minutes streamed this cycle, minutes added this cycle, file storage) priced by the
@@ -204,7 +204,7 @@ export default async function handler(req, res) {
             fileBytes: out.files.reduce((s, f) => s + (f.at < end ? f.bytes : 0), 0),
             videos: 0, notes: [],
           };
-          const p = priceUsage(usage, out.rates, out.plan);
+          const p = priceUsage(usage, out.rates, out.plan, out.discount);
           // That day on its own too (for the daily bars): minutes streamed, minutes of video added; and video stored by its end
           const added = out.vids.reduce((s, v) => s + (v.at >= d.start && v.at < end ? v.min : 0), 0);
           return { t: d.start, end, cycle: c, amount: p.usageTotal, mins: Math.round(streamed * 100) / 100,
@@ -262,14 +262,14 @@ export default async function handler(req, res) {
         const statuses = await redis.hGetAll(`billing_status:${slug}`);
         // The account's own type from its Brand Kit (venue, artist, record label or management)
         const accountType = (await redis.get(`brand_org_type:${slug}`)) || (await redis.get(`account_type:${slug}`)) || getVenuesConfig()[slug]?.type || (/team$/i.test(String(getVenuesConfig()[slug]?.name || '')) ? 'management' : 'venue');
-        return { rates, plans, assignments, customer, usage, artists: [...new Set(artists)].sort(), labels, bkVenues, statuses, accountType };
+        return { rates, plans, assignments, customer, usage, artists: [...new Set(artists)].sort(), labels, bkVenues, statuses, accountType, discount: await readDiscount(redis, slug) };
       });
       const a = data.assignments[target] || {};
       const planId = req.query.plan !== undefined && isAdmin ? String(req.query.plan) : (a.plan || '');
       // The plan at this account's price (venue, record label or artist: see TYPE_FACTOR)
       const billedType = target.startsWith('artist:') ? 'artist' : target.startsWith('label:') ? 'label' : data.accountType;
       const plan = planForType(data.plans.find(p => p.id === planId) || null, billedType);
-      const priced = priceUsage(data.usage, data.rates, plan);
+      const priced = priceUsage(data.usage, data.rates, plan, data.discount);
       let invoices = [];
       const stripe = stripeClient();
       if (stripe) {
@@ -603,7 +603,7 @@ export default async function handler(req, res) {
         const a = (await readAssignments(redis, slug)).venue || {};
         const plan = planForType(plans.find(p => p.id === a.plan) || null, await accountTypeOf(redis, slug));
         const usage = await venueUsage(slug, auth, monthRange());
-        const priced = priceUsage(usage, rates, plan);
+        const priced = priceUsage(usage, rates, plan, await readDiscount(redis, slug));
         if (a.subscription) priced.total = priced.usageTotal;
         return { name: a.name || venueName, period: monthRange().label, plan: priced.planAmount && !a.subscription ? { name: plan.name, amount: priced.planAmount } : null, lines: priced.lines, total: priced.total, url: 'https://local-assets.com/billing', charged: false, example: true };
       });

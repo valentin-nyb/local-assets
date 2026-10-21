@@ -1,7 +1,7 @@
 import { list, del } from '@vercel/blob';
 import { createClient } from 'redis';
 import { getWebSessionAuth, getVenuesConfig, isAdminVenue, refreshRegistry, getMuxAuthForVenue, MEMBERS_KEY } from './_venues.js';
-import { readAssignments, readPlans, stripeClient, accountTypeOf } from './_billing.js';
+import { readAssignments, readPlans, stripeClient, accountTypeOf, DISCOUNTS_KEY } from './_billing.js';
 import { unpaidKey, readUnpaid } from './_suspend.js';
 import { thumbnailPrefix } from './_thumbnails.js';
 
@@ -11,6 +11,7 @@ import { thumbnailPrefix } from './_thumbnails.js';
 //   POST { action: 'resume', slug }        running again
 //   POST { action: 'cancel', slug }        the plan ends at the end of its paid month (or its minimum term)
 //   POST { action: 'keep', slug }          a cancelled plan carries on
+//   POST { action: 'discount', slug, percent }   a discount (0–100%) on its usage prices, from its next bill
 //   POST { action: 'delete', slug, confirm: slug }   deleted everywhere: plan cancelled now, every video and
 //        camera in its video storage, its files, records and artist access. Run again if it says more is left.
 
@@ -81,6 +82,7 @@ export default async function handler(req, res) {
       const accounts = await withRedis(async redis => {
         const plans = await readPlans(redis);
         const members = await redis.hGetAll(MEMBERS_KEY).catch(() => ({}));
+        const discounts = await redis.hGetAll(DISCOUNTS_KEY).catch(() => ({}));
         return Promise.all(clients.map(async ([slug, v]) => {
           const unpaid = await readUnpaid(redis, slug);
           const asg = (await readAssignments(redis, slug)).venue || {};
@@ -94,7 +96,7 @@ export default async function handler(req, res) {
             email: asg.email || v.email || '', plan: (plans.find(p => p.id === asg.plan) || {}).name || asg.plan || '',
             paused: unpaid.some(i => i.id === ADMIN_PAUSE), unpaid: unpaid.filter(i => i.id !== ADMIN_PAUSE && i.target === 'venue').map(i => i.number || i.id),
             subscription: sub ? sub.status : subId ? 'unknown' : 'none', endsAt: ends ? ends * 1000 : null,
-            setupPending: v.status === 'pending', artists, video: !!getMuxAuthForVenue({ slug, ...v }),
+            setupPending: v.status === 'pending', artists, video: !!getMuxAuthForVenue({ slug, ...v }), discount: Number(discounts?.[slug]) || 0,
           };
         }));
       });
@@ -116,6 +118,19 @@ export default async function handler(req, res) {
         : r.hDel(unpaidKey(slug), ADMIN_PAUSE));
       console.log('[admin-accounts]', body.action, slug, 'by', session.email);
       return res.status(200).json({ ok: true, paused: body.action === 'pause' });
+    }
+
+    if (body.action === 'discount') {
+      const pct = Math.round(Number(body.percent) * 10) / 10;
+      if (!Number.isFinite(pct) || pct < 0 || pct > 100) return res.status(400).json({ error: 'Enter a discount from 0 to 100%' });
+      await withRedis(async r => {
+        if (pct > 0) await r.hSet(DISCOUNTS_KEY, slug, String(pct)); else await r.hDel(DISCOUNTS_KEY, slug);
+        // The billing overview is worked out again with it
+        const keys = []; for await (const b of r.scanIterator({ MATCH: 'billing_overview:*', COUNT: 200 })) keys.push(...[].concat(b));
+        if (keys.length) await r.del(keys);
+      });
+      console.log('[admin-accounts] discount', slug, pct + '%', 'by', session.email);
+      return res.status(200).json({ ok: true, discount: pct });
     }
 
     if (body.action === 'cancel' || body.action === 'keep') {
@@ -191,6 +206,7 @@ export default async function handler(req, res) {
           if (keep.length) await redis.hSet(MEMBERS_KEY, email, JSON.stringify(keep)); else await redis.hDel(MEMBERS_KEY, email);
         }
         await redis.hDel('la_venues', slug);
+        await redis.hDel(DISCOUNTS_KEY, slug);
         await redis.sAdd('la_deleted', slug);
         await refreshRegistry(redis);
       });

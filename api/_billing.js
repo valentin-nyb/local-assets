@@ -456,8 +456,16 @@ function deliveryLines(usage, inc, rates) {
   if (k4 > 0) lines.push({ key: 'videoDelivery4K', label: 'Streaming and downloads in 4K', quantity: k4, included: k4 * share, unit: 'minutes delivered in 4K', rate: Number(rates.videoDelivery4K ?? DEFAULT_RATES.videoDelivery4K) || 0 });
   return lines;
 }
-export function priceUsage(usage, rates, plan) {
-  const m = 1 + (Number(rates.margin) || 0);
+// A discount on an account's usage prices (Accounts, admin): percent, 0–100. Redis hash billing_discounts.
+export const DISCOUNTS_KEY = 'billing_discounts';
+export async function readDiscount(redis, slug) {
+  const v = Number(await redis.hGet(DISCOUNTS_KEY, slug).catch(() => 0));
+  return Number.isFinite(v) ? Math.min(100, Math.max(0, v)) : 0;
+}
+export function priceUsage(usage, rates, plan, discount = 0) {
+  // Usage is priced at cost plus the margin, less the account's discount (the plan's own price is unchanged)
+  const off = 1 - Math.min(100, Math.max(0, Number(discount) || 0)) / 100;
+  const m = (1 + (Number(rates.margin) || 0)) * off;
   const gb = usage.fileBytes / 1e9;
   const inc = plan?.included || {};
   const lines = [
@@ -473,7 +481,7 @@ export function priceUsage(usage, rates, plan) {
   });
   const usageTotal = round2(lines.reduce((s, l) => s + l.amount, 0));
   const planAmount = plan && Number(plan.price) > 0 ? round2(Number(plan.price)) : 0;
-  return { lines, usageTotal, plan: plan || null, planAmount, total: round2(usageTotal + planAmount), currency: rates.currency || 'gbp' };
+  return { lines, usageTotal, plan: plan || null, planAmount, total: round2(usageTotal + planAmount), currency: rates.currency || 'gbp', discount: Math.round((1 - off) * 100) };
 }
 
 export function stripeClient() {
@@ -560,7 +568,7 @@ export async function invoiceVenue(redis, stripe, { slug, auth, email, name, tar
   const type = artist ? 'artist' : label ? 'label' : await accountTypeOf(redis, slug);
   const plan = planForType(planId !== undefined ? (plans.find(p => p.id === planId) || null) : await readPlan(redis, slug, target), type);
   const usage = await venueUsage(slug, auth, period, artist, label);
-  const priced = priceUsage(usage, rates, plan);
+  const priced = priceUsage(usage, rates, plan, await readDiscount(redis, slug));
   if (priced.total < 0.3) { await redis.set(doneKey, 'none'); return { skipped: true, reason: 'Nothing to bill' }; }
   // Billed every month even before the legal name and address are filled in Bill to: the account's name stands in
   // (and Stripe keeps any address the client gave at checkout)
@@ -578,7 +586,7 @@ export async function invoiceVenue(redis, stripe, { slug, auth, email, name, tar
   for (const l of priced.lines) {
     if (l.amount < 0.01) continue;
     const over = l.included ? ` (${l.billable.toLocaleString('en-GB')} over the ${l.included.toLocaleString('en-GB')} included)` : '';
-    await stripe.invoiceItems.create({ customer, currency, amount: Math.round(l.amount * 100), description: `${l.label} · ${l.quantity.toLocaleString('en-GB')} ${l.unit}${over} · ${period.label}` });
+    await stripe.invoiceItems.create({ customer, currency, amount: Math.round(l.amount * 100), description: `${l.label} · ${l.quantity.toLocaleString('en-GB')} ${l.unit}${over}${priced.discount ? ` · ${priced.discount}% discount` : ''} · ${period.label}` });
   }
   // A card saved at sign-up is charged on the 1st; otherwise the invoice is emailed with 14 days to pay
   const card = await defaultCard(stripe, customer);
