@@ -165,11 +165,12 @@ export function findVenuesByEmail(email) {
 
 // The venue to use for this email: `preferredSlug` if the email belongs to it,
 // otherwise the first venue it is listed in. Null if it is listed in none.
-export function findVenueByEmail(email, preferredSlug) {
+// as: for an artist with access to several artists in one account, which of them (artist-<slug>)
+export function findVenueByEmail(email, preferredSlug, as) {
   const venues = findVenuesByEmail(email);
   // A platform admin opens on the local / assets admin account unless another account was chosen
   const adminHome = platformAdmins().includes(String(email).toLowerCase().trim()) ? venues.find(v => isAdminVenue(v)) : null;
-  const venue = venues.find(v => v.slug === preferredSlug) || adminHome || venues[0] || null;
+  const venue = (as && venues.find(v => v.slug === preferredSlug && v.member?.owner === as)) || venues.find(v => v.slug === preferredSlug) || adminHome || venues[0] || null;
   if (venue) console.log('[_venues] findVenueByEmail:', email, '→', venue.slug, venues.length > 1 ? `(1 of ${venues.length})` : '');
   else console.error('[_venues] findVenueByEmail: no match for', email, '| venue slugs:', Object.keys(getVenuesConfig()));
   return venue;
@@ -188,14 +189,15 @@ export async function venueChoicesTyped(email) {
     const brand = await redis.mGet(list.map(v => `brand_org_type:${v.slug}`));
     const acct = await redis.mGet(list.map(v => `account_type:${v.slug}`));
     const cfg = getVenuesConfig();
-    return list.map((v, i) => ({ ...v, type: isAdmin(v) ? 'admin' : (brand[i] || acct[i] || cfg[v.slug]?.type || 'venue') }));
+    return list.map((v, i) => ({ ...v, type: isAdmin(v) ? 'admin' : v.member ? 'artist' : (brand[i] || acct[i] || cfg[v.slug]?.type || 'venue') }));
   } catch { return list; }
   finally { await redis.quit().catch(() => {}); }
 }
 export function venueChoices(email) {
   // The local / assets admin account first, then the clients A–Z
   const isAdmin = v => v.slug === (process.env.BILLING_ADMIN_VENUE || 'local-assets-admin') || /^local\s*[\/-]?\s*assets\b/i.test(String(v.name || '').trim());
-  return findVenuesByEmail(email).map(v => ({ slug: v.slug, name: v.name || v.slug, ...(v.member ? { member: v.member.name } : {}) }))
+  // An artist with access: one choice per artist (the same account can appear once for each)
+  return findVenuesByEmail(email).map(v => ({ slug: v.slug, name: v.member ? `${v.member.name} · ${v.name || v.slug}` : (v.name || v.slug), ...(v.member ? { member: v.member.name, as: v.member.owner } : {}) }))
     .sort((a, b) => (isAdmin(b) - isAdmin(a)) || a.name.localeCompare(b.name));
 }
 
@@ -228,8 +230,8 @@ export function framePass(slug, camId) {
   return crypto.createHmac('sha256', getSecret()).update(`frame|${slug}|${camId}`).digest('base64url');
 }
 
-export function signWebToken(email, venueSlug) {
-  const payload = { email, venueSlug, exp: Date.now() + 3_600_000 };
+export function signWebToken(email, venueSlug, as) {
+  const payload = { email, venueSlug, ...(as ? { as } : {}), exp: Date.now() + 3_600_000 };
   const data    = Buffer.from(JSON.stringify(payload)).toString('base64url');
   const sig     = crypto.createHmac('sha256', getSecret()).update(data).digest('base64url');
   return `${data}.${sig}`;
@@ -274,7 +276,7 @@ export function getWebSessionAuth(req) {
     return null;
   }
 
-  let venue = findVenueByEmail(email, payload.venueSlug);
+  let venue = findVenueByEmail(email, payload.venueSlug, payload.as);
   // A local / assets admin on the admin account acts on one client's account for this request
   // (X-LA-Venue), e.g. watermarking a clip shown in the combined Distribution History
   const asVenue = String(req.headers['x-la-venue'] || '').trim();

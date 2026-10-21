@@ -334,10 +334,10 @@ document.addEventListener("DOMContentLoaded", () => {
         if (venues.length < 2) return '';
         var html = '<div data-la-switcher class="la-acct-group">';
         venues.forEach(function(v) {
-            var current = v.slug === session.venueSlug;
+            var current = v.slug === session.venueSlug && (!v.as || (session.member && session.member.owner === v.as));
             // Icon by what the account is: an artist, a venue, a record label, management, or local / assets itself
             var kind = v.type || (/^local\s*[\/-]?\s*assets\b/i.test(String(v.name || '')) || v.slug === 'local-assets-admin' ? 'admin' : 'venue');
-            html += '<button type="button" class="la-acct-row' + (current ? ' cur' : '') + '" data-venue-slug="' + _esc(v.slug) + '" onclick="window.LA_SWITCH_VENUE(this.dataset.venueSlug)"' + (current ? ' disabled aria-current="true"' : '') + '>' +
+            html += '<button type="button" class="la-acct-row' + (current ? ' cur' : '') + '" data-venue-slug="' + _esc(v.slug) + '" data-as="' + _esc(v.as || '') + '" onclick="window.LA_SWITCH_VENUE(this.dataset.venueSlug, this.dataset.as)"' + (current ? ' disabled aria-current="true"' : '') + '>' +
                 (_LA_ICON[kind] || _LA_ICON.venue) + '<span>' + _esc(_niceName(v.name)) + '</span>' + (current ? '<i class="la-acct-check">' + _LA_ICON.check + '</i>' : '') + '</button>';
         });
         return html + '</div>';
@@ -363,7 +363,12 @@ document.addEventListener("DOMContentLoaded", () => {
             var cur = _getAdminSession();
             if (res.ok && data.webToken && cur) {
                 cur.webToken = data.webToken; cur.ts = Date.now();
-                if ('member' in data) cur.member = data.member || null;
+                if ('member' in data) {
+                    var was = cur.member ? cur.member.owner : '', now = data.member ? data.member.owner : '';
+                    cur.member = data.member || null;
+                    if (data.member) { cur.venue = String(data.member.name).toUpperCase(); localStorage.setItem('la_venue_name', cur.venue); }
+                    if (was !== now) { localStorage.setItem('la_admin', JSON.stringify(cur)); location.reload(); return; }
+                }
                 // Keep the venue switcher in step with the accounts that still exist
                 if (Array.isArray(data.venues)) {
                     var changed = JSON.stringify(data.venues) !== JSON.stringify(cur.venues || []);
@@ -408,14 +413,14 @@ document.addEventListener("DOMContentLoaded", () => {
     document.addEventListener('visibilitychange', function() { if (document.visibilityState === 'visible') _refreshToken(); });
     _refreshToken();
 
-    window.LA_SWITCH_VENUE = async function(slug) {
+    window.LA_SWITCH_VENUE = async function(slug, as) {
         var session = _getAdminSession();
         if (!session) { window.LA_ADMIN_LOGOUT(); return; }
         try {
             var res = await fetch('/api/switch-venue', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session.webToken || '') },
-                body: JSON.stringify({ venueSlug: slug }),
+                body: JSON.stringify({ venueSlug: slug, as: as || '' }),
             });
             var data = await res.json().catch(function() { return {}; });
             if (!res.ok) { alert(data.error || 'Could not switch venue'); return; }

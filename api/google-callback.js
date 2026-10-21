@@ -97,7 +97,7 @@ export default async function handler(req, res) {
 
     // Sign a short-lived webToken (no Redis — pure HMAC)
     const venueSlug = venue?.slug || '';
-    const webToken  = signWebToken(email, venueSlug);
+    const webToken  = signWebToken(email, venueSlug, venue?.member?.owner);
 
     const sessionData = JSON.stringify({
       email,

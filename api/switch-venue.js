@@ -18,15 +18,18 @@ export default async function handler(req, res) {
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch (_) {} }
   // Keeps an open page signed in: a fresh token for the same venue
   // and the current list of accounts, so the switcher drops a deleted one
-  if (body?.refresh) return res.status(200).json({ webToken: signWebToken(session.email, session.venueSlug), venueSlug: session.venueSlug, venues: await venueChoicesTyped(session.email), member: session.member || null });
+  if (body?.refresh) return res.status(200).json({ webToken: signWebToken(session.email, session.venueSlug, session.member?.owner), venue: session.member ? session.member.name : undefined, venueSlug: session.venueSlug, venues: await venueChoicesTyped(session.email), member: session.member || null });
   const slug = String(body?.venueSlug || '');
 
-  const venue = findVenuesByEmail(session.email).find(v => v.slug === slug);
+  // An artist with access to several artists here: the one chosen (as)
+  const as = String(body?.as || '');
+  const list = findVenuesByEmail(session.email);
+  const venue = (as && list.find(v => v.slug === slug && v.member?.owner === as)) || list.find(v => v.slug === slug);
   if (!venue) return res.status(403).json({ error: 'You do not have access to that venue' });
 
   console.log('[switch-venue]', session.email, '→', venue.slug);
   return res.status(200).json({
-    webToken:  signWebToken(session.email, venue.slug),
+    webToken:  signWebToken(session.email, venue.slug, venue.member?.owner),
     venue:     venue.member ? venue.member.name : (venue.name || venue.slug),
     venueSlug: venue.slug,
     member:    venue.member || null,
