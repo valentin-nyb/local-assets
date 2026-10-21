@@ -805,6 +805,20 @@
                 else el.addEventListener('click', function() { apply(el.dataset.v); });
             });
         }
+        // Logo and text both in the middle: the text, a gap, then the logo, centred together in the frame
+        function layoutMiddle() {
+            var pv = document.getElementById('bk-wm-preview'), img = document.getElementById('bk-wm-logo'), tx = document.getElementById('bk-wm-text');
+            if (!pv || !img || !tx || !_wm || _wm.position !== 'cc' || !_wm.text || _wm.text.position !== 'cc') return;
+            if (tx.style.display === 'none' || img.style.display === 'none') return;
+            var L = WM_LAYOUT[_wmFrame], k = pv.offsetWidth / L.W;
+            tx.style.alignItems = 'flex-start';   // the name and session line up on the left
+            var iw = parseFloat(img.style.width) || img.offsetWidth, ih = parseFloat(img.style.height) || img.offsetHeight;
+            var tw = tx.offsetWidth, th = tx.offsetHeight, gap = 32 * k, W = pv.clientWidth, H = pv.clientHeight;
+            var x0 = (W - (tw + gap + iw)) / 2;
+            tx.style.right = 'auto'; tx.style.bottom = 'auto'; img.style.right = 'auto'; img.style.bottom = 'auto';
+            tx.style.left = Math.round(x0) + 'px'; tx.style.top = Math.round((H - th) / 2) + 'px';
+            img.style.left = Math.round(x0 + tw + gap) + 'px'; img.style.top = Math.round((H - ih) / 2) + 'px';
+        }
         function positionPreview() {
             var exb = document.getElementById('bk-wm-export');
             if (exb && !exb.disabled) exb.textContent = /\.gif(\?|$)/i.test(wmPreviewLogoRaw()) ? 'Export GIF' : 'Export PNG';
@@ -896,21 +910,17 @@
             img.style.top = p[0] === 't' ? Math.round(L.top * k) + 'px' : 'auto';
             img.style.bottom = p[0] === 'b' ? Math.round(L.bottom * k) + 'px' : 'auto';
             }
-            // Both in the middle: the text then the logo, laid out together from their real sizes on screen and
-            // centred in the frame (both lined up through the middle)
+            // Both in the middle: the text then the logo, laid out together from their real sizes on screen
             if (p === 'cc' && _wm.text && _wm.text.position === 'cc' && pv) {
-                var tx = document.getElementById('bk-wm-text');
-                if (tx && tx.style.display !== 'none') {
-                    tx.style.alignItems = 'flex-start';   // the name and session line up on the left
-                    var iw = parseFloat(img.style.width) || img.offsetWidth, ih = parseFloat(img.style.height) || img.offsetHeight;
-                    var tw = tx.offsetWidth, th = tx.offsetHeight, gap = 32 * k, W = pv.clientWidth, H = pv.clientHeight;
-                    var x0 = (W - (tw + gap + iw)) / 2;
-                    tx.style.right = 'auto'; tx.style.bottom = 'auto'; img.style.right = 'auto'; img.style.bottom = 'auto';
-                    tx.style.left = Math.round(x0) + 'px'; tx.style.top = Math.round((H - th) / 2) + 'px';
-                    img.style.left = Math.round(x0 + tw + gap) + 'px'; img.style.top = Math.round((H - ih) / 2) + 'px';
+                layoutMiddle();
+                // Again whenever either changes size (the brand font arriving after a refresh, the logo loading)
+                if (window.ResizeObserver && !positionPreview._ro) {
+                    positionPreview._ro = new ResizeObserver(function() { layoutMiddle(); });
                 }
+                if (positionPreview._ro) { var tx0 = document.getElementById('bk-wm-text'); positionPreview._ro.disconnect(); if (tx0) positionPreview._ro.observe(tx0); positionPreview._ro.observe(img); }
+                if (document.fonts && document.fonts.ready) document.fonts.ready.then(layoutMiddle);
                 if (!img.complete) img.addEventListener('load', function() { positionPreview(); }, { once: true });
-            }
+            } else if (positionPreview._ro) positionPreview._ro.disconnect();
         }
         // Where the watermark sits in each frame, in px: close to the edge and low, same sizes in both frames
         var WM_LAYOUT = {
