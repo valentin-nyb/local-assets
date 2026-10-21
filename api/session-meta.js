@@ -30,6 +30,8 @@ export default async function handler(req, res) {
       return res.status(200).json({ sessions });
     }
     if (req.method !== 'POST') return res.status(405).end();
+    // An artist with access sees the session names; the account edits them
+    if (session.member) return res.status(403).json({ error: 'Only the account can do this' });
 
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
     const artist = clean(body.artist, 80).toUpperCase();

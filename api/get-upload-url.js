@@ -18,6 +18,8 @@ export default async function handler(req, res) {
   if (!session?.muxAuth) {
     return res.status(401).json({ error: 'Not authenticated — no Cloud Storage access for this account' });
   }
+  // An artist with access doesn't upload recordings or thumbnails (the account does)
+  if (session.member) return res.status(403).json({ error: 'Only the account can do this' });
   if (req.method !== 'GET' && session?.venueSlug) { const _p = await pausedBy(session.venueSlug); if (_p) return sendPaused(res, _p); }
 
   let body = req.body;

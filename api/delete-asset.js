@@ -12,6 +12,7 @@ export default async function handler(req, res) {
 
   const session = getWebSessionAuth(req);
   if (!session?.email) return res.status(401).json({ error: 'Not authenticated' });
+  if (session.member) return res.status(403).json({ error: 'Only the account can do this' });
 
   const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
   const id = String(body.id || '');

@@ -152,7 +152,9 @@
         .wm-apply:disabled { opacity:.6; cursor:default; }
         .wm-restore { height:28px; padding:0 12px; border-radius:999px; border:1px solid var(--la-line); background:transparent; color:var(--la-sub); font:500 11px Inter,ui-sans-serif,system-ui,sans-serif; cursor:pointer; white-space:nowrap; }
         .wm-restore:disabled { opacity:.6; cursor:default; }
-        .wm-restore.hidden, .wm-apply.hidden { display:none; }
+        .wm-restore.hidden, .wm-apply.hidden, #recent-sets-list .wm-restore.hidden, #recent-sets-list .wm-apply.hidden { display:none !important; }
+        /* An artist with access only watches and downloads: cutting, watermarking, posting, editing and uploading are the account's */
+        html.la-member .wm-restore, html.la-member .wm-apply, html.la-member .wm-master, html.la-member .yt-dist-btn, html.la-member .sc-dist-btn, html.la-member .se-edit, html.la-member [data-la-upload] { display:none !important; }
         @media (hover:hover) { .wm-restore:not(:disabled):hover { color:var(--la-text); border-color:var(--la-text); } }
         .wm-apply.is-remove { color:var(--la-bad, #ef4444); border-color:color-mix(in srgb, var(--la-bad, #ef4444) 45%, transparent); }
         @media (hover:hover) { .wm-apply:not(:disabled):not(.is-remove):hover { border-color:var(--la-accent); color:var(--la-accent); } .wm-apply.is-remove:hover { background:color-mix(in srgb, var(--la-bad, #ef4444) 12%, transparent); } }
@@ -1441,7 +1443,7 @@
                         html += '</div>';
                     }
                 } else {
-                    html += '<div class="p-4 pl-16 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-' + uid + '">';
+                    html += '<div class="p-4 pl-16 flex items-center justify-between hover:bg-white/[0.03] transition-all group/asset" id="row-' + uid + '" data-la-upload>';
                     if (asset.type === 'MASTER') {
                         // MASTER: keep inline file picker
                         html += '<label class="flex items-center gap-4 cursor-pointer flex-1 min-w-0">';
@@ -1662,7 +1664,7 @@
                 }
                 var readyCount = readyUrls.length;
                 var hasAny = thumbAssets.length > 0;
-                var canUploadMore = thumbAssets.length < 20;
+                var canUploadMore = thumbAssets.length < 20 && !document.documentElement.classList.contains('la-member');
                 var statusText;
                 if (hasAny) {
                     statusText = readyCount + ' UPLOADED';
@@ -1670,6 +1672,8 @@
                     if (failedCount > 0) statusText += ' / ' + failedCount + ' FAILED';
                     statusText = 'IN VAULT — ' + statusText;
                     if (canUploadMore) statusText += ' — TAP TO ADD';
+                } else if (document.documentElement.classList.contains('la-member')) {
+                    statusText = 'NONE YET';
                 } else {
                     statusText = '.JPG / .PNG — TAP TO UPLOAD (MAX 20)';
                 }

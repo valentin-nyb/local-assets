@@ -554,6 +554,8 @@
         var _wm = null;
         var WM_POS = [['tl', 'Top left'], ['tr', 'Top right'], ['bl', 'Bottom left'], ['br', 'Bottom right'], ['cc', 'Middle']];
         var WM_SIZE = [['s', 'Small'], ['m', 'Medium'], ['l', 'Large']];
+        // Text also has XLarge, for the horizontal frame
+        var WM_TEXT_SIZES = WM_SIZE.concat([['xl', 'XLarge']]);
         // Largest logo box per size, in px on a 1080×1920 clip (same as the clip worker)
         var WM_BOX = { s: [180, 120], m: [260, 180], l: [380, 270] };
         var WM_MARGIN_X = 60;   // side margin in px on a 1080-wide clip, same as the clip worker
@@ -604,9 +606,9 @@
         var WM_TEXT_COLOR = [['white', 'White'], ['black', 'Black']];
         // The text has its own size; until one is chosen it follows the logo's
         // Large in the horizontal frame is a little smaller (as on the clips, api/_watermark-render.js)
-        function wmTextPx(L) { var sz = wmTextSize(); return sz === 'l' && L && L.W > L.H ? 86 : WM_TEXT_PX[sz] || WM_TEXT_PX.m; }
+        function wmTextPx(L) { var sz = wmTextSize(); return L && L.W > L.H && sz === 'l' ? 86 : L && L.W > L.H && sz === 'xl' ? 150 : WM_TEXT_PX[sz] || WM_TEXT_PX.m; }
         function wmTextSize() { return (_wm.text && WM_TEXT_PX[_wm.text.size]) ? _wm.text.size : (_wm.size || 'm'); }
-        var WM_TEXT_PX = { s: 48, m: 66, l: 110 };
+        var WM_TEXT_PX = { s: 48, m: 66, l: 110, xl: 150 };
         // The clip worker draws watermark text from these font files (not WOFF2)
         var WM_TEXT_FONT = /\.(ttf|otf|woff)$/i;
         function wmLogos() { return _files.filter(function(f) { return f.category === 'logos' && /\.(png|svg|webp|jpe?g|gif)$/i.test(f.name); }); }
@@ -727,7 +729,7 @@
                             ? '<div class="bk-wm-textrow"><button type="button" class="cam-btn ghost" id="bk-wm-text-artist">Add artist name</button><span class="bk-wm-font">Or preview a font, type your text and choose Use as watermark.</span></div>'
                             : '<p class="bk-wm-hint">Upload a font (TTF, OTF or WOFF) to add the artist\'s name or a line of text.</p>') +
                         '<span class="bk-wm-label">Logo size</span>' + seg('size', WM_SIZE, _wm.size) +
-                        (wmText() ? '<span class="bk-wm-label">Text size</span>' + seg('textsize', WM_SIZE, wmTextSize()) : '') +
+                        (wmText() ? '<span class="bk-wm-label">Text size</span>' + seg('textsize', WM_TEXT_SIZES, wmTextSize()) : '') +
                         '<span class="bk-wm-label">Opacity</span><input type="range" min="30" max="100" step="5" value="' + Math.round(_wm.opacity * 100) + '" data-wm="opacity" aria-label="Opacity">' +
                     '</div>' +
                     '<p class="bk-wm-status" id="bk-wm-status">' + (noLogo && !wmText() ? 'Upload a logo to your brand kit to use a watermark.' : '') + '</p>' +

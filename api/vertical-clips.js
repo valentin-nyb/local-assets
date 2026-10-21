@@ -39,6 +39,7 @@ export default async function handler(req, res) {
   if (body.action !== 'start' && body.action !== 'moments' && body.action !== 'limits' && body.action !== 'intake') return res.status(400).json({ error: 'Unknown action' });
   const session = getWebSessionAuth(req);
   if (!session?.email) return res.status(401).json({ error: 'Not authenticated' });
+  if (session.member && body.action !== 'limits') return res.status(403).json({ error: 'Only the account can do this' });
   if (body.action === 'limits') {
     // The plan's clip limit, and how many the recording is long enough for
     const r0 = createClient({ url: process.env.REDIS_URL }); await r0.connect();

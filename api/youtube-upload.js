@@ -176,6 +176,7 @@ export default async function handler(req, res) {
   } else if (!session?.email) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
+  if (session?.member) return res.status(403).json({ error: 'Only the account can do this' });
   if (req.method !== 'GET' && session?.venueSlug) { const _p = await pausedBy(session.venueSlug); if (_p) return sendPaused(res, _p); }
   const venueSlug = upload ? upload.venueSlug : session.venueSlug;
   if (!venueSlug) return res.status(403).json({ error: 'No venue associated with this account' });

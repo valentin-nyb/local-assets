@@ -184,6 +184,8 @@ export default async function handler(req, res) {
   if (!session.venueSlug || !session.muxAuth) return res.status(403).json({ error: 'No Cloud Storage for this account' });
   const slug = session.venueSlug, auth = session.muxAuth;
   const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+  // An artist with access only watches and downloads (the account cuts and watermarks)
+  if (session.member && body.action !== 'sweep' && body.action !== 'exportGif') return res.status(403).json({ error: 'Only the account can do this' });
   if (body.action === 'apply' || body.action === 'applyMaster') { const _p = await pausedBy(slug, body.artist ? `artist:${String(body.artist).toUpperCase()}` : null); if (_p) return sendPaused(res, _p); }
 
   // Brand Kit "Export GIF": the watermark with a moving logo as an animated GIF, at 4K, transparent
