@@ -334,6 +334,7 @@
         .cal-dj { display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 10px; min-width:0; }
         /* A set opens its details (artwork, logos, times) */
         .cal-row[data-cal-i] { cursor:pointer; }
+        .cal-tag.mine { color:var(--la-accent) !important; border-color:var(--la-accent) !important; }
         /* An artist with access: the calendar is the venue's, followed as it is (no link to change, nothing to set up) */
         html.la-member #cal-change, html.la-member #cal-remove, html.la-member #cal-form, html.la-member #cal-find, html.la-member .cal-how, html.la-member #cal-expand { display:none !important; }
         html.la-member .cal-panel.folded .cal-sched:not([hidden]) { display:block !important; }
@@ -901,7 +902,7 @@
                 var tag = e.now ? (e.endedAt ? '<span class="cal-tag done">Finished</span>' : '<span class="cal-tag on">On now</span>') : i === (cal.current ? 1 : 0) ? '<span class="cal-tag">Next</span>' : '';
                 return '<div class="cal-row' + (e.now ? ' now' : '') + '" data-cal-i="' + i + '" role="button" tabindex="0" aria-label="' + esc(e.artist) + ': event details">' +
                     '<div class="cal-date"><span>' + wd + '</span><b>' + dm + '</b>' + tag + '</div>' +
-                    '<div class="cal-dj"><b>' + esc(e.artist) + '</b>' + (e.venue ? '<span>' + esc(e.venue) + '</span>' : '') + '</div>' +
+                    '<div class="cal-dj"><b>' + esc(e.artist) + '</b>' + (e.mine ? '<span class="cal-tag mine">Your set</span>' : '') + (e.venue ? '<span>' + esc(e.venue) + '</span>' : '') + '</div>' +
                     '<div class="cal-time">' + fmtTime(e.start) + ' – ' + fmtTime(e.endedAt || e.end) + '</div>' +
                     '<div class="cal-time rec">' + fmtTime(e.start - 120e3) + ' – ' + fmtTime(e.endedAt || (e.end + 120e3)) + '</div>' +
                 '</div>';

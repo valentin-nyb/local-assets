@@ -165,12 +165,12 @@ export default async function handler(req, res) {
           calendar.schedule = { open: w.open, closesAt: w.closesAt, opensAt: w.opensAt, nextArtist: w.next?.artist || null, currentArtist: w.current?.artist || null };
         } catch (e) { console.error('[cameras] calendar', slug, e.message); calendar.error = e.message || 'The calendar could not be read'; }
       }
-      // An artist with access: no cameras, and only their own sets in the calendar
+      // An artist with access: no cameras; the venue's calendar as it is, their own sets marked
       if (session.member) {
         // Theirs: named like them in the calendar, or linked to their Brand Kit folder in the event's details
         const mine = e => e && (sameArtist(e.artist, session.member.name) || e.artistOwner === session.member.owner);
-        if (calendar.current && !mine(calendar.current)) calendar.current = null;
-        if (calendar.upcoming) calendar.upcoming = calendar.upcoming.filter(mine);
+        if (calendar.current) calendar.current.mine = mine(calendar.current);
+        if (calendar.upcoming) calendar.upcoming.forEach(e => { e.mine = mine(e); });
         delete calendar.schedule;
         return res.status(200).json({ venue: slug, cameras: [], calendar, relay: null, member: session.member });
       }
