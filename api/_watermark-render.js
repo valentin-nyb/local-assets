@@ -134,9 +134,15 @@ async function compose(wm, L, width, movingLogo) {
   if (wm.text?.value && wm.text.font) {
     const tPos = wm.text.position || 'br';
     const sameRow = logo && tPos !== position && tPos[0] === position[0];
-    const room = sameRow ? Math.min(TEXT_MAX_WIDTH * s, L.W - 2 * L.mx - logo.w - 48 * s) : TEXT_MAX_WIDTH * s;
-    const t = await textLayer(wm.text, wm.text.size || wm.size, room, s, tPos[1]).catch(e => { console.error('[watermark-render] text:', e.message); return null; });
-    if (t) {
+    // Both in the middle: side by side, the logo then the text, centred together
+    const besides = logo && tPos === 'cc' && position === 'cc', G = 32 * s;
+    const room = besides ? Math.min(TEXT_MAX_WIDTH * s, L.W - 2 * L.mx - logo.w - G) : sameRow ? Math.min(TEXT_MAX_WIDTH * s, L.W - 2 * L.mx - logo.w - 48 * s) : TEXT_MAX_WIDTH * s;
+    const t = await textLayer(wm.text, wm.text.size || wm.size, room, s, besides ? 'l' : tPos[1]).catch(e => { console.error('[watermark-render] text:', e.message); return null; });
+    if (t && besides) {
+      const lg = layers.find(l => l === layers[0]), left = Math.round((L.W - (logo.w + G + t.w)) / 2);
+      lg.left = left; lg.top = Math.round((L.H - logo.h) / 2);
+      layers.push({ ...t, left: Math.round(left + logo.w + G), top: Math.round((L.H - t.h) / 2) });
+    } else if (t) {
       // Same corner: next to the logo. Same row, other side: lined up with the middle of the logo.
       const shift = !logo ? 0 : tPos === position ? logo.h + STACK_GAP * s : sameRow ? (logo.h - t.h) / 2 : 0;
       layers.push({ ...t, ...place(tPos, t.w, t.h, shift) });

@@ -565,7 +565,7 @@
             var t = _wm.text, cur = t.source === 'artist' ? 'auto' : t.pick ? t.pick : 'custom';
             var artists = _owners.filter(function(o) { return o.key.indexOf('artist-') === 0; });
             return '<select data-wm="textpick" aria-label="Watermark title">' +
-                '<option value="auto"' + (cur === 'auto' ? ' selected' : '') + '>Each clip\'s artist (automatic)</option>' +
+                '<option value="auto"' + (cur === 'auto' ? ' selected' : '') + '>Artist</option>' +
                 (artists.length ? '<optgroup label="Always this artist">' + artists.map(function(o) { return '<option value="' + esc(o.key) + '"' + (cur === o.key ? ' selected' : '') + '>' + esc(o.name) + '</option>'; }).join('') + '</optgroup>' : '') +
                 '<option value="custom"' + (cur === 'custom' ? ' selected' : '') + '>Custom text…</option></select>';
         }
@@ -577,7 +577,7 @@
             var keys = Object.keys(_sessionTitles).filter(function(k) { return !artistName || norm(k.split('|')[0]) === norm(artistName); })
                 .sort(function(a, b) { return b.split('|')[1].localeCompare(a.split('|')[1]); });
             return '<select data-wm="subpick" aria-label="Watermark subtitle">' +
-                '<option value="auto"' + (cur === 'auto' ? ' selected' : '') + '>Each clip\'s session name (automatic)</option>' +
+                '<option value="auto"' + (cur === 'auto' ? ' selected' : '') + '>Session name</option>' +
                 (keys.length ? '<optgroup label="' + esc(artistName ? 'Sessions of ' + artistName : 'Always this session') + '">' + keys.map(function(k) {
                     var p = k.split('|');
                     return '<option value="ses:' + esc(k) + '"' + (cur === 'ses:' + k ? ' selected' : '') + '>' + esc(_sessionTitles[k]) + ' · ' + esc(artistName ? p[1] : p[0] + ' · ' + p[1]) + '</option>';
@@ -819,7 +819,9 @@
                     t1.textContent = wmTextValue();
                     t2.textContent = sub ? sub.value : '';
                     t2.style.display = sub ? '' : 'none';
-                    txt.style.alignItems = _wm.text.position === 'cc' ? 'center' : _wm.text.position[1] === 'r' ? 'flex-end' : 'flex-start';
+                    // Both in the middle: the text sits beside the logo, lines left-aligned
+                    var besides = _wm.text.position === 'cc' && p === 'cc' && !!url;
+                    txt.style.alignItems = besides ? 'flex-start' : _wm.text.position === 'cc' ? 'center' : _wm.text.position[1] === 'r' ? 'flex-end' : 'flex-start';
                     if (sub) loadBrandFont(sub.font).then(function(family) { if (t2.dataset.family !== family) { t2.dataset.family = family; t2.style.fontFamily = family; positionPreview(); } }).catch(function() {});
                     var blackText = _wm.text.color === 'black';
                     txt.style.color = blackText ? '#000' : '#fff';
@@ -834,7 +836,7 @@
                     txt.style.maxWidth = 'none';
                     // On the same row as the logo, the text keeps clear of it (as on the clips)
                     var lwClip = lhClip ? lhClip * img.naturalWidth / img.naturalHeight : 0;
-                    var room = lhClip && tp !== p && tp[0] === p[0] ? Math.min(760, L.W - 2 * L.mx - lwClip - 48) : 760;
+                    var room = besides && lhClip ? Math.min(760, L.W - 2 * L.mx - lwClip - 32) : lhClip && tp !== p && tp[0] === p[0] ? Math.min(760, L.W - 2 * L.mx - lwClip - 48) : 760;
                     if (txt.offsetWidth / k > room) txt.style.fontSize = (WM_TEXT_PX[wmTextSize()] * room / (txt.offsetWidth / k)) * k + 'px';
                     txt.style.gap = (parseFloat(txt.style.fontSize) * WM_SUB_GAP * 0.5) + 'px';
                     var thClip = txt.offsetHeight / k;
@@ -844,8 +846,14 @@
                     if (tp === 'cc') {
                         // Middle: centred, under the logo when that's in the middle too
                         txt.style.right = 'auto'; txt.style.bottom = 'auto';
-                        txt.style.left = Math.round((L.W * k - txt.offsetWidth) / 2) + 'px';
-                        txt.style.top = Math.round(((L.H - thClip) / 2 + (p === 'cc' && lhClip ? lhClip + 24 : 0)) * k) + 'px';
+                        var twClip = txt.offsetWidth / k;
+                        if (besides && lhClip) {
+                            txt.style.left = Math.round(((L.W - (lwClip + 32 + twClip)) / 2 + lwClip + 32) * k) + 'px';
+                            txt.style.top = Math.round((L.H - thClip) / 2 * k) + 'px';
+                        } else {
+                            txt.style.left = Math.round((L.W * k - txt.offsetWidth) / 2) + 'px';
+                            txt.style.top = Math.round(((L.H - thClip) / 2 + (p === 'cc' && lhClip ? lhClip + 24 : 0)) * k) + 'px';
+                        }
                     } else {
                     txt.style.left = tp[1] === 'l' ? Math.round(L.mx * k) + 'px' : 'auto';
                     txt.style.right = tp[1] === 'r' ? Math.round(L.mx * k) + 'px' : 'auto';
@@ -873,7 +881,9 @@
             img.style.opacity = _wm.opacity;
             if (p === 'cc') {
                 img.style.right = 'auto'; img.style.bottom = 'auto';
-                img.style.left = Math.round((L.W - lw) / 2 * k) + 'px';
+                // Text in the middle too: the logo then the text, centred together
+                var tEl = document.getElementById('bk-wm-text'), tw = _wm.text && _wm.text.position === 'cc' && tEl && tEl.style.display !== 'none' ? tEl.offsetWidth / k : 0;
+                img.style.left = Math.round((tw ? (L.W - (lw + 32 + tw)) / 2 : (L.W - lw) / 2) * k) + 'px';
                 img.style.top = Math.round((L.H - lw / ar) / 2 * k) + 'px';
             } else {
             img.style.left = p[1] === 'l' ? Math.round(L.mx * k) + 'px' : 'auto';
