@@ -27,9 +27,9 @@
     },
     "files": [
       "main.js",
+      "offline.html",
       "preload.js",
-      "this-mac.js",
-      "offline.html"
+      "this-mac.js"
     ],
     "protocols": [
       {
@@ -43,7 +43,6 @@
       "category": "public.app-category.productivity",
       "icon": "icons/icon.icns",
       "hardenedRuntime": true,
-      "gatekeeperAssess": false,
       "darkModeSupport": true,
       "artifactName": "local-assets-${arch}.${ext}",
       "extendInfo": {
@@ -51,7 +50,9 @@
         "NSMicrophoneUsageDescription": "a™ streams the mixer or microphone you link in Camera Control as your sets' HQ audio.",
         "NSCameraUseContinuityCameraDeviceType": true,
         "LSMultipleInstancesProhibited": true
-      }
+      },
+      "entitlements": "entitlements.mac.plist",
+      "entitlementsInherit": "entitlements.mac.plist"
     },
     "dmg": {
       "title": "a™",

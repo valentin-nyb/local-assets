@@ -34,8 +34,6 @@
   var st = document.createElement('style'); st.textContent = css;
   (document.head || document.documentElement).appendChild(st);
 
-  var esc = function (v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
-  var ICONS = { danger: 'solar:trash-bin-minimalistic-linear', error: 'solar:danger-triangle-linear', ok: 'solar:check-circle-linear', info: 'solar:info-circle-linear', question: 'solar:question-circle-linear' };
 
   function open(opts) {
     return new Promise(function (resolve) {

@@ -1,5 +1,5 @@
 import { createClient } from 'redis';
-import { getWebSessionAuth, sameArtist } from './_venues.js';
+import { getWebSessionAuth } from './_venues.js';
 import { calendarKey, fetchEvents } from './_calendar.js';
 
 export const artKey = slug => `event_art:${slug}`;

@@ -94,12 +94,12 @@ export default async function handler(req, res) {
   // everyone else only sees their own venue.
   const ADMIN_VENUE = process.env.BILLING_ADMIN_VENUE || 'local-assets-admin';
   // The local / assets venue: its configured slug, or the venue named "local / assets"
-  const isAdminVenue = session.venueSlug === ADMIN_VENUE || /^local\s*[\/-]?\s*assets\b/i.test(String(session.venue?.name || '').trim());
-  const isAdmin = admins().includes(session.email) && isAdminVenue;
+  const onAdminVenue = session.venueSlug === ADMIN_VENUE || /^local\s*[\/-]?\s*assets\b/i.test(String(session.venue?.name || '').trim());
+  const isAdmin = admins().includes(session.email) && onAdminVenue;
   if (admins().includes(session.email)) console.log('[billing] venue', session.venueSlug, JSON.stringify(session.venue?.name || ''), 'admin view:', isAdmin, '| venues:', Object.keys(getVenuesConfig()).join(','));
   const cfg = getVenuesConfig();
     // local / assets is the admin account, not a venue: only real venues are billed
-  const isAdminEntry = k => k === ADMIN_VENUE || k === session.venueSlug && isAdminVenue || /^local\s*[\/-]?\s*assets\b/i.test(String(cfg[k]?.name || '').trim());
+  const isAdminEntry = k => k === ADMIN_VENUE || k === session.venueSlug && onAdminVenue || /^local\s*[\/-]?\s*assets\b/i.test(String(cfg[k]?.name || '').trim());
   const billable = Object.keys(cfg).filter(k => !isAdminEntry(k));
   let slug = session.venueSlug, auth = session.muxAuth, venueName = session.venue?.name || session.venueSlug;
   if (isAdmin) {

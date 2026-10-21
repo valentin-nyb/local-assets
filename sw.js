@@ -1,7 +1,5 @@
 importScripts('/vendor/client-zip-2.5.1-worker.js');
 
-const CACHE_NAME = 'la-v5';
-
 self.addEventListener('install', event => {
   self.skipWaiting();
 });

@@ -680,3 +680,6 @@ header #venue-breadcrumb + * , header #venue-breadcrumb ~ h1 { min-width: 0; }
     header #venue-breadcrumb { display: inline-block !important; font-size: 14px !important; }
     header h1.font-mono { font-size: 14px !important; }
 }
+
+/* Full screen on iPhone (home-screen app and the iOS app): the side menu's logo clears the notch */
+#la-side-head { padding-top: env(safe-area-inset-top); height: calc(5rem + env(safe-area-inset-top)) !important; box-sizing: border-box; }

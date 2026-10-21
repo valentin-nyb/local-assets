@@ -6,9 +6,11 @@
     if (document.querySelector('script[type=speculationrules]')) return;
     var sr = document.createElement('script');
     sr.type = 'speculationrules';
-    sr.textContent = JSON.stringify({ prerender: [{ where: { href_matches: ['/dashboard', '/camera', '/brand', '/assets', '/billing', '/contacts'] }, eagerness: 'moderate' }] });
+    sr.textContent = JSON.stringify({ prerender: [{ where: { href_matches: ['/dashboard', '/camera', '/brand', '/assets', '/billing', '/contacts', '/accounts'] }, eagerness: 'moderate' }] });
     document.head.appendChild(sr);
 })();
+// Inside the iPhone app (ios-app): sign-in through Safari and push notifications (la-native.js)
+(function () { if (!window.Capacitor || document.querySelector('script[data-la-native]')) return; var sc = document.createElement('script'); sc.src = '/la-native.js?v=1'; sc.setAttribute('data-la-native', ''); document.head.appendChild(sc); })();
 (function () { if (document.querySelector('script[data-la-select]')) return; var sc = document.createElement('script'); sc.src = '/la-select.js?v=5'; sc.defer = true; sc.setAttribute('data-la-select', ''); document.head.appendChild(sc); })();
 document.addEventListener("DOMContentLoaded", () => {
     // Inject theme switcher CSS if not already present
