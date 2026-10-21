@@ -5,8 +5,9 @@
 <html lang="en" class="dark scroll-smooth">
 <head>
     <script>try { var _la = JSON.parse(localStorage.getItem('la_admin') || '{}'); if (_la.member) document.documentElement.classList.add('la-member');
-        var _lc = (_la.venues || []).filter(function(v) { return v && v.slug === _la.venueSlug; })[0];
-        if (!_la.member && (_la.venueSlug === 'local-assets-admin' || /^local\s*[\/-]?\s*assets\b/i.test(String(_lc ? _lc.name : (_la.venue || '')).trim()))) document.documentElement.classList.add('la-admin-acct'); } catch (_) {}</script>
+        // A local / assets admin (the admin account is in their account list), in any account or artist view
+        var _adm = function(v) { return v && (v.slug === 'local-assets-admin' || /^local\s*[\/-]?\s*assets\b/i.test(String(v.name || '').trim())); };
+        if (_la.venueSlug === 'local-assets-admin' || (_la.venues || []).some(_adm)) document.documentElement.classList.add('la-admin-acct'); } catch (_) {}</script>
     <script>
       (function(){
         var s = localStorage.getItem('la_admin');
