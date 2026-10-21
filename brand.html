@@ -892,19 +892,19 @@
             img.style.top = p[0] === 't' ? Math.round(L.top * k) + 'px' : 'auto';
             img.style.bottom = p[0] === 'b' ? Math.round(L.bottom * k) + 'px' : 'auto';
             }
-            // Both in the middle: measure where the pair landed and move it so its centre is the frame's centre
+            // Both in the middle: the text then the logo, laid out together from their real sizes on screen and
+            // centred in the frame (both lined up through the middle)
             if (p === 'cc' && _wm.text && _wm.text.position === 'cc' && pv) {
-                var txtEl = document.getElementById('bk-wm-text');
-                var nudge = function() {
-                    if (!txtEl || txtEl.style.display === 'none' || img.style.display === 'none') return;
-                    var fr = pv.getBoundingClientRect(), a1 = img.getBoundingClientRect(), b1 = txtEl.getBoundingClientRect();
-                    if (!a1.width || !b1.width) return;
-                    var dx = (fr.left + fr.width / 2) - (Math.min(a1.left, b1.left) + Math.max(a1.right, b1.right)) / 2;
-                    var dy = (fr.top + fr.height / 2) - (Math.min(a1.top, b1.top) + Math.max(a1.bottom, b1.bottom)) / 2;
-                    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
-                    [img, txtEl].forEach(function(el) { el.style.left = (parseFloat(el.style.left) || 0) + dx + 'px'; el.style.top = (parseFloat(el.style.top) || 0) + dy + 'px'; });
-                };
-                nudge();
+                var tx = document.getElementById('bk-wm-text');
+                if (tx && tx.style.display !== 'none') {
+                    tx.style.alignItems = 'flex-end';
+                    var iw = parseFloat(img.style.width) || img.offsetWidth, ih = parseFloat(img.style.height) || img.offsetHeight;
+                    var tw = tx.offsetWidth, th = tx.offsetHeight, gap = 32 * k, W = pv.clientWidth, H = pv.clientHeight;
+                    var x0 = (W - (tw + gap + iw)) / 2;
+                    tx.style.right = 'auto'; tx.style.bottom = 'auto'; img.style.right = 'auto'; img.style.bottom = 'auto';
+                    tx.style.left = Math.round(x0) + 'px'; tx.style.top = Math.round((H - th) / 2) + 'px';
+                    img.style.left = Math.round(x0 + tw + gap) + 'px'; img.style.top = Math.round((H - ih) / 2) + 'px';
+                }
                 if (!img.complete) img.addEventListener('load', function() { positionPreview(); }, { once: true });
             }
         }
