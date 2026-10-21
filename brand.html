@@ -998,16 +998,18 @@
                 g.save();
                 g.imageSmoothingQuality = 'high';
                 g.globalAlpha = _wm.opacity;
-                var box = WM_BOX[_wm.size] || WM_BOX.m, lh = 0, ar = 1;
+                var box = WM_BOX[_wm.size] || WM_BOX.m, lh = 0, ar = 1, lw = 0;
+                var tp = _wm.text ? _wm.text.position : '', besides = !!(logo && tf && family && p === 'cc' && tp === 'cc');
+                // The logo: in its corner, or in the middle (beside the text when that's in the middle too: placed below)
                 if (logo) {
                     ar = (logo.naturalWidth || 2) / (logo.naturalHeight || 1);
-                    var lw = Math.min(box[0], box[1] * ar); lh = lw / ar;
-                    g.drawImage(logo, p[1] === 'l' ? L.mx : W - L.mx - lw, p[0] === 't' ? L.top : H - L.bottom - lh, lw, lh);
+                    lw = Math.min(box[0], box[1] * ar); lh = lw / ar;
+                    if (!besides) g.drawImage(logo, p === 'cc' ? (W - lw) / 2 : p[1] === 'l' ? L.mx : W - L.mx - lw, p === 'cc' ? (H - lh) / 2 : p[0] === 't' ? L.top : H - L.bottom - lh, lw, lh);
                 }
                 if (tf && family) {
                     // The title, and the subtitle under it in its own font, laid out as on the clips
-                    var px = WM_TEXT_PX[wmTextSize()] || WM_TEXT_PX.m, pad = 12, tp = _wm.text.position;
-                    var room = logo && tp !== p && tp[0] === p[0] ? Math.min(760, W - 2 * L.mx - lh * ar - 48) : 760;
+                    var px = WM_TEXT_PX[wmTextSize()] || WM_TEXT_PX.m, pad = 12;
+                    var room = besides ? Math.min(760, W - 2 * L.mx - lw - 32) : logo && tp !== p && tp[0] === p[0] ? Math.min(760, W - 2 * L.mx - lh * ar - 48) : 760;
                     var lines = [{ fam: family, v: wmTextValue(), k: 1 }];
                     if (r[2]) lines.push({ fam: r[2], v: wmSub().value, k: WM_SUB_SCALE });
                     var measure = function() { return lines.map(function(l) { g.font = (px * l.k) + 'px ' + l.fam; var m = g.measureText(l.v); return { m: m, w: m.actualBoundingBoxLeft + m.actualBoundingBoxRight, h: m.actualBoundingBoxAscent + m.actualBoundingBoxDescent }; }); };
@@ -1016,7 +1018,10 @@
                     var gap = px * WM_SUB_GAP;
                     var th = ms.reduce(function(a, x) { return a + x.h; }, 0) + gap * (ms.length - 1) + pad * 2;
                     var shift = !logo ? 0 : tp === p ? lh + 24 : tp[0] === p[0] ? (lh - th) / 2 : 0;
-                    var top = tp[0] === 't' ? L.top + shift : H - L.bottom - shift - th;
+                    var top = tp === 'cc' ? (H - th) / 2 + (logo && p === 'cc' && !besides ? lh + 24 : 0) : tp[0] === 't' ? L.top + shift : H - L.bottom - shift - th;
+                    // Both in the middle: the text, a gap, then the logo, centred together and lined up through the middle
+                    var x0 = besides ? (W - (tw + 2 * pad + 32 + lw)) / 2 : 0;
+                    if (besides) g.drawImage(logo, x0 + tw + 2 * pad + 32, (H - lh) / 2, lw, lh);
                     var blackText = _wm.text.color === 'black';
                     g.shadowColor = 'transparent'; g.shadowBlur = 0; g.shadowOffsetY = 0;
                     g.fillStyle = blackText ? '#000' : '#fff';
@@ -1024,7 +1029,7 @@
                     lines.forEach(function(l, i) {
                         var x = ms[i];
                         g.font = (px * l.k) + 'px ' + l.fam;
-                        var left = tp[1] === 'l' ? L.mx + pad : W - L.mx - pad - x.w;
+                        var left = besides ? x0 + pad : tp === 'cc' ? (W - x.w) / 2 : tp[1] === 'l' ? L.mx + pad : W - L.mx - pad - x.w;
                         g.fillText(l.v, left + x.m.actualBoundingBoxLeft, y + x.m.actualBoundingBoxAscent);
                         y += x.h + gap;
                     });
