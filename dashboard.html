@@ -3433,7 +3433,7 @@
 
                     html += '<div style="margin-bottom:12px;">';
                     html += '<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:7px;">';
-                    html += '<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.2em;color:' + nameColor + ';">' + (job.artistName || '') + '</span>';
+                    html += '<span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.2em;color:' + nameColor + ';">' + escHtml(job.artistName || '') + '</span>';
                     html += '<span style="display:flex;align-items:baseline;gap:12px;">';
                     html += '<span style="font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:0.1em;color:' + labelColor + ';">' + statusLabel + '</span>';
                     var safeJobId = String(job.jobId || '').replace(/[^a-f0-9]/gi, '');
