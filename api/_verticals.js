@@ -336,13 +336,15 @@ export async function cutVertical(redis, auth, job) {
     if (look) setTimeout(() => fs.rm(look, { force: true }, () => {}), 600e3);
     const tail = ['-vf', 'crop=trunc(ih*9/16/2)*2:ih,scale=1080:1920:flags=lanczos,setsar=1,fps=30' + (look ? ',lut3d=file=' + look : ''),
       '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p',
-      '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', out];
+      '-af', 'aresample=async=1000:first_pts=0', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', out];
     const encode = ['-map', '0:v:0', '-map', '0:a:0?', ...tail];
     const sizeOf = () => (fs.existsSync(out) ? fs.statSync(out).size : 0);
     // Mux keeps the sound as its own track in the stream, so the best picture and the sound are read as two inputs
     const clipUrl = `https://stream.mux.com/${job.pid}.m3u8?rendition_order=desc&asset_start_time=${Math.floor(job.start)}&asset_end_time=${Math.ceil(job.end)}`;
     const { video, audio } = await streamParts(clipUrl).catch(e => { console.error('[verticals] playlist', e.message); return {}; });
-    const inputs = video && audio ? ['-i', video, '-i', audio] : ['-i', clipUrl];
+    // Picture and sound are read side by side over the network: deep queues so neither waits on the other
+    const q = ['-thread_queue_size', '4096'];
+    const inputs = video && audio ? [...q, '-i', video, ...q, '-i', audio] : [...q, '-i', clipUrl];
     const maps = video && audio ? ['-map', '0:v:0', '-map', '1:a:0'] : ['-map', '0:v:0', '-map', '0:a:0?'];
     await run(['-hide_banner', '-loglevel', 'warning', '-y', ...inputs, '-t', String(len), ...maps, ...tail])
       .catch(e => console.error('[verticals] instant clip', e.message));
@@ -357,7 +359,7 @@ export async function cutVertical(redis, auth, job) {
         fs.renameSync(out, keep);
         await run(['-hide_banner', '-loglevel', 'warning', '-y', '-i', keep,
           '-i', `https://stream.mux.com/${hq.pid}.m3u8?asset_start_time=${Math.floor(job.start)}&asset_end_time=${Math.ceil(job.end)}`,
-          '-t', String(len), '-map', '0:v:0', '-map', '1:a:0', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', out])
+          '-t', String(len), '-map', '0:v:0', '-map', '1:a:0', '-c:v', 'copy', '-af', 'aresample=async=1000:first_pts=0', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', out])
           .catch(e => console.error('[verticals] hq audio', e.message));
         const ok = sizeOf() >= 200 * 1024 && await hasAudio(out);
         console.log('[verticals] hq audio', job.n, hq.id, ok ? 'added' : 'failed');
