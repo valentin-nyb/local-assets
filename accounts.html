@@ -1,0 +1,246 @@
+
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+<head>
+    <script>
+      (function(){
+        var s = localStorage.getItem('la_admin');
+        if (!s) { window.location.replace('/login.html'); return; }
+        try {
+          var d = JSON.parse(s);
+          if (!d.ts || Date.now() - d.ts > 10 * 60 * 1000) {
+            localStorage.removeItem('la_admin');
+            window.location.replace('/login.html');
+          }
+        } catch(e) {
+          localStorage.removeItem('la_admin');
+          window.location.replace('/login.html');
+        }
+      })();
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="a™">
+    <meta name="theme-color" content="#000000">
+    <title>local / assets™ - Accounts</title>
+    <link rel="icon" type="image/x-icon" href="favicon/favicon.ico">
+    <link rel="icon" type="image/svg+xml" href="favicon/favicon.svg">
+    <link rel="apple-touch-icon" href="favicon/apple-touch-icon.png">
+    <link rel="manifest" href="favicon/site.webmanifest">
+
+    <link rel="stylesheet" href="styles/tailwind.css">
+    <link rel="stylesheet" href="styles/theme.css?v=30">
+    <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <script src="/la-dialogs.js?v=2"></script>
+    <script src="nav-component.js?v=34"></script>
+    <style>
+        .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
+        .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
+        .nav-link:hover:not(.active) { background: rgba(255, 255, 255, 0.03); color: white; }
+        body { background-color: #050505; color: #ffffff; -webkit-font-smoothing: antialiased; }
+        .nav-link.active { background-color: rgba(255, 255, 255, 0.05); border: 1px solid #27272a; color: white; }
+        ::-webkit-scrollbar { display: none; }
+        @media (max-width: 767px) { #sidebar { position: fixed; z-index: 50; height: 100vh; } }
+        .ac-eyebrow { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--la-dim); }
+        .ac-h { font-size:26px; line-height:1.2; color:var(--la-text); margin-top:6px; }
+        .ac-sub { font-size:13px; line-height:1.6; color:var(--la-sub); margin-top:6px; max-width:680px; }
+        .ac-tools { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+        .ac-tools input { height:40px; min-width:260px; border-radius:999px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 16px; font-size:14px; outline:none; }
+        .ac-tools input:focus { border-color:var(--la-accent); }
+        .ac-list { display:flex; flex-direction:column; gap:10px; }
+        .ac-row { display:grid; grid-template-columns:minmax(0, 1.6fr) minmax(0, 1fr) auto; gap:16px; align-items:center; border:1px solid var(--la-line); background:var(--la-surface); border-radius:16px; padding:16px 20px; }
+        .ac-row.is-gone { opacity:.45; pointer-events:none; }
+        .ac-name { font-size:16px; font-weight:500; color:var(--la-text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .ac-meta { margin-top:4px; font:500 10px/1.5 'JetBrains Mono', monospace; letter-spacing:.14em; text-transform:uppercase; color:var(--la-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .ac-chips { display:flex; flex-wrap:wrap; gap:6px; }
+        .ac-chip { display:inline-flex; align-items:center; gap:6px; height:24px; padding:0 10px; border-radius:999px; border:1px solid var(--la-line); font:500 10px/1 'JetBrains Mono', monospace; letter-spacing:.12em; text-transform:uppercase; color:var(--la-sub); white-space:nowrap; }
+        .ac-chip::before { content:''; width:6px; height:6px; border-radius:50%; background:currentColor; }
+        .ac-chip.ok { color:var(--la-accent); border-color:color-mix(in srgb, var(--la-accent) 45%, transparent); }
+        .ac-chip.warn { color:#f59e0b; border-color:rgba(245,158,11,.45); }
+        .ac-chip.bad { color:var(--la-bad); border-color:color-mix(in srgb, var(--la-bad) 45%, transparent); }
+        .ac-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+        .ac-btn { height:34px; padding:0 14px; border-radius:999px; border:1px solid var(--la-line); background:none; color:var(--la-text); font-size:13px; font-weight:500; cursor:pointer; white-space:nowrap; transition:border-color .15s, color .15s, background .15s; }
+        @media (hover:hover) { .ac-btn:hover { border-color:var(--la-accent); color:var(--la-accent); } .ac-btn.danger:hover { background:var(--la-bad); border-color:var(--la-bad); color:#fff; } }
+        .ac-btn.danger { color:var(--la-bad); border-color:color-mix(in srgb, var(--la-bad) 45%, transparent); }
+        .ac-btn:disabled { opacity:.5; cursor:default; }
+        .ac-empty { border:1px dashed var(--la-line); border-radius:16px; padding:28px 20px; font-size:13px; color:var(--la-sub); }
+        @media (max-width: 900px) { .ac-row { grid-template-columns:1fr; } .ac-actions { justify-content:flex-start; } }
+        /* Delete dialog */
+        .ac-back { position:fixed; inset:0; z-index:2147483000; background:var(--la-overlay, rgba(0,0,0,.6)); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; padding:16px; }
+        .ac-panel { width:480px; max-width:100%; background:var(--la-raised, var(--la-surface)); border:1px solid var(--la-line); border-radius:16px; padding:22px; display:flex; flex-direction:column; gap:14px; }
+        .ac-panel h3 { font-size:17px; font-weight:600; color:var(--la-text); }
+        .ac-panel p, .ac-panel li { font-size:13px; line-height:1.55; color:var(--la-sub); }
+        .ac-panel ul { padding-left:18px; list-style:disc; display:flex; flex-direction:column; gap:2px; }
+        .ac-panel input { height:40px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 12px; font-size:14px; outline:none; }
+        .ac-panel input:focus { border-color:var(--la-bad); }
+        .ac-panel .ac-err { color:var(--la-bad); font-size:12px; }
+        .ac-panel .ac-err:empty { display:none; }
+        .ac-panel .ac-bar { display:flex; justify-content:flex-end; gap:8px; }
+        .ac-panel .ac-btn.danger:not(:disabled) { background:var(--la-bad); border-color:var(--la-bad); color:#fff; }
+</style>
+</head>
+<body class="font-sans antialiased bg-background text-foreground overflow-hidden h-screen w-screen flex selection:bg-primary selection:text-black">
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/90 z-40 hidden backdrop-blur-md opacity-0 transition-opacity duration-300"></div>
+    <aside id="sidebar" class="w-64 border-r border-[#27272a] bg-[#0a0a0a] flex flex-col transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 shrink-0 h-full"></aside>
+    <main class="flex-1 flex flex-col overflow-hidden relative w-full bg-[#050505]">
+        <header class="la-topbar h-16 flex items-center px-4 md:px-8 border-b border-[#27272a] bg-[#050505] shrink-0 justify-between w-full z-40">
+            <div class="flex items-center gap-2 md:gap-3 min-w-0"><button type="button" onclick="toggleSidebar()" class="la-menu-btn" aria-label="Open menu"><iconify-icon icon="solar:hamburger-menu-linear"></iconify-icon></button>
+                <span id="venue-breadcrumb" class="text-zinc-600 text-[10px] font-mono uppercase tracking-[0.3em] hidden md:inline"></span>
+                <h1 class="text-[10px] font-mono uppercase tracking-[0.2em] md:tracking-[0.3em] text-[#39FF14] font-bold m-0 truncate">ACCOUNTS</h1>
+            </div>
+            <div class="flex items-center gap-4 shrink-0">
+                <button id="venue-avatar" class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center font-bold text-xs shrink-0"></button>
+            </div>
+        </header>
+        <div class="flex-1 w-full overflow-y-auto no-scrollbar">
+            <div class="la-page">
+                <div>
+                    <p class="ac-eyebrow">Admin</p>
+                    <h2 class="ac-h">Client accounts</h2>
+                    <p class="ac-sub">Every venue, artist and record label account. Pause one to stop its uploads, clips, recording and publishing; resume it any time. Cancel ends its plan at the end of the paid month. Delete removes it everywhere, for good.</p>
+                </div>
+                <div class="ac-tools"><input id="ac-q" type="search" placeholder="Search accounts" aria-label="Search accounts"><span class="ac-sub" id="ac-count" style="margin:0"></span></div>
+                <div class="ac-list" id="ac-list"><p class="ac-empty">Loading…</p></div>
+            </div>
+        </div>
+    </main>
+    <script>
+        function toggleSidebar() {
+            var sidebar = document.getElementById('sidebar'), overlay = document.getElementById('sidebar-overlay');
+            if (sidebar.classList.contains('-translate-x-full')) { sidebar.classList.remove('-translate-x-full'); overlay.classList.remove('hidden'); setTimeout(function() { overlay.classList.add('opacity-100'); }, 10); }
+            else { sidebar.classList.add('-translate-x-full'); overlay.classList.add('opacity-0'); setTimeout(function() { overlay.classList.add('hidden'); }, 300); }
+        }
+        function laFetch(url, opts) {
+            var sess = {}; try { sess = JSON.parse(localStorage.getItem('la_admin') || '{}'); } catch (_) {}
+            opts = Object.assign({}, opts); opts.headers = Object.assign({}, opts.headers);
+            if (sess.webToken) opts.headers['Authorization'] = 'Bearer ' + sess.webToken;
+            return fetch(url, opts);
+        }
+        function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+        (function() {
+            try { var s = JSON.parse(localStorage.getItem('la_admin') || '{}'); var v = (s.venue || '').toUpperCase();
+                document.getElementById('venue-breadcrumb').textContent = v; document.getElementById('venue-avatar').textContent = (v || '?').charAt(0); } catch (_) {}
+        })();
+        function post(body) {
+            return laFetch('/api/admin-accounts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+                .then(function(r) { return r.json().catch(function() { return {}; }).then(function(d) { if (!r.ok) throw new Error(d.error || r.status); return d; }); });
+        }
+        var day = function(ms) { return new Date(ms).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); };
+
+        var _accounts = [];
+        async function load() {
+            var list = document.getElementById('ac-list');
+            try {
+                var r = await laFetch('/api/admin-accounts?t=' + Date.now());
+                var d = await r.json();
+                if (!r.ok) throw new Error(d.error || r.status);
+                _accounts = d.accounts || [];
+                render();
+            } catch (e) { list.innerHTML = '<p class="ac-empty">' + esc(e.message) + '</p>'; }
+        }
+        function chips(a) {
+            var c = [];
+            if (a.paused) c.push(['bad', 'Paused']);
+            else if (a.unpaid.length) c.push(['bad', 'Unpaid ' + a.unpaid.join(', ')]);
+            else if (a.setupPending) c.push(['warn', 'Setting up']);
+            else c.push(['ok', 'Active']);
+            if (a.endsAt) c.push(['warn', 'Plan ends ' + day(a.endsAt)]);
+            else if (a.subscription === 'canceled') c.push(['bad', 'Plan cancelled']);
+            else if (a.subscription === 'past_due' || a.subscription === 'unpaid') c.push(['bad', 'Payment ' + a.subscription.replace('_', ' ')]);
+            else if (a.subscription === 'none') c.push(['', 'No Stripe plan']);
+            return c.map(function(x) { return '<span class="ac-chip ' + x[0] + '">' + esc(x[1]) + '</span>'; }).join('');
+        }
+        function render() {
+            var q = document.getElementById('ac-q').value.trim().toLowerCase();
+            var rows = _accounts.filter(function(a) { return !q || (a.name + ' ' + a.slug + ' ' + a.email + ' ' + a.type).toLowerCase().indexOf(q) >= 0; });
+            document.getElementById('ac-count').textContent = rows.length + ' of ' + _accounts.length + ' accounts';
+            var list = document.getElementById('ac-list');
+            if (!rows.length) { list.innerHTML = '<p class="ac-empty">' + (_accounts.length ? 'No account matches.' : 'No client accounts yet.') + '</p>'; return; }
+            list.innerHTML = rows.map(function(a) {
+                var live = a.subscription && a.subscription !== 'none' && a.subscription !== 'canceled' && a.subscription !== 'unknown';
+                return '<div class="ac-row" data-slug="' + esc(a.slug) + '">' +
+                    '<div style="min-width:0"><p class="ac-name">' + esc(a.name) + '</p>' +
+                        '<p class="ac-meta">' + esc([a.type, a.plan || 'No plan', a.email, a.artists ? a.artists + ' artist login' + (a.artists !== 1 ? 's' : '') : ''].filter(Boolean).join(' · ')) + '</p></div>' +
+                    '<div class="ac-chips">' + chips(a) + '</div>' +
+                    '<div class="ac-actions">' +
+                        '<button type="button" class="ac-btn" data-act="' + (a.paused ? 'resume' : 'pause') + '">' + (a.paused ? 'Resume' : 'Pause') + '</button>' +
+                        (live ? '<button type="button" class="ac-btn" data-act="' + (a.endsAt ? 'keep' : 'cancel') + '">' + (a.endsAt ? 'Keep plan' : 'Cancel plan') + '</button>' : '') +
+                        '<button type="button" class="ac-btn danger" data-act="delete">Delete</button>' +
+                    '</div></div>';
+            }).join('');
+        }
+        document.getElementById('ac-q').addEventListener('input', render);
+        document.getElementById('ac-list').addEventListener('click', async function(e) {
+            var b = e.target.closest('[data-act]'); if (!b) return;
+            var row = b.closest('[data-slug]'), slug = row.dataset.slug, a = _accounts.filter(function(x) { return x.slug === slug; })[0];
+            var act = b.dataset.act;
+            if (act === 'delete') return openDelete(a);
+            var ask = {
+                pause: { title: 'Pause ' + a.name + '?', message: 'Uploads, vertical clips, watermarks, recording and publishing stop, and the account sees a banner saying local / assets paused it. Everything is kept; resume it any time.', confirmText: 'Pause account', danger: true },
+                resume: { title: 'Resume ' + a.name + '?', message: 'The account works again straight away.', confirmText: 'Resume account' },
+                cancel: { title: 'Cancel ' + a.name + '\'s plan?', message: 'No more monthly charges after the paid month ends (or its 12-month minimum, if it has one). The account keeps working until then.', confirmText: 'Cancel plan', danger: true },
+                keep: { title: 'Keep ' + a.name + '\'s plan?', message: 'The cancellation is withdrawn and the plan carries on as before.', confirmText: 'Keep plan' },
+            }[act];
+            if (!(await laConfirm(ask))) return;
+            b.disabled = true; var t = b.textContent; b.textContent = '…';
+            try {
+                var d = await post({ action: act, slug: slug });
+                laToast({ pause: a.name + ' is paused', resume: a.name + ' is running again', cancel: a.name + '\'s plan ends ' + (d.endsAt ? day(d.endsAt) : 'at the end of the month'), keep: a.name + '\'s plan carries on' }[act]);
+                await load();
+            } catch (er) { b.disabled = false; b.textContent = t; laAlert('Could not ' + act + ' ' + a.name + ': ' + er.message, { tone: 'error' }); }
+        });
+
+        // Delete everywhere: typed name to confirm; runs again while videos are still being removed
+        function openDelete(a) {
+            var m = document.createElement('div');
+            m.className = 'ac-back';
+            m.innerHTML = '<form class="ac-panel" role="alertdialog" aria-modal="true" aria-labelledby="ac-dt">' +
+                '<h3 id="ac-dt">Delete ' + esc(a.name) + ' everywhere?</h3>' +
+                '<p>This can\'t be undone. It removes:</p>' +
+                '<ul><li>its plan in Stripe, cancelled now (paid invoices stay for your accounts)</li><li>every video, clip, audio file and camera in its video storage</li><li>its Brand Kit, thumbnails, watermarks, contacts and settings</li><li>every artist login to it; it can no longer sign in</li></ul>' +
+                '<p>Type <b style="color:var(--la-text)">' + esc(a.slug) + '</b> to confirm.</p>' +
+                '<input autocomplete="off" spellcheck="false" aria-label="Account name to confirm">' +
+                '<p class="ac-err"></p>' +
+                '<div class="ac-bar"><button type="button" class="ac-btn" data-cancel>Cancel</button><button type="submit" class="ac-btn danger" disabled>Delete everywhere</button></div>' +
+            '</form>';
+            document.body.appendChild(m);
+            var f = m.querySelector('form'), inp = f.querySelector('input'), go = f.querySelector('[type=submit]'), err = f.querySelector('.ac-err'), busy = false;
+            var close = function() { if (busy) return; m.remove(); document.removeEventListener('keydown', onKey); };
+            var onKey = function(e) { if (e.key === 'Escape') close(); };
+            document.addEventListener('keydown', onKey);
+            m.addEventListener('click', function(e) { if (e.target === m) close(); });
+            f.querySelector('[data-cancel]').onclick = close;
+            inp.oninput = function() { go.disabled = inp.value.trim() !== a.slug; };
+            inp.focus();
+            f.onsubmit = async function(e) {
+                e.preventDefault();
+                if (inp.value.trim() !== a.slug) return;
+                busy = true; go.disabled = true; inp.disabled = true; f.querySelector('[data-cancel]').disabled = true; err.textContent = '';
+                var total = { videos: 0, cameras: 0 };
+                try {
+                    for (var run = 0; run < 20; run++) {
+                        go.textContent = run ? 'Deleting… ' + total.videos + ' videos so far' : 'Deleting…';
+                        var d = await post({ action: 'delete', slug: a.slug, confirm: a.slug });
+                        total.videos += d.videos || 0; total.cameras += d.cameras || 0;
+                        if (d.deleted) {
+                            busy = false; close();
+                            laToast(a.name + ' deleted: ' + total.videos + ' videos, ' + (d.files || 0) + ' files' + (d.notes && d.notes.length ? '. ' + d.notes.join(' ') : ''));
+                            return load();
+                        }
+                        if (!d.more) throw new Error('it stopped before finishing');
+                    }
+                    throw new Error('it is taking long. Run Delete again to finish.');
+                } catch (er) {
+                    busy = false; go.disabled = false; inp.disabled = false; f.querySelector('[data-cancel]').disabled = false; go.textContent = 'Try again';
+                    err.textContent = 'Could not finish: ' + er.message + (total.videos ? ' (' + total.videos + ' videos already deleted)' : '');
+                }
+            };
+        }
+        load();
+    </script>
+</body>
+</html>

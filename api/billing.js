@@ -79,7 +79,7 @@ export default async function handler(req, res) {
       const unpaid = await withRedis(redis => readUnpaid(redis, session.venueSlug));
       const venue = unpaid.find(i => i.target === 'venue');
       const setupPending = getVenuesConfig()[session.venueSlug]?.status === 'pending';
-      return res.status(200).json({ setupPending, paused: !!venue, payUrl: venue?.url || null, number: venue?.number || null, others: unpaid.filter(i => i.target !== 'venue').map(i => ({ target: i.target, number: i.number, url: i.url })) });
+      return res.status(200).json({ setupPending, paused: !!venue, byAdmin: !!venue?.admin, payUrl: venue?.url || null, number: venue?.number || null, others: unpaid.filter(i => i.target !== 'venue').map(i => ({ target: i.target, number: i.number, url: i.url })) });
     } catch (e) { return res.status(200).json({ paused: false }); }
   }
 

@@ -24,7 +24,8 @@ export async function pausedBy(slug, target = null, redis = null) {
 
 export function sendPaused(res, inv) {
   return res.status(402).json({
-    error: `This account is paused until invoice ${inv.number || ''} is paid.`.replace('  ', ' '),
+    // Paused by local / assets (Accounts), or by an unpaid invoice
+    error: inv.admin ? 'This account is paused by local / assets. Email hello@local-assets.com to start it again.' : `This account is paused until invoice ${inv.number || ''} is paid.`.replace('  ', ' '),
     paused: true, payUrl: inv.url || null,
   });
 }
