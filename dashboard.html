@@ -197,6 +197,7 @@
                 <div class="absolute inset-0 pointer-events-none" style="background:linear-gradient(90deg, rgba(0,0,0,.72) 0%, rgba(0,0,0,.35) 55%, rgba(0,0,0,.6) 100%)"></div>
                 <div class="absolute inset-0 bg-scanlines opacity-10 pointer-events-none"></div>
 
+                <button type="button" id="hero-pick" class="hero-pick hidden">Choose banner moment</button>
                 <div id="hero-text" class="relative z-10 min-w-0">
                     <div class="flex items-center gap-3 mb-3">
                         <span id="hero-badge" class="hidden inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest"></span>
@@ -2368,6 +2369,7 @@
                 else { img.removeAttribute('src'); img.classList.add('hidden'); }
             }
 
+            var hpb = document.getElementById('hero-pick'); if (hpb) hpb.classList.add('hidden');   // shown again for the latest session
             if (live.length) {
                 var s = live[0];
                 badge.style.background = '';
@@ -2406,6 +2408,7 @@
                 setImg('');            // no still: the banner is only the muted video, around the moment the DJ is seen
                 focusHeroImage(a);
                 playHeroLoop(a);
+                _heroAsset = a; var hp = document.getElementById('hero-pick'); if (hp) hp.classList.remove('hidden');
             } else if (_health.loaded) {
                 badge.className = 'hidden';
                 sub.textContent = '';
@@ -2426,6 +2429,36 @@
         var _peakPending = {};
         // The DJ seen from the front (la-djframe.js): preferred over the sound-and-movement guess once found
         var _djSpot = {};
+        // Choose banner moment: frames from across the set; the one picked is where the banner plays (kept for everyone)
+        var _heroAsset = null;
+        document.addEventListener('click', function(e) {
+            var b = e.target.closest('#hero-pick'); if (!b) return;
+            e.preventDefault(); e.stopPropagation();
+            var a = _heroAsset; if (!a || !a.playback_ids || !a.playback_ids[0]) return;
+            var pid = a.playback_ids[0].id, dur = Number(a.duration) || 0, cur = (_djSpot[a.id] || {}).time;
+            var times = []; for (var i = 0; i < 16; i++) times.push(Math.round(dur * (0.04 + 0.92 * i / 15)));
+            var m = document.createElement('div'); m.className = 'se-backdrop';
+            m.innerHTML = '<div class="se-panel hp-panel" role="dialog" aria-modal="true"><p class="se-title">Choose the banner moment</p>' +
+                '<p class="hp-sub">Pick a frame where the DJ is playing. The banner loops a few seconds from there.</p>' +
+                '<div class="hp-grid">' + times.map(function(t) {
+                    var mm = Math.floor(t / 60), ss = t % 60;
+                    return '<button type="button" class="hp-frame' + (cur != null && Math.abs(cur - t) < dur / 30 ? ' on' : '') + '" data-t="' + t + '"><img src="https://image.mux.com/' + pid + '/thumbnail.jpg?time=' + t + '&width=360" alt="" loading="lazy"><span>' + mm + ':' + (ss < 10 ? '0' : '') + ss + '</span></button>';
+                }).join('') + '</div><p class="se-error"></p><div class="del-actions"><button type="button" class="se-btn ghost" data-cancel>Cancel</button></div></div>';
+            document.body.appendChild(m);
+            var close = function() { m.remove(); };
+            m.addEventListener('click', function(ev) { if (ev.target === m || ev.target.closest('[data-cancel]')) close(); });
+            m.querySelectorAll('.hp-frame').forEach(function(fb) { fb.addEventListener('click', function() {
+                var spot = { time: Number(fb.dataset.t), focus: { x: 50, y: 45 } };
+                m.querySelectorAll('.hp-frame').forEach(function(x) { x.disabled = true; });
+                laFetch('/api/peak-moment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ assetId: a.id, dj: spot, v: 3 }) })
+                    .then(function(r) { if (!r.ok) throw new Error(r.status); })
+                    .then(function() {
+                        try { localStorage.setItem('la_dj3:' + a.id, JSON.stringify(spot)); } catch (_) {}
+                        _djSpot[a.id] = spot; _heroLoop = null; close(); renderHero();
+                    })
+                    .catch(function(er) { m.querySelector('.se-error').textContent = 'Could not save it: ' + er.message; m.querySelectorAll('.hp-frame').forEach(function(x) { x.disabled = false; }); });
+            }); });
+        });
         function djSpot(a) {
             if (!(a.id in _djSpot) && window.laDjSpot) { _djSpot[a.id] = undefined; window.laDjSpot(a).then(function(s) { _djSpot[a.id] = s || null; if (s) renderHero(); }); }
             return _djSpot[a.id] || null;
@@ -3626,6 +3659,16 @@
         @media (max-width: 560px)  { .kpi-grid { grid-template-columns:1fr; gap:12px; } }
         .kpi { background:var(--la-surface); border:1px solid var(--la-line); border-radius:14px; padding:18px 20px; display:flex; flex-direction:column; min-width:0; }
         .kpi-today { color:var(--la-accent); font-weight:600; }
+        .hero-pick { position:absolute; right:16px; bottom:14px; z-index:20; height:28px; padding:0 12px; border-radius:999px; border:1px solid rgba(255,255,255,.25); background:rgba(0,0,0,.45); color:#fff; font:600 11px 'Helvetica Neue', Helvetica, Arial, sans-serif; cursor:pointer; opacity:0; transition:opacity .2s; }
+        #live-feed-hero:hover .hero-pick, .hero-pick:focus-visible { opacity:1; }
+        @media (hover:none) { .hero-pick { opacity:1; } }
+        .hp-panel { max-width:860px !important; width:calc(100vw - 32px); }
+        .hp-sub { font-size:13px; color:var(--la-sub); margin:4px 0 14px; }
+        .hp-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:8px; max-height:60vh; overflow:auto; }
+        .hp-frame { position:relative; padding:0; border:2px solid transparent; border-radius:10px; overflow:hidden; background:#000; cursor:pointer; aspect-ratio:16/9; }
+        .hp-frame img { width:100%; height:100%; object-fit:cover; display:block; }
+        .hp-frame span { position:absolute; left:6px; bottom:6px; font:500 10px 'JetBrains Mono',monospace; color:#fff; background:rgba(0,0,0,.6); padding:2px 6px; border-radius:6px; }
+        .hp-frame:hover, .hp-frame.on { border-color:var(--la-accent); }
         /* An artist with access to a venue's or label's account: not the account's storage or revenue */
         html.la-member .kpi-account { display:none !important; }
         .kpi-head { display:flex; align-items:center; justify-content:space-between; gap:8px; height:22px; }
