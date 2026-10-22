@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en" style="color-scheme:dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>local / assets™ — Stream from DJI Mimo</title>
+    <meta name="robots" content="noindex">
+    <meta name="referrer" content="no-referrer">
+    <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Opened from the QR code in Camera Control (a DJI Osmo's setup): copies the camera slot's full streaming
+         address on the phone, to paste in DJI Mimo. The address travels after the # (it never reaches the server). -->
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root { --green: #39FF14; --bg: #070905; --fg: #fafafa; --line: rgba(250,250,250,.12); --sub: #a1a1aa; --dim: #7c8178; --mono: 'JetBrains Mono', ui-monospace, monospace; --display: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+        html, body { min-height: 100%; background: var(--bg); color: var(--fg); -webkit-font-smoothing: antialiased; font-family: var(--display); }
+        body { min-height: 100dvh; display: flex; justify-content: center; padding: calc(env(safe-area-inset-top) + 88px) 16px calc(env(safe-area-inset-bottom) + 32px); }
+        .wordmark { position: absolute; top: calc(env(safe-area-inset-top) + 32px); left: 20px; width: 120px; aspect-ratio: 1328 / 165; background: url(/logos/Green@2x.png) left center / contain no-repeat; }
+        .wrap { width: min(100%, 440px); }
+        .eyebrow { font: 500 10px/1 var(--mono); letter-spacing: .24em; text-transform: uppercase; color: var(--dim); margin-bottom: 14px; }
+        h1 { font-weight: 900; font-size: 30px; line-height: 1; text-transform: uppercase; }
+        .lead { margin-top: 12px; font-size: 15px; line-height: 1.5; color: var(--sub); }
+        .btn { position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; height: 54px; margin-top: 26px; border-radius: 999px;
+               border: 1px solid var(--green); background: var(--green); color: #000; font: 500 16px/1 var(--display); cursor: pointer; transition: transform .15s; -webkit-tap-highlight-color: transparent; }
+        .btn:active { transform: scale(.98); }
+        .btn.done { background: transparent; color: var(--green); }
+        .addr { margin-top: 12px; font: 400 11px/1.5 var(--mono); color: var(--dim); word-break: break-all; -webkit-user-select: all; user-select: all; }
+        ol { list-style: none; margin-top: 28px; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; counter-reset: s; }
+        li { counter-increment: s; display: flex; gap: 14px; padding: 15px 16px; font-size: 14px; line-height: 1.5; color: #d4d4d8; }
+        li + li { border-top: 1px solid var(--line); }
+        li::before { content: counter(s, decimal-leading-zero); flex-shrink: 0; font: 500 10px/21px var(--mono); color: var(--green); letter-spacing: .1em; }
+        li b { color: var(--fg); font-weight: 600; }
+        .get { display: flex; gap: 8px; margin-top: 14px; }
+        .get a { flex: 1; display: flex; align-items: center; justify-content: center; height: 42px; border-radius: 999px; border: 1px solid rgba(250,250,250,.2); color: var(--fg); text-decoration: none; font-size: 13px; }
+        .note { margin-top: 22px; font-size: 12px; line-height: 1.6; color: var(--dim); }
+        .err { margin-top: 26px; font-size: 14px; line-height: 1.6; color: #f87171; }
+    </style>
+</head>
+<body>
+    <a class="wordmark" href="/" aria-label="local / assets"></a>
+    <main class="wrap" id="main">
+        <p class="eyebrow">DJI Osmo · DJI Mimo</p>
+        <h1>Stream to local / assets</h1>
+        <p class="lead" id="lead">Copy your camera's address, then paste it in DJI Mimo.</p>
+        <button type="button" class="btn" id="copy">Copy the address</button>
+        <p class="addr" id="addr"></p>
+        <ol>
+            <li><span>Open <b>DJI Mimo</b> with the Osmo connected.</span></li>
+            <li><span>Choose <b>Live</b>, then <b>RTMP</b> (custom).</span></li>
+            <li><span>Paste the address and pick the best quality your Wi-Fi allows.</span></li>
+            <li><span>Start the live stream before the first set. It records with the calendar from there.</span></li>
+        </ol>
+        <div class="get">
+            <a href="https://apps.apple.com/app/id1431720653" target="_blank" rel="noopener">DJI Mimo for iPhone</a>
+            <a href="https://play.google.com/store/search?q=DJI%20Mimo&amp;c=apps" target="_blank" rel="noopener">For Android</a>
+        </div>
+        <p class="note">Keep this address private: anyone with it can send video to this camera slot.</p>
+    </main>
+    <script>
+        (function() {
+            var full = ''; try { full = decodeURIComponent((location.hash.match(/[#&]a=([^&]+)/) || [])[1] || ''); } catch (_) {}
+            var copy = document.getElementById('copy');
+            if (!/^rtmps?:\/\/\S+\/\S+$/.test(full)) {
+                copy.remove();
+                document.getElementById('lead').outerHTML = '<p class="err">This link is missing the camera’s address. Scan the QR code in Camera Control again.</p>';
+                return;
+            }
+            document.getElementById('addr').textContent = full;
+            var done = function() { copy.classList.add('done'); copy.textContent = 'Copied ✓ Now open DJI Mimo'; };
+            copy.addEventListener('click', function() {
+                // A tap is needed: phones only let a page copy when the person presses something
+                if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(full).then(done, fallback);
+                else fallback();
+            });
+            function fallback() {
+                var t = document.createElement('textarea'); t.value = full; t.setAttribute('readonly', ''); t.style.cssText = 'position:fixed;opacity:0;top:0';
+                document.body.appendChild(t); t.select(); t.setSelectionRange(0, full.length);
+                var ok = false; try { ok = document.execCommand('copy'); } catch (_) {}
+                t.remove();
+                if (ok) done(); else copy.textContent = 'Press and hold the address below to copy it';
+            }
+        })();
+    </script>
+</body>
+</html>

@@ -2116,7 +2116,10 @@
                         // DJI Mimo is a phone app, so its steps are for streaming from a phone.
                         (onPhone
                             ? how('DJI Osmo (Pocket 3, Action)', ['Copy the <b>full address</b> below.', 'Open the <b>DJI Mimo</b> app on this phone, with the Osmo connected.', 'Choose <b>Live</b>, then <b>RTMP</b> (custom), and paste it. Pick the best quality your Wi-Fi allows.', 'Start the live stream before the first set.', 'Or plug the Osmo into the venue Mac and let the a™ app stream it: open this page on the Mac for those steps.'], fullRow)
-                            : how('DJI Osmo (Pocket 3, Action)', viaMac('the Osmo', 'Plug the Osmo into the Mac with a USB-C cable and choose <b>Webcam</b> on the Osmo\'s screen.'), macBtn)) +
+                            : how('DJI Osmo (Pocket 3, Action)', viaMac('the Osmo', 'Plug the Osmo into the Mac with a USB-C cable and choose <b>Webcam</b> on the Osmo\'s screen.'), macBtn +
+                                // Or from DJI Mimo on a phone: the code opens a page there that copies the full address (mimo.html)
+                                '<div class="cam-qr cam-qr-mimo"><div id="cam-qr-mimo" class="cam-qr-code"></div><div><p class="cam-qr-title">Or stream from DJI Mimo on a phone</p>' +
+                                '<ol class="cam-qr-steps"><li>Scan this code with the phone\'s camera and tap the link.</li><li>Tap <b>Copy the address</b>.</li><li>In DJI Mimo: <b>Live</b> → <b>RTMP</b>, paste it and go live.</li></ol></div></div>')) +
                         how('Sony Alpha', viaMac('the camera', 'Plug the camera into the Mac by USB (it works as a webcam), or by HDMI with a capture adapter.').concat(['<b>Newer models</b> can also stream on their own through Sony\'s Creators\' App: paste the <b>full address</b> there instead.']), macBtn + fullRow) +
                         how('A phone', ['Install <b>Larix Broadcaster</b> (free, iPhone and Android).', onPhone ? 'Tap <b>Open in Larix</b> below.' : 'Point the phone\'s camera at the code below and tap the link.', 'For the shortest delay: Settings → Video → <b>Keyframe frequency 1 s</b>.', 'Turn the phone sideways and press record.'],
                             '<div class="cam-qr"><div id="cam-qr-code" class="cam-qr-code"></div>' + (onPhone ? '<a class="cam-btn primary" href="' + esc(larix) + '">Open in Larix</a>' : '<p class="cam-dialog-note" style="margin:0">Scan it with the phone\'s camera.</p>') + '</div>' + fullRow) +
@@ -2156,6 +2159,8 @@
                       '</div><p class="cam-dialog-note">Pan, tilt, zoom and AI tracking from Camera Control are for OBSBOT cameras; everything else works the same.</p>' : '') +
                     '<p class="cam-dialog-note"> Keep the stream key private. Anyone with it can send video to this camera slot.</p>';
                 document.querySelectorAll('#cam-obs-dl, [data-obs-dl]').forEach(function(obsBtn) { obsBtn.addEventListener('click', function() { downloadObsProfile(c, d, obsBtn); }); });
+                var mimoBox = document.getElementById('cam-qr-mimo');
+                if (mimoBox) loadQr().then(function(qrcode) { var q = qrcode(0, 'L'); q.addData(location.origin + '/mimo#a=' + encodeURIComponent(full)); q.make(); mimoBox.innerHTML = q.createSvgTag({ cellSize: 4, margin: 2, scalable: true }); }).catch(function() { mimoBox.textContent = 'QR code unavailable'; });
                 var qrBox = document.getElementById('cam-qr-code');
                 if (qrBox) loadQr().then(function(qrcode) { var q = qrcode(0, 'L'); q.addData(larix); q.make(); qrBox.innerHTML = q.createSvgTag({ cellSize: 4, margin: 2, scalable: true }); }).catch(function() { qrBox.textContent = 'QR code unavailable'; });
                 document.querySelectorAll('[data-copy]').forEach(function(b) {
