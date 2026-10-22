@@ -74,23 +74,30 @@
     }
 
     // asset: a Mux asset ({ id, duration, playback_ids }). Resolves to { time, focus } or null.
+    // The account's saved moment (the server's) always wins, so every device shows the same one (also after
+    // the banner moment is chosen); this browser's copy is only used when the server can't be reached.
     window.laDjSpot = function (asset) {
         if (!asset || !asset.id || !asset.playback_ids || !asset.playback_ids[0]) return Promise.resolve(null);
         var key = 'la_dj3:' + asset.id;
-        try { var c = JSON.parse(localStorage.getItem(key) || 'null'); if (c) return Promise.resolve(c.time != null ? c : null); } catch (_) {}
+        var cached = null; try { cached = JSON.parse(localStorage.getItem(key) || 'null'); } catch (_) {}
+        var local = cached && cached.time != null ? cached : null;
         if (inflight[asset.id]) return inflight[asset.id];
         var fetchFn = window.laFetch || fetch;
         var keep = function (v) { try { localStorage.setItem(key, JSON.stringify(v || { none: true })); } catch (_) {} return v; };
+        var save = function (v) { fetchFn('/api/peak-moment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ assetId: asset.id, dj: v, v: 3 }) }).catch(function () {}); };
         inflight[asset.id] = fetchFn('/api/peak-moment?dj=3&assetId=' + encodeURIComponent(asset.id))
-            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
             .then(function (s) {
                 if (s && s.dj) return keep(s.dj);
+                // Not on the server yet: this browser's earlier find goes there (so other devices get it), else find it now
+                if (local) { save(local); return local; }
                 return find(asset.playback_ids[0].id, Number(asset.duration) || 0).then(function (v) {
-                    if (v) fetchFn('/api/peak-moment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ assetId: asset.id, dj: v, v: 3 }) }).catch(function () {});
+                    if (v) save(v);
                     return keep(v);
                 });
             })
-            .catch(function () { return null; });
+            .catch(function () { return local; })
+            .then(function (v) { delete inflight[asset.id]; return v; });
         return inflight[asset.id];
     };
 })();
