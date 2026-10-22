@@ -139,6 +139,8 @@
         .bl-plan-price span { font-size:12px; font-weight:400; color:var(--la-dim); margin-left:6px; letter-spacing:0; }
         .bl-plan-feats { list-style:none; margin:16px 0 20px; padding:0; display:flex; flex-direction:column; gap:9px; font-size:12.5px; line-height:1.4; color:var(--la-text-2, #d4d4d8); flex:1; }
         .bl-plan-feats li { position:relative; padding-left:18px; }
+        /* A feature's second line (an add-on): under it, in the accent colour */
+        .bl-plan-feats .bl-feat-add { display:block; margin-top:3px; color:var(--la-accent); font-weight:500; }
         .bl-plan-feats li::before { content:''; position:absolute; left:2px; top:.45em; width:8px; height:5px; border-left:1.5px solid var(--la-accent); border-bottom:1.5px solid var(--la-accent); transform:rotate(-45deg); }
         .bl-plan-spec { display:grid; grid-template-columns:1fr auto; gap:10px 12px; margin:16px 0 20px; font-size:12px; flex:1; align-content:start; }
         .bl-plan-spec dt { color:var(--la-sub); }
@@ -658,7 +660,7 @@
                         (cur ? '<span class="bl-plan-badge">Current</span>' : featured ? '<span class="bl-plan-badge alt">Recommended</span>' : '') +
                         '<p class="bl-plan-cat">' + esc(cat) + '</p><p class="bl-plan-name">' + esc(tier) + '</p>' +
                         '<p class="bl-plan-price">£' + fmt(p.price) + '<span>/ month</span></p>' +
-                        '<ul class="bl-plan-feats">' + feats.map(function(f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul>' +
+                        '<ul class="bl-plan-feats">' + feats.map(function(f) { var l = String(f).split('\n'); return '<li>' + esc(l[0]) + (l[1] ? '<span class="bl-feat-add">' + esc(l[1]) + '</span>' : '') + '</li>'; }).join('') + '</ul>' +
                         (cur ? '<button type="button" class="cam-btn ghost" disabled>Your plan</button>'
                              : '<button type="button" class="cam-btn ' + (featured || curIdx < 0 && i === 0 ? 'primary' : 'ghost') + '" data-plan="' + esc(p.id) + '">' + (curIdx < 0 ? 'Choose ' + esc(tier) : i > curIdx ? 'Upgrade' : 'Switch') + '</button>') +
                     '</div>';

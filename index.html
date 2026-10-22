@@ -80,7 +80,8 @@
         .ord-rent input[type=date] { height:44px; padding:0 12px; border-radius:10px; border:1px solid #27272a; background:transparent; color:#fff; font-size:14px; color-scheme:dark light; }
         .ord-days span { min-width:64px; }
         .ord-note { font-size:12px; line-height:1.55; color:#a1a1aa; margin-top:8px; }
-</style>
+        .tr-feat-add { display:block; margin-top:3px; color:#39FF14; }
+    </style>
     <style>
         /* Venue Command Center: how the cameras work */
         .vc-cams { margin-top:96px; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,400px); gap:48px; align-items:start; border:1px solid #27272a; background:#0a0a0a; border-radius:20px; padding:32px; }
@@ -964,19 +965,21 @@
             if (!list) return;
             var tick = (document.querySelector('.tr-card li svg') || {}).outerHTML || '';
             var esc = function(v) { return String(v).replace(/[&<>"]/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+            // A second line (an add-on, after \n) goes under the first, in green
+            var featHtml = function(f) { var l = String(f).split('\n'); return esc(l[0]) + (l[1] ? '<span class="tr-feat-add">' + esc(l[1]) + '</span>' : ''); };
             document.querySelectorAll('.tr-card').forEach(function(card) {
                 var pb = card.querySelector('[onclick^="selectTier("]'), pid = pb ? (/selectTier\('([^']+)'/.exec(pb.getAttribute('onclick')) || [])[1] : '';
                 var p = list.filter(function(x) { return x.id === pid; })[0];
                 if (!p || !p.features.length) return;
                 card.querySelectorAll('.tr-h, ul, .tr-stats').forEach(function(el) { el.remove(); });
                 var ul = document.createElement('ul'); ul.className = 'tr-feats';
-                ul.innerHTML = p.features.map(function(f) { return '<li>' + tick + '<span>' + esc(f) + '</span></li>'; }).join('');
+                ul.innerHTML = p.features.map(function(f) { return '<li>' + tick + '<span>' + featHtml(f) + '</span></li>'; }).join('');
                 var after = card.querySelector('.tr-for') || card.querySelector('.tr-price');
                 after.insertAdjacentElement('afterend', ul);
             });
             // The trial's own list: the same lines, without the join price (shown beside it)
             var trial = list.filter(function(x) { return x.id === 'dj-trial'; })[0], tf = document.querySelector('.tr-offer-feats');
-            if (trial && tf) tf.innerHTML = trial.features.filter(function(f) { return !/^£/.test(f); }).map(function(f) { return '<li>' + tick + '<span>' + esc(f) + '</span></li>'; }).join('');
+            if (trial && tf) tf.innerHTML = trial.features.filter(function(f) { return !/^£/.test(f); }).map(function(f) { return '<li>' + tick + '<span>' + featHtml(f) + '</span></li>'; }).join('');
         }
         document.addEventListener('click', function(e) {
             var b = e.target.closest('.tr-who-seg button'); if (!b) return;
