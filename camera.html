@@ -301,6 +301,13 @@
         .cam-guides .cam-guide summary { margin:0 !important; border:0 !important; background:none !important; padding:14px 18px !important; align-items:center; font-size:14px !important; font-weight:600 !important; }
         .cam-guides .cam-guide ol { margin:0 !important; padding:0 18px 16px 38px !important; gap:8px !important; }
         .cam-guides { margin:16px 0 0 !important; }
+        .cam-guides.cam-guides-first { margin:4px 0 0 !important; }
+        .cam-guide-x { display:flex; flex-direction:column; gap:10px; padding:0 18px 18px; }
+        .cam-guide-x:empty { display:none; }
+        .cam-guide-x .cam-field { margin:0; }
+        .cam-guide-x .cam-qr { margin:0; }
+        .cam-guide-btns { display:flex; flex-wrap:wrap; gap:8px; }
+        @media (max-width:640px) { .cam-guide-x { padding:0 14px 14px; } }
         @media (max-width:640px) { .cam-guides .cam-guide summary { padding:13px 14px !important; } .cam-guides .cam-guide ol { padding:0 14px 14px 32px !important; } }
         .cam-guide summary { cursor:pointer; padding:12px 14px; font-size:14px; font-weight:500; color:var(--la-text); list-style:none; display:flex; justify-content:space-between; }
         .cam-guide summary::-webkit-details-marker { display:none; }
@@ -2093,6 +2100,24 @@
                 var larix = 'larix://set/v1?conn[][url]=' + encodeURIComponent(full) + '&conn[][name]=' + encodeURIComponent('local / assets · ' + c.name) + '&conn[][overwrite]=on';
                 var onPhone = /iPhone|iPad|Android/i.test(navigator.userAgent);
                 var guide = function(key, title, steps) { return '<details class="cam-guide"><summary>' + title + '</summary><ol>' + steps.map(function(x) { return '<li>' + x + '</li>'; }).join('') + '</ol></details>'; };
+                // One of the cameras people bring (not a PTZ camera, not the decks): the camera first, and inside each one
+                // its own steps with what it needs (the address, the QR code, the OBS profile)
+                if (other && !audio) {
+                    var how = function(title, steps, extra) { return '<details class="cam-guide" name="cam-how"><summary>' + title + '</summary><ol>' + steps.map(function(x) { return '<li>' + x + '</li>'; }).join('') + '</ol><div class="cam-guide-x">' + extra + '</div></details>'; };
+                    var fullRow = row('Full address', full, true);
+                    document.getElementById('cam-dialog-body').innerHTML =
+                        '<p class="cam-dialog-text">Choose your camera. Once it streams here, it records with the calendar, saves each set for the DJ and makes the clips.</p>' +
+                        '<div class="cam-guides cam-guides-first">' +
+                        how('DJI Osmo (Pocket 3, Action)', ['Copy the <b>full address</b> below.', 'Open the <b>DJI Mimo</b> app with the Osmo connected.', 'Choose <b>Live</b>, then <b>RTMP</b> (custom), and paste it. Pick the best quality your Wi-Fi allows.', 'Start the live stream before the first set.'], fullRow) +
+                        how('Sony Alpha', ['Connect the camera to the venue Mac by USB (it works as a webcam) or by HDMI with a capture adapter.', 'Install <b>OBS</b> (free) and download our ready profile: address, key and settings included.', 'Unzip it. In OBS: <b>Profile → Import</b>, pick the folder and choose it in the <b>Profile</b> menu.', 'Add the camera as a <b>Video Capture Device</b> and press <b>Start Streaming</b>.', '<b>Newer models</b> can stream on their own through Sony\'s Creators\' App: paste the <b>full address</b> there instead.'],
+                            '<div class="cam-guide-btns"><a class="cam-btn ghost" href="https://obsproject.com/download" target="_blank" rel="noopener">Get OBS (free)</a><button type="button" class="cam-btn ghost" id="cam-obs-dl">Download OBS profile</button></div>' + row('Server', d.rtmpsUrl) + row('Stream key', d.streamKey, true) + fullRow) +
+                        how('A phone', ['Install <b>Larix Broadcaster</b> (free, iPhone and Android).', onPhone ? 'Tap <b>Open in Larix</b> below.' : 'Point the phone\'s camera at the code below and tap the link.', 'For the shortest delay: Settings → Video → <b>Keyframe frequency 1 s</b>.', 'Turn the phone sideways and press record.'],
+                            '<div class="cam-qr"><div id="cam-qr-code" class="cam-qr-code"></div>' + (onPhone ? '<a class="cam-btn primary" href="' + esc(larix) + '">Open in Larix</a>' : '<p class="cam-dialog-note" style="margin:0">Scan it with the phone\'s camera.</p>') + '</div>' + fullRow) +
+                        how('Any other camera', ['Look for <b>RTMP</b>, <b>custom stream</b> or <b>live streaming</b> in its settings or app.', 'Paste the <b>full address</b>, or the <b>Server</b> and <b>Stream key</b> if it has two boxes.', 'No RTMP? Connect it to the venue Mac and stream it with OBS, as for the Sony Alpha.'],
+                            fullRow + row('Server', d.rtmpsUrl) + row('Server (if RTMPS isn\'t supported)', d.rtmpUrl) + row('Stream key', d.streamKey, true) + (d.srtUrl ? row('SRT (alternative)', d.srtUrl, true) : '')) +
+                        '</div><p class="cam-dialog-note">Pan, tilt, zoom and AI tracking from Camera Control are for OBSBOT cameras; everything else works the same.</p>' +
+                        '<p class="cam-dialog-note">Keep the stream key private. Anyone with it can send video to this camera slot.</p>';
+                } else
                 document.getElementById('cam-dialog-body').innerHTML =
                     (other ? '<div class="cam-qr"><div id="cam-qr-code" class="cam-qr-code"></div><div><p class="cam-qr-title">Set up the phone in one tap</p>' +
                         '<ol class="cam-qr-steps"><li>Install <b>Larix Broadcaster</b> (free) on the phone.</li><li>' + (onPhone ? 'Tap <b>Open in Larix</b> below.' : 'Point the phone\'s camera at this code and tap the link.') + '</li><li>Turn the phone sideways and press record.</li></ol>' +
