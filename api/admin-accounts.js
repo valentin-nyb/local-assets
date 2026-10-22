@@ -1,6 +1,6 @@
 import { list, del } from '@vercel/blob';
 import { createClient } from 'redis';
-import { getWebSessionAuth, getVenuesConfig, isAdminVenue, refreshRegistry, getMuxAuthForVenue, MEMBERS_KEY } from './_venues.js';
+import { getWebSessionAuth, getVenuesConfig, isAdminVenue, refreshRegistry, getMuxAuthForVenue, MEMBERS_KEY, freshVenues } from './_venues.js';
 import { readAssignments, readPlans, stripeClient, accountTypeOf, DISCOUNTS_KEY } from './_billing.js';
 import { unpaidKey, readUnpaid } from './_suspend.js';
 import { thumbnailPrefix } from './_thumbnails.js';
@@ -14,6 +14,7 @@ import { accessInviteEmail } from './_emails.js';
 //   POST { action: 'cancel', slug }        the plan ends at the end of its paid month (or its minimum term)
 //   POST { action: 'keep', slug }          a cancelled plan carries on
 //   POST { action: 'discount', slug, percent }   a discount (0–100%) on its usage prices, from its next bill
+//   (a new account is opened from Accounts → New account through api/billing.js openAccount)
 //   POST { action: 'emailExample', to, slug? }   the artist-access email, as an example, to that address
 //   POST { action: 'delete', slug, confirm: slug }   deleted everywhere: plan cancelled now, every video and
 //        camera in its video storage, its files, records and artist access. Run again if it says more is left.
@@ -76,6 +77,7 @@ export default async function handler(req, res) {
   if (!session?.email || !admins().includes(String(session.email).toLowerCase()) || !isAdminVenue(session.venue)) {
     return res.status(403).json({ error: 'Only local / assets can do this. Switch to the local / assets account first.' });
   }
+  await freshVenues(2000);   // an account just created (New account) or deleted shows straight away
   const cfg = getVenuesConfig();
   const clients = Object.entries(cfg).filter(([slug, v]) => !isAdminVenue({ slug, ...v }));
 

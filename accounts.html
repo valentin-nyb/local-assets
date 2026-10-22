@@ -82,6 +82,11 @@
         .ac-panel .ac-err:empty { display:none; }
         .ac-panel .ac-bar { display:flex; justify-content:flex-end; gap:8px; }
         .ac-panel .ac-btn.danger:not(:disabled) { background:var(--la-bad); border-color:var(--la-bad); color:#fff; }
+        .ac-panel .ac-f { display:flex; flex-direction:column; gap:6px; font-size:12px; font-weight:500; color:var(--la-text-2, var(--la-sub)); }
+        .ac-panel select { height:40px; border-radius:10px; }
+        .ac-new input:focus { border-color:var(--la-accent); }
+        .ac-check { display:flex; align-items:center; gap:10px; font-size:13px; color:var(--la-sub); }
+        .ac-check input { width:16px; height:16px; accent-color:var(--la-accent); }
         .ac-panel .ac-btn.primary-acc { background:var(--la-accent); border-color:var(--la-accent); color:var(--la-accent-ink); }
 </style>
 </head>
@@ -105,7 +110,7 @@
                     <h2 class="ac-h">Client accounts</h2>
                     <p class="ac-sub">Every venue, artist and record label account. Pause one to stop its uploads, clips, recording and publishing; resume it any time. Cancel ends its plan at the end of the paid month. Delete removes it everywhere, for good.</p>
                 </div>
-                <div class="ac-tools"><input id="ac-q" type="search" placeholder="Search accounts" aria-label="Search accounts"><span class="ac-sub" id="ac-count" style="margin:0"></span></div>
+                <div class="ac-tools"><input id="ac-q" type="search" placeholder="Search accounts" aria-label="Search accounts"><span class="ac-sub" id="ac-count" style="margin:0"></span><button type="button" class="cam-btn primary" id="ac-new" style="margin-left:auto">New account</button></div>
                 <div class="ac-list" id="ac-list"><p class="ac-empty">Loading…</p></div>
                 <!-- The emails clients get, as examples -->
                 <div class="ac-emails">
@@ -212,6 +217,62 @@
                 await load();
             } catch (er) { b.disabled = false; b.textContent = t; laAlert('Could not ' + act + ' ' + a.name + ': ' + er.message, { tone: 'error' }); }
         });
+
+        // A new client account, set up in one go: its login emails sign in with Google, it gets the next ready
+        // video storage (Billing → Ready video storage), an optional plan billed monthly, and the welcome email
+        document.getElementById('ac-new').addEventListener('click', openNew);
+        var _plans = null;
+        function openNew() {
+            var m = document.createElement('div');
+            m.className = 'ac-back';
+            m.innerHTML = '<form class="ac-panel ac-new" role="dialog" aria-modal="true" aria-labelledby="ac-nt" autocomplete="off">' +
+                '<h3 id="ac-nt">New account</h3>' +
+                '<p>Opens the account straight away on the next ready video storage. Everyone listed signs in with Google.</p>' +
+                '<label class="ac-f">Account name<input name="name" maxlength="60" required placeholder="Cafe 1001"></label>' +
+                '<label class="ac-f">Type<select name="type"><option value="venue">Venue</option><option value="artist">Artist</option><option value="label">Record label</option><option value="management">Management</option></select></label>' +
+                '<label class="ac-f">Login emails<input name="emails" required placeholder="owner@venue.com, manager@venue.com"></label>' +
+                '<label class="ac-f">Plan<select name="plan"><option value="">No plan yet (free until one is given)</option></select></label>' +
+                '<label class="ac-check"><input type="checkbox" name="welcome" checked> Send the welcome email to each login</label>' +
+                '<p class="ac-err"></p>' +
+                '<div class="ac-bar"><button type="button" class="ac-btn" data-cancel>Cancel</button><button type="submit" class="ac-btn primary-acc">Create account</button></div>' +
+            '</form>';
+            document.body.appendChild(m);
+            var f = m.querySelector('form'), err = f.querySelector('.ac-err'), go = f.querySelector('[type=submit]');
+            var close = function() { m.remove(); document.removeEventListener('keydown', onKey); };
+            var onKey = function(e) { if (e.key === 'Escape') close(); };
+            document.addEventListener('keydown', onKey);
+            m.addEventListener('click', function(e) { if (e.target === m) close(); });
+            f.querySelector('[data-cancel]').onclick = close;
+            f.name.focus();
+            // The plans at this type's prices
+            var paintPlans = function() {
+                if (!_plans) return;
+                var t = f.type.value === 'management' ? 'label' : f.type.value, cur = f.plan.value;
+                var price = {}; ((_plans.byType || {})[t] || []).forEach(function(p) { price[p.id] = p.price; });
+                f.plan.innerHTML = '<option value="">No plan yet (free until one is given)</option>' + (_plans.plans || []).map(function(p) {
+                    var pr = price[p.id] != null ? price[p.id] : p.price;
+                    return '<option value="' + esc(p.id) + '"' + (p.id === cur ? ' selected' : '') + '>' + esc(p.name) + ' · ' + (pr > 0 ? '£' + pr.toLocaleString('en-GB') + ' a month' : 'pay as you go') + '</option>';
+                }).join('');
+            };
+            (_plans ? Promise.resolve(_plans) : fetch('/api/plans').then(function(r) { return r.json(); })).then(function(d) { _plans = d; paintPlans(); }).catch(function() {});
+            f.type.addEventListener('change', paintPlans);
+            f.onsubmit = async function(e) {
+                e.preventDefault();
+                go.disabled = true; go.textContent = 'Setting up…'; err.textContent = '';
+                try {
+                    var r = await laFetch('/api/billing', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'openAccount', name: f.name.value.trim(), type: f.type.value, emails: f.emails.value, plan: f.plan.value, welcome: f.welcome.checked }) });
+                    var d = await r.json().catch(function() { return {}; });
+                    if (!r.ok) throw new Error(d.error || r.status);
+                    close();
+                    laAlert(d.waiting
+                        ? f.name.value.trim() + ' is set up, but there is no ready video storage left: it can sign in, and recordings start once you add storage in Billing → Ready video storage.'
+                        : f.name.value.trim() + ' is live on its own video storage (' + d.label + '). ' + (d.welcomed ? 'The welcome email went to ' + d.welcomed + (d.welcomed > 1 ? ' logins.' : ' login.') : f.welcome.checked ? 'The welcome email could not be sent.' : 'No welcome email sent.'),
+                        { title: 'Account created', tone: d.waiting ? 'info' : 'ok' });
+                    load();
+                } catch (er) { go.disabled = false; go.textContent = 'Create account'; err.textContent = 'Could not create it: ' + er.message; }
+            };
+        }
 
         // A discount on the account's usage prices (storage, streaming, recording, files); the plan's price is unchanged
         function openDiscount(a) {

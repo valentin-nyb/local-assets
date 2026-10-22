@@ -518,12 +518,30 @@ export default async function handler(req, res) {
         await saveRegistryEntry(r, slug, { name: name.toUpperCase(), emails, type, plan: '', status: 'pending', manual: true, createdAt: new Date().toISOString() });
         await r.set(`brand_org_type:${slug}`, type);
         await r.set(`brand_org_name:${slug}`, name);
-        const label = await activateFromPool(r, slug, String(body.key || ''));
-        return { slug, label };
+        const label = await activateFromPool(r, slug, String(body.key || '') || null);
+        // A plan chosen when it was opened (Accounts → New account): billed monthly to the first login email
+        const planId = cleanText(body.plan, 40);
+        const plan = planId ? (await readPlans(r)).find(p => p.id === planId) : null;
+        if (plan) await r.hSet(assignKey(slug), 'venue', JSON.stringify({ plan: plan.id, email: emails[0], name: '', monthly: true, details: cleanDetails({}) }));
+        return { slug, label, plan: plan ? planForType(plan, type) : null };
       });
       console.log('[billing] account opened by hand', out.slug, type, out.label ? 'live' : 'waiting for storage');
-      if (!out.label) return res.status(200).json({ ok: true, slug: out.slug, waiting: true, pool: await withRedis(r => listPool(r)) });
-      return res.status(200).json({ ok: true, slug: out.slug, label: out.label, pool: await withRedis(r => listPool(r)) });
+      // The welcome email to each login (Accounts → New account), as after a sign-up
+      let welcomed = 0;
+      const mailKey = process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY;
+      if (body.welcome && mailKey) {
+        const { Resend } = await import('resend');
+        const { welcomeEmail } = await import('./_emails.js');
+        const resend = new Resend(mailKey);
+        for (const email of emails) {
+          const m = welcomeEmail({ name, email, type, plan: { name: out.plan ? out.plan.name : 'local / assets', line: out.plan ? (out.plan.price > 0 ? `£${Number(out.plan.price).toLocaleString('en-GB')} a month, billed on the 1st.` : 'Pay as you go, billed on the 1st.') : 'Set up for you by local / assets.' }, ready: !!out.label });
+          const sent = await resend.emails.send({ from: 'local / assets <noreply@local-assets.com>', replyTo: 'info@local-assets.com', to: email, subject: m.subject, html: m.html, text: m.text }).catch(e => ({ error: e }));
+          if (!sent?.error) welcomed++;
+          else console.error('[billing] welcome email', out.slug, sent.error?.message || sent.error);
+        }
+      }
+      if (!out.label) return res.status(200).json({ ok: true, slug: out.slug, waiting: true, welcomed, pool: await withRedis(r => listPool(r)) });
+      return res.status(200).json({ ok: true, slug: out.slug, label: out.label, welcomed, pool: await withRedis(r => listPool(r)) });
     }
     // A sign-up still waiting: give it the next ready environment
     if (body.action === 'useReady') {
