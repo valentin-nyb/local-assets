@@ -324,9 +324,12 @@ function sync() {
 // Ask the site (signed in as this Mac's user) which camera slots still exist. A link to a slot that was
 // removed is forgotten, so the app never opens a camera (an iPhone switches to webcam mode) for nothing.
 // Until the site has answered, nothing is opened.
+// The site signs requests with the session token it keeps in the window (no cookies), read through getToken.
 async function checkSite() {
   try {
-    const r = await session.defaultSession.fetch('https://local-assets.com/api/cameras', { credentials: 'include', signal: AbortSignal.timeout(15000) })
+    const token = getToken ? await getToken() : ''
+    if (!token) return   // not signed in yet (or the window is on the offline screen)
+    const r = await session.defaultSession.fetch('https://local-assets.com/api/cameras', { headers: { Authorization: 'Bearer ' + token }, signal: AbortSignal.timeout(15000) })
     if (!r.ok) return
     const d = await r.json()
     const ids = new Set(), venues = new Set()
@@ -374,8 +377,10 @@ async function sendFrames() {
   }
 }
 
-function init(onChange) {
+let getToken = null
+function init(onChange, tokenOf) {
   notify = onChange
+  getToken = tokenOf
   // Camera processes left by an earlier copy of the app (an update, a crash) would hold the cameras
   try { require('child_process').execFileSync('/usr/bin/pkill', ['-f', FFMPEG], { stdio: 'ignore' }) } catch {}
   load()

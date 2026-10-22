@@ -192,7 +192,9 @@ if (!app.requestSingleInstanceLock()) {
     })
     session.defaultSession.setPermissionCheckHandler((_wc, permission, origin) => permission === 'media' && origin === SITE)
     buildMenu()
-    thisMac.init(() => { if (win && !win.isDestroyed()) win.webContents.send('la:mac-changed') })
+    thisMac.init(() => { if (win && !win.isDestroyed()) win.webContents.send('la:mac-changed') },
+      // The signed-in session's token, from the site's own storage in the window
+      () => win && !win.isDestroyed() ? win.webContents.executeJavaScript(`(function () { try { return (JSON.parse(localStorage.getItem('la_admin') || 'null') || {}).webToken || '' } catch (e) { return '' } })()`).catch(() => '') : Promise.resolve(''))
     createWindow()
     if (pendingLink) { handleLink(pendingLink); pendingLink = null }
   })
