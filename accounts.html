@@ -85,6 +85,14 @@
         .ac-panel .ac-f { display:flex; flex-direction:column; gap:6px; font-size:12px; font-weight:500; color:var(--la-text-2, var(--la-sub)); }
         .ac-panel select { height:40px; border-radius:10px; }
         .ac-new input:focus { border-color:var(--la-accent); }
+        .ac-logins { display:flex; flex-direction:column; border:1px solid var(--la-line); border-radius:12px; overflow:hidden; }
+        .ac-login { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 14px; font-size:13px; color:var(--la-text); }
+        .ac-login + .ac-login { border-top:1px solid var(--la-line); }
+        .ac-login span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .ac-login small { font:500 9px/1 'JetBrains Mono', monospace; letter-spacing:.14em; text-transform:uppercase; color:var(--la-dim); flex-shrink:0; }
+        .ac-x { width:26px; height:26px; border-radius:999px; border:1px solid var(--la-line); background:none; color:var(--la-sub); cursor:pointer; flex-shrink:0; }
+        .ac-addrow { display:flex; gap:8px; } .ac-addrow input { flex:1; min-width:0; }
+        #ac-ex select { height:40px; border-radius:999px; }
         .ac-check { display:flex; align-items:center; gap:10px; font-size:13px; color:var(--la-sub); }
         .ac-check input { width:16px; height:16px; accent-color:var(--la-accent); }
         .ac-panel .ac-btn.primary-acc { background:var(--la-accent); border-color:var(--la-accent); color:var(--la-accent-ink); }
@@ -115,8 +123,8 @@
                 <!-- The emails clients get, as examples -->
                 <div class="ac-emails">
                     <p class="ac-eyebrow" style="margin:0">Emails</p>
-                    <p class="ac-sub" style="margin:6px 0 12px">The email an artist gets when they're given access (Brand Kit → Give access), sent as an example.</p>
-                    <form class="ac-tools" id="ac-ex"><input type="email" name="to" placeholder="Send the example to…" aria-label="Email to send the example to" required><button type="submit" class="cam-btn ghost">Send example</button><span class="ac-sub" id="ac-ex-msg" style="margin:0"></span></form>
+                    <p class="ac-sub" style="margin:6px 0 12px">The email someone gets when they're added to an account (Logins) or an artist is given access (Brand Kit → Give access), sent as an example.</p>
+                    <form class="ac-tools" id="ac-ex"><select name="kind" aria-label="Which email"><option value="team">Added to an account (Logins)</option><option value="artist">Artist given access (Brand Kit)</option></select><input type="email" name="to" placeholder="Send the example to…" aria-label="Email to send the example to" required><button type="submit" class="cam-btn ghost">Send example</button><span class="ac-sub" id="ac-ex-msg" style="margin:0"></span></form>
                 </div>
             </div>
         </div>
@@ -142,7 +150,7 @@
             e.preventDefault();
             var f = this, b = f.querySelector('button'), msg = document.getElementById('ac-ex-msg');
             b.disabled = true; msg.textContent = 'Sending…';
-            try { var d = await post({ action: 'emailExample', to: f.to.value.trim() }); msg.textContent = 'Sent to ' + f.to.value.trim() + ' (' + d.account + (d.artist ? ', ' + d.artist : '') + ')'; }
+            try { var d = await post({ action: 'emailExample', kind: f.kind.value, to: f.to.value.trim() }); msg.textContent = 'Sent to ' + f.to.value.trim() + ' (' + d.account + (d.artist ? ', ' + d.artist : '') + ')'; }
             catch (er) { msg.textContent = er.message; }
             b.disabled = false;
         });
@@ -189,6 +197,7 @@
                         '<p class="ac-meta">' + esc([a.type, a.plan || 'No plan', a.email, a.artists ? a.artists + ' artist login' + (a.artists !== 1 ? 's' : '') : ''].filter(Boolean).join(' · ')) + '</p></div>' +
                     '<div class="ac-chips">' + chips(a) + '</div>' +
                     '<div class="ac-actions">' +
+                        '<button type="button" class="ac-btn" data-act="logins">Logins' + ((a.logins || []).length ? ' ' + a.logins.length : '') + '</button>' +
                         '<button type="button" class="ac-btn" data-act="discount">' + (a.discount ? 'Discount ' + a.discount + '%' : 'Discount') + '</button>' +
                         '<button type="button" class="ac-btn" data-act="' + (a.paused ? 'resume' : 'pause') + '">' + (a.paused ? 'Resume' : 'Pause') + '</button>' +
                         (live ? '<button type="button" class="ac-btn" data-act="' + (a.endsAt ? 'keep' : 'cancel') + '">' + (a.endsAt ? 'Keep plan' : 'Cancel plan') + '</button>' : '') +
@@ -202,6 +211,7 @@
             var row = b.closest('[data-slug]'), slug = row.dataset.slug, a = _accounts.filter(function(x) { return x.slug === slug; })[0];
             var act = b.dataset.act;
             if (act === 'delete') return openDelete(a);
+            if (act === 'logins') return openLogins(a);
             if (act === 'discount') return openDiscount(a);
             var ask = {
                 pause: { title: 'Pause ' + a.name + '?', message: 'Uploads, vertical clips, watermarks, recording and publishing stop, and the account sees a banner saying local / assets paused it. Everything is kept; resume it any time.', confirmText: 'Pause account', danger: true },
@@ -271,6 +281,52 @@
                         { title: 'Account created', tone: d.waiting ? 'info' : 'ok' });
                     load();
                 } catch (er) { go.disabled = false; go.textContent = 'Create account'; err.textContent = 'Could not create it: ' + er.message; }
+            };
+        }
+
+        // Who signs in to the whole account: its own emails, and people added here (each gets the access email)
+        function openLogins(a) {
+            var m = document.createElement('div');
+            m.className = 'ac-back';
+            m.innerHTML = '<form class="ac-panel ac-new" role="dialog" aria-modal="true" aria-labelledby="ac-lt" autocomplete="off">' +
+                '<h3 id="ac-lt">Logins for ' + esc(a.name) + '</h3>' +
+                '<p>Everyone here signs in with Google and can use the whole account. Someone you add gets an email saying they have access and what they can do.</p>' +
+                '<div class="ac-logins"></div>' +
+                '<div class="ac-addrow"><input name="email" type="email" placeholder="name@venue.com" aria-label="Email to add" required><button type="submit" class="ac-btn primary-acc">Add and send email</button></div>' +
+                '<p class="ac-err"></p>' +
+                '<div class="ac-bar"><button type="button" class="ac-btn" data-cancel>Done</button></div>' +
+            '</form>';
+            document.body.appendChild(m);
+            var f = m.querySelector('form'), err = f.querySelector('.ac-err'), go = f.querySelector('[type=submit]'), box = f.querySelector('.ac-logins');
+            var paint = function(list) {
+                a.logins = list;
+                box.innerHTML = list.length ? list.map(function(l) {
+                    return '<div class="ac-login"><span>' + esc(l.email) + '</span>' + (l.added ? '<button type="button" class="bl-x ac-x" data-rm="' + esc(l.email) + '" title="Remove this login" aria-label="Remove ' + esc(l.email) + '">×</button>' : '<small>Account setup</small>') + '</div>';
+                }).join('') : '<p class="ac-empty" style="margin:0">No logins yet.</p>';
+            };
+            paint(a.logins || []);
+            var close = function() { m.remove(); document.removeEventListener('keydown', onKey); render(); };
+            var onKey = function(e) { if (e.key === 'Escape') close(); };
+            document.addEventListener('keydown', onKey);
+            m.addEventListener('click', function(e) { if (e.target === m) close(); });
+            f.querySelector('[data-cancel]').onclick = close;
+            f.email.focus();
+            box.addEventListener('click', async function(e) {
+                var b = e.target.closest('[data-rm]'); if (!b) return;
+                b.disabled = true; err.textContent = '';
+                try { var d = await post({ action: 'removeLogin', slug: a.slug, email: b.dataset.rm }); paint(d.logins); laToast(b.dataset.rm + ' can no longer sign in to ' + a.name); }
+                catch (er) { b.disabled = false; err.textContent = er.message; }
+            });
+            f.onsubmit = async function(e) {
+                e.preventDefault();
+                var email = f.email.value.trim();
+                go.disabled = true; go.textContent = 'Adding…'; err.textContent = '';
+                try {
+                    var d = await post({ action: 'addLogin', slug: a.slug, email: email });
+                    paint(d.logins); f.email.value = '';
+                    laToast(d.emailed ? email + ' added · the access email is on its way' : email + ' added (the email could not be sent)');
+                } catch (er) { err.textContent = 'Could not add it: ' + er.message; }
+                go.disabled = false; go.textContent = 'Add and send email';
             };
         }
 

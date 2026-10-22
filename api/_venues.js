@@ -7,10 +7,13 @@ import { createClient } from 'redis';
 //   muxWebhook: <encrypted signing secret of the environment's webhook> }.
 // Read into a cache when a function starts and refreshed in the background, so lookups stay synchronous.
 const REGISTRY_KEY = 'la_venues';
-let _registry = {}, _registryAt = 0, _registryLoading = null, _deleted = new Set(), _members = {}, _artistsOf = {};
+let _registry = {}, _registryAt = 0, _registryLoading = null, _deleted = new Set(), _members = {}, _artistsOf = {}, _logins = {};
 // Artists given access by a venue or record label (Brand Kit → Give access): email → [{ slug, owner, name }].
 // They sign in to that account but only see their own sets and Brand Kit folder (see memberAllowed).
 export const MEMBERS_KEY = 'la_artist_members';
+// People added to a whole account by local / assets (Accounts → Logins), beside the emails it was set up with:
+// slug → JSON [emails]. They sign in like the account's own emails.
+export const LOGINS_KEY = 'la_logins';
 const encKey = () => crypto.createHash('sha256').update(process.env.LOCAL_ASSETS_API_KEY || 'dev-secret-change-me').digest();
 export function sealSecret(text) {
   const iv = crypto.randomBytes(12), c = crypto.createCipheriv('aes-256-gcm', encKey(), iv);
@@ -38,6 +41,7 @@ export async function refreshRegistry(redis = null) {
       } catch {}
     }
     _deleted = new Set(await redis.sMembers('la_deleted').catch(() => []));   // accounts deleted by the admin
+    _logins = Object.fromEntries(Object.entries(await redis.hGetAll(LOGINS_KEY).catch(() => ({})) || {}).map(([k, v]) => { try { return [k, JSON.parse(v).map(e => String(e).toLowerCase().trim())]; } catch { return [k, []]; } }));
     _members = Object.fromEntries(Object.entries(await redis.hGetAll(MEMBERS_KEY).catch(() => ({})) || {}).map(([e, v]) => { try { return [e, JSON.parse(v)]; } catch { return [e, []]; } }));
     _registry = out; _registryAt = Date.now();
     // Each account's artists (its artist logins and Brand Kit artist folders), for the admin's account menu
@@ -147,6 +151,11 @@ function venueEnvKey(slug) {
 
 // Login emails for a venue, from its `emails` array in VENUES_CONFIG. Entries are
 // also split on commas/whitespace, so ["a@x.com, b@y.com"] counts as two emails.
+// An account's sign-in emails: those it was set up with, and those added under Accounts → Logins (added: true)
+export function accountLogins(slug, cfg) {
+  const own = venueEmails(cfg || {});
+  return own.map(email => ({ email, added: false })).concat((_logins[slug] || []).filter(e => !own.includes(e)).map(email => ({ email, added: true })));
+}
 function venueEmails(cfg) {
   const list = Array.isArray(cfg.emails) ? cfg.emails : typeof cfg.emails === 'string' ? [cfg.emails] : [];
   return list.flatMap(e => String(e).split(/[\s,;]+/))
@@ -164,7 +173,7 @@ export function findVenuesByEmail(email) {
   const admin = platformAdmins().includes(lower);
   const cfgs = getVenuesConfig();
   const full = Object.entries(cfgs)
-    .filter(([, cfg]) => admin || venueEmails(cfg).includes(lower))
+    .filter(([slug, cfg]) => admin || venueEmails(cfg).includes(lower) || (_logins[slug] || []).includes(lower))
     .map(([slug, cfg]) => ({ slug, ...cfg }));
   // Accounts this email can open as one of their artists (full access to the same account wins)
   const asArtist = (_members[lower] || []).filter(m => cfgs[m.slug] && !full.some(v => v.slug === m.slug))

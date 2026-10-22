@@ -1,6 +1,6 @@
 import { list, del } from '@vercel/blob';
 import { createClient } from 'redis';
-import { getWebSessionAuth, getVenuesConfig, isAdminVenue, refreshRegistry, getMuxAuthForVenue, MEMBERS_KEY, freshVenues } from './_venues.js';
+import { getWebSessionAuth, getVenuesConfig, isAdminVenue, refreshRegistry, getMuxAuthForVenue, MEMBERS_KEY, freshVenues, LOGINS_KEY, accountLogins } from './_venues.js';
 import { readAssignments, readPlans, stripeClient, accountTypeOf, DISCOUNTS_KEY } from './_billing.js';
 import { unpaidKey, readUnpaid } from './_suspend.js';
 import { thumbnailPrefix } from './_thumbnails.js';
@@ -15,7 +15,9 @@ import { accessInviteEmail, mailFrom } from './_emails.js';
 //   POST { action: 'keep', slug }          a cancelled plan carries on
 //   POST { action: 'discount', slug, percent }   a discount (0–100%) on its usage prices, from its next bill
 //   (a new account is opened from Accounts → New account through api/billing.js openAccount)
-//   POST { action: 'emailExample', to, slug? }   the artist-access email, as an example, to that address
+//   POST { action: 'emailExample', to, kind?, slug? }   the access email (artist, or kind 'team'), as an example
+//   POST { action: 'addLogin', slug, email }      a person signs in to the whole account; they get the access email
+//   POST { action: 'removeLogin', slug, email }   an added login stops working (the account's own emails stay)
 //   POST { action: 'delete', slug, confirm: slug }   deleted everywhere: plan cancelled now, every video and
 //        camera in its video storage, its files, records and artist access. Run again if it says more is left.
 
@@ -97,7 +99,7 @@ export default async function handler(req, res) {
           const ends = sub && (sub.cancel_at || (sub.cancel_at_period_end ? (sub.current_period_end || sub.items?.data?.[0]?.current_period_end) : 0));
           const artists = Object.values(members || {}).reduce((n, raw) => { try { return n + JSON.parse(raw).filter(m => m.slug === slug).length; } catch { return n; } }, 0);
           return {
-            slug, name: v.name || slug, type: await accountTypeOf(redis, slug).catch(() => v.type || 'venue'),
+            slug, name: v.name || slug, logins: accountLogins(slug, v), type: await accountTypeOf(redis, slug).catch(() => v.type || 'venue'),
             email: asg.email || v.email || '', plan: (plans.find(p => p.id === asg.plan) || {}).name || asg.plan || '',
             paused: unpaid.some(i => i.id === ADMIN_PAUSE), unpaid: unpaid.filter(i => i.id !== ADMIN_PAUSE && i.target === 'venue').map(i => i.number || i.id),
             subscription: sub ? sub.status : subId ? 'unknown' : 'none', endsAt: ends ? ends * 1000 : null,
@@ -121,7 +123,7 @@ export default async function handler(req, res) {
       const pick = clients.find(([s]) => s === String(body.slug || '')) || clients[0];
       const account = pick ? (pick[1].name || pick[0]) : 'Your venue';
       const artist = pick ? await withRedis(async r => Object.entries(await r.hGetAll(`brand_owner_names:${pick[0]}`) || {}).filter(([k]) => k.startsWith('artist-')).map(([, v]) => v)[0] || '').catch(() => '') : '';
-      const m = accessInviteEmail({ artist: String(artist || 'Artist name').toUpperCase(), account, email: to, example: true });
+      const m = accessInviteEmail({ kind: body.kind === 'team' ? 'team' : 'artist', artist: String(artist || 'Artist name').toUpperCase(), account, email: to, example: true });
       const r = await new Resend(key).emails.send({ from: mailFrom(), replyTo: 'info@local-assets.com', to, subject: m.subject, html: m.html, text: m.text }).catch(e => ({ error: e }));
       if (r?.error) return res.status(502).json({ error: 'Could not send it: ' + (r.error.message || r.error.name || 'email refused') });
       console.log('[admin-accounts] access email example sent by', session.email);
@@ -133,6 +135,33 @@ export default async function handler(req, res) {
     const venue = { slug, ...entry[1] };
     const name = venue.name || slug;
 
+    // People who sign in to the whole account: added here, each gets the access email saying what they can do
+    if (body.action === 'addLogin' || body.action === 'removeLogin') {
+      const email = String(body.email || '').trim().toLowerCase();
+      if (!/^[^\s@<>]+@[^\s@<>]+\.[a-z]{2,}$/i.test(email)) return res.status(400).json({ error: 'Enter a valid email' });
+      const own = accountLogins(slug, venue).filter(l => !l.added).map(l => l.email);
+      if (body.action === 'removeLogin' && own.includes(email)) return res.status(400).json({ error: 'This email is part of the account\'s own setup and can\'t be removed here.' });
+      const list = await withRedis(async r => {
+        let cur = []; try { cur = JSON.parse(await r.hGet(LOGINS_KEY, slug) || '[]'); } catch {}
+        cur = cur.filter(e => e !== email);
+        if (body.action === 'addLogin' && !own.includes(email)) cur.push(email);
+        cur.length ? await r.hSet(LOGINS_KEY, slug, JSON.stringify(cur)) : await r.hDel(LOGINS_KEY, slug);
+        await refreshRegistry(r);
+        return cur;
+      });
+      let emailed = false;
+      if (body.action === 'addLogin') {
+        const key = process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY;
+        if (key) {
+          const m = accessInviteEmail({ kind: 'team', account: name, email });
+          const r = await new Resend(key).emails.send({ from: mailFrom(), replyTo: 'info@local-assets.com', to: email, subject: m.subject, html: m.html, text: m.text }).catch(e => ({ error: e }));
+          emailed = !r?.error;
+          if (r?.error) console.error('[admin-accounts] access email', slug, r.error.message || r.error);
+        }
+      }
+      console.log('[admin-accounts]', body.action, slug, 'by', session.email);
+      return res.status(200).json({ ok: true, logins: accountLogins(slug, venue), added: list.length, emailed });
+    }
     if (body.action === 'pause' || body.action === 'resume') {
       await withRedis(r => body.action === 'pause'
         ? r.hSet(unpaidKey(slug), ADMIN_PAUSE, JSON.stringify({ target: 'venue', number: '', url: null, admin: true, at: new Date().toISOString(), by: session.email }))
@@ -228,6 +257,7 @@ export default async function handler(req, res) {
         }
         await redis.hDel('la_venues', slug);
         await redis.hDel(DISCOUNTS_KEY, slug);
+        await redis.hDel(LOGINS_KEY, slug);
         await redis.sAdd('la_deleted', slug);
         await refreshRegistry(redis);
       });
