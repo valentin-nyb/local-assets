@@ -497,7 +497,6 @@
         .ci-verts { display:grid; grid-template-columns:repeat(6,1fr); gap:6px; margin-top:12px; }
         .ci-verts i { aspect-ratio:9/16; border-radius:6px; background:var(--la-chip) center/cover no-repeat; border:1px solid var(--la-line); }
         .ci-verts i { position:relative; overflow:hidden; }
-        #ci-branded i.real .ci-wm, #ci-branded i.real .ci-name { display:none; }
         .ci-loop { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
         .ci-wm { z-index:1; }
         .ci-result-foot { font-size:11px; color:var(--la-dim); margin-top:10px; }
@@ -510,6 +509,11 @@
         .ci-wm:empty::after { content:'LOGO'; }
         .ci-name { position:absolute; z-index:1; bottom:9.5%; transform:translateY(50%); right:calc(6.5% + 4px); max-width:60%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font:900 7px/1 "Helvetica Neue", Helvetica, Arial, sans-serif; letter-spacing:.02em; color:#fff; text-transform:uppercase; }
         .ci-wm.has-logo { background-color:transparent; -webkit-backdrop-filter:none; backdrop-filter:none; }
+        /* The example's two watermark designs: logo and name across the middle (first and last), logo top right and name bottom left (the two between) */
+        #ci-branded i.wm-mid .ci-wm { top:50%; bottom:auto; left:57%; width:30%; height:7%; transform:translateY(-50%); background-position:left center; }
+        #ci-branded i.wm-mid .ci-name { top:50%; bottom:auto; transform:translateY(-50%); left:5%; right:45%; max-width:none; text-align:right; font-size:8px; }
+        #ci-branded i.wm-corner .ci-wm { top:5%; bottom:auto; left:auto; right:6%; width:26%; height:6%; background-position:right center; }
+        #ci-branded i.wm-corner .ci-name { bottom:9%; left:7%; right:auto; max-width:80%; font-size:9px; }
         .ci-steps { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px 24px; align-self:start; padding-top:22px; border-top:1px solid var(--la-line-soft); }
         .ci-steps li { display:flex; gap:12px; }
         .ci-steps li > b { flex-shrink:0; width:24px; height:24px; border-radius:999px; background:var(--la-accent-soft); color:var(--la-accent); font-size:12px; display:flex; align-items:center; justify-content:center; }
@@ -743,7 +747,7 @@
                                 <li>Watermark</li>
                                 <li>HD export</li>
                             </ol>
-                            <div class="ci-verts ci-branded" id="ci-branded"><i><span class="ci-wm"></span><span class="ci-name">DJ NAME</span></i><i><span class="ci-wm"></span><span class="ci-name">DJ NAME</span></i><i><span class="ci-wm"></span><span class="ci-name">DJ NAME</span></i><i><span class="ci-wm"></span><span class="ci-name">DJ NAME</span></i></div>
+                            <div class="ci-verts ci-branded" id="ci-branded"><i class="wm-mid"><span class="ci-wm"></span><span class="ci-name">DJ NAME</span></i><i class="wm-corner"><span class="ci-wm"></span><span class="ci-name">DJ NAME</span></i><i class="wm-corner"><span class="ci-wm"></span><span class="ci-name">DJ NAME</span></i><i class="wm-mid"><span class="ci-wm"></span><span class="ci-name">DJ NAME</span></i></div>
                             <p class="ci-result-foot">Vertical clips at 1080 × 1920, ready to post. The full recording is kept too.</p>
                         </div>
                     </div>
@@ -1077,8 +1081,12 @@
         }
         // The intro's example card uses this venue's latest session, when there is one
         function fillIntroExample(venueSlug) {
-            // The example clips always show the local / assets logo and a placeholder name
+            // The example clips show the account's logo (the local / assets one until it loads) and its DJ's name
             document.querySelectorAll('.ci-wm').forEach(function(w) { w.classList.add('has-logo'); w.style.backgroundImage = 'url(/logos/a-white.png)'; w.innerHTML = '&#8203;'; });
+            laFetch('/api/brand').then(function(r) { return r.ok ? r.json() : {}; }).then(function(d) {
+                var logo = (d.files || []).filter(function(f) { return f.category === 'logos' && f.owner === 'venue' && /\.(png|webp|svg)(\?|$)/i.test(f.url || ''); })[0];
+                if (logo) document.querySelectorAll('.ci-wm').forEach(function(w) { w.style.backgroundImage = 'url("' + String(logo.url).replace(/["\\]/g, '') + '")'; });
+            }).catch(function() {});
             // Until the account's latest session loads: the account's name
             (function() { try { var a = JSON.parse(localStorage.getItem('la_admin') || '{}'); var v = String(a.venue || '').replace(/\s+TEAM$/i, '').trim(); if (v) document.querySelectorAll('.ci-name').forEach(function(n) { n.textContent = v.toUpperCase(); }); } catch (_) {} })();
             laFetch('/api/list-assets').then(function(r) { return r.ok ? r.json() : []; }).then(function(list) {
@@ -1114,23 +1122,11 @@
                 };
                 if (window.laDjSpot) { window.laDjSpot(m).then(show, function() { show(null); }); setTimeout(function() { show(null); }, 4000); }
                 else show(null);
-                // The session's own vertical clips (four different highlights); a session with fewer is filled
-                // from moments spread over the recording
-                var socialOf = function(a) {
-                    var pt = String(a.passthrough || '').trim(), x = /^(.+?) \/\/ SOCIAL \/\/ (\d+)/i.exec(pt);
-                    if (x) return { artist: x[1].toUpperCase().trim(), n: Number(x[2]) };
-                    try { var o = JSON.parse(pt); if (o && String(o.camera || '').toUpperCase() === 'SOCIAL') return { artist: String(o.artist || '').toUpperCase().trim(), n: Number(o.clip || o.n) || 0 }; } catch (_) {}
-                    return null;
-                };
-                var clips = list.filter(function(a) { var c = socialOf(a); return c && c.artist === name && a.status === 'ready' && (a.playback_ids || []).length && Number(a.created_at) >= Number(m.created_at); })
-                    .sort(function(a, b) { return socialOf(a).n - socialOf(b).n; }).slice(0, 4);
+                // Four moments spread over the set, clean: the example draws its two watermark designs on top
                 document.querySelectorAll('#ci-branded i').forEach(function(t, i) {
                     var img = document.createElement('img');
                     img.alt = ''; img.className = 'ci-loop'; img.loading = 'lazy';
-                    var c = clips[i];
-                    t.classList.toggle('real', !!c);   // a real clip carries its own watermark: no example one on top
-                    if (c) { var cd = Number(c.duration) || 8, cs = Math.max(0, Math.round(cd * 0.35)); img.src = 'https://image.mux.com/' + c.playback_ids[0].id + '/animated.webp?start=' + cs + '&end=' + Math.min(cs + 4, Math.floor(cd)) + '&width=240&fps=10'; }
-                    else img.src = loop(dur * (0.12 + i * 0.25), 240);
+                    img.src = loop(dur * (0.12 + i * 0.25), 240);
                     t.insertBefore(img, t.firstChild);
                 });
             }).catch(function() {});
