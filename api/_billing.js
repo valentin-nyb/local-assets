@@ -215,7 +215,7 @@ function planFeatures(planId, type, t, included, name) {
   if (planId === 'liveset-distribution') return [who, sets, '12 vertical clips from every set', brand, space,
     artist || type === 'venue' ? 'Connect your DJI Osmo, Sony Alpha\nOr add one of our cameras for £149 a month' : '1 PTZ camera included, set up for you (12-month minimum)'];
   if (planId === 'liveset-creative') return [who, sets, 'Unlimited vertical clips from every set', 'Multi-camera auto-edit of the full set, in 4K with HQ audio', brand, space,
-    artist ? '1 PTZ camera, Starlink Mini and Mac mini, set up for you (a second camera £149 a month)' : '2 PTZ cameras, Starlink Mini and Mac mini, set up for you',
+    artist ? '1 PTZ camera, Starlink Mini and Mac mini, set up for you\nOr add a second camera for £149 a month' : '2 PTZ cameras, Starlink Mini and Mac mini, set up for you',
     '12-month minimum; the kit goes back to us when the plan ends', 'Quarterly performance reports'];
   return null;
 }
