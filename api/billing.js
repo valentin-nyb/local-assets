@@ -1,4 +1,5 @@
 import { listPool, addToPool, removeFromPool, activateFromPool, poolSize } from './_mux-pool.js';
+import { mailFrom } from './_emails.js';
 import { unpaidKey, readUnpaid } from './_suspend.js';
 import { createClient } from 'redis';
 import { getWebSessionAuth, getVenuesConfig, readRegistryRaw, saveRegistryEntry, sealSecret, freshVenues, isAdminVenue } from './_venues.js';
@@ -399,7 +400,7 @@ export default async function handler(req, res) {
             await redis.hSet(`billing_cancel_requests`, slug, JSON.stringify({ email: session.email, at: new Date().toISOString(), reason: String(body0.reason || '').slice(0, 500) }));
             if ((process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY)) {
               const { Resend } = await import('resend');
-              await new Resend((process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY)).emails.send({ from: 'local / assets <noreply@local-assets.com>', to: process.env.ORDERS_EMAIL || 'info@local-assets.com', subject: `Cancellation request: ${venueName}`, html: `<p>${venueName} (${session.email}) asked to cancel their account.</p><p>${String(body0.reason || '').replace(/[<>]/g, '')}</p>` }).catch(() => {});
+              await new Resend((process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY)).emails.send({ from: mailFrom(), to: process.env.ORDERS_EMAIL || 'info@local-assets.com', subject: `Cancellation request: ${venueName}`, html: `<p>${venueName} (${session.email}) asked to cancel their account.</p><p>${String(body0.reason || '').replace(/[<>]/g, '')}</p>` }).catch(() => {});
             }
             return { ok: true, requested: true };
           }
@@ -535,7 +536,7 @@ export default async function handler(req, res) {
         const resend = new Resend(mailKey);
         for (const email of emails) {
           const m = welcomeEmail({ name, email, type, plan: { name: out.plan ? out.plan.name : 'local / assets', line: out.plan ? (out.plan.price > 0 ? `£${Number(out.plan.price).toLocaleString('en-GB')} a month, billed on the 1st.` : 'Pay as you go, billed on the 1st.') : 'Set up for you by local / assets.' }, ready: !!out.label });
-          const sent = await resend.emails.send({ from: 'local / assets <noreply@local-assets.com>', replyTo: 'info@local-assets.com', to: email, subject: m.subject, html: m.html, text: m.text }).catch(e => ({ error: e }));
+          const sent = await resend.emails.send({ from: mailFrom(), replyTo: 'info@local-assets.com', to: email, subject: m.subject, html: m.html, text: m.text }).catch(e => ({ error: e }));
           if (!sent?.error) welcomed++;
           else console.error('[billing] welcome email', out.slug, sent.error?.message || sent.error);
         }

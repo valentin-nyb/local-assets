@@ -5,7 +5,7 @@ import { createClient } from 'redis';
 import { handleUpload } from '@vercel/blob/client';
 import { getWebSessionAuth, MEMBERS_KEY, refreshRegistry, getVenuesConfig } from './_venues.js';
 import { Resend } from 'resend';
-import { accessInviteEmail } from './_emails.js';
+import { accessInviteEmail, mailFrom } from './_emails.js';
 import { cleanWatermark, readWatermark, watermarkKey, readArtistWatermark, artistWatermarkKey, resolveWatermark, newestWatermark } from './_watermark.js';
 import { renderWatermarkPng, VERTICAL, HORIZONTAL } from './_watermark-render.js';
 import { ownerLimit, accountTypeOf, readAssignments } from './_billing.js';
@@ -180,7 +180,7 @@ export default async function handler(req, res) {
         const key = process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY;
         if (key) {
           const m = accessInviteEmail({ artist: out.name, account: getVenuesConfig()[slug]?.name || slug, email });
-          const r = await new Resend(key).emails.send({ from: 'local / assets <noreply@local-assets.com>', replyTo: session.email, to: email, subject: m.subject, html: m.html, text: m.text }).catch(e => ({ error: e }));
+          const r = await new Resend(key).emails.send({ from: mailFrom(), replyTo: session.email, to: email, subject: m.subject, html: m.html, text: m.text }).catch(e => ({ error: e }));
           emailed = !r?.error;
         }
       }

@@ -6,6 +6,9 @@ const SITE = 'https://local-assets.com';
 const FONT = "'Helvetica Neue', Helvetica, Arial, sans-serif";
 const MONO = "'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace";
 const GREEN = '#85FA4F';
+// The sender: the domain set up for sending in Resend (RESEND_EMAIL_DOMAIN, from the Vercel integration), else
+// local-assets.com. An address on a domain Resend hasn't verified is refused, so the email never arrives.
+export const mailFrom = (box = 'noreply', name = 'local / assets') => `${name} <${box}@${process.env.RESEND_EMAIL_DOMAIN || 'local-assets.com'}>`;
 
 // Welcome email after a sign-up. plan: { name, line } where line says what was paid and what's next.
 export function welcomeEmail({ name, email, type, plan, ready }) {

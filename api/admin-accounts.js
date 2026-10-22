@@ -5,7 +5,7 @@ import { readAssignments, readPlans, stripeClient, accountTypeOf, DISCOUNTS_KEY 
 import { unpaidKey, readUnpaid } from './_suspend.js';
 import { thumbnailPrefix } from './_thumbnails.js';
 import { Resend } from 'resend';
-import { accessInviteEmail } from './_emails.js';
+import { accessInviteEmail, mailFrom } from './_emails.js';
 
 // Admin only (local / assets): every client account, and what can be done to it.
 //   GET                                   the accounts, each with its plan and status
@@ -122,7 +122,7 @@ export default async function handler(req, res) {
       const account = pick ? (pick[1].name || pick[0]) : 'Your venue';
       const artist = pick ? await withRedis(async r => Object.entries(await r.hGetAll(`brand_owner_names:${pick[0]}`) || {}).filter(([k]) => k.startsWith('artist-')).map(([, v]) => v)[0] || '').catch(() => '') : '';
       const m = accessInviteEmail({ artist: String(artist || 'Artist name').toUpperCase(), account, email: to, example: true });
-      const r = await new Resend(key).emails.send({ from: 'local / assets <noreply@local-assets.com>', replyTo: 'info@local-assets.com', to, subject: m.subject, html: m.html, text: m.text }).catch(e => ({ error: e }));
+      const r = await new Resend(key).emails.send({ from: mailFrom(), replyTo: 'info@local-assets.com', to, subject: m.subject, html: m.html, text: m.text }).catch(e => ({ error: e }));
       if (r?.error) return res.status(502).json({ error: 'Could not send it: ' + (r.error.message || r.error.name || 'email refused') });
       console.log('[admin-accounts] access email example sent by', session.email);
       return res.status(200).json({ ok: true, account, artist });

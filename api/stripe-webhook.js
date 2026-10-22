@@ -5,7 +5,7 @@ import crypto from 'crypto';
 import { createClient } from 'redis';
 import { readRegistryRaw, saveRegistryEntry, getVenuesConfig } from './_venues.js';
 import { activateFromPool, poolSize } from './_mux-pool.js';
-import { welcomeEmail } from './_emails.js';
+import { welcomeEmail, mailFrom } from './_emails.js';
 
 // Vercel: disable body parsing so we get raw bytes for signature verification
 export const config = { api: { bodyParser: false } };
@@ -224,7 +224,7 @@ async function recordCameraOrder(session, stripe) {
     const esc = v => String(v ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     try {
       await new Resend((process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY)).emails.send({
-        from: 'local/assets™ <noreply@local-assets.com>',
+        from: mailFrom('noreply', 'local/assets™'),
         to: process.env.ORDERS_EMAIL || 'info@local-assets.com',
         subject: order.rental
           ? `Camera hire: ${quantity} × OBSBOT Tail 2, ${order.rental.days} day${order.rental.days > 1 ? 's' : ''} from ${order.rental.startDate} (${order.venueSlug || order.email})`
@@ -307,7 +307,7 @@ async function createClientAccount(session, stripe) {
   const esc = v => String(v ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const resend = new Resend((process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY));
   await resend.emails.send({
-    from: 'local / assets <noreply@local-assets.com>', to: process.env.ORDERS_EMAIL || 'info@local-assets.com',
+    from: mailFrom(), to: process.env.ORDERS_EMAIL || 'info@local-assets.com',
     subject: storage ? `New client: ${name} (${type}) · live` : `New client: ${name} (${type}) · finish setup`,
     html: `<p><b>${esc(name)}</b> (${esc(type)}) signed up for ${esc(m.tierName || m.tier)} with ${esc(email)}.${card ? ' Card saved for usage on the 1st.' : ''}</p>` +
       (storage
@@ -321,7 +321,7 @@ async function createClientAccount(session, stripe) {
     : 'No monthly fee. What you use is charged to your card on the 1st.';
   const mail = welcomeEmail({ name, email, type, plan: { name: m.tierName || m.tier || 'local / assets', line }, ready: !!storage });
   await resend.emails.send({
-    from: 'local / assets <noreply@local-assets.com>', to: email, replyTo: 'info@local-assets.com',
+    from: mailFrom(), to: email, replyTo: 'info@local-assets.com',
     subject: mail.subject, html: mail.html, text: mail.text,
   }).catch(e => console.error('[Stripe Webhook] welcome email', e.message));
 }
@@ -334,7 +334,7 @@ async function sendGoogleLoginNotice(email) {
   const link = 'https://local-assets.com/client.html';
 
   await resend.emails.send({
-    from: 'local/assets™ <noreply@local-assets.com>',
+    from: mailFrom('noreply', 'local/assets™'),
     to: email,
     subject: 'Your local/assets™ Client Portal',
     html: `
