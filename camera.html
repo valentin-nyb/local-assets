@@ -1102,13 +1102,18 @@
                 document.querySelectorAll('.ci-name').forEach(function(n) { n.textContent = name; });
                 // Short silent loops from the session (animated WebP: plays like a GIF, smaller)
                 var loop = function(t, w) { var a = Math.round(t); return 'https://image.mux.com/' + pid + '/animated.webp?start=' + a + '&end=' + (a + 4) + '&width=' + w + '&fps=10'; };
-                document.getElementById('ci-stage').innerHTML = '<img alt="" class="ci-loop" src="' + loop(dur * 0.45, 480) + '">';
-                // The DJ seen from the front (la-djframe.js, as on the dashboard banner), once it's found
-                if (window.laDjSpot) window.laDjSpot(m).then(function(d) {
-                    if (!d || d.time == null) return;
-                    var st = document.querySelector('#ci-stage .ci-loop');
-                    if (st) { st.src = loop(Math.max(0, Math.min(d.time - 2, dur - 5)), 480); st.style.objectPosition = d.focus.x + '% ' + d.focus.y + '%'; }
-                });
+                // One picture only: the account's saved DJ moment (la-djframe.js, as on the dashboard banner), so it
+                // doesn't start somewhere else and then jump. The middle of the set if none comes within 4 s.
+                var shown = false, show = function(d) {
+                    if (shown) return; shown = true;
+                    var t = d && d.time != null ? Math.max(0, Math.min(d.time - 2, dur - 5)) : dur * 0.45;
+                    var img = new Image(); img.alt = ''; img.className = 'ci-loop';
+                    if (d && d.focus) img.style.objectPosition = d.focus.x + '% ' + d.focus.y + '%';
+                    img.onload = function() { var stg = document.getElementById('ci-stage'); stg.innerHTML = ''; stg.appendChild(img); };
+                    img.src = loop(t, 480);
+                };
+                if (window.laDjSpot) { window.laDjSpot(m).then(show, function() { show(null); }); setTimeout(function() { show(null); }, 4000); }
+                else show(null);
                 // The session's own vertical clips (four different highlights); a session with fewer is filled
                 // from moments spread over the recording
                 var socialOf = function(a) {
