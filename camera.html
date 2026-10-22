@@ -105,6 +105,7 @@
         .cam-osd[data-state="nosig"] b, .cam-osd[data-state="wait"] b { color:var(--la-dim); }
         @keyframes camTally { 50% { opacity:.35; } }
         .cam-toolbar { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+        .cam-chip.acct { color:var(--la-text); border-color:color-mix(in srgb, var(--la-text) 30%, transparent); }
         .cam-eyebrow { font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--la-dim); }
         .cam-h { font-size:22px; font-weight:700; letter-spacing:-.01em; margin-top:4px; color:var(--la-text); }
         .cam-actions { display:flex; gap:8px; flex-wrap:wrap; }
@@ -1011,61 +1012,36 @@
             }
         }
 
-        // Admin account: one client's cameras at a time, picked at the top right. A client with no
-        // cameras shows how it looks once one is connected.
-        var _adminVenueSel = (function() { try { return localStorage.getItem('la_cam_acct') || ''; } catch (_) { return ''; } })();
+        // Admin account: every client's cameras in the usual layout, each card named with its account.
+        // Remote control's relay is set up per account from its cameras' cards (Relay); THIS MAC links are made
+        // signed in as the client (one account's slots at a time).
+        var _adminAll = false, _relayBy = {}, _relayVenue = '';
         function renderAdminCameras(venues) {
+            _adminAll = true;
             var grid = document.getElementById('cam-grid'), intro = document.getElementById('cam-empty');
             var da = document.getElementById('deck-add'); if (da) da.style.display = 'none';
             document.getElementById('cal-panel').classList.add('hidden');
             var calNote = document.getElementById('cal-admin-note'); if (calNote) calNote.classList.add('on');
             document.getElementById('cam-head-actions').style.display = 'none';
             document.getElementById('cam-error').classList.add('hidden');
+            intro.classList.add('hidden');
             if (!venues.length) { camStatus('No client accounts', 'var(--la-dim)'); camOsd('nosig', 'No clients', ''); return; }
-            if (!venues.some(function(v) { return v.slug === _adminVenueSel; })) _adminVenueSel = venues[0].slug;
-            var v = venues.filter(function(x) { return x.slug === _adminVenueSel; })[0];
             _camVenue = {};
-            venues.forEach(function(x) { x.cameras.forEach(function(c) { _camVenue[c.id] = x.slug; }); });
-            // Account switch, top right
-            var sel = document.getElementById('cam-acct');
-            if (!sel) {
-                var wrap = document.createElement('label');
-                wrap.className = 'cam-acct';
-                wrap.innerHTML = '<span>Client account</span><select id="cam-acct" aria-label="Client account"></select>';
-                document.querySelector('.cam-toolbar').appendChild(wrap);
-                sel = document.getElementById('cam-acct');
-                sel.addEventListener('change', function() {
-                    _adminVenueSel = sel.value;
-                    try { localStorage.setItem('la_cam_acct', sel.value); } catch (_) {}
-                    _camKey = ''; renderAdminCameras(_adminVenuesData);
-                });
-            }
-            _adminVenuesData = venues;
-            sel.innerHTML = venues.map(function(x) {
-                var l = x.cameras.filter(function(c) { return c.status === 'active'; }).length;
-                return '<option value="' + esc(x.slug) + '"' + (x.slug === v.slug ? ' selected' : '') + '>' + esc(x.name) + (x.cameras.length ? ' · ' + (l ? l + ' live' : x.cameras.length + ' offline') : '') + '</option>';
-            }).join('');
-            var eb = document.querySelector('.cam-eyebrow'); if (eb) eb.textContent = v.name;
-            _relay = v.relay || null; paintRelay();
-            _cams = v.cameras; _camsLoaded = !v.error;   // a venue that couldn't be read never unlinks its cameras
+            var all = [];
+            venues.slice().sort(function(a, b) { return String(a.name).localeCompare(String(b.name)); }).forEach(function(x) {
+                _relayBy[x.slug] = x.relay || null;
+                (x.cameras || []).forEach(function(c) { _camVenue[c.id] = x.slug; all.push(Object.assign({}, c, { _venue: x.slug, _venueName: x.name })); });
+            });
+            _relay = null; paintRelay();
+            _cams = all; _camsLoaded = !venues.some(function(x) { return x.error; });   // an account that couldn't be read never unlinks its cameras
             setTimeout(renderMac); paintRecBar();
             var live = _cams.filter(function(c) { return c.status === 'active'; }).length;
-            camCount(live, _cams.length, !!v.error);
-            var key = v.slug + JSON.stringify([v.error || ''].concat(_cams.map(function(c) { return [c.id, c.status, c.name, c.ndiName, c.ip, c.artist, c.autoClips, c.recording]; })));
+            camCount(live, _cams.length, venues.some(function(x) { return x.error; }));
+            var key = 'all' + JSON.stringify(venues.map(function(x) { return x.error || ''; }).concat(_cams.map(function(c) { return [c._venue, c.id, c.status, c.name, c.ndiName, c.ip, c.artist, c.autoClips, c.recording]; })));
             if (key === _camKey) return;
             _camKey = key;
             grid.innerHTML = '';
-            // No cameras on this account: the example of a connected camera, with this client's latest session
-            intro.classList.add('hidden');
-            if (!_cams.length) {
-                // The camera control screen as it is with a camera connected (controls answer once one is)
-                var full = document.createElement('div');
-                full.className = 'ctl-full';
-                grid.appendChild(full);
-                openControl({ id: 'preview', name: 'Cam 01 // Main floor', demo: true, placeholder: true, ip: '-' }, full);
-                latestLoop(v.slug, function(src) { var st = full.querySelector('#ctl-stage'); if (st) st.innerHTML = '<img alt="" src="' + src + '" style="width:100%;height:100%;object-fit:cover">'; });
-                return;
-            }
+            if (!_cams.filter(function(c) { return c.kind !== 'audio'; }).length) grid.innerHTML = '<p class="deck-sub" style="grid-column:1/-1">No client has connected a camera yet.</p>';
             drawCameras(grid);
         }
         // Cameras in the grid, the decks in their own section below
@@ -1079,9 +1055,10 @@
                 st.textContent = !decks.length ? '' : on.length ? 'Live' + (decks.length > 1 ? ' · ' + on.length + ' of ' + decks.length : '') : 'Not connected';
                 st.title = on.length ? 'Sound is coming in from the mixer' : 'Start streaming from the mixer setup (see Stream setup)';
             }
+            var nBy = {};   // CAM 01, 02… within each account (the admin sees every account's)
             _cams.forEach(function(c) {
                 if (c.kind === 'audio') { if (deck) deck.appendChild(cameraCard(c, 0)); }
-                else grid.appendChild(cameraCard(c, n++));
+                else { var k = c._venue || ''; nBy[k] = (nBy[k] || 0) + 1; grid.appendChild(cameraCard(c, nBy[k] - 1)); }
             });
         }
         var _adminVenuesData = [];
@@ -1243,13 +1220,14 @@
             var pill = isLive ? '<span class="cam-pill on">' + (c.inSession ? 'LIVE · REC' : 'LIVE') + '</span>'
                 : c.status === 'missing' ? '<span class="cam-pill warn">STREAM MISSING</span>'
                 : '<span class="cam-pill">OFFLINE</span>';
-            var chips = '';
+            var chips = c._venueName ? '<span class="cam-chip acct">' + esc(c._venueName) + '</span>' : '';
             if (c.model && c.kind !== 'audio') chips += '<span class="cam-chip">' + esc(c.model) + '</span>';
             if (c.ndiName) chips += '<span class="cam-chip ndi" title="NDI source name">NDI · ' + esc(c.ndiName) + '</span>';
             if (c.ip) chips += '<span class="cam-chip">' + esc(c.ip) + '</span>';
             var actions = '';
             if (!c.external && (!c.kind || c.kind === 'obsbot')) actions += '<button type="button" class="cam-link cam-ctl" data-act="control">Control</button>';
             if (c.ip) actions += '<a class="cam-link" href="http://' + esc(c.ip) + '/" target="_blank" rel="noopener" title="The camera\'s own settings page. Works on the venue network.">Camera page</a>';
+            if (c._venue && !c.external && (!c.kind || c.kind === 'obsbot')) actions += '<button type="button" class="cam-link" data-act="relay" title="Remote control through this account\'s venue relay">Relay</button>';
             if (!c.external) {
                 actions += '<button type="button" class="cam-link" data-act="setup">Stream setup</button>';
                 actions += '<button type="button" class="cam-link" data-act="edit">Edit</button>';
@@ -1294,6 +1272,7 @@
                             .catch(function(e) { b.disabled = false; b.textContent = 'Preview now'; laAlert('Could not open the camera: ' + e.message, { tone: 'error' }); });
                     }
                     if (act === 'control') openControl(c);
+                    if (act === 'relay') { _relayVenue = c._venue; _relay = _relayBy[c._venue] || null; openRelaySetup(); }
                 });
             });
             return card;
@@ -1380,7 +1359,7 @@
                 '<div class="ls-sec"><div id="ls-brand"><p class="ls-empty">Loading…</p></div></div>' +
                 '<div class="cam-form-actions" style="margin-top:20px"><a class="cam-btn ghost" href="/brand">Open Brand Kit</a><button type="button" class="cam-btn primary rec-stop" onclick="stopCalendarSet(this)">Stop set</button></div>');
             try {
-                var hdr = {}; if (macVenue() && document.getElementById('cam-acct')) hdr['X-LA-Venue'] = macVenue();
+                var hdr = {};
                 var res = await Promise.all([
                     laFetch('/api/brand', { headers: hdr }).then(function(r) { return r.ok ? r.json() : {}; }),
                     laFetch('/api/list-assets?only=thumbs', { headers: hdr }).then(function(r) { return r.ok ? r.json() : []; }).catch(function() { return []; })
@@ -1480,7 +1459,7 @@
             missing: ['Plug in ', 'warn'], blocked: ['Allow access in System Settings', 'warn'], error: ['', 'warn'], linking: ['Linking…', '']
         };
         function macVenue() {
-            if (document.getElementById('cam-acct')) return _adminVenueSel || '';
+            if (_adminAll) return '';   // every account's cameras at once: THIS MAC stays hidden
             try { return JSON.parse(localStorage.getItem('la_admin') || '{}').venueSlug || ''; } catch (_) { return ''; }
         }
         function macChip(l) {
@@ -1676,14 +1655,14 @@
             var box = document.getElementById('cam-relay');
             if (!box) return;
             // Remote control is for OBSBOT cameras: the line only shows when the account has one
-            box.classList.toggle('hidden', !_cams.some(function(c) { return !c.external && (!c.kind || c.kind === 'obsbot'); }));
+            box.classList.toggle('hidden', _adminAll || !_cams.some(function(c) { return !c.external && (!c.kind || c.kind === 'obsbot'); }));
             box.dataset.on = _relay && _relay.online ? '1' : '';
             document.getElementById('cam-relay-text').textContent = _relay && _relay.online ? 'Remote control on · venue relay connected' : _relay && _relay.set ? 'Remote control off · venue relay not connected' : 'Remote control not set up';
             var btn = box.querySelector('button');
             btn.textContent = _relay && _relay.online ? 'Relay' : 'Set up';
-            btn.hidden = !document.getElementById('cam-acct');   // only local / assets (admin) sets up the venue relay
+            btn.hidden = !_adminAll;   // only local / assets (admin) sets up the venue relay
         }
-        function adminVenueArg() { return document.getElementById('cam-acct') ? { venue: _adminVenueSel } : {}; }
+        function adminVenueArg() { return _adminAll && _relayVenue ? { venue: _relayVenue } : {}; }
         function openRelaySetup() {
             if (window._ctlCleanup) window._ctlCleanup();
             document.querySelector('#cam-dialog .cam-dialog-panel').classList.remove('ctl', 'ctl-off');
