@@ -1228,6 +1228,8 @@
         var _wmSweepT;
         function sweepWatermarks() {
             clearTimeout(_wmSweepT);
+            // An artist only sees and downloads: the account's own dashboard finishes the watermarks
+            if (document.documentElement.classList.contains('la-member')) return;
             var sweepOne = function(v) {
                 return laFetch('/api/watermark-clips', { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, v ? { 'X-LA-Venue': v } : {}), body: JSON.stringify({ action: 'sweep' }) })
                     .then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; });
