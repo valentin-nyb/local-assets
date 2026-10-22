@@ -142,28 +142,89 @@ export function invoiceEmail({ name, period, plan, lines, total, url, charged, e
   return { subject: `${example ? '[Example] ' : ''}Your local / assets invoice for ${period}: ${money(total)}`, html, text };
 }
 
-// An artist given access to a venue's or record label's account (Brand Kit → Give access)
-export function accessInviteEmail({ artist, account, email }) {
+// An artist given access to a venue's or record label's account (Brand Kit → Give access): what they can do
+// there, how to sign in, and the apps. example: a sample sent by local / assets (marked in the subject).
+export function accessInviteEmail({ artist, account, email, example }) {
+  const steps = [
+    ['Sign in', `With Google, using ${esc(email)}. There is no password to remember.`],
+    ['Your sets', `Every set you play at ${esc(account)} is recorded and kept in Distribution History: watch it and download it in full quality.`],
+    ['Clips ready to post', 'Each set comes with vertical clips for Instagram, TikTok and Shorts, and thumbnails, with your name on them.'],
+    ['Your calendar', `See your upcoming sets at ${esc(account)}. The cameras start and stop with them, so there is nothing to press.`],
+    ['Your Brand Kit', 'Keep your logo, photos and links up to date. They go on your clips and thumbnails.'],
+  ];
+  const preheader = `${account} gave you access to your sets on local / assets. Sign in with Google to see them.`;
+  const app = (eyebrow, title, line, cta) => `<td valign="top" width="50%" style="padding:18px 20px;border:1px solid #23261f;border-radius:14px">
+          <p style="margin:0 0 8px;font:500 10px/1 ${MONO};letter-spacing:.24em;text-transform:uppercase;color:#71717a">${eyebrow}</p>
+          <p style="margin:0;font:700 15px/1.3 ${FONT};letter-spacing:.02em;text-transform:uppercase;color:#fafafa">${title}</p>
+          <p style="margin:6px 0 14px;font:400 13px/1.5 ${FONT};color:#a1a1aa">${line}</p>${cta}</td>`;
+
   const html = `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>Your access to ${esc(account)}</title></head>
-<body style="margin:0;padding:0;background:#070905">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#070905"><tr><td align="center" style="padding:48px 16px">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark"><title>You have access to local / assets</title></head>
+<body style="margin:0;padding:0;background:#070905;-webkit-text-size-adjust:100%">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#070905">${esc(preheader)}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#070905">
+<tr><td align="center" style="padding:48px 16px">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px">
     <tr><td style="padding:0 4px 40px"><img src="${SITE}/logos/Green@2x.png" width="150" alt="local / assets" style="display:block;width:150px;height:auto;border:0"></td></tr>
     <tr><td style="padding:0 4px">
       <p style="margin:0 0 14px;font:500 11px/1 ${MONO};letter-spacing:.3em;text-transform:uppercase;color:${GREEN}">You have access</p>
       <h1 style="margin:0;font:700 40px/1 ${FONT};letter-spacing:-.01em;text-transform:uppercase;color:#fafafa">${esc(artist)}</h1>
-      <p style="margin:20px 0 0;font:400 16px/1.6 ${FONT};color:#a1a1aa">${esc(account)} gave you access to your sets on local / assets: every recording, vertical clip and thumbnail of yours, the calendar, and your Brand Kit to keep your logo and photos up to date.</p>
-      <p style="margin:16px 0 0;font:400 14px/1.6 ${FONT};color:#71717a">Sign in with Google using ${esc(email)}. There is no password.</p>
+      <p style="margin:20px 0 0;font:400 16px/1.6 ${FONT};color:#a1a1aa">${esc(account)} added you to local / assets. Every set you play there is recorded and turned into clips and thumbnails with your name on them, ready to post.</p>
     </td></tr>
-    <tr><td style="padding:28px 4px 0"><table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td style="border-radius:999px;background:${GREEN}">
-      <a href="${SITE}/login.html" style="display:inline-block;padding:15px 34px;font:600 14px/1 ${FONT};color:#000;text-decoration:none;border-radius:999px">Sign in</a>
-    </td></tr></table></td></tr>
-    <tr><td style="padding:40px 4px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #1b1e18"><tr>
-      <td style="padding:20px 0 0;font:500 10px/1.6 ${MONO};letter-spacing:.2em;text-transform:uppercase;color:#52525b">local / assets&trade; &middot; London</td></tr></table></td></tr>
+    <tr><td style="padding:32px 4px 0">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #23261f;border-radius:14px">
+        <tr><td style="padding:18px 22px" width="50%">
+          <p style="margin:0 0 6px;font:500 10px/1 ${MONO};letter-spacing:.24em;text-transform:uppercase;color:#71717a">Account</p>
+          <p style="margin:0;font:600 16px/1.3 ${FONT};color:#fafafa">${esc(account)}</p>
+        </td><td style="padding:18px 22px;border-left:1px solid #23261f">
+          <p style="margin:0 0 6px;font:500 10px/1 ${MONO};letter-spacing:.24em;text-transform:uppercase;color:#71717a">Sign in with</p>
+          <p style="margin:0;font:600 16px/1.3 ${FONT};color:#fafafa;word-break:break-all">${esc(email)}</p>
+        </td></tr>
+      </table>
+    </td></tr>
+    <tr><td style="padding:28px 4px 0">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td style="border-radius:999px;background:${GREEN}">
+        <a href="${SITE}/login.html" style="display:inline-block;padding:15px 34px;font:600 14px/1 ${FONT};color:#000;text-decoration:none;border-radius:999px">Sign in to your workspace</a>
+      </td></tr></table>
+    </td></tr>
+    <tr><td style="padding:40px 4px 8px"><p style="margin:0;font:500 10px/1 ${MONO};letter-spacing:.24em;text-transform:uppercase;color:#71717a">What you can do</p></td></tr>
+    ${steps.map(([t, d], i) => `<tr><td style="padding:0 4px">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #1b1e18"><tr>
+        <td width="44" valign="top" style="padding:18px 0;font:500 11px/1.5 ${MONO};letter-spacing:.1em;color:${GREEN}">0${i + 1}</td>
+        <td valign="top" style="padding:16px 0"><p style="margin:0;font:600 15px/1.4 ${FONT};color:#fafafa">${t}</p><p style="margin:4px 0 0;font:400 14px/1.55 ${FONT};color:#a1a1aa">${d}</p></td>
+      </tr></table></td></tr>`).join('')}
+    <tr><td style="padding:36px 4px 12px"><p style="margin:0;font:500 10px/1 ${MONO};letter-spacing:.24em;text-transform:uppercase;color:#71717a">Get the app</p></td></tr>
+    <tr><td style="padding:0 4px">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;border-spacing:0"><tr>
+        ${app('macOS', 'a™ for Mac', 'Your sets, clips and Brand Kit on your Mac.', `<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td style="border-radius:999px;border:1px solid #3f3f46"><a href="${SITE}/download" style="display:inline-block;padding:11px 20px;font:600 13px/1 ${FONT};color:#fafafa;text-decoration:none;border-radius:999px">Download for Mac</a></td></tr></table>`)}
+        <td width="12" style="width:12px;min-width:12px;font-size:0;line-height:0;border:0">&nbsp;</td>
+        ${app('iPhone &amp; iPad', 'Mobile app', 'Your sets and clips on the go.', `<p style="margin:0;display:inline-block;padding:9px 14px;border:1px dashed #3f3f46;border-radius:999px;font:500 10px/1 ${MONO};letter-spacing:.18em;text-transform:uppercase;color:#71717a">Coming soon</p>`)}
+      </tr></table>
+    </td></tr>
+    <tr><td style="padding:14px 4px 0"><p style="margin:0;font:400 13px/1.6 ${FONT};color:#71717a">Until then, local-assets.com works in your phone's browser: sign in and add it to your home screen.</p></td></tr>
+    <tr><td style="padding:36px 4px 0">
+      <p style="margin:0;font:400 13px/1.6 ${FONT};color:#71717a">Questions? Reply to this email or write to <a href="mailto:info@local-assets.com" style="color:#d4d4d8;text-decoration:underline">info@local-assets.com</a>.</p>
+    </td></tr>
+    <tr><td style="padding:40px 4px 0">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #1b1e18"><tr>
+        <td style="padding:20px 0 0;font:500 10px/1.6 ${MONO};letter-spacing:.2em;text-transform:uppercase;color:#52525b">local / assets&trade; &middot; London</td>
+        <td align="right" style="padding:20px 0 0"><img src="${SITE}/logos/a-white.png" width="18" alt="" style="display:inline-block;width:18px;height:auto;border:0;opacity:.7"></td>
+      </tr></table>
+    </td></tr>
   </table>
-</td></tr></table>
+</td></tr>
+</table>
 </body></html>`;
-  const text = `${account} gave you access to your sets on local / assets (${artist}): your recordings, clips, thumbnails, the calendar and your Brand Kit.\n\nSign in with Google using ${email}: ${SITE}/login.html`;
-  return { subject: `${account} gave you access on local / assets`, html, text };
+
+  const text = [
+    `You have access to local / assets, ${artist}.`, '',
+    `${account} added you to local / assets. Every set you play there is recorded and turned into clips and thumbnails with your name on them, ready to post.`, '',
+    `Account: ${account}`, `Sign in with: ${email}`, '',
+    ...steps.map(([t, d], i) => `0${i + 1}  ${t}: ${d.replace(/<[^>]+>/g, '').replace(/&[a-z]+;|&#\d+;/g, ' ')}`), '',
+    `Sign in: ${SITE}/login.html`,
+    `Download a™ for Mac: ${SITE}/download`,
+    'iPhone and iPad app: coming soon (local-assets.com works in your phone\'s browser).', '',
+    'Questions? Reply to this email or write to info@local-assets.com.',
+  ].join('\n');
+  return { subject: `${example ? '[Example] ' : ''}You have access to local / assets: ${account}`, html, text };
 }

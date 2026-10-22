@@ -48,6 +48,7 @@
         .ac-eyebrow { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--la-dim); }
         .ac-h { font-size:26px; line-height:1.2; color:var(--la-text); margin-top:6px; }
         .ac-sub { font-size:13px; line-height:1.6; color:var(--la-sub); margin-top:6px; max-width:680px; }
+        .ac-emails { margin-top:36px; padding-top:24px; border-top:1px solid var(--la-line); }
         .ac-tools { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
         .ac-tools input { height:40px; min-width:260px; border-radius:999px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 16px; font-size:14px; outline:none; }
         .ac-tools input:focus { border-color:var(--la-accent); }
@@ -106,6 +107,12 @@
                 </div>
                 <div class="ac-tools"><input id="ac-q" type="search" placeholder="Search accounts" aria-label="Search accounts"><span class="ac-sub" id="ac-count" style="margin:0"></span></div>
                 <div class="ac-list" id="ac-list"><p class="ac-empty">Loading…</p></div>
+                <!-- The emails clients get, as examples -->
+                <div class="ac-emails">
+                    <p class="ac-eyebrow" style="margin:0">Emails</p>
+                    <p class="ac-sub" style="margin:6px 0 12px">The email an artist gets when they're given access (Brand Kit → Give access), sent as an example.</p>
+                    <form class="ac-tools" id="ac-ex"><input type="email" name="to" placeholder="Send the example to…" aria-label="Email to send the example to" required><button type="submit" class="cam-btn ghost">Send example</button><span class="ac-sub" id="ac-ex-msg" style="margin:0"></span></form>
+                </div>
             </div>
         </div>
     </main>
@@ -126,6 +133,14 @@
             try { var s = JSON.parse(localStorage.getItem('la_admin') || '{}'); var v = (s.venue || '').toUpperCase();
                 document.getElementById('venue-breadcrumb').textContent = v; document.getElementById('venue-avatar').textContent = (v || '?').charAt(0); } catch (_) {}
         })();
+        document.getElementById('ac-ex').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            var f = this, b = f.querySelector('button'), msg = document.getElementById('ac-ex-msg');
+            b.disabled = true; msg.textContent = 'Sending…';
+            try { var d = await post({ action: 'emailExample', to: f.to.value.trim() }); msg.textContent = 'Sent to ' + f.to.value.trim() + ' (' + d.account + (d.artist ? ', ' + d.artist : '') + ')'; }
+            catch (er) { msg.textContent = er.message; }
+            b.disabled = false;
+        });
         function post(body) {
             return laFetch('/api/admin-accounts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
                 .then(function(r) { return r.json().catch(function() { return {}; }).then(function(d) { if (!r.ok) throw new Error(d.error || r.status); return d; }); });

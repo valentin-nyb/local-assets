@@ -4,6 +4,8 @@ import { getWebSessionAuth, getVenuesConfig, isAdminVenue, refreshRegistry, getM
 import { readAssignments, readPlans, stripeClient, accountTypeOf, DISCOUNTS_KEY } from './_billing.js';
 import { unpaidKey, readUnpaid } from './_suspend.js';
 import { thumbnailPrefix } from './_thumbnails.js';
+import { Resend } from 'resend';
+import { accessInviteEmail } from './_emails.js';
 
 // Admin only (local / assets): every client account, and what can be done to it.
 //   GET                                   the accounts, each with its plan and status
@@ -12,6 +14,7 @@ import { thumbnailPrefix } from './_thumbnails.js';
 //   POST { action: 'cancel', slug }        the plan ends at the end of its paid month (or its minimum term)
 //   POST { action: 'keep', slug }          a cancelled plan carries on
 //   POST { action: 'discount', slug, percent }   a discount (0–100%) on its usage prices, from its next bill
+//   POST { action: 'emailExample', to, slug? }   the artist-access email, as an example, to that address
 //   POST { action: 'delete', slug, confirm: slug }   deleted everywhere: plan cancelled now, every video and
 //        camera in its video storage, its files, records and artist access. Run again if it says more is left.
 
@@ -106,6 +109,22 @@ export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).end();
 
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
+    // An example of the email an artist gets when given access (Brand Kit → Give access), sent to an address
+    // typed by local / assets: for one client account (or the first), with one of its artists
+    if (body.action === 'emailExample') {
+      const to = String(body.to || '').trim().toLowerCase();
+      if (!/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(to)) return res.status(400).json({ error: 'Enter the email to send the example to' });
+      const key = process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY;
+      if (!key) return res.status(503).json({ error: 'Email is not set up (no Resend key)' });
+      const pick = clients.find(([s]) => s === String(body.slug || '')) || clients[0];
+      const account = pick ? (pick[1].name || pick[0]) : 'Your venue';
+      const artist = pick ? await withRedis(async r => Object.entries(await r.hGetAll(`brand_owner_names:${pick[0]}`) || {}).filter(([k]) => k.startsWith('artist-')).map(([, v]) => v)[0] || '').catch(() => '') : '';
+      const m = accessInviteEmail({ artist: String(artist || 'Artist name').toUpperCase(), account, email: to, example: true });
+      const r = await new Resend(key).emails.send({ from: 'local / assets <noreply@local-assets.com>', replyTo: 'info@local-assets.com', to, subject: m.subject, html: m.html, text: m.text }).catch(e => ({ error: e }));
+      if (r?.error) return res.status(502).json({ error: 'Could not send it: ' + (r.error.message || r.error.name || 'email refused') });
+      console.log('[admin-accounts] access email example sent by', session.email);
+      return res.status(200).json({ ok: true, account, artist });
+    }
     const slug = String(body.slug || '').trim();
     const entry = clients.find(([s]) => s === slug);
     if (!entry) return res.status(404).json({ error: 'No client account with that name' });
