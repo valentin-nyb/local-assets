@@ -36,7 +36,7 @@
     <link rel="stylesheet" href="styles/theme.css?v=34">
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
-    <script src="/la-dialogs.js?v=2"></script>
+    <script src="/la-dialogs.js?v=3"></script>
     <script src="nav-component.js?v=36"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
@@ -1217,7 +1217,6 @@
                 }
             });
         }
-        var _wmSaveT;
         // The venue's watermark is saved as "Artist name" and "Session name", so every clip shows its own.
         // An artist or session chosen in the menus only changes the preview (and Export).
         function wmToSave() {
@@ -1227,20 +1226,33 @@
             if (t.sub && t.sub.pick) { t.sub.source = 'session'; t.sub.value = ''; delete t.sub.pick; }
             return w;
         }
-        function saveWatermark() {
+        // Changes to the watermark wait in the save bar at the bottom of the screen (la-dialogs.js): Save keeps them,
+        // Reset puts back the watermark as last saved. saveWatermark(true) saves at once (a one-time layout move).
+        var _wmSavedRaw = null, _wmSavedOut = null;
+        function wmSyncButtons() {
             // Keep the logo cards' "Use as watermark" buttons in step with the panel
             document.querySelectorAll('[data-use-wm]').forEach(function(b) {
                 var on = _wm.enabled && wmPreviewLogoRaw() === b.dataset.useWm;
                 b.classList.toggle('is-on', on);
                 b.textContent = on ? 'Watermark' : 'Use as watermark';
             });
-            clearTimeout(_wmSaveT);
-            _wmSaveT = setTimeout(function() {
-                var st = document.getElementById('bk-wm-status');
-                laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setWatermark', watermark: wmToSave() }) })
-                    .then(function(r) { if (!r.ok) throw new Error(r.status); if (st) st.textContent = 'Saved'; })
-                    .catch(function() { if (st) st.textContent = 'Could not save. Try again.'; });
-            }, 350);
+        }
+        function wmMarkSaved() { _wmSavedRaw = JSON.stringify(_wm); _wmSavedOut = JSON.stringify(wmToSave()); }
+        function wmPost() {
+            var st = document.getElementById('bk-wm-status'), raw = JSON.stringify(_wm), out = wmToSave();
+            return laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setWatermark', watermark: out }) })
+                .then(function(r) { if (!r.ok) throw new Error(r.status); _wmSavedRaw = raw; _wmSavedOut = JSON.stringify(out); if (st) st.textContent = ''; });
+        }
+        var _wmChanges = { text: 'Unsaved watermark changes', onSave: wmPost, onReset: function() {
+            if (!_wmSavedRaw) return;
+            _wm = JSON.parse(_wmSavedRaw);
+            renderWatermark(); wmSyncButtons();
+        } };
+        function saveWatermark(now) {
+            wmSyncButtons();
+            if (now) return wmPost().catch(function() {});
+            if (JSON.stringify(wmToSave()) === _wmSavedOut) laSaveBar.clean();
+            else laSaveBar.dirty(_wmChanges);
         }
 
         async function loadBrand() {
@@ -1273,10 +1285,11 @@
                 try {
                     if (!localStorage.getItem('la_wm_layout2') && _wm.position === 'br' && _wm.text && _wm.text.position === 'bl') {
                         _wm.position = 'bl'; _wm.text.position = 'br';
-                        saveWatermark();
+                        saveWatermark(true);
                     }
                     localStorage.setItem('la_wm_layout2', '1');
                 } catch (_) {}
+                wmMarkSaved();
                 var assets = Array.isArray(res[1]) ? res[1] : (res[1].data || []);
                 buildSessions(assets);
                 var names = {};

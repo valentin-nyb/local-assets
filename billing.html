@@ -35,7 +35,7 @@
     <link rel="stylesheet" href="styles/theme.css?v=34">
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
-    <script src="/la-dialogs.js?v=2"></script>
+    <script src="/la-dialogs.js?v=3"></script>
     <script src="nav-component.js?v=36"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
@@ -718,8 +718,9 @@
             });
             if (!admin) return;
             var f = document.getElementById('bl-rates');
-            ['videoStorage', 'videoDelivery', 'videoDelivery4K', 'videoEncoding', 'liveRecording', 'fileStorage'].forEach(function(k) { if (document.activeElement !== f[k]) f[k].value = d.rates[k]; });
-            if (document.activeElement !== f.marginPct) f.marginPct.value = Math.round((d.rates.margin || 0) * 1000) / 10;
+            // (rates being changed and not saved yet stay as typed)
+            if (!(window.laSaveBar && laSaveBar.isDirty())) ['videoStorage', 'videoDelivery', 'videoDelivery4K', 'videoEncoding', 'liveRecording', 'fileStorage'].forEach(function(k) { if (document.activeElement !== f[k]) f[k].value = d.rates[k]; });
+            if (document.activeElement !== f.marginPct && !(window.laSaveBar && laSaveBar.isDirty())) f.marginPct.value = Math.round((d.rates.margin || 0) * 1000) / 10;
             // Venue to bill (admin), then the venue itself, its artists or its record labels
             _venue = d.venueSlug || _venue;
             document.getElementById('bl-venue').innerHTML = (d.venues || []).map(function(v) { return '<option value="' + esc(v.slug) + '"' + (v.slug === d.venueSlug ? ' selected' : '') + '>' + esc(v.name) + '</option>'; }).join('');
@@ -955,6 +956,13 @@
             } catch (e) { msg.textContent = 'Could not save: ' + e.message; }
             this.disabled = false;
         });
+        // The admin editors save from the save bar at the bottom of the screen (la-dialogs.js) instead of their own buttons
+        var saveFailed = function(id) { return function() { var t = document.getElementById(id).textContent; return /^Could not/.test(t) ? t : ''; }; };
+        laSaveBar.watch(document.getElementById('bl-rates'), { button: document.getElementById('bl-save'), failed: saveFailed('bl-admin-msg'), onReset: function() { load(); } });
+        laSaveBar.watch(document.getElementById('bl-plans-box'), { button: document.getElementById('bl-save-plans'), failed: saveFailed('bl-plans-msg'), clicks: '#bl-add-plan,[data-del-plan]',
+            onReset: function() { document.getElementById('bl-plans').dataset.editing = ''; load(); } });
+        laSaveBar.watch(document.getElementById('bl-kit-box'), { button: document.getElementById('bl-save-kit'), failed: saveFailed('bl-kit-msg'), clicks: '#bl-add-kit,[data-del-kit]',
+            onReset: function() { document.getElementById('bl-kit').dataset.editing = ''; load(); } });
         // Changing who is billed, the plan or the period updates the preview
         document.getElementById('bl-inv-filter').addEventListener('change', function() { if (_data) render(_data); });
         document.getElementById('bl-venue').addEventListener('change', function() { _venue = this.value; _target = 'venue'; _planOverride = undefined; document.getElementById('bl-plans').dataset.editing = ''; load(); });
