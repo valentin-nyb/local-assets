@@ -12,6 +12,25 @@
 // Inside the iPhone app (ios-app): sign-in through Safari and push notifications (la-native.js)
 (function () { if (!window.Capacitor || document.querySelector('script[data-la-native]')) return; var sc = document.createElement('script'); sc.src = '/la-native.js?v=1'; sc.setAttribute('data-la-native', ''); document.head.appendChild(sc); })();
 (function () { if (document.querySelector('script[data-la-select]')) return; var sc = document.createElement('script'); sc.src = '/la-select.js?v=5'; sc.defer = true; sc.setAttribute('data-la-select', ''); document.head.appendChild(sc); })();
+// Installed on an iPhone or iPad (home screen): the height Safari gives the page leaves out the status bar, so
+// the app stopped that much short of the bottom of the screen. Sized to the whole screen instead
+// (only when the app has the full width, so not in Split View on an iPad).
+(function () {
+  var standalone = window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+  if (!standalone || !window.screen) return;
+  var root = document.documentElement;
+  root.classList.add('la-standalone');
+  var fit = function () {
+    var land = window.innerWidth > window.innerHeight;
+    var w = land ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
+    var h = land ? Math.min(screen.width, screen.height) : Math.max(screen.width, screen.height);
+    if (Math.abs(window.innerWidth - w) <= 2 && h > window.innerHeight) root.style.setProperty('--la-app-h', h + 'px');
+    else root.style.removeProperty('--la-app-h');
+  };
+  fit();
+  window.addEventListener('resize', fit);
+  window.addEventListener('orientationchange', function () { setTimeout(fit, 300); });
+})();
 document.addEventListener("DOMContentLoaded", () => {
     // Inject theme switcher CSS if not already present
     if (!document.getElementById('la-theme-switcher-css')) {

@@ -689,5 +689,8 @@ header #venue-breadcrumb + * , header #venue-breadcrumb ~ h1 { min-width: 0; }
    empty band showed under the footer: pinned to all four edges instead. */
 html { background: var(--la-bg, #050505); }
 body.h-screen { position: fixed; inset: 0; width: auto !important; height: auto !important; }
+/* …and to the whole screen's height, which the page is told in --la-app-h (nav-component.js) */
+html.la-standalone, html.la-standalone body { overflow: hidden; }
+html.la-standalone body.h-screen { bottom: auto; height: var(--la-app-h, 100%) !important; }
 /* The footer: one compact line on every screen, just clear of the home indicator */
 .la-statusbar.la-statusbar { height: auto !important; min-height: 0 !important; padding-top: 12px !important; padding-bottom: calc(env(safe-area-inset-bottom) + 12px) !important; }
