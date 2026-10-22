@@ -441,7 +441,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 b.id = 'la-paused';
                 b.setAttribute('role', 'alert');
                 b.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 20px;background:#7f1d1d;color:#fff;font:500 13px/1.4 Inter,system-ui,sans-serif;flex-shrink:0;z-index:45;';
-                if (d.byAdmin) { b.innerHTML = '<span><b style="font-weight:700">Account paused.</b> local / assets has paused this account, so uploads, clips, watermarks and publishing are stopped. Email hello@local-assets.com to start it again.</span>'; main.insertBefore(b, main.firstChild); return; }
+                if (d.byAdmin) { b.innerHTML = '<span><b style="font-weight:700">Account paused.</b> local / assets has paused this account, so uploads, clips, watermarks and publishing are stopped. Email info@local-assets.com to start it again.</span>'; main.insertBefore(b, main.firstChild); return; }
                 b.innerHTML = '<span><b style="font-weight:700">Account paused.</b> Invoice ' + _esc(d.number || '') + ' is unpaid, so uploads, clips, watermarks and publishing are stopped until it is paid.</span>' +
                     (d.payUrl ? '<a href="' + _esc(d.payUrl) + '" target="_blank" rel="noopener" style="background:#fff;color:#7f1d1d;font-weight:700;padding:7px 14px;border-radius:8px;text-decoration:none;white-space:nowrap">Pay now</a>' : '<a href="/billing" style="color:#fff;text-decoration:underline">Billing</a>');
                 main.insertBefore(b, main.firstChild);

@@ -41,7 +41,7 @@
           <div class="lf-brand">
             <a href="/" class="lf-logo" aria-label="local / assets home"><span role="img" aria-label="local / assets"></span></a>
             <p class="lf-tag">Every set recorded, branded and ready to share: the full set in 4K, HQ audio, vertical clips and thumbnails.</p>
-            <a href="mailto:hello@local-assets.com" class="lf-btn">Talk to us</a>
+            <a href="mailto:info@local-assets.com" class="lf-btn">Talk to us</a>
           </div>
           <nav class="lf-col" aria-label="Product">
             <p class="lf-h">Product</p>
@@ -56,7 +56,6 @@
           </nav>
           <div class="lf-col">
             <p class="lf-h">Contact</p>
-            <a href="mailto:hello@local-assets.com">hello@local-assets.com</a>
             <a href="mailto:info@local-assets.com">info@local-assets.com</a>
           </div>
         </div>
