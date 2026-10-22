@@ -43,7 +43,7 @@ export async function readRates(redis) {
 export const DEFAULT_PLANS = [
   { id: 'dj-trial', name: 'Trial Month', price: 0, signupFee: 49, maxClips: 6, cameras: 0,
     included: { storedMinutes: 0, deliveredMinutes: 0, fileGB: 0 },
-    features: ['From £49 to join (comes off your first month), then pay as you go', '6 vertical social clips per session', 'Brand Kit and watermark', 'Connect your DJI Osmo, Sony Alpha and more', 'Distribution History', 'Usage charged to your card on the 1st'] },
+    features: ['From £49 to join (comes off your first month), then pay as you go', '6 vertical social clips per session', 'Brand Kit and watermark', 'Connect your DJI Osmo, Sony Alpha', 'Distribution History', 'Usage charged to your card on the 1st'] },
   { id: 'starter-distribution', name: 'Starter', price: 2750, maxClips: 6, cameras: 0,
     included: { storedMinutes: 10000, deliveredMinutes: 25000, fileGB: 1000 },
     features: ['Camera available as an add-on', 'Content intake & quality control', 'Up to 8 events processed / month', '6 vertical clips per session', 'Brand Kit, thumbnails & watermark', '1 TB cloud storage'] },
@@ -208,7 +208,7 @@ function planFeatures(planId, type, t, included, name) {
     'No monthly fee: you pay only for what you use, on the 1st',
     '6 vertical clips from every set',
     brand,
-    'Connect your DJI Osmo, Sony Alpha and more',
+    'Connect your DJI Osmo, Sony Alpha',
   ];
   if (planId === 'starter-distribution') return [who, sets, '6 vertical clips from every set', brand, space, 'Connect your DJI Osmo, Sony Alpha or add one of our cameras for £149 a month'];
   // Pro: artists and venues add our PTZ camera for £149 a month; record labels get one included
