@@ -141,7 +141,10 @@ export default async function handler(req, res) {
         ? `localStorage.setItem('la_venue_name', ${JSON.stringify(venue.name.toUpperCase())});`
         : `localStorage.removeItem('la_venue_name');`}
       localStorage.removeItem('la_revenue_cache_v2');
-      window.location.href = '/dashboard';
+      // Back to the page that asked for the sign-in (login.html?next=…, e.g. /download), else the dashboard;
+      // only a path on this site
+      var next = ''; try { next = sessionStorage.getItem('la_pending_next') || ''; sessionStorage.removeItem('la_pending_next'); } catch (e) {}
+      window.location.href = next.charAt(0) === '/' && next.charAt(1) !== '/' && next.charCodeAt(1) !== 92 ? next : '/dashboard';   // 92: a backslash
     </script></body></html>`);
 
   } catch (e) {

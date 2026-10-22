@@ -20,7 +20,7 @@
                 var d = JSON.parse(localStorage.getItem('la_admin') || 'null');
                 if (d && d.ts && Date.now() - d.ts < 600000) {
                     var nx = new URLSearchParams(location.search).get('next') || '/dashboard.html';
-                    if (nx.startsWith('/')) window.location.replace(nx);
+                    if (/^\/(?![\/\\])/.test(nx)) window.location.replace(nx);
                 }
             } catch(e) {}
         })();
@@ -194,7 +194,7 @@
                 if (data.venue) localStorage.setItem('la_venue_name', data.venue.toUpperCase());
                 localStorage.removeItem('la_revenue_cache_v2');
                 setStatus('Signed in — redirecting…', 'ok');
-                window.location.replace(next.startsWith('/') ? next : '/dashboard.html');
+                window.location.replace(/^\/(?![\/\\])/.test(next) ? next : '/dashboard.html');
             })
             .catch(function() {
                 setStatus('Network error — try again', 'err');
