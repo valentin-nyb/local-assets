@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>local / assets™ — a™ for Mac</title>
+    <title>local / assets™ — Download a™</title>
     <meta name="robots" content="noindex">
     <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,51 +12,167 @@
     <!-- The a™ installer, for signed-in customers only (api/download.js hands out the file) -->
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        :root { --green: #39FF14; --bg: #070905; --fg: #fafafa; --mono: 'JetBrains Mono', ui-monospace, monospace; --display: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+        :root { --green: #39FF14; --bg: #070905; --fg: #fafafa; --line: rgba(250,250,250,.12); --sub: #a1a1aa; --dim: #7c8178; --mono: 'JetBrains Mono', ui-monospace, monospace; --display: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
         html, body { min-height: 100%; background: var(--bg); color: var(--fg); -webkit-font-smoothing: antialiased; font-family: var(--display); }
-        body { min-height: 100dvh; display: flex; align-items: center; justify-content: center; padding: 96px 24px 48px; }
-        .wordmark { position: fixed; top: 40px; left: 24px; width: 128px; aspect-ratio: 1328 / 165; background: url(/logos/Green@2x.png) left center / contain no-repeat; }
-        .wrap { width: min(100%, 480px); }
-        .eyebrow { font-family: var(--mono); font-size: 10px; letter-spacing: .24em; text-transform: uppercase; color: #7c8178; margin-bottom: 18px; }
-        h1 { font-weight: 700; font-size: clamp(30px, 8vw, 44px); line-height: .98; letter-spacing: -.02em; text-transform: uppercase; }
-        .lead { margin-top: 16px; font-size: 15px; line-height: 1.55; color: #a1a1aa; }
-        .btns { display: flex; flex-direction: column; gap: 12px; margin-top: 34px; }
-        .btn { position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; height: 56px; padding: 0 22px;
-               border-radius: 999px; border: 1px solid rgba(250,250,250,.28); background: transparent; color: var(--fg); font: 500 15px/1 var(--display); text-decoration: none; cursor: pointer;
+        body { min-height: 100dvh; display: flex; align-items: center; justify-content: center; padding: 112px 16px 48px; }
+        .wordmark { position: fixed; top: 40px; left: 24px; width: 128px; aspect-ratio: 1328 / 165; background: url(/logos/Green@2x.png) left center / contain no-repeat; z-index: 2; }
+        .wrap { width: min(100%, 880px); display: flex; flex-direction: column; align-items: center; }
+        .eyebrow { font-family: var(--mono); font-size: 10px; letter-spacing: .24em; text-transform: uppercase; color: var(--dim); margin-bottom: 18px; text-align: center; }
+        h1 { font-weight: 900; font-size: clamp(30px, 7vw, 48px); line-height: .98; letter-spacing: -.01em; text-transform: uppercase; text-align: center; }
+        .lead { margin-top: 16px; max-width: 520px; font-size: 15px; line-height: 1.55; color: var(--sub); text-align: center; }
+
+        /* The two ways to get it: a card each, the device floating on its own glow */
+        .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; width: 100%; margin-top: 40px; }
+        .card { position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 22px; padding: 26px 22px 22px; border-radius: 20px; border: 1px solid var(--line);
+                background: #0b0d09; transition: border-color .3s; }
+        .card::before { content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none; transition: transform .5s ease, opacity .5s;
+                background: radial-gradient(60% 55% at 50% 58%, rgba(57,255,20,.20), transparent 70%), radial-gradient(90% 70% at 50% 120%, rgba(57,255,20,.10), transparent 70%); }
+        .card.soon::before { background: radial-gradient(60% 55% at 50% 58%, rgba(250,250,250,.08), transparent 70%); }
+        @media (hover: hover) { .card:hover { border-color: rgba(57,255,20,.45); } .card.soon:hover { border-color: rgba(250,250,250,.24); } .card:hover::before { transform: scale(1.06); } .card:hover .device { transform: scale(1.04); } }
+        .card > * { position: relative; z-index: 1; }
+        .card-h { text-align: center; }
+        .card-h small { display: block; font: 500 10px/1 var(--mono); letter-spacing: .2em; text-transform: uppercase; color: var(--dim); margin-bottom: 10px; }
+        .card-h h2 { font-weight: 900; font-size: 20px; letter-spacing: .01em; text-transform: uppercase; }
+        .card-h p { margin-top: 8px; font-size: 13px; line-height: 1.5; color: var(--sub); }
+        .stage { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 220px; }
+        .device { transition: transform .4s ease; }
+        .float { animation: float 4.5s ease-in-out infinite; }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        @media (prefers-reduced-motion: reduce) { .float { animation: none; } }
+        .shadow { width: 62%; height: 14px; margin: 14px auto 0; border-radius: 50%; background: radial-gradient(closest-side, rgba(0,0,0,.75), transparent); animation: shadow 4.5s ease-in-out infinite; }
+        @keyframes shadow { 0%, 100% { transform: scaleX(1); opacity: .9; } 50% { transform: scaleX(.86); opacity: .6; } }
+        .mac { width: min(100%, 340px); }
+        .phone { width: 128px; }
+
+        .btns { display: flex; flex-direction: column; gap: 10px; }
+        .btn { position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; height: 50px; padding: 0 20px;
+               border-radius: 999px; border: 1px solid rgba(250,250,250,.28); background: transparent; color: var(--fg); font: 500 14px/1 var(--display); text-decoration: none; cursor: pointer;
                transition: color .3s cubic-bezier(.65,0,.35,1), border-color .3s, transform .15s; }
-        .btn small { font: 400 12px/1 var(--display); color: inherit; opacity: .6; }
+        .btn svg { flex-shrink: 0; }
+        .btn small { font: 400 12px/1 var(--display); opacity: .6; }
         .btn::before { content: ""; position: absolute; inset: -1px; z-index: -1; border-radius: inherit; background: #fafafa; transform: scaleX(0); transform-origin: right center; transition: transform .42s cubic-bezier(.65,0,.35,1); }
         .btn.main { background: var(--green); border-color: var(--green); color: #000; }
         .btn.main::before { background: #0a0a0a; }
-        @media (hover: hover) { .btn:hover { color: #000; border-color: #fafafa; } .btn:hover::before { transform: scaleX(1); transform-origin: left center; } .btn.main:hover { color: var(--green); border-color: var(--green); } }
-        .btn:active { transform: scale(.98); }
+        @media (hover: hover) { .btn:not(:disabled):hover { color: #000; border-color: #fafafa; } .btn:not(:disabled):hover::before { transform: scaleX(1); transform-origin: left center; } .btn.main:hover { color: var(--green) !important; border-color: var(--green) !important; } }
+        .btn:active:not(:disabled) { transform: scale(.98); }
+        .btn:disabled { cursor: default; color: var(--dim); border-style: dashed; border-color: rgba(250,250,250,.18); }
         .btn.busy { opacity: .6; pointer-events: none; }
-        .note { margin-top: 28px; padding-top: 20px; border-top: 1px solid rgba(250,250,250,.1); font-size: 13px; line-height: 1.6; color: #8b8f87; }
+        .tag { position: absolute; top: 16px; right: 16px; z-index: 2; font: 500 9px/1 var(--mono); letter-spacing: .18em; text-transform: uppercase; color: var(--green); border: 1px solid rgba(57,255,20,.35); background: rgba(57,255,20,.08); border-radius: 999px; padding: 6px 9px; }
+        .card.soon .tag { color: var(--sub); border-color: var(--line); background: rgba(250,250,250,.04); }
+
+        .note { margin-top: 28px; max-width: 560px; padding-top: 20px; border-top: 1px solid rgba(250,250,250,.1); font-size: 13px; line-height: 1.6; color: #8b8f87; text-align: center; }
         .note b { color: #d4d4d8; font-weight: 600; }
-        .err { margin-top: 14px; font-size: 13px; color: #f87171; min-height: 1em; }
+        .err { margin-top: 14px; font-size: 13px; color: #f87171; min-height: 1em; text-align: center; }
+        @media (max-width: 720px) {
+            body { padding-top: 96px; }
+            .cards { grid-template-columns: minmax(0, 1fr); margin-top: 32px; }
+            .stage { min-height: 190px; }
+        }
     </style>
 </head>
 <body>
     <a class="wordmark" href="/" aria-label="local / assets"></a>
     <main class="wrap">
-        <p class="eyebrow">a™ for Mac</p>
+        <p class="eyebrow">a™ apps</p>
         <h1>Download the app</h1>
-        <p class="lead">Camera Control, uploads and your Brand Kit on your Mac. Record every set from a camera plugged into it.</p>
-        <div class="btns" id="btns"></div>
+        <p class="lead">Camera Control, uploads and your Brand Kit, wherever you work. Record every set from a camera plugged into your Mac.</p>
+
+        <div class="cards">
+            <!-- Desktop: a MacBook floating, the dashboard on its screen -->
+            <section class="card" aria-labelledby="c-mac">
+                <span class="tag">Available</span>
+                <div class="card-h"><small>macOS</small><h2 id="c-mac">Desktop app</h2><p>For the Mac at the venue, with your cameras plugged in.</p></div>
+                <div class="stage"><div class="device">
+                    <div class="float">
+                        <svg class="mac" viewBox="0 0 340 214" role="img" aria-label="a MacBook showing the local / assets dashboard">
+                            <defs>
+                                <linearGradient id="lid" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a3d38"/><stop offset="1" stop-color="#22241f"/></linearGradient>
+                                <linearGradient id="base" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5b5e57"/><stop offset=".45" stop-color="#3a3c37"/><stop offset="1" stop-color="#1c1d1a"/></linearGradient>
+                                <linearGradient id="hero" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1b3a12"/><stop offset=".6" stop-color="#0f1a0b"/><stop offset="1" stop-color="#0b0d09"/></linearGradient>
+                                <linearGradient id="shine" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".09"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/></linearGradient>
+                            </defs>
+                            <!-- lid and screen -->
+                            <rect x="34" y="2" width="272" height="182" rx="11" fill="url(#lid)"/>
+                            <rect x="41" y="9" width="258" height="168" rx="5" fill="#050605"/>
+                            <rect x="158" y="9" width="24" height="5" rx="2.5" fill="#1a1b18"/>
+                            <!-- the dashboard: side menu, banner, cards -->
+                            <rect x="45" y="16" width="44" height="157" rx="3" fill="#0d0f0b"/>
+                            <rect x="51" y="23" width="26" height="4" rx="2" fill="#39FF14"/>
+                            <rect x="51" y="38" width="30" height="3" rx="1.5" fill="#fafafa" opacity=".55"/>
+                            <rect x="51" y="47" width="24" height="3" rx="1.5" fill="#fafafa" opacity=".25"/>
+                            <rect x="51" y="56" width="28" height="3" rx="1.5" fill="#fafafa" opacity=".25"/>
+                            <rect x="51" y="65" width="22" height="3" rx="1.5" fill="#fafafa" opacity=".25"/>
+                            <rect x="51" y="74" width="26" height="3" rx="1.5" fill="#fafafa" opacity=".25"/>
+                            <rect x="95" y="16" width="200" height="56" rx="5" fill="url(#hero)"/>
+                            <rect x="103" y="50" width="70" height="7" rx="1.5" fill="#fafafa"/>
+                            <rect x="103" y="61" width="42" height="3" rx="1.5" fill="#39FF14" opacity=".8"/>
+                            <circle cx="281" cy="28" r="3" fill="#39FF14"/>
+                            <rect x="95" y="78" width="63" height="34" rx="4" fill="#10130d"/><rect x="101" y="85" width="24" height="3" rx="1.5" fill="#fafafa" opacity=".35"/><rect x="101" y="95" width="34" height="8" rx="1.5" fill="#fafafa" opacity=".85"/>
+                            <rect x="163.5" y="78" width="63" height="34" rx="4" fill="#10130d"/><rect x="169.5" y="85" width="24" height="3" rx="1.5" fill="#fafafa" opacity=".35"/><rect x="169.5" y="95" width="28" height="8" rx="1.5" fill="#39FF14"/>
+                            <rect x="232" y="78" width="63" height="34" rx="4" fill="#10130d"/><rect x="238" y="85" width="24" height="3" rx="1.5" fill="#fafafa" opacity=".35"/><rect x="238" y="95" width="38" height="8" rx="1.5" fill="#fafafa" opacity=".85"/>
+                            <rect x="95" y="118" width="200" height="55" rx="4" fill="#10130d"/>
+                            <rect x="101" y="125" width="30" height="40" rx="3" fill="#1d2a17"/><rect x="135" y="125" width="30" height="40" rx="3" fill="#24331c"/><rect x="169" y="125" width="30" height="40" rx="3" fill="#1d2a17"/><rect x="203" y="125" width="30" height="40" rx="3" fill="#24331c"/>
+                            <rect x="241" y="128" width="46" height="3" rx="1.5" fill="#fafafa" opacity=".5"/><rect x="241" y="136" width="34" height="3" rx="1.5" fill="#fafafa" opacity=".25"/>
+                            <rect x="41" y="9" width="258" height="168" rx="5" fill="url(#shine)"/>
+                            <!-- base -->
+                            <path d="M4 186h332l-6 14c-1.4 3-4 4.5-7.5 4.5H17.5c-3.5 0-6.1-1.5-7.5-4.5z" fill="url(#base)"/>
+                            <rect x="146" y="186" width="48" height="5" rx="2.5" fill="#1c1d1a"/>
+                            <rect x="4" y="184" width="332" height="3" rx="1.5" fill="#6d706a"/>
+                        </svg>
+                    </div>
+                    <div class="shadow"></div>
+                </div></div>
+                <div class="btns" id="btns"></div>
+            </section>
+
+            <!-- iPhone and iPad: coming soon -->
+            <section class="card soon" aria-labelledby="c-ios">
+                <span class="tag">Coming soon</span>
+                <div class="card-h"><small>iPhone &amp; iPad</small><h2 id="c-ios">Mobile app</h2><p>Your sets, clips and calendar on the go.</p></div>
+                <div class="stage"><div class="device">
+                    <div class="float" style="animation-delay:-1.6s">
+                        <svg class="phone" viewBox="0 0 128 252" role="img" aria-label="an iPhone showing the local / assets app">
+                            <defs>
+                                <linearGradient id="frame" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4a4d47"/><stop offset="1" stop-color="#1f201d"/></linearGradient>
+                                <linearGradient id="hero2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2a2c28"/><stop offset="1" stop-color="#0d0e0c"/></linearGradient>
+                            </defs>
+                            <rect x="2" y="2" width="124" height="248" rx="24" fill="url(#frame)"/>
+                            <rect x="7" y="7" width="114" height="238" rx="19.5" fill="#050605"/>
+                            <rect x="47" y="14" width="34" height="10" rx="5" fill="#000"/>
+                            <rect x="15" y="34" width="54" height="4" rx="2" fill="#fafafa" opacity=".7"/>
+                            <rect x="15" y="46" width="98" height="52" rx="7" fill="url(#hero2)"/>
+                            <rect x="21" y="78" width="46" height="6" rx="1.5" fill="#fafafa" opacity=".8"/>
+                            <rect x="21" y="88" width="28" height="3" rx="1.5" fill="#fafafa" opacity=".35"/>
+                            <rect x="15" y="106" width="47" height="34" rx="6" fill="#111310"/><rect x="66" y="106" width="47" height="34" rx="6" fill="#111310"/>
+                            <rect x="21" y="113" width="20" height="3" rx="1.5" fill="#fafafa" opacity=".3"/><rect x="21" y="124" width="28" height="7" rx="1.5" fill="#fafafa" opacity=".7"/>
+                            <rect x="72" y="113" width="20" height="3" rx="1.5" fill="#fafafa" opacity=".3"/><rect x="72" y="124" width="24" height="7" rx="1.5" fill="#fafafa" opacity=".7"/>
+                            <rect x="15" y="148" width="98" height="70" rx="6" fill="#111310"/>
+                            <rect x="21" y="155" width="26" height="46" rx="4" fill="#1e201c"/><rect x="51" y="155" width="26" height="46" rx="4" fill="#262824"/><rect x="81" y="155" width="26" height="46" rx="4" fill="#1e201c"/>
+                            <rect x="21" y="206" width="40" height="3" rx="1.5" fill="#fafafa" opacity=".3"/>
+                            <rect x="46" y="234" width="36" height="3" rx="1.5" fill="#fafafa" opacity=".6"/>
+                        </svg>
+                    </div>
+                    <div class="shadow" style="width:46%;animation-delay:-1.6s"></div>
+                </div></div>
+                <div class="btns"><button type="button" class="btn" disabled><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></svg>Coming soon</button></div>
+            </section>
+        </div>
+
         <p class="err" id="err"></p>
         <p class="note" id="note"><b>First time you open it:</b> macOS may say it can't check the app. Open <b>System Settings → Privacy &amp; Security</b> and choose <b>Open Anyway</b>. You only need to do this once.</p>
     </main>
     <script>
         (function() {
             var btns = document.getElementById('btns'), err = document.getElementById('err');
+            var APPLE = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M16.4 12.6c0-2.5 2-3.6 2.1-3.7-1.2-1.7-3-1.9-3.6-2-1.5-.2-3 .9-3.8.9-.8 0-2-.9-3.3-.8-1.7 0-3.3 1-4.2 2.5-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.6 1.3-.1 1.8-.8 3.3-.8s2 .8 3.3.8c1.4 0 2.3-1.3 3.1-2.5 1-1.4 1.4-2.8 1.4-2.9 0 0-2.8-1.1-2.8-4.3zM14 5.2c.7-.8 1.2-2 1-3.2-1 0-2.2.7-3 1.5-.6.7-1.2 1.9-1 3.1 1.1.1 2.3-.6 3-1.4z"/></svg>';
             var sess = null; try { sess = JSON.parse(localStorage.getItem('la_admin') || 'null'); } catch (_) {}
             if (!sess || !sess.webToken) {
-                btns.innerHTML = '<a class="btn main" href="/login?next=/download"><span>Sign in to download</span><small>For local / assets customers</small></a>';
+                btns.innerHTML = '<a class="btn main" href="/login?next=/download">' + APPLE + '<span>Sign in to download</span></a>';
                 return;
             }
-            // Apple silicon first (green), Intel second (white)
+            // Apple silicon first (green), Intel second (outline)
             var opts = [['arm64', 'Download for Apple silicon', 'M1 and later'], ['x64', 'Download for Intel', 'Older Macs']];
-            btns.innerHTML = opts.map(function(o, i) { return '<button type="button" class="btn' + (i ? '' : ' main') + '" data-arch="' + o[0] + '"><span>' + o[1] + '</span><small>' + o[2] + '</small></button>'; }).join('');
+            btns.innerHTML = opts.map(function(o, i) { return '<button type="button" class="btn' + (i ? '' : ' main') + '" data-arch="' + o[0] + '">' + APPLE + '<span>' + o[1] + '</span><small>' + o[2] + '</small></button>'; }).join('');
             btns.addEventListener('click', function(e) {
                 var b = e.target.closest('[data-arch]'); if (!b) return;
                 b.classList.add('busy'); err.textContent = '';
