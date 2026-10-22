@@ -16,40 +16,43 @@
         html, body { min-height: 100%; background: var(--bg); color: var(--fg); -webkit-font-smoothing: antialiased; font-family: var(--display); }
         body { min-height: 100dvh; display: flex; align-items: center; justify-content: center; padding: 112px 16px 48px; }
         .wordmark { position: fixed; top: 40px; left: 24px; width: 128px; aspect-ratio: 1328 / 165; background: url(/logos/Green@2x.png) left center / contain no-repeat; z-index: 2; }
-        .wrap { width: min(100%, 880px); display: flex; flex-direction: column; align-items: center; }
+        .wrap { width: min(100%, 700px); display: flex; flex-direction: column; align-items: center; }
         .eyebrow { font-family: var(--mono); font-size: 10px; letter-spacing: .24em; text-transform: uppercase; color: var(--dim); margin-bottom: 18px; text-align: center; }
         h1 { font-weight: 900; font-size: clamp(30px, 7vw, 48px); line-height: .98; letter-spacing: -.01em; text-transform: uppercase; text-align: center; }
         .lead { margin-top: 16px; max-width: 520px; font-size: 15px; line-height: 1.55; color: var(--sub); text-align: center; }
 
         /* The two ways to get it: a card each, the device floating on its own glow */
-        .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; width: 100%; margin-top: 40px; }
-        .card { position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 22px; padding: 26px 22px 22px; border-radius: 20px; border: 1px solid var(--line);
-                background: #0b0d09; transition: border-color .3s; }
+        .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; width: 100%; margin-top: 36px; }
+        .card { position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 18px; padding: 22px 18px 18px; border-radius: 16px; border: 1px solid rgba(250,250,250,.08);
+                background: #050605; transition: border-color .3s; }
         .card::before { content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none; transition: transform .5s ease, opacity .5s;
-                background: radial-gradient(60% 55% at 50% 58%, rgba(57,255,20,.20), transparent 70%), radial-gradient(90% 70% at 50% 120%, rgba(57,255,20,.10), transparent 70%); }
-        .card.soon::before { background: radial-gradient(60% 55% at 50% 58%, rgba(250,250,250,.08), transparent 70%); }
-        @media (hover: hover) { .card:hover { border-color: rgba(57,255,20,.45); } .card.soon:hover { border-color: rgba(250,250,250,.24); } .card:hover::before { transform: scale(1.06); } .card:hover .device { transform: scale(1.04); } }
+                background: radial-gradient(55% 45% at 50% 55%, rgba(57,255,20,.07), transparent 70%), radial-gradient(80% 60% at 50% 50%, rgba(250,250,250,.03), transparent 70%); }
+        .card.soon::before { background: radial-gradient(55% 45% at 50% 55%, rgba(250,250,250,.05), transparent 70%); }
+        @media (hover: hover) { .card:hover { border-color: rgba(250,250,250,.4); } .card.soon:hover { border-color: rgba(250,250,250,.4); } .card:hover::before { transform: scale(1.06); } .card:hover .device { transform: scale(1.04); } }
         .card > * { position: relative; z-index: 1; }
         .card-h { text-align: center; }
         .card-h small { display: block; font: 500 10px/1 var(--mono); letter-spacing: .2em; text-transform: uppercase; color: var(--dim); margin-bottom: 10px; }
-        .card-h h2 { font-weight: 900; font-size: 20px; letter-spacing: .01em; text-transform: uppercase; }
-        .card-h p { margin-top: 8px; font-size: 13px; line-height: 1.5; color: var(--sub); }
-        .stage { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 220px; }
+        .card-h h2 { font-weight: 900; font-size: 16px; letter-spacing: .02em; text-transform: uppercase; }
+        .card-h p { margin-top: 6px; font-size: 12px; line-height: 1.5; color: var(--sub); }
+        .stage { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 210px; perspective: 900px; }
         .device { transition: transform .4s ease; }
         .float { animation: float 4.5s ease-in-out infinite; }
         @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
         @media (prefers-reduced-motion: reduce) { .float { animation: none; } }
         .shadow { width: 62%; height: 14px; margin: 14px auto 0; border-radius: 50%; background: radial-gradient(closest-side, rgba(0,0,0,.75), transparent); animation: shadow 4.5s ease-in-out infinite; }
         @keyframes shadow { 0%, 100% { transform: scaleX(1); opacity: .9; } 50% { transform: scaleX(.86); opacity: .6; } }
-        .mac { width: min(100%, 340px); }
-        .phone { width: 128px; }
+        .mac { width: min(100%, 270px); }
+        .phone { width: 104px; }
+        /* Shown at an angle, as if photographed: the Mac seen a little from above, the phone tilted */
+        .tilt-mac { transform: rotateX(14deg) rotateY(-12deg) rotateZ(1deg); transform-style: preserve-3d; filter: drop-shadow(0 18px 24px rgba(0,0,0,.6)); }
+        .tilt-phone { transform: rotateX(18deg) rotateY(-22deg) rotateZ(-24deg); transform-style: preserve-3d; filter: drop-shadow(0 18px 22px rgba(0,0,0,.65)); }
 
-        .btns { display: flex; flex-direction: column; gap: 10px; }
-        .btn { position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; height: 50px; padding: 0 20px;
-               border-radius: 999px; border: 1px solid rgba(250,250,250,.28); background: transparent; color: var(--fg); font: 500 14px/1 var(--display); text-decoration: none; cursor: pointer;
+        .btns { display: flex; flex-direction: column; gap: 8px; }
+        .btn { position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 40px; padding: 0 16px;
+               border-radius: 999px; border: 1px solid rgba(250,250,250,.14); background: #141613; color: var(--fg); font: 500 13px/1 var(--display); text-decoration: none; cursor: pointer;
                transition: color .3s cubic-bezier(.65,0,.35,1), border-color .3s, transform .15s; }
         .btn svg { flex-shrink: 0; }
-        .btn small { font: 400 12px/1 var(--display); opacity: .6; }
+        .btn small { font: 400 11px/1 var(--display); opacity: .55; }
         .btn::before { content: ""; position: absolute; inset: -1px; z-index: -1; border-radius: inherit; background: #fafafa; transform: scaleX(0); transform-origin: right center; transition: transform .42s cubic-bezier(.65,0,.35,1); }
         .btn.main { background: var(--green); border-color: var(--green); color: #000; }
         .btn.main::before { background: #0a0a0a; }
@@ -57,7 +60,7 @@
         .btn:active:not(:disabled) { transform: scale(.98); }
         .btn:disabled { cursor: default; color: var(--dim); border-style: dashed; border-color: rgba(250,250,250,.18); }
         .btn.busy { opacity: .6; pointer-events: none; }
-        .tag { position: absolute; top: 16px; right: 16px; z-index: 2; font: 500 9px/1 var(--mono); letter-spacing: .18em; text-transform: uppercase; color: var(--green); border: 1px solid rgba(57,255,20,.35); background: rgba(57,255,20,.08); border-radius: 999px; padding: 6px 9px; }
+        .tag { display: inline-block; margin-top: 12px; font: 500 9px/1 var(--mono); letter-spacing: .18em; text-transform: uppercase; color: var(--green); border: 1px solid rgba(57,255,20,.35); background: rgba(57,255,20,.08); border-radius: 999px; padding: 6px 9px; }
         .card.soon .tag { color: var(--sub); border-color: var(--line); background: rgba(250,250,250,.04); }
 
         .note { margin-top: 28px; max-width: 560px; padding-top: 20px; border-top: 1px solid rgba(250,250,250,.1); font-size: 13px; line-height: 1.6; color: #8b8f87; text-align: center; }
@@ -80,10 +83,9 @@
         <div class="cards">
             <!-- Desktop: a MacBook floating, the dashboard on its screen -->
             <section class="card" aria-labelledby="c-mac">
-                <span class="tag">Available</span>
-                <div class="card-h"><small>macOS</small><h2 id="c-mac">Desktop app</h2><p>For the Mac at the venue, with your cameras plugged in.</p></div>
+                <div class="card-h"><small>macOS</small><h2 id="c-mac">Desktop app</h2><p>For the Mac at the venue, with your cameras plugged in.</p><span class="tag">Available</span></div>
                 <div class="stage"><div class="device">
-                    <div class="float">
+                    <div class="float"><div class="tilt-mac">
                         <svg class="mac" viewBox="0 0 340 214" role="img" aria-label="a MacBook showing the local / assets dashboard">
                             <defs>
                                 <linearGradient id="lid" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a3d38"/><stop offset="1" stop-color="#22241f"/></linearGradient>
@@ -119,7 +121,7 @@
                             <rect x="146" y="186" width="48" height="5" rx="2.5" fill="#1c1d1a"/>
                             <rect x="4" y="184" width="332" height="3" rx="1.5" fill="#6d706a"/>
                         </svg>
-                    </div>
+                    </div></div>
                     <div class="shadow"></div>
                 </div></div>
                 <div class="btns" id="btns"></div>
@@ -127,10 +129,9 @@
 
             <!-- iPhone and iPad: coming soon -->
             <section class="card soon" aria-labelledby="c-ios">
-                <span class="tag">Coming soon</span>
-                <div class="card-h"><small>iPhone &amp; iPad</small><h2 id="c-ios">Mobile app</h2><p>Your sets, clips and calendar on the go.</p></div>
+                <div class="card-h"><small>iPhone &amp; iPad</small><h2 id="c-ios">Mobile app</h2><p>Your sets, clips and calendar on the go.</p><span class="tag">Coming soon</span></div>
                 <div class="stage"><div class="device">
-                    <div class="float" style="animation-delay:-1.6s">
+                    <div class="float" style="animation-delay:-1.6s"><div class="tilt-phone">
                         <svg class="phone" viewBox="0 0 128 252" role="img" aria-label="an iPhone showing the local / assets app">
                             <defs>
                                 <linearGradient id="frame" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4a4d47"/><stop offset="1" stop-color="#1f201d"/></linearGradient>
@@ -151,7 +152,7 @@
                             <rect x="21" y="206" width="40" height="3" rx="1.5" fill="#fafafa" opacity=".3"/>
                             <rect x="46" y="234" width="36" height="3" rx="1.5" fill="#fafafa" opacity=".6"/>
                         </svg>
-                    </div>
+                    </div></div>
                     <div class="shadow" style="width:46%;animation-delay:-1.6s"></div>
                 </div></div>
                 <div class="btns"><button type="button" class="btn" disabled><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></svg>Coming soon</button></div>
