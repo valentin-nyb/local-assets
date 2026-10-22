@@ -35,7 +35,7 @@
     <link rel="stylesheet" href="styles/theme.css?v=34">
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
-    <script src="/la-dialogs.js?v=3"></script>
+    <script src="/la-dialogs.js?v=4"></script>
     <script src="nav-component.js?v=37"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
@@ -960,6 +960,9 @@
         });
         // The admin editors save from the save bar at the bottom of the screen (la-dialogs.js) instead of their own buttons
         var saveFailed = function(id) { return function() { var t = document.getElementById(id).textContent; return /^Could not/.test(t) ? t : ''; }; };
+        // Who is billed, their plan and billing details: the save bar too (Preview and Send invoice stay as they are)
+        laSaveBar.watch(document.getElementById('bl-send-form'), { button: document.getElementById('bl-save-assign'),
+            failed: function() { var t = document.getElementById('bl-send-msg').textContent; return /^(Could not|Type the name)/.test(t) ? t : ''; }, onReset: function() { _planOverride = undefined; load(); } });
         laSaveBar.watch(document.getElementById('bl-rates'), { button: document.getElementById('bl-save'), failed: saveFailed('bl-admin-msg'), onReset: function() { load(); } });
         laSaveBar.watch(document.getElementById('bl-plans-box'), { button: document.getElementById('bl-save-plans'), failed: saveFailed('bl-plans-msg'), clicks: '#bl-add-plan,[data-del-plan]',
             onReset: function() { document.getElementById('bl-plans').dataset.editing = ''; load(); } });

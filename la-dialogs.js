@@ -175,6 +175,20 @@
         return o;
       }
     };
+    // Saved somewhere else (a window's own Save): the bar says so, then goes
+    window.laSaveBar.done = function (text) { if (saving) return; cur = null; paint('ok', text || 'Changes saved'); hideT = setTimeout(hide, 2000); };
+    // Every Save in a window across the site: once the window closes without an error, "Changes saved"
+    document.addEventListener('submit', function (e) {
+      var f = e.target, b = e.submitter || (f.querySelector && f.querySelector('[type=submit]'));
+      if (!b || !/^\s*save\b/i.test(b.textContent || '') || !f.closest('.se-backdrop, .cam-dialog, .ac-backdrop, .lad-backdrop, [role=dialog]')) return;
+      var t0 = Date.now(), iv = setInterval(function () {
+        var err = f.querySelector('.se-error, .cam-form-error, .ac-err, [id$="-error"]');
+        if (err && err.textContent.trim() && !b.disabled) { clearInterval(iv); return; }   // it went wrong: the window says why
+        var gone = !f.isConnected || !f.offsetParent;
+        if (gone) { clearInterval(iv); window.laSaveBar.done(); }
+        else if (Date.now() - t0 > 20000) clearInterval(iv);
+      }, 200);
+    }, true);
     // Leaving the page with changes not saved asks first; Cmd/Ctrl+S saves them
     window.addEventListener('beforeunload', function (e) { if (cur) { e.preventDefault(); e.returnValue = ''; } });
     document.addEventListener('keydown', function (e) { if (cur && (e.metaKey || e.ctrlKey) && (e.key === 's' || e.key === 'S')) { e.preventDefault(); save(); } });

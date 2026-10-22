@@ -38,7 +38,7 @@
     <link rel="stylesheet" href="styles/theme.css?v=34">
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
-    <script src="/la-dialogs.js?v=3"></script>
+    <script src="/la-dialogs.js?v=4"></script>
     <script src="/la-djframe.js?v=4"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player@3"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -3837,8 +3837,14 @@
         .kpi-contacts { display:none; }
         html.la-member .kpi-contacts { display:grid; grid-column:span 3; gap:12px; grid-template-columns:repeat(3, minmax(0, 1fr)); }
         html.la-member .kpi-contacts[data-n="1"] { grid-template-columns:1fr; }
-        html.la-member .kpi-contacts[data-n="2"], html.la-member .kpi-contacts[data-n="4"] { grid-template-columns:repeat(2, minmax(0, 1fr)); }
-        @media (max-width: 1100px) { html.la-member .kpi-contacts { grid-column:1 / -1; } }
+        html.la-member .kpi-contacts[data-n="2"] { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+        /* Four contacts: one row of smaller cards, so the row stays as tall as Next event */
+        html.la-member .kpi-contacts[data-n="4"] { grid-template-columns:repeat(4, minmax(0, 1fr)); gap:10px; }
+        html.la-member .kpi-contacts[data-n="4"] .kc.kpi { padding:14px 14px; }
+        html.la-member .kpi-contacts[data-n="4"] .kc-name { font-size:13px; }
+        html.la-member .kpi-contacts[data-n="4"] .kc-actions { gap:5px; margin-top:6px; }
+        html.la-member .kpi-contacts[data-n="4"] .kc-btn { height:22px; padding:0 9px; font-size:10.5px; }
+        @media (max-width: 1100px) { html.la-member .kpi-contacts { grid-column:1 / -1; } html.la-member .kpi-contacts[data-n="4"] { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
         html.la-member #next-event-card { order:2; }   /* an artist: contacts first, Next event on the right */
         @media (max-width: 560px) { html.la-member .kpi-contacts { grid-template-columns:1fr !important; } }
         .kpi-contacts .kc.kpi { padding:18px 20px; min-height:0; display:flex; flex-direction:column; justify-content:center; gap:4px; min-width:0; text-decoration:none; color:inherit; }
