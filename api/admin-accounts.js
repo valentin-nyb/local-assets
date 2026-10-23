@@ -156,13 +156,20 @@ export default async function handler(req, res) {
     if (body.action === 'addLogin' || body.action === 'removeLogin') {
       const email = String(body.email || '').trim().toLowerCase();
       if (!/^[^\s@<>]+@[^\s@<>]+\.[a-z]{2,}$/i.test(email)) return res.status(400).json({ error: 'Enter a valid email' });
-      const own = accountLogins(slug, venue).filter(l => !l.added).map(l => l.email);
-      if (body.action === 'removeLogin' && own.includes(email)) return res.status(400).json({ error: 'This email is part of the account\'s own setup and can\'t be removed here.' });
+      const all = accountLogins(slug, venue), own = all.filter(l => !l.added).map(l => l.email);
+      if (body.action === 'removeLogin' && all.length <= 1 && all[0]?.email === email) return res.status(400).json({ error: 'An account needs at least one login. Add another one first.' });
       const list = await withRedis(async r => {
         let cur = []; try { cur = JSON.parse(await r.hGet(LOGINS_KEY, slug) || '[]'); } catch {}
         cur = cur.filter(e => e !== email);
         if (body.action === 'addLogin' && !own.includes(email)) cur.push(email);
         cur.length ? await r.hSet(LOGINS_KEY, slug, JSON.stringify(cur)) : await r.hDel(LOGINS_KEY, slug);
+        // One of the account's own setup emails: taken off (kept as an edit, as VENUES_CONFIG can't be changed
+        // from here); added again later, it comes back
+        let ed = {}; try { ed = JSON.parse(await r.hGet(EDITS_KEY, slug) || '{}'); } catch {}
+        const removed = new Set(ed.removed || []);
+        if (body.action === 'removeLogin' && own.includes(email)) removed.add(email);
+        if (body.action === 'addLogin') removed.delete(email);
+        if (removed.size !== (ed.removed || []).length) await r.hSet(EDITS_KEY, slug, JSON.stringify({ ...ed, removed: [...removed] }));
         await refreshRegistry(r);
         return cur;
       });
@@ -180,7 +187,7 @@ export default async function handler(req, res) {
         }
       }
       console.log('[admin-accounts]', body.action, slug, 'by', session.email);
-      return res.status(200).json({ ok: true, logins: accountLogins(slug, venue), added: list.length, emailed, emailError, emailId, delivery });
+      return res.status(200).json({ ok: true, logins: accountLogins(slug, { slug, ...getVenuesConfig()[slug] }), added: list.length, emailed, emailError, emailId, delivery });
     }
     // Accounts → Edit: the name, the type, the plan (when it isn't billed through Stripe) and the billing email
     if (body.action === 'edit') {
@@ -196,7 +203,8 @@ export default async function handler(req, res) {
         // Checked before anything is saved
         if (billed && planId !== (asg?.plan || '')) return { error: `${name}'s plan is billed through Stripe: change it there, or cancel it first.` };
         if (planId && !billed && !(await readPlans(r)).some(p => p.id === planId)) return { error: 'Unknown plan' };
-        await r.hSet(EDITS_KEY, slug, JSON.stringify({ name: newName.toUpperCase() }));
+        let ed = {}; try { ed = JSON.parse(await r.hGet(EDITS_KEY, slug) || '{}'); } catch {}
+        await r.hSet(EDITS_KEY, slug, JSON.stringify({ ...ed, name: newName.toUpperCase() }));
         await r.set(`brand_org_name:${slug}`, newName);
         if (type) await r.set(`brand_org_type:${slug}`, type);
         if (planId !== null && !billed) {

@@ -89,8 +89,8 @@
         .ac-logins { display:flex; flex-direction:column; border:1px solid var(--la-line); border-radius:12px; overflow:hidden; }
         .ac-login { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 14px; font-size:13px; color:var(--la-text); }
         .ac-login + .ac-login { border-top:1px solid var(--la-line); }
-        .ac-login span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-        .ac-login small { font:500 9px/1 'JetBrains Mono', monospace; letter-spacing:.14em; text-transform:uppercase; color:var(--la-dim); flex-shrink:0; }
+        .ac-login span { min-width:0; margin-right:auto; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .ac-login small { font:500 9px/1 'JetBrains Mono', monospace; letter-spacing:.14em; text-transform:uppercase; color:var(--la-dim); flex-shrink:0; margin-left:auto; }
         .ac-x { width:26px; height:26px; border-radius:999px; border:1px solid var(--la-line); background:none; color:var(--la-sub); cursor:pointer; flex-shrink:0; }
         .ac-addrow { display:flex; gap:8px; } .ac-addrow input { flex:1; min-width:0; }
         .ac-check { display:flex; align-items:center; gap:10px; font-size:13px; color:var(--la-sub); }
@@ -354,7 +354,7 @@
             var paint = function(list) {
                 a.logins = list;
                 box.innerHTML = list.length ? list.map(function(l) {
-                    return '<div class="ac-login"><span>' + esc(l.email) + '</span>' + (l.added ? '<button type="button" class="bl-x ac-x" data-rm="' + esc(l.email) + '" title="Remove this login" aria-label="Remove ' + esc(l.email) + '">×</button>' : '<small>Account setup</small>') + '</div>';
+                    return '<div class="ac-login"><span>' + esc(l.email) + '</span>' + (l.added ? '' : '<small>Account setup</small>') + '<button type="button" class="bl-x ac-x" data-rm="' + esc(l.email) + '" title="Remove this login" aria-label="Remove ' + esc(l.email) + '">×</button></div>';
                 }).join('') : '<p class="ac-empty" style="margin:0">No logins yet.</p>';
             };
             paint(a.logins || []);
@@ -366,6 +366,7 @@
             f.email.focus();
             box.addEventListener('click', async function(e) {
                 var b = e.target.closest('[data-rm]'); if (!b) return;
+                if (!(await laConfirm({ title: 'Remove ' + b.dataset.rm + '?', message: 'They can no longer sign in to ' + a.name + '. You can add them again any time.', confirmText: 'Remove login', danger: true }))) return;
                 b.disabled = true; err.textContent = '';
                 try { var d = await post({ action: 'removeLogin', slug: a.slug, email: b.dataset.rm }); paint(d.logins); laToast(b.dataset.rm + ' can no longer sign in to ' + a.name); }
                 catch (er) { b.disabled = false; err.textContent = er.message; }
