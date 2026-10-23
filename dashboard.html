@@ -2500,7 +2500,11 @@
 
             var streams = _health.cameras || [];
             var live = streams.filter(function(s) { return s.status === 'active'; });
-            if (camEl) camEl.textContent = _health.cameras == null ? '—' : streams.length ? live.length + '/' + streams.length + ' LIVE' : 'NONE';
+            if (camEl) {
+                camEl.textContent = _health.cameras == null ? '—' : streams.length ? live.length + '/' + streams.length + ' LIVE' : 'NONE';
+                // In colour only while a camera is live; white like the other figure otherwise
+                camEl.style.color = live.length ? '' : '#ffffff';
+            }
 
             function setImg(src) {
                 if (src) { if (img.getAttribute('src') !== src) img.src = src; img.classList.remove('hidden'); }

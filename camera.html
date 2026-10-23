@@ -1122,8 +1122,27 @@
                     try { var o = JSON.parse(pt); if (o && String(o.camera || '').toUpperCase() === 'SOCIAL') return { artist: String(o.artist || '').toUpperCase().trim(), n: Number(o.clip || o.n) || 0 }; } catch (_) {}
                     return null;
                 };
-                var clips = list.filter(function(a) { var c = socialOf(a); return c && c.artist === name && a.status === 'ready' && (a.playback_ids || []).length && Number(a.created_at) >= Number(m.created_at); })
-                    .sort(function(a, b) { return socialOf(a).n - socialOf(b).n; }).slice(0, 4);
+                // As in Distribution History: per clip number, the newest copy that belongs to this recording (cut
+                // from it, or a watermarked copy of one that was), so an older copy or another set's clip never shows
+                var byId = {}; list.forEach(function(a) { byId[a.id] = a; });
+                var mastersOf = masters.filter(function(a) { return String(artistOf(a)).toUpperCase() === name; }).sort(function(a, b) { return Number(a.created_at) - Number(b.created_at); });
+                var fromM = function(c, depth) {
+                    var ext = c.meta && c.meta.external_id;
+                    if (ext) return ext === m.id;
+                    var src = c.source_asset_id && byId[c.source_asset_id];
+                    if (src && (depth || 0) < 5) return src.id === m.id || (socialOf(src) ? fromM(src, (depth || 0) + 1) : false);
+                    if (c.source_asset_id) return false;
+                    // No link: the newest recording of this DJ made before it
+                    var own = null; mastersOf.forEach(function(x) { if (Number(x.created_at) <= Number(c.created_at)) own = x; });
+                    return !!own && own.id === m.id;
+                };
+                var best = {};
+                list.forEach(function(a) {
+                    var c = socialOf(a);
+                    if (!c || c.artist !== name || !c.n || a.status !== 'ready' || !(a.playback_ids || []).length || !fromM(a)) return;
+                    if (!best[c.n] || Number(a.created_at) > Number(best[c.n].created_at)) best[c.n] = a;
+                });
+                var clips = Object.keys(best).map(Number).sort(function(a, b) { return a - b; }).slice(0, 4).map(function(n) { return best[n]; });
                 document.querySelectorAll('#ci-branded i').forEach(function(t, i) {
                     var img = document.createElement('img');
                     img.alt = ''; img.className = 'ci-loop'; img.loading = 'lazy';
