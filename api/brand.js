@@ -18,7 +18,8 @@ import { ownerLimit, accountTypeOf, readAssignments } from './_billing.js';
 
 // "posts" are Instagram posts: several images kept together as one, under posts/<post id>/<image>
 // "videos": short videos (promos, teasers); each gets a copy with the watermark burned in (Mux, MP4)
-const CATEGORIES = ['logos', 'covers', 'artwork', 'posts', 'photos', 'videos', 'guidelines', 'fonts', 'looks', 'other'];
+// "animations": moving logos for the watermark (a GIF, or a transparent video turned into one)
+const CATEGORIES = ['logos', 'animations', 'covers', 'artwork', 'posts', 'photos', 'videos', 'guidelines', 'fonts', 'looks', 'other'];
 const videoWmKey = slug => `brand_video_wm:${slug}`;   // pathname → { assetId, pid, ready }
 const POST_ID = /^[a-z0-9]{6,24}$/;
 const newPostId = () => Math.random().toString(36).slice(2, 8) + Date.now().toString(36);

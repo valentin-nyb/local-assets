@@ -76,7 +76,7 @@ export async function resolveWatermark(redis, slug, artist, date = null) {
   if (!w.enabled) return null;
 
   const prefix = `brand/${slug}/`;
-  const logos = [];
+  const logos = [], anims = [];
   const fonts = new Set();
   let cursor;
   do {
@@ -84,6 +84,8 @@ export async function resolveWatermark(redis, slug, artist, date = null) {
     for (const b of page.blobs) {
       const [owner, category] = b.pathname.slice(prefix.length).split('/');
       if (category === 'logos' && LOGO_FILE.test(b.pathname)) logos.push({ owner, url: b.url, at: new Date(b.uploadedAt).getTime() });
+      // An animation is used only when picked by name (never as the account's default logo)
+      if (category === 'animations' && /\.gif$/i.test(b.pathname)) anims.push(b.url);
       if (category === 'fonts') fonts.add(b.url);
     }
     cursor = page.hasMore ? page.cursor : undefined;
@@ -91,7 +93,7 @@ export async function resolveWatermark(redis, slug, artist, date = null) {
   logos.sort((a, b) => b.at - a.at);
 
   let url = null;
-  if (w.logo.startsWith('https://')) url = logos.find(l => l.url === w.logo)?.url || null;
+  if (w.logo.startsWith('https://')) url = logos.find(l => l.url === w.logo)?.url || anims.find(u => u === w.logo) || null;
   if (!url && w.logo === 'auto' && artist) url = logos.find(l => l.owner === 'artist-' + slugify(artist))?.url || null;
   if (!url) url = logos.find(l => l.owner === 'venue')?.url || null;
   // Only a font still in this account's brand kit

@@ -4,7 +4,8 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { waitUntil } from '@vercel/functions';
-import { put } from '@vercel/blob';
+import { put, del as delBlob } from '@vercel/blob';
+import sharp from 'sharp';
 import { createClient } from 'redis';
 import { getWebSessionAuth } from './_venues.js';
 import { resolveWatermark } from './_watermark.js';
@@ -186,8 +187,50 @@ export default async function handler(req, res) {
   const slug = session.venueSlug, auth = session.muxAuth;
   const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
   // An artist with access only watches and downloads (the account cuts and watermarks)
-  if (session.member && body.action !== 'sweep' && body.action !== 'exportGif') return res.status(403).json({ error: 'Only the account can do this' });
+  if (session.member && body.action !== 'sweep' && body.action !== 'exportGif' && body.action !== 'prepareAnimation') return res.status(403).json({ error: 'Only the account can do this' });
   if (body.action === 'apply' || body.action === 'applyMaster') { const _p = await pausedBy(slug, body.artist ? `artist:${String(body.artist).toUpperCase()}` : null); if (_p) return sendPaused(res, _p); }
+
+  // Brand Kit → Animations, after an upload: a moving logo to use as the watermark. A GIF is kept as it is
+  // (it must move); a video with a transparent background (ProRes 4444 .mov, WebM with alpha) becomes a
+  // looping GIF in its place, the form the clip renderer draws. A video with no transparency is refused.
+  if (body.action === 'prepareAnimation') {
+    const url = String(body.url || '');
+    let pathname = '';
+    try { const u = new URL(url); if (/\.public\.blob\.vercel-storage\.com$/i.test(u.hostname)) pathname = decodeURIComponent(u.pathname.slice(1)); } catch {}
+    const parts = pathname.startsWith(`brand/${slug}/`) ? pathname.slice(`brand/${slug}/`.length).split('/') : [];
+    if (parts.length < 3 || parts[1] !== 'animations') return res.status(400).json({ error: 'Not one of your animations' });
+    if (session.member && parts[0] !== session.member.owner) return res.status(403).json({ error: 'Only your own animations' });
+    if (/\.gif$/i.test(pathname)) {
+      const m = await fetch(url).then(r => r.arrayBuffer()).then(b => sharp(Buffer.from(b), { animated: true }).metadata()).catch(() => null);
+      if (!m) return res.status(400).json({ error: 'This GIF could not be read' });
+      return res.status(200).json({ url, moving: (m.pages || 1) > 1 });
+    }
+    if (!/\.(mp4|mov|m4v|webm)$/i.test(pathname)) return res.status(400).json({ error: 'Use a GIF, or an MP4, MOV or WebM video' });
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'anim-'));
+    try {
+      const src = path.join(dir, 'src' + path.extname(pathname).toLowerCase()), out = path.join(dir, 'anim.gif');
+      fs.writeFileSync(src, Buffer.from(await (await fetch(url)).arrayBuffer()));
+      // WebM keeps its transparency only through the libvpx decoder. 10 s at most, 15 frames a second,
+      // 720 px wide at most (a watermark logo is far smaller), each frame's transparent pixels kept clear
+      await run(['-hide_banner', '-loglevel', 'error', '-y', ...(/\.webm$/i.test(src) ? ['-c:v', 'libvpx-vp9'] : []), '-t', '10', '-i', src,
+        '-vf', "fps=15,scale='min(720,iw)':-2:flags=lanczos,format=rgba,split[a][b];[a]palettegen=reserve_transparent=1:stats_mode=full[p];[b][p]paletteuse=alpha_threshold=128:dither=none",
+        '-loop', '0', out]);
+      const gif = fs.readFileSync(out);
+      // Transparent somewhere in the first frame, or it would cover the clip with a rectangle
+      const st = await sharp(gif, { pages: 1 }).ensureAlpha().stats();
+      if (st.channels[3].min === 255) {
+        await delBlob(url).catch(() => {});
+        return res.status(400).json({ error: 'This video has no transparent background, so it would cover the clip with a box. Export it as ProRes 4444 (.mov) or WebM with alpha, or use a GIF.' });
+      }
+      const blob = await put(pathname.replace(/\.[a-z0-9]+$/i, '.gif'), gif, { access: 'public', contentType: 'image/gif', addRandomSuffix: true });
+      await delBlob(url).catch(() => {});
+      console.log('[watermark-clips] animation ready', slug, parts[0], Math.round(gif.length / 1024) + ' KB');
+      return res.status(200).json({ url: blob.url, moving: true });
+    } catch (e) {
+      console.error('[watermark-clips] animation', slug, e.message);
+      return res.status(400).json({ error: 'This video could not be turned into an animation: ' + e.message });
+    } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+  }
 
   // Brand Kit "Export GIF": the watermark with a moving logo as an animated GIF, at 4K, transparent
   if (body.action === 'exportGif') {

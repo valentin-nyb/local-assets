@@ -284,6 +284,8 @@
         @media (hover:hover) { .bk-file-actions a:hover, .bk-file-actions button:hover { background:var(--la-chip); color:var(--la-text); } .bk-file-actions .del:hover { color:var(--la-bad); } }
         .bk-empty-owner { font-size:12px; color:var(--la-dim); padding:14px 0 2px; }
         .bk-empty-owner button { color:var(--la-accent); background:none; border:none; padding:0; cursor:pointer; font:inherit; }
+        .bk-anim-note { margin:0; padding:10px 12px; border-radius:10px; background:var(--la-chip); font-size:12px; line-height:1.5; color:var(--la-sub); }
+        .bk-anim-note b { color:var(--la-text); font-weight:600; }
         .bk-drop { border:1.5px dashed var(--la-line); border-radius:12px; padding:22px 14px; text-align:center; color:var(--la-sub); font-size:13px; cursor:pointer; transition:border-color .15s, background .15s; }
         .bk-drop.over, .bk-drop:focus-visible { border-color:var(--la-accent); background:var(--la-accent-soft); outline:none; }
         .bk-drop iconify-icon { font-size:26px; color:var(--la-dim); display:flex; justify-content:center; width:100%; margin:0 0 6px; }
@@ -510,6 +512,8 @@
         // Files are stored per owner: the venue, or "artist-<slug>" for each artist.
         var CATS = [
             { key: 'logos',      label: 'Logos',      icon: 'solar:star-shine-linear', tag: 'Logo' },
+            // Moving logos for the watermark: a GIF, or a video with a transparent background (turned into a GIF)
+            { key: 'animations', label: 'Animation',  icon: 'solar:play-circle-linear', tag: 'Animation' },
             { key: 'covers',     label: 'Album covers', icon: 'solar:vinyl-record-linear', tag: 'Album cover' },
             { key: 'artwork',    label: 'Artwork',    icon: 'solar:gallery-wide-linear', tag: 'Artwork' },
             // Several images kept together as one post (a carousel)
@@ -611,7 +615,7 @@
         var WM_TEXT_PX = { s: 48, m: 66, l: 102, xl: 118 };
         // The clip worker draws watermark text from these font files (not WOFF2)
         var WM_TEXT_FONT = /\.(ttf|otf|woff)$/i;
-        function wmLogos() { return _files.filter(function(f) { return f.category === 'logos' && /\.(png|svg|webp|jpe?g|gif)$/i.test(f.name); }); }
+        function wmLogos() { return _files.filter(wmLogoFile); }
         function wmPreviewLogoRaw() {
             var logos = wmLogos();
             if (/^https:/.test(_wm.logo)) { var m = logos.filter(function(f) { return f.url === _wm.logo; })[0]; if (m) return m.url; }
@@ -1571,7 +1575,7 @@
         // Pictures that can become a session thumbnail (covers, artwork, photos)
         function thumbFile(f) { return f.category !== 'logos' && /\.(png|jpe?g|webp)$/i.test(f.name); }
         // Logos the clip worker can stamp on clips
-        function wmLogoFile(f) { return f.category === 'logos' && /\.(png|svg|webp|jpe?g|gif)$/i.test(f.name); }
+        function wmLogoFile(f) { return (f.category === 'logos' && /\.(png|svg|webp|jpe?g|gif)$/i.test(f.name)) || (f.category === 'animations' && /\.gif$/i.test(f.name)); }
         function wmUsesLogo(f) { return !!_wm && _wm.enabled && wmPreviewLogoRaw() === f.url; }
         // From a logo card or its popup: this logo becomes the watermark, bottom left
         function useLogoAsWatermark(url) {
@@ -2065,10 +2069,11 @@
                 '<div class="bk-row2"><label>For<select name="owner">' + opts + '</select></label>' +
                 '<label>Type<select name="category">' + CATS.map(function(c) { return '<option value="' + c.key + '">' + c.label + '</option>'; }).join('') + '</select></label></div>' +
                 '<label id="bk-new-wrap" class="hidden"><span id="bk-new-label">Name</span><input name="newName" maxlength="60"></label>' +
+                '<p id="bk-anim-note" class="bk-anim-note hidden"><b>A moving logo for your watermark.</b> Upload a GIF, or an MP4, MOV or WebM with a transparent background (ProRes 4444 or WebM with alpha). Up to 10 seconds, looped on every clip.</p>' +
                 '<label id="bk-other-wrap" class="hidden">What is it?<input name="otherLabel" maxlength="40" placeholder="e.g. Press kit, Tech rider, Stage plot"><small>Shown on the file instead of "Other".</small></label>' +
                 '<label id="bk-label-artist-wrap" class="hidden">Artist<select name="labelArtist">' + artistOpts + '</select><small>The record label\'s brand kit is kept under this artist.</small></label>' +
                 '<div id="bk-drop" class="bk-drop" tabindex="0">Drop files here or <b>browse</b>' +
-                    '<small>Logos, covers, artwork, photos, videos, PDFs, AI/EPS, fonts, colour looks (.cube) or ZIP · up to 200 MB each</small></div>' +
+                    '<small>Logos, animations, covers, artwork, photos, videos, PDFs, AI/EPS, fonts, colour looks (.cube) or ZIP · up to 200 MB each</small></div>' +
                 '<input id="bk-input" type="file" multiple class="hidden" accept=".png,.jpg,.jpeg,.svg,.webp,.gif,.pdf,.ai,.eps,.psd,.zip,.ttf,.otf,.woff,.woff2,.txt,.cube,.mp4,.mov,.m4v,.webm">' +
                 '<div id="bk-queue" class="bk-queue"></div>' +
                 '<p id="bk-form-error" class="cam-form-error"></p>' +
@@ -2079,6 +2084,7 @@
             var syncOther = function() {
                 var other = form.category.value === 'other';
                 document.getElementById('bk-other-wrap').classList.toggle('hidden', !other);
+                document.getElementById('bk-anim-note').classList.toggle('hidden', form.category.value !== 'animations');
                 if (other && catTouched) setTimeout(function() { form.otherLabel.focus(); }, 0);
             };
             form.category.addEventListener('change', function() { catTouched = true; syncOther(); });
@@ -2094,11 +2100,13 @@
                     if (/\.(ttf|otf|woff2?)$/i.test(p0.name)) form.category.value = 'fonts';
                     else if (/\.cube$/i.test(p0.name)) form.category.value = 'looks';
                     else if (/pdf/.test(p0.type)) form.category.value = 'guidelines';
+                    else if (/\.gif$/i.test(p0.name)) form.category.value = 'animations';
                     else if (/^video\//.test(p0.type) || VID_EXT.test(p0.name)) form.category.value = 'videos';
                     else if (/^image\//.test(p0.type)) form.category.value =
                         /cover|album|release|single|\bep\b/i.test(p0.name) ? 'covers'
                         : /artwork|poster|flyer|visual|graphic/i.test(p0.name) ? 'artwork'
                         : /photo|press|portrait|avatar|shot|img_|dsc/i.test(p0.name) || /jpe?g$/i.test(p0.name) ? 'photos' : 'logos';
+                    syncOther();
                 }
             };
             var syncNew = function() {
@@ -2150,6 +2158,14 @@
                         });
                         if (form.category.value === 'other' && form.otherLabel.value.trim() && up && up.url) {
                             await laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setFileLabel', url: up.url, label: form.otherLabel.value.trim() }) }).catch(function() {});
+                        }
+                        // An animation: checked, and a video turned into a looping GIF (it must have a transparent background)
+                        if (form.category.value === 'animations' && up && up.url) {
+                            row.querySelector('.st').textContent = 'Preparing…';
+                            var ar = await laFetch('/api/watermark-clips', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'prepareAnimation', url: up.url }) });
+                            var ad = await ar.json().catch(function() { return {}; });
+                            if (!ar.ok) throw new Error(ad.error || ar.status);
+                            if (ad.moving === false) errEl.textContent = f.name + ' is a still GIF: it works as a watermark, but won\'t move.';
                         }
                         // A video: a watermarked copy is made straight away (shown as "Watermarking…" until it's ready)
                         if (form.category.value === 'videos' && VID_EXT.test(safe) && up && up.url) {
@@ -2273,7 +2289,7 @@
             document.querySelectorAll('.bk-cat-opt').forEach(function(b) {
                 b.addEventListener('click', async function() {
                     if (b.dataset.cat === 'watermark') {
-                        if (f.category === 'logos') { useLogoAsWatermark(f.url); return; }
+                        if (f.category === 'logos' || f.category === 'animations') { useLogoAsWatermark(f.url); return; }
                         b.dataset.cat = 'logos';
                         var asWatermark = true;
                     }
