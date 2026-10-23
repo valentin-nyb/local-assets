@@ -7,13 +7,15 @@ import { createClient } from 'redis';
 //   muxWebhook: <encrypted signing secret of the environment's webhook> }.
 // Read into a cache when a function starts and refreshed in the background, so lookups stay synchronous.
 const REGISTRY_KEY = 'la_venues';
-let _registry = {}, _registryAt = 0, _registryLoading = null, _deleted = new Set(), _members = {}, _artistsOf = {}, _logins = {};
+let _registry = {}, _registryAt = 0, _registryLoading = null, _deleted = new Set(), _members = {}, _artistsOf = {}, _logins = {}, _edits = {};
 // Artists given access by a venue or record label (Brand Kit → Give access): email → [{ slug, owner, name }].
 // They sign in to that account but only see their own sets and Brand Kit folder (see memberAllowed).
 export const MEMBERS_KEY = 'la_artist_members';
 // People added to a whole account by local / assets (Accounts → Logins), beside the emails it was set up with:
 // slug → JSON [emails]. They sign in like the account's own emails.
 export const LOGINS_KEY = 'la_logins';
+// Changes made in Accounts → Edit (slug → JSON { name }), laid over the account's setup, VENUES_CONFIG included
+export const EDITS_KEY = 'la_account_edits';
 const encKey = () => crypto.createHash('sha256').update(process.env.LOCAL_ASSETS_API_KEY || 'dev-secret-change-me').digest();
 export function sealSecret(text) {
   const iv = crypto.randomBytes(12), c = crypto.createCipheriv('aes-256-gcm', encKey(), iv);
@@ -42,6 +44,7 @@ export async function refreshRegistry(redis = null) {
     }
     _deleted = new Set(await redis.sMembers('la_deleted').catch(() => []));   // accounts deleted by the admin
     _logins = Object.fromEntries(Object.entries(await redis.hGetAll(LOGINS_KEY).catch(() => ({})) || {}).map(([k, v]) => { try { return [k, JSON.parse(v).map(e => String(e).toLowerCase().trim())]; } catch { return [k, []]; } }));
+    _edits = Object.fromEntries(Object.entries(await redis.hGetAll(EDITS_KEY).catch(() => ({})) || {}).map(([k, v]) => { try { const o = JSON.parse(v); return [k, o.name ? { name: String(o.name) } : {}]; } catch { return [k, {}]; } }));
     _members = Object.fromEntries(Object.entries(await redis.hGetAll(MEMBERS_KEY).catch(() => ({})) || {}).map(([e, v]) => { try { return [e, JSON.parse(v)]; } catch { return [e, []]; } }));
     _registry = out; _registryAt = Date.now();
     // Each account's artists (its artist logins and Brand Kit artist folders), for the admin's account menu
@@ -86,6 +89,7 @@ export function getVenuesConfig() {
   // Configured venues win over sign-ups with the same slug
   const all = { ..._registry, ...readEnvConfig() };
   for (const slug of _deleted) delete all[slug];
+  for (const [slug, e] of Object.entries(_edits)) if (all[slug]) all[slug] = { ...all[slug], ...e };
   return all;
 }
 

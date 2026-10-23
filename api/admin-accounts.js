@@ -1,11 +1,22 @@
 import { list, del } from '@vercel/blob';
 import { createClient } from 'redis';
-import { getWebSessionAuth, getVenuesConfig, isAdminVenue, refreshRegistry, getMuxAuthForVenue, MEMBERS_KEY, freshVenues, LOGINS_KEY, accountLogins } from './_venues.js';
-import { readAssignments, readPlans, stripeClient, accountTypeOf, DISCOUNTS_KEY } from './_billing.js';
+import { getWebSessionAuth, getVenuesConfig, isAdminVenue, refreshRegistry, getMuxAuthForVenue, MEMBERS_KEY, freshVenues, LOGINS_KEY, EDITS_KEY, accountLogins } from './_venues.js';
+import { readAssignments, readPlans, stripeClient, accountTypeOf, DISCOUNTS_KEY, assignKey } from './_billing.js';
 import { unpaidKey, readUnpaid } from './_suspend.js';
 import { thumbnailPrefix } from './_thumbnails.js';
 import { Resend } from 'resend';
 import { accessInviteEmail, mailFrom } from './_emails.js';
+
+// Resend's latest event for one email: sent, delivered, delivery_delayed, bounced, complained…
+// waited for up to ms while it is still only "sent" or "queued"
+async function deliveryOf(resend, id, ms) {
+  const end = Date.now() + ms;
+  for (;;) {
+    const ev = await resend.emails.get(id).then(x => x?.data?.last_event || null).catch(() => null);
+    if ((ev && ev !== 'sent' && ev !== 'queued') || Date.now() >= end) return ev;
+    await new Promise(r => setTimeout(r, 1500));
+  }
+}
 
 // Admin only (local / assets): every client account, and what can be done to it.
 //   GET                                   the accounts, each with its plan and status
@@ -100,7 +111,7 @@ export default async function handler(req, res) {
           const artists = Object.values(members || {}).reduce((n, raw) => { try { return n + JSON.parse(raw).filter(m => m.slug === slug).length; } catch { return n; } }, 0);
           return {
             slug, name: v.name || slug, logins: accountLogins(slug, v), type: await accountTypeOf(redis, slug).catch(() => v.type || 'venue'),
-            email: asg.email || v.email || '', plan: (plans.find(p => p.id === asg.plan) || {}).name || asg.plan || '',
+            email: asg.email || v.email || '', plan: (plans.find(p => p.id === asg.plan) || {}).name || asg.plan || '', planId: asg.plan || '',
             paused: unpaid.some(i => i.id === ADMIN_PAUSE), unpaid: unpaid.filter(i => i.id !== ADMIN_PAUSE && i.target === 'venue').map(i => i.number || i.id),
             subscription: sub ? sub.status : subId ? 'unknown' : 'none', endsAt: ends ? ends * 1000 : null,
             setupPending: v.status === 'pending', artists, video: !!getMuxAuthForVenue({ slug, ...v }), discount: Number(discounts?.[slug]) || 0,
@@ -124,10 +135,16 @@ export default async function handler(req, res) {
       const account = pick ? (pick[1].name || pick[0]) : 'Your venue';
       const artist = pick ? await withRedis(async r => Object.entries(await r.hGetAll(`brand_owner_names:${pick[0]}`) || {}).filter(([k]) => k.startsWith('artist-')).map(([, v]) => v)[0] || '').catch(() => '') : '';
       const m = accessInviteEmail({ kind: body.kind === 'team' ? 'team' : 'artist', artist: String(artist || 'Artist name').toUpperCase(), account, email: to, example: true });
-      const r = await new Resend(key).emails.send({ from: mailFrom(), replyTo: 'info@local-assets.com', to, subject: m.subject, html: m.html, text: m.text }).catch(e => ({ error: e }));
+      const resend = new Resend(key), from = mailFrom();
+      const r = await resend.emails.send({ from, replyTo: 'info@local-assets.com', to, subject: m.subject, html: m.html, text: m.text }).catch(e => ({ error: e }));
       if (r?.error) return res.status(502).json({ error: 'Could not send it: ' + (r.error.message || r.error.name || 'email refused') });
-      console.log('[admin-accounts] access email example sent by', session.email);
-      return res.status(200).json({ ok: true, account, artist });
+      const id = r?.data?.id || null;
+      // What Resend knows a few seconds later (delivered, bounced…), and whether the sender's domain is verified
+      const status = id ? await deliveryOf(resend, id, 8000) : null;
+      const domain = from.split('@')[1].replace(/>$/, '');
+      const dom = await resend.domains.list().then(x => (x?.data?.data || x?.data || []).find(d => d.name === domain)).catch(() => null);
+      console.log('[admin-accounts] access email example sent by', session.email, '| from', domain, '| id', id, '| status', status, '| domain', dom ? dom.status : 'not in Resend');
+      return res.status(200).json({ ok: true, account, artist, id, from, status, domain: dom ? dom.status : 'missing' });
     }
     const slug = String(body.slug || '').trim();
     const entry = clients.find(([s]) => s === slug);
@@ -149,18 +166,55 @@ export default async function handler(req, res) {
         await refreshRegistry(r);
         return cur;
       });
-      let emailed = false;
+      let emailed = false, emailError = null, emailId = null, delivery = null;
       if (body.action === 'addLogin') {
         const key = process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY;
         if (key) {
           const m = accessInviteEmail({ kind: 'team', account: name, email });
-          const r = await new Resend(key).emails.send({ from: mailFrom(), replyTo: 'info@local-assets.com', to: email, subject: m.subject, html: m.html, text: m.text }).catch(e => ({ error: e }));
+          const resend = new Resend(key);
+          const r = await resend.emails.send({ from: mailFrom(), replyTo: 'info@local-assets.com', to: email, subject: m.subject, html: m.html, text: m.text }).catch(e => ({ error: e }));
           emailed = !r?.error;
-          if (r?.error) console.error('[admin-accounts] access email', slug, r.error.message || r.error);
+          if (r?.error) { console.error('[admin-accounts] access email', slug, r.error.message || r.error); emailError = r.error.message || r.error.name || 'refused'; }
+          // What Resend knows a few seconds later: delivered, bounced, suppressed…
+          else if (r?.data?.id) { emailId = r.data.id; delivery = await deliveryOf(resend, emailId, 8000); console.log('[admin-accounts] access email', slug, 'id', emailId, 'status', delivery); }
         }
       }
       console.log('[admin-accounts]', body.action, slug, 'by', session.email);
-      return res.status(200).json({ ok: true, logins: accountLogins(slug, venue), added: list.length, emailed });
+      return res.status(200).json({ ok: true, logins: accountLogins(slug, venue), added: list.length, emailed, emailError, emailId, delivery });
+    }
+    // Accounts → Edit: the name, the type, the plan (when it isn't billed through Stripe) and the billing email
+    if (body.action === 'edit') {
+      const newName = String(body.name || '').replace(/[<>\u0000-\u001f]/g, '').replace(/\s+/g, ' ').trim().slice(0, 60);
+      if (!newName) return res.status(400).json({ error: 'Type the account name' });
+      const type = ['venue', 'label', 'artist', 'management'].includes(body.type) ? body.type : null;
+      const billEmail = String(body.billingEmail || '').trim().toLowerCase();
+      if (billEmail && !/^[^\s@<>]+@[^\s@<>]+\.[a-z]{2,}$/i.test(billEmail)) return res.status(400).json({ error: 'Enter a valid billing email' });
+      const out = await withRedis(async r => {
+        const asg = (await readAssignments(r, slug)).venue || null;
+        const planId = body.plan === undefined ? null : String(body.plan || '');
+        const billed = planId !== null && !!(await subscriptionOf(r, slug));
+        // Checked before anything is saved
+        if (billed && planId !== (asg?.plan || '')) return { error: `${name}'s plan is billed through Stripe: change it there, or cancel it first.` };
+        if (planId && !billed && !(await readPlans(r)).some(p => p.id === planId)) return { error: 'Unknown plan' };
+        await r.hSet(EDITS_KEY, slug, JSON.stringify({ name: newName.toUpperCase() }));
+        await r.set(`brand_org_name:${slug}`, newName);
+        if (type) await r.set(`brand_org_type:${slug}`, type);
+        if (planId !== null && !billed) {
+          // No plan: the billing details are kept for later
+          if (!planId) { if (asg) await r.hSet(assignKey(slug), 'venue', JSON.stringify({ ...asg, plan: '' })); }
+          else {
+            const first = accountLogins(slug, venue)[0]?.email || '';
+            await r.hSet(assignKey(slug), 'venue', JSON.stringify({ ...(asg || { name: '', monthly: true }), plan: planId, email: billEmail || asg?.email || first }));
+          }
+        }
+        const now = (await readAssignments(r, slug)).venue;
+        if (billEmail && now && now.email !== billEmail) await r.hSet(assignKey(slug), 'venue', JSON.stringify({ ...now, email: billEmail }));
+        await refreshRegistry(r);
+        return {};
+      });
+      if (out.error) return res.status(400).json({ error: out.error });
+      console.log('[admin-accounts] edit', slug, 'by', session.email);
+      return res.status(200).json({ ok: true });
     }
     if (body.action === 'pause' || body.action === 'resume') {
       await withRedis(r => body.action === 'pause'
@@ -258,6 +312,7 @@ export default async function handler(req, res) {
         await redis.hDel('la_venues', slug);
         await redis.hDel(DISCOUNTS_KEY, slug);
         await redis.hDel(LOGINS_KEY, slug);
+        await redis.hDel(EDITS_KEY, slug);
         await redis.sAdd('la_deleted', slug);
         await refreshRegistry(redis);
       });

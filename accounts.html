@@ -48,7 +48,8 @@
         .ac-eyebrow { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--la-dim); }
         .ac-h { font-size:26px; line-height:1.2; color:var(--la-text); margin-top:6px; }
         .ac-sub { font-size:13px; line-height:1.6; color:var(--la-sub); margin-top:6px; max-width:680px; }
-        .ac-emails { margin-top:36px; padding-top:24px; border-top:1px solid var(--la-line); }
+        .ac-mail { margin:0; font-size:13px; line-height:1.5; color:var(--la-sub); }
+        .ac-mail b { color:var(--la-text); font-weight:600; }
         .ac-tools { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
         .ac-tools input { height:40px; min-width:260px; border-radius:999px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 16px; font-size:14px; outline:none; }
         .ac-tools input:focus { border-color:var(--la-accent); }
@@ -92,7 +93,6 @@
         .ac-login small { font:500 9px/1 'JetBrains Mono', monospace; letter-spacing:.14em; text-transform:uppercase; color:var(--la-dim); flex-shrink:0; }
         .ac-x { width:26px; height:26px; border-radius:999px; border:1px solid var(--la-line); background:none; color:var(--la-sub); cursor:pointer; flex-shrink:0; }
         .ac-addrow { display:flex; gap:8px; } .ac-addrow input { flex:1; min-width:0; }
-        #ac-ex select { height:40px; border-radius:999px; }
         .ac-check { display:flex; align-items:center; gap:10px; font-size:13px; color:var(--la-sub); }
         .ac-check input { width:16px; height:16px; accent-color:var(--la-accent); }
         .ac-panel .ac-btn.primary-acc { background:var(--la-accent); border-color:var(--la-accent); color:var(--la-accent-ink); }
@@ -121,11 +121,6 @@
                 <div class="ac-tools"><input id="ac-q" type="search" placeholder="Search accounts" aria-label="Search accounts"><span class="ac-sub" id="ac-count" style="margin:0"></span><button type="button" class="cam-btn primary" id="ac-new" style="margin-left:auto">New account</button></div>
                 <div class="ac-list" id="ac-list"><p class="ac-empty">Loading…</p></div>
                 <!-- The emails clients get, as examples -->
-                <div class="ac-emails">
-                    <p class="ac-eyebrow" style="margin:0">Emails</p>
-                    <p class="ac-sub" style="margin:6px 0 12px">The email someone gets when they're added to an account (Logins) or an artist is given access (Brand Kit → Give access), sent as an example.</p>
-                    <form class="ac-tools" id="ac-ex"><select name="kind" aria-label="Which email"><option value="team">Added to an account (Logins)</option><option value="artist">Artist given access (Brand Kit)</option></select><input type="email" name="to" placeholder="Send the example to…" aria-label="Email to send the example to" required><button type="submit" class="cam-btn ghost">Send example</button><span class="ac-sub" id="ac-ex-msg" style="margin:0"></span></form>
-                </div>
             </div>
         </div>
     </main>
@@ -146,14 +141,20 @@
             try { var s = JSON.parse(localStorage.getItem('la_admin') || '{}'); var v = (s.venue || '').toUpperCase();
                 document.getElementById('venue-breadcrumb').textContent = v; document.getElementById('venue-avatar').textContent = (v || '?').charAt(0); } catch (_) {}
         })();
-        document.getElementById('ac-ex').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            var f = this, b = f.querySelector('button'), msg = document.getElementById('ac-ex-msg');
-            b.disabled = true; msg.textContent = 'Sending…';
-            try { var d = await post({ action: 'emailExample', kind: f.kind.value, to: f.to.value.trim() }); msg.textContent = 'Sent to ' + f.to.value.trim() + ' (' + d.account + (d.artist ? ', ' + d.artist : '') + ')'; }
-            catch (er) { msg.textContent = er.message; }
-            b.disabled = false;
-        });
+        // What Resend says happened to the email, in plain words
+        function deliveryText(status, domain) {
+            var dom = domain === 'verified' ? '' : domain === 'missing' ? ' The sending domain isn\'t set up in Resend, so inboxes may refuse it.' : domain ? ' The sending domain is "' + esc(domain) + '" in Resend, not verified: inboxes may refuse it.' : '';
+            var t = {
+                delivered: '<b>Delivered</b>: it reached the inbox server. Look in Spam or Promotions if it isn\'t in the inbox.',
+                bounced: '<b>Bounced</b>: the address refused it. Check the address, or remove it from Resend → Suppressions.',
+                complained: '<b>Marked as spam</b> by the recipient before. Remove it from Resend → Suppressions.',
+                delivery_delayed: '<b>Delayed</b>: the inbox is holding it. Check again in a few minutes.',
+                failed: '<b>Failed</b>: Resend couldn\'t send it.',
+                suppressed: '<b>Suppressed</b>: Resend blocks this address after an earlier bounce or spam report. Remove it from Resend → Suppressions.',
+                sent: '<b>Sent</b>, waiting for the inbox to answer.', queued: '<b>Queued</b> at Resend.'
+            }[status] || 'Delivery not known yet.';
+            return t + dom;
+        }
         function post(body) {
             return laFetch('/api/admin-accounts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
                 .then(function(r) { return r.json().catch(function() { return {}; }).then(function(d) { if (!r.ok) throw new Error(d.error || r.status); return d; }); });
@@ -197,6 +198,7 @@
                         '<p class="ac-meta">' + esc([a.type, a.plan || 'No plan', a.email, a.artists ? a.artists + ' artist login' + (a.artists !== 1 ? 's' : '') : ''].filter(Boolean).join(' · ')) + '</p></div>' +
                     '<div class="ac-chips">' + chips(a) + '</div>' +
                     '<div class="ac-actions">' +
+                        '<button type="button" class="ac-btn" data-act="edit">Edit</button>' +
                         '<button type="button" class="ac-btn" data-act="logins">Logins' + ((a.logins || []).length ? ' ' + a.logins.length : '') + '</button>' +
                         '<button type="button" class="ac-btn" data-act="discount">' + (a.discount ? 'Discount ' + a.discount + '%' : 'Discount') + '</button>' +
                         '<button type="button" class="ac-btn" data-act="' + (a.paused ? 'resume' : 'pause') + '">' + (a.paused ? 'Resume' : 'Pause') + '</button>' +
@@ -212,6 +214,7 @@
             var act = b.dataset.act;
             if (act === 'delete') return openDelete(a);
             if (act === 'logins') return openLogins(a);
+            if (act === 'edit') return openEdit(a);
             if (act === 'discount') return openDiscount(a);
             var ask = {
                 pause: { title: 'Pause ' + a.name + '?', message: 'Uploads, vertical clips, watermarks, recording and publishing stop, and the account sees a banner saying local / assets paused it. Everything is kept; resume it any time.', confirmText: 'Pause account', danger: true },
@@ -284,6 +287,55 @@
             };
         }
 
+        // Accounts → Edit: name, type, plan (unless it's billed through Stripe) and the billing email
+        function openEdit(a) {
+            var billed = a.subscription && a.subscription !== 'none';
+            var m = document.createElement('div');
+            m.className = 'ac-back';
+            m.innerHTML = '<form class="ac-panel ac-new" role="dialog" aria-modal="true" aria-labelledby="ac-et" autocomplete="off">' +
+                '<h3 id="ac-et">Edit ' + esc(a.name) + '</h3>' +
+                '<label class="ac-f">Account name<input name="name" maxlength="60" required></label>' +
+                '<label class="ac-f">Type<select name="type"><option value="venue">Venue</option><option value="artist">Artist</option><option value="label">Record label</option><option value="management">Management</option></select></label>' +
+                '<label class="ac-f">Plan<select name="plan"' + (billed ? ' disabled' : '') + '><option value="">No plan (free until one is given)</option></select>' + (billed ? '<small>Billed through Stripe: change it there, or cancel it first.</small>' : '') + '</label>' +
+                '<label class="ac-f">Billing email<input name="billingEmail" type="email" placeholder="Where bills are sent"></label>' +
+                '<p class="ac-err"></p>' +
+                '<div class="ac-bar"><button type="button" class="ac-btn" data-cancel>Cancel</button><button type="submit" class="ac-btn primary-acc">Save</button></div>' +
+            '</form>';
+            document.body.appendChild(m);
+            var f = m.querySelector('form'), err = f.querySelector('.ac-err'), go = f.querySelector('[type=submit]');
+            f.name.value = a.name; f.type.value = a.type || 'venue'; f.billingEmail.value = a.email || '';
+            var close = function() { m.remove(); document.removeEventListener('keydown', onKey); };
+            var onKey = function(e) { if (e.key === 'Escape') close(); };
+            document.addEventListener('keydown', onKey);
+            m.addEventListener('click', function(e) { if (e.target === m) close(); });
+            f.querySelector('[data-cancel]').onclick = close;
+            f.name.focus();
+            var paintPlans = function() {
+                if (!_plans) return;
+                var t = f.type.value === 'management' ? 'label' : f.type.value, cur = f.plan.dataset.v != null ? f.plan.value : (a.planId || '');
+                f.plan.dataset.v = '1';
+                var price = {}; ((_plans.byType || {})[t] || []).forEach(function(p) { price[p.id] = p.price; });
+                f.plan.innerHTML = '<option value="">No plan (free until one is given)</option>' + (_plans.plans || []).map(function(p) {
+                    var pr = price[p.id] != null ? price[p.id] : p.price;
+                    return '<option value="' + esc(p.id) + '"' + (p.id === cur ? ' selected' : '') + '>' + esc(p.name) + ' · ' + (pr > 0 ? '£' + pr.toLocaleString('en-GB') + ' a month' : 'pay as you go') + '</option>';
+                }).join('');
+            };
+            (_plans ? Promise.resolve(_plans) : fetch('/api/plans').then(function(r) { return r.json(); })).then(function(d) { _plans = d; paintPlans(); }).catch(function() {});
+            f.type.addEventListener('change', paintPlans);
+            f.onsubmit = async function(e) {
+                e.preventDefault();
+                go.disabled = true; go.textContent = 'Saving…'; err.textContent = '';
+                try {
+                    var body = { action: 'edit', slug: a.slug, name: f.name.value.trim(), type: f.type.value, billingEmail: f.billingEmail.value.trim() };
+                    if (!billed && _plans) body.plan = f.plan.value;
+                    await post(body);
+                    close();
+                    laToast(f.name.value.trim() + ' saved');
+                    load();
+                } catch (er) { go.disabled = false; go.textContent = 'Save'; err.textContent = 'Could not save it: ' + er.message; }
+            };
+        }
+
         // Who signs in to the whole account: its own emails, and people added here (each gets the access email)
         function openLogins(a) {
             var m = document.createElement('div');
@@ -294,10 +346,11 @@
                 '<div class="ac-logins"></div>' +
                 '<div class="ac-addrow"><input name="email" type="email" placeholder="name@venue.com" aria-label="Email to add" required><button type="submit" class="ac-btn primary-acc">Add and send email</button></div>' +
                 '<p class="ac-err"></p>' +
+                '<p class="ac-mail" aria-live="polite"></p>' +
                 '<div class="ac-bar"><button type="button" class="ac-btn" data-cancel>Done</button></div>' +
             '</form>';
             document.body.appendChild(m);
-            var f = m.querySelector('form'), err = f.querySelector('.ac-err'), go = f.querySelector('[type=submit]'), box = f.querySelector('.ac-logins');
+            var f = m.querySelector('form'), err = f.querySelector('.ac-err'), go = f.querySelector('[type=submit]'), box = f.querySelector('.ac-logins'), mail = f.querySelector('.ac-mail');
             var paint = function(list) {
                 a.logins = list;
                 box.innerHTML = list.length ? list.map(function(l) {
@@ -320,11 +373,12 @@
             f.onsubmit = async function(e) {
                 e.preventDefault();
                 var email = f.email.value.trim();
-                go.disabled = true; go.textContent = 'Adding…'; err.textContent = '';
+                go.disabled = true; go.textContent = 'Adding…'; err.textContent = ''; mail.textContent = '';
                 try {
                     var d = await post({ action: 'addLogin', slug: a.slug, email: email });
                     paint(d.logins); f.email.value = '';
-                    laToast(d.emailed ? email + ' added · the access email is on its way' : email + ' added (the email could not be sent)');
+                    mail.innerHTML = d.emailed ? esc(email + ' added. Access email: ') + deliveryText(d.delivery) : esc(email + ' added, but the email could not be sent' + (d.emailError ? ': ' + d.emailError : '.'));
+                    laToast(email + ' added');
                 } catch (er) { err.textContent = 'Could not add it: ' + er.message; }
                 go.disabled = false; go.textContent = 'Add and send email';
             };
