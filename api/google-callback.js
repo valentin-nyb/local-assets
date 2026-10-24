@@ -136,6 +136,7 @@ export default async function handler(req, res) {
     }
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return res.send(`<!DOCTYPE html><html><body><script>
+      try { history.replaceState(null, '', '/login'); } catch (e) {}
       localStorage.setItem('la_admin', ${JSON.stringify(sessionData)});
       ${venue?.name
         ? `localStorage.setItem('la_venue_name', ${JSON.stringify(venue.name.toUpperCase())});`
@@ -212,6 +213,10 @@ h1 span{display:inline-block;white-space:nowrap;transition:color .3s,transform .
   <p class="note">Nothing happened? Press Open a™.</p>
 </main>
 <p class="foot">© 2026 local / assets™</p>
-<script>addEventListener('load',function(){setTimeout(function(){location.href=${JSON.stringify(link)};},150);});</script>
+<script>
+  // The address bar shows the site, not the long one-time sign-in address (it can't be used again anyway)
+  try { history.replaceState(null, '', '/'); } catch (e) {}
+  addEventListener('load',function(){setTimeout(function(){location.href=${JSON.stringify(link)};},150);});
+</script>
 </body></html>`;
 }
