@@ -654,8 +654,11 @@
         }
         // The watermark text, while its font is still in the brand kit
         // The text shown in previews: the latest session's artist when the text is "Artist name"
+        // A thumbnail for one session: "Artist name" and "Session name" are that session's, as on its clips
+        var _wmSession = null;   // { artist, date } while a thumbnail is drawn
         function wmTextValue() {
             if (!_wm.text) return '';
+            if (_wmSession && (_wm.text.source === 'artist' || _wm.text.pick)) return _wmSession.artist;
             // "Artist name": each clip's own artist; the preview says so (an artist sees their own name)
             if (_wm.text.source === 'artist') return _member ? String(_member.name).toUpperCase() : 'ARTIST NAME';
             return _wm.text.value || '';
@@ -674,6 +677,11 @@
             var t = _wm && _wm.text && _wm.text.sub;
             if (!t || (!t.value && t.source !== 'session')) return null;
             if (!_files.some(function(f) { return f.url === t.font; })) return null;
+            // A session's thumbnail: its own name, or no subtitle when it has none (as on its clips)
+            if (_wmSession && (t.source === 'session' || t.pick)) {
+                var title = _sessionTitles[_wmSession.artist + '|' + _wmSession.date];
+                return title ? { value: title, font: t.font, source: 'session' } : null;
+            }
             // "Session name": each session's own; the preview shows an example
             return t.source === 'session' ? { value: 'Session Name', font: t.font, source: 'session' } : t;
         }
@@ -1016,7 +1024,7 @@
         }
         function drawWatermark(g, L) {
             var url = wmPreviewLogo(), tf = wmText(), p = _wm.position;
-            var sb = tf ? wmSub() : null;
+            var sb = tf ? wmSub() : null, tv = wmTextValue();
             var logoP = !url ? null : /\.gif(\?|$)/i.test(url) ? gifFullestFrame(url).then(function(c) { return c || loadImage(url); }) : loadImage(url);
             return Promise.all([logoP, tf ? loadBrandFont(tf.url) : null, sb ? loadBrandFont(sb.font) : null]).then(function(r) {
                 var logo = r[0], family = r[1], W = L.W, H = L.H;
@@ -1035,8 +1043,8 @@
                     // The title, and the subtitle under it in its own font, laid out as on the clips
                     var px = wmTextPx(L) * tk, pad = 12;
                     var room = besides ? Math.min(760 * tk, W - 2 * L.mx - lw - 32) : logo && tp !== p && tp[0] === p[0] ? Math.min(760 * tk, W - 2 * L.mx - lh * ar - 48) : 760 * tk;
-                    var lines = [{ fam: family, v: wmTextValue(), k: 1 }];
-                    if (r[2]) lines.push({ fam: r[2], v: wmSub().value, k: WM_SUB_SCALE });
+                    var lines = [{ fam: family, v: tv, k: 1 }];
+                    if (r[2]) lines.push({ fam: r[2], v: sb.value, k: WM_SUB_SCALE });
                     var measure = function() { return lines.map(function(l) { g.font = (px * l.k) + 'px ' + l.fam; var m = g.measureText(l.v); return { m: m, w: m.actualBoundingBoxLeft + m.actualBoundingBoxRight, h: m.actualBoundingBoxAscent + m.actualBoundingBoxDescent }; }); };
                     var ms = measure(), tw = Math.max.apply(null, ms.map(function(x) { return x.w; }));
                     if (tw > room) { px = px * room / tw; ms = measure(); tw = Math.max.apply(null, ms.map(function(x) { return x.w; })); }
@@ -1127,7 +1135,7 @@
         }
         // Image cropped to fill W×H (centre), then the watermark. scale 2 renders at 4K;
         // everything is drawn in frame coordinates so the watermark keeps its place.
-        function renderThumb(img, L, scale) {
+        function renderThumb(img, L, scale, sess) {
             scale = scale || 1;
             var c = document.createElement('canvas'); c.width = L.W * scale; c.height = L.H * scale;
             var g = c.getContext('2d');
@@ -1136,7 +1144,12 @@
             var s = Math.max(L.W / img.naturalWidth, L.H / img.naturalHeight);
             var w = img.naturalWidth * s, h = img.naturalHeight * s;
             g.drawImage(img, (L.W - w) / 2, (L.H - h) / 2, w, h);
-            return (_wm && _wm.enabled ? drawWatermark(g, L) : Promise.resolve()).then(function() { return c; });
+            if (!(_wm && _wm.enabled)) return Promise.resolve(c);
+            // The session's artist and name are read while the text is measured, before the logo and fonts load
+            _wmSession = sess || null;
+            var p = drawWatermark(g, L);
+            _wmSession = null;
+            return p.then(function() { return c; });
         }
         function openSetThumbnail(url) {
             var f = _files.filter(function(x) { return x.url === url; })[0];
@@ -1163,18 +1176,23 @@
             var form = document.getElementById('bk-thumb-form'), err = document.getElementById('bk-thumb-error');
             var imgP = loadImage(f.url);
             // Small previews drawn with the same code as the full-size files
-            imgP.then(function(img) {
-                // Start with the format that matches the picture; both stay selectable
-                var landscape = img.naturalWidth >= img.naturalHeight;
-                form.horizontal.checked = landscape; form.vertical.checked = !landscape;
+            var drawPreviews = function(img) {
+                var sess = list[Number(form.session && form.session.value)];
                 [['bk-thumb-h', THUMB_LAYOUT.horizontal], ['bk-thumb-v', THUMB_LAYOUT.vertical]].forEach(function(x) {
-                    renderThumb(img, x[1]).then(function(full) {
+                    renderThumb(img, x[1], 1, sess).then(function(full) {
                         var cv = document.getElementById(x[0]); if (!cv) return;
                         cv.width = x[1].W / 4; cv.height = x[1].H / 4;
                         var g = cv.getContext('2d'); g.imageSmoothingQuality = 'high';
                         g.drawImage(full, 0, 0, cv.width, cv.height);
                     });
                 });
+            };
+            imgP.then(function(img) {
+                // Start with the format that matches the picture; both stay selectable
+                var landscape = img.naturalWidth >= img.naturalHeight;
+                form.horizontal.checked = landscape; form.vertical.checked = !landscape;
+                drawPreviews(img);
+                if (form.session) form.session.addEventListener('change', function() { drawPreviews(img); });
             }).catch(function() { err.textContent = 'This image could not be loaded.'; });
             form.addEventListener('submit', async function(e) {
                 e.preventDefault();
@@ -1188,7 +1206,7 @@
                         var im = await imgP, base = f.name.replace(/\.[^.]+$/, '');
                         for (var j = 0; j < kinds.length; j++) {
                             var LL = THUMB_LAYOUT[kinds[j]], cov = Math.min(im.naturalWidth / LL.W, im.naturalHeight / LL.H);
-                            var c2 = await renderThumb(im, LL, cov >= 2 ? 2 : cov >= 1.33 ? 1.5 : 1);
+                            var c2 = await renderThumb(im, LL, cov >= 2 ? 2 : cov >= 1.33 ? 1.5 : 1, null);
                             var b2 = await new Promise(function(r) { c2.toBlob(r, 'image/jpeg', 0.95); });
                             saveBlob(b2, base + '-' + kinds[j] + '.jpg');
                         }
@@ -1204,7 +1222,7 @@
                         var L = THUMB_LAYOUT[kinds[k]];
                         // Highest resolution the picture supports: 4K when it covers twice the frame
                         var cover = Math.min(img.naturalWidth / L.W, img.naturalHeight / L.H);
-                        var cv = await renderThumb(img, L, cover >= 2 ? 2 : cover >= 1.33 ? 1.5 : 1);
+                        var cv = await renderThumb(img, L, cover >= 2 ? 2 : cover >= 1.33 ? 1.5 : 1, sess);
                         // Best JPEG quality that fits the 4 MB upload limit
                         var blob = null;
                         for (var q = 0.97; q >= 0.6; q -= 0.07) {
