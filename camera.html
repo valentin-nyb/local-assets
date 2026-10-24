@@ -358,6 +358,8 @@
         .ev-link-l { font:500 10px/1 'JetBrains Mono',monospace; letter-spacing:.14em; text-transform:uppercase; color:var(--la-dim); }
         /* The artist picker: small, in the window's own font, its note under it */
         :root body .ev-link select { flex:1; min-width:0; max-width:300px; height:34px !important; min-height:34px !important; padding:0 44px 0 12px !important; font:400 12.5px/1 'Helvetica Neue', Helvetica, Arial, sans-serif !important; color:var(--la-text) !important; background-size:32px 22px !important; border-radius:8px !important; }
+        .ev-link input { flex:1; min-width:0; max-width:300px; height:34px; padding:0 12px; border-radius:8px; border:1px solid var(--la-line, rgba(250,250,250,.16)); background:transparent; color:var(--la-text); font:400 12.5px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+        .ev-link .cam-btn { height:34px; min-height:34px; padding:0 14px; font-size:12.5px; }
         .ev-link-n { flex-basis:100%; font-size:11px; line-height:1.4; color:var(--la-dim); margin-top:-4px; }
         .ev-sec + .ev-sec { margin-top:14px; border-top:1px solid var(--la-line); padding-top:14px; }
         .ev-sec-h { display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; margin:0 0 12px; padding:0; border:0; background:none; color:var(--la-dim); font:500 10px/1 'JetBrains Mono',monospace; letter-spacing:.16em; text-transform:uppercase; text-align:left; }
@@ -1900,7 +1902,8 @@
                 // Which Brand Kit artist this event is for (saved with the event): their logos and photos show here
                 var linkRow = isMember || !ev.key ? '' : '<div class="ev-link"><span class="ev-link-l">Artist</span><select id="ev-artist" aria-label="Brand Kit artist for this event">' +
                     '<option value="">' + (byName ? 'Matched by name: ' + esc(names[byName]) : 'Not linked to a Brand Kit artist') + '</option>' +
-                    artists.map(function(k) { return '<option value="' + esc(k) + '"' + (ev.artistOwner === k ? ' selected' : '') + '>' + esc(names[k]) + '</option>'; }).join('') + '</select>' +
+                    artists.map(function(k) { return '<option value="' + esc(k) + '"' + (ev.artistOwner === k ? ' selected' : '') + '>' + esc(names[k]) + '</option>'; }).join('') +
+                    '<option value="__new">+ New artist…</option></select>' +
                     '<span class="ev-link-n">' + (ev.artistOwner ? 'Linked to this event' : byName ? 'Found by the name in the calendar' : 'Choose their folder to show their logos and photos') + '</span></div>';
                 box.innerHTML = linkRow +
                     '<section class="ev-sec"><div class="ev-sec-h static"><span>Artwork for this event' + (art.length ? ' <i>' + art.length + '</i>' : '') + '</span>' +
@@ -1910,14 +1913,40 @@
                     fold('Logos', logos, 'logo') + fold('Artist photos', photos, 'photo') +
                     (!logos.length ? '<p class="ev-empty" style="margin-top:14px">No logos in Brand Kit yet.</p>' : '');
                 var sel = document.getElementById('ev-artist');
+                var linkTo = async function(owner) {
+                    var rr = await laFetch('/api/next-event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: ev.key, artistOwner: owner }) });
+                    var dd = await rr.json(); if (!rr.ok) throw new Error(dd.error || rr.status);
+                    ev.artistOwner = dd.artistOwner; openEventInfo(ev);
+                };
                 if (sel) sel.addEventListener('change', async function() {
+                    if (sel.value === '__new') return newArtistRow();
                     sel.disabled = true;
-                    try {
-                        var rr = await laFetch('/api/next-event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: ev.key, artistOwner: sel.value }) });
-                        var dd = await rr.json(); if (!rr.ok) throw new Error(dd.error || rr.status);
-                        ev.artistOwner = dd.artistOwner; openEventInfo(ev);
-                    } catch (e) { sel.disabled = false; laAlert('Could not link the artist: ' + e.message, { tone: 'error' }); }
+                    try { await linkTo(sel.value); }
+                    catch (e) { sel.disabled = false; laAlert('Could not link the artist: ' + e.message, { tone: 'error' }); }
                 });
+                // A new Brand Kit artist, named like the DJ in the calendar, linked to this event
+                function newArtistRow() {
+                    var row = box.querySelector('.ev-link');
+                    row.innerHTML = '<span class="ev-link-l">Artist</span><input id="ev-new-artist" maxlength="60" aria-label="New artist name" value="' + esc(ev.artist || '') + '">' +
+                        '<button type="button" class="cam-btn primary" id="ev-new-add">Add</button><button type="button" class="cam-btn ghost" id="ev-new-cancel">Cancel</button>' +
+                        '<span class="ev-link-n">Adds a folder for this artist in Brand Kit, for their logos and photos, and links it to this event.</span>';
+                    var inp = document.getElementById('ev-new-artist'), add = document.getElementById('ev-new-add');
+                    inp.focus(); inp.select();
+                    document.getElementById('ev-new-cancel').addEventListener('click', function() { openEventInfo(ev); });
+                    var go = async function() {
+                        var name = inp.value.trim(); if (!name) { inp.focus(); return; }
+                        var key = 'artist-' + name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+                        if (key === 'artist-') { inp.focus(); return; }
+                        add.disabled = true; add.textContent = 'Adding…';
+                        try {
+                            var rr = await laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setOwnerName', owner: key, name: name }) });
+                            var dd = await rr.json(); if (!rr.ok) throw new Error(dd.error || rr.status);
+                            await linkTo(key);
+                        } catch (e) { add.disabled = false; add.textContent = 'Add'; laAlert('Could not add the artist: ' + e.message, { tone: 'error' }); }
+                    };
+                    add.addEventListener('click', go);
+                    inp.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); go(); } });
+                }
                 box.querySelectorAll('.ev-fold > .ev-sec-h').forEach(function(h) { h.addEventListener('click', function() { var sec = h.parentNode, open = sec.classList.toggle('folded') === false; h.setAttribute('aria-expanded', open); }); });
                 // Each logo on a background it shows against: light for a dark logo, dark for a light one
                 box.querySelectorAll('img[data-tone]').forEach(function(im) {
