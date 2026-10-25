@@ -9,7 +9,7 @@ async function getRedis() {
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', 'https://local-assets.com');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Cookie');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
@@ -20,6 +20,12 @@ export default async function handler(req, res) {
 
   const redis = await getRedis();
   try {
+  // Log out: the session ends on the server and the cookie is cleared (the page can't clear an HttpOnly cookie)
+  if (req.query.action === 'logout') {
+    await redis.del(`session:${sessionToken}`);
+    res.setHeader('Set-Cookie', 'la_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0');
+    return res.status(200).json({ ok: true });
+  }
   const clientId = await redis.get(`session:${sessionToken}`);
   if (!clientId) return res.status(401).json({ error: 'Session expired — please log in again' });
 

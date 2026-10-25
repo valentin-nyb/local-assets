@@ -630,8 +630,8 @@
 
     // ── LOGOUT ────────────────────────────────────────────────────────
     function logout() {
-        document.cookie = 'la_session=; Path=/; Max-Age=0';
-        showLogin();
+        // The session cookie is HttpOnly: the server ends it and clears it
+        fetch('/api/client-profile?action=logout', { method: 'POST', credentials: 'same-origin' }).catch(function() {}).then(function() { showLogin(); });
     }
 
     // ── HELPERS ───────────────────────────────────────────────────────

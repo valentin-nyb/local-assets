@@ -8,6 +8,9 @@ import { createClient } from 'redis';
 // Read into a cache when a function starts and refreshed in the background, so lookups stay synchronous.
 const REGISTRY_KEY = 'la_venues';
 let _registry = {}, _registryAt = 0, _registryLoading = null, _deleted = new Set(), _members = {}, _artistsOf = {}, _logins = {}, _edits = {};
+// Sign-ins ended with Log out (session id → when), so their tokens stop working before they expire
+export const SIGNED_OUT_KEY = 'la_signed_out';
+let _signedOut = new Set();
 // Artists given access by a venue or record label (Brand Kit → Give access): email → [{ slug, owner, name }].
 // They sign in to that account but only see their own sets and Brand Kit folder (see memberAllowed).
 export const MEMBERS_KEY = 'la_artist_members';
@@ -46,6 +49,11 @@ export async function refreshRegistry(redis = null) {
     _deleted = new Set(await redis.sMembers('la_deleted').catch(() => []));   // accounts deleted by the admin
     _logins = Object.fromEntries(Object.entries(await redis.hGetAll(LOGINS_KEY).catch(() => ({})) || {}).map(([k, v]) => { try { return [k, JSON.parse(v).map(e => String(e).toLowerCase().trim())]; } catch { return [k, []]; } }));
     _edits = Object.fromEntries(Object.entries(await redis.hGetAll(EDITS_KEY).catch(() => ({})) || {}).map(([k, v]) => { try { const o = JSON.parse(v); return [k, { ...(o.name ? { name: String(o.name) } : {}), ...(Array.isArray(o.removed) && o.removed.length ? { removed: o.removed.map(e => String(e).toLowerCase().trim()) } : {}) }]; } catch { return [k, {}]; } }));
+    // Ended sign-ins, kept until their last token has expired (tokens last an hour)
+    const out2 = await redis.hGetAll(SIGNED_OUT_KEY).catch(() => ({})) || {};
+    const stale = Object.keys(out2).filter(k => Date.now() - Number(out2[k]) > 2 * 3_600_000);
+    if (stale.length) await redis.hDel(SIGNED_OUT_KEY, stale).catch(() => {});
+    _signedOut = new Set(Object.keys(out2).filter(k => !stale.includes(k)));
     _members = Object.fromEntries(Object.entries(await redis.hGetAll(MEMBERS_KEY).catch(() => ({})) || {}).map(([e, v]) => { try { return [e, JSON.parse(v)]; } catch { return [e, []]; } }));
     _registry = out; _registryAt = Date.now();
     // Each account's artists (its artist logins and Brand Kit artist folders), for the admin's account menu
@@ -259,8 +267,9 @@ export function framePass(slug, camId) {
   return crypto.createHmac('sha256', getSecret()).update(`frame|${slug}|${camId}`).digest('base64url');
 }
 
-export function signWebToken(email, venueSlug, as) {
-  const payload = { email, venueSlug, ...(as ? { as } : {}), exp: Date.now() + 3_600_000 };
+// sid: one sign-in, kept through its renewals and account switches, so Log out can end it on the server
+export function signWebToken(email, venueSlug, as, sid) {
+  const payload = { email, venueSlug, ...(as ? { as } : {}), sid: sid || crypto.randomBytes(12).toString('base64url'), exp: Date.now() + 3_600_000 };
   const data    = Buffer.from(JSON.stringify(payload)).toString('base64url');
   const sig     = crypto.createHmac('sha256', getSecret()).update(data).digest('base64url');
   return `${data}.${sig}`;
@@ -304,6 +313,10 @@ export function getWebSessionAuth(req) {
     console.error('[_venues] getWebSessionAuth: no valid session token');
     return null;
   }
+  if (payload.sid && _signedOut.has(payload.sid)) {
+    console.error('[_venues] getWebSessionAuth: signed out');
+    return null;
+  }
 
   let venue = findVenueByEmail(email, payload.venueSlug, payload.as);
   // A local / assets admin on the admin account acts on one client's account for this request
@@ -321,7 +334,17 @@ export function getWebSessionAuth(req) {
     return null;
   }
 
-  return { email, venueSlug: venue?.slug || '', venue, muxAuth, member };
+  return { email, venueSlug: venue?.slug || '', venue, muxAuth, member, sid: payload.sid || '' };
+}
+
+// Log out: this sign-in's tokens are refused from now on (here at once, elsewhere within a minute)
+export async function endSignIn(redis, sid) {
+  if (!sid) return;
+  await redis.hSet(SIGNED_OUT_KEY, sid, String(Date.now()));
+  _signedOut.add(sid);
+}
+export async function signInEnded(redis, sid) {
+  return !!sid && (_signedOut.has(sid) || !!(await redis.hGet(SIGNED_OUT_KEY, sid).catch(() => null)));
 }
 
 // What an artist with access can reach: their sets, clips and downloads (Overview), the calendar, and Brand Kit

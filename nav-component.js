@@ -277,6 +277,11 @@ document.addEventListener("DOMContentLoaded", () => {
     var _SESSION_MS = 10 * 60 * 1000;
 
     window.LA_ADMIN_LOGOUT = function() {
+        // Ends the sign-in on the server too, so a copy of its token stops working
+        try {
+            var t = (JSON.parse(localStorage.getItem('la_admin') || 'null') || {}).webToken;
+            if (t) fetch('/api/switch-venue', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + t }, body: JSON.stringify({ signOut: true }) }).catch(function() {});
+        } catch (_) {}
         localStorage.removeItem('la_admin');
         var d = document.getElementById('la-auth-drop');
         if (d) d.remove();

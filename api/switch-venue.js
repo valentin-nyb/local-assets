@@ -1,7 +1,8 @@
-import { getWebSessionAuth, findVenuesByEmail, signWebToken, venueChoicesTyped, freshVenues } from './_venues.js';
+import { createClient } from 'redis';
+import { getWebSessionAuth, findVenuesByEmail, signWebToken, venueChoicesTyped, freshVenues, endSignIn, signInEnded } from './_venues.js';
 
 // Switch the signed-in user to another venue they are listed in (VENUES_CONFIG).
-// { refresh: true } renews the token for the current venue.
+// { refresh: true } renews the token for the current venue. { signOut: true } ends this sign-in (Log out).
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', 'https://local-assets.com');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
@@ -16,9 +17,18 @@ export default async function handler(req, res) {
 
   let body = req.body;
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch (_) {} }
+  // Log out, and renewals checked against Redis itself (the in-memory list can be a minute behind)
+  if (body?.signOut || body?.refresh) {
+    const redis = createClient({ url: process.env.REDIS_URL });
+    try {
+      await redis.connect();
+      if (body.signOut) { await endSignIn(redis, session.sid); console.log('[switch-venue] signed out', session.email); return res.status(200).json({ ok: true }); }
+      if (await signInEnded(redis, session.sid)) return res.status(401).json({ error: 'Signed out' });
+    } finally { await redis.quit().catch(() => {}); }
+  }
   // Keeps an open page signed in: a fresh token for the same venue
   // and the current list of accounts, so the switcher drops a deleted one
-  if (body?.refresh) return res.status(200).json({ webToken: signWebToken(session.email, session.venueSlug, session.member?.owner), venue: session.member ? session.member.name : undefined, venueSlug: session.venueSlug, venues: await venueChoicesTyped(session.email), member: session.member || null });
+  if (body?.refresh) return res.status(200).json({ webToken: signWebToken(session.email, session.venueSlug, session.member?.owner, session.sid), venue: session.member ? session.member.name : undefined, venueSlug: session.venueSlug, venues: await venueChoicesTyped(session.email), member: session.member || null });
   const slug = String(body?.venueSlug || '');
 
   // An artist with access to several artists here: the one chosen (as)
@@ -29,7 +39,7 @@ export default async function handler(req, res) {
 
   console.log('[switch-venue]', session.email, '→', venue.slug);
   return res.status(200).json({
-    webToken:  signWebToken(session.email, venue.slug, venue.member?.owner),
+    webToken:  signWebToken(session.email, venue.slug, venue.member?.owner, session.sid),
     venue:     venue.member ? venue.member.name : (venue.name || venue.slug),
     venueSlug: venue.slug,
     member:    venue.member || null,
