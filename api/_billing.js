@@ -210,12 +210,12 @@ function planFeatures(planId, type, t, included, name) {
     brand,
     'Connect your DJI Osmo, Sony Alpha and more',
   ];
-  if (planId === 'starter-distribution') return [who, sets, '6 vertical clips from every set', brand, space, 'Connect your DJI Osmo, Sony Alpha and more\nOr add one of our cameras for £149 a month, 12-month minimum. Set up for you, controlled from Camera Control. The camera goes back when the rental ends.'];
+  if (planId === 'starter-distribution') return [who, sets, '6 vertical clips from every set', brand, space, 'Connect your DJI Osmo, Sony Alpha and more\nOr add one of our cameras for £149 a month, 12-month minimum.\nSet up for you, controlled from Camera Control.'];
   // Pro: artists and venues add our PTZ camera for £149 a month; record labels get one included
   if (planId === 'liveset-distribution') return [who, sets, '12 vertical clips from every set', brand, space,
-    artist || type === 'venue' ? 'Connect your DJI Osmo, Sony Alpha and more\nOr add one of our cameras for £149 a month, 12-month minimum. Set up for you, controlled from Camera Control. The camera goes back when the rental ends.' : '1 PTZ camera included, set up for you (12-month minimum)'];
+    artist || type === 'venue' ? 'Connect your DJI Osmo, Sony Alpha and more\nOr add one of our cameras for £149 a month, 12-month minimum.\nSet up for you, controlled from Camera Control.' : '1 PTZ camera included, set up for you (12-month minimum)'];
   if (planId === 'liveset-creative') return [who, sets, 'Unlimited vertical clips from every set', 'Multi-camera auto-edit of the full set, in 4K with HQ audio', brand, space,
-    artist ? '1 PTZ camera, Starlink Mini and Mac mini, set up for you\nOr add a second camera for £149 a month, 12-month minimum. Set up for you, controlled from Camera Control. The camera goes back when the rental ends.' : '2 PTZ cameras, Starlink Mini and Mac mini, set up for you',
+    artist ? '1 PTZ camera, Starlink Mini and Mac mini, set up for you\nOr add a second camera for £149 a month, 12-month minimum.\nSet up for you, controlled from Camera Control.' : '2 PTZ cameras, Starlink Mini and Mac mini, set up for you',
     '12-month minimum', 'Quarterly performance reports'];
   return null;
 }
