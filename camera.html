@@ -322,7 +322,9 @@
         .cal-find summary::-webkit-details-marker { display:none; }
         .cal-find summary::before { content:'+'; display:inline-block; width:14px; color:var(--la-dim); }
         .cal-find[open] summary::before { content:'−'; }
-        .cal-find-grid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:16px; margin-top:12px; }
+        /* Apple Calendar sits just after the Google steps, not halfway across a wide screen */
+        .cal-find-grid { display:grid; grid-template-columns:repeat(2, minmax(0, max-content)); justify-content:start; gap:16px 56px; margin-top:12px; }
+        @media (max-width:640px) { .cal-find-grid { grid-template-columns:minmax(0,1fr); gap:18px; } }
         .cal-find-grid b { font:700 11px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.06em; text-transform:uppercase; color:var(--la-text); }
         .cal-find-grid ol { margin:8px 0 0; padding-left:18px; font-size:12px; line-height:1.6; color:var(--la-sub); }
         .cal-help { font-size:12px; color:var(--la-dim); margin-top:14px; line-height:1.5; }
