@@ -200,7 +200,7 @@ function planFeatures(planId, type, t, included, name) {
   const artist = type === 'artist', word = type === 'venue' ? 'events' : 'sets';
   const sets = !t ? '' : t.sets === 0 ? `Unlimited ${word} every month` : `Up to ${t.sets} ${word} a month, each checked and stored safely`;
   const space = `Room for about ${hours(included.storedMinutes || 0)} hours of full sets; more is charged by the month`;
-  const brand = 'Brand Kit: your logo, watermark and thumbnails on everything';
+  const brand = 'Brand Kit: your logo, animations and custom fonts for watermark and thumbnails';
   const who = whoLine(type, planId);
   if (planId === 'dj-trial' || /venue\s*trial/i.test(String(name || ''))) return [
     who,
