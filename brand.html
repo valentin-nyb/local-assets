@@ -517,6 +517,9 @@
 
         // ── Brand kit ─────────────────────────────────────────────────────
         // Files are stored per owner: the venue, or "artist-<slug>" for each artist.
+        // Brand Kit files are shown from local-assets.com/files/... (a proxy of the storage), so a file opened
+        // in a new tab never shows the storage address
+        function fileSrc(u) { return String(u || '').replace(/^https:\/\/[a-z0-9]+\.public\.blob\.vercel-storage\.com\/brand\//, '/files/'); }
         var CATS = [
             { key: 'logos',      label: 'Logos',      icon: 'solar:star-shine-linear', tag: 'Logo' },
             // Moving logos for the watermark: a GIF, or a video with a transparent background (turned into a GIF)
@@ -1400,8 +1403,8 @@
                 // A logo picked as the profile picture shows like a logo (contained, on a tile that suits its colour)
                 var photoIsLogo = usePhoto && files.some(function(f) { return f.url === photo && f.category === 'logos'; });
                 if (photoIsLogo) { logo = { url: themeLogo(photo, files) }; usePhoto = false; }
-                var avatar = usePhoto ? '<img class="bk-avatar-photo" src="' + esc(photo) + '" alt="">'
-                    : logo ? '<img src="' + esc(logo.url) + '" alt="" crossorigin="anonymous" onload="' + (photoIsLogo ? 'fitThemeLogo(this)' : 'fitPreviewBg(this)') + '" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}">' : esc(o.name.replace(/[^A-Za-z0-9 ]/g, '').split(/\s+/).map(function(w) { return w[0] || ''; }).join('').slice(0, 2) || '?');
+                var avatar = usePhoto ? '<img class="bk-avatar-photo" src="' + esc(fileSrc(photo)) + '" alt="">'
+                    : logo ? '<img src="' + esc(fileSrc(logo.url)) + '" alt="" crossorigin="anonymous" onload="' + (photoIsLogo ? 'fitThemeLogo(this)' : 'fitPreviewBg(this)') + '" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}">' : esc(o.name.replace(/[^A-Za-z0-9 ]/g, '').split(/\s+/).map(function(w) { return w[0] || ''; }).join('').slice(0, 2) || '?');
                 var body = '';
                 if (!files.length) {
                     body = '<p class="bk-empty-owner">No brand files yet. <button type="button" data-up="' + esc(o.key) + '">Upload logos or guidelines</button></p>';
@@ -1717,11 +1720,11 @@
             if (f.post) return openPostPreview(f.owner, f.post, postImages(f.owner, f.post).indexOf(f));
             if (/\.cube$/i.test(f.name)) return openLutPreview(f);
             var view = IMG_EXT.test(f.name)
-                ? '<div class="bk-preview bk-file-view' + (f.category === 'logos' ? '' : ' photo') + '"><img src="' + esc(f.url) + '" alt="" crossorigin="anonymous" onload="fitPreviewBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}"></div>'
+                ? '<div class="bk-preview bk-file-view' + (f.category === 'logos' ? '' : ' photo') + '"><img src="' + esc(fileSrc(f.url)) + '" alt="" crossorigin="anonymous" onload="fitPreviewBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}"></div>'
                 : VID_EXT.test(f.name)
-                ? '<div class="bk-file-view"><video src="' + esc(f.watermarked && f.watermarked.ready ? f.watermarked.url.replace(/\?download=.*$/, '') : f.url) + '" controls playsinline autoplay muted></video></div>'
+                ? '<div class="bk-file-view"><video src="' + esc(fileSrc(f.watermarked && f.watermarked.ready ? f.watermarked.url.replace(/\?download=.*$/, '') : f.url)) + '" controls playsinline autoplay muted></video></div>'
                 : /pdf$/i.test(f.name)
-                ? '<iframe class="bk-file-pdf" src="' + esc(f.url) + '" title="' + esc(f.name) + '"></iframe>'
+                ? '<iframe class="bk-file-pdf" src="' + esc(fileSrc(f.url)) + '" title="' + esc(f.name) + '"></iframe>'
                 : '<p class="bk-meta">This file can\'t be shown in the browser. Download it to open it.</p>';
             openCamDialog(f.name,
                 view +
@@ -1852,7 +1855,7 @@
                 list.innerHTML = d.events.map(function(ev) {
                     var art = ev.art || [], on = art.indexOf(f.url) >= 0;
                     return '<button type="button" class="bk-ev' + (on ? ' on' : '') + '" data-key="' + esc(ev.key) + '">' +
-                        '<img src="' + esc(f.url) + '" alt="" style="' + (on ? '' : 'opacity:.35') + '">' +
+                        '<img src="' + esc(fileSrc(f.url)) + '" alt="" style="' + (on ? '' : 'opacity:.35') + '">' +
                         '<span class="bk-ev-t"><b>' + esc(ev.artist || ev.title) + '</b><small>' + esc(day(ev.start)) + (art.length ? ' · ' + art.length + ' artwork' + (art.length === 1 ? '' : 's') : '') + '</small></span>' +
                         '<span class="bk-ev-act">' + (on ? 'Added · remove' : 'Add') + '</span></button>';
                 }).join('');
@@ -1879,7 +1882,7 @@
             var f = imgs[0], size = imgs.reduce(function(n, x) { return n + (x.size || 0); }, 0);
             return '<div class="bk-file">' +
                 '<div class="bk-preview photo"><span class="bk-tag is-post">Instagram</span>' +
-                    '<img src="' + esc(f.url) + '" alt="" loading="lazy">' +
+                    '<img src="' + esc(fileSrc(f.url)) + '" alt="" loading="lazy">' +
                     (imgs.length > 1 ? '<span class="bk-post-count">1 / ' + imgs.length + '</span>' : '') + '</div>' +
                 '<div class="bk-info"><p class="bk-name">' + imgs.length + ' image' + (imgs.length === 1 ? '' : 's') + '</p><p class="bk-meta">' + fmtSize(size) + ' · ' + fmtDate(f.uploadedAt) + '</p></div>' +
                 '<div class="bk-file-actions">' +
@@ -1898,7 +1901,7 @@
                 '<div class="bk-post-view"><img id="bk-post-img" alt="">' +
                     (many ? '<button type="button" class="bk-post-nav prev" id="bk-post-prev" aria-label="Previous image">‹</button><button type="button" class="bk-post-nav next" id="bk-post-next" aria-label="Next image">›</button>' : '') +
                     '<span class="bk-post-count" id="bk-post-count"></span></div>' +
-                (many ? '<div class="bk-post-strip">' + imgs.map(function(x, i) { return '<button type="button" data-post-i="' + i + '" aria-label="Image ' + (i + 1) + '"><img src="' + esc(x.url) + '" alt=""></button>'; }).join('') + '</div>' : '') +
+                (many ? '<div class="bk-post-strip">' + imgs.map(function(x, i) { return '<button type="button" data-post-i="' + i + '" aria-label="Image ' + (i + 1) + '"><img src="' + esc(fileSrc(x.url)) + '" alt=""></button>'; }).join('') + '</div>' : '') +
                 '<p class="bk-meta" id="bk-post-meta" style="margin-top:10px"></p>' +
                 '<label class="bk-share-label" for="bk-share-link">Share link</label>' +
                 '<div class="bk-share"><input id="bk-share-link" readonly><button type="button" class="cam-btn ghost" id="bk-share-copy">Copy link</button></div>' +
@@ -1929,13 +1932,13 @@
             document.querySelector('#cam-dialog .cam-dialog-panel').classList.add('wide');
             var pic = document.getElementById('bk-post-img'), want = 0;
             // The next and previous pictures load in the background, so a step shows straight away
-            imgs.forEach(function(x) { var p = new Image(); p.src = x.url; });
+            imgs.forEach(function(x) { var p = new Image(); p.src = fileSrc(x.url); });
             function show(i) {
                 idx = Math.max(0, Math.min(imgs.length - 1, i));
                 var f = imgs[idx], link = f.link || f.url, n = ++want;
                 var pre = new Image();
-                pre.onload = pre.onerror = function() { if (n === want) pic.src = f.url; };
-                pre.src = f.url;
+                pre.onload = pre.onerror = function() { if (n === want) pic.src = fileSrc(f.url); };
+                pre.src = fileSrc(f.url);
                 document.getElementById('bk-post-count').textContent = (idx + 1) + ' / ' + imgs.length;
                 document.getElementById('bk-post-meta').textContent = f.name + ' · ' + fmtSize(f.size) + ' · ' + fmtDate(f.uploadedAt);
                 document.getElementById('bk-share-link').value = link;
@@ -2051,12 +2054,12 @@
             // Photos fill the card; JPGs filed as logos are photos too (no transparency). Transparent logos stay whole.
             var isPhoto = f.category === 'covers' || f.category === 'artwork' || f.category === 'photos' || /\.jpe?g$/i.test(f.name);
             var preview = IMG_EXT.test(f.name)
-                ? '<div class="bk-preview' + (isPhoto ? ' photo' : '') + '">' + tag + '<img src="' + esc(f.url) + '" alt="" loading="lazy" crossorigin="anonymous" onload="fitPreviewBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}">' +
+                ? '<div class="bk-preview' + (isPhoto ? ' photo' : '') + '">' + tag + '<img src="' + esc(fileSrc(f.url)) + '" alt="" loading="lazy" crossorigin="anonymous" onload="fitPreviewBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}">' +
                     '' +
                     (thumbFile(f) ? '<button type="button" class="bk-use-wm" data-set-thumb="' + esc(f.url) + '" title="Use this image as a session thumbnail, with your watermark">Set as thumbnail</button>' : '') +
                     (wmLogoFile(f) ? '<button type="button" class="bk-use-wm' + (wmUsesLogo(f) ? ' is-on' : '') + '" data-use-wm="' + esc(f.url) + '" title="Stamp this logo bottom left on every vertical clip">' + (wmUsesLogo(f) ? 'Watermark' : 'Use as watermark') + '</button>' : '') + '</div>'
                 : VID_EXT.test(f.name)
-                ? '<div class="bk-preview photo bk-video">' + tag + '<video src="' + esc(f.url) + '#t=0.5" muted playsinline preload="metadata"></video>' +
+                ? '<div class="bk-preview photo bk-video">' + tag + '<video src="' + esc(fileSrc(f.url)) + '#t=0.5" muted playsinline preload="metadata"></video>' +
                     (f.watermarked ? (f.watermarked.ready ? '<a class="bk-use-wm is-on" href="' + esc(f.watermarked.url) + '" title="Download the copy with your watermark">Watermarked</a>'
                         : '<span class="bk-use-wm">' + (f.watermarked.error ? 'Watermark failed' : 'Watermarking…') + '</span>')
                         : '<button type="button" class="bk-use-wm" data-wm-video="' + esc(f.url) + '" title="Make a copy with your watermark">Watermark it</button>') + '</div>'

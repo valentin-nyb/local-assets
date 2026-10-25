@@ -20,10 +20,12 @@ function viewer(blob, path) {
   // addRandomSuffix turns "logo.png" into "logo-AbC123xyz.png"; show the original name
   const name = file.replace(/-[A-Za-z0-9]{20,40}(\.[^.]+)$/, '$1');
   const self = '/asset/' + path.slice('brand/'.length).split('/').map(encodeURIComponent).join('/');
+  // Shown through local-assets.com/files/ (a proxy of the storage), so opening the image in a new tab keeps our address
+  const src = '/files/' + path.slice('brand/'.length).split('/').map(encodeURIComponent).join('/');
   const body = IMAGE.test(file)
-    ? `<img src="${esc(blob.url)}" alt="${esc(name)}">`
+    ? `<img src="${esc(src)}" alt="${esc(name)}">`
     : PDF.test(file)
-      ? `<iframe src="${esc(blob.url)}" title="${esc(name)}"></iframe>`
+      ? `<iframe src="${esc(src)}" title="${esc(name)}"></iframe>`
       : `<p class="none">This file can't be shown in the browser.</p>`;
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
