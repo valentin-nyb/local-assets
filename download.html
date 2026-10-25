@@ -20,7 +20,10 @@
         .eyebrow { font-family: var(--mono); font-size: 10px; letter-spacing: .24em; text-transform: uppercase; color: var(--dim); margin-bottom: 18px; text-align: center; }
         /* The a™ logo in the heading: the white "a" at the height of the capitals, then a small ™ */
         .h1-a { display: inline-block; height: .74em; aspect-ratio: 72 / 80; margin-left: .08em; background: url(/logos/a-white.png) center bottom / contain no-repeat; vertical-align: baseline; }
-        .h1-tm { font-size: .3em; font-weight: 500; vertical-align: top; margin-left: .06em; position: relative; top: .35em; }
+        .h1-tm { font-size: .5em; font-weight: 700; line-height: 1; vertical-align: top; margin-left: .04em; position: relative; top: .14em; }
+        /* Eyebrow, heading and intro all start on the same left edge; the block stays centred on the page */
+        .title { width: min(100%, 520px); margin: 0 auto; }
+        .title .eyebrow, .title h1, .title .lead { text-align: left; }
         h1 { font-weight: 900; font-size: clamp(30px, 7vw, 48px); line-height: .98; letter-spacing: -.01em; text-transform: uppercase; text-align: center; }
         .lead { margin-top: 16px; max-width: 520px; font-size: 15px; line-height: 1.55; color: var(--sub); text-align: center; }
 
@@ -79,9 +82,11 @@
 <body>
     <a class="wordmark" href="/" aria-label="local / assets"></a>
     <main class="wrap">
-        <p class="eyebrow">For Mac, iPhone and iPad</p>
-        <h1>Download <span class="h1-a" role="img" aria-label="a™"></span><span class="h1-tm" aria-hidden="true">™</span></h1>
-        <p class="lead">Plug your camera into your Mac and every set records itself, then turns into ready-to-post vertical clips with your logo on them. No editing, no uploading, nothing to remember.</p>
+        <div class="title">
+            <p class="eyebrow">For Mac, iPhone and iPad</p>
+            <h1>Download <span class="h1-a" role="img" aria-label="a™"></span><span class="h1-tm" aria-hidden="true">™</span></h1>
+            <p class="lead">Plug your camera into your Mac and every set records itself, then turns into ready-to-post vertical clips with your logo on them. No editing, no uploading, nothing to remember.</p>
+        </div>
 
         <div class="cards">
             <!-- Desktop: a MacBook floating, the dashboard on its screen -->
