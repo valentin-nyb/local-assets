@@ -406,7 +406,9 @@ document.addEventListener("DOMContentLoaded", () => {
             var data = await res.json().catch(function() { return {}; });
             var cur = _getAdminSession();
             if (res.ok && data.webToken && cur) {
-                cur.webToken = data.webToken; cur.ts = Date.now();
+                cur.webToken = data.webToken;
+                // The session runs 10 minutes from the last real use (the apps: from now)
+                cur.ts = _isApp() ? Date.now() : Math.min(Date.now(), Math.max(_lastActive(), cur.ts || 0));
                 if ('member' in data) {
                     var was = cur.member ? cur.member.owner : '', now = data.member ? data.member.owner : '';
                     cur.member = data.member || null;
@@ -461,9 +463,14 @@ document.addEventListener("DOMContentLoaded", () => {
     // The a™ apps stay signed in (the Mac app streams sets by itself); Log out still signs them out.
     function _isApp() { return !!window.laApp; }
     function _lastActive() { try { return Number(localStorage.getItem('la_active')) || 0; } catch (_) { return 0; } }
-    function _mediaPlaying() { return Array.prototype.some.call(document.querySelectorAll('video, audio'), function(m) { return !m.paused && !m.ended; }); }
+    // Someone watching: a video or audio playing with sound (the banner and previews loop muted by themselves)
+    function _mediaPlaying() {
+        var list = Array.prototype.slice.call(document.querySelectorAll('video, audio, mux-player'));
+        return list.some(function(m) { return !m.paused && !m.ended && !m.muted && m.volume > 0; });
+    }
     var _markedAt = 0;
-    function _markActive() {
+    function _markActive(e) {
+        if (e && e.isTrusted === false) return;   // only a person's own input, not events a page makes
         var now = Date.now(); if (now - _markedAt < 15000) return; _markedAt = now;
         try { localStorage.setItem('la_active', String(now)); } catch (_) {}
     }
@@ -476,8 +483,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     if (_signedInAtLoad) {
         _markActive();
-        ['pointerdown', 'keydown', 'wheel', 'touchstart', 'scroll'].forEach(function(ev) { window.addEventListener(ev, _markActive, { passive: true, capture: true }); });
-        setInterval(function() { if (_mediaPlaying()) _markActive(); _checkSignedIn(); }, 20000);
+        // Taps, clicks, keys and the wheel: not 'scroll', which pages also cause by themselves
+        ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(function(ev) { window.addEventListener(ev, _markActive, { passive: true, capture: true }); });
+        setInterval(function() { if (_mediaPlaying()) _markActive(null); _checkSignedIn(); }, 20000);
         window.addEventListener('storage', function(e) { if (e.key === 'la_admin' && !e.newValue) _checkSignedIn(); });
         window.addEventListener('pageshow', function(e) { if (e.persisted) _checkSignedIn(); });
     }
