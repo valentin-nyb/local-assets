@@ -43,7 +43,7 @@ export async function readRates(redis) {
 export const DEFAULT_PLANS = [
   { id: 'dj-trial', name: 'Trial Month', price: 0, signupFee: 49, maxClips: 6, cameras: 0,
     included: { storedMinutes: 0, deliveredMinutes: 0, fileGB: 0 },
-    features: ['From £49 to join (comes off your first month), then pay as you go', '6 vertical social clips per session', 'Brand Kit and watermark', 'Connect your DJI Osmo, Sony Alpha', 'Distribution History', 'Usage charged to your card on the 1st'] },
+    features: ['From £49 to join (comes off your first month), then pay as you go', '6 vertical social clips per session', 'Brand Kit and watermark', 'Connect your DJI Osmo, Sony Alpha and more', 'Distribution History', 'Usage charged to your card on the 1st'] },
   { id: 'starter-distribution', name: 'Starter', price: 2750, maxClips: 6, cameras: 0,
     included: { storedMinutes: 10000, deliveredMinutes: 25000, fileGB: 1000 },
     features: ['Camera available as an add-on', 'Content intake & quality control', 'Up to 8 events processed / month', '6 vertical clips per session', 'Brand Kit, thumbnails & watermark', '1 TB cloud storage'] },
@@ -208,15 +208,15 @@ function planFeatures(planId, type, t, included, name) {
     'No monthly fee: you pay only for what you use, on the 1st',
     '6 vertical clips from every set',
     brand,
-    'Connect your DJI Osmo, Sony Alpha',
+    'Connect your DJI Osmo, Sony Alpha and more',
   ];
-  if (planId === 'starter-distribution') return [who, sets, '6 vertical clips from every set', brand, space, 'Connect your DJI Osmo, Sony Alpha\nOr add one of our cameras for £149 a month, 12-month minimum. Set up for you, controlled from Camera Control. The camera goes back when the rental ends.'];
+  if (planId === 'starter-distribution') return [who, sets, '6 vertical clips from every set', brand, space, 'Connect your DJI Osmo, Sony Alpha and more\nOr add one of our cameras for £149 a month, 12-month minimum. Set up for you, controlled from Camera Control. The camera goes back when the rental ends.'];
   // Pro: artists and venues add our PTZ camera for £149 a month; record labels get one included
   if (planId === 'liveset-distribution') return [who, sets, '12 vertical clips from every set', brand, space,
-    artist || type === 'venue' ? 'Connect your DJI Osmo, Sony Alpha\nOr add one of our cameras for £149 a month, 12-month minimum. Set up for you, controlled from Camera Control. The camera goes back when the rental ends.' : '1 PTZ camera included, set up for you (12-month minimum)'];
+    artist || type === 'venue' ? 'Connect your DJI Osmo, Sony Alpha and more\nOr add one of our cameras for £149 a month, 12-month minimum. Set up for you, controlled from Camera Control. The camera goes back when the rental ends.' : '1 PTZ camera included, set up for you (12-month minimum)'];
   if (planId === 'liveset-creative') return [who, sets, 'Unlimited vertical clips from every set', 'Multi-camera auto-edit of the full set, in 4K with HQ audio', brand, space,
     artist ? '1 PTZ camera, Starlink Mini and Mac mini, set up for you\nOr add a second camera for £149 a month, 12-month minimum. Set up for you, controlled from Camera Control. The camera goes back when the rental ends.' : '2 PTZ cameras, Starlink Mini and Mac mini, set up for you',
-    '12-month minimum; the kit goes back to us when the plan ends', 'Quarterly performance reports'];
+    '12-month minimum', 'Quarterly performance reports'];
   return null;
 }
 export function priceForType(price, type, planId) {
