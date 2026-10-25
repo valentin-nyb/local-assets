@@ -2663,6 +2663,13 @@
             var kick = function() { if (mp.paused) tryPlay(); };
             document.addEventListener('touchstart', kick, { once: true, passive: true });
             document.addEventListener('click', kick, { once: true });
+            // iOS pauses video when the app or tab goes to the background: start it again on return
+            // (and keep trying for a few seconds after opening, until the player has loaded)
+            var resume = function() { if (_heroLoop && _heroLoop.el === mp && mp.paused && document.visibilityState === 'visible') tryPlay(); };
+            document.addEventListener('visibilitychange', resume);
+            window.addEventListener('pageshow', resume);
+            window.addEventListener('focus', resume);
+            [500, 1500, 3000, 6000].forEach(function(ms) { setTimeout(resume, ms); });
             mp.addEventListener('timeupdate', function() { if (mp.currentTime >= end || mp.currentTime < start - 1) mp.currentTime = start; });
             wrap.appendChild(mp);
             _heroLoop = { key: key, el: mp };
