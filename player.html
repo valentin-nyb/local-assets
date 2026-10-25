@@ -78,7 +78,10 @@
         .clip-thumb.active img { opacity: 1; }
         .clip-thumb-num { font: 500 10px/1 'JetBrains Mono', ui-monospace, monospace; text-align: center; margin-top: 5px; color: var(--la-dim); }
         .clip-thumb.active .clip-thumb-num { color: var(--la-accent); }
-    </style>
+            /* Player time: hovering colours the numbers instead of filling a green box behind them */
+        mux-player::part(time display) { --media-control-hover-background: transparent; }
+        mux-player::part(time display):hover { color: var(--la-accent, #39FF14); }
+</style>
 </head>
 <body class="pg">
 

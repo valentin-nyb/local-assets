@@ -523,13 +523,13 @@
         .ci-phase ol { list-style:none; margin:0; padding:0; }
         .ci-phase li { display:flex; gap:10px; padding-bottom:12px; }
         .ci-phase li + li { padding-top:12px; border-top:1px solid var(--la-line-soft); }
-        .ci-phase li > b { flex-shrink:0; font:500 10px/18px 'JetBrains Mono',monospace; letter-spacing:.06em; color:var(--la-dim); }
+        .ci-phase li > b { flex-shrink:0; font:500 10px/18px 'JetBrains Mono',monospace; letter-spacing:.06em; color:var(--la-accent); }
         html:not(.dark) .ci-phase li > b { color:#EA580C; }
-        .ci-phase strong { display:block; font:700 13px/18px "Helvetica Neue", Helvetica, Arial, sans-serif; color:var(--la-text); margin-bottom:4px; }
+        .ci-phase strong { display:block; font:700 13px/18px "Helvetica Neue", Helvetica, Arial, sans-serif; color:var(--la-text); margin-bottom:4px; text-transform:uppercase; letter-spacing:.02em; }
         .ci-phase span { display:block; font-size:12px; line-height:1.5; color:var(--la-sub); }
         .ci-link { color:var(--la-text); text-decoration:underline; text-underline-offset:2px; }
-        /* Animated logos: blue on the dark theme, orange on the light one */
-        .ci-anim { font-style:normal; color:#60A5FA; }
+        /* Animated logos in orange (a lighter orange on the dark theme) */
+        .ci-anim { font-style:normal; color:#FB923C; }
         html:not(.dark) .ci-anim { color:#EA580C; }
         @media (max-width: 900px) {
             .cam-intro { grid-template-columns:minmax(0,1fr); padding:22px 18px; gap:28px; }
@@ -655,6 +655,9 @@
         .cam-check { display:flex !important; flex-direction:row !important; align-items:flex-start; gap:10px; cursor:pointer; }
         .cam-check input { width:16px; height:16px; margin-top:2px; accent-color:var(--la-accent); flex-shrink:0; }
         .cam-check span { display:flex; flex-direction:column; gap:3px; }
+        /* Player time: hovering colours the numbers instead of filling a green box behind them */
+        mux-player::part(time display) { --media-control-hover-background: transparent; }
+        mux-player::part(time display):hover { color: var(--la-accent, #39FF14); }
 </style>
 </head>
 <body class="font-sans antialiased bg-background text-foreground overflow-hidden h-screen w-screen flex selection:bg-primary selection:text-black">

@@ -54,6 +54,9 @@
         .hero-meta .hero-facts:empty { display:none; }
         .hero-meta .hero-facts span { display:inline-flex; align-items:baseline; gap:7px; font:600 12px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.04em; text-transform:uppercase; color:#fff; }
         .hero-meta .hero-facts i { font:500 9px/1 'JetBrains Mono', monospace; font-style:normal; letter-spacing:.18em; color:rgba(255,255,255,.6); }
+        /* Player time: hovering colours the numbers instead of filling a green box behind them */
+        mux-player::part(time display) { --media-control-hover-background: transparent; }
+        mux-player::part(time display):hover { color: var(--la-accent, #39FF14); }
 </style>
     <style>
         body { background-color: #050505; color: #ffffff; -webkit-font-smoothing: antialiased; }
