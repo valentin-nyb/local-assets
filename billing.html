@@ -649,6 +649,9 @@
                 d.plansOffered = d.plansOffered.slice().sort(function(a, b) { return (a.price || 0) - (b.price || 0); });
                 var curIdx = d.plansOffered.findIndex(function(p) { return p.id === d.currentPlan; });
                 var nextUp = curIdx + 1;   // the plan to suggest
+                // Pro is the one to suggest while it's a step up; otherwise the next plan
+                var proIdx = d.plansOffered.findIndex(function(p) { return p.id === 'liveset-distribution'; });
+                if (proIdx > curIdx) nextUp = proIdx;
                 var fmt = function(n) { return Math.round(n).toLocaleString('en-GB'); };
                 document.getElementById('bl-offer').innerHTML = d.plansOffered.map(function(p, i) {
                     var cur = p.id === d.currentPlan, parts = String(p.name).split(/\s*·\s*/);
