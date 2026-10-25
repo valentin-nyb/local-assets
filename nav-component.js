@@ -385,6 +385,8 @@ document.addEventListener("DOMContentLoaded", () => {
     async function _refreshToken() {
         var session = _getAdminSession();
         if (!session || !session.webToken || _refreshing) return;
+        // Only while someone is using a page: an idle browser runs out after 10 minutes like a closed one
+        if (!_isApp() && Date.now() - _lastActive() > _SESSION_MS && !_mediaPlaying()) return;
         _refreshing = true;
         try {
             var res = await fetch('/api/switch-venue', {
@@ -447,8 +449,35 @@ document.addEventListener("DOMContentLoaded", () => {
                 main.insertBefore(b, main.firstChild);
             }).catch(function() {});
     })();
+    // ── Signing out on time ──
+    // In a browser the session lasts 10 minutes from the last time anyone used a page (any tab).
+    // An expired or signed-out session sends every open page to sign-in: on a timer, when a tab comes back,
+    // when another tab signs out, and when Back shows a page kept from before signing out.
+    // The a™ apps stay signed in (the Mac app streams sets by itself); Log out still signs them out.
+    function _isApp() { return !!window.laApp; }
+    function _lastActive() { try { return Number(localStorage.getItem('la_active')) || 0; } catch (_) { return 0; } }
+    function _mediaPlaying() { return Array.prototype.some.call(document.querySelectorAll('video, audio'), function(m) { return !m.paused && !m.ended; }); }
+    var _markedAt = 0;
+    function _markActive() {
+        var now = Date.now(); if (now - _markedAt < 15000) return; _markedAt = now;
+        try { localStorage.setItem('la_active', String(now)); } catch (_) {}
+    }
+    var _signedInAtLoad = !!_getAdminSession();
+    function _checkSignedIn() {
+        if (!_signedInAtLoad) return;
+        if (_getAdminSession()) return;
+        try { localStorage.removeItem('la_admin'); } catch (_) {}
+        window.location.replace('/login.html?next=' + encodeURIComponent(location.pathname + location.search));
+    }
+    if (_signedInAtLoad) {
+        _markActive();
+        ['pointerdown', 'keydown', 'wheel', 'touchstart', 'scroll'].forEach(function(ev) { window.addEventListener(ev, _markActive, { passive: true, capture: true }); });
+        setInterval(function() { if (_mediaPlaying()) _markActive(); _checkSignedIn(); }, 20000);
+        window.addEventListener('storage', function(e) { if (e.key === 'la_admin' && !e.newValue) _checkSignedIn(); });
+        window.addEventListener('pageshow', function(e) { if (e.persisted) _checkSignedIn(); });
+    }
     setInterval(_refreshToken, 5 * 60 * 1000);
-    document.addEventListener('visibilitychange', function() { if (document.visibilityState === 'visible') _refreshToken(); });
+    document.addEventListener('visibilitychange', function() { if (document.visibilityState === 'visible') { _checkSignedIn(); _refreshToken(); } });
     _refreshToken();
 
     window.LA_SWITCH_VENUE = async function(slug, as) {
