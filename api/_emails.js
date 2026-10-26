@@ -49,7 +49,8 @@ export function mailError(e) {
   const m = String(e?.message || e?.name || e || 'refused');
   return /header|bearer|api key|unauthori[sz]ed|forbidden/i.test(m) ? 'the email key saved in Vercel (LA_RESEND_API_KEY) is not a valid Resend key' : m.slice(0, 200);
 }
-export const mailFrom = (box = 'noreply', name = 'local / assets') => `${name} <${box}@${SEND_DOMAIN}>`;
+// Every email comes from info@ (the Google Workspace account), so Gmail shows its profile photo, the a
+export const mailFrom = (box, name = 'local / assets') => `${name} <info@${SEND_DOMAIN}>`;
 
 // Welcome email after a sign-up. plan: { name, line } where line says what was paid and what's next.
 export function welcomeEmail({ name, email, type, plan, ready }) {

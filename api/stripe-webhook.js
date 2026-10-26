@@ -224,7 +224,7 @@ async function recordCameraOrder(session, stripe) {
     const esc = v => String(v ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     try {
       await new Resend((process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY || '').trim()).emails.send({
-        from: mailFrom('noreply', 'local/assets™'),
+        from: mailFrom(),
         to: process.env.ORDERS_EMAIL || 'info@local-assets.com',
         subject: order.rental
           ? `Camera hire: ${quantity} × OBSBOT Tail 2, ${order.rental.days} day${order.rental.days > 1 ? 's' : ''} from ${order.rental.startDate} (${order.venueSlug || order.email})`
@@ -334,7 +334,7 @@ async function sendGoogleLoginNotice(email) {
   const link = 'https://local-assets.com/client.html';
 
   await resend.emails.send({
-    from: mailFrom('noreply', 'local/assets™'),
+    from: mailFrom(),
     to: email,
     subject: 'Your local/assets™ Client Portal',
     html: `

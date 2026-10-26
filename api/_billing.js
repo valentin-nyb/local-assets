@@ -543,7 +543,7 @@ export async function accountTypeOf(redis, slug) {
 export async function sendInvoiceEmail(to, data) {
   if (!(process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY || '').trim()) throw new Error("Email is not set up (LA_RESEND_API_KEY)");
   const m = invoiceEmail(data);
-  const r = await new Resend((process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY || '').trim()).emails.send({ from: mailFrom('billing'), replyTo: 'info@local-assets.com', to, subject: m.subject, html: m.html, text: m.text });
+  const r = await new Resend((process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY || '').trim()).emails.send({ from: mailFrom(), replyTo: 'info@local-assets.com', to, subject: m.subject, html: m.html, text: m.text });
   if (r?.error) throw new Error(mailError(r.error));
   console.log('[billing] invoice email accepted', to, r?.data?.id || '');
   return r;
