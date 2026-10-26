@@ -11,8 +11,9 @@ import {
 // Minutes Mux had encoded by kind, read off Mux's bill (Billing → Summary) before the webhook noted every video;
 // a month's encoding never counts as less than this
 const MUX_BILL_FLOOR = {
-  '2026-10': { 'vod:premium:720p': 1109, 'vod:premium:1080p': 890, 'vod:basic:720p': 127, 'vod:basic:1080p': 243,
-    'vod:premium:audio-only': 513, 'vod:basic:audio-only': 59, 'live:plus:720p': 403 },
+  // From Mux's daily usage report (Usage → Export CSV, 26 Oct 2026)
+  '2026-10': { 'vod:premium:720p': 1108, 'vod:premium:1080p': 892, 'vod:basic:720p': 127, 'vod:basic:1080p': 244,
+    'vod:premium:audio-only': 512, 'vod:basic:audio-only': 59, 'live:plus:720p': 393, 'live:plus:1080p': 10 },
 };
 
 // Billing page data and actions.
