@@ -115,7 +115,7 @@ async function animateClip(job) {
     const blob = await put(`watermarks/${job.slug}/gif-${crypto.randomBytes(6).toString('hex')}.mp4`, fs.readFileSync(out), { access: 'public', contentType: 'video/mp4', addRandomSuffix: false, multipart: size() > 50 * 1024 * 1024 });
     const copy = await muxReq(auth, '/video/v1/assets', {
       method: 'POST',
-      body: JSON.stringify({ input: [{ url: blob.url }], playback_policy: ['public'], passthrough: tagFor(job.artist, job.n),
+      body: JSON.stringify({ input: [{ url: blob.url }], playback_policy: ['public'], video_quality: process.env.MUX_VIDEO_QUALITY || 'basic', passthrough: tagFor(job.artist, job.n),
         ...(job.masterId ? { meta: { external_id: job.masterId } } : {}), static_renditions: [{ resolution: 'highest' }] }),
     });
     await redis.hSet(swapsKey(job.slug), copy.id, JSON.stringify({ old: job.oldId, n: job.n }));
@@ -151,7 +151,7 @@ async function audioOnly(job) {
     if (size() < 20 * 1024) await grab(`https://stream.mux.com/${job.pid}.m3u8`);
     if (size() < 20 * 1024) throw new Error('no sound found in the recording');
     const blob = await put(`watermarks/${job.slug}/decks-${crypto.randomBytes(6).toString('hex')}.m4a`, fs.readFileSync(out), { access: 'public', contentType: 'audio/mp4', addRandomSuffix: false, multipart: size() > 50 * 1024 * 1024 });
-    const copy = await muxReq(auth, '/video/v1/assets', { method: 'POST', body: JSON.stringify({ input: [{ url: blob.url }], playback_policy: ['public'], passthrough: job.passthrough, static_renditions: [{ resolution: 'audio-only' }] }) });
+    const copy = await muxReq(auth, '/video/v1/assets', { method: 'POST', body: JSON.stringify({ input: [{ url: blob.url }], playback_policy: ['public'], video_quality: process.env.MUX_VIDEO_QUALITY || 'basic', passthrough: job.passthrough, static_renditions: [{ resolution: 'audio-only' }] }) });
     await redis.set(`aud_swap:${copy.id}`, JSON.stringify({ old: job.assetId, blob: blob.url }), { EX: 7 * 86400 });
     console.log('[decks-audio] audio-only copy', job.slug, job.assetId, '→', copy.id, Math.round(size() / 1024) + ' KB', Math.round((Date.now() - t0) / 1000) + 's');
   } catch (e) {
@@ -357,7 +357,7 @@ export default async function handler(req, res) {
         method: 'POST',
         body: JSON.stringify({
           input: [{ url: `mux://assets/${master.id}` }, { url: overlayUrl, overlay_settings: { vertical_align: 'top', horizontal_align: 'left', width: '100%', opacity: '100%' } }],
-          playback_policy: ['public'],
+          playback_policy: ['public'], video_quality: process.env.MUX_VIDEO_QUALITY || 'basic',
           passthrough: `${artist} // 4KWM`,
           meta: { external_id: master.id },
           static_renditions: [{ resolution: 'highest' }],
@@ -451,7 +451,7 @@ export default async function handler(req, res) {
           method: 'POST',
           body: JSON.stringify({
             input: [input, { url: overlayUrl, overlay_settings: { vertical_align: 'top', horizontal_align: 'left', width: '100%', opacity: '100%' } }],
-            playback_policy: ['public'],
+            playback_policy: ['public'], video_quality: process.env.MUX_VIDEO_QUALITY || 'basic',
             passthrough: tagFor(artist, n),
             ...(sessionMaster ? { meta: { external_id: sessionMaster.id } } : {}),
             static_renditions: [{ resolution: 'highest' }],

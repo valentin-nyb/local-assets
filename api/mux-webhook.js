@@ -90,7 +90,7 @@ async function createAudioAsset(auth, assetId, artistName) {
         headers: { 'Content-Type': 'application/json', Authorization: auth },
         body: JSON.stringify({
             input: [{ url: `mux://assets/${assetId}` }],
-            playback_policy: ['public'],
+            playback_policy: ['public'], video_quality: process.env.MUX_VIDEO_QUALITY || 'basic',
             passthrough: tag,
             static_renditions: [{ resolution: 'audio-only' }]
         })
@@ -161,7 +161,7 @@ async function createThumbnails(auth, assetId, artistName, playbackId, duration)
                 headers: { 'Content-Type': 'application/json', Authorization: auth },
                 body: JSON.stringify({
                     input: [{ url: blob.url }],
-                    playback_policy: ['public'],
+                    playback_policy: ['public'], video_quality: process.env.MUX_VIDEO_QUALITY || 'basic',
                     passthrough: tag,
                     static_renditions: [{ resolution: 'highest' }]
                 })

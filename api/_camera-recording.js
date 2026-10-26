@@ -137,7 +137,7 @@ export async function processCameraRecording(event) {
           method: 'POST',
           body: JSON.stringify({
             input: [{ url: `mux://assets/${assetId}`, start_time: Math.floor(s.start), end_time: Math.ceil(s.end) }],
-            playback_policy: ['public'],
+            playback_policy: ['public'], video_quality: process.env.MUX_VIDEO_QUALITY || 'basic',
             passthrough: tag(s.artist, date, calSets.length ? s : null, camLabel, multi && calSets.length > 0),
             // The decks: a downloadable audio file; cameras: the full-quality MP4
             static_renditions: [{ resolution: isAudio ? 'audio-only' : 'highest' }],
