@@ -1,3 +1,4 @@
+import { videoQuality } from './_video-quality.js';
 import crypto from 'crypto';
 import fs from 'fs';
 import os from 'os';
@@ -395,7 +396,7 @@ export async function cutVertical(redis, auth, job) {
       method: 'POST',
       body: JSON.stringify({
         input: [{ url: blob.url }],
-        playback_policy: ['public'], video_quality: process.env.MUX_VIDEO_QUALITY || 'basic',
+        playback_policy: ['public'], video_quality: await videoQuality(job.slug),
         passthrough: tagFor(job.artist, job.n, true),
         meta: { external_id: job.masterId },
         static_renditions: [{ resolution: 'highest' }],

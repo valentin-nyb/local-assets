@@ -1,3 +1,4 @@
+import { videoQuality } from './_video-quality.js';
 import { pausedBy, sendPaused } from './_suspend.js';
 import { getWebSessionAuth } from './_venues.js';
 
@@ -53,8 +54,8 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         new_asset_settings: {
           playback_policy: ['public'],
-          // Basic: Mux encodes it free (Premium cost ~$85 a month while testing). MUX_VIDEO_QUALITY=premium switches back
-          video_quality: process.env.MUX_VIDEO_QUALITY || 'basic',
+          // Basic (free to encode) unless Premium is on for the account in Accounts
+          video_quality: await videoQuality(session?.venueSlug),
           passthrough: passthrough,
           meta: { title: videoTitle.slice(0, 512) },
           static_renditions: [{ resolution: isAudio ? 'audio-only' : 'highest' }],

@@ -1,3 +1,4 @@
+import { videoQuality } from './_video-quality.js';
 import crypto from 'crypto';
 import { createClient } from 'redis';
 import { getWebSessionAuth } from './_venues.js';
@@ -46,7 +47,7 @@ export async function startMulticam(r, slug, auth, artist, date, src, { title = 
   const upload = async (camera, extra) => {
     const up = await fetch('https://api.mux.com/video/v1/uploads', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: auth }, signal: AbortSignal.timeout(15000),
-      body: JSON.stringify({ timeout: 604800, new_asset_settings: { playback_policy: ['public'], video_quality: process.env.MUX_VIDEO_QUALITY || 'basic', passthrough: JSON.stringify({ artist, date, camera }), ...extra } }),
+      body: JSON.stringify({ timeout: 604800, new_asset_settings: { playback_policy: ['public'], video_quality: await videoQuality(slug), passthrough: JSON.stringify({ artist, date, camera }), ...extra } }),
     }).then(x => x.json());
     if (!up?.data?.url) throw new Error('Mux did not create the upload: ' + (up?.error?.messages?.[0] || 'unknown'));
     return { id: up.data.id, url: up.data.url };
