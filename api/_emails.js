@@ -21,6 +21,8 @@ const THEME = `<style>
     .e-btns .e-sp { height:10px !important; width:auto !important; }
   }
   @media (prefers-color-scheme: dark) {
+    .e-lt { display:none !important; }
+    .e-dk { display:block !important; max-height:none !important; }
     .e-bg { background:#070905 !important; }
     .e-card { background:#0d100b !important; }
     .e-t { color:#fafafa !important; } .e-s { color:#a1a1aa !important; } .e-d { color:#71717a !important; } .e-f { color:#52525b !important; }
@@ -102,8 +104,9 @@ const apps = (macLine) => row(`<table role="presentation" width="100%" cellpaddi
 // The footer: the wordmark small, the places to go, and where the email comes from
 const footer = row(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td class="e-line" style="padding:28px 0 0;border-top:1px solid ${L.line}">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
-        <td valign="top"><span class="e-t" style="font:700 15px/1 ${FONT};letter-spacing:-.03em;color:${L.text}">local&nbsp;/&nbsp;assets&trade;</span></td>
-        <td valign="top" align="right" class="e-f" style="font:500 10px/1.4 ${MONO};letter-spacing:.2em;text-transform:uppercase;color:${L.foot}">London</td>
+        <td valign="middle"><span class="e-t" style="font:700 15px/1 ${FONT};letter-spacing:-.03em;color:${L.text}">local&nbsp;/&nbsp;assets&trade;</span><span class="e-f" style="font:500 10px/1 ${MONO};letter-spacing:.2em;text-transform:uppercase;color:${L.foot}">&nbsp;&nbsp;&middot;&nbsp;&nbsp;London</span></td>
+        <!-- The a: black on the light email, white on the dark one -->
+        <td valign="middle" align="right" width="24"><img class="e-lt" src="${SITE}/logos/a-black.png" width="22" alt="a&trade;" style="display:block;width:22px;height:auto;border:0"><!--[if !mso]><!--><img class="e-dk" src="${SITE}/logos/a-white.png" width="22" alt="a&trade;" style="display:none;width:22px;height:auto;border:0;max-height:0;overflow:hidden"><!--<![endif]--></td>
       </tr></table>
       <p class="e-d" style="margin:16px 0 0;font:400 13px/1.7 ${FONT};color:${L.dim}"><a href="${SITE}" class="e-link" style="color:${L.link};text-decoration:none">local-assets.com</a> &nbsp;&middot;&nbsp; <a href="${SITE}/download" class="e-link" style="color:${L.link};text-decoration:none">Download a&trade;</a> &nbsp;&middot;&nbsp; <a href="${SITE}/privacy" class="e-link" style="color:${L.link};text-decoration:none">Privacy</a></p>
     </td></tr></table>`, '56px 0 0');
