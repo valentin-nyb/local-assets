@@ -27,7 +27,8 @@ const THEME = `<style>
 </style>`;
 const head = (title) => `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark"><title>${title}</title>${THEME}</head>`;
-const wordmark = `<img class="e-lt" src="${SITE}/logos/email-wordmark-orange.png" width="150" height="19" alt="local / assets" style="display:block;width:150px;height:19px;border:0"><!--[if !mso]><!--><img class="e-dk" src="${SITE}/logos/email-wordmark.png" width="150" height="19" alt="local / assets" style="width:150px;height:19px;border:0"><!--<![endif]-->`;
+// The wordmark is white in both looks, on its own black band so it shows on a white email too
+const wordmark = `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="background:#0a0a08;border-radius:14px"><tr><td style="padding:16px 20px;background:#0a0a08;border-radius:14px"><img src="${SITE}/logos/email-wordmark-white.png" width="150" height="19" alt="local / assets" style="display:block;width:150px;height:19px;border:0"></td></tr></table>`;
 const footer = `<tr><td style="padding:40px 4px 0">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="e-line2" style="border-top:1px solid ${L.line2}"><tr>
         <td class="e-f" style="padding:20px 0 0;font:500 10px/1.6 ${MONO};letter-spacing:.2em;text-transform:uppercase;color:${L.foot}">local / assets&trade; &middot; London</td>
