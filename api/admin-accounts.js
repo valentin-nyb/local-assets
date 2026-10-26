@@ -133,7 +133,7 @@ export default async function handler(req, res) {
     if (body.action === 'emailExample') {
       const to = String(body.to || '').trim().toLowerCase();
       if (!/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(to)) return res.status(400).json({ error: 'Enter the email to send the example to' });
-      const key = process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY;
+      const key = (process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY || '').trim();
       if (!key) return res.status(503).json({ error: 'Email is not set up (no Resend key)' });
       const pick = clients.find(([s]) => s === String(body.slug || '')) || clients[0];
       const account = pick ? (pick[1].name || pick[0]) : 'Your venue';
@@ -179,7 +179,7 @@ export default async function handler(req, res) {
       });
       let emailed = false, emailError = null, emailId = null, delivery = null;
       if (body.action === 'addLogin') {
-        const key = process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY;
+        const key = (process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY || '').trim();
         if (key) {
           const m = accessInviteEmail({ kind: 'team', account: name, email });
           const resend = new Resend(key);

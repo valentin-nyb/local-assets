@@ -219,11 +219,11 @@ async function recordCameraOrder(session, stripe) {
     await redis.quit().catch(() => {});
   }
 
-  if ((process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY)) {
+  if ((process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY || '').trim()) {
     const a = order.address || {};
     const esc = v => String(v ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     try {
-      await new Resend((process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY)).emails.send({
+      await new Resend((process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY || '').trim()).emails.send({
         from: mailFrom('noreply', 'local/assets™'),
         to: process.env.ORDERS_EMAIL || 'info@local-assets.com',
         subject: order.rental
@@ -303,9 +303,9 @@ async function createClientAccount(session, stripe) {
     console.log('[Stripe Webhook] client account', same ? 'exists' : 'created', slug, type, m.tier, storage ? 'live' : 'waiting for storage', card ? 'card saved' : 'no card');
   } finally { await redis.quit().catch(() => {}); }
 
-  if (!(process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY) || same) return;
+  if (!(process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY || '').trim() || same) return;
   const esc = v => String(v ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const resend = new Resend((process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY));
+  const resend = new Resend((process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY || '').trim());
   await resend.emails.send({
     from: mailFrom(), to: process.env.ORDERS_EMAIL || 'info@local-assets.com',
     subject: storage ? `New client: ${name} (${type}) · live` : `New client: ${name} (${type}) · finish setup`,
@@ -327,7 +327,7 @@ async function createClientAccount(session, stripe) {
 }
 
 async function sendGoogleLoginNotice(email) {
-  const apiKey = (process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY);
+  const apiKey = (process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY || '').trim();
   if (!apiKey) throw new Error('RESEND_API_KEY not set');
 
   const resend = new Resend(apiKey);

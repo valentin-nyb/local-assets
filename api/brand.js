@@ -179,7 +179,7 @@ export default async function handler(req, res) {
       // The invite, from the account (an email that can't be sent doesn't undo the access)
       let emailed = false;
       if (body.action === 'grantAccess') {
-        const key = process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY;
+        const key = (process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY || '').trim();
         if (key) {
           const m = accessInviteEmail({ artist: out.name, account: getVenuesConfig()[slug]?.name || slug, email });
           const r = await new Resend(key).emails.send({ from: mailFrom(), replyTo: session.email, to: email, subject: m.subject, html: m.html, text: m.text }).catch(e => ({ error: e }));
