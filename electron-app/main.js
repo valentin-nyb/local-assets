@@ -3,7 +3,7 @@
 // sign-in inside apps, so sign-in happens in the browser: the app opens it with the hash of a one-time
 // secret, the browser hands back a code through localassets://signed-in, and the app swaps the code and
 // its secret for the session (api/google-auth POST). Only the app that started the sign-in can finish it.
-const { app, BrowserWindow, shell, ipcMain, Menu, net, nativeTheme, session } = require('electron')
+const { app, BrowserWindow, shell, ipcMain, Menu, net, nativeTheme, session, dialog } = require('electron')
 const crypto = require('crypto')
 const path = require('path')
 const thisMac = require('./this-mac')
@@ -170,6 +170,30 @@ function buildMenu() {
   ]))
 }
 
+// One copy only, in Applications: opened from Downloads or the disk image, macOS runs the app from a hidden
+// temporary folder (and a second copy can be left behind). Offer to move it, once per launch.
+async function offerMoveToApplications() {
+  if (!app.isPackaged || app.isInApplicationsFolder()) return
+  const { response } = await dialog.showMessageBox({ type: 'question', buttons: ['Move to Applications', 'Not now'], defaultId: 0, cancelId: 1,
+    message: 'Move a™ to your Applications folder?', detail: 'a™ works best from Applications: it opens faster, and only one copy runs. It restarts from there.' })
+  if (response === 0) { try { app.moveToApplicationsFolder() } catch (e) { console.error('[a™] move to Applications', e.message) } }
+}
+// A newer a™ on local-assets.com (apps/mac-latest.json): say so, with the download page. When it opens, then daily.
+function newer(a, b) { const x = String(a).split('.').map(Number), y = String(b).split('.').map(Number); for (let i = 0; i < 3; i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0) } return false }
+let toldVersion = ''
+async function checkForUpdate() {
+  try {
+    const r = await net.fetch(`${SITE}/apps/mac-latest.json?cb=${Date.now()}`)
+    if (!r.ok) return
+    const { version, notes } = await r.json()
+    if (!version || !newer(version, app.getVersion()) || toldVersion === version) return
+    toldVersion = version
+    const { response } = await dialog.showMessageBox({ type: 'info', buttons: ['Download', 'Later'], defaultId: 0, cancelId: 1,
+      message: `A new a™ is ready (${version})`, detail: (notes ? notes + '\n\n' : '') + `You have ${app.getVersion()}. Download the new one, then replace a™ in Applications.` })
+    if (response === 0) shell.openExternal(`${SITE}/download`)
+  } catch {}
+}
+
 // One copy of the app at a time; a second launch (or a localassets:// link) goes to the first
 if (!app.requestSingleInstanceLock()) {
   app.quit()
@@ -197,6 +221,7 @@ if (!app.requestSingleInstanceLock()) {
       () => win && !win.isDestroyed() ? win.webContents.executeJavaScript(`(function () { try { return (JSON.parse(localStorage.getItem('la_admin') || 'null') || {}).webToken || '' } catch (e) { return '' } })()`).catch(() => '') : Promise.resolve(''))
     createWindow()
     if (pendingLink) { handleLink(pendingLink); pendingLink = null }
+    offerMoveToApplications().finally(() => { setTimeout(checkForUpdate, 8000); setInterval(checkForUpdate, 24 * 3600e3) })
   })
   app.on('activate', () => { if (!win) createWindow(); else win.show() })
   app.on('before-quit', () => thisMac.stopAll())

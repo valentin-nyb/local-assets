@@ -389,6 +389,13 @@ function init(onChange, tokenOf) {
   // the disk image) would hold the cameras: any a™ ffmpeg, wherever that copy lives
   try { require('child_process').execFileSync('/usr/bin/pkill', ['-f', FFMPEG], { stdio: 'ignore' }) } catch {}
   try { require('child_process').execFileSync('/usr/bin/pkill', ['-f', 'a™.app/Contents/Resources/ffmpeg'], { stdio: 'ignore' }) } catch {}
+  // If a™ itself ends without stopping them (a crash, a force quit, an update), a small watcher ends its
+  // camera processes a few seconds later, so none keeps a camera open in the background
+  try {
+    const w = spawn('/bin/sh', ['-c', `while kill -0 ${process.pid} 2>/dev/null; do sleep 3; done; /usr/bin/pkill -f "$0"; exec /usr/bin/pkill -f 'a™.app/Contents/Resources/ffmpeg'`, FFMPEG],
+      { detached: true, stdio: 'ignore' })
+    w.unref()
+  } catch {}
   load()
   poll().then(checkSite)
   setInterval(() => checkSite(), 60e3)
