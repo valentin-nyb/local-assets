@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import { getWebSessionAuth } from './_venues.js';
+import { createCheckout } from './_checkout.js';
 
 // Camera orders: OBSBOT Tail 2 sold by local / assets through Stripe Checkout.
 // Payment methods (card, Apple Pay, Klarna, …) come from the Stripe dashboard settings,
@@ -53,7 +54,7 @@ export default async function handler(req, res) {
 
   try {
     const stripe = new Stripe(sk);
-    const checkout = await stripe.checkout.sessions.create({
+    const checkout = await createCheckout(stripe, {
       mode: 'payment',
       ...(session.email ? { customer_email: session.email } : {}),
       line_items: [rent ? {

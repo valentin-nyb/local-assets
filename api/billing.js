@@ -4,6 +4,7 @@ import { unpaidKey, readUnpaid } from './_suspend.js';
 import { createClient } from 'redis';
 import { getWebSessionAuth, getVenuesConfig, readRegistryRaw, saveRegistryEntry, sealSecret, freshVenues, isAdminVenue } from './_venues.js';
 import { venueAuth } from './_verticals.js';
+import { createCheckout } from './_checkout.js';
 import {
   readRates, readPlans, cleanPlans, readAssignments, assignKey, venueUsage, venueArtists, priceUsage,
   monthRange, stripeClient, invoiceVenue, venueEntries, DEFAULT_RATES, applyDetails, usageByDay, planForType, priceForType, commitEndFor, readKit, cleanKit, KIT_PLANS, accountTypeOf, sendInvoiceEmail, billingEmailFor, readDiscount, muxCost, MUX_PRICES, parseMuxReport, accountRatesKey } from './_billing.js';
@@ -422,7 +423,7 @@ export default async function handler(req, res) {
         const customer = await withRedis(r => r.get(`billing_customer:${slug}`));
         const commitEnd = new Date(Date.now() + 365 * 86400e3).toISOString().slice(0, 10);
         const meta = { kind: 'addon-camera', venueSlug: slug, minimumMonths: '12', commitEnd };
-        const checkout = await stripe.checkout.sessions.create({
+        const checkout = await createCheckout(stripe, {
           mode: 'subscription',
           ...(customer ? { customer } : { customer_email: session.email }),
           line_items: [{ quantity: 1, price_data: { currency: 'gbp', unit_amount: 14900, tax_behavior: 'exclusive', recurring: { interval: 'month' }, product_data: { name: 'local / assets · PTZ camera (12-month minimum)' } } }],
@@ -497,7 +498,7 @@ export default async function handler(req, res) {
         const credit = a.trialFee > 0 && a.trialAt && Date.now() - a.trialAt <= 30 * 86400e3 && !a.trialCredited
           ? await stripe.coupons.create({ amount_off: Math.round(a.trialFee * 100), currency: 'gbp', duration: 'once', max_redemptions: 1, name: 'Trial Month credit' }).catch(e => { console.error('[billing] trial credit', e.message); return null; })
           : null;
-        const checkout = await stripe.checkout.sessions.create({
+        const checkout = await createCheckout(stripe, {
           ...(credit ? { discounts: [{ coupon: credit.id }] } : {}),
           mode: 'subscription',
           ...(customer ? { customer } : { customer_email: session.email }),

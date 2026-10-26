@@ -626,3 +626,58 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run); else run();
 })();
+
+// The terms: the first time someone opens the dashboard they tick that they agree to the Terms of Service
+// and have read the Privacy policy. Asked once per version (api/switch-venue.js keeps who agreed and when).
+(function() {
+    function session() { try { var d = JSON.parse(localStorage.getItem('la_admin') || 'null'); return d && d.webToken ? d : null; } catch (_) { return null; } }
+    function post(token, body) {
+        return fetch('/api/switch-venue', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify(body) })
+            .then(function(r) { return r.json().catch(function() { return {}; }).then(function(d) { d._status = r.status; return d; }); });
+    }
+    function ask(s, version) {
+        if (document.getElementById('la-terms')) return;
+        var st = document.createElement('style');
+        st.textContent = '#la-terms .lad-panel{width:480px}#la-terms .lat-eyebrow{font:500 10px/1 "JetBrains Mono",ui-monospace,monospace;letter-spacing:.24em;text-transform:uppercase;color:var(--la-dim,#7c8178);margin-bottom:14px}'
+            + '#la-terms a{color:var(--la-text,#fafafa);text-decoration:underline;text-decoration-color:var(--la-accent,#39FF14);text-underline-offset:3px}'
+            + '#la-terms .lat-check{display:flex;gap:12px;align-items:flex-start;margin-top:20px;padding:14px 16px;border:1px solid var(--la-line,#27272a);border-radius:16px;cursor:pointer;font-size:14px;line-height:1.5;color:var(--la-text,#fafafa)}'
+            + '#la-terms .lat-check input{flex:none;width:18px;height:18px;margin-top:1px;accent-color:var(--la-accent,#39FF14);cursor:pointer}'
+            + '#la-terms .lad-btn.primary[disabled]{opacity:.4;cursor:not-allowed;filter:none}'
+            + '#la-terms .lat-err{margin-top:12px;font-size:13px;color:var(--la-bad,#ef4444);min-height:0}';
+        document.head.appendChild(st);
+        var wrap = document.createElement('div');
+        wrap.className = 'lad-backdrop'; wrap.id = 'la-terms';
+        wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true'); wrap.setAttribute('aria-labelledby', 'la-terms-title');
+        wrap.innerHTML = '<div class="lad-panel">'
+            + '<p class="lat-eyebrow">Before you start</p>'
+            + '<h2 class="lad-title" id="la-terms-title">Our terms</h2>'
+            + '<p class="lad-msg">To use local / assets, please agree to our <a href="/terms" target="_blank" rel="noopener">Terms of Service</a>. Our <a href="/privacy" target="_blank" rel="noopener">Privacy policy</a> explains what we keep and why. You only need to do this once.</p>'
+            + '<label class="lat-check"><input type="checkbox" id="la-terms-tick"><span>I agree to the Terms of Service and have read the Privacy policy.</span></label>'
+            + '<p class="lat-err" id="la-terms-err"></p>'
+            + '<div class="lad-actions"><button type="button" class="lad-btn primary" id="la-terms-ok" disabled>Continue</button><button type="button" class="lad-btn ghost" id="la-terms-out">Log out</button></div>'
+            + '</div>';
+        document.body.appendChild(wrap);
+        requestAnimationFrame(function() { wrap.classList.add('in'); });
+        var tick = wrap.querySelector('#la-terms-tick'), ok = wrap.querySelector('#la-terms-ok'), err = wrap.querySelector('#la-terms-err');
+        tick.addEventListener('change', function() { ok.disabled = !tick.checked; });
+        wrap.querySelector('#la-terms-out').addEventListener('click', function() { if (window.LA_ADMIN_LOGOUT) window.LA_ADMIN_LOGOUT(); });
+        ok.addEventListener('click', function() {
+            if (!tick.checked) return;
+            ok.disabled = true; err.textContent = '';
+            var cur = session() || s;
+            post(cur.webToken, { acceptTerms: version }).then(function(d) {
+                if (!d.ok) { err.textContent = d.error || 'Could not save that. Try again.'; ok.disabled = false; return; }
+                wrap.classList.remove('in'); setTimeout(function() { wrap.remove(); }, 160);
+            }).catch(function() { err.textContent = 'Could not save that. Check the connection and try again.'; ok.disabled = false; });
+        });
+    }
+    function run() {
+        var s = session();
+        if (!s || /^\/(login|download|privacy|terms)(\.html)?$/.test(location.pathname)) return;
+        post(s.webToken, { termsStatus: true }).then(function(d) {
+            if (d._status !== 200 || !d.version) return;
+            if (!d.accepted) ask(s, d.version);
+        }).catch(function() {});
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run); else run();
+})();
