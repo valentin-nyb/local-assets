@@ -19,12 +19,15 @@
         html, body { min-height: 100%; background: var(--bg); color: var(--fg); -webkit-font-smoothing: antialiased; font-family: var(--display); }
         body { min-height: 100dvh; display: flex; align-items: center; justify-content: center; padding: 112px 16px 48px; }
         .wordmark { position: fixed; top: 40px; left: 24px; width: 184px; aspect-ratio: 1328 / 165; background: url(/logos/White@2x.png) left center / contain no-repeat; z-index: 2; }
+        /* Dot grid behind the page that lights up around the pointer, as on the sign-in and home pages */
+        .dot-grid-canvas { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+        .wrap, .note { position: relative; z-index: 1; }
         .wrap { width: min(100%, 700px); display: flex; flex-direction: column; align-items: center; }
         .eyebrow { font-family: var(--mono); font-size: 10px; letter-spacing: .24em; text-transform: uppercase; color: var(--dim); margin-bottom: 18px; text-align: center; }
         /* The a™ logo in the heading: the moving white "a" (GIF), oversized with its ™, floating like the devices below */
         /* The logo only takes the height of the capitals in the line, so the eyebrow stays close; the a rises above */
         .note-once { color: #f87171; }
-        .h1-logo { display: inline-block; position: relative; height: .74em; width: calc(1.5em * 630 / 698 + .7em); margin-left: .12em; vertical-align: baseline; animation: float 4.5s ease-in-out infinite; }
+        .h1-logo { display: inline-block; position: relative; height: .74em; width: calc(1.5em * 630 / 698 + .52em); margin-left: .12em; vertical-align: baseline; animation: float 4.5s ease-in-out infinite; }
         .h1-a { position: absolute; left: 0; bottom: -.12em; height: 1.5em; aspect-ratio: 630 / 698; background: url(/logos/a-white-anim.gif) center bottom / contain no-repeat; }
         .h1-tm { position: absolute; right: 0; top: -1.45em; font-size: .55em; font-weight: 700; line-height: 1; }
         @media (prefers-reduced-motion: reduce) { .h1-logo { animation: none; } }
@@ -87,6 +90,7 @@
     </style>
 </head>
 <body>
+    <canvas class="dot-grid-canvas" aria-hidden="true"></canvas>
     <a class="wordmark" href="/" aria-label="local / assets"></a>
     <main class="wrap">
         <div class="title">
@@ -197,6 +201,35 @@
                     .then(function(d) { location.href = d.url; setTimeout(function() { b.classList.remove('busy'); }, 1500); })
                     .catch(function(x) { b.classList.remove('busy'); if (x.message) err.textContent = 'Could not start the download: ' + x.message; });
             });
+        })();
+    </script>
+    <script>
+        // Dot grid that lights up around the pointer, as on the home page hero
+        (function () {
+            var canvas = document.querySelector('.dot-grid-canvas');
+            if (!canvas) return;
+            var ctx = canvas.getContext('2d'), dots = [], mouse = { x: -1000, y: -1000 };
+            var SPACING = 45, DOT_SIZE = 1.1, GLOW_RADIUS = 120, ACTIVE = '57, 255, 20';
+            function init() {
+                canvas.width = window.innerWidth; canvas.height = window.innerHeight; dots = [];
+                for (var x = SPACING / 2; x < canvas.width; x += SPACING)
+                    for (var y = SPACING / 2; y < canvas.height; y += SPACING) dots.push({ x: x, y: y });
+            }
+            function draw() {
+                var idle = '#141a11';
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                for (var i = 0; i < dots.length; i++) {
+                    var d = dots[i], dx = mouse.x - d.x, dy = mouse.y - d.y, dist = Math.sqrt(dx * dx + dy * dy);
+                    ctx.fillStyle = dist < GLOW_RADIUS ? 'rgba(' + ACTIVE + ',' + (1 - dist / GLOW_RADIUS) + ')' : idle;
+                    ctx.beginPath(); ctx.arc(d.x, d.y, dist < GLOW_RADIUS ? DOT_SIZE + 0.5 : DOT_SIZE, 0, Math.PI * 2); ctx.fill();
+                }
+                requestAnimationFrame(draw);
+            }
+            window.addEventListener('mousemove', function (e) { mouse.x = e.clientX; mouse.y = e.clientY; });
+            window.addEventListener('touchmove', function (e) { mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; }, { passive: true });
+            window.addEventListener('touchend', function () { mouse.x = -1000; mouse.y = -1000; });
+            window.addEventListener('resize', init);
+            init(); draw();
         })();
     </script>
 </body>

@@ -59,9 +59,10 @@
         h1 { font-family: var(--display); font-weight: 700; font-size: clamp(28px, 8.6vw, 44px); line-height: .96; letter-spacing: -0.02em; text-transform: uppercase; color: var(--fg); }
         h1 span { display: inline-block; white-space: nowrap; cursor: default; }
         /* Hover: LOG IN turns green, then WORKSPACE™ (TO YOUR stays as it is; nothing moves) */
-        h1 .g { transition: color .3s; }
+        h1 .l1, h1 .g { transition: color .3s; }
         h1 .l2.g { transition-delay: 0s; }
-        @media (hover: hover) { h1:hover .g { color: var(--green); } h1:hover .l2.g { transition-delay: .18s; } }
+        /* Hovering the title turns all of it green, the second line just after */
+        @media (hover: hover) { h1:hover .l1, h1:hover .g { color: var(--green); } h1:hover .l2.g { transition-delay: .18s; } }
         .lead { margin-top: 16px; font-size: 15px; line-height: 1.5; color: #a1a1aa; }
 
         /* Continue with Google: a pill in the platform style, green slides in on hover */
