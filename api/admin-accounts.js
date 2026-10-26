@@ -6,7 +6,7 @@ import { readAssignments, readPlans, stripeClient, accountTypeOf, DISCOUNTS_KEY,
 import { unpaidKey, readUnpaid } from './_suspend.js';
 import { thumbnailPrefix } from './_thumbnails.js';
 import { Resend } from 'resend';
-import { accessInviteEmail, mailFrom } from './_emails.js';
+import { accessInviteEmail, mailFrom, mailError } from './_emails.js';
 
 // Resend's latest event for one email: sent, delivered, delivery_delayed, bounced, complained…
 // waited for up to ms while it is still only "sent" or "queued"
@@ -141,7 +141,7 @@ export default async function handler(req, res) {
       const m = accessInviteEmail({ kind: body.kind === 'team' ? 'team' : 'artist', artist: String(artist || 'Artist name').toUpperCase(), account, email: to, example: true });
       const resend = new Resend(key), from = mailFrom();
       const r = await resend.emails.send({ from, replyTo: 'info@local-assets.com', to, subject: m.subject, html: m.html, text: m.text }).catch(e => ({ error: e }));
-      if (r?.error) return res.status(502).json({ error: 'Could not send it: ' + (r.error.message || r.error.name || 'email refused') });
+      if (r?.error) return res.status(502).json({ error: 'Could not send it: ' + mailError(r.error) });
       const id = r?.data?.id || null;
       // What Resend knows a few seconds later (delivered, bounced…), and whether the sender's domain is verified
       const status = id ? await deliveryOf(resend, id, 8000) : null;
@@ -180,15 +180,16 @@ export default async function handler(req, res) {
       let emailed = false, emailError = null, emailId = null, delivery = null;
       if (body.action === 'addLogin') {
         const key = (process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY || '').trim();
-        if (key) {
+        // A broken key throws while the client is made (before any send): the login is still added
+        if (key) try {
           const m = accessInviteEmail({ kind: 'team', account: name, email });
           const resend = new Resend(key);
           const r = await resend.emails.send({ from: mailFrom(), replyTo: 'info@local-assets.com', to: email, subject: m.subject, html: m.html, text: m.text }).catch(e => ({ error: e }));
           emailed = !r?.error;
-          if (r?.error) { console.error('[admin-accounts] access email', slug, r.error.message || r.error); emailError = r.error.message || r.error.name || 'refused'; }
+          if (r?.error) { console.error('[admin-accounts] access email', slug, mailError(r.error)); emailError = mailError(r.error); }
           // What Resend knows a few seconds later: delivered, bounced, suppressed…
           else if (r?.data?.id) { emailId = r.data.id; delivery = await deliveryOf(resend, emailId, 8000); console.log('[admin-accounts] access email', slug, 'id', emailId, 'status', delivery); }
-        }
+        } catch (e) { emailError = mailError(e); console.error('[admin-accounts] access email', slug, emailError); }
       }
       console.log('[admin-accounts]', body.action, slug, 'by', session.email);
       return res.status(200).json({ ok: true, logins: accountLogins(slug, { slug, ...getVenuesConfig()[slug] }), added: list.length, emailed, emailError, emailId, delivery });
@@ -342,6 +343,6 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Unknown action' });
   } catch (e) {
     console.error('[admin-accounts]', e.message);
-    return res.status(500).json({ error: e.message });
+    return res.status(500).json({ error: /bearer|header value/i.test(e.message) ? mailError(e) : e.message });
   }
 }

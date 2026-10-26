@@ -9,6 +9,12 @@ const GREEN = '#85FA4F';
 // The sender: local-assets.com, the domain verified in Resend. (RESEND_EMAIL_DOMAIN from the Vercel integration
 // isn't used: Resend took the emails sent from it, then failed every one as "domain is not verified".)
 export const SEND_DOMAIN = 'local-assets.com';
+// Why Resend refused an email, safe to show: a broken key makes the HTTP library quote the key itself
+// ("Bearer …" is an invalid header value), so that case never repeats the error text
+export function mailError(e) {
+  const m = String(e?.message || e?.name || e || 'refused');
+  return /header|bearer|api key|unauthori[sz]ed|forbidden/i.test(m) ? 'the email key saved in Vercel (LA_RESEND_API_KEY) is not a valid Resend key' : m.slice(0, 200);
+}
 export const mailFrom = (box = 'noreply', name = 'local / assets') => `${name} <${box}@${SEND_DOMAIN}>`;
 
 // Welcome email after a sign-up. plan: { name, line } where line says what was paid and what's next.
