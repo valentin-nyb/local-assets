@@ -26,6 +26,8 @@
         n++;
       }, MS);
     };
-    sheet.src = '/favicon/spin-frames.png?v=3';
+    // A black a in light tab bars, white in dark ones
+    var dark = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches;
+    sheet.src = dark ? '/favicon/spin-frames.png?v=4' : '/favicon/spin-frames-black.png?v=4';
   } catch (_) {}
 })();
