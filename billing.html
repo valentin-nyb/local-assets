@@ -95,6 +95,7 @@
         .bl-seg { display:inline-flex; border:1px solid color-mix(in srgb, var(--la-text) 24%, transparent); border-radius:999px; padding:3px; gap:2px; }
         .bl-seg button { height:32px; min-width:56px; padding:0 14px; border:0; border-radius:999px; background:none; color:var(--la-text); font:500 13px 'Helvetica Neue', Helvetica, Arial, sans-serif; cursor:pointer; transition:background .25s ease, color .25s ease; }
         .bl-seg button.on { background:var(--la-text); color:var(--la-bg); }
+        .bl-csv { display:inline-flex; align-items:center; gap:8px; height:40px; }
         .bl-chart { position:relative; padding:12px 20px 18px; min-height:300px; }
         .bl-chart svg .bar { fill:color-mix(in srgb, var(--la-accent) 38%, transparent); }
         .bl-legend { display:flex; gap:18px; padding:0 20px 16px; font-size:12px; color:var(--la-sub); }
@@ -329,6 +330,7 @@
                                 <optgroup label="Cycles"><option value="cycle">Current cycle</option><option value="inv1" selected>Last invoice + current cycle</option><option value="inv2">Last 2 invoices + current cycle</option><option value="inv3">Last 3 invoices + current cycle</option></optgroup>
                             </select>
                             <div class="bl-seg" role="group" aria-label="Show"><button type="button" data-unit="streamed">Streamed</button><button type="button" data-unit="stored" class="on">Stored</button><button type="button" data-unit="money">£</button></div>
+                            <button type="button" class="cam-btn ghost bl-csv" id="bl-csv" title="Download this usage as a spreadsheet (CSV)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h7"/><path d="M14 3v5h5"/><path d="M19 8v3"/><path d="M13 16h8"/><path d="M18 13l3 3-3 3"/></svg>CSV</button>
                         </div>
                     </div>
                     <div class="bl-chart" id="bl-chart"><p class="bl-chart-empty">Loading usage…</p></div>
@@ -458,6 +460,27 @@
                 _chart = d; _chartAt = Date.now(); drawChart();
             } catch (e) { box.innerHTML = '<p class="bl-chart-empty">Usage chart unavailable: ' + esc(e.message) + '</p>'; }
         }
+        // The usage shown in the chart, day by day, as a spreadsheet: the same figures the invoice is priced from
+        document.getElementById('bl-csv').addEventListener('click', function() {
+            var d = _chart; if (!d || !(d.points || []).length) { laAlert('No usage to download yet.'); return; }
+            var labels = [];
+            d.points.forEach(function(x) { (x.lines || []).forEach(function(l) { if (labels.indexOf(l.label) < 0) labels.push(l.label); }); });
+            var q = function(v) { v = v == null ? '' : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+            var cur = (d.currency || 'gbp').toUpperCase();
+            var head = ['Date', 'Cycle', 'Minutes streamed that day', 'Minutes streamed this cycle', 'Minutes of video stored', 'Minutes of video added that day']
+                .concat(labels.map(function(l) { return l + ' (' + cur + ', this cycle)'; })).concat(['Usage this cycle (' + cur + ')']);
+            var rows = d.points.filter(function(x) { return x.t <= d.today; }).map(function(x) {
+                var by = {}; (x.lines || []).forEach(function(l) { by[l.label] = l.amount; });
+                return [new Date(x.t).toISOString().slice(0, 10), new Date(x.cycle).toISOString().slice(0, 7), x.daily, x.mins, x.stored, x.added]
+                    .concat(labels.map(function(l) { return by[l] != null ? by[l].toFixed(2) : ''; })).concat([Number(x.amount || 0).toFixed(2)]);
+            });
+            var csv = [head].concat(rows).map(function(r) { return r.map(q).join(','); }).join('\r\n');
+            var sel = document.getElementById('bl-chart-acct'), who = (!sel.classList.contains('hidden') && sel.selectedOptions[0] && sel.selectedOptions[0].textContent) || (function() { try { return localStorage.getItem('la_venue_name'); } catch (_) { return ''; } })() || 'account';
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' }));
+            a.download = 'local-assets-usage-' + String(who).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + new Date().toISOString().slice(0, 10) + '.csv';
+            document.body.appendChild(a); a.click(); a.remove(); setTimeout(function() { URL.revokeObjectURL(a.href); }, 2000);
+        });
         // Points come from the server, priced exactly like the invoice (today's point is "Usage so far")
         // v: the line (running total this cycle, video stored, or £ above the plan); b: that day on its own (bars)
         function chartSeries(d) {
