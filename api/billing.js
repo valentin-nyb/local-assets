@@ -8,6 +8,13 @@ import {
   readRates, readPlans, cleanPlans, readAssignments, assignKey, venueUsage, venueArtists, priceUsage,
   monthRange, stripeClient, invoiceVenue, venueEntries, DEFAULT_RATES, applyDetails, usageByDay, planForType, priceForType, commitEndFor, readKit, cleanKit, KIT_PLANS, accountTypeOf, sendInvoiceEmail, billingEmailFor, readDiscount, muxCost, MUX_PRICES } from './_billing.js';
 
+// Minutes Mux had encoded by kind, read off Mux's bill (Billing → Summary) before the webhook noted every video;
+// a month's encoding never counts as less than this
+const MUX_BILL_FLOOR = {
+  '2026-10': { 'vod:premium:720p': 1109, 'vod:premium:1080p': 890, 'vod:basic:720p': 127, 'vod:basic:1080p': 243,
+    'vod:premium:audio-only': 513, 'vod:basic:audio-only': 59, 'live:plus:720p': 403 },
+};
+
 // Billing page data and actions.
 //   GET ?target=venue|artist:NAME&plan=ID&period=current|previous   usage, plan and price for one bill-to
 //   GET ?cron=1                            (Vercel cron, the 1st) invoices last month for every monthly bill-to
@@ -132,7 +139,7 @@ export default async function handler(req, res) {
       if (!isAdmin) return res.status(403).json({ error: 'Admin only' });
       const period = monthRange();
       const out = await withRedis(async redis => {
-        const cacheKey = `billing_overview2:${period.key}`;
+        const cacheKey = `billing_overview3:${period.key}`;
         if (!req.query.fresh) { const c = await redis.get(cacheKey).catch(() => null); if (c) return JSON.parse(c); }
         const [rates, plans] = await Promise.all([readRates(redis), readPlans(redis)]);
         const seenEnv = new Set(), rows = [], usages = [];
@@ -158,6 +165,26 @@ export default async function handler(req, res) {
         // What Mux charges, in dollars: each account's own rows; the free streaming minutes are shared out
         // between the accounts by how much each streamed (Mux gives them to the organisation, not to an account)
         const monthPart = Math.min(1, (Date.now() - period.start) / (period.end - period.start));
+        // Videos encoded this month and deleted since: still charged by Mux. The webhook notes each one's minutes
+        // (mux_ledger); per account and kind, the larger of that and what's still in storage counts.
+        const ledger = await redis.hGetAll(`mux_ledger:${period.key}`).catch(() => ({})) || {};
+        const bySlug = {};
+        for (const [f, v] of Object.entries(ledger)) { const [sl, k] = f.split('|'); (bySlug[sl] = bySlug[sl] || {})[k] = Number(v) || 0; }
+        for (const r of rows) {
+          const led = bySlug[r.slug]; if (!r._u || !led) continue;
+          for (const [k, m] of Object.entries(led)) r._u.muxEncode[k] = Math.max(r._u.muxEncode[k] || 0, m);
+          delete bySlug[r.slug];
+        }
+        // Accounts deleted since (and videos no account claimed): their encoding is still on Mux's bill
+        const gone = { storedMinutes: 0, deliveredMinutes: 0, delivered4KMinutes: 0, fileBytes: 0, muxEncode: {} };
+        for (const led of Object.values(bySlug)) for (const [k, m] of Object.entries(led)) gone.muxEncode[k] = (gone.muxEncode[k] || 0) + m;
+        // A month's minimum per kind, from Mux's own bill, for videos deleted before the webhook noted them
+        const floor = MUX_BILL_FLOOR[period.key] || {};
+        for (const [k, m] of Object.entries(floor)) {
+          const have = usages.reduce((t, u) => t + ((u.muxEncode || {})[k] || 0), 0) + (gone.muxEncode[k] || 0);
+          if (m > have) gone.muxEncode[k] = (gone.muxEncode[k] || 0) + (m - have);
+        }
+        if (Object.keys(gone.muxEncode).length) { usages.push(gone); rows.push({ slug: '', name: 'Deleted accounts and videos', type: 'admin', plan: '—', storedHours: 0, streamedHours: 0, newHours: 0, recordedHours: 0, fileGB: 0, billed: 0, _u: gone }); }
         const allDelivered = usages.reduce((t, u) => t + (u.deliveredMinutes || 0), 0);
         for (const r of rows) {
           if (!r._u) continue;

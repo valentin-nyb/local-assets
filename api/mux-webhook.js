@@ -175,6 +175,20 @@ async function createThumbnails(auth, assetId, artistName, playbackId, duration)
 }
 
 // ── WEBHOOK HANDLER ──────────────────────────────────────────────────
+// Minutes Mux encoded this month, by account and kind (vod|live : quality : resolution); Redis hash mux_ledger:<YYYY-MM>
+async function noteEncoded(slug, a) {
+  const min = (Number(a.duration) || 0) / 60;
+  if (!min || !process.env.REDIS_URL) return;
+  const r = createClient({ url: process.env.REDIS_URL }); await r.connect();
+  try {
+    if (!(await r.set(`mux_ledgered:${a.id}`, '1', { NX: true, EX: 60 * 86400 }))) return;
+    const q = ({ baseline: 'basic', smart: 'plus' })[a.encoding_tier] || a.video_quality || 'plus';
+    const tier = a.resolution_tier || (a.max_stored_resolution === 'Audio only' ? 'audio-only' : '1080p');
+    const month = new Date((Number(a.created_at) || Date.now() / 1000) * 1000).toISOString().slice(0, 7);
+    await r.hIncrByFloat(`mux_ledger:${month}`, `${slug || '?'}|${a.live_stream_id ? 'live' : 'vod'}:${q}:${tier}`, Math.round(min * 1000) / 1000);
+  } finally { await r.quit().catch(() => {}); }
+}
+
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).send('Use POST');
 
@@ -195,6 +209,9 @@ export default async function handler(req, res) {
         const duration = data.duration || 0;
         const playbackId = data.playback_ids?.[0]?.id;
         const found = await venueForAsset(assetId);
+        // Mux charges for encoding as soon as a video is ready, even if it's deleted later: note its minutes
+        // for this month (Billing → What Mux charges), once per video
+        await noteEncoded(found ? found.slug : '', data).catch(e => console.error('[Webhook] encode ledger', e.message));
         if (!found) { console.error('[Webhook] No venue Cloud Storage holds', assetId); return res.status(200).send('Unknown asset'); }
         const auth = found.auth;
 
