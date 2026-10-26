@@ -297,10 +297,11 @@
                 <section class="bl-section hidden bl-fold folded" id="bl-overview">
                     <div class="bl-section-head bl-fold-head" role="button" tabindex="0" aria-expanded="false" onclick="if(event.target.closest('button,select,a,input'))return;var s=this.parentNode;s.classList.toggle('folded');this.setAttribute('aria-expanded',!s.classList.contains('folded'))" onkeydown="if(event.target!==this)return;if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><div><h3>All accounts <svg class="bl-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h3><span class="bl-msg" id="bl-ov-sub">This month so far</span></div><button type="button" class="cam-btn ghost" id="bl-ov-refresh">Refresh</button></div>
                     <div class="bl-grid" style="padding:20px 20px 0">
-                        <div class="bl-card"><p class="lbl">What it costs us</p><p class="val" id="bl-ov-cost">—</p><p class="note">Video and files, every account's storage</p></div>
+                        <div class="bl-card"><p class="lbl">What it costs us</p><p class="val" id="bl-ov-cost">—</p><p class="note" id="bl-ov-cost-note">What Mux and file storage charge, in dollars</p></div>
                         <div class="bl-card"><p class="lbl">What we bill</p><p class="val" id="bl-ov-billed">—</p><p class="note">Plans plus usage above them</p></div>
                         <div class="bl-card"><p class="lbl">Left for us</p><p class="val" id="bl-ov-left">—</p><p class="note" id="bl-ov-left-note"></p></div>
                     </div>
+                    <div class="bl-scroll" style="padding-top:12px"><table class="bl-table" id="bl-ov-mux"></table></div>
                     <div class="bl-scroll" style="padding-top:12px"><table class="bl-table" id="bl-ov-table"><tbody><tr><td class="bl-empty">Adding up every account…</td></tr></tbody></table></div>
                 </section>
                 <div class="bl-grid" id="bl-cards">
@@ -777,9 +778,15 @@
                 if (!r.ok) throw new Error(d.error || r.status);
                 var cur = d.currency, h = function(n) { return (Math.round(n * 10) / 10).toLocaleString('en-GB') + ' h'; };
                 document.getElementById('bl-ov-sub').textContent = d.period + ' so far · ' + d.rows.length + ' accounts · updated ' + new Date(d.at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-                document.getElementById('bl-ov-cost').textContent = money(d.totals.cost, cur);
+                // Costs are what Mux charges, in dollars (as on Mux's bill); billing is in pounds
+                document.getElementById('bl-ov-cost').textContent = money(d.totals.cost, 'usd');
+                document.getElementById('bl-ov-cost-note').textContent = 'What Mux and file storage charge · about ' + money(d.totals.costGbp, 'gbp');
                 document.getElementById('bl-ov-billed').textContent = money(d.totals.billed, cur);
-                var left = d.totals.billed - d.totals.cost;
+                var left = d.totals.billed - (d.totals.costGbp || 0);
+                var mt = document.getElementById('bl-ov-mux');
+                mt.innerHTML = (d.mux || []).length ? '<thead><tr><th>What Mux charges this month</th><th class="num">Usage</th><th class="num">Cost</th></tr></thead><tbody>' +
+                    d.mux.map(function(l) { return '<tr><td data-l="Category">' + esc(l.label) + '</td><td class="num" data-l="Usage">' + Math.round(l.quantity).toLocaleString('en-GB') + '</td><td class="num" data-l="Cost">' + money(l.cost, 'usd') + '</td></tr>'; }).join('') +
+                    '</tbody><tfoot><tr><td><b>Total</b></td><td></td><td class="num"><b>' + money(d.totals.cost, 'usd') + '</b></td></tr></tfoot>' : '';
                 document.getElementById('bl-ov-left').textContent = money(left, cur);
                 document.getElementById('bl-ov-left-note').textContent = d.totals.billed > 0 ? Math.round(left / d.totals.billed * 100) + '% of what we bill' : 'Nothing billed yet';
                 var TYPE = { venue: 'Venue', label: 'Record label', artist: 'Artist', management: 'Management', admin: 'local / assets' };
@@ -789,8 +796,8 @@
                         return '<tr><td data-l="Account"><b>' + esc(x.name) + '</b><br><span class="bl-msg">' + (TYPE[x.type] || x.type) + (x.shared ? ' · shares its video storage with another account' : '') + '</span></td>' +
                             '<td data-l="Plan">' + esc(x.plan) + '</td><td class="num" data-l="Video kept">' + h(x.storedHours) + '</td><td class="num" data-l="Watched">' + h(x.streamedHours) + '</td>' +
                             '<td class="num" data-l="Recorded">' + h(x.recordedHours) + '</td><td class="num" data-l="Files">' + (Math.round(x.fileGB * 10) / 10) + ' GB</td>' +
-                            '<td class="num" data-l="Costs us">' + money(x.cost, cur) + '</td><td class="num" data-l="We bill">' + (x.type === 'admin' ? '—' : money(x.billed, cur)) + '</td></tr>';
-                    }).join('') + '</tbody><tfoot><tr><td><b>Total</b></td><td></td><td class="num">' + h(d.totals.storedHours) + '</td><td class="num">' + h(d.totals.streamedHours) + '</td><td class="num">' + h(d.totals.recordedHours) + '</td><td class="num">' + (Math.round(d.totals.fileGB * 10) / 10) + ' GB</td><td class="num"><b>' + money(d.totals.cost, cur) + '</b></td><td class="num"><b>' + money(d.totals.billed, cur) + '</b></td></tr></tfoot>';
+                            '<td class="num" data-l="Costs us">' + money(x.cost, 'usd') + '</td><td class="num" data-l="We bill">' + (x.type === 'admin' ? '—' : money(x.billed, cur)) + '</td></tr>';
+                    }).join('') + '</tbody><tfoot><tr><td><b>Total</b></td><td></td><td class="num">' + h(d.totals.storedHours) + '</td><td class="num">' + h(d.totals.streamedHours) + '</td><td class="num">' + h(d.totals.recordedHours) + '</td><td class="num">' + (Math.round(d.totals.fileGB * 10) / 10) + ' GB</td><td class="num"><b>' + money(d.totals.cost, 'usd') + '</b></td><td class="num"><b>' + money(d.totals.billed, cur) + '</b></td></tr></tfoot>';
             } catch (e) { t.innerHTML = '<tbody><tr><td class="bl-empty">Could not add up the accounts: ' + esc(e.message) + '</td></tr></tbody>'; }
             btn.disabled = false;
         }

@@ -19,6 +19,47 @@ export const DEFAULT_RATES = {
   currency: 'gbp',
 };
 
+// What Mux charges local / assets, in US dollars, with Mux's own rows (Billing → Summary in the Mux dashboard).
+// Per minute. From this organisation's Mux bill (October 2026) and mux.com/pricing; 1440p and 2160p estimated.
+export const MUX_PRICES = {
+  encode: {   // minutes of new video, by quality and resolution
+    basic:   { 'audio-only': 0, '720p': 0, '1080p': 0, '1440p': 0, '2160p': 0 },
+    plus:    { 'audio-only': 0.00167, '720p': 0.025, '1080p': 0.03125, '1440p': 0.0625, '2160p': 0.09375 },
+    premium: { 'audio-only': 0.0025, '720p': 0.0375, '1080p': 0.046875, '1440p': 0.09375, '2160p': 0.140625 },
+  },
+  storage: 0.001,          // per minute stored, per month (prorated by the days it is kept)
+  deliveryFree: 100000,    // minutes streamed free each month, across the whole Mux organisation
+  delivery: 0.001,         // per minute streamed above that
+  delivery4K: 0.0025,
+  files: 0.023,            // Vercel Blob, per GB per month
+  usdToGbp: 0.79,          // to compare with what we bill (in pounds)
+};
+const TIER_LABEL = { 'audio-only': 'Audio', '720p': '720p', '1080p': '1080p', '1440p': '1440p', '2160p': '4K' };
+const QUALITY_LABEL = { basic: 'Basic', plus: 'Plus', premium: 'Premium' };
+// usages: venueUsage() results. monthPart: share of the month so far (storage is charged by the day).
+// freeLeft: free streaming minutes still to share out (the organisation's 100,000). Returns Mux's rows and the total.
+export function muxCost(usages, monthPart = 1, freeLeft = MUX_PRICES.deliveryFree) {
+  const P = MUX_PRICES, rows = {};
+  const add = (key, label, qty, rate) => { const r = rows[key] || (rows[key] = { label, quantity: 0, cost: 0 }); r.quantity += qty; r.cost += qty * rate; };
+  let delivered = 0, delivered4K = 0, stored = 0, gb = 0;
+  for (const u of usages) {
+    for (const [k, min] of Object.entries(u.muxEncode || {})) {
+      const [kind, q, tier] = k.split(':');
+      const rate = (P.encode[q] || P.encode.plus)[tier] ?? (P.encode[q] || P.encode.plus)['1080p'];
+      add('enc:' + k, `Minutes encoded (${kind === 'live' ? 'Live' : 'VOD'}) · ${TIER_LABEL[tier] || tier} ${QUALITY_LABEL[q] || q}`, min, rate);
+    }
+    stored += u.storedMinutes || 0; delivered += u.deliveredMinutes || 0; delivered4K += u.delivered4KMinutes || 0; gb += (u.fileBytes || 0) / 1e9;
+  }
+  add('stored', 'Minutes stored', stored * monthPart, P.storage);
+  const free = Math.min(delivered, Math.max(0, freeLeft)), paid = delivered - free, paid4K = Math.min(paid, delivered4K);
+  add('streamed', 'Minutes streamed' + (free ? ` (${Math.round(free).toLocaleString('en-GB')} free)` : ''), delivered, 0);
+  rows.streamed.cost = (paid - paid4K) * P.delivery + paid4K * P.delivery4K;
+  add('files', 'Files (Brand Kit, thumbnails, watermarks), GB', gb, P.files * monthPart);
+  const lines = Object.values(rows).map(r => ({ label: r.label, quantity: Math.round(r.quantity * 100) / 100, cost: Math.round(r.cost * 100) / 100 }))
+    .sort((a, b) => b.cost - a.cost || a.label.localeCompare(b.label));
+  return { lines, total: Math.round(lines.reduce((t, l) => t + l.cost, 0) * 100) / 100, freeUsed: free };
+}
+
 export async function readRates(redis) {
   try {
     const saved = JSON.parse(await redis.get('billing_rates') || '{}');
@@ -393,7 +434,7 @@ export async function venueUsage(slug, auth, { start, end }, artist = null, labe
   const only = artist ? String(artist).toUpperCase().trim() : null;
   if (label) auth = null;   // a record label is billed for its brand kit files only
   const ids = new Set();
-  const usage = { storedMinutes: 0, newMinutes: 0, liveMinutes: 0, deliveredMinutes: 0, delivered4KMinutes: 0, fileBytes: 0, videos: 0, notes: [] };
+  const usage = { storedMinutes: 0, newMinutes: 0, liveMinutes: 0, deliveredMinutes: 0, delivered4KMinutes: 0, fileBytes: 0, videos: 0, notes: [], muxEncode: {} };
   if (auth) {
     // Mux keys that no longer work (environment deleted or keys revoked): bill no video usage, say why
     try { await muxGet(auth, '/video/v1/assets?limit=1&page=1'); }
@@ -409,7 +450,14 @@ export async function venueUsage(slug, auth, { start, end }, artist = null, labe
         const min = (Number(a.duration) || 0) / 60;
         usage.storedMinutes += min; usage.videos++;
         const created = Number(a.created_at) * 1000;
-        if (created >= start && created < end) { usage.newMinutes += min; if (a.live_stream_id) usage.liveMinutes += min; }
+        if (created >= start && created < end) {
+          usage.newMinutes += min; if (a.live_stream_id) usage.liveMinutes += min;
+          // For Mux's own cost: VOD or live, its quality and resolution
+          const q = ({ baseline: 'basic', smart: 'plus' })[a.encoding_tier] || a.video_quality || 'plus';
+          const tier = a.resolution_tier || (a.max_stored_resolution === 'Audio only' ? 'audio-only' : '1080p');
+          const k = `${a.live_stream_id ? 'live' : 'vod'}:${q}:${tier}`;
+          usage.muxEncode[k] = (usage.muxEncode[k] || 0) + min;
+        }
       }
       if ((b.data || []).length < 100) break;
     }

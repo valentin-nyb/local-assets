@@ -6,7 +6,7 @@ import { getWebSessionAuth, getVenuesConfig, readRegistryRaw, saveRegistryEntry,
 import { venueAuth } from './_verticals.js';
 import {
   readRates, readPlans, cleanPlans, readAssignments, assignKey, venueUsage, venueArtists, priceUsage,
-  monthRange, stripeClient, invoiceVenue, venueEntries, DEFAULT_RATES, applyDetails, usageByDay, planForType, priceForType, commitEndFor, readKit, cleanKit, KIT_PLANS, accountTypeOf, sendInvoiceEmail, billingEmailFor, readDiscount } from './_billing.js';
+  monthRange, stripeClient, invoiceVenue, venueEntries, DEFAULT_RATES, applyDetails, usageByDay, planForType, priceForType, commitEndFor, readKit, cleanKit, KIT_PLANS, accountTypeOf, sendInvoiceEmail, billingEmailFor, readDiscount, muxCost, MUX_PRICES } from './_billing.js';
 
 // Billing page data and actions.
 //   GET ?target=venue|artist:NAME&plan=ID&period=current|previous   usage, plan and price for one bill-to
@@ -132,10 +132,10 @@ export default async function handler(req, res) {
       if (!isAdmin) return res.status(403).json({ error: 'Admin only' });
       const period = monthRange();
       const out = await withRedis(async redis => {
-        const cacheKey = `billing_overview:${period.key}`;
+        const cacheKey = `billing_overview2:${period.key}`;
         if (!req.query.fresh) { const c = await redis.get(cacheKey).catch(() => null); if (c) return JSON.parse(c); }
         const [rates, plans] = await Promise.all([readRates(redis), readPlans(redis)]);
-        const seenEnv = new Set(), rows = [];
+        const seenEnv = new Set(), rows = [], usages = [];
         const entries = venueEntries();
         for (const { slug: s, cfg: c, auth: a } of entries) {
           const own = isAdminEntry(s);
@@ -147,18 +147,28 @@ export default async function handler(req, res) {
           try { usage = await venueUsage(s, shared ? null : a, period); }
           catch (e) { rows.push({ slug: s, name: c?.name || s, type, error: e.message }); continue; }
           const gb = usage.fileBytes / 1e9;
-          const cost = usage.storedMinutes * rates.videoStorage + (usage.deliveredMinutes - (usage.delivered4KMinutes || 0)) * rates.videoDelivery + (usage.delivered4KMinutes || 0) * (Number(rates.videoDelivery4K) || 0) + usage.newMinutes * rates.videoEncoding
-            + (usage.liveMinutes || 0) * (Number(rates.liveRecording) || 0) + gb * rates.fileStorage;
+          usages.push(usage);
           const asg = (await readAssignments(redis, s)).venue || {};
           const plan = own ? null : planForType(plans.find(p => p.id === asg.plan) || null, type);
           const billed = own ? 0 : priceUsage(usage, rates, plan, await readDiscount(redis, s)).total;
           rows.push({ slug: s, name: c?.name || s, type, plan: plan?.name || (own ? 'local / assets' : 'No plan'), shared, notes: usage.notes,
             storedHours: usage.storedMinutes / 60, streamedHours: usage.deliveredMinutes / 60, newHours: usage.newMinutes / 60, recordedHours: (usage.liveMinutes || 0) / 60, fileGB: gb,
-            cost: Math.round(cost * 100) / 100, billed: Math.round(billed * 100) / 100 });
+            billed: Math.round(billed * 100) / 100, _u: usage });
         }
-        rows.sort((x, y) => y.cost - x.cost);
+        // What Mux charges, in dollars: each account's own rows; the free streaming minutes are shared out
+        // between the accounts by how much each streamed (Mux gives them to the organisation, not to an account)
+        const monthPart = Math.min(1, (Date.now() - period.start) / (period.end - period.start));
+        const allDelivered = usages.reduce((t, u) => t + (u.deliveredMinutes || 0), 0);
+        for (const r of rows) {
+          if (!r._u) continue;
+          const share = allDelivered ? (r._u.deliveredMinutes || 0) / allDelivered : 0;
+          r.cost = muxCost([r._u], monthPart, MUX_PRICES.deliveryFree * share).total;
+          delete r._u;
+        }
+        const mux = muxCost(usages, monthPart);
+        rows.sort((x, y) => (y.cost || 0) - (x.cost || 0));
         const sum = k => Math.round(rows.reduce((t, r) => t + (r[k] || 0), 0) * 100) / 100;
-        const result = { period: period.label, at: Date.now(), rows, totals: { cost: sum('cost'), billed: sum('billed'), storedHours: sum('storedHours'), streamedHours: sum('streamedHours'), recordedHours: sum('recordedHours'), fileGB: sum('fileGB') }, currency: rates.currency || 'gbp' };
+        const result = { period: period.label, at: Date.now(), rows, mux: mux.lines, usdToGbp: MUX_PRICES.usdToGbp, totals: { cost: mux.total, costGbp: Math.round(mux.total * MUX_PRICES.usdToGbp * 100) / 100, billed: sum('billed'), storedHours: sum('storedHours'), streamedHours: sum('streamedHours'), recordedHours: sum('recordedHours'), fileGB: sum('fileGB') }, currency: rates.currency || 'gbp' };
         await redis.set(cacheKey, JSON.stringify(result), { EX: 600 }).catch(() => {});
         return result;
       });
