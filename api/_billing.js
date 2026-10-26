@@ -107,7 +107,16 @@ export function parseMuxReport(text) {
   return out;
 }
 
-export async function readRates(redis) {
+// A client's own usage rates and margin (Billing → Usage rates, with the client chosen and its own rates on):
+// saved over the standard ones. Redis billing_rates_acct:<slug>.
+export const accountRatesKey = slug => `billing_rates_acct:${slug}`;
+export async function readRates(redis, slug = null) {
+  const base = await readStandardRates(redis);
+  if (!slug) return base;
+  const own = JSON.parse(await redis.get(accountRatesKey(slug)).catch(() => null) || 'null');
+  return own ? { ...base, ...own, own: true } : base;
+}
+async function readStandardRates(redis) {
   try {
     const saved = JSON.parse(await redis.get('billing_rates') || '{}');
     // Once (19 Oct 2026): 50% admin costs on every usage price
@@ -655,7 +664,7 @@ export async function invoiceVenue(redis, stripe, { slug, auth, email, name, tar
   const doneKey = `billing_invoiced:${slug}:${target}:${period.key}`;
   const existing = await redis.get(doneKey);
   if (existing) return { skipped: true, invoice: existing };
-  const rates = await readRates(redis);
+  const rates = await readRates(redis, slug);
   const plans = await readPlans(redis);
   const artist = target.startsWith('artist:') ? target.slice(7) : null;
   const label = target.startsWith('label:') ? target.slice(6) : null;

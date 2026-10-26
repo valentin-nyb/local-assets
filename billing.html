@@ -219,6 +219,18 @@
         .bl-fold-head:focus { outline:none; }
         .bl-fold-head:focus-visible { outline:2px solid var(--la-accent); outline-offset:-2px; border-radius:16px 16px 0 0; }
         /* Usage rates: a short name and its unit on every field, so the boxes line up */
+        /* Usage rates: the standard ones, or one client's own (a switch) */
+        .bl-rates-for { display:flex; align-items:center; gap:14px 22px; flex-wrap:wrap; padding:20px 20px 0; }
+        .bl-rates-who { display:flex; align-items:center; gap:10px; font-size:13px; color:var(--la-sub); }
+        .bl-rates-who select { height:40px; min-width:240px; border-radius:6px; border:1px solid var(--la-line); background:var(--la-surface); color:var(--la-text); padding:0 12px; font:inherit; }
+        .bl-rates-own { display:inline-flex; align-items:center; gap:10px; font-size:13px; color:var(--la-text); cursor:pointer; user-select:none; }
+        .bl-rates-own input { position:absolute; opacity:0; width:1px; height:1px; }
+        .bl-switch { position:relative; width:38px; height:22px; border-radius:999px; background:color-mix(in srgb, var(--la-text) 18%, transparent); transition:background .2s; flex-shrink:0; }
+        .bl-switch::after { content:""; position:absolute; top:3px; left:3px; width:16px; height:16px; border-radius:50%; background:var(--la-text); transition:transform .2s; }
+        .bl-rates-own input:checked + .bl-switch { background:var(--la-accent); }
+        .bl-rates-own input:checked + .bl-switch::after { transform:translateX(16px); background:#000; }
+        .bl-rates-own input:focus-visible + .bl-switch { outline:2px solid var(--la-accent); outline-offset:2px; }
+        .bl-rates.is-standard input { opacity:.55; }
         .bl-rates { grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:16px 14px; padding:20px 20px 16px; align-items:end; }
         .bl-rates label { gap:0; }
         .bl-rates label b { font-weight:500; font-size:12px; color:var(--la-text); line-height:1.3; }
@@ -371,6 +383,10 @@
                 </section>
                 <section class="bl-section hidden bl-fold folded" id="bl-admin">
                     <div class="bl-section-head bl-fold-head" role="button" tabindex="0" aria-expanded="false" onclick="if(event.target.closest('button,select,a,input'))return;var s=this.parentNode;s.classList.toggle('folded');this.setAttribute('aria-expanded',!s.classList.contains('folded'))" onkeydown="if(event.target!==this)return;if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><h3>Usage rates <svg class="bl-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h3><span class="bl-msg">Your cost per unit, in £, and the margin added on top</span></div>
+                    <div class="bl-rates-for">
+                        <label class="bl-rates-who"><span>Rates for</span><select id="bl-rates-acct" aria-label="Rates for"><option value="">Every client (standard rates)</option></select></label>
+                        <label class="bl-rates-own hidden" id="bl-rates-own-wrap"><input type="checkbox" id="bl-rates-own" role="switch"><span class="bl-switch" aria-hidden="true"></span><span id="bl-rates-own-lbl">Own rates for this client</span></label>
+                    </div>
                     <form id="bl-rates" class="bl-admin bl-rates">
                         <label><b>Video storage</b><small>£ per minute, each month</small><input name="videoStorage" inputmode="decimal"></label>
                         <label><b>Streaming</b><small>£ per minute watched</small><input name="videoDelivery" inputmode="decimal"></label>
@@ -749,8 +765,7 @@
             if (!admin) return;
             var f = document.getElementById('bl-rates');
             // (rates being changed and not saved yet stay as typed)
-            if (!(window.laSaveBar && laSaveBar.isDirty())) ['videoStorage', 'videoDelivery', 'videoDelivery4K', 'videoEncoding', 'liveRecording', 'fileStorage'].forEach(function(k) { if (document.activeElement !== f[k]) f[k].value = d.rates[k]; });
-            if (document.activeElement !== f.marginPct && !(window.laSaveBar && laSaveBar.isDirty())) f.marginPct.value = Math.round((d.rates.margin || 0) * 1000) / 10;
+            if (!(window.laSaveBar && laSaveBar.isDirty())) loadRates();
             // Venue to bill (admin), then the venue itself, its artists or its record labels
             _venue = d.venueSlug || _venue;
             document.getElementById('bl-venue').innerHTML = (d.venues || []).map(function(v) { return '<option value="' + esc(v.slug) + '"' + (v.slug === d.venueSlug ? ' selected' : '') + '>' + esc(v.name) + '</option>'; }).join('');
@@ -997,11 +1012,44 @@
             return laFetch('/api/billing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
                 .then(function(r) { return r.json().then(function(d) { if (!r.ok) throw new Error(d.error || r.status); return d; }); });
         }
+        // Usage rates: the standard ones, or a client's own. With a client chosen and its switch off, it uses the
+        // standard rates (shown greyed); on, its own rates can be typed and saved for it alone.
+        var _ratesStd = null;
+        var RATE_KEYS = ['videoStorage', 'videoDelivery', 'videoDelivery4K', 'videoEncoding', 'liveRecording', 'fileStorage'];
+        function fillRates(r, editable) {
+            var f = document.getElementById('bl-rates');
+            RATE_KEYS.forEach(function(k) { f[k].value = r[k]; f[k].readOnly = !editable; });
+            f.marginPct.value = Math.round((r.margin || 0) * 1000) / 10; f.marginPct.readOnly = !editable;
+            f.classList.toggle('is-standard', !editable);
+        }
+        async function loadRates() {
+            var sel = document.getElementById('bl-rates-acct'), acct = sel.value;
+            try {
+                var r = await laFetch('/api/billing?rates=1&account=' + encodeURIComponent(acct)), d = await r.json();
+                if (!r.ok) throw new Error(d.error || r.status);
+                _ratesStd = d.standard;
+                var keep = sel.value;
+                sel.innerHTML = '<option value="">Every client (standard rates)</option>' + d.clients.map(function(c) { return '<option value="' + esc(c.slug) + '">' + esc(c.name) + (c.own ? ' · own rates' : '') + '</option>'; }).join('');
+                sel.value = keep;
+                var wrap = document.getElementById('bl-rates-own-wrap'), sw = document.getElementById('bl-rates-own');
+                wrap.classList.toggle('hidden', !acct);
+                sw.checked = !!(acct && d.own);
+                fillRates(acct && d.own ? Object.assign({}, d.standard, d.own) : d.standard, !acct || !!d.own);
+                if (window.laSaveBar) laSaveBar.clean();
+            } catch (e) { document.getElementById('bl-admin-msg').textContent = 'Could not load the rates: ' + e.message; }
+        }
+        document.getElementById('bl-rates-acct').addEventListener('change', loadRates);
+        document.getElementById('bl-rates-own').addEventListener('change', function() {
+            // On: start from the standard rates, ready to change; off: back to the standard rates (saved with the bar)
+            fillRates(_ratesStd || {}, this.checked);
+            document.getElementById('bl-rates').dispatchEvent(new Event('input', { bubbles: true }));
+        });
         document.getElementById('bl-save').addEventListener('click', async function() {
             var msg = document.getElementById('bl-admin-msg'), f = document.getElementById('bl-rates');
             this.disabled = true; msg.textContent = 'Saving…';
             try {
-                await post({ action: 'setRates', rates: { videoStorage: f.videoStorage.value, videoDelivery: f.videoDelivery.value, videoDelivery4K: f.videoDelivery4K.value, videoEncoding: f.videoEncoding.value, liveRecording: f.liveRecording.value, fileStorage: f.fileStorage.value, margin: Number(f.marginPct.value) / 100 } });
+                var acct = document.getElementById('bl-rates-acct').value, own = document.getElementById('bl-rates-own').checked;
+                await post({ action: 'setRates', account: acct, own: own, rates: { videoStorage: f.videoStorage.value, videoDelivery: f.videoDelivery.value, videoDelivery4K: f.videoDelivery4K.value, videoEncoding: f.videoEncoding.value, liveRecording: f.liveRecording.value, fileStorage: f.fileStorage.value, margin: Number(f.marginPct.value) / 100 } });
                 msg.textContent = 'Saved'; await load();
                 // Every account's figures again, at the new rates
                 if (document.getElementById('bl-ov-sub')) loadOverview(true).catch(function() {});

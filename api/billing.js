@@ -6,7 +6,7 @@ import { getWebSessionAuth, getVenuesConfig, readRegistryRaw, saveRegistryEntry,
 import { venueAuth } from './_verticals.js';
 import {
   readRates, readPlans, cleanPlans, readAssignments, assignKey, venueUsage, venueArtists, priceUsage,
-  monthRange, stripeClient, invoiceVenue, venueEntries, DEFAULT_RATES, applyDetails, usageByDay, planForType, priceForType, commitEndFor, readKit, cleanKit, KIT_PLANS, accountTypeOf, sendInvoiceEmail, billingEmailFor, readDiscount, muxCost, MUX_PRICES, parseMuxReport } from './_billing.js';
+  monthRange, stripeClient, invoiceVenue, venueEntries, DEFAULT_RATES, applyDetails, usageByDay, planForType, priceForType, commitEndFor, readKit, cleanKit, KIT_PLANS, accountTypeOf, sendInvoiceEmail, billingEmailFor, readDiscount, muxCost, MUX_PRICES, parseMuxReport, accountRatesKey } from './_billing.js';
 
 // Minutes Mux had encoded by kind, read off Mux's bill (Billing → Summary) before the webhook noted every video;
 // a month's encoding never counts as less than this
@@ -134,6 +134,17 @@ export default async function handler(req, res) {
       res.setHeader('Content-Type', 'application/pdf');
       return res.status(200).send(Buffer.from(await r.arrayBuffer()));
     }
+    // Admin: the standard usage rates, and one client's own rates if it has them (Billing → Usage rates)
+    if (req.method === 'GET' && req.query.rates) {
+      if (!isAdmin) return res.status(403).json({ error: 'Admin only' });
+      const acct = String(req.query.account || '');
+      const out = await withRedis(async redis => ({ standard: await readRates(redis),
+        own: acct && billable.includes(acct) ? JSON.parse(await redis.get(accountRatesKey(acct)).catch(() => null) || 'null') : null,
+        clients: billable.map(k => ({ slug: k, name: cfg[k]?.name || k, own: false })) }));
+      // Which clients have their own rates (shown in the list)
+      await withRedis(async redis => { for (const c of out.clients) c.own = !!(await redis.exists(accountRatesKey(c.slug))); });
+      return res.status(200).json(out);
+    }
     // Admin: every account at once, this month so far: what its video and files cost us (all their Cloud
     // Storage environments, and the local / assets one) and what it is billed. Kept 10 minutes (?fresh=1 to redo).
     if (req.method === 'GET' && req.query.overview) {
@@ -158,7 +169,7 @@ export default async function handler(req, res) {
           usages.push(usage);
           const asg = (await readAssignments(redis, s)).venue || {};
           const plan = own ? null : planForType(plans.find(p => p.id === asg.plan) || null, type);
-          const billed = own ? 0 : priceUsage(usage, rates, plan, await readDiscount(redis, s)).total;
+          const billed = own ? 0 : priceUsage(usage, await readRates(redis, s), plan, await readDiscount(redis, s)).total;
           rows.push({ slug: s, name: c?.name || s, type, plan: plan?.name || (own ? 'local / assets' : 'No plan'), shared, notes: usage.notes,
             storedHours: usage.storedMinutes / 60, streamedHours: usage.deliveredMinutes / 60, newHours: usage.newMinutes / 60, recordedHours: (usage.liveMinutes || 0) / 60, fileGB: gb,
             billed: Math.round(billed * 100) / 100, _u: usage });
@@ -220,6 +231,7 @@ export default async function handler(req, res) {
       const to = today + 86400e3;
       // One account's day-by-day usage, priced with its own plan (by its type)
       const accountDays = async (redis, rates, plans, aSlug, aAuth, aTarget, planOverride) => {
+        rates = await readRates(redis, aSlug);
         const assignments = await readAssignments(redis, aSlug);
         const planId = planOverride !== undefined ? planOverride : (assignments[aTarget]?.plan || '');
         const type = aTarget.startsWith('artist:') ? 'artist' : aTarget.startsWith('label:') ? 'label' : await accountTypeOf(redis, aSlug);
@@ -290,7 +302,7 @@ export default async function handler(req, res) {
       const label = target.startsWith('label:') ? target.slice(6) : null;
       const data = await withRedis(async redis => {
         const [rates, plans, assignments, customer] = await Promise.all([
-          readRates(redis), readPlans(redis), readAssignments(redis, slug),
+          readRates(redis, slug), readPlans(redis), readAssignments(redis, slug),
           redis.get(`billing_customer:${target === 'venue' ? slug : `${slug}:${target}`}`),
         ]);
         const usage = await venueUsage(slug, auth, base, artist, label);
@@ -652,7 +664,15 @@ export default async function handler(req, res) {
         const n = Number(r[k]);
         if (Number.isFinite(n) && n >= 0 && n < 1000) clean[k] = n;
       }
-      await withRedis(async redis => { await redis.set('billing_rates', JSON.stringify({ ...DEFAULT_RATES, ...clean })); await clearOverview(redis); });
+      // For one client (its own rates, or back to the standard ones), or the standard rates for everyone else
+      const acct = String(body.account || '');
+      if (acct && !billable.includes(acct)) return res.status(404).json({ error: 'Unknown client' });
+      await withRedis(async redis => {
+        if (!acct) await redis.set('billing_rates', JSON.stringify({ ...DEFAULT_RATES, ...clean }));
+        else if (body.own) await redis.set(accountRatesKey(acct), JSON.stringify(clean));
+        else await redis.del(accountRatesKey(acct));
+        await clearOverview(redis);
+      });
       return res.status(200).json({ ok: true });
     }
 
@@ -695,7 +715,7 @@ export default async function handler(req, res) {
       const to = String(body.to || '').trim().toLowerCase();
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return res.status(400).json({ error: 'Enter the email to send the example to' });
       const data = await withRedis(async redis => {
-        const [rates, plans] = await Promise.all([readRates(redis), readPlans(redis)]);
+        const [rates, plans] = await Promise.all([readRates(redis, slug), readPlans(redis)]);
         const a = (await readAssignments(redis, slug)).venue || {};
         const plan = planForType(plans.find(p => p.id === a.plan) || null, await accountTypeOf(redis, slug));
         const usage = await venueUsage(slug, auth, monthRange());
