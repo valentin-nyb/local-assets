@@ -29,7 +29,11 @@ const relayReady = new Promise(resolve => {
   server.listen(0, '127.0.0.1', () => { relayPort = server.address().port; resolve() })
 })
 const ingest = () => `rtmp://127.0.0.1:${relayPort}/app/`
-const POLL_MS = 4000
+// How often to look for cameras plugged in or out. Each look opens the Mac's camera system (AVFoundation):
+// every 4 s kept the camera privacy service (tccd), the audio service and Continuity Camera busy and slowed
+// the whole Mac. Every 15 s with a camera linked here; every 60 s when none is.
+const POLL_MS = 15000
+const POLL_IDLE_MS = 60000
 const RETRY_WAITING_MS = 20000      // the slot is closed (no set on): try again in 20 s
 const RETRY_DROPPED_MS = 3000       // it was sending and stopped: reconnect quickly
 const VIDEO_MODES = [['1920x1080', '30'], ['1280x720', '30'], [null, '30'], [null, null]]
@@ -381,19 +385,21 @@ let getToken = null
 function init(onChange, tokenOf) {
   notify = onChange
   getToken = tokenOf
-  // Camera processes left by an earlier copy of the app (an update, a crash) would hold the cameras
+  // Camera processes left by an earlier copy of the app (an update, a crash, a copy run from Downloads or
+  // the disk image) would hold the cameras: any a™ ffmpeg, wherever that copy lives
   try { require('child_process').execFileSync('/usr/bin/pkill', ['-f', FFMPEG], { stdio: 'ignore' }) } catch {}
+  try { require('child_process').execFileSync('/usr/bin/pkill', ['-f', 'a™.app/Contents/Resources/ffmpeg'], { stdio: 'ignore' }) } catch {}
   load()
   poll().then(checkSite)
   setInterval(() => checkSite(), 60e3)
   // Each look opens AVFoundation in its own ffmpeg; never let them overlap (one can take 8 s while a
   // camera is being plugged in)
-  let polling = false
+  let polling = false, lastPoll = Date.now()
   setInterval(() => {
-    if (polling) return
+    if (polling || Date.now() - lastPoll < (Object.keys(links).length ? POLL_MS : POLL_IDLE_MS)) return
     polling = true
-    poll().catch(() => {}).then(() => { polling = false })
-  }, POLL_MS)
+    poll().catch(() => {}).then(() => { polling = false; lastPoll = Date.now() })
+  }, 5000)
   setInterval(() => sendFrames().catch(() => {}), 1000)
 }
 
