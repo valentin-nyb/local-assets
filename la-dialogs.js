@@ -67,6 +67,7 @@
   .ladd-type{margin-top:22px;display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;font-size:15px;color:var(--la-sub,#a1a1aa)}
   .ladd-name{display:inline-flex;align-items:center;gap:8px;max-width:100%;padding:5px 8px 5px 12px;border-radius:8px;border:0;background:var(--la-chip,#18181b);
     color:var(--la-text,#fafafa);font:500 15px Inter,ui-sans-serif,system-ui,sans-serif;cursor:pointer}
+  .ladd-name.ok svg{color:var(--la-accent,#39FF14)}
   .ladd-name span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .ladd-name svg{flex-shrink:0;color:var(--la-sub,#a1a1aa)}
   .ladd-panel,.ladd-panel *{box-sizing:border-box}
@@ -193,9 +194,25 @@
       f.addEventListener('submit', function (e) { e.preventDefault(); submit(); });
       f.querySelectorAll('[data-cancel]').forEach(function (b) { b.addEventListener('click', function () { done(false); }); });
       m.addEventListener('click', function (e) { if (e.target === m) done(false); });
-      f.querySelector('.ladd-name').addEventListener('click', function () {
-        var b = this;
-        try { navigator.clipboard.writeText(name).then(function () { b.title = 'Copied'; }); } catch (_) {}
+      // Copy the name; the chip shows a tick for a moment so it's clear it worked
+      var chip = f.querySelector('.ladd-name'), chipIcon = chip.querySelector('svg').outerHTML;
+      var TICK = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+      var copied = function () {
+        chip.querySelector('svg').outerHTML = TICK; chip.classList.add('ok'); chip.title = 'Copied';
+        setTimeout(function () { var i = chip.querySelector('svg'); if (i) i.outerHTML = chipIcon; chip.classList.remove('ok'); chip.title = 'Copy'; }, 1400);
+        inp.focus();
+      };
+      var oldCopy = function () {
+        var t = document.createElement('textarea'); t.value = name; t.setAttribute('readonly', ''); t.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+        m.appendChild(t); t.select(); t.setSelectionRange(0, name.length);
+        var ok = false; try { ok = document.execCommand('copy'); } catch (_) {}
+        t.remove(); return ok;
+      };
+      // The copy command first: it works straight away inside the click everywhere; the clipboard API can wait
+      // on a permission and never answer
+      chip.addEventListener('click', function () {
+        if (oldCopy()) return copied();
+        try { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(name).then(copied, function () {}); } catch (_) {}
       });
       setTimeout(function () { inp.focus(); }, 30);
     });
