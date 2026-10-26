@@ -231,9 +231,10 @@
 
     <main class="min-h-screen bg-background relative">
         <section class="min-h-screen flex flex-col md:px-8 overflow-hidden pr-4 pl-4 relative justify-center">
-            <nav class="flex md:pr-8 md:pt-8 md:pb-8 md:pl-8 z-20 pt-8 pr-4 pb-8 pl-4 absolute top-0 right-0 left-0 items-center justify-between">
-                <a href="index.html" class="flex items-center shrink-0">
-                    <img src="logos/White@2x.png" alt="logo" class="h-5 md:h-6 w-auto object-contain object-left">
+            <!-- The white wordmark sits 40px down and 24px in, 184px wide, as on the sign-in and download pages -->
+            <nav class="flex z-20 pb-8 absolute top-0 right-0 left-0 items-center justify-between" style="padding-top:calc(env(safe-area-inset-top) + 40px);padding-left:24px;padding-right:24px">
+                <a href="index.html" class="flex items-center shrink-0 self-start">
+                    <img src="logos/White@2x.png" alt="local / assets" style="display:block;width:184px;height:auto">
                 </a>
                 <div class="flex items-center gap-3">
                     <a href="dashboard.html" class="la-dashboard-btn" id="la-dashboard-btn"><span>Dashboard</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
