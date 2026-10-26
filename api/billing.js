@@ -462,9 +462,10 @@ export default async function handler(req, res) {
 
     // Sign-ups waiting for their video storage (a Mux environment created by local / assets)
     if (body.action === 'pendingClients') {
-      const reg = await withRedis(r => readRegistryRaw(r));
+      // Deleted accounts never show here, even if their sign-up record was left behind
+      const [reg, deleted] = await withRedis(async r => [await readRegistryRaw(r), new Set(await r.sMembers('la_deleted').catch(() => []))]);
       const ready = await withRedis(r => poolSize(r));
-      return res.status(200).json({ ready, clients: Object.entries(reg).filter(([, v]) => v.status === 'pending').map(([slug, v]) => ({ slug, name: v.name, type: v.type, plan: v.plan, email: (v.emails || [])[0] || '', createdAt: v.createdAt })) });
+      return res.status(200).json({ ready, clients: Object.entries(reg).filter(([slug, v]) => v.status === 'pending' && !deleted.has(slug)).map(([slug, v]) => ({ slug, name: v.name, type: v.type, plan: v.plan, email: (v.emails || [])[0] || '', createdAt: v.createdAt })) });
     }
     // Ready video storage: empty Mux environments a new sign-up takes straight away
     if (body.action === 'muxPool') {
