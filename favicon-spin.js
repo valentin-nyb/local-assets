@@ -26,6 +26,6 @@
         n++;
       }, MS);
     };
-    sheet.src = '/favicon/spin-frames.png';
+    sheet.src = '/favicon/spin-frames.png?v=3';
   } catch (_) {}
 })();
