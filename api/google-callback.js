@@ -182,7 +182,7 @@ body{min-height:100dvh;display:flex;align-items:center;justify-content:center;ov
 /* Dot grid that lights up around the pointer, as on the sign-in page */
 .dot-grid-canvas{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
 .wrap,.foot,.wordmark{z-index:1}
-.wordmark{position:fixed;top:calc(env(safe-area-inset-top) + 40px);left:24px;width:184px;aspect-ratio:1328/165;background:url(/logos/White@2x.png) left center/contain no-repeat}
+.wordmark{position:absolute;top:calc(env(safe-area-inset-top) + 40px);left:24px;width:184px;aspect-ratio:1328/165;background:url(/logos/White@2x.png) left center/contain no-repeat}
 .wrap{position:relative;width:var(--col);display:flex;flex-direction:column;align-items:flex-start}
 .eyebrow{display:flex;align-items:center;gap:10px;font:500 10px/1 var(--mono);letter-spacing:.24em;text-transform:uppercase;color:var(--green);margin-bottom:18px}
 .eyebrow::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 1.6s ease-in-out infinite}

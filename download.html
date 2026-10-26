@@ -18,7 +18,7 @@
         :root { --green: #39FF14; --bg: #070905; --fg: #fafafa; --line: rgba(250,250,250,.12); --sub: #a1a1aa; --dim: #7c8178; --mono: 'JetBrains Mono', ui-monospace, monospace; --display: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
         html, body { min-height: 100%; background: var(--bg); color: var(--fg); -webkit-font-smoothing: antialiased; font-family: var(--display); }
         body { min-height: 100dvh; display: flex; align-items: center; justify-content: center; padding: 112px 16px 48px; }
-        .wordmark { position: fixed; top: 40px; left: 24px; width: 184px; aspect-ratio: 1328 / 165; background: url(/logos/White@2x.png) left center / contain no-repeat; z-index: 2; }
+        .wordmark { position: absolute; top: calc(env(safe-area-inset-top) + 40px); left: 24px; width: 184px; aspect-ratio: 1328 / 165; background: url(/logos/White@2x.png) left center / contain no-repeat; z-index: 2; }
         /* Dot grid behind the page that lights up around the pointer, as on the sign-in and home pages */
         .dot-grid-canvas { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
         .wrap, .note { position: relative; z-index: 1; }
@@ -83,7 +83,7 @@
         .note b { color: #d4d4d8; font-weight: 600; }
         .err { margin-top: 14px; font-size: 13px; color: #f87171; min-height: 1em; text-align: center; }
         @media (max-width: 720px) {
-            body { padding-top: 96px; }
+            body { padding-top: 112px; }
             .cards { grid-template-columns: minmax(0, 1fr); margin-top: 32px; }
             .stage { min-height: 190px; }
         }
