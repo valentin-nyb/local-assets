@@ -38,7 +38,7 @@ export function welcomeEmail({ name, email, type, plan, ready }) {
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#070905">
 <tr><td align="center" style="padding:48px 16px">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px">
-    <tr><td style="padding:0 4px 40px"><img src="${SITE}/logos/Green@2x.png" width="150" alt="local / assets" style="display:block;width:150px;height:auto;border:0"></td></tr>
+    <tr><td style="padding:0 4px 40px"><img src="${SITE}/logos/email-wordmark.png" width="150" height="19" alt="local / assets" style="display:block;width:150px;height:19px;border:0"></td></tr>
     <tr><td style="padding:0 4px">
       <p style="margin:0 0 14px;font:500 11px/1 ${MONO};letter-spacing:.3em;text-transform:uppercase;color:${GREEN}">Welcome</p>
       <h1 style="margin:0;font:700 40px/1 ${FONT};letter-spacing:-.01em;text-transform:uppercase;color:#fafafa">${esc(name)}</h1>
@@ -110,7 +110,7 @@ export function invoiceEmail({ name, period, plan, lines, total, url, charged, e
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#070905">
 <tr><td align="center" style="padding:48px 16px">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px">
-    <tr><td style="padding:0 4px 40px"><img src="${SITE}/logos/Green@2x.png" width="150" alt="local / assets" style="display:block;width:150px;height:auto;border:0"></td></tr>
+    <tr><td style="padding:0 4px 40px"><img src="${SITE}/logos/email-wordmark.png" width="150" height="19" alt="local / assets" style="display:block;width:150px;height:19px;border:0"></td></tr>
     ${example ? `<tr><td style="padding:0 4px 20px"><p style="margin:0;padding:10px 14px;border:1px dashed #3f3f46;border-radius:10px;font:400 13px/1.5 ${FONT};color:#a1a1aa">Example only: this is what ${esc(name)} receives on the 1st. Nothing was charged.</p></td></tr>` : ''}
     <tr><td style="padding:0 4px">
       <p style="margin:0 0 14px;font:500 11px/1 ${MONO};letter-spacing:.3em;text-transform:uppercase;color:${GREEN}">Invoice · ${esc(period)}</p>
@@ -208,7 +208,7 @@ export function accessInviteEmail({ artist, account, email, example, kind = 'art
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#070905">
 <tr><td align="center" style="padding:48px 16px">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px">
-    <tr><td style="padding:0 4px 40px"><img src="${SITE}/logos/Green@2x.png" width="150" alt="local / assets" style="display:block;width:150px;height:auto;border:0"></td></tr>
+    <tr><td style="padding:0 4px 40px"><img src="${SITE}/logos/email-wordmark.png" width="150" height="19" alt="local / assets" style="display:block;width:150px;height:19px;border:0"></td></tr>
     <tr><td style="padding:0 4px">
       <p style="margin:0 0 14px;font:500 11px/1 ${MONO};letter-spacing:.3em;text-transform:uppercase;color:${GREEN}">${K.eyebrow}</p>
       <h1 style="margin:0;font:700 40px/1 ${FONT};letter-spacing:-.01em;text-transform:uppercase;color:#fafafa">${esc(title)}</h1>
