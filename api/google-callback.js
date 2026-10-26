@@ -180,7 +180,7 @@ function appHandoffPage(link) {
 html,body{height:100%;background:var(--bg);color:var(--fg);font-family:var(--display);-webkit-font-smoothing:antialiased}
 body{min-height:100dvh;display:flex;align-items:center;justify-content:center;overflow:hidden;
   background-image:radial-gradient(circle,#141a11 1.1px,transparent 1.2px);background-size:45px 45px;background-position:center}
-.wordmark{position:fixed;top:calc(max(env(safe-area-inset-top),12px) + 28px);left:var(--gut);width:128px;aspect-ratio:1328/165;background:url(/logos/Green@2x.png) left center/contain no-repeat}
+.wordmark{position:fixed;top:calc(max(env(safe-area-inset-top),12px) + 28px);left:var(--gut);width:184px;aspect-ratio:1328/165;background:url(/logos/White@2x.png) left center/contain no-repeat}
 .wrap{width:var(--col);display:flex;flex-direction:column;align-items:flex-start}
 .eyebrow{display:flex;align-items:center;gap:10px;font:500 10px/1 var(--mono);letter-spacing:.24em;text-transform:uppercase;color:var(--green);margin-bottom:18px}
 .eyebrow::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 1.6s ease-in-out infinite}
