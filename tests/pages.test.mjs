@@ -46,5 +46,6 @@ test('source, worker and app folders are never served by the website', () => {
 
 test('the manifest\'s icons exist', () => {
   const m = JSON.parse(fs.readFileSync('favicon/site.webmanifest', 'utf8'));
-  for (const i of m.icons) assert.ok(fs.existsSync('.' + i.src), i.src);
+  // A ?v=… on the address only makes browsers fetch the icon again
+  for (const i of m.icons) assert.ok(fs.existsSync('.' + i.src.split('?')[0]), i.src);
 });
