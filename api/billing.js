@@ -1,5 +1,5 @@
 import { listPool, addToPool, removeFromPool, activateFromPool, poolSize } from './_mux-pool.js';
-import { mailFrom } from './_emails.js';
+import { mailFrom, mailError } from './_emails.js';
 import { unpaidKey, readUnpaid } from './_suspend.js';
 import { createClient } from 'redis';
 import { getWebSessionAuth, getVenuesConfig, readRegistryRaw, saveRegistryEntry, sealSecret, freshVenues, isAdminVenue } from './_venues.js';
@@ -485,6 +485,24 @@ export default async function handler(req, res) {
       const without = Object.entries(cfg).filter(([slug, v]) => slug !== ADMIN_VENUE && !/^local\s*[\/-]?\s*assets\b/i.test(String(v?.name || '')) && !venueAuth(slug)).map(([slug, v]) => ({ slug, name: v?.name || slug }));
       return res.status(200).json({ pool, without });
     }
+    // A new account that just got its video storage: each login gets the "your account is ready" email, once
+    const mailReady = async (slug) => {
+      const key = (process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY || '').trim();
+      if (!key) return 0;
+      const e = await withRedis(async r => (await r.set(`ready_mailed:${slug}`, '1', { NX: true })) ? (await readRegistryRaw(r))[slug] : null).catch(() => null);
+      if (!e) return 0;
+      const { Resend } = await import('resend');
+      const { storageReadyEmail } = await import('./_emails.js');
+      const resend = new Resend(key);
+      let n = 0;
+      for (const email of [...new Set(e.emails || [])]) {
+        const m = storageReadyEmail({ name: e.name || slug, email, type: e.type });
+        const sent = await resend.emails.send({ from: mailFrom(), replyTo: 'info@local-assets.com', to: email, subject: m.subject, html: m.html, text: m.text }).catch(er => ({ error: er }));
+        if (sent?.error) console.error('[billing] ready email', slug, mailError(sent.error)); else n++;
+      }
+      console.log('[billing] ready email', slug, n, 'sent');
+      return n;
+    };
     // Give one ready environment to an existing account that has no video storage
     if (body.action === 'giveReady') {
       const slug = String(body.slug || ''), key = String(body.key || '');
@@ -498,6 +516,7 @@ export default async function handler(req, res) {
       });
       if (!label) return res.status(400).json({ error: 'That ready storage could not be used (already taken, or Mux did not accept it). Try another one.' });
       console.log('[billing] ready storage given to', slug, label);
+      const mailed = await mailReady(slug);
       return res.status(200).json({ ok: true, label, pool: await withRedis(r => listPool(r)) });
     }
     if (body.action === 'muxPoolAdd') {
@@ -561,7 +580,8 @@ export default async function handler(req, res) {
       const label = await withRedis(async r => { const reg = await readRegistryRaw(r); return reg[slug]?.status === 'pending' ? activateFromPool(r, slug) : null; });
       if (!label) return res.status(400).json({ error: 'No ready video storage left. Add one under Ready video storage.' });
       console.log('[billing] client activated from ready storage', slug, label);
-      return res.status(200).json({ ok: true, label });
+      const mailed = await mailReady(slug);
+      return res.status(200).json({ ok: true, label, mailed });
     }
     if (body.action === 'finishSetup') {
       const slug = String(body.slug || ''), id = String(body.tokenId || '').trim(), secret = String(body.tokenSecret || '').trim(), webhook = String(body.webhookSecret || '').trim();
@@ -576,7 +596,8 @@ export default async function handler(req, res) {
       });
       if (!out) return res.status(404).json({ error: 'Unknown client' });
       console.log('[billing] client activated', slug);
-      return res.status(200).json({ ok: true });
+      const mailed = await mailReady(slug);
+      return res.status(200).json({ ok: true, mailed });
     }
 
     if (body.action === 'setRates') {

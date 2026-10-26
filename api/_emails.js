@@ -25,6 +25,13 @@ const THEME = `<style>
     .e-dk { display:block !important; max-height:none !important; overflow:visible !important; }
   }
 </style>`;
+// Gmail hides ("•••") any part of an email it has seen before in the same conversation, so a second email
+// with the same subject showed nothing. An invisible marker unique to each email, at the top and the bottom.
+const unique = (html) => {
+  const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+  const mark = `<div style="display:none;max-height:0;overflow:hidden;font-size:1px;line-height:1px;color:transparent;mso-hide:all">${id}</div>`;
+  return html.replace(/(<body[^>]*>)/, `$1${mark}`).replace('</body>', `${mark}</body>`);
+};
 const head = (title) => `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark"><title>${title}</title>${THEME}</head>`;
 // The wordmark is white in both looks, on its own black band so it shows on a white email too
@@ -116,7 +123,58 @@ export function welcomeEmail({ name, email, type, plan, ready }) {
     'Questions? Reply to this email or write to info@local-assets.com.',
   ].join('\n');
 
-  return { subject: `Welcome to local / assets, ${name}`, html, text };
+  return { subject: `Welcome to local / assets, ${name}`, html: unique(html), text };
+}
+
+// Sent when a new account gets its private video storage after signing up (Billing → Finish setup or Ready
+// video storage): everything is open now, and the first things to do.
+export function storageReadyEmail({ name, email, type }) {
+  const who = type === 'label' ? 'record label' : type === 'artist' ? 'artist' : type === 'management' ? 'management' : 'venue';
+  const steps = [
+    ['Sign in', `With Google, using ${esc(email)}. There is no password to remember.`],
+    ['Connect a camera', 'In Camera Control, add an OBSBOT, a DJI camera, a Sony Alpha or a phone. Each one gets its own stream address.'],
+    ['Connect your calendar', 'Paste your Google or Apple Calendar link. Each event is a set: the cameras start and stop with it.'],
+    ['Finish your Brand Kit', 'Logos (animated ones too), fonts and photos. Anything you added while you waited is kept.'],
+    ['Film your first set', 'It lands in Distribution History with vertical clips and thumbnails, watermarked and ready to post.'],
+  ];
+  const preheader = `Your private video storage is set up. Recording, uploads and clips are open now.`;
+  const html = `${head('Your local / assets account is ready')}
+<body class="e-bg" style="margin:0;padding:0;background:${L.bg};-webkit-text-size-adjust:100%">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:${L.bg}">${esc(preheader)}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="e-bg" style="background:${L.bg}">
+<tr><td align="center" style="padding:48px 16px">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px">
+    <tr><td style="padding:0 4px 40px">${wordmark}</td></tr>
+    <tr><td style="padding:0 4px">
+      <p style="margin:0 0 14px;font:500 11px/1 ${MONO};letter-spacing:.3em;text-transform:uppercase;color:${ORANGE}" class="e-acc">You're ready</p>
+      <h1 style="margin:0;font:700 40px/1 ${FONT};letter-spacing:-.01em;text-transform:uppercase;color:${L.text}" class="e-t">${esc(name)}</h1>
+      <p style="margin:20px 0 0;font:400 16px/1.6 ${FONT};color:${L.sub}" class="e-s">Your private video storage is set up, so your ${who} account is fully open: record sets, upload, and get branded vertical clips and thumbnails ready to post.</p>
+    </td></tr>
+    <tr><td style="padding:28px 4px 0">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>${button(`${SITE}/login.html`, `Open your workspace`)}<td width="12"></td>${button2(`${SITE}/download`, `Download a™ for Mac`)}</tr></table>
+    </td></tr>
+    <tr><td style="padding:40px 4px 8px"><p style="margin:0;font:500 10px/1 ${MONO};letter-spacing:.24em;text-transform:uppercase;color:${L.dim}" class="e-d">Start here</p></td></tr>
+    ${steps.map(([t, d], i) => `<tr><td style="padding:0 4px">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="e-line2" style="border-top:1px solid ${L.line2}"><tr>
+        <td width="44" valign="top" style="padding:18px 0;font:500 11px/1.5 ${MONO};letter-spacing:.1em;color:${ORANGE}" class="e-acc">0${i + 1}</td>
+        <td valign="top" style="padding:16px 0"><p style="margin:0;font:600 15px/1.4 ${FONT};color:${L.text}" class="e-t">${t}</p><p style="margin:4px 0 0;font:400 14px/1.55 ${FONT};color:${L.sub}" class="e-s">${d}</p></td>
+      </tr></table></td></tr>`).join('')}
+    <tr><td style="padding:36px 4px 0">
+      <p style="margin:0;font:400 13px/1.6 ${FONT};color:${L.dim}" class="e-d">Need a hand setting up the cameras? Reply to this email or write to <a href="mailto:info@local-assets.com" style="color:${L.link};text-decoration:underline" class="e-link">info@local-assets.com</a>.</p>
+    </td></tr>
+    ${footer}
+  </table>
+</td></tr>
+</table>
+</body></html>`;
+  const text = [
+    `${name}: your local / assets account is ready.`, '',
+    `Your private video storage is set up, so your ${who} account is fully open: record sets, upload, and get branded vertical clips and thumbnails ready to post.`, '',
+    'Start here:', ...steps.map(([t, d], i) => `0${i + 1}  ${t}: ${d.replace(/<[^>]+>/g, '')}`), '',
+    `Open your workspace: ${SITE}/login.html`, `Download a™ for Mac: ${SITE}/download`, '',
+    'Need a hand setting up the cameras? Reply to this email or write to info@local-assets.com.',
+  ].join('\n');
+  return { subject: `Your local / assets account is ready, ${name}`, html: unique(html), text };
 }
 
 // The monthly invoice, sent on the 1st with Stripe's invoice: what the month cost, line by line, and the link
@@ -165,7 +223,7 @@ export function invoiceEmail({ name, period, plan, lines, total, url, charged, e
     ...rows.map(([t, d, a]) => `${t} (${d}): ${money(a)}`), `Total: ${money(total)}`, '',
     `${charged ? 'View' : 'View and pay'} the invoice: ${url || SITE + '/billing'}`, 'Questions? Reply to this email or write to info@local-assets.com.',
   ].join('\n');
-  return { subject: `${example ? '[Example] ' : ''}Your local / assets invoice for ${period}: ${money(total)}`, html, text };
+  return { subject: `${example ? '[Example] ' : ''}Your local / assets invoice for ${period}: ${money(total)}`, html: unique(html), text };
 }
 
 // The email someone gets when they're given access to an account: an artist given access to their own sets
@@ -288,5 +346,5 @@ export function accessInviteEmail({ artist, account, email, example, kind = 'art
     'iPhone and iPad app: coming soon (local-assets.com works in your phone\'s browser).', '',
     'Questions? Reply to this email or write to info@local-assets.com.',
   ].join('\n');
-  return { subject: `${example ? '[Example] ' : ''}You have access to local / assets: ${account}`, html, text };
+  return { subject: `${example ? '[Example] ' : ''}You have access to local / assets: ${account}`, html: unique(html), text };
 }
