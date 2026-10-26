@@ -1,5 +1,5 @@
 (function () {
-  const VERSION = 'V2.4.0';
+  const VERSION = 'V1.0.1';
   const YEAR = new Date().getFullYear();
 
   // Same look as the app: Helvetica Neue text, JetBrains Mono labels, pill buttons, the logo with the
@@ -61,7 +61,7 @@
         </div>
         <div class="lf-bottom">
           <span>© ${YEAR} local / assets · All rights reserved</span>
-          <span class="lf-status"><span class="lf-dot" aria-hidden="true"></span>Local / Assets ${VERSION} <b>// Connected</b></span>
+          <span class="lf-status"><span class="lf-dot" aria-hidden="true"></span>Local / Assets <span data-la-version>${VERSION}</span> <b>// Connected</b></span>
         </div>
       </div>
     </footer>
@@ -84,6 +84,14 @@
     }
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', inject);
-  else inject();
+  // The version follows the newest a™ release (apps/mac-latest.json), so it never goes stale
+  function version() {
+    fetch('/apps/mac-latest.json', { cache: 'no-cache' }).then(function(r) { return r.ok ? r.json() : null; }).then(function(d) {
+      if (!d || !/^\d+(\.\d+)*$/.test(String(d.version || ''))) return;
+      document.querySelectorAll('[data-la-version]').forEach(function(el) { el.textContent = 'V' + d.version; });
+    }).catch(function() {});
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function() { inject(); version(); });
+  else { inject(); version(); }
 })();

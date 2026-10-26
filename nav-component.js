@@ -615,3 +615,14 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }, 15000);
 });
+// The version under the sidebar follows the newest a™ release (apps/mac-latest.json), so it never goes stale
+(function() {
+    function run() {
+    if (!document.querySelector('[data-la-version]')) return;
+    fetch('/apps/mac-latest.json', { cache: 'no-cache' }).then(function(r) { return r.ok ? r.json() : null; }).then(function(d) {
+        if (!d || !/^\d+(\.\d+)*$/.test(String(d.version || ''))) return;
+        document.querySelectorAll('[data-la-version]').forEach(function(el) { el.textContent = 'V' + d.version; });
+    }).catch(function() {});
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run); else run();
+})();
