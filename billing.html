@@ -223,8 +223,10 @@
         .bl-rates-for { display:flex; align-items:center; gap:14px 22px; flex-wrap:wrap; padding:20px 20px 0; }
         .bl-rates-who { display:flex; align-items:center; gap:10px; font-size:13px; color:var(--la-sub); }
         .bl-rates-who select { height:40px; min-width:240px; border-radius:6px; border:1px solid var(--la-line); background:var(--la-surface); color:var(--la-text); padding:0 12px; font:inherit; }
-        .bl-rates-own { display:inline-flex; align-items:center; gap:10px; font-size:13px; color:var(--la-text); cursor:pointer; user-select:none; }
-        .bl-rates-own input { position:absolute; opacity:0; width:1px; height:1px; }
+        .bl-rates-own { position:relative; display:inline-flex; align-items:center; gap:10px; font-size:13px; color:var(--la-text); cursor:pointer; user-select:none; }
+        .bl-rates-own.hidden { display:none; }
+        /* The checkbox sits under the switch itself, so clicking it never scrolls the page to it */
+        .bl-rates-own input { position:absolute; left:0; top:50%; width:38px; height:22px; margin:-11px 0 0; opacity:0; cursor:pointer; }
         .bl-switch { position:relative; width:38px; height:22px; border-radius:999px; background:color-mix(in srgb, var(--la-text) 18%, transparent); transition:background .2s; flex-shrink:0; }
         .bl-switch::after { content:""; position:absolute; top:3px; left:3px; width:16px; height:16px; border-radius:50%; background:var(--la-text); transition:transform .2s; }
         .bl-rates-own input:checked + .bl-switch { background:var(--la-accent); }
