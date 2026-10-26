@@ -296,7 +296,7 @@
                     </div>
                 </section>
                 <section class="bl-section hidden bl-fold folded" id="bl-overview">
-                    <div class="bl-section-head bl-fold-head" role="button" tabindex="0" aria-expanded="false" onclick="if(event.target.closest('button,select,a,input'))return;var s=this.parentNode;s.classList.toggle('folded');this.setAttribute('aria-expanded',!s.classList.contains('folded'))" onkeydown="if(event.target!==this)return;if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><div><h3>All accounts <svg class="bl-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h3><span class="bl-msg" id="bl-ov-sub">This month so far</span></div><button type="button" class="cam-btn ghost" id="bl-ov-refresh">Refresh</button></div>
+                    <div class="bl-section-head bl-fold-head" role="button" tabindex="0" aria-expanded="false" onclick="if(event.target.closest('button,select,a,input'))return;var s=this.parentNode;s.classList.toggle('folded');this.setAttribute('aria-expanded',!s.classList.contains('folded'))" onkeydown="if(event.target!==this)return;if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><div><h3>All accounts <svg class="bl-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h3><span class="bl-msg" id="bl-ov-sub">This month so far</span></div><button type="button" class="cam-btn ghost" id="bl-ov-mux-up" title="Mux dashboard → Usage → Export CSV">Upload Mux report</button><input type="file" id="bl-ov-mux-file" accept=".csv,text/csv" hidden><button type="button" class="cam-btn ghost" id="bl-ov-refresh">Refresh</button></div>
                     <div class="bl-grid" style="padding:20px 20px 0">
                         <div class="bl-card"><p class="lbl">What it costs us</p><p class="val" id="bl-ov-cost">—</p><p class="note" id="bl-ov-cost-note">What Mux and file storage charge, in dollars</p></div>
                         <div class="bl-card"><p class="lbl">What we bill</p><p class="val" id="bl-ov-billed">—</p><p class="note">Plans plus usage above them</p></div>
@@ -803,13 +803,15 @@
                 document.getElementById('bl-ov-sub').textContent = d.period + ' so far · ' + d.rows.length + ' accounts · updated ' + new Date(d.at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
                 // Costs are what Mux charges, in dollars (as on Mux's bill); billing is in pounds
                 document.getElementById('bl-ov-cost').textContent = money(d.totals.cost, 'usd');
-                document.getElementById('bl-ov-cost-note').textContent = 'What Mux and file storage charge · about ' + money(d.totals.costGbp, 'gbp');
+                document.getElementById('bl-ov-cost-note').textContent = d.report
+                    ? 'From Mux\'s report up to ' + new Date(d.report.through + 'T12:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + ': ' + money(d.report.gross, 'usd') + ' usage, ' + money(d.report.credits, 'usd') + ' credits · about ' + money(d.totals.costGbp, 'gbp')
+                    : 'What Mux and file storage charge (estimated: upload Mux\'s report for exact figures) · about ' + money(d.totals.costGbp, 'gbp');
                 document.getElementById('bl-ov-billed').textContent = money(d.totals.billed, cur);
                 var left = d.totals.billed - (d.totals.costGbp || 0);
                 var mt = document.getElementById('bl-ov-mux');
                 mt.innerHTML = (d.mux || []).length ? '<thead><tr><th>What Mux charges this month</th><th class="num">Usage</th><th class="num">Cost</th></tr></thead><tbody>' +
                     d.mux.map(function(l) { return '<tr><td data-l="Category">' + esc(l.label) + '</td><td class="num" data-l="Usage">' + Math.round(l.quantity).toLocaleString('en-GB') + '</td><td class="num" data-l="Cost">' + money(l.cost, 'usd') + '</td></tr>'; }).join('') +
-                    '</tbody><tfoot><tr><td><b>Total</b></td><td></td><td class="num"><b>' + money(d.totals.cost, 'usd') + '</b></td></tr></tfoot>' : '';
+                    '</tbody><tfoot><tr><td><b>' + (d.report ? 'Owed after credits' : 'Total') + '</b></td><td></td><td class="num"><b>' + money(d.totals.cost, 'usd') + '</b></td></tr></tfoot>' : '';
                 document.getElementById('bl-ov-left').textContent = money(left, cur);
                 document.getElementById('bl-ov-left-note').textContent = d.totals.billed > 0 ? Math.round(left / d.totals.billed * 100) + '% of what we bill' : 'Nothing billed yet';
                 var TYPE = { venue: 'Venue', label: 'Record label', artist: 'Artist', management: 'Management', admin: 'local / assets' };
@@ -825,6 +827,20 @@
             btn.disabled = false;
         }
         document.getElementById('bl-ov-refresh').addEventListener('click', function() { loadOverview(true); });
+        // Mux's usage report: Mux dashboard → Usage → Export CSV, then upload it here
+        document.getElementById('bl-ov-mux-up').addEventListener('click', function() { document.getElementById('bl-ov-mux-file').click(); });
+        document.getElementById('bl-ov-mux-file').addEventListener('change', async function() {
+            var f = this.files[0], b = document.getElementById('bl-ov-mux-up'); this.value = '';
+            if (!f) return;
+            b.disabled = true; b.textContent = 'Reading…';
+            try {
+                var r = await laFetch('/api/billing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'muxReport', csv: await f.text() }) });
+                var d = await r.json(); if (!r.ok) throw new Error(d.error || r.status);
+                laToast('Mux report saved: ' + Object.keys(d.months).map(function(k) { var m = d.months[k]; return new Date(k + '-01T12:00:00Z').toLocaleDateString('en-GB', { month: 'long' }) + ' ' + money(m.net, 'usd') + ' owed'; }).join(', '));
+                loadOverview(true);
+            } catch (e) { laAlert('Could not read the Mux report: ' + e.message, { tone: 'error' }); }
+            b.disabled = false; b.textContent = 'Upload Mux report';
+        });
         document.getElementById('bl-chart-acct').addEventListener('change', function() { _chartVenue = this.value; if (typeof loadChart === 'function') loadChart(); });
         // The email this account gets on the 1st, sent as an example (nothing is charged)
         document.getElementById('bl-example').addEventListener('click', async function() {

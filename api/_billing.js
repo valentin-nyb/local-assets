@@ -60,6 +60,53 @@ export function muxCost(usages, monthPart = 1, freeLeft = MUX_PRICES.deliveryFre
   return { lines, total: Math.round(lines.reduce((t, l) => t + l.cost, 0) * 100) / 100, freeUsed: free };
 }
 
+// Mux's daily usage report (Mux dashboard → Usage → Export CSV), read into each month it covers:
+// what Mux charged, row by row like its Summary, and the plan credits it applied. Redis mux_report:<YYYY-MM>.
+export function parseMuxReport(text) {
+  const rows = [];
+  for (const line of String(text || '').replace(/^﻿/, '').split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    const cells = []; let cur = '', q = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (q) { if (c === '"' && line[i + 1] === '"') { cur += '"'; i++; } else if (c === '"') q = false; else cur += c; }
+      else if (c === '"') q = true; else if (c === ',') { cells.push(cur); cur = ''; } else cur += c;
+    }
+    cells.push(cur); rows.push(cells);
+  }
+  if (!rows.length || !/usage category/i.test(rows[0][0])) throw new Error('This is not a Mux usage report (its first column should be "Usage Category")');
+  const days = rows[0].slice(1).map(d => { const t = Date.parse(d + ' UTC'); return isNaN(t) ? null : new Date(t); });
+  const num = v => { const n = Number(String(v).replace(/[$,\s]/g, '')); return Number.isFinite(n) ? n : 0; };
+  const months = {};
+  const month = d => (months[d.toISOString().slice(0, 7)] = months[d.toISOString().slice(0, 7)] || { rows: {}, through: null });
+  const byName = {}; rows.slice(1).forEach(r => { byName[r[0].trim()] = r; });
+  const sumFor = (name, key) => { const r = byName[name]; if (!r) return; r.slice(1).forEach((v, i) => { const d = days[i]; if (!d) return; const m = month(d); m.rows[key] = (m.rows[key] || 0) + num(v); if (num(v) && (!m.through || d > m.through)) m.through = d; }); };
+  const lines = [];   // [cost row, minutes row, label]
+  for (const name of Object.keys(byName)) {
+    let m;
+    if ((m = name.match(/^\$ Ingest (Basic|Plus|Premium) (720p|1080p|1440p|2160p|Audio)$/))) lines.push([name, `Mins Ingest ${m[1]} ${m[2]}`, `Minutes encoded · ${m[2] === 'Audio' ? 'Audio' : m[2] === '2160p' ? '4K' : m[2]} ${m[1]}`]);
+    else if ((m = name.match(/^\$ (\w+) (Only )?Delivery Usage$/))) lines.push([name, name.replace(/^\$ /, 'Mins '), `Minutes streamed · ${m[1]}`]);
+    else if (/^\$ (Standard|Cold) Storage Usage$/.test(name)) lines.push([name, name.replace(/^\$ /, 'Mins '), 'Minutes stored']);
+    else if (/^\$ Plan Credits Usage$/.test(name)) lines.push([name, null, 'Plan credits']);
+    // Totals of the rows above, and storage split by quality (a breakdown of the storage rows): not added again
+    else if (/^\$ /.test(name) && !/^\$ (VOD|Live Stream) Ingest Usage$|^\$ Storage /.test(name)) lines.push([name, name.replace(/^\$ /, 'Mins '), name.replace(/^\$ /, '')]);
+  }
+  for (const [c, m, label] of lines) { sumFor(c, '$' + label); if (m && byName[m]) sumFor(m, '#' + label); }
+  const out = {};
+  for (const [key, m] of Object.entries(months)) {
+    const labels = [...new Set(Object.keys(m.rows).map(k => k.slice(1)))];
+    const ls = labels.map(l => ({ label: l, quantity: Math.round(m.rows['#' + l] || 0), cost: Math.round((m.rows['$' + l] || 0) * 100) / 100 }))
+      .filter(l => l.cost || l.quantity).sort((a, b) => (a.label === 'Plan credits') - (b.label === 'Plan credits') || b.cost - a.cost);
+    const credits = ls.filter(l => l.label === 'Plan credits').reduce((t, l) => t + l.cost, 0);
+    const gross = ls.filter(l => l.label !== 'Plan credits').reduce((t, l) => t + l.cost, 0);
+    if (!ls.length) continue;
+    out[key] = { lines: ls, gross: Math.round(gross * 100) / 100, credits: Math.round(credits * 100) / 100, net: Math.round((gross + credits) * 100) / 100,
+      through: m.through ? m.through.toISOString().slice(0, 10) : null };
+  }
+  if (!Object.keys(out).length) throw new Error('The report has no charges in it');
+  return out;
+}
+
 export async function readRates(redis) {
   try {
     const saved = JSON.parse(await redis.get('billing_rates') || '{}');

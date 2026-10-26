@@ -6,7 +6,7 @@ import { getWebSessionAuth, getVenuesConfig, readRegistryRaw, saveRegistryEntry,
 import { venueAuth } from './_verticals.js';
 import {
   readRates, readPlans, cleanPlans, readAssignments, assignKey, venueUsage, venueArtists, priceUsage,
-  monthRange, stripeClient, invoiceVenue, venueEntries, DEFAULT_RATES, applyDetails, usageByDay, planForType, priceForType, commitEndFor, readKit, cleanKit, KIT_PLANS, accountTypeOf, sendInvoiceEmail, billingEmailFor, readDiscount, muxCost, MUX_PRICES } from './_billing.js';
+  monthRange, stripeClient, invoiceVenue, venueEntries, DEFAULT_RATES, applyDetails, usageByDay, planForType, priceForType, commitEndFor, readKit, cleanKit, KIT_PLANS, accountTypeOf, sendInvoiceEmail, billingEmailFor, readDiscount, muxCost, MUX_PRICES, parseMuxReport } from './_billing.js';
 
 // Minutes Mux had encoded by kind, read off Mux's bill (Billing → Summary) before the webhook noted every video;
 // a month's encoding never counts as less than this
@@ -196,7 +196,11 @@ export default async function handler(req, res) {
         const mux = muxCost(usages, monthPart);
         rows.sort((x, y) => (y.cost || 0) - (x.cost || 0));
         const sum = k => Math.round(rows.reduce((t, r) => t + (r[k] || 0), 0) * 100) / 100;
-        const result = { period: period.label, at: Date.now(), rows, mux: mux.lines, usdToGbp: MUX_PRICES.usdToGbp, totals: { cost: mux.total, costGbp: Math.round(mux.total * MUX_PRICES.usdToGbp * 100) / 100, billed: sum('billed'), storedHours: sum('storedHours'), streamedHours: sum('streamedHours'), recordedHours: sum('recordedHours'), fileGB: sum('fileGB') }, currency: rates.currency || 'gbp' };
+        // Mux's own report for this month, when one was uploaded: its rows and what's owed after its credits
+        const report = JSON.parse(await redis.get(`mux_report:${period.key}`).catch(() => null) || 'null');
+        const cost = report ? report.net : mux.total;
+        const result = { period: period.label, at: Date.now(), rows, mux: report ? report.lines : mux.lines, report: report ? { gross: report.gross, credits: report.credits, through: report.through, uploadedAt: report.uploadedAt } : null,
+          usdToGbp: MUX_PRICES.usdToGbp, totals: { cost, costGbp: Math.round(cost * MUX_PRICES.usdToGbp * 100) / 100, billed: sum('billed'), storedHours: sum('storedHours'), streamedHours: sum('streamedHours'), recordedHours: sum('recordedHours'), fileGB: sum('fileGB') }, currency: rates.currency || 'gbp' };
         await redis.set(cacheKey, JSON.stringify(result), { EX: 600 }).catch(() => {});
         return result;
       });
@@ -499,6 +503,19 @@ export default async function handler(req, res) {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
 
     // Sign-ups waiting for their video storage (a Mux environment created by local / assets)
+    // Mux's usage report (CSV, from the Mux dashboard): kept per month; that month's costs then come from it
+    if (body.action === 'muxReport') {
+      let months;
+      try { months = parseMuxReport(body.csv); } catch (e) { return res.status(400).json({ error: e.message }); }
+      await withRedis(async r => {
+        for (const [key, m] of Object.entries(months)) {
+          await r.set(`mux_report:${key}`, JSON.stringify({ ...m, uploadedAt: Date.now(), by: session.email }));
+          await r.del(`billing_overview3:${key}`);
+        }
+      });
+      console.log('[billing] Mux report', Object.keys(months).join(', '), 'by', session.email);
+      return res.status(200).json({ ok: true, months: Object.fromEntries(Object.entries(months).map(([k, m]) => [k, { net: m.net, gross: m.gross, credits: m.credits, through: m.through }])) });
+    }
     if (body.action === 'pendingClients') {
       // Deleted accounts never show here, even if their sign-up record was left behind
       const [reg, deleted] = await withRedis(async r => [await readRegistryRaw(r), new Set(await r.sMembers('la_deleted').catch(() => []))]);
