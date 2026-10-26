@@ -425,6 +425,11 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         } catch (e) {} finally { _refreshing = false; }
     }
+    // Banners go just under the page's top bar: above it they sat under the phone's status bar and were cut off
+    function _placeBanner(main, el) {
+        var bar = main.querySelector(':scope > header, :scope > .la-topbar');
+        if (bar) bar.insertAdjacentElement('afterend', el); else main.insertBefore(el, main.firstChild);
+    }
     // An unpaid invoice pauses the account: a banner on every page with the way to pay
     (function _billingBanner() {
         var session = _getAdminSession();
@@ -439,7 +444,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         sb.id = 'la-setup';
                         sb.style.cssText = 'padding:12px 20px;background:#14532d;color:#fff;font:500 13px/1.4 Inter,system-ui,sans-serif;flex-shrink:0;z-index:45;';
                         sb.innerHTML = '<b style="font-weight:700">Welcome to local / assets.</b> We\'re setting up your private video storage. You can set up your Brand Kit now; uploads and recordings open as soon as it\'s ready, and we\'ll email you.';
-                        mn.insertBefore(sb, mn.firstChild);
+                        _placeBanner(mn, sb);
                     }
                     return;
                 }
@@ -450,10 +455,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 b.id = 'la-paused';
                 b.setAttribute('role', 'alert');
                 b.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 20px;background:#7f1d1d;color:#fff;font:500 13px/1.4 Inter,system-ui,sans-serif;flex-shrink:0;z-index:45;';
-                if (d.byAdmin) { b.innerHTML = '<span><b style="font-weight:700">Account paused.</b> local / assets has paused this account, so uploads, clips, watermarks and publishing are stopped. Email info@local-assets.com to start it again.</span>'; main.insertBefore(b, main.firstChild); return; }
+                if (d.byAdmin) { b.innerHTML = '<span><b style="font-weight:700">Account paused.</b> local / assets has paused this account, so uploads, clips, watermarks and publishing are stopped. Email info@local-assets.com to start it again.</span>'; _placeBanner(main, b); return; }
                 b.innerHTML = '<span><b style="font-weight:700">Account paused.</b> Invoice ' + _esc(d.number || '') + ' is unpaid, so uploads, clips, watermarks and publishing are stopped until it is paid.</span>' +
                     (d.payUrl ? '<a href="' + _esc(d.payUrl) + '" target="_blank" rel="noopener" style="background:#fff;color:#7f1d1d;font-weight:700;padding:7px 14px;border-radius:8px;text-decoration:none;white-space:nowrap">Pay now</a>' : '<a href="/billing" style="color:#fff;text-decoration:underline">Billing</a>');
-                main.insertBefore(b, main.firstChild);
+                _placeBanner(main, b);
             }).catch(function() {});
     })();
     // ── Signing out on time ──
