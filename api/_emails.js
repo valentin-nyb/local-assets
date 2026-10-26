@@ -34,19 +34,19 @@ const unique = (html) => {
 };
 const head = (title) => `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark"><title>${title}</title>${THEME}</head>`;
-// The wordmark is white in both looks, on its own black band so it shows on a white email too
-const wordmark = `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="background:#0a0a08;border-radius:14px"><tr><td style="padding:16px 20px;background:#0a0a08;border-radius:14px"><img src="${SITE}/logos/email-wordmark-white.png" width="150" height="19" alt="local / assets" style="display:block;width:150px;height:19px;border:0"></td></tr></table>`;
+// The wordmark as text, not an image: every mail app recolours text with its theme (Gmail's dark mode too,
+// which ignores the dark styles and turned a black band white under a white logo). Black on light, white on dark.
+const wordmark = `<p class="e-t" style="margin:0;font:700 26px/1 ${FONT};letter-spacing:-.035em;color:${L.text}">local&nbsp;/&nbsp;assets<sup style="font-size:9px;letter-spacing:0;vertical-align:top;position:relative;top:2px;margin-left:1px">TM</sup></p>`;
 const footer = `<tr><td style="padding:40px 4px 0">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="e-line2" style="border-top:1px solid ${L.line2}"><tr>
         <td class="e-f" style="padding:20px 0 0;font:500 10px/1.6 ${MONO};letter-spacing:.2em;text-transform:uppercase;color:${L.foot}">local / assets&trade; &middot; London</td>
-        <td align="right" style="padding:20px 0 0"><img class="e-lt" src="${SITE}/logos/a-black.png" width="18" alt="" style="display:inline-block;width:18px;height:auto;border:0;opacity:.7"><!--[if !mso]><!--><img class="e-dk" src="${SITE}/logos/a-white.png" width="18" alt="" style="width:18px;height:auto;border:0;opacity:.7;margin-left:auto"><!--<![endif]--></td>
       </tr></table>
     </td></tr>`;
 const button = (href, label) => `<td class="e-btn" style="border-radius:999px;background:${ORANGE}">
-        <a class="e-btn-t" href="${href}" style="display:inline-block;padding:15px 34px;font:600 14px/1 ${FONT};color:#ffffff;text-decoration:none;border-radius:999px">${label}</a>
+        <a class="e-btn-t" href="${href}" style="display:inline-block;padding:15px 34px;font:700 13px/1 ${FONT};letter-spacing:.06em;text-transform:uppercase;color:#ffffff;text-decoration:none;border-radius:999px">${label}</a>
       </td>`;
 const button2 = (href, label) => `<td class="e-ol" style="border-radius:999px;border:1px solid ${L.outline}">
-        <a class="e-t" href="${href}" style="display:inline-block;padding:14px 28px;font:600 14px/1 ${FONT};color:${L.text};text-decoration:none;border-radius:999px">${label}</a>
+        <a class="e-t" href="${href}" style="display:inline-block;padding:14px 28px;font:700 13px/1 ${FONT};letter-spacing:.06em;text-transform:uppercase;color:${L.text};text-decoration:none;border-radius:999px">${label}</a>
       </td>`;
 // The sender: local-assets.com, the domain verified in Resend. (RESEND_EMAIL_DOMAIN from the Vercel integration
 // isn't used: Resend took the emails sent from it, then failed every one as "domain is not verified".)
@@ -268,7 +268,6 @@ export function accessInviteEmail({ artist, account, email, example, kind = 'art
   const K = ACCESS[kind] || ACCESS.artist;
   const title = kind === 'team' ? account : artist;
   const steps = [['Sign in', `With Google, using ${esc(email)}. There is no password to remember.`]].concat(K.can(account));
-  const cant = K.cant(account);
   const preheader = kind === 'team' ? `You've been added to ${account} on local / assets. Sign in with Google to start.` : `${account} gave you access to your sets on local / assets. Sign in with Google to see them.`;
   const app = (eyebrow, ttl, line, cta) => `<td class="e-col" valign="top" width="50%" style="padding:18px 20px;border:1px solid ${L.line};border-radius:14px" class="e-line">
           <p style="margin:0 0 8px;font:500 10px/1 ${MONO};letter-spacing:.24em;text-transform:uppercase;color:${L.dim}" class="e-d">${eyebrow}</p>
@@ -308,16 +307,10 @@ export function accessInviteEmail({ artist, account, email, example, kind = 'art
         <td width="44" valign="top" style="padding:18px 0;font:500 11px/1.5 ${MONO};letter-spacing:.1em;color:${ORANGE}" class="e-acc">0${i + 1}</td>
         <td valign="top" style="padding:16px 0"><p style="margin:0;font:600 15px/1.4 ${FONT};color:${L.text}" class="e-t">${t}</p><p style="margin:4px 0 0;font:400 14px/1.55 ${FONT};color:${L.sub}" class="e-s">${d}</p></td>
       </tr></table></td></tr>`).join('')}
-    <tr><td style="padding:28px 4px 0">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="e-line" style="border:1px dashed ${L.line};border-radius:14px"><tr><td style="padding:18px 22px">
-        <p style="margin:0 0 10px;font:500 10px/1 ${MONO};letter-spacing:.24em;text-transform:uppercase;color:${L.dim}" class="e-d">${K.cantTitle(account)}</p>
-        ${cant.map(c => `<p style="margin:6px 0 0;font:400 14px/1.5 ${FONT};color:${L.sub}" class="e-s"><span class="e-f" style="color:${L.foot}">&#8212;&nbsp;</span>${c}</p>`).join('')}
-      </td></tr></table>
-    </td></tr>
-    <tr><td style="padding:36px 4px 12px"><p style="margin:0;font:500 10px/1 ${MONO};letter-spacing:.24em;text-transform:uppercase;color:${L.dim}" class="e-d">Get the app</p></td></tr>
+    <tr><td style="padding:36px 4px 12px"><p style="margin:0;font:500 10px/1 ${MONO};letter-spacing:.24em;text-transform:uppercase;color:${ORANGE}" class="e-acc">Get the app</p></td></tr>
     <tr><td style="padding:0 4px">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;border-spacing:0"><tr>
-        ${app('macOS', 'a™ for Mac', kind === 'team' ? 'Camera Control, uploads and recording from a camera plugged into the Mac.' : 'Your sets, clips and Brand Kit on your Mac.', `<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td class="e-ol" style="border-radius:999px;border:1px solid ${L.outline}"><a class="e-t" href="${SITE}/download" style="display:inline-block;padding:11px 20px;font:600 13px/1 ${FONT};color:${L.text};text-decoration:none;border-radius:999px">Download for Mac</a></td></tr></table>`)}
+        ${app('macOS', 'a™ for Mac', kind === 'team' ? 'Camera Control, uploads and recording from a camera plugged into the Mac.' : 'Your sets, clips and Brand Kit on your Mac.', `<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td class="e-btn" style="border-radius:999px;background:${ORANGE}"><a class="e-btn-t" href="${SITE}/download" style="display:inline-block;padding:11px 20px;font:700 12px/1 ${FONT};letter-spacing:.06em;text-transform:uppercase;color:#ffffff;text-decoration:none;border-radius:999px">Download for Mac</a></td></tr></table>`)}
         <td class="e-gap" width="12" style="width:12px;min-width:12px;font-size:0;line-height:0;border:0">&nbsp;</td>
         ${app('iPhone &amp; iPad', 'Mobile app', 'Your sets and clips on the go.', `<p style="margin:0;display:inline-block;padding:9px 14px;border:1px dashed ${L.outline};border-radius:999px;font:500 10px/1 ${MONO};letter-spacing:.18em;text-transform:uppercase;color:${L.dim}" class="e-d">Coming soon</p>`)}
       </tr></table>
@@ -339,8 +332,6 @@ export function accessInviteEmail({ artist, account, email, example, kind = 'art
     `Sign in with: ${email}`, '',
     'What you can do:',
     ...steps.map(([t, d], i) => `0${i + 1}  ${t}: ${plain(d)}`), '',
-    plain(K.cantTitle(account)) + ':',
-    ...cant.map(c => '- ' + plain(c)), '',
     `Sign in: ${SITE}/login.html`,
     `Download a™ for Mac: ${SITE}/download`,
     'iPhone and iPad app: coming soon (local-assets.com works in your phone\'s browser).', '',
