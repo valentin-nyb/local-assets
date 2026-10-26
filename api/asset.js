@@ -30,7 +30,7 @@ function viewer(blob, path) {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(name)} · local / assets</title>
-<link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon/favicon.svg?v=4" type="image/svg+xml">
 <meta name="robots" content="noindex">
 <style>
   :root { color-scheme: dark; }
