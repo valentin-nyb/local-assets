@@ -7,8 +7,8 @@
   .lad-backdrop{position:fixed;inset:0;z-index:2147483600;display:flex;align-items:center;justify-content:center;padding:16px;
     background:var(--la-overlay,rgba(0,0,0,.6));-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);opacity:0;transition:opacity .15s}
   .lad-backdrop.in{opacity:1}
-  .lad-panel{width:400px;max-width:100%;background:var(--la-raised,#0c0c0d);color:var(--la-text,#fafafa);border:1px solid var(--la-line,#27272a);
-    border-radius:16px;padding:24px;box-shadow:var(--la-shadow,0 24px 80px rgba(0,0,0,.55));font-family:Inter,ui-sans-serif,system-ui,sans-serif;
+  .lad-panel{width:440px;max-width:100%;background:var(--la-raised,#0c0c0d);color:var(--la-text,#fafafa);border:1px solid var(--la-line,#27272a);
+    border-radius:28px;padding:30px 32px 32px;box-shadow:var(--la-shadow,0 24px 80px rgba(0,0,0,.55));font-family:Inter,ui-sans-serif,system-ui,sans-serif;
     transform:translateY(6px) scale(.98);transition:transform .15s}
   .lad-backdrop.in .lad-panel{transform:none}
   .lad-head{display:flex;flex-direction:column;align-items:flex-start}
@@ -16,10 +16,16 @@
     background:var(--la-chip,#18181b);color:var(--la-sub,#a1a1aa)}
   .lad-icon.danger,.lad-icon.error{background:color-mix(in srgb,var(--la-bad,#ef4444) 14%,transparent);color:var(--la-bad,#ef4444)}
   .lad-icon.ok{background:color-mix(in srgb,var(--la-ok,#39FF14) 14%,transparent);color:var(--la-ok,#39FF14)}
-  .lad-title{font-size:18px;font-weight:600;line-height:1.3;letter-spacing:-.01em;margin:0}
-  .lad-msg{font-size:13px;line-height:1.6;color:var(--la-sub,#a1a1aa);margin-top:10px;white-space:pre-line;word-break:break-word}
-  .lad-actions{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:10px;margin-top:22px}
-  .lad-btn{height:40px;padding:0 16px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid transparent;font-family:inherit}
+  .lad-title{font-size:19px;font-weight:600;line-height:1.3;letter-spacing:-.01em;margin:0}
+  .lad-msg{font-size:15px;line-height:1.55;color:var(--la-sub,#a1a1aa);margin-top:10px;white-space:pre-line;word-break:break-word}
+  .lad-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px}
+  .lad-btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;height:40px;padding:0 16px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid transparent;font-family:inherit}
+  .lad-actions .lad-btn{height:48px;padding:0 18px;border-radius:14px;font-size:15px}
+  .lad-actions .lad-btn:has(kbd){padding-right:8px}
+  .lad-btn kbd{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;padding:0 7px;border-radius:8px;font:500 13px Inter,ui-sans-serif,system-ui,sans-serif;background:color-mix(in srgb,currentColor 14%,transparent);color:inherit;opacity:.75}
+  .lad-btn kbd + kbd{margin-left:-4px}
+  /* Shortcut keys show only where there is a keyboard: the website on a computer and the Mac app */
+  @media (hover:none),(pointer:coarse){.lad-btn kbd,.ladd-btn kbd{display:none}.lad-actions .lad-btn:has(kbd),.ladd-btn{padding-right:18px}}
   .lad-btn.ghost{background:none;color:var(--la-text,#fafafa);border-color:var(--la-line,#27272a)}
   .lad-btn.primary{background:var(--la-accent,#39FF14);color:var(--la-accent-ink,#000)}
   .lad-btn.danger{background:var(--la-bad,#ef4444);color:#fff}
@@ -48,10 +54,60 @@
   .las-go{display:flex;gap:6px;margin-left:6px;flex-shrink:0}
   .las-bar:not(.ask) .las-go{display:none}
   :root body .las-bar .lad-btn{height:36px;min-height:36px;padding:0 18px;font-size:13px}
+  .ladd-panel{width:520px;max-width:100%;background:var(--la-raised,#0c0c0d);color:var(--la-text,#fafafa);border:1px solid var(--la-line,#27272a);
+    border-radius:28px;padding:30px 32px 32px;box-shadow:var(--la-shadow,0 24px 80px rgba(0,0,0,.55));font-family:Inter,ui-sans-serif,system-ui,sans-serif;
+    transform:translateY(6px) scale(.98);transition:transform .15s}
+  .lad-backdrop.in .ladd-panel{transform:none}
+  .ladd-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+  .ladd-title{font-size:19px;font-weight:600;line-height:1.3;margin:0;letter-spacing:-.01em}
+  .ladd-x{flex-shrink:0;width:32px;height:32px;margin:-4px -6px 0 0;display:flex;align-items:center;justify-content:center;border:0;border-radius:8px;background:none;color:var(--la-sub,#a1a1aa);cursor:pointer}
+  .ladd-msg{margin-top:22px;font-size:15px;line-height:1.55;color:var(--la-sub,#a1a1aa);white-space:pre-line;word-break:break-word}
+  .ladd-warn{margin-top:4px;font-size:15px;font-weight:700;color:#f87171}
+  html:not(.dark) .ladd-warn{color:#dc2626}
+  .ladd-type{margin-top:22px;display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;font-size:15px;color:var(--la-sub,#a1a1aa)}
+  .ladd-name{display:inline-flex;align-items:center;gap:8px;max-width:100%;padding:5px 8px 5px 12px;border-radius:8px;border:0;background:var(--la-chip,#18181b);
+    color:var(--la-text,#fafafa);font:500 15px Inter,ui-sans-serif,system-ui,sans-serif;cursor:pointer}
+  .ladd-name span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ladd-name svg{flex-shrink:0;color:var(--la-sub,#a1a1aa)}
+  .ladd-panel,.ladd-panel *{box-sizing:border-box}
+  .ladd-input{display:block;width:100%;margin-top:18px;height:46px;padding:0 16px;border-radius:12px;border:1px solid var(--la-line,#27272a);
+    background:var(--la-chip,#18181b);color:var(--la-text,#fafafa);font:400 15px Inter,ui-sans-serif,system-ui,sans-serif;outline:none}
+  .ladd-input:focus{border-color:var(--la-sub,#a1a1aa)}
+  .ladd-input::placeholder{color:var(--la-dim,#71717a)}
+  .ladd-err{margin-top:10px;font-size:13px;color:#f87171;min-height:0}
+  .ladd-err:empty{display:none}
+  .ladd-bar{display:flex;flex-wrap:wrap;gap:12px;margin-top:22px}
+  .ladd-btn{display:inline-flex;align-items:center;gap:10px;height:48px;padding:0 8px 0 18px;border-radius:14px;font:600 15px Inter,ui-sans-serif,system-ui,sans-serif;cursor:pointer;border:1px solid transparent}
+  .ladd-btn kbd{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;padding:0 7px;border-radius:8px;font:500 13px Inter,ui-sans-serif,system-ui,sans-serif}
+  .ladd-btn kbd + kbd{margin-left:-4px}
+  .ladd-del{background:color-mix(in srgb,#ef4444 24%,transparent);color:#fca5a5;border-color:color-mix(in srgb,#ef4444 18%,transparent)}
+  .ladd-del kbd{background:color-mix(in srgb,#ef4444 22%,transparent);color:#fca5a5}
+  .ladd-del:disabled{cursor:not-allowed;background:color-mix(in srgb,#ef4444 12%,transparent);color:color-mix(in srgb,#fca5a5 55%,transparent)}
+  .ladd-del:disabled kbd{color:color-mix(in srgb,#fca5a5 55%,transparent)}
+  html:not(.dark) .ladd-del{background:color-mix(in srgb,#ef4444 14%,transparent);color:#b91c1c}
+  html:not(.dark) .ladd-del kbd{color:#b91c1c}
+  html:not(.dark) .ladd-del:disabled,html:not(.dark) .ladd-del:disabled kbd{color:color-mix(in srgb,#b91c1c 50%,transparent)}
+  .ladd-cancel{background:var(--la-chip,#18181b);color:var(--la-text,#fafafa);border-color:var(--la-line,#27272a)}
+  .ladd-cancel kbd{background:color-mix(in srgb,var(--la-text,#fafafa) 10%,transparent);color:var(--la-sub,#a1a1aa)}
+  @media (hover:hover){.ladd-del:not(:disabled):hover{background:color-mix(in srgb,#ef4444 32%,transparent)}.ladd-cancel:hover{filter:brightness(1.15)}.ladd-x:hover{color:var(--la-text,#fafafa)}}
+  @media (max-width:480px){.ladd-panel{padding:24px 20px;border-radius:22px}.ladd-btn{flex:1;justify-content:center}}
+  /* The pages' own boxes: rounded like the shared ones; their buttons get the same shortcut keys */
+  .ac-panel,.cam-dialog-panel,.se-panel,.pm-panel,.ord-panel,.cal-panel{border-radius:28px !important}
+  .la-kbd{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;padding:0 6px;margin-left:8px;border-radius:7px;vertical-align:middle;
+    font:500 12px Inter,ui-sans-serif,system-ui,sans-serif;background:color-mix(in srgb,currentColor 14%,transparent);color:inherit;opacity:.75;flex-shrink:0}
+  .la-kbd + .la-kbd{margin-left:4px}
+  .la-kbd svg{width:14px;height:14px}
+  @media (hover:none),(pointer:coarse){.la-kbd{display:none}}
   @media (max-width:480px){.las-bar{left:16px;right:16px;max-width:none;transform:translateY(24px)}.las-bar.show{transform:none}.las-st{flex:1}}`;
   var st = document.createElement('style'); st.textContent = css;
   (document.head || document.documentElement).appendChild(st);
 
+
+  // ⌘ ↩ (Ctrl ↩ off the Mac) on the button that goes ahead, Esc on Cancel
+  var IS_MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+  var ENTER_SVG = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 5v7a3 3 0 0 1-3 3H6"/><path d="M10 11l-4 4 4 4"/></svg>';
+  var KEYS_GO = '<kbd>' + (IS_MAC ? '⌘' : 'Ctrl') + '</kbd><kbd>' + ENTER_SVG + '</kbd>';
+  window.laKeysGo = KEYS_GO;
 
   function open(opts) {
     return new Promise(function (resolve) {
@@ -61,12 +117,12 @@
       m.innerHTML = '<div class="lad-panel" role="' + (opts.cancel ? 'alertdialog' : 'dialog') + '" aria-modal="true">' +
         '<div class="lad-head">' +
         '<div style="min-width:0;width:100%"><p class="lad-title"></p>' + (opts.message ? '<p class="lad-msg"></p>' : '') + '</div></div>' +
-        '<div class="lad-actions">' + (opts.cancel ? '<button type="button" class="lad-btn ghost" data-v="0"></button>' : '') +
-        '<button type="button" class="lad-btn ' + (tone === 'danger' ? 'danger' : 'primary') + '" data-v="1"></button></div></div>';
+        '<div class="lad-actions"><button type="button" class="lad-btn ' + (tone === 'danger' ? 'danger' : 'primary') + '" data-v="1"><span></span>' + KEYS_GO + '</button>' +
+        (opts.cancel ? '<button type="button" class="lad-btn ghost" data-v="0"><span></span><kbd>Esc</kbd></button>' : '') + '</div></div>';
       m.querySelector('.lad-title').textContent = opts.title;
       if (opts.message) m.querySelector('.lad-msg').textContent = opts.message;
-      if (opts.cancel) m.querySelector('[data-v="0"]').textContent = opts.cancel;
-      m.querySelector('[data-v="1"]').textContent = opts.ok || 'OK';
+      if (opts.cancel) m.querySelector('[data-v="0"] span').textContent = opts.cancel;
+      m.querySelector('[data-v="1"] span').textContent = opts.ok || 'OK';
       document.body.appendChild(m);
       requestAnimationFrame(function () { m.classList.add('in'); });
       var done = function (v) { document.removeEventListener('keydown', key); m.classList.remove('in'); setTimeout(function () { m.remove(); }, 150); resolve(v); };
@@ -83,6 +139,109 @@
     o = typeof o === 'string' ? { title: o } : (o || {});
     return open({ title: o.title || 'Are you sure?', message: o.message, ok: o.confirmText || 'Confirm', cancel: o.cancelText || 'Cancel', tone: o.danger ? 'danger' : 'question' });
   };
+
+  // laConfirmDelete({ title, message, name, placeholder, confirmText, run }) → Promise<boolean>
+  // For deleting something important: the person types its name to unlock the red button (⌘/Ctrl + Enter, or click).
+  // run(ctl), when given, does the deleting while the box stays open: ctl.label(text) shows progress on the button;
+  // a thrown error is shown in the box and the button works again.
+  window.laConfirmDelete = function (o) {
+    o = o || {};
+    var name = String(o.name || 'delete');
+    var COPY = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8.5" y="8.5" width="11" height="11" rx="2.5"/><path d="M15.5 8.5V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7.5a2 2 0 0 0 2 2h2.5"/></svg>';
+    var X = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+    return new Promise(function (resolve) {
+      var m = document.createElement('div');
+      m.className = 'lad-backdrop';
+      m.innerHTML = '<form class="ladd-panel" role="alertdialog" aria-modal="true" autocomplete="off">' +
+        '<div class="ladd-head"><p class="ladd-title"></p><button type="button" class="ladd-x" data-cancel aria-label="Cancel">' + X + '</button></div>' +
+        '<p class="ladd-msg"></p><p class="ladd-warn">This can not be undone.</p>' +
+        '<p class="ladd-type">Type <button type="button" class="ladd-name" title="Copy"><span></span>' + COPY + '</button> to confirm.</p>' +
+        '<input class="ladd-input" spellcheck="false" autocapitalize="off">' +
+        '<p class="ladd-err" role="alert"></p>' +
+        '<div class="ladd-bar"><button type="submit" class="ladd-btn ladd-del" disabled><span></span>' + KEYS_GO + '</button>' +
+        '<button type="button" class="ladd-btn ladd-cancel" data-cancel>Cancel<kbd>Esc</kbd></button></div></form>';
+      var f = m.querySelector('form'), inp = f.querySelector('input'), go = f.querySelector('.ladd-del'), label = go.querySelector('span'), err = f.querySelector('.ladd-err'), busy = false;
+      f.querySelector('.ladd-title').textContent = o.title || 'Delete ' + name + '?';
+      f.querySelector('.ladd-msg').textContent = o.message || 'Are you sure you want to delete ' + name + '?';
+      if (!o.message && o.message !== undefined) f.querySelector('.ladd-msg').remove();
+      f.querySelector('.ladd-name span').textContent = name;
+      inp.placeholder = o.placeholder || 'Enter the name';
+      inp.setAttribute('aria-label', 'Type ' + name + ' to confirm');
+      label.textContent = o.confirmText || 'Delete';
+      document.body.appendChild(m);
+      requestAnimationFrame(function () { m.classList.add('in'); });
+      var ok = function () { return inp.value.trim() === name; };
+      var done = function (v) { if (busy) return; document.removeEventListener('keydown', key); m.classList.remove('in'); setTimeout(function () { m.remove(); }, 150); resolve(v); };
+      var submit = async function () {
+        if (!ok() || busy) return;
+        if (!o.run) return done(true);
+        busy = true; go.disabled = true; inp.disabled = true; err.textContent = '';
+        f.querySelectorAll('[data-cancel]').forEach(function (b) { b.disabled = true; });
+        try { await o.run({ label: function (t) { label.textContent = t; } }); busy = false; done(true); }
+        catch (e) {
+          busy = false; inp.disabled = false; go.disabled = !ok(); label.textContent = o.confirmText || 'Delete';
+          f.querySelectorAll('[data-cancel]').forEach(function (b) { b.disabled = false; });
+          err.textContent = (e && e.message) || String(e);
+        }
+      };
+      var key = function (e) {
+        if (e.key === 'Escape') { e.preventDefault(); done(false); }
+        else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); submit(); }
+      };
+      document.addEventListener('keydown', key);
+      inp.addEventListener('input', function () { go.disabled = busy || !ok(); });
+      f.addEventListener('submit', function (e) { e.preventDefault(); submit(); });
+      f.querySelectorAll('[data-cancel]').forEach(function (b) { b.addEventListener('click', function () { done(false); }); });
+      m.addEventListener('click', function (e) { if (e.target === m) done(false); });
+      f.querySelector('.ladd-name').addEventListener('click', function () {
+        var b = this;
+        try { navigator.clipboard.writeText(name).then(function () { b.title = 'Copied'; }); } catch (_) {}
+      });
+      setTimeout(function () { inp.focus(); }, 30);
+    });
+  };
+
+  // Shortcut keys in the pages' own boxes: ⌘ ↩ presses the button that goes ahead (the form's submit button, else
+  // its primary button), Esc presses Cancel / Close / Done. The keys are shown on those buttons (not on touch screens).
+  (function () {
+    var PANELS = '.ac-panel,.cam-dialog-panel,.se-panel,.pm-panel,.ord-panel,.cal-panel';
+    var KEY_GO = '<kbd class="la-kbd">' + (IS_MAC ? '⌘' : 'Ctrl') + '</kbd><kbd class="la-kbd">' + ENTER_SVG + '</kbd>';
+    var shown = function (el) { return !!(el && el.isConnected && el.offsetParent !== null); };
+    function goBtn(p) {
+      var list = Array.prototype.slice.call(p.querySelectorAll('button[type=submit], button.primary, button.cam-btn.primary, button.primary-acc, button.danger:not([data-rm])'));
+      return list.filter(shown)[0] || null;
+    }
+    function stopBtn(p) {
+      var list = Array.prototype.slice.call(p.querySelectorAll('button[data-cancel], button')).filter(function (b) {
+        return shown(b) && (b.hasAttribute('data-cancel') || /^(cancel|close|done|not now)$/i.test((b.textContent || '').replace(/esc$/i, '').trim()));
+      });
+      return list[0] || null;
+    }
+    function top() {
+      var all = Array.prototype.slice.call(document.querySelectorAll(PANELS)).filter(shown);
+      return all[all.length - 1] || null;
+    }
+    function mark() {
+      document.querySelectorAll(PANELS).forEach(function (p) {
+        var g = goBtn(p), c = stopBtn(p);
+        if (g && !g.querySelector('.la-kbd') && (g.textContent || '').trim()) g.insertAdjacentHTML('beforeend', KEY_GO);
+        if (c && c !== g && !c.querySelector('.la-kbd')) c.insertAdjacentHTML('beforeend', '<kbd class="la-kbd">Esc</kbd>');
+      });
+    }
+    var queued = false;
+    new MutationObserver(function () { if (queued) return; queued = true; requestAnimationFrame(function () { queued = false; mark(); }); })
+      .observe(document.documentElement, { childList: true, subtree: true });
+    document.addEventListener('keydown', function (e) {
+      if (document.querySelector('.lad-backdrop')) return;   // the shared boxes handle their own keys
+      var p = top(); if (!p) return;
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        var g = goBtn(p); if (g && !g.disabled) { e.preventDefault(); g.click(); }
+      } else if (e.key === 'Escape') {
+        // The page may close the box itself on Esc; if it's still open a moment later, press Cancel
+        setTimeout(function () { if (shown(p)) { var c = stopBtn(p); if (c && !c.disabled) c.click(); } }, 0);
+      }
+    });
+  })();
 
   // laAlert(message, { title, tone }) → Promise. First line becomes the title when none is given.
   window.laAlert = function (message, o) {

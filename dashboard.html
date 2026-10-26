@@ -38,7 +38,7 @@
     <link rel="stylesheet" href="styles/theme.css?v=34">
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
-    <script src="/la-dialogs.js?v=4"></script>
+    <script src="/la-dialogs.js?v=5"></script>
     <script src="/la-djframe.js?v=4"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player@3"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -935,7 +935,7 @@
             if ((e.SOCIAL || []).length) parts.push(e.SOCIAL.length + ' vertical clip' + (e.SOCIAL.length > 1 ? 's' : ''));
             if ((e.THUMB || []).length) parts.push(e.THUMB.length + ' thumbnail' + (e.THUMB.length > 1 ? 's' : ''));
             var what = parts.length > 1 ? parts.slice(0, -1).join(', ') + ' and ' + parts[parts.length - 1] : (parts[0] || 'recordings');
-            if (!(await laConfirm({ title: 'Delete this session?', message: artist + ' · ' + shown + '. This permanently removes all ' + files.length + ' file' + (files.length === 1 ? '' : 's') + ' of this session (' + what + ') from Cloud Storage. This can\'t be undone.', confirmText: 'Delete session', danger: true }))) return;
+            if (!(await laConfirmDelete({ name: String(artist), placeholder: 'Enter the artist name', title: 'Delete this session?', message: artist + ' · ' + shown + '. This permanently removes all ' + files.length + ' file' + (files.length === 1 ? '' : 's') + ' of this session (' + what + ') from Cloud Storage.', confirmText: 'Delete session', danger: true }))) return;
             var venue = _adminView ? (_venueOfArtist[String(artist).toUpperCase().trim()] || '') : '';
             var failed = 0;
             laToast('Deleting session…');

@@ -35,7 +35,7 @@
     <link rel="stylesheet" href="styles/theme.css?v=34">
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
-    <script src="/la-dialogs.js?v=4"></script>
+    <script src="/la-dialogs.js?v=5"></script>
     <script src="nav-component.js?v=38"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
@@ -430,49 +430,28 @@
 
         // Delete everywhere: typed name to confirm; runs again while videos are still being removed
         function openDelete(a) {
-            var m = document.createElement('div');
-            m.className = 'ac-back';
-            m.innerHTML = '<form class="ac-panel" role="alertdialog" aria-modal="true" aria-labelledby="ac-dt">' +
-                '<h3 id="ac-dt">Delete ' + esc(a.name) + ' everywhere?</h3>' +
-                '<p>This can\'t be undone. It removes:</p>' +
-                '<ul><li>its plan in Stripe, cancelled now (paid invoices stay for your accounts)</li><li>every video, clip, audio file and camera in its video storage</li><li>its Brand Kit, thumbnails, watermarks, contacts and settings</li><li>every artist login to it; it can no longer sign in</li></ul>' +
-                '<p>Type <b style="color:var(--la-text)">' + esc(a.slug) + '</b> to confirm.</p>' +
-                '<input autocomplete="off" spellcheck="false" aria-label="Account name to confirm">' +
-                '<p class="ac-err"></p>' +
-                '<div class="ac-bar"><button type="button" class="ac-btn" data-cancel>Cancel</button><button type="submit" class="ac-btn danger" disabled>Delete everywhere</button></div>' +
-            '</form>';
-            document.body.appendChild(m);
-            var f = m.querySelector('form'), inp = f.querySelector('input'), go = f.querySelector('[type=submit]'), err = f.querySelector('.ac-err'), busy = false;
-            var close = function() { if (busy) return; m.remove(); document.removeEventListener('keydown', onKey); };
-            var onKey = function(e) { if (e.key === 'Escape') close(); };
-            document.addEventListener('keydown', onKey);
-            m.addEventListener('click', function(e) { if (e.target === m) close(); });
-            f.querySelector('[data-cancel]').onclick = close;
-            inp.oninput = function() { go.disabled = inp.value.trim() !== a.slug; };
-            inp.focus();
-            f.onsubmit = async function(e) {
-                e.preventDefault();
-                if (inp.value.trim() !== a.slug) return;
-                busy = true; go.disabled = true; inp.disabled = true; f.querySelector('[data-cancel]').disabled = true; err.textContent = '';
-                var total = { videos: 0, cameras: 0 };
-                try {
+            var total = { videos: 0, cameras: 0 }, result = null;
+            laConfirmDelete({
+                title: 'Delete ' + a.name + ' everywhere?',
+                message: 'It removes its plan in Stripe (cancelled now; paid invoices stay for your accounts), every video, clip, audio file and camera in its video storage, its Brand Kit, thumbnails, watermarks, contacts and settings, and every login to it.',
+                name: a.slug, placeholder: 'Enter the account name', confirmText: 'Delete account',
+                run: async function(ctl) {
                     for (var run = 0; run < 20; run++) {
-                        go.textContent = run ? 'Deleting… ' + total.videos + ' videos so far' : 'Deleting…';
-                        var d = await post({ action: 'delete', slug: a.slug, confirm: a.slug });
+                        ctl.label(run ? 'Deleting… ' + total.videos + ' videos so far' : 'Deleting…');
+                        var d;
+                        try { d = await post({ action: 'delete', slug: a.slug, confirm: a.slug }); }
+                        catch (er) { throw new Error('Could not finish: ' + er.message + (total.videos ? ' (' + total.videos + ' videos already deleted)' : '')); }
                         total.videos += d.videos || 0; total.cameras += d.cameras || 0;
-                        if (d.deleted) {
-                            busy = false; close();
-                            laToast(a.name + ' deleted: ' + total.videos + ' videos, ' + (d.files || 0) + ' files' + (d.notes && d.notes.length ? '. ' + d.notes.join(' ') : ''));
-                            return load();
-                        }
-                        if (!d.more) throw new Error('it stopped before finishing');
+                        if (d.deleted) { result = d; return; }
+                        if (!d.more) throw new Error('Could not finish: it stopped before finishing');
                     }
-                    throw new Error('it is taking long. Run Delete again to finish.');
-                } catch (er) {
-                    busy = false; go.disabled = false; inp.disabled = false; f.querySelector('[data-cancel]').disabled = false; go.textContent = 'Try again';
-                    err.textContent = 'Could not finish: ' + er.message + (total.videos ? ' (' + total.videos + ' videos already deleted)' : '');
+                    throw new Error('It is taking long. Press Delete again to finish.');
                 }
-            };
+            }).then(function(ok) {
+                if (!ok || !result) return;
+                laToast(a.name + ' deleted: ' + total.videos + ' videos, ' + (result.files || 0) + ' files' + (result.notes && result.notes.length ? '. ' + result.notes.join(' ') : ''));
+                load();
+            });
         }
         load();
     </script>
