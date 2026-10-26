@@ -1519,6 +1519,30 @@
             }).join('');
         }
         var _macBusy = {}, _mac = null;
+        // A camera plugged into this Mac links itself to a camera slot made "On this Mac" that has none yet, with
+        // its own microphone if it has one ("smacker Camera" → "smacker Microphone"). The Mac's built-in camera
+        // and Desk View aren't picked by themselves. Choosing "Not from this Mac" for a camera stops it relinking there.
+        var MAC_BUILTIN = /facetime|built-?in|desk view|capture screen|virtual|obs/i;
+        function macDeclined(slot, dev) { try { return localStorage.getItem('la_mac_noauto:' + slot + ':' + dev) === '1'; } catch (_) { return false; } }
+        function macAutoLink(st, slots, venue) {
+            var used = {}; Object.keys(st.links).forEach(function(id) { var l = st.links[id]; if (l.video) used[l.video] = 1; });
+            Object.keys(_macBusy).forEach(function(id) { if (_macBusy[id].video) used[_macBusy[id].video] = 1; });
+            var free = (st.devices.video || []).filter(function(n) { return !used[n] && !MAC_BUILTIN.test(n); });
+            var slot = slots.find(function(c) { return c.kind !== 'audio' && c.model === 'This Mac' && !st.links[c.id] && !_macBusy[c.id]; });
+            if (!slot) return false;
+            var cam = free.find(function(n) { return !macDeclined(slot.id, n); });
+            if (!cam) return false;
+            var stem = cam.replace(/\s*(camera|cam|video|webcam)\b.*$/i, '').trim().toLowerCase();
+            var mic = stem && (st.devices.audio || []).find(function(a) { return a.toLowerCase().indexOf(stem) === 0 && !MAC_BUILTIN.test(a); }) || '';
+            _macBusy[slot.id] = { video: cam, audio: mic };
+            camApi({ action: 'connection', id: slot.id }).then(function(conn) {
+                return window.laApp.mac.link({ venue: venue, slotId: slot.id, slotName: slot.name, kind: 'camera', video: cam, audio: mic, key: conn.streamKey, frame: conn.frame });
+            }).then(function() { camStatus(cam + ' linked to ' + slot.name + (mic ? ', with ' + mic : '')); })
+              .catch(function(e) { camStatus('Could not link ' + cam + ': ' + (e.message || e), 'var(--la-bad)'); })
+              .then(function() { delete _macBusy[slot.id]; renderMac(); });
+            renderMac();
+            return true;
+        }
         async function renderMac() {
             if (!(window.laApp && window.laApp.mac)) return;
             var sec = document.getElementById('mac-section');
@@ -1541,6 +1565,7 @@
                     if (conn.frame) return window.laApp.mac.link({ venue: venue, slotId: id, slotName: c.name, kind: 'camera', video: l.video, audio: l.audio, key: conn.streamKey, frame: conn.frame });
                 }).catch(function() {}).then(function() { renderMac.upgrading = false; });
             });
+            if (macAutoLink(st, slots, venue)) return;
             // Not while a list is open (the browser's, or the site's own menu): redrawing the row under it
             // made the pick land on the old list, so it jumped back and needed a second click
             var a = document.activeElement;
@@ -1679,7 +1704,12 @@
             // Let go of the list, or the row skips redrawing while it has focus and keeps saying Not linked
             if (e.target.blur) e.target.blur();
             try {
-                if (kind === 'audio' ? !audio : !video) { await window.laApp.mac.unlink(venue, id); return renderMac(); }
+                if (kind === 'audio' ? !audio : !video) {
+                    // Unlinked by hand: don't link that camera to this slot again by itself
+                    var was = (macLinked()[id] || {}).video; if (was) try { localStorage.setItem('la_mac_noauto:' + id + ':' + was, '1'); } catch (_) {}
+                    await window.laApp.mac.unlink(venue, id); return renderMac();
+                }
+                try { Object.keys(localStorage).forEach(function(k) { if (k.indexOf('la_mac_noauto:' + id + ':') === 0) localStorage.removeItem(k); }); } catch (_) {}
                 _macBusy[id] = { video: video, audio: audio }; renderMac();
                 var conn = await camApi({ action: 'connection', id: id });
                 await window.laApp.mac.link({ venue: venue, slotId: id, slotName: row.dataset.name, kind: kind, video: video, audio: audio, key: conn.streamKey, frame: conn.frame });
