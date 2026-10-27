@@ -211,13 +211,15 @@ export function invoiceEmail({ name, period, plan, lines, total, url, charged, e
     example ? row(`<p class="e-s e-ol" style="margin:0;padding:12px 16px;border:1px dashed ${L.outline};border-radius:14px;font:400 14px/1.5 ${FONT};color:${L.sub}">Example only: this is what ${esc(name)} receives on the 1st. Nothing was charged.</p>`, '0 0 28px') : '',
     hero(`Invoice &middot; ${esc(period)}`, money(total), `${esc(name)}: your local / assets plan and usage for ${esc(period)}. ${status}`, 52),
     table,
-    buttons([[esc(url || SITE + '/billing'), charged ? 'View the invoice' : 'View and pay the invoice'], [`${SITE}/billing`, 'Your billing']]),
+    // View and pay: Stripe's page for this invoice (card or bank transfer). Your billing: the account's Billing page
+    buttons([...(url ? [[esc(url), charged ? 'View the invoice' : 'View and pay the invoice']] : []), [`${SITE}/billing`, 'Your billing']]),
+    example && !url ? row(`<p class="e-s" style="margin:0;font:400 13px/1.5 ${FONT};color:${L.dim}">In the real email a first button, View and pay the invoice, opens Stripe's page to pay this invoice.</p>`, '12px 0 0') : '',
     note(`Every invoice is also in your account under Billing, with its PDF. Questions? Reply to this email or write to ${mailLink}.`),
   ].join('\n') });
   const text = [
     `${example ? '[Example] ' : ''}local / assets invoice · ${period}`, '', `${name}: ${money(total)}. ${status}`, '',
     ...items.map(([t, d, a]) => `${t} (${d}): ${money(a)}`), `Total: ${money(total)}`, '',
-    `${charged ? 'View' : 'View and pay'} the invoice: ${url || SITE + '/billing'}`, 'Questions? Reply to this email or write to info@local-assets.com.',
+    ...(url ? [`${charged ? 'View' : 'View and pay'} the invoice: ${url}`] : []), `Your billing: ${SITE}/billing`, 'Questions? Reply to this email or write to info@local-assets.com.',
     '', `© ${new Date().getUTCFullYear()} local / assets LTD`,
   ].join('\n');
   return { subject: `${example ? '[Example] ' : ''}Your local / assets invoice for ${period}: ${money(total)}`, html, text };

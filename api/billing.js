@@ -722,8 +722,15 @@ export default async function handler(req, res) {
         const usage = await venueUsage(slug, auth, monthRange());
         const priced = priceUsage(usage, rates, plan, await readDiscount(redis, slug));
         if (a.subscription) priced.total = priced.usageTotal;
-        return { name: a.name || venueName, period: monthRange().label, plan: priced.planAmount && !a.subscription ? { name: plan.name, amount: priced.planAmount } : null, lines: priced.lines, total: priced.total, url: 'https://local-assets.com/billing', charged: false, example: true };
+        return { name: a.name || venueName, period: monthRange().label, plan: priced.planAmount && !a.subscription ? { name: plan.name, amount: priced.planAmount } : null, lines: priced.lines, total: priced.total, url: '', charged: false, example: true };
       });
+      // The pay button opens Stripe's page for the account's newest unpaid invoice, when it has one
+      const stripe = stripeClient();
+      if (stripe) try {
+        for await (const inv of stripe.invoices.list({ limit: 100, status: 'open' })) {
+          if (inv.metadata?.venueSlug === slug && inv.hosted_invoice_url) { data.url = inv.hosted_invoice_url; break; }
+        }
+      } catch (e) { console.error('[billing] example invoice link', e.message); }
       await sendInvoiceEmail(to, data);
       return res.status(200).json({ ok: true, to, total: data.total });
     }
