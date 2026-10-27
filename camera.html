@@ -39,7 +39,7 @@
     <script src="/la-dialogs.js?v=6"></script>
     <script src="/la-djframe.js?v=4"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player@3"></script>
-    <script src="nav-component.js?v=43"></script>
+    <script src="nav-component.js?v=44"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
         .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
@@ -2272,7 +2272,9 @@
                 var on = d.ownerNames || {}, list = function(pre) { var n = {}; Object.keys(on).forEach(function(o) { if (o.indexOf(pre) === 0 && on[o]) n[on[o]] = 1; }); return n; };
                 var artists = list('artist-'), venues = list('venue-'), labels = list('label-');
                 (d.files || []).forEach(function(f) { if (f.owner && f.owner.indexOf('artist-') === 0 && !on[f.owner]) artists[f.owner.slice(7).replace(/-/g, ' ').toUpperCase()] = 1; });
-                _cams.forEach(function(c) { if (c.artist) artists[c.artist] = 1; if (c.stageVenue) venues[c.stageVenue] = 1; if (c.stageLabel) labels[c.stageLabel] = 1; });
+                // The cameras' last sets too, except an artist, venue or label deleted in the Brand Kit
+                var hidden = d.hiddenOwners || [], gone = function(pre, n) { return hidden.indexOf(pre + String(n).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50)) >= 0; };
+                _cams.forEach(function(c) { if (c.artist && !gone('artist-', c.artist)) artists[c.artist] = 1; if (c.stageVenue && !gone('venue-', c.stageVenue)) venues[c.stageVenue] = 1; if (c.stageLabel && !gone('label-', c.stageLabel)) labels[c.stageLabel] = 1; });
                 var type = d.orgType || 'venue', own = String(d.orgName || getVenueName() || '').trim(), fixed = {};
                 if (d.member && d.member.name) fixed.artist = d.member.name;
                 else if (type === 'artist') fixed.artist = own;

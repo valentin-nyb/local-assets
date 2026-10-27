@@ -1,10 +1,9 @@
 // local / assets dropdown menus: every <select> on the page opens a menu in the site's style instead of
 // the browser's grey one. The <select> stays the source of truth (value, change events, forms); this only
-// draws the list. Phones and tablets keep their native picker, which suits touch better.
+// draws the list. On phones and tablets a tap opens the same menu (taller rows for fingers).
 (function () {
   if (window.__laSelect) return;
   window.__laSelect = true;
-  if (!window.matchMedia || !matchMedia('(hover: hover) and (pointer: fine)').matches) return;
 
   var css = document.createElement('style');
   css.textContent =
@@ -23,6 +22,7 @@
       'background-image:url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2738%27 height=%2726%27 viewBox=%270 0 38 26%27%3E%3Cpath d=%27M1 2v22%27 stroke=%27%238a8a93%27 stroke-width=%271.2%27/%3E%3Cpath d=%27M19 10.5l5-5 5 5M19 15.5l5 5 5-5%27 fill=%27none%27 stroke=%27%238a8a93%27 stroke-width=%271.5%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27/%3E%3C/svg%3E") !important;' +
       'background-repeat:no-repeat !important;background-position:right 6px center !important;background-size:38px 26px !important;outline:none}' +
     ':root body select.las-open{box-shadow:0 0 0 2px var(--la-text,#fafafa) !important;border-color:transparent !important}' +
+    '@media (hover:none),(pointer:coarse){.las-opt{padding:13px 16px}.las-menu{-webkit-overflow-scrolling:touch}}' +
     '@media (prefers-reduced-motion:reduce){.las-menu{transition:none}}';
   document.head.appendChild(css);
 
@@ -36,6 +36,7 @@
     m.classList.remove('on');
     setTimeout(function () { m.remove(); }, 160);
     document.removeEventListener('mousedown', outside, true);
+    document.removeEventListener('touchstart', outside, true);
     window.removeEventListener('resize', onWin, true);
     window.removeEventListener('scroll', onWin, true);
     if (focusBack && s) s.focus({ preventScroll: true });
@@ -113,6 +114,7 @@
     menu.addEventListener('keydown', keys);
     menu.focus({ preventScroll: true });
     document.addEventListener('mousedown', outside, true);
+    document.addEventListener('touchstart', outside, true);
     window.addEventListener('resize', onWin, true);
     window.addEventListener('scroll', onWin, true);
   }
@@ -145,6 +147,20 @@
     s.focus({ preventScroll: true });
     open(s);
   }, true);
+  // Touch: a tap (not a scroll that started on it) opens our menu instead of the device's picker
+  var touchAt = null;
+  document.addEventListener('touchstart', function (e) {
+    touchAt = usable(e.target) && e.touches.length === 1 ? { s: e.target, x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
+  }, { capture: true, passive: true });
+  document.addEventListener('touchend', function (e) {
+    var t = touchAt; touchAt = null;
+    if (!t || e.target !== t.s || !e.changedTouches.length) return;
+    var c = e.changedTouches[0];
+    if (Math.abs(c.clientX - t.x) > 10 || Math.abs(c.clientY - t.y) > 10) return;
+    e.preventDefault();   // no native picker, no mouse events after it
+    if (sel === t.s) { close(false); return; }
+    open(t.s);
+  }, { capture: true, passive: false });
   // Keyboard on a focused select: Space, Enter, Alt+Down open the same menu
   document.addEventListener('keydown', function (e) {
     var s = e.target;

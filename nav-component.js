@@ -11,7 +11,7 @@
 })();
 // Inside the iPhone app (ios-app): sign-in through Safari and push notifications (la-native.js)
 (function () { if (!window.Capacitor || document.querySelector('script[data-la-native]')) return; var sc = document.createElement('script'); sc.src = '/la-native.js?v=1'; sc.setAttribute('data-la-native', ''); document.head.appendChild(sc); })();
-(function () { if (document.querySelector('script[data-la-select]')) return; var sc = document.createElement('script'); sc.src = '/la-select.js?v=5'; sc.defer = true; sc.setAttribute('data-la-select', ''); document.head.appendChild(sc); })();
+(function () { if (document.querySelector('script[data-la-select]')) return; var sc = document.createElement('script'); sc.src = '/la-select.js?v=6'; sc.defer = true; sc.setAttribute('data-la-select', ''); document.head.appendChild(sc); })();
 // Installed on an iPhone or iPad (home screen): the height Safari gives the page leaves out the status bar, so
 // the app stopped that much short of the bottom of the screen. Sized to the whole screen instead
 // (only when the app has the full width, so not in Split View on an iPad).
