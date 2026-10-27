@@ -150,16 +150,6 @@
         .cal-state.on { color:var(--la-ok); border-color:color-mix(in srgb, var(--la-ok) 40%, transparent); }
         .cal-state.bad { color:var(--la-bad); border-color:color-mix(in srgb, var(--la-bad) 40%, transparent); }
         /* How the calendar works: three cards in a row, like the dashboard's cards (an icon tile, the step's number, when it happens) */
-        .cal-how { list-style:none; margin:20px 0 0; padding:0; display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px; counter-reset:none; }
-        .cal-how li { position:relative; padding:16px; display:flex; flex-direction:column; gap:8px; background:var(--la-raised); border:1px solid var(--la-line); border-radius:16px; box-shadow:var(--la-shadow-sm, none); min-width:0; }
-        .cal-how-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
-        .cal-how-ic { display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:10px; background:var(--la-accent-soft); color:var(--la-accent); font-style:normal; }
-        .cal-how-n { font:500 10px/1 'JetBrains Mono', monospace; color:var(--la-dim); letter-spacing:.14em; }
-        .cal-how b { font:900 13px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.02em; text-transform:uppercase; color:var(--la-text); }
-        .cal-how p { margin:0; font-size:12px; line-height:1.55; color:var(--la-sub); flex:1; }
-        .cal-how em { align-self:flex-start; margin-top:4px; font:500 9px/1 'JetBrains Mono', monospace; font-style:normal; letter-spacing:.14em; text-transform:uppercase; color:var(--la-sub); background:var(--la-chip); border:1px solid var(--la-line); border-radius:999px; padding:6px 9px; }
-        .cal-panel.folded .cal-how, .cal-panel.folded .cal-sched, .cal-panel.folded #cal-note, .cal-panel.folded #cal-find { display:none !important; }
-        .cal-panel.folded .cal-source { margin-top:16px; }
         .cal-source { display:flex; align-items:center; gap:12px; margin-top:18px; padding:12px 14px; border:1px solid var(--la-line); border-radius:12px; }
         .cal-source-dot { width:8px; height:8px; border-radius:50%; background:var(--la-ok); flex-shrink:0; }
         .cal-source.bad .cal-source-dot { background:var(--la-bad); }
@@ -349,8 +339,7 @@
         .cal-row[data-cal-i] { cursor:pointer; }
         .cal-tag.mine { color:var(--la-accent) !important; border-color:var(--la-accent) !important; }
         /* An artist with access: the calendar is the venue's, followed as it is (no link to change, nothing to set up) */
-        html.la-member #cal-change, html.la-member #cal-remove, html.la-member #cal-form, html.la-member #cal-find, html.la-member .cal-how, html.la-member #cal-expand { display:none !important; }
-        html.la-member .cal-panel.folded .cal-sched:not([hidden]) { display:block !important; }
+        html.la-member #cal-remove, html.la-member #cal-form, html.la-member #cal-find { display:none !important; }
         .cal-row[data-cal-i]:hover { background:color-mix(in srgb, var(--la-text) 4%, transparent); }
         .ev-facts { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:1px; margin:2px 0 22px; border:1px solid var(--la-line); border-radius:12px; overflow:hidden; background:var(--la-line); }
         .ev-facts div { background:var(--la-raised, #0a0a0a); padding:12px 14px; min-width:0; }
@@ -413,8 +402,7 @@
         .cal-time.rec { color:var(--la-sub); }
         @media (max-width:760px) {
             .cal-panel { padding:18px; }
-            .cal-how { grid-template-columns:minmax(0,1fr); gap:8px; } .cal-how li { padding:14px; }
-            .cal-find-grid { grid-template-columns:minmax(0,1fr); }
+                .cal-find-grid { grid-template-columns:minmax(0,1fr); }
             .cal-form { flex-wrap:wrap; } .cal-form input { flex-basis:100%; }
             /* Phones: the status on its own line, then the three actions side by side, equal widths */
             .cal-source { flex-wrap:wrap; gap:10px 8px; padding:14px; } .cal-source-text { flex-basis:calc(100% - 20px); }
@@ -788,8 +776,6 @@
                     <div class="cal-source" id="cal-source" hidden>
                         <span class="cal-source-dot"></span>
                         <div class="cal-source-text"><b id="cal-source-name">Google Calendar</b><span id="cal-source-sub">Checked every minute</span></div>
-                        <button type="button" class="cam-btn ghost" id="cal-expand" aria-expanded="false">Show sets</button>
-                        <button type="button" class="cam-btn ghost" id="cal-change">Change link</button>
                         <button type="button" class="cam-btn la-danger" id="cal-remove">Disconnect</button>
                     </div>
                     <form class="cal-form" id="cal-form">
@@ -809,11 +795,6 @@
                         <div id="cal-list"></div>
                     </div>
                     <p class="cal-help" id="cal-note" hidden></p>
-                    <ol class="cal-how">
-                        <li><div class="cal-how-top"><i class="cal-how-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></i><span class="cal-how-n">01</span></div><b>One event per set</b><p>Title it with the DJ's name. Add the venue as the location.</p><em>In your calendar</em></li>
-                        <li><div class="cal-how-top"><i class="cal-how-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none"/></svg></i><span class="cal-how-n">02</span></div><b>Cameras start</b><p>Recording starts 2 minutes before the set.</p><em>2 min before</em></li>
-                        <li><div class="cal-how-top"><i class="cal-how-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></i><span class="cal-how-n">03</span></div><b>Saved for the DJ</b><p>Recording stops 2 minutes after the set. It's saved in Distribution History with vertical clips.</p><em>2 min after</em></li>
-                    </ol>
                 </section>
 
                 <p id="cal-admin-note" class="deck-sub">Each client connects their own calendar from their account.</p>
@@ -917,22 +898,14 @@
             src.hidden = !cal.connected;
             src.classList.toggle('bad', !!cal.error);
             document.getElementById('cal-source-name').textContent = calSourceName(cal.host);
-            // Connected and working: folded to one line (the source, the next set and the buttons) unless opened
+            // Connected and working: the source, the next set, Disconnect, and the sets coming up (always shown)
             var nextSet = cal.current || (cal.upcoming || [])[0];
             var nextTxt = nextSet ? (cal.current ? (cal.current.endedAt ? ' · Finished ' + fmtTime(cal.current.endedAt) + ': ' : ' · On now: ') : ' · Next: ') + niceArtist(nextSet.artist) + ', ' + new Date(nextSet.start).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/London' }) + ' ' + fmtTime(nextSet.start) : '';
             document.getElementById('cal-source-sub').textContent = cal.error ? 'The link can\'t be read. Paste the right one.' : 'Connected · checked every minute' + nextTxt;
-            var open = calOpen();
-            var panel = document.getElementById('cal-panel');
-            panel.classList.toggle('folded', ok && !open);
-            var ex = document.getElementById('cal-expand');
-            ex.hidden = !ok;
-            var n = (cal.current ? 1 : 0) + (cal.upcoming || []).length;
-            ex.textContent = open ? 'Hide sets' : 'Show sets';
-            ex.setAttribute('aria-expanded', open ? 'true' : 'false');
-            // The link field shows when not connected, when it can't be read, or after Change link
-            form.hidden = cal.connected && !cal.error && !form.dataset.open;
+            // The link field shows when not connected (a new link: Disconnect first) or when it can't be read
+            form.hidden = cal.connected && !cal.error;
             document.getElementById('cal-save').textContent = cal.connected ? 'Save link' : 'Connect';
-            document.getElementById('cal-find').hidden = cal.connected && !cal.error && !form.dataset.open && !calOpen();
+            document.getElementById('cal-find').hidden = cal.connected && !cal.error;
             var sets = [];
             if (cal.current) sets.push(Object.assign({ now: true }, cal.current));
             (cal.upcoming || []).forEach(function(e) { sets.push(e); });
@@ -957,16 +930,6 @@
             if (cal.error) document.getElementById('cal-error').textContent = cal.error;
         }
         function niceArtist(n) { n = String(n || ''); return n === n.toUpperCase() ? n.toLowerCase().replace(/(^|[\s\-\/(&.])([a-z])/g, function(m, a, b) { return a + b.toUpperCase(); }) : n; }
-        function calOpen() { try { return localStorage.getItem('la_cal_open') === '1'; } catch (_) { return false; } }
-        document.getElementById('cal-expand').addEventListener('click', function() {
-            var open = !calOpen();
-            try { localStorage.setItem('la_cal_open', open ? '1' : '0'); } catch (_) {}
-            var panel = document.getElementById('cal-panel');
-            panel.classList.toggle('folded', !open);
-            if (open) document.getElementById('cal-find').hidden = false;
-            this.setAttribute('aria-expanded', open ? 'true' : 'false');
-            this.textContent = open ? 'Hide sets' : 'Show sets';
-        });
         async function saveCalendar(url) {
             var err = document.getElementById('cal-error'), btn = document.getElementById('cal-save');
             err.textContent = ''; btn.disabled = true;
@@ -980,13 +943,6 @@
             } catch (e) { err.textContent = e.message; }
             btn.disabled = false;
         }
-        document.getElementById('cal-change').addEventListener('click', function() {
-            var f = document.getElementById('cal-form');
-            f.dataset.open = f.dataset.open ? '' : '1';
-            f.hidden = !f.dataset.open;
-            document.getElementById('cal-find').hidden = !f.dataset.open;
-            if (f.dataset.open) document.getElementById('cal-url').focus();
-        });
         document.getElementById('cal-form').addEventListener('submit', function(e) { e.preventDefault(); var v = document.getElementById('cal-url').value.trim(); if (v) saveCalendar(v); });
         document.getElementById('cal-remove').addEventListener('click', async function() {
             if (await laConfirm({ title: 'Disconnect the calendar?', message: 'The cameras stop starting and stopping on their own. Recordings are split by the On stage name set on each camera instead.', confirmText: 'Disconnect', danger: true })) saveCalendar('');
