@@ -1894,7 +1894,7 @@
                 };
                 // Which Brand Kit artist this event is for (saved with the event): their logos and photos show here
                 var linkRow = isMember || !ev.key ? '' : '<div class="ev-link"><span class="ev-link-l">Artist</span><select id="ev-artist" aria-label="Brand Kit artist for this event">' +
-                    '<option value="">' + (byName ? 'Matched by name: ' + esc(names[byName]) : 'Not linked to a Brand Kit artist') + '</option>' +
+                    '<option value="">' + (byName ? 'Matched by name: ' + esc(names[byName]) : 'NOT LINKED') + '</option>' +
                     artists.map(function(k) { return '<option value="' + esc(k) + '"' + (ev.artistOwner === k ? ' selected' : '') + '>' + esc(names[k]) + '</option>'; }).join('') +
                     '<option value="__new">+ New artist…</option></select>' +
                     '<span class="ev-link-n">' + (ev.artistOwner ? 'Linked to this event' : byName ? 'Found by the name in the calendar' : 'Choose their folder to show their logos and photos') + '</span></div>';
