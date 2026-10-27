@@ -31,6 +31,14 @@
   window.addEventListener('resize', fit);
   window.addEventListener('orientationchange', function () { setTimeout(fit, 300); });
 })();
+// The breadcrumb's account name: the local / assets account shows its company name as written.
+// Defined before the page loads: pages call it from their own scripts while still loading.
+window.laSetBreadcrumb = function(el, name) {
+    if (!el) return;
+    var isLa = /^local\s*[\/-]?\s*assets\b/i.test(String(name || ''));
+    el.textContent = isLa ? 'local / assets LTD' : name;
+    el.classList.toggle('is-la', isLa);
+};
 document.addEventListener("DOMContentLoaded", () => {
     // Inject theme switcher CSS if not already present
     if (!document.getElementById('la-theme-switcher-css')) {
@@ -192,13 +200,6 @@ document.addEventListener("DOMContentLoaded", () => {
             .catch(function() {});
     }
 
-    // The breadcrumb's account name: the local / assets account shows its company name as written
-    window.laSetBreadcrumb = function(el, name) {
-        if (!el) return;
-        var isLa = /^local\s*[\/-]?\s*assets\b/i.test(String(name || ''));
-        el.textContent = isLa ? 'local / assets LTD' : name;
-        el.classList.toggle('is-la', isLa);
-    };
     window.applyVenueName = function() {
         var name = window.getVenueName().toUpperCase();
         var breadcrumb = document.getElementById('venue-breadcrumb');
