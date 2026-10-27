@@ -505,14 +505,14 @@
         .ci-wm.has-logo { background-color:transparent; -webkit-backdrop-filter:none; backdrop-filter:none; }
         /* Set up in 8 steps: sized to the space it has (container query), so it reads on any screen.
            Wide: the four phases side by side, left to right. Medium: two by two. Narrow: one under another. */
-        .ci-how { grid-column:1 / -1; align-self:start; padding-top:24px; border-top:1px solid var(--la-line-soft); container-type:inline-size; }
+        .ci-how { align-self:start; padding-top:24px; border-top:1px solid var(--la-line-soft); container-type:inline-size; }
         .ci-how .cam-eyebrow { margin-bottom:14px; }
         .ci-steps { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
         @container (min-width: 1040px) { .ci-steps { grid-template-columns:repeat(4,minmax(0,1fr)); } }
         @container (max-width: 540px) { .ci-steps { grid-template-columns:minmax(0,1fr); gap:10px; } .ci-phase { padding:14px 14px 4px; } }
         .ci-phase { display:flex; flex-direction:column; border:1px solid var(--la-line); border-radius:14px; background:var(--la-raised, rgba(255,255,255,.02)); padding:18px 18px 6px; min-width:0; }
         .ci-phase-h { font:500 10px/1 'JetBrains Mono',monospace; letter-spacing:.18em; text-transform:uppercase; color:var(--la-accent); margin-bottom:14px; }
-        .ci-phase ol { list-style:none; margin:0; padding:0; flex:1; display:grid; grid-auto-rows:1fr; }
+        .ci-phase ol { list-style:none; margin:0; padding:0; }
         .ci-phase li { display:flex; gap:10px; padding-bottom:14px; min-width:0; }
         .ci-phase li + li { padding-top:14px; border-top:1px solid var(--la-line-soft); }
         .ci-phase li > div { min-width:0; }
@@ -524,6 +524,18 @@
         /* Animated logos in orange (a lighter orange on the dark theme) */
         .ci-anim { font-style:normal; color:#F472B6; }
         html:not(.dark) .ci-anim { color:#DB2777; }
+        /* Wide: the text and the 8 steps on the left, the example beside them (no empty space under the text).
+           Narrower: one column, the text, the example (not wider than it reads well), then the steps. */
+        @media (min-width: 1400px) { .ci-example { grid-row:span 2; } }
+        @media (max-width: 1399px) {
+            .cam-intro { grid-template-columns:minmax(0,1fr); }
+            /* The example's two halves side by side: the camera, then what arrives when the stream stops */
+            .ci-example { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); grid-template-rows:auto 1fr; column-gap:16px; align-items:start; }
+            .ci-example > .cam-card { grid-column:1; grid-row:1 / span 2; }
+            .ci-example > .ci-arrow { grid-column:2; grid-row:1; justify-content:flex-start; padding:0 0 10px; }
+            .ci-example > .ci-result { grid-column:2; grid-row:2; }
+        }
+        @media (max-width: 700px) { .ci-example { display:block; } .ci-example > .ci-arrow { justify-content:center; padding:12px 0; } }
         @media (max-width: 900px) {
             .cam-intro { grid-template-columns:minmax(0,1fr); padding:22px 18px; gap:28px; }
             .ci-example { grid-row:auto; }
