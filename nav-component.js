@@ -31,6 +31,63 @@
   window.addEventListener('resize', fit);
   window.addEventListener('orientationchange', function () { setTimeout(fit, 300); });
 })();
+// Loading, in the way Claude Code shows it's working: a turning ✻ and a line about what the page is doing,
+// changing every couple of seconds. <la-spin topic="history"></la-spin> where content is on its way; the page's
+// own content replaces it. Defined before the page loads, so it shows from the first paint.
+(function() {
+    if (!window.customElements || customElements.get('la-spin')) return;
+    var LINES = {
+        history: ['Gathering your sets…', 'Matching clips to their sessions…', 'Lining up the long forms…', 'Counting the vertical clips…', 'Checking the watermarks…', 'Reading the session dates…'],
+        brand: ['Opening the Brand Kit…', 'Finding the logos…', 'Sorting fonts and artwork…', 'Loading the GIF animations…', 'Checking the watermark…'],
+        contacts: ['Finding your contacts…', 'Matching artists and venues…', 'Sorting by name…'],
+        accounts: ['Listing the client accounts…', 'Checking plans and payments…', 'Counting the logins…'],
+        billing: ['Adding up this month…', 'Fetching the invoices from Stripe…', 'Checking what’s been paid…'],
+        stage: ['Loading the artist’s brand…', 'Finding the logos and fonts…'],
+        stream: ['Preparing the stream address…', 'Fetching the stream key…'],
+        page: ['Loading…', 'Almost there…']
+    };
+    var FRAMES = ['\u00b7', '\u2722', '\u2733', '\u2736', '\u273b', '\u273d', '\u273b', '\u2736', '\u2733', '\u2722'];   // · ✢ ✳ ✶ ✻ ✽ and back
+    // Dark mode: each line in its own colour (the Brand Kit's) or plain, the ✻ with it; light mode: black or orange
+    var DARK = ['#39FF14', '#60A5FA', '#FACC15', '#FB923C', '#2DD4BF', '#F87171', '#F472B6', '#818CF8'];
+    // Light mode is black, white and orange only: its lines are black or orange
+    var LIGHT = ['#0a0a0a', '#EA580C'];
+    // Dark: about one line in three plain (grey), the others a colour; never the same twice running
+    var _last = -1;
+    function tint() {
+        var dark = document.documentElement.classList.contains('dark');
+        if (dark && Math.random() < 0.35 && _last !== -1) { _last = -1; return 'var(--la-sub, #a1a1aa)'; }
+        var l = dark ? DARK : LIGHT, n;
+        do { n = Math.floor(Math.random() * l.length); } while (n === _last);
+        _last = n; return l[n];
+    }
+    var css = document.createElement('style');
+    css.textContent = 'la-spin{display:flex;align-items:center;gap:10px;padding:18px 4px;font:500 13px/1.4 "Helvetica Neue",Helvetica,Arial,sans-serif;color:var(--la-sub,#a1a1aa)}' +
+        'la-spin .ls-g{flex:none;width:16px;text-align:center;font-size:15px;line-height:1;color:var(--ls-c,#39FF14);transition:color .25s ease}' +
+        // The words shimmer: a band of light keeps sweeping across them, as in Claude Code
+        'la-spin .ls-t{transition:opacity .25s ease;background:linear-gradient(90deg,var(--ls-c) 0%,var(--ls-c) 40%,var(--ls-hi,#fafafa) 50%,var(--ls-c) 60%,var(--ls-c) 100%);' +
+        'background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:ls-shim 2s linear infinite}' +
+        'html:not(.dark) la-spin{--ls-hi:#b4b4bb}la-spin .ls-t.out{opacity:0}@keyframes ls-shim{from{background-position:100% 0}to{background-position:-150% 0}}' +
+        '@media (prefers-reduced-motion:reduce){la-spin .ls-t{animation:none;background:none;color:var(--ls-c)}}' +
+        'la-spin[center]{justify-content:center}';
+    (document.head || document.documentElement).appendChild(css);
+    var still = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    customElements.define('la-spin', class extends HTMLElement {
+        connectedCallback() {
+            var lines = LINES[this.getAttribute('topic')] || LINES.page, i = 0, f = 0, self = this;
+            this.setAttribute('role', 'status');
+            this.innerHTML = '<span class="ls-g" aria-hidden="true">' + (still ? '\u273b' : FRAMES[0]) + '</span><span class="ls-t"></span>';
+            var g = this.firstChild, t = this.lastChild;
+            this.style.setProperty('--ls-c', tint());
+            t.textContent = lines[0];
+            if (!still) this._g = setInterval(function() { f = (f + 1) % FRAMES.length; g.textContent = FRAMES[f]; }, 110);
+            if (lines.length > 1) this._t = setInterval(function() {
+                t.classList.add('out');
+                setTimeout(function() { i = (i + 1) % lines.length; t.textContent = lines[i]; self.style.setProperty('--ls-c', tint()); t.classList.remove('out'); }, 250);
+            }, 2200);
+        }
+        disconnectedCallback() { clearInterval(this._g); clearInterval(this._t); }
+    });
+})();
 // The breadcrumb's account name: the local / assets account shows its company name as written.
 // Defined before the page loads: pages call it from their own scripts while still loading.
 window.laSetBreadcrumb = function(el, name) {

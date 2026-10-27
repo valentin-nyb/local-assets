@@ -36,7 +36,7 @@
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=6"></script>
-    <script src="nav-component.js?v=45"></script>
+    <script src="nav-component.js?v=46"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
         .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
@@ -277,7 +277,7 @@
                 <p id="bl-error" class="bl-msg hidden" style="color:var(--la-bad)"></p>
                 <section class="bl-section">
                     <div class="bl-section-head"><h3>Invoices</h3><div class="bl-inv-tools"><select id="bl-inv-filter" class="bl-inv-filter hidden" aria-label="Show invoices for"></select><button type="button" class="cam-btn ghost hidden" id="bl-inv-zip">Download all</button></div></div>
-                    <div class="bl-scroll" id="bl-invoices"><p class="bl-empty">Loading…</p></div>
+                    <div class="bl-scroll" id="bl-invoices"><la-spin topic="billing"></la-spin></div>
                 </section>
                 <section class="bl-section hidden bl-fold folded" id="bl-send-box">
                     <div class="bl-section-head bl-fold-head" role="button" tabindex="0" aria-expanded="false" onclick="if(event.target.closest('button,select,a,input'))return;var s=this.parentNode;s.classList.toggle('folded');this.setAttribute('aria-expanded',!s.classList.contains('folded'))" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><h3>Bill to <svg class="bl-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h3><span class="bl-msg" id="bl-stripe-acct">Choose who to see and invoice: plan price, plus usage above what the plan includes</span></div>

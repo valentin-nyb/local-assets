@@ -36,7 +36,7 @@
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=6"></script>
-    <script src="nav-component.js?v=45"></script>
+    <script src="nav-component.js?v=46"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
         .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
@@ -140,7 +140,7 @@
                 <section class="ac-on" id="ac-online" aria-live="polite"><p class="ac-on-h"><span class="ac-on-dot"></span>Online now <b id="ac-on-n">…</b></p><div id="ac-on-list" class="ac-on-list"></div>
                     <details class="ac-on-recent"><summary>Seen recently <span id="ac-on-rn"></span></summary><div id="ac-on-recent" class="ac-on-list"></div></details></section>
                 <div class="ac-tools"><input id="ac-q" type="search" placeholder="Search accounts" aria-label="Search accounts"><span class="ac-sub" id="ac-count" style="margin:0"></span><button type="button" class="cam-btn primary" id="ac-new" style="margin-left:auto">New account</button></div>
-                <div class="ac-list" id="ac-list"><p class="ac-empty">Loading…</p></div>
+                <div class="ac-list" id="ac-list"><la-spin topic="accounts"></la-spin></div>
                 <!-- The emails clients get, as examples -->
             </div>
         </div>

@@ -36,7 +36,7 @@
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=6"></script>
-    <script src="nav-component.js?v=45"></script>
+    <script src="nav-component.js?v=46"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
         .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
@@ -100,7 +100,7 @@
                     </div>
                     <button type="button" class="cam-btn ghost ct-owner" id="ct-edit">Edit contacts</button>
                 </div>
-                <div class="ct-grid" id="ct-list"></div>
+                <div class="ct-grid" id="ct-list"><la-spin topic="contacts" style="grid-column:1/-1"></la-spin></div>
                 <form class="ct-form hidden ct-owner" id="ct-form"></form>
             </div>
         </div>

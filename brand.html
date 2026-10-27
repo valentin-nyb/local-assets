@@ -37,7 +37,7 @@
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=6"></script>
-    <script src="nav-component.js?v=45"></script>
+    <script src="nav-component.js?v=46"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
         .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
@@ -183,28 +183,30 @@
         .bk-tag.is-profile { color:var(--la-accent); border-color:color-mix(in srgb, var(--la-accent) 45%, transparent); }
         /* Instagram posts in purple */
         .bk-tag.is-post { color:#C084FC; border-color:color-mix(in srgb, #C084FC 50%, transparent); }
-        html:not(.dark) .bk-tag.is-post { color:#9333EA; border-color:#9333EA; }
+        html:not(.dark) .bk-tag.is-post { color:#EA580C; border-color:#EA580C; }
         /* Each type in its own colour: animations blue, artwork orange, covers yellow, photos teal, guidelines red, fonts pink, logos indigo (green once a logo is the watermark); the light theme has its own solid colours */
         .bk-tag.is-anim { color:#60A5FA; border-color:color-mix(in srgb, #60A5FA 50%, transparent); }
-        html:not(.dark) .bk-tag.is-anim { color:#2563EB; border-color:#2563EB; }
+        html:not(.dark) .bk-tag.is-anim { color:#EA580C; border-color:#EA580C; }
         .bk-tag.is-art { color:#FB923C; border-color:color-mix(in srgb, #FB923C 50%, transparent); }
         html:not(.dark) .bk-tag.is-art { color:#EA580C; border-color:#EA580C; }
         .bk-tag.is-font { color:#F472B6; border-color:color-mix(in srgb, #F472B6 50%, transparent); }
-        html:not(.dark) .bk-tag.is-font { color:#DB2777; border-color:#DB2777; }
+        html:not(.dark) .bk-tag.is-font { color:#0a0a0a; border-color:#0a0a0a; }
         .bk-tag.is-cover { color:#FACC15; border-color:color-mix(in srgb, #FACC15 50%, transparent); }
-        html:not(.dark) .bk-tag.is-cover { color:#CA8A04; border-color:#CA8A04; }
+        html:not(.dark) .bk-tag.is-cover { color:#0a0a0a; border-color:#0a0a0a; }
         .bk-tag.is-photo { color:#2DD4BF; border-color:color-mix(in srgb, #2DD4BF 50%, transparent); }
-        html:not(.dark) .bk-tag.is-photo { color:#0D9488; border-color:#0D9488; }
+        html:not(.dark) .bk-tag.is-photo { color:#0a0a0a; border-color:#0a0a0a; }
         .bk-tag.is-guide { color:#F87171; border-color:color-mix(in srgb, #F87171 50%, transparent); }
-        html:not(.dark) .bk-tag.is-guide { color:#DC2626; border-color:#DC2626; }
+        html:not(.dark) .bk-tag.is-guide { color:#EA580C; border-color:#EA580C; }
         /* The kinds of file at the top of the page, each in the colour of its tag (Colour in every colour) */
         .bk-kinds .k-logo { color:#818CF8; } .bk-kinds .k-anim { color:#60A5FA; } .bk-kinds .k-cover { color:#FACC15; } .bk-kinds .k-art { color:#FB923C; }
         .bk-kinds .k-photo { color:#2DD4BF; } .bk-kinds .k-guide { color:#F87171; } .bk-kinds .k-font { color:#F472B6; }
-        html:not(.dark) .bk-kinds .k-logo { color:#4F46E5; } html:not(.dark) .bk-kinds .k-anim { color:#2563EB; } html:not(.dark) .bk-kinds .k-cover { color:#CA8A04; } html:not(.dark) .bk-kinds .k-art { color:#EA580C; }
-        html:not(.dark) .bk-kinds .k-photo { color:#0D9488; } html:not(.dark) .bk-kinds .k-guide { color:#DC2626; } html:not(.dark) .bk-kinds .k-font { color:#DB2777; }
+        html:not(.dark) .bk-kinds .k-logo { color:#0a0a0a; } html:not(.dark) .bk-kinds .k-anim { color:#EA580C; } html:not(.dark) .bk-kinds .k-cover { color:#0a0a0a; } html:not(.dark) .bk-kinds .k-art { color:#EA580C; }
+        html:not(.dark) .bk-kinds .k-photo { color:#0a0a0a; } html:not(.dark) .bk-kinds .k-guide { color:#EA580C; } html:not(.dark) .bk-kinds .k-font { color:#0a0a0a; }
         .bk-kinds .k-colour { background:linear-gradient(90deg, #F87171, #FB923C, #FACC15, #4ADE80, #60A5FA, #C084FC); -webkit-background-clip:text; background-clip:text; color:transparent; }
+        /* Light mode reads in black, white and orange only (site-wide); dark mode keeps every colour */
+        html:not(.dark) .bk-kinds .k-colour { background:linear-gradient(90deg, #EA580C, #0a0a0a); -webkit-background-clip:text; background-clip:text; }
         .bk-tag.is-logo { color:#818CF8; border-color:color-mix(in srgb, #818CF8 50%, transparent); }
-        html:not(.dark) .bk-tag.is-logo { color:#4F46E5; border-color:#4F46E5; }
+        html:not(.dark) .bk-tag.is-logo { color:#0a0a0a; border-color:#0a0a0a; }
         .bk-tag.is-logo.is-wm, html:not(.dark) .bk-tag.is-logo.is-wm { color:var(--la-accent); border-color:color-mix(in srgb, var(--la-accent) 45%, transparent); }
         .bk-file-actions .is-on { color:var(--la-accent) !important; }
         .bk-preview.bk-video video { width:100%; height:100%; object-fit:cover; display:block; }
@@ -469,7 +471,7 @@
                     </div>
                 </div>
                 <section id="bk-wm" class="bk-wm hidden"></section>
-                <div id="bk-owners" class="bk-owners"></div>
+                <div id="bk-owners" class="bk-owners"><la-spin topic="brand"></la-spin></div>
                 <p id="bk-error" class="hidden text-center text-[10px] font-mono uppercase tracking-widest text-red-500"></p>
             </div>
         </div>

@@ -39,7 +39,7 @@
     <script src="/la-dialogs.js?v=6"></script>
     <script src="/la-djframe.js?v=4"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player@3"></script>
-    <script src="nav-component.js?v=45"></script>
+    <script src="nav-component.js?v=46"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
         .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
@@ -523,7 +523,7 @@
         .ci-link { color:var(--la-text); text-decoration:underline; text-underline-offset:2px; }
         /* Animated logos in orange (a lighter orange on the dark theme) */
         .ci-anim { font-style:normal; color:#F472B6; }
-        html:not(.dark) .ci-anim { color:#DB2777; }
+        html:not(.dark) .ci-anim { color:#EA580C; }
         /* Wide: the text and the 8 steps on the left, the example beside them (no empty space under the text).
            Narrower: one column, the text, the example (not wider than it reads well), then the steps. */
         @media (min-width: 1400px) { .ci-example { grid-row:span 2; } }
@@ -1361,7 +1361,7 @@
                 '<div class="ls-row"><span>Saved to Distribution History</span><small>' + esc(artist) + (start ? ' · ' + fmtDay(start) : '') + '</small></div>' +
                 '<div class="ls-row"><span>Vertical clips</span><small>' + (slots.some(function(c) { return c.kind !== 'audio' && c.autoClips !== false; }) ? 'Made automatically' : 'Off') + '</small></div>' +
                 '<div class="ls-row"><span>Watermark</span><small id="ls-wm">…</small></div></div>' +
-                '<div class="ls-sec"><div id="ls-brand"><p class="ls-empty">Loading…</p></div></div>' +
+                '<div class="ls-sec"><div id="ls-brand"><la-spin topic="stage"></la-spin></div></div>' +
                 '<div class="cam-form-actions" style="margin-top:20px"><a class="cam-btn ghost" href="/brand">Open Brand Kit</a><button type="button" class="cam-btn primary rec-stop" onclick="stopCalendarSet(this)">Stop set</button></div>');
             try {
                 var hdr = {};
@@ -2130,7 +2130,7 @@
             return new Promise(function(ok, bad) { var sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js'; sc.onload = function() { ok(window.qrcode); }; sc.onerror = bad; document.head.appendChild(sc); });
         }
         function openStreamSetup(c) {
-            openCamDialog('Stream setup — ' + c.name, '<p class="cam-dialog-text">Loading…</p>');
+            openCamDialog('Stream setup — ' + c.name, '<la-spin topic="stream"></la-spin>');
             camApi({ action: 'connection', id: c.id }).then(function(d) {
                 function row(label, value, secret) {
                     return '<div class="cam-field"><span>' + label + '</span><div><code' + (secret ? ' class="secret"' : '') + '>' + esc(value) + '</code>' +
