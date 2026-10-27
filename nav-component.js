@@ -384,7 +384,8 @@ document.addEventListener("DOMContentLoaded", () => {
         venues = ordered;
         var html = '<div data-la-switcher class="la-acct-group">';
         venues.forEach(function(v) {
-            var current = v.slug === session.venueSlug && (!v.as || (session.member && session.member.owner === v.as));
+            // The account itself is current only while not viewing it as one of its artists (so it can be chosen to go back)
+            var current = v.slug === session.venueSlug && (v.as ? !!(session.member && session.member.owner === v.as) : !session.member);
             // Icon by what the account is: an artist, a venue, a record label, management, or local / assets itself
             var kind = v.type || (/^local\s*[\/-]?\s*assets\b/i.test(String(v.name || '')) || v.slug === 'local-assets-admin' ? 'admin' : 'venue');
             html += '<button type="button" class="la-acct-row' + (v.sub ? ' sub' : '') + (current ? ' cur' : '') + '" data-venue-slug="' + _esc(v.slug) + '" data-as="' + _esc(v.as || '') + '" onclick="window.LA_SWITCH_VENUE(this.dataset.venueSlug, this.dataset.as)"' + (current ? ' disabled aria-current="true"' : '') + '>' +
