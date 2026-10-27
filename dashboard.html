@@ -2621,7 +2621,7 @@
         }
         // The banner is a muted, autoplaying loop of the long-form video around its peak,
         // played as real video (hardware-decoded on phones) and faded in once it plays.
-        var _heroLoop = null;
+        var _heroLoop = null, _heroWait = {}, _heroWaitTimer = null;
         function playHeroLoop(a) {
             var wrap = document.getElementById('live-feed-player-wrap');
             if (!wrap || !window.customElements || !customElements.get('mux-player')) return;
@@ -2632,6 +2632,19 @@
             var start = Math.max(0, Math.min(t - 4, dur - 10)), end = start + 8;
             var key = pid + '|' + Math.round(start);
             if (_heroLoop && _heroLoop.key === key) return;
+            // The same video at a new moment (its peak or the DJ came in after it started): the playing video
+            // moves there. Building a new player instead flashed black on phones and could wait for a touch.
+            if (_heroLoop && _heroLoop.pid === pid && _heroLoop.el.isConnected) {
+                _heroLoop.key = key; _heroLoop.start = start; _heroLoop.end = end;
+                try { _heroLoop.el.currentTime = start; } catch (_) {}
+                return;
+            }
+            // Wait a moment for the peak and the DJ's moment (usually known within a second), so the banner
+            // starts where it stays instead of jumping
+            if (!dj && _peaks[a.id] == null && (a.id in _djSpot ? _djSpot[a.id] === undefined || _peakPending[a.id] : true)) {
+                _heroWait[a.id] = _heroWait[a.id] || Date.now();
+                if (Date.now() - _heroWait[a.id] < 2500) { clearTimeout(_heroWaitTimer); _heroWaitTimer = setTimeout(renderHero, 2600 - (Date.now() - _heroWait[a.id])); return; }
+            }
             wrap.style.opacity = '0';
             wrap.innerHTML = '';
             var mp = document.createElement('mux-player');
@@ -2644,6 +2657,8 @@
             mp.setAttribute('start-time', String(Math.round(start)));
             mp.setAttribute('thumbnail-time', String(Math.round(start)));
             mp.setAttribute('max-resolution', window.innerWidth >= 768 ? '1080p' : '720p');
+            // Sharp from the first frame: no blurry low-quality start
+            mp.setAttribute('min-resolution', window.innerWidth >= 768 ? '720p' : '480p');
             mp.setAttribute('disable-tracking', '');
             mp.setAttribute('nohotkeys', '');
             mp.setAttribute('default-hidden-captions', '');
@@ -2674,7 +2689,8 @@
             };
             mp.addEventListener('playing', function() { if (anim) { anim.remove(); anim = null; } });
             var tryPlay = function() { mp.muted = true; var p = mp.play && mp.play(); if (p && p.catch) p.catch(function(e) { if (e && e.name === 'NotAllowedError') showAnim(); }); };
-            setTimeout(function() { if (mp.paused) showAnim(); }, 4000);
+            // Still not playing after a while (a slow connection takes a few seconds to start): the moving picture
+            setTimeout(function() { if (mp.paused) showAnim(); }, 7000);
             mp.addEventListener('loadedmetadata', tryPlay);
             mp.addEventListener('canplay', function() { if (mp.paused) tryPlay(); });
             var kick = function() { if (mp.paused) tryPlay(); };
@@ -2687,9 +2703,9 @@
             window.addEventListener('pageshow', resume);
             window.addEventListener('focus', resume);
             [500, 1500, 3000, 6000].forEach(function(ms) { setTimeout(resume, ms); });
-            mp.addEventListener('timeupdate', function() { if (mp.currentTime >= end || mp.currentTime < start - 1) mp.currentTime = start; });
+            mp.addEventListener('timeupdate', function() { var l = _heroLoop && _heroLoop.el === mp ? _heroLoop : { start: start, end: end }; if (mp.currentTime >= l.end || mp.currentTime < l.start - 1) mp.currentTime = l.start; });
             wrap.appendChild(mp);
-            _heroLoop = { key: key, el: mp };
+            _heroLoop = { key: key, el: mp, pid: pid, start: start, end: end };
             if (wrap.dataset.pos) mp.style.setProperty('--media-object-position', wrap.dataset.pos);
         }
         function stopHeroLoop() {
