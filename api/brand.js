@@ -69,6 +69,32 @@ export default async function handler(req, res) {
   if (!slug) return res.status(403).json({ error: 'No venue for this account' });
 
   try {
+    // ?logosFor=CAFE 1001|RADIO 1001: the logos of other accounts on the platform with those names (a session's venue
+    // or record label that has its own account), for the session tiles. Their own Brand Kit logos only, already public links.
+    if (req.method === 'GET' && req.query?.logosFor) {
+      const key = n => String(n || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+      const wanted = new Set(String(req.query.logosFor).split('|').map(key).filter(Boolean).slice(0, 30));
+      const cfg = getVenuesConfig(), slugs = Object.keys(cfg).filter(s => s !== slug);
+      const [orgNames, photos] = await withRedis(r => Promise.all([Promise.all(slugs.map(s => r.get(`brand_org_name:${s}`))), Promise.all(slugs.map(s => r.hGet(`brand_owner_photo:${s}`, 'venue')))])).catch(() => [[], []]);
+      const out = {};
+      await Promise.all(slugs.map(async (s, i) => {
+        const k = key(orgNames[i] || cfg[s]?.name);
+        if (!k || !wanted.has(k) || out[k]) return;
+        const imgs = [];
+        try {
+          const page = await list({ prefix: `${prefixFor(s)}venue/`, limit: 200 });
+          for (const b of page.blobs) {
+            const m = parsePath(b.pathname, s);
+            if (m && /\.(png|jpe?g|svg|webp|gif)$/i.test(m.name) && (m.category === 'logos' || m.category === 'photos')) imgs[m.category === 'logos' ? 'unshift' : 'push']({ url: b.url, name: m.name, logo: m.category === 'logos' });
+          }
+        } catch (e) { console.error('[brand] logosFor', s, e.message); }
+        const prof = photos[i] && imgs.find(x => x.url === photos[i]);
+        if (prof) imgs.splice(imgs.indexOf(prof), 1), imgs.unshift(prof);
+        if (imgs.length) out[k] = imgs.slice(0, 8);
+      }));
+      res.setHeader('Cache-Control', 'private, max-age=300');
+      return res.status(200).json({ logos: out });
+    }
     if (req.method === 'GET') {
       const files = [];
       let cursor;
@@ -81,13 +107,16 @@ export default async function handler(req, res) {
         cursor = page.hasMore ? page.cursor : undefined;
       } while (cursor);
       files.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
-      const [orgType, orgName, ownerNames, pinned, watermark, labelArtists, fileLabels, hiddenOwners, ownerGenres, ownerLinks] = await withRedis(r => Promise.all([
+      const [orgType, orgName, savedNames, pinned, watermark, labelArtists, fileLabels, hiddenOwners, ownerGenres, ownerLinks] = await withRedis(r => Promise.all([
         r.get(`brand_org_type:${slug}`), r.get(`brand_org_name:${slug}`),
         r.hGetAll(`brand_owner_names:${slug}`), r.hGetAll(`brand_owner_photo:${slug}`),
         readWatermark(r, slug), r.hGetAll(`brand_label_artist:${slug}`), r.hGetAll(`brand_file_label:${slug}`),
         r.sMembers(`brand_hidden_owners:${slug}`),
         r.hGetAll(`brand_owner_genres:${slug}`), r.hGetAll(`brand_owner_links:${slug}`),
       ])).catch(() => [null, null, {}, {}, cleanWatermark(), {}, {}, [], {}, {}]);
+      // A deleted artist, venue or label stays out of every list (the Brand Kit, and the dropdowns on the other
+      // pages), even when its name is still saved, until files are added to it again
+      const ownerNames = Object.fromEntries(Object.entries(savedNames || {}).filter(([o]) => !(hiddenOwners || []).includes(o) || files.some(f => f.owner === o)));
       // Videos: their watermarked copy in Cloud Storage (Mux), and whether it's ready to download
       const vids = files.filter(f => f.category === 'videos');
       if (vids.length) {
