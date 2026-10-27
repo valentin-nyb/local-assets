@@ -10,6 +10,8 @@ html:not(.dark) {
     color-scheme: light;
     --neon: #F97316;
 }
+/* Dark mode: the device's own pickers, menus and date wheels are dark too */
+html.dark { color-scheme: dark; }
 
 /* Background colors */
 html:not(.dark) body,
@@ -586,9 +588,13 @@ html:not(.dark) body :is(.cam-btn, .pm-disconnect).la-danger { color: #dc2626 !i
     :root body select:not([multiple]):not([size]):not(.bl-status):not([data-native]):not(.flatpickr-monthDropdown-months) {
         -webkit-appearance: none; appearance: none;
         padding-right: 50px !important; padding-left: 16px !important;
+        /* Its colours too: without them Safari fills the box light grey under the light text in dark mode */
+        border-radius: 4px !important; border: 1px solid color-mix(in srgb, var(--la-text, #fafafa) 26%, transparent) !important;
+        background-color: var(--la-surface, #0e0e10) !important; color: var(--la-text, #fafafa) !important; opacity: 1;
         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='38' height='26' viewBox='0 0 38 26'%3E%3Cpath d='M1 2v22' stroke='%238a8a93' stroke-width='1.2'/%3E%3Cpath d='M19 10.5l5-5 5 5M19 15.5l5 5 5-5' fill='none' stroke='%238a8a93' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
         background-repeat: no-repeat !important; background-position: right 6px center !important; background-size: 38px 26px !important;
     }
+    :root body select:not([multiple]):not([size]):not(.bl-status):not([data-native]):not(.flatpickr-monthDropdown-months):disabled { opacity: .55; }
 }
 /* Date fields: the date sits in the middle of the box, on the left (Safari puts it at the top) */
 .cam-form input[type=date], .se-panel input[type=date], .ing-field input[type=date] { line-height: normal; display: flex; align-items: center; }
