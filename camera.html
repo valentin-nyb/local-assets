@@ -472,6 +472,7 @@
         .cam-form label { display:flex; flex-direction:column; gap:6px; font-size:12px; font-weight:500; color:var(--la-text-2); }
         .cam-form input { height:40px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 12px; font-size:14px; outline:none; }
         .cam-form input:focus { border-color:var(--la-accent); }
+        :root body .cam-form input.pick-fixed { opacity:.75; cursor:default; box-shadow:none !important; border-color:color-mix(in srgb, var(--la-text) 12%, transparent) !important; }
         .cam-form small { font-size:11px; font-weight:400; color:var(--la-dim); }
         .cam-form-error { font-size:12px; color:var(--la-bad); min-height:0; }
         .cam-form-actions { display:flex; justify-content:flex-end; gap:8px; }
@@ -1329,12 +1330,11 @@
             var today = new Date(Date.now() - new Date().getTimezoneOffset() * 60e3).toISOString().slice(0, 10);
             openCamDialog('Create a session',
                 '<form id="ses-form" class="cam-form">' +
-                '<label>Artist<input name="artist" list="ses-artists" maxlength="60" required placeholder="Artist name" autocomplete="off" value="' + esc(_calNow ? _calNow.artist : (first.artist || '')) + '"><datalist id="ses-artists"></datalist></label>' +
+                pickHtml('artist', 'Artist', _calNow ? _calNow.artist : (first.artist || '')) + pickNewHtml('artist') +
                 '<label>Session name<input name="title" maxlength="80" placeholder="e.g. Sunset set" autocomplete="off" value="' + esc(first.stageTitle || '') + '"></label>' +
-                '<div class="cam-two"><label>Venue<select name="venue"><option value="">No venue</option>' + (first.stageVenue ? '<option selected>' + esc(first.stageVenue) + '</option>' : '') + '<option value="__new">+ New venue…</option></select></label>' +
-                '<label>Date<input name="date" type="date" value="' + today + '"></label></div>' +
-                '<label class="stage-newvenue" hidden>New venue<input name="newVenue" maxlength="60" placeholder="e.g. Venue Name" autocomplete="off"></label>' +
-                '<label>Record label<input name="label" list="ses-labels" maxlength="60" placeholder="Optional" autocomplete="off" value="' + esc(first.stageLabel || '') + '"><datalist id="ses-labels"></datalist></label>' +
+                '<div class="cam-two">' + pickHtml('venue', 'Venue', first.stageVenue || '') +
+                '<label>Date<input name="date" type="date" value="' + today + '"></label></div>' + pickNewHtml('venue') +
+                pickHtml('label', 'Record label', first.stageLabel || '') + pickNewHtml('label') +
                 '<div class="ses-slots"><span class="bk-wm-label" style="font-size:12px;color:var(--la-sub)">Record</span>' + slots.map(function(c) {
                     var on = anyLinked ? !!linked[c.id] : true;
                     return '<label class="cam-check"><input type="checkbox" name="slot" value="' + esc(c.id) + '"' + (on ? ' checked' : '') + '><span>' + esc(c.name) + '<small>' + (c.kind === 'audio' ? 'Decks audio · the session\'s HQ audio' : 'Camera') + (linked[c.id] ? ' · from this Mac' : '') + '</small></span></label>';
@@ -1346,26 +1346,19 @@
                 '<button type="submit" class="cam-btn primary">Start recording</button></div>' +
                 '</form>');
             var form = document.getElementById('ses-form');
-            loadArtistNames().then(function(list) { var dl = document.getElementById('ses-artists'); if (dl) dl.innerHTML = list.map(function(n) { return '<option value="' + esc(n) + '">'; }).join(''); });
-            laFetch('/api/brand').then(function(r) { return r.ok ? r.json() : {}; }).then(function(d) {
-                var names = Object.keys(d.ownerNames || {}).filter(function(k) { return k.indexOf('venue-') === 0; }).map(function(k) { return d.ownerNames[k]; }).filter(Boolean).sort();
-                var labels = Object.keys(d.ownerNames || {}).filter(function(k) { return k.indexOf('label-') === 0; }).map(function(k) { return d.ownerNames[k]; }).filter(Boolean).sort();
-                var dl = document.getElementById('ses-labels'); if (dl) dl.innerHTML = labels.map(function(n) { return '<option value="' + esc(n) + '">'; }).join('');
-                var cur = form.venue.value;
-                form.venue.innerHTML = '<option value="">No venue</option>' + names.concat(cur && cur !== '__new' && names.indexOf(cur) < 0 ? [cur] : []).map(function(n) { return '<option' + (n === cur ? ' selected' : '') + '>' + esc(n) + '</option>'; }).join('') + '<option value="__new">+ New venue…</option>';
-            }).catch(function() {});
-            form.venue.addEventListener('change', function() { var nv = form.querySelector('.stage-newvenue'); nv.hidden = form.venue.value !== '__new'; if (!nv.hidden) form.newVenue.focus(); });
-            form.artist.focus();
+            setupPicks(form);
             form.addEventListener('submit', async function(e) {
                 e.preventDefault();
                 var ids = Array.from(form.querySelectorAll('[name=slot]:checked')).map(function(x) { return x.value; });
                 var err = document.getElementById('ses-error');
+                if (!form.artist.value.trim()) { err.textContent = 'Choose the artist.'; return; }
                 if (!ids.length) { err.textContent = 'Choose a camera or the decks to record.'; return; }
+                savePickedNew(form);
                 var btn = form.querySelector('[type=submit]');
                 btn.disabled = true; btn.textContent = 'Starting…';
                 try {
                     await camApi({ action: 'recordNow', ids: ids, artist: form.artist.value.trim(), title: form.elements.title.value.trim(),
-                        venue: form.venue.value === '__new' ? form.newVenue.value.trim() : form.venue.value, label: form.label.value.trim(), date: form.date.value, autoClips: form.autoClips.checked });
+                        venue: form.venue.value.trim(), label: form.label.value.trim(), date: form.date.value, autoClips: form.autoClips.checked });
                     if (window.laApp && window.laApp.mac && window.laApp.mac.kick) window.laApp.mac.kick();
                     closeCamDialog();
                     laToast('Recording. Press Stop and save when the set ends.');
@@ -2261,16 +2254,72 @@
         }
 
         // ── On stage: names the recording, and splits it when the artist changes mid-stream ──
-        var _artistNames = null;
-        function loadArtistNames() {
-            if (_artistNames) return Promise.resolve(_artistNames);
-            return laFetch('/api/brand').then(function(r) { return r.ok ? r.json() : {}; }).then(function(d) {
-                var names = {};
-                Object.keys(d.ownerNames || {}).forEach(function(o) { if (o.indexOf('artist-') === 0) names[d.ownerNames[o]] = 1; });
-                (d.files || []).forEach(function(f) { if (f.owner.indexOf('artist-') === 0 && !(d.ownerNames || {})[f.owner]) names[f.owner.slice(7).replace(/-/g, ' ').toUpperCase()] = 1; });
-                _cams.forEach(function(c) { if (c.artist) names[c.artist] = 1; });
-                return (_artistNames = Object.keys(names).sort());
-            }).catch(function() { return []; });
+        // Artist, venue and record label in the session forms. The account's own one is fixed (an artist account's
+        // artist, a venue's venue, a label's label); the others are a dropdown of the saved ones (Brand Kit and
+        // the cameras' recent sets) with "+ New…" to type one. A hidden field of the same name holds the value.
+        var PICK = { artist: { none: 'Choose an artist', ph: 'Artist name' }, venue: { none: 'No venue', ph: 'e.g. Venue Name' }, label: { none: 'No record label', ph: 'e.g. Label Name' } };
+        function pickHtml(k, title, cur, extra) {
+            return '<label data-pick="' + k + '">' + title + '<select data-sel="' + k + '"><option value="">' + PICK[k].none + '</option>' +
+                (cur ? '<option selected>' + esc(cur) + '</option>' : '') + '<option value="__new">+ New ' + (k === 'label' ? 'record label' : k) + '…</option></select>' +
+                '<input type="hidden" name="' + k + '" value="' + esc(cur || '') + '">' + (extra || '') + '</label>';
+        }
+        function pickNewHtml(k) {
+            return '<label data-pick-new="' + k + '" hidden>New ' + (k === 'label' ? 'record label' : k) + '<input data-new="' + k + '" maxlength="60" placeholder="' + PICK[k].ph + '" autocomplete="off"></label>';
+        }
+        var _brandInfo = null;
+        function loadBrandInfo() {
+            return _brandInfo || (_brandInfo = laFetch('/api/brand').then(function(r) { return r.ok ? r.json() : {}; }).catch(function() { return {}; }).then(function(d) {
+                var on = d.ownerNames || {}, list = function(pre) { var n = {}; Object.keys(on).forEach(function(o) { if (o.indexOf(pre) === 0 && on[o]) n[on[o]] = 1; }); return n; };
+                var artists = list('artist-'), venues = list('venue-'), labels = list('label-');
+                (d.files || []).forEach(function(f) { if (f.owner && f.owner.indexOf('artist-') === 0 && !on[f.owner]) artists[f.owner.slice(7).replace(/-/g, ' ').toUpperCase()] = 1; });
+                _cams.forEach(function(c) { if (c.artist) artists[c.artist] = 1; if (c.stageVenue) venues[c.stageVenue] = 1; if (c.stageLabel) labels[c.stageLabel] = 1; });
+                var type = d.orgType || 'venue', own = String(d.orgName || getVenueName() || '').trim(), fixed = {};
+                if (d.member && d.member.name) fixed.artist = d.member.name;
+                else if (type === 'artist') fixed.artist = own;
+                if (type === 'venue' && own) fixed.venue = own;
+                if (type === 'label' && own) fixed.label = own;
+                return { fixed: fixed, artist: Object.keys(artists).sort(), venue: Object.keys(venues).sort(), label: Object.keys(labels).sort() };
+            }));
+        }
+        function setupPicks(form) {
+            form.querySelectorAll('[data-pick]').forEach(function(wrap) {
+                var k = wrap.dataset.pick, sel = wrap.querySelector('select'), hid = form.elements[k];
+                var nl = form.querySelector('[data-pick-new="' + k + '"]'), ni = nl && nl.querySelector('input');
+                sel.addEventListener('change', function() {
+                    var isNew = sel.value === '__new';
+                    nl.hidden = !isNew; hid.value = isNew ? ni.value.trim() : sel.value;
+                    if (isNew) ni.focus();
+                });
+                ni.addEventListener('input', function() { hid.value = ni.value.trim(); });
+            });
+            loadBrandInfo().then(function(info) {
+                form.querySelectorAll('[data-pick]').forEach(function(wrap) {
+                    var k = wrap.dataset.pick, sel = wrap.querySelector('select'), hid = form.elements[k];
+                    if (!sel || !sel.isConnected) return;
+                    if (info.fixed[k]) {
+                        // The account's own: shown, not chosen
+                        var f = document.createElement('input');
+                        f.readOnly = true; f.tabIndex = -1; f.className = 'pick-fixed'; f.value = info.fixed[k];
+                        sel.replaceWith(f); hid.value = info.fixed[k];
+                        var nl = form.querySelector('[data-pick-new="' + k + '"]'); if (nl) nl.hidden = true;
+                        return;
+                    }
+                    if (sel.value === '__new') return;
+                    var cur = sel.value, names = info[k].slice();
+                    if (cur && names.indexOf(cur) < 0) names.unshift(cur);
+                    sel.innerHTML = '<option value="">' + PICK[k].none + '</option>' + names.map(function(n) { return '<option' + (n === cur ? ' selected' : '') + '>' + esc(n) + '</option>'; }).join('') +
+                        '<option value="__new">+ New ' + (k === 'label' ? 'record label' : k) + '…</option>';
+                });
+            });
+        }
+        // A venue or record label typed as new joins the Brand Kit, so it's in the dropdown next time
+        function savePickedNew(form) {
+            ['venue', 'label'].forEach(function(k) {
+                var sel = form.querySelector('[data-sel="' + k + '"]'), name = form.elements[k] ? form.elements[k].value.trim() : '';
+                if (!sel || sel.value !== '__new' || !name) return;
+                laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setOwnerName', owner: k + '-' + name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50), name: name }) }).catch(function() {});
+                _brandInfo = null;
+            });
         }
         function openOnStage(c) {
             var live = c.status === 'active';
@@ -2281,40 +2330,25 @@
                 '<li><b>3</b><span>Change the artist between sets while streaming and the recording is split at that moment, one session per artist.</span></li>' +
                 '</ol>' +
                 '<form id="stage-form" class="cam-form">' +
-                '<label>Artist on stage<input name="artist" list="stage-artists" maxlength="60" placeholder="Artist name" autocomplete="off" value="' + esc(c.artist) + '"><datalist id="stage-artists"></datalist>' +
-                (live ? '<small>Streaming now. Saving a new name starts a new set from this moment.</small>' : '<small>Set this before the stream starts.</small>') + '</label>' +
+                pickHtml('artist', 'Artist on stage', c.artist || '', live ? '<small>Streaming now. Saving a new name starts a new set from this moment.</small>' : '<small>Set this before the stream starts.</small>') + pickNewHtml('artist') +
                 // Without a calendar, the session's details are given here so it arrives complete
                 (_calSched ? '<p class="cam-dialog-note" style="margin:0">During calendar sets, the calendar\'s name, venue and date are used. These are for streams outside them.</p>' : '') + (
                     '<label>Session name<input name="title" maxlength="80" placeholder="e.g. Friday Night Session" autocomplete="off" value="' + esc(c.stageTitle) + '"></label>' +
-                    '<div class="cam-two"><label>Venue<select name="venue"><option value="">No venue</option>' + (c.stageVenue ? '<option selected>' + esc(c.stageVenue) + '</option>' : '') + '<option value="__new">+ New venue…</option></select></label>' +
-                    '<label>Date<input name="date" type="date" value="' + esc(c.stageDate || new Date(Date.now() - new Date().getTimezoneOffset() * 60e3).toISOString().slice(0, 10)) + '"></label></div>' +
-                    '<label class="stage-newvenue" hidden>New venue<input name="newVenue" maxlength="60" placeholder="e.g. Venue Name" autocomplete="off"></label>') +
+                    '<div class="cam-two">' + pickHtml('venue', 'Venue', c.stageVenue || '') +
+                    '<label>Date<input name="date" type="date" value="' + esc(c.stageDate || new Date(Date.now() - new Date().getTimezoneOffset() * 60e3).toISOString().slice(0, 10)) + '"></label></div>' + pickNewHtml('venue')) +
                 '<label class="cam-check"><input type="checkbox" name="autoClips"' + (c.autoClips === false ? '' : ' checked') + '><span>Make vertical clips automatically<small>Vertical clips for social media from each set, once the recording is saved.</small></span></label>' +
                 '<p id="stage-error" class="cam-form-error"></p>' +
                 '<div class="cam-form-actions"><button type="button" class="cam-btn ghost" onclick="closeCamDialog()">Cancel</button>' +
                 '<button type="submit" class="cam-btn primary">' + (live && c.artist ? 'Start new set' : 'Save') + '</button></div>' +
                 '</form>');
             var form = document.getElementById('stage-form');
-            loadArtistNames().then(function(list) {
-                var dl = document.getElementById('stage-artists');
-                if (dl) dl.innerHTML = list.map(function(n) { return '<option value="' + esc(n) + '">'; }).join('');
-            });
-            if (form.venue) {
-                laFetch('/api/brand').then(function(r) { return r.ok ? r.json() : {}; }).then(function(d) {
-                    var names = Object.keys(d.ownerNames || {}).filter(function(k) { return k.indexOf('venue-') === 0; }).map(function(k) { return d.ownerNames[k]; }).filter(Boolean).sort();
-                    var cur = form.venue.value;
-                    form.venue.innerHTML = '<option value="">No venue</option>' + names.concat(c.stageVenue && names.indexOf(c.stageVenue) < 0 ? [c.stageVenue] : []).map(function(n) { return '<option' + (n === cur ? ' selected' : '') + '>' + esc(n) + '</option>'; }).join('') + '<option value="__new">+ New venue…</option>';
-                }).catch(function() {});
-                form.venue.addEventListener('change', function() { var nv = form.querySelector('.stage-newvenue'); nv.hidden = form.venue.value !== '__new'; if (!nv.hidden) form.newVenue.focus(); });
-            }
-            form.artist.focus();
+            setupPicks(form);
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
                 var btn = form.querySelector('[type=submit]');
                 btn.disabled = true; btn.textContent = 'Saving…';
-                var venue = form.venue ? (form.venue.value === '__new' ? form.newVenue.value.trim() : form.venue.value) : '';
-                // A new venue joins the Brand Kit's venues
-                if (form.venue && form.venue.value === '__new' && venue) laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setOwnerName', owner: 'venue-' + venue.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50), name: venue }) }).catch(function() {});
+                var venue = form.venue ? form.venue.value.trim() : '';
+                savePickedNew(form);
                 camApi({ action: 'onStage', id: c.id, artist: form.artist.value.trim().toUpperCase(), autoClips: form.autoClips.checked,
                     title: form.elements.title ? form.elements.title.value.trim() : '', venue: venue, date: form.date ? form.date.value : '' })
                     .then(function() { _camKey = ''; closeCamDialog(); laToast(form.artist.value.trim() ? form.artist.value.trim().toUpperCase() + ' is on stage' : 'Saved'); return loadCameras(); })
