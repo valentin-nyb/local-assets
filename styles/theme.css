@@ -613,7 +613,9 @@ html body header h1.font-mono.font-mono { color: var(--la-text) !important; }
 header #venue-breadcrumb { color: var(--la-sub) !important; }
 /* Client names in capitals ("CAFE 1001 / Cameras"); the local / assets account stays its lowercase wordmark */
 header #venue-breadcrumb { text-transform: uppercase !important; }
-header #venue-breadcrumb.is-la { text-transform: lowercase !important; }
+/* The local / assets account: its company name as written, "local / assets LTD" (no capital L) */
+header #venue-breadcrumb.is-la { text-transform: none !important; }
+header #venue-breadcrumb.is-la::first-letter { text-transform: none; }
 header #venue-breadcrumb:not(:empty)::after { content: "/"; display: inline-block; margin-left: 10px; color: var(--la-dim); font-weight: 300; }
 
 /* Side menu: an icon and the name in Geist; the page you're on is white on a soft rounded tint */

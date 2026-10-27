@@ -192,11 +192,18 @@ document.addEventListener("DOMContentLoaded", () => {
             .catch(function() {});
     }
 
+    // The breadcrumb's account name: the local / assets account shows its company name as written
+    window.laSetBreadcrumb = function(el, name) {
+        if (!el) return;
+        var isLa = /^local\s*[\/-]?\s*assets\b/i.test(String(name || ''));
+        el.textContent = isLa ? 'local / assets LTD' : name;
+        el.classList.toggle('is-la', isLa);
+    };
     window.applyVenueName = function() {
         var name = window.getVenueName().toUpperCase();
         var breadcrumb = document.getElementById('venue-breadcrumb');
         var tier = document.getElementById('venue-tier');
-        if (breadcrumb) { breadcrumb.textContent = name; breadcrumb.classList.toggle('is-la', /^local\s*[\/-]?\s*assets\b/i.test(name)); }
+        window.laSetBreadcrumb(breadcrumb, name);
         if (tier) tier.textContent = String(name).toUpperCase();
         document.querySelectorAll('[data-venue-label]').forEach(function(el) {
             el.textContent = name;
