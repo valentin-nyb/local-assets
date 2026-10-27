@@ -55,6 +55,22 @@
         .ac-tools input:focus { border-color:var(--la-accent); }
         @media (max-width: 600px) { .ac-tools { flex-wrap:nowrap; } .ac-tools input { flex:1; min-width:0; } #ac-count { display:none; } }
         .ac-list { display:flex; flex-direction:column; gap:10px; }
+        .ac-on { border:1px solid var(--la-line); background:var(--la-surface); border-radius:16px; padding:16px 20px; display:flex; flex-direction:column; gap:10px; }
+        .ac-on-h { display:flex; align-items:center; gap:10px; font:500 10px/1 'JetBrains Mono', monospace; letter-spacing:.2em; text-transform:uppercase; color:var(--la-dim); }
+        .ac-on-h b { color:var(--la-text); font-weight:600; letter-spacing:.1em; }
+        .ac-on-dot { width:8px; height:8px; border-radius:50%; background:var(--la-accent); box-shadow:0 0 0 4px color-mix(in srgb, var(--la-accent) 18%, transparent); }
+        .ac-on-list { display:flex; flex-direction:column; }
+        .ac-on-p { display:grid; grid-template-columns:minmax(0, 1.4fr) minmax(0, 1fr) auto; gap:14px; align-items:center; padding:10px 0; border-top:1px solid var(--la-line); font-size:13px; color:var(--la-text); }
+        .ac-on-p .w { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .ac-on-p small { display:block; margin-top:3px; font:500 9.5px/1.4 'JetBrains Mono', monospace; letter-spacing:.12em; text-transform:uppercase; color:var(--la-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .ac-on-p .t { font:500 10px/1 'JetBrains Mono', monospace; letter-spacing:.1em; text-transform:uppercase; color:var(--la-sub); white-space:nowrap; }
+        .ac-on-p .t.live { color:var(--la-accent); }
+        .ac-on-none { padding:10px 0 2px; border-top:1px solid var(--la-line); font-size:13px; color:var(--la-sub); }
+        .ac-on-recent summary { cursor:pointer; font-size:13px; color:var(--la-sub); list-style:none; padding-top:4px; }
+        .ac-on-recent summary::-webkit-details-marker { display:none; }
+        .ac-on-recent summary::before { content:'+ '; } .ac-on-recent[open] summary::before { content:'− '; }
+        .ac-on-recent[open] summary { margin-bottom:6px; }
+        @media (max-width: 600px) { .ac-on-p { grid-template-columns:minmax(0, 1fr) auto; } .ac-on-p .w2 { display:none; } }
         .ac-row { display:grid; grid-template-columns:minmax(0, 1.6fr) minmax(0, 1fr) auto; gap:16px; align-items:center; border:1px solid var(--la-line); background:var(--la-surface); border-radius:16px; padding:16px 20px; }
         .ac-btn.is-premium { color:var(--la-accent); border-color:color-mix(in srgb, var(--la-accent) 50%, transparent); }
         .ac-row.is-gone { opacity:.45; pointer-events:none; }
@@ -120,6 +136,9 @@
                     <h2 class="ac-h">Client accounts</h2>
                     <p class="ac-sub">Every venue, artist and record label account. Pause one to stop its uploads, clips, recording and publishing; resume it any time. Cancel ends its plan at the end of the paid month. Delete removes it everywhere, for good.</p>
                 </div>
+                <!-- Who is on the platform: online now, and everyone seen in the last 30 days -->
+                <section class="ac-on" id="ac-online" aria-live="polite"><p class="ac-on-h"><span class="ac-on-dot"></span>Online now <b id="ac-on-n">…</b></p><div id="ac-on-list" class="ac-on-list"></div>
+                    <details class="ac-on-recent"><summary>Seen recently <span id="ac-on-rn"></span></summary><div id="ac-on-recent" class="ac-on-list"></div></details></section>
                 <div class="ac-tools"><input id="ac-q" type="search" placeholder="Search accounts" aria-label="Search accounts"><span class="ac-sub" id="ac-count" style="margin:0"></span><button type="button" class="cam-btn primary" id="ac-new" style="margin-left:auto">New account</button></div>
                 <div class="ac-list" id="ac-list"><p class="ac-empty">Loading…</p></div>
                 <!-- The emails clients get, as examples -->
@@ -211,6 +230,35 @@
             }).join('');
         }
         document.getElementById('ac-q').addEventListener('input', render);
+
+        // Online now: seen in the last 2 minutes (each open page says so about once a minute)
+        var ONLINE_MS = 2.5 * 60000, PAGES = { dashboard: 'Overview', assets: 'Ingest', camera: 'Camera Control', brand: 'Brand Kit', billing: 'Billing', contacts: 'Contacts', accounts: 'Accounts', client: 'Client view', player: 'Player' };
+        function ago(ms) {
+            var m = Math.round(ms / 60000);
+            if (m < 1) return 'Now'; if (m < 60) return m + ' min ago';
+            var h = Math.round(m / 60); if (h < 24) return h + ' h ago';
+            var d = Math.round(h / 24); return d === 1 ? 'Yesterday' : d + ' days ago';
+        }
+        function personRow(p, now) {
+            var live = now - p.at < ONLINE_MS;
+            var who = p.member ? p.member + ' · artist access' : (p.account || p.slug || '');
+            return '<div class="ac-on-p"><div class="w">' + esc(p.email) + '<small>' + esc(who) + '</small></div>' +
+                '<div class="w w2">' + esc(PAGES[p.page] || p.page || 'Overview') + '<small>' + esc(p.app ? p.device + ' · a™ app' : p.device) + '</small></div>' +
+                '<span class="t' + (live ? ' live' : '') + '">' + (live ? 'Online' : ago(now - p.at)) + '</span></div>';
+        }
+        async function loadOnline() {
+            try {
+                var r = await laFetch('/api/switch-venue', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ presence: true }) });
+                var d = await r.json(); if (!r.ok) throw new Error(d.error || r.status);
+                var now = d.now || Date.now(), people = d.people || [];
+                var on = people.filter(function(p) { return now - p.at < ONLINE_MS; }), rest = people.filter(function(p) { return now - p.at >= ONLINE_MS; });
+                document.getElementById('ac-on-n').textContent = on.length;
+                document.getElementById('ac-on-list').innerHTML = on.length ? on.map(function(p) { return personRow(p, now); }).join('') : '<p class="ac-on-none">No one is on the platform right now.</p>';
+                document.getElementById('ac-on-rn').textContent = rest.length ? '· ' + rest.length : '';
+                document.getElementById('ac-on-recent').innerHTML = rest.length ? rest.map(function(p) { return personRow(p, now); }).join('') : '<p class="ac-on-none">No one in the last 30 days.</p>';
+            } catch (e) { document.getElementById('ac-on-n').textContent = '—'; document.getElementById('ac-on-list').innerHTML = '<p class="ac-on-none">' + esc(e.message) + '</p>'; }
+        }
+        loadOnline(); setInterval(function() { if (document.visibilityState === 'visible') loadOnline(); }, 30000);
         document.getElementById('ac-list').addEventListener('click', async function(e) {
             var b = e.target.closest('[data-act]'); if (!b) return;
             var row = b.closest('[data-slug]'), slug = row.dataset.slug, a = _accounts.filter(function(x) { return x.slug === slug; })[0];

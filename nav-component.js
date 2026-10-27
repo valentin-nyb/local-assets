@@ -689,3 +689,23 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run); else run();
 })();
+// Who is on the platform (the admin's Accounts page, Online now): while a page is open and on screen it says so
+// about once a minute, with the page and the kind of device. Nothing else is sent.
+(function() {
+    if (/^\/(login|download|privacy|terms|mimo)(\.html)?$/.test(location.pathname)) return;
+    var ua = navigator.userAgent || '';
+    var device = /iPhone|iPod/.test(ua) ? 'iPhone' : /iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) ? 'iPad'
+        : /Android/.test(ua) ? 'Android' : /Macintosh|Mac OS X/.test(ua) ? 'Mac' : /Windows/.test(ua) ? 'Windows' : /Linux/.test(ua) ? 'Linux' : 'Other';
+    var last = 0;
+    function ping() {
+        if (document.visibilityState !== 'visible' || Date.now() - last < 30000) return;
+        var t = ''; try { t = JSON.parse(localStorage.getItem('la_admin') || '{}').webToken || ''; } catch (_) {}
+        if (!t) return;
+        last = Date.now();
+        fetch('/api/switch-venue', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + t },
+            body: JSON.stringify({ ping: { page: location.pathname.replace(/^\/|\.html$/g, '') || 'dashboard', device: device, app: !!(window.laApp && window.laApp.mac) || /Electron/.test(ua) } }) }).catch(function() {});
+    }
+    setTimeout(ping, 1500);
+    setInterval(ping, 60000);
+    document.addEventListener('visibilitychange', ping);
+})();
