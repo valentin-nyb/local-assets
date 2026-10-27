@@ -1305,6 +1305,9 @@
             else laSaveBar.dirty(_wmChanges);
         }
 
+        // The first load: Upload files waits for it (the For list needs the brand kits)
+        var _brandReady = null, _brandReadyDone = null;
+        _brandReady = new Promise(function(r) { _brandReadyDone = r; });
         async function loadBrand() {
             var err = document.getElementById('bk-error');
             try {
@@ -1391,11 +1394,13 @@
                     _owners = [org].concat(ownLabels, group('venue-', 'Venue brand kit', 'Venues'), artists, loose);
                 }
                 err.classList.add('hidden');
+                _brandReadyDone();
                 render();
                 // Once the session names are in (or after 1.5 s): a late answer draws it again only if names changed
                 if (_titlesIn) renderWatermark();
                 else Promise.race([titlesP, new Promise(function(r) { setTimeout(r, 1500); })]).then(function() { _titlesIn = true; renderWatermark(); });
             } catch (e) {
+                _brandReadyDone();
                 err.textContent = 'Could not load the brand kit — ' + e.message;
                 err.classList.remove('hidden');
             }
@@ -2099,7 +2104,19 @@
                 '</div></div>';
         }
 
+        var _uploadAsk = 0;
         function openUpload(ownerKey) {
+            // Pressed before the brand kits are in: the dialog says so and fills in once they are
+            if (!_owners.length) {
+                var ask = ++_uploadAsk;
+                openCamDialog('Upload brand files', '<la-spin topic="brand"></la-spin>');
+                _brandReady.then(function() {
+                    if (ask !== _uploadAsk || document.getElementById('cam-dialog').classList.contains('hidden')) return;
+                    if (_owners.length) openUpload(ownerKey);
+                    else document.getElementById('cam-dialog-body').innerHTML = '<p class="cam-dialog-text">The brand kit could not be loaded, so there\u2019s nowhere to put the files yet. Reload the page and try again.</p>';
+                });
+                return;
+            }
             // An artist with access uploads only to their own folder
             if (_member) ownerKey = _member.owner;
             // "__newLabel:artist-x" opens it for a new record label under that artist
