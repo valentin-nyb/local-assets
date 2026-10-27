@@ -109,6 +109,7 @@ const footer = row(`<table role="presentation" width="100%" cellpadding="0" cell
         <td valign="middle" align="right" width="24"><img class="e-lt" src="${SITE}/logos/a-black.png" width="22" alt="a&trade;" style="display:block;width:22px;height:auto;border:0"><!--[if !mso]><!--><img class="e-dk" src="${SITE}/logos/a-white.png" width="22" alt="a&trade;" style="display:none;width:22px;height:auto;border:0;max-height:0;overflow:hidden"><!--<![endif]--></td>
       </tr></table>
       <p class="e-d" style="margin:16px 0 0;font:400 13px/1.7 ${FONT};color:${L.dim}"><a href="${SITE}" class="e-link" style="color:${L.link};text-decoration:none">local-assets.com</a> &nbsp;&middot;&nbsp; <a href="${SITE}/download" class="e-link" style="color:${L.link};text-decoration:none">Download a&trade;</a> &nbsp;&middot;&nbsp; <a href="${SITE}/privacy" class="e-link" style="color:${L.link};text-decoration:none">Privacy</a></p>
+      <p class="e-d" style="margin:6px 0 0;font:400 12px/1.6 ${FONT};color:${L.dim}">&copy; ${new Date().getUTCFullYear()} local / assets LTD</p>
     </td></tr></table>`, '56px 0 0');
 
 // The sender: local-assets.com, the domain verified in Resend. (RESEND_EMAIL_DOMAIN from the Vercel integration
@@ -154,6 +155,7 @@ export function welcomeEmail({ name, email, type, plan, ready }) {
     `Sign in: ${SITE}/login.html`,
     `Download a™ for Mac: ${SITE}/download`, '',
     'Questions? Reply to this email or write to info@local-assets.com.',
+    '', `© ${new Date().getUTCFullYear()} local / assets LTD`,
   ].join('\n');
   return { subject: `Welcome to local / assets, ${name}`, html, text };
 }
@@ -184,6 +186,7 @@ export function storageReadyEmail({ name, email, type }) {
     'Start here:', ...list.map(([t, d], i) => `0${i + 1}  ${t}: ${plainText(d)}`), '',
     `Open your workspace: ${SITE}/login.html`, `Download a™ for Mac: ${SITE}/download`, '',
     'Need a hand setting up the cameras? Reply to this email or write to info@local-assets.com.',
+    '', `© ${new Date().getUTCFullYear()} local / assets LTD`,
   ].join('\n');
   return { subject: `Your local / assets account is ready, ${name}`, html, text };
 }
@@ -215,6 +218,7 @@ export function invoiceEmail({ name, period, plan, lines, total, url, charged, e
     `${example ? '[Example] ' : ''}local / assets invoice · ${period}`, '', `${name}: ${money(total)}. ${status}`, '',
     ...items.map(([t, d, a]) => `${t} (${d}): ${money(a)}`), `Total: ${money(total)}`, '',
     `${charged ? 'View' : 'View and pay'} the invoice: ${url || SITE + '/billing'}`, 'Questions? Reply to this email or write to info@local-assets.com.',
+    '', `© ${new Date().getUTCFullYear()} local / assets LTD`,
   ].join('\n');
   return { subject: `${example ? '[Example] ' : ''}Your local / assets invoice for ${period}: ${money(total)}`, html, text };
 }
@@ -272,6 +276,7 @@ export function accessInviteEmail({ artist, account, email, example, kind = 'art
     `Download a™ for Mac: ${SITE}/download`,
     'iPhone and iPad app: coming soon (local-assets.com works in your phone\'s browser).', '',
     'Questions? Reply to this email or write to info@local-assets.com.',
+    '', `© ${new Date().getUTCFullYear()} local / assets LTD`,
   ].join('\n');
   return { subject: `${example ? '[Example] ' : ''}You have access to local / assets: ${account}`, html, text };
 }

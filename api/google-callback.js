@@ -216,7 +216,7 @@ h1 span{display:inline-block;white-space:nowrap;transition:color .3s,transform .
   <a class="btn" href="${link}" aria-label="Open a™">Open<i aria-hidden="true"></i><sup aria-hidden="true">™</sup></a>
   <p class="note">Nothing happened? Press Open a™.</p>
 </main>
-<p class="foot">© 2026 local / assets™</p>
+<p class="foot">© 2026 local / assets LTD</p>
 <script>
   // The address bar shows the site, not the long one-time sign-in address (it can't be used again anyway)
   try { history.replaceState(null, '', '/'); } catch (e) {}

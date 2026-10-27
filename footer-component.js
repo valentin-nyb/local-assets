@@ -60,7 +60,7 @@
           </div>
         </div>
         <div class="lf-bottom">
-          <span>© ${YEAR} local / assets · All rights reserved</span>
+          <span>© ${YEAR} local / assets LTD · All rights reserved</span>
           <span class="lf-status"><span class="lf-dot" aria-hidden="true"></span>Local / Assets <span data-la-version>${VERSION}</span> <b>// Connected</b></span>
         </div>
       </div>

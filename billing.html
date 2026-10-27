@@ -1103,7 +1103,7 @@
             return '<div class="inv">' +
                 '<div class="inv-top"><div><p class="inv-h">Invoice</p><p class="inv-muted">Preview · not sent yet</p></div><img src="/logos/a-black.png" alt="local / assets" class="inv-logo"></div>' +
                 '<div class="inv-meta"><div><p class="inv-k">Date of issue</p><p>' + fmtD(today) + '</p><p class="inv-k">Date due</p><p>' + fmtD(due) + '</p></div>' +
-                '<div><p class="inv-k">From</p><p><b>local / assets</b><br>info@local-assets.com</p></div>' +
+                '<div><p class="inv-k">From</p><p><b>local / assets LTD</b><br>info@local-assets.com</p></div>' +
                 '<div><p class="inv-k">Bill to</p>' + (det && det.legalName
                     ? billToHtml(det.legalName, [det.line1, det.line2, [det.city, det.postcode].filter(Boolean).join(' '), COUNTRY_NAMES[det.country] || det.country], det.vat ? [det.vat] : [], email)
                     : billToHtml(who, [], [], email) + '<p class="inv-muted" style="color:#b45309">Billing details missing</p>') + '</div></div>' +
@@ -1138,7 +1138,7 @@
             var html = '<div class="inv">' +
                 '<div class="inv-top"><div><p class="inv-h">Invoice</p><p class="inv-muted">' + esc(i.number || i.id) + '</p><span class="inv-paid ' + (paid ? 'ok' : 'open') + '">' + esc(LBL[i.status] || i.status) + '</span></div><img src="/logos/a-black.png" alt="local / assets" class="inv-logo"></div>' +
                 '<div class="inv-meta"><div><p class="inv-k">Date of issue</p><p>' + fmtD(i.issued || i.created) + '</p>' + (i.due ? '<p class="inv-k">Date due</p><p>' + fmtD(i.due) + '</p>' : '') + (i.paidAt ? '<p class="inv-k">Paid on</p><p>' + fmtD(i.paidAt) + '</p>' : '') + '</div>' +
-                '<div><p class="inv-k">From</p><p><b>local / assets</b><br>info@local-assets.com</p></div>' +
+                '<div><p class="inv-k">From</p><p><b>local / assets LTD</b><br>info@local-assets.com</p></div>' +
                 '<div><p class="inv-k">Bill to</p>' + billToHtml(i.billedTo, (i.address || []).map(function(l) { return COUNTRY_NAMES[l] || l; }), i.vat || [], i.email || '') + '</div></div>' +
                 '<p class="inv-due">' + (paid ? money(i.total, cur) + ' paid' : money(i.amountDue != null ? i.amountDue : i.total, cur) + (i.due ? ' due ' + fmtD(i.due) : ' due')) + '</p>' +
                 '<table class="inv-t"><thead><tr><th>Description</th><th class="r">Amount</th></tr></thead><tbody>' + lines +
