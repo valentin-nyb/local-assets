@@ -1,6 +1,8 @@
 import { videoQuality } from './_video-quality.js';
 import { pausedBy, sendPaused } from './_suspend.js';
 import { getWebSessionAuth } from './_venues.js';
+import { createClient } from 'redis';
+import { listAllAssets, sessionClips, socialInfo, tagFor, UPLOAD_CLIPS } from './_verticals.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', 'https://local-assets.com');
@@ -40,6 +42,34 @@ export default async function handler(req, res) {
     passthrough = legacyName || 'SESSION_ARCHIVE';
   }
 
+  // A vertical clip made by the client: it joins the session's vertical clips with a number of its own
+  // (61 to 99, after the ones cut from the long form), so it can be watermarked like them and is never
+  // replaced when clips are cut. It doesn't count towards the plan's clips per session.
+  let clipMeta = null;
+  if (artist && camera === 'SOCIAL') {
+    try {
+      const assets = await listAllAssets(session.muxAuth);
+      const { master, shown, hidden } = sessionClips(assets, artist, date);
+      const used = new Set([...shown.keys(), ...hidden.keys()]);
+      // Without a long form in Cloud Storage the clip is matched to the session by its date
+      if (!master) for (const a of assets) { const i = socialInfo(a); let d = null; try { d = JSON.parse(a.passthrough).date; } catch {} if (i && i.artist === artist && i.n && d === date) used.add(i.n); }
+      const redis = createClient({ url: process.env.REDIS_URL });
+      await redis.connect();
+      let n = null;
+      try {
+        // Held for an hour, so several clips uploaded at once each get their own number
+        for (let k = UPLOAD_CLIPS.from; k <= UPLOAD_CLIPS.to && !n; k++)
+          if (!used.has(k) && await redis.set(`v_upslot:${session.venueSlug}:${artist}|${date}:${k}`, '1', { NX: true, EX: 3600 })) n = k;
+      } finally { await redis.quit().catch(() => {}); }
+      if (!n) return res.status(409).json({ error: `This session has the most uploaded vertical clips it can take (${UPLOAD_CLIPS.to - UPLOAD_CLIPS.from + 1}). Delete one to add another.` });
+      passthrough = master ? tagFor(artist, n) : JSON.stringify({ artist, date, camera: 'SOCIAL', clip: n });
+      clipMeta = { ...(master ? { external_id: master.id } : {}), creator_id: 'la-upload' };
+    } catch (e) {
+      console.error('[get-upload-url] vertical clip', e.message);
+      return res.status(500).json({ error: 'Could not check this session\'s clips. Try again.' });
+    }
+  }
+
   const isAudio    = camera === 'AUDIO' || passthrough.includes('// AUDIO') || passthrough.includes('/AUDIO');
   // The title in Cloud Storage, like every other recording: "STAN LODGE // MASTER — 17 OCT 2026"
   const d = new Date(date + 'T12:00:00Z');
@@ -57,7 +87,7 @@ export default async function handler(req, res) {
           // Basic (free to encode) unless Premium is on for the account in Accounts
           video_quality: await videoQuality(session?.venueSlug),
           passthrough: passthrough,
-          meta: { title: videoTitle.slice(0, 512) },
+          meta: { title: videoTitle.slice(0, 512), ...(clipMeta || {}) },
           static_renditions: [{ resolution: isAudio ? 'audio-only' : 'highest' }],
           // 4K uploads are kept in 4K (else Mux stores 1080p), so vertical clips cut from them stay sharp
           ...(isAudio ? {} : { max_resolution_tier: '2160p' }),

@@ -38,6 +38,10 @@ export function socialInfo(a) {
   } catch {}
   return null;
 }
+// Clip numbers: 1 to 60 are cut from the long form (the plan's clips per session); 61 to 99 are clips the
+// client uploads (api/get-upload-url.js), which are never cut, re-cut or replaced
+export const UPLOAD_CLIPS = { from: 61, to: 99 };
+export const isUploadedClip = a => a?.meta?.creator_id === 'la-upload';
 export const tagFor = (artist, n, hidden) => `${artist} // ${hidden ? 'SOCIALRAW' : 'SOCIAL'} // ${String(n).padStart(2, '0')}`;
 export const originalsKey = slug => `v_orig:${slug}`;       // set: vertical originals
 const jobsKey = slug => `v_jobs:${slug}`;                    // hash: new original → JSON { artist, n, blob, master }
@@ -221,7 +225,7 @@ export async function startMoments(redis, slug, master, artist, origin, moments,
   const dur = Number(master.duration) || 0;
   const seg = Math.min(45, dur);
   const done = await redis.hGetAll(doneKey(master.id));
-  const have = new Set(taken.map(Number));
+  const have = new Set(taken.map(Number).filter(n => n < UPLOAD_CLIPS.from));   // uploaded clips stay as they are
   const limit = Math.max(cap, moments.length);
   const slots = [];
   for (let n = 1; n <= limit; n++) if (!have.has(n)) slots.push(n);

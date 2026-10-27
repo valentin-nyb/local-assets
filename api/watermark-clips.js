@@ -13,7 +13,7 @@ import { resolveWatermark } from './_watermark.js';
 import { renderWatermarkPng, renderWatermarkParts, animatedLogo, VERTICAL, HORIZONTAL } from './_watermark-render.js';
 import { spawn } from 'child_process';
 import ffmpegPath from 'ffmpeg-static';
-import { run, signJob, verifyJob, venueAuth as venueAuthFor, muxReq, SUB, socialInfo, tagFor, clipTimes, listAllAssets, sessionClips, videoSize, finishVerticals, originalsKey, clipOwner, artistMasters } from './_verticals.js';
+import { run, signJob, verifyJob, venueAuth as venueAuthFor, muxReq, SUB, socialInfo, tagFor, clipTimes, listAllAssets, sessionClips, videoSize, finishVerticals, originalsKey, isUploadedClip, clipOwner, artistMasters } from './_verticals.js';
 
 // Puts the Brand Kit watermark on a session's vertical clips, and takes it off again.
 // The vertical originals are cut once from the full recording (api/_verticals.js). Applying makes a
@@ -312,10 +312,12 @@ export default async function handler(req, res) {
       const originals = new Set(await redis.sMembers(originalsKey(slug)));
       // Already portrait (e.g. a copy drawn with a moving logo, which is a new upload with no source)
       const portrait = a => (a.tracks || []).some(t => t.type === 'video' && Number(t.max_height) > Number(t.max_width));
+      const byIdAll = new Map(assets.map(a => [a.id, a]));
       const horizontal = assets.filter(a => {
         const info = socialInfo(a);
         if (!info || info.hidden) return false;
-        return !originals.has(a.id) && !originals.has(a.source_asset_id) && !portrait(a);
+        // Clips the client uploaded are never re-cut, whatever their shape
+        return !originals.has(a.id) && !originals.has(a.source_asset_id) && !portrait(a) && !isUploadedClip(a) && !isUploadedClip(byIdAll.get(a.source_asset_id));
       }).map(a => a.id);
       return res.status(200).json({ done: done + v.done, pending: pending + v.pending, verticalsPending: v.pending, watermarked, horizontal, pendingIds });
     }
