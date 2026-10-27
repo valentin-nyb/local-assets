@@ -42,7 +42,7 @@
     <script src="/la-djframe.js?v=4"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player@3"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-    <script src="nav-component.js?v=43"></script>
+    <script src="nav-component.js?v=44"></script>
     <style>
         /* Standardized sidebar styles used by the JS component */
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
@@ -639,6 +639,7 @@
         function brandSlug(name) {
             return String(name).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
         }
+        var _linkedWant = {}, _linkedAsked = {}, _linkedLogos = {};   // other accounts' logos (?logosFor), asked once per name
         var _brandPhotos = null, _venueLogos = {}, _venueLogosByName = {}, _venueOwnerByName = {}, _brandPhotosAt = 0, _venueRefetched = false;
         function nameKey(v) { return String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ''); }
         // Brand Kit data: this account's, or on the admin account every client's merged
@@ -674,7 +675,8 @@
                 // Dark theme shows a white logo on a dark tile, light theme a black logo on a light tile.
                 var missing = false, dark = document.documentElement.classList.contains('dark');
                 document.querySelectorAll('[data-venue-logo]').forEach(function(box) {
-                    var list = _venueLogos[box.dataset.venueLogo] || _venueLogosByName[nameKey(box.dataset.venueName)];
+                    // The venue's logos; without any, the record label's
+                    var list = _venueLogos[box.dataset.venueLogo] || _venueLogosByName[nameKey(box.dataset.venueName)] || (box.dataset.labelName ? _venueLogosByName[nameKey(box.dataset.labelName)] : null);
                     // The venue's chosen profile picture (a GIF plays) comes before its logos
                     var owner = (_brandPhotos && _brandPhotos[box.dataset.venueLogo]) ? box.dataset.venueLogo : _venueOwnerByName[nameKey(box.dataset.venueName)];
                     var prof = owner && _brandPhotos && _brandPhotos[owner];
@@ -691,7 +693,7 @@
                         box.innerHTML = '<img src="' + prof.replace(/"/g, '&quot;') + '" alt="" crossorigin="anonymous" style="width:100%;height:100%;' + (profLogo ? 'object-fit:contain;padding:4px' : 'object-fit:cover') + '" onload="fitLogoBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}">';
                         return;
                     }
-                    if (!list || !list.length) { missing = true; box.title = 'No Brand Kit logo found for venue "' + (box.dataset.venueName || '') + '"'; return; }
+                    if (!list || !list.length) { missing = true; [box.dataset.venueName, box.dataset.labelName].forEach(function(n) { if (n && !(nameKey(n) in _linkedAsked)) _linkedWant[nameKey(n)] = n; }); box.title = 'No Brand Kit logo found for venue "' + (box.dataset.venueName || '') + '"'; return; }
                     var url = pickVenueLogo(list, dark), key = url + (dark ? '#d' : '#l');
                     if (box.dataset.painted === key) return;
                     box.dataset.painted = key;
@@ -699,6 +701,16 @@
                     box.style.setProperty('background', dark ? '#141416' : '#f4f4f5', 'important');
                     box.innerHTML = '<img src="' + url.replace(/"/g, '&quot;') + '" alt="" crossorigin="anonymous" style="width:100%;height:100%;object-fit:contain;padding:4px" onload="fitLogoBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}">';
                 });
+                // Venues and labels with an account of their own on the platform: their own Brand Kit logos
+                var want = Object.keys(_linkedWant);
+                if (want.length) {
+                    var names = want.map(function(k) { _linkedAsked[k] = 1; return _linkedWant[k]; }); _linkedWant = {};
+                    laFetch('/api/brand?logosFor=' + encodeURIComponent(names.join('|'))).then(function(r) { return r.ok ? r.json() : {}; }).then(function(d) {
+                        var got = (d && d.logos) || {}, any = false;
+                        Object.keys(got).forEach(function(k) { if (!_venueLogosByName[k]) { _venueLogosByName[k] = got[k]; _linkedLogos[k] = got[k]; any = true; } });
+                        if (any) paint();
+                    }).catch(function() {});
+                }
                 // A venue added to the Brand Kit since we last looked: check once more
                 if (missing && !_venueRefetched && Date.now() - _brandPhotosAt > 5000) { _venueRefetched = true; _brandPhotosAt = 0; applyArtistPhotos(); }
             };
@@ -722,19 +734,19 @@
                     var own = 'artist-' + brandSlug(d.orgName || getVenueName());
                     if (!_brandPhotos[own]) _brandPhotos[own] = _brandPhotos.venue;
                 }
-                _venueLogos = {}; _venueLogosByName = {}; _venueOwnerByName = {};
+                _venueLogos = {}; _venueLogosByName = Object.assign({}, _linkedLogos); _venueOwnerByName = {};
                 var names = (d && d.ownerNames) || {};
                 Object.keys(names).forEach(function(k) { if (k.indexOf('venue-') === 0) _venueOwnerByName[nameKey(names[k])] = k; });
                 if (d && d.orgType !== 'artist') _venueOwnerByName[nameKey(d.orgName || getVenueName())] = 'venue';
                 ((d && d.files) || []).forEach(function(f) {
                     // Added venues ("venue-…") and the account's own brand kit ("venue", named in Brand Kit)
-                    if ((f.owner !== 'venue' && f.owner.indexOf('venue-') !== 0) || !/\.(png|jpe?g|svg|webp|gif)$/i.test(f.name)) return;
+                    if ((f.owner !== 'venue' && f.owner.indexOf('venue-') !== 0 && f.owner.indexOf('label-') !== 0) || !/\.(png|jpe?g|svg|webp|gif)$/i.test(f.name)) return;
                     // logos first; any other image of the venue as a fallback
                     var better = f.category === 'logos';
                     // Every image of the venue, logos first, so the theme can pick the white or the black one
                     var list = _venueLogos[f.owner] || (_venueLogos[f.owner] = []);
                     list[better ? 'unshift' : 'push']({ url: f.url, name: f.name, logo: better });
-                    _venueLogosByName[nameKey(f.owner === 'venue' ? (d.orgName || getVenueName()) : (names[f.owner] || f.owner.slice(6)))] = list;
+                    _venueLogosByName[nameKey(f.owner === 'venue' ? (d.orgName || getVenueName()) : (names[f.owner] || f.owner.replace(/^(venue|label)-/, '')))] = list;
                 });
                 _brandPhotosAt = Date.now(); paint();
             }).catch(function() {});
@@ -1902,7 +1914,7 @@
                     // A session without a venue of its own was at the account's venue
                     var sVenueName = sessionMeta(artist.name, dateStr).venue || '';
                     var sVenueKey = sVenueName ? 'venue-' + brandSlug(sVenueName) : 'venue';
-                    html += '<div class="w-8 h-8 bg-[#050505] border border-border/50 flex items-center justify-center rounded-lg overflow-hidden" data-venue-logo="' + sVenueKey + '" data-venue-name="' + escHtml(sVenueName || accountVenueName(artist.name)) + '">';
+                    html += '<div class="w-8 h-8 bg-[#050505] border border-border/50 flex items-center justify-center rounded-lg overflow-hidden" data-venue-logo="' + sVenueKey + '" data-venue-name="' + escHtml(sVenueName || accountVenueName(artist.name)) + '" data-label-name="' + escHtml(sessionMeta(artist.name, dateStr).label || '') + '">';
                     html += '';
                     html += '</div>';
                     html += '<div class="sess-text">';
