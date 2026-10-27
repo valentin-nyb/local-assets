@@ -10,8 +10,25 @@ env:
   VERCEL_PROJECT_ID: prj_I7q4Oh0Cxk7nkEWK4a1tCRURdWAl
 
 jobs:
+  # Nothing reaches the site unless the tests pass, including every page opened in Chrome as a client,
+  # the admin and an artist (tests/pages-run.test.mjs)
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm test
+        env:
+          CI: true
+
   deploy-vercel:
     name: Deploy to Vercel
+    needs: test
     runs-on: ubuntu-latest
     concurrency:
       group: vercel-deploy
