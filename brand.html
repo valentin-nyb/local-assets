@@ -184,13 +184,25 @@
         /* Instagram posts in purple */
         .bk-tag.is-post { color:#C084FC; border-color:color-mix(in srgb, #C084FC 50%, transparent); }
         html:not(.dark) .bk-tag.is-post { color:#9333EA; border-color:#9333EA; }
-        /* Each type in its own colour: animations blue, artwork orange, fonts pink, logos white (green once a logo is the watermark); the light theme has its own solid colours */
+        /* Each type in its own colour: animations blue, artwork orange, covers yellow, photos teal, guidelines red, fonts pink, logos white (green once a logo is the watermark); the light theme has its own solid colours */
         .bk-tag.is-anim { color:#60A5FA; border-color:color-mix(in srgb, #60A5FA 50%, transparent); }
         html:not(.dark) .bk-tag.is-anim { color:#2563EB; border-color:#2563EB; }
         .bk-tag.is-art { color:#FB923C; border-color:color-mix(in srgb, #FB923C 50%, transparent); }
         html:not(.dark) .bk-tag.is-art { color:#EA580C; border-color:#EA580C; }
         .bk-tag.is-font { color:#F472B6; border-color:color-mix(in srgb, #F472B6 50%, transparent); }
         html:not(.dark) .bk-tag.is-font { color:#DB2777; border-color:#DB2777; }
+        .bk-tag.is-cover { color:#FACC15; border-color:color-mix(in srgb, #FACC15 50%, transparent); }
+        html:not(.dark) .bk-tag.is-cover { color:#CA8A04; border-color:#CA8A04; }
+        .bk-tag.is-photo { color:#2DD4BF; border-color:color-mix(in srgb, #2DD4BF 50%, transparent); }
+        html:not(.dark) .bk-tag.is-photo { color:#0D9488; border-color:#0D9488; }
+        .bk-tag.is-guide { color:#F87171; border-color:color-mix(in srgb, #F87171 50%, transparent); }
+        html:not(.dark) .bk-tag.is-guide { color:#DC2626; border-color:#DC2626; }
+        /* The kinds of file at the top of the page, each in the colour of its tag (Colour in every colour) */
+        .bk-kinds .k-logo { color:var(--la-text); } .bk-kinds .k-anim { color:#60A5FA; } .bk-kinds .k-cover { color:#FACC15; } .bk-kinds .k-art { color:#FB923C; }
+        .bk-kinds .k-photo { color:#2DD4BF; } .bk-kinds .k-guide { color:#F87171; } .bk-kinds .k-font { color:#F472B6; }
+        html:not(.dark) .bk-kinds .k-anim { color:#2563EB; } html:not(.dark) .bk-kinds .k-cover { color:#CA8A04; } html:not(.dark) .bk-kinds .k-art { color:#EA580C; }
+        html:not(.dark) .bk-kinds .k-photo { color:#0D9488; } html:not(.dark) .bk-kinds .k-guide { color:#DC2626; } html:not(.dark) .bk-kinds .k-font { color:#DB2777; }
+        .bk-kinds .k-colour { background:linear-gradient(90deg, #F87171, #FB923C, #FACC15, #4ADE80, #60A5FA, #C084FC); -webkit-background-clip:text; background-clip:text; color:transparent; }
         .bk-tag.is-logo { color:var(--la-text); border-color:color-mix(in srgb, var(--la-text) 40%, transparent); }
         .bk-tag.is-logo.is-wm { color:var(--la-accent); border-color:color-mix(in srgb, var(--la-accent) 45%, transparent); }
         .bk-file-actions .is-on { color:var(--la-accent) !important; }
@@ -444,7 +456,7 @@
             <div class="la-page">
                 <div class="cam-toolbar bk-toolbar">
                     <div class="min-w-0">
-                        <p class="cam-eyebrow">Logos · GIF animations · Covers · Artwork · Photos · Guidelines · Fonts · Colour</p>
+                        <p class="cam-eyebrow bk-kinds"><span class="k-logo">Logos</span> · <span class="k-anim">GIF animations</span> · <span class="k-cover">Covers</span> · <span class="k-art">Artwork</span> · <span class="k-photo">Photos</span> · <span class="k-guide">Guidelines</span> · <span class="k-font">Fonts</span> · <span class="k-colour">Colour</span></p>
                         <h2 class="cam-h">Brand kit</h2>
                         <p class="bk-lead">Keep your own, each venue's and each artist's brand files in one place, so the team always downloads the right logo and guidelines.</p>
                     </div>
@@ -2051,7 +2063,7 @@
             var ext = (f.name.split('.').pop() || 'file').slice(0, 5);
             var cat = CATS.filter(function(c) { return c.key === f.category; })[0] || CATS[CATS.length - 1];
             var tagText = cat.key === 'photos' && f.owner.indexOf('artist-') === 0 ? (_ownerPhotos[f.owner] === f.url ? 'Artist photo' : 'Photo') : f.category === 'other' && f.label ? esc(f.label) : cat.tag;
-            var tone = { animations: ' is-anim', artwork: ' is-art', posts: ' is-post', fonts: ' is-font', logos: ' is-logo' + (wmUsesLogo(f) ? ' is-wm' : '') }[cat.key] || '';
+            var tone = { animations: ' is-anim', artwork: ' is-art', covers: ' is-cover', photos: ' is-photo', guidelines: ' is-guide', posts: ' is-post', fonts: ' is-font', logos: ' is-logo' + (wmUsesLogo(f) ? ' is-wm' : '') }[cat.key] || '';
             var tag = '<button type="button" class="bk-tag' + tone + (_ownerPhotos[f.owner] === f.url ? ' is-profile' : '') + '" data-move="' + esc(f.url) + '" title="Change type">' + tagText + '</button>';
             // Photos fill the card; JPGs filed as logos are photos too (no transparency). Transparent logos stay whole.
             var isPhoto = f.category === 'covers' || f.category === 'artwork' || f.category === 'photos' || /\.jpe?g$/i.test(f.name);
