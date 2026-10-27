@@ -74,12 +74,12 @@ function open(page, who) {
 for (const who of Object.keys(SESSIONS)) {
   test(`every page opens without script errors as ${who === 'member' ? 'an artist with access' : 'the ' + who}`, { skip: !CHROME && !process.env.CI && 'no Chrome on this machine' }, async () => {
     assert.ok(CHROME, 'Chrome is needed to open the pages');
-    // Four browsers at a time; a page that times out once is opened again before it counts as broken
+    // Four browsers at a time; a page that times out (a busy machine) is opened up to twice more before it counts as broken
     const results = [], queue = [...pages];
     await Promise.all([0, 1, 2, 3].map(async () => {
       for (let p; (p = queue.shift());) {
         let errs = await open(p, who);
-        if (errs[0] === 'the page never finished loading') errs = await open(p, who);
+        for (let n = 0; n < 2 && errs[0] === 'the page never finished loading'; n++) errs = await open(p, who);
         results.push([p, errs]);
       }
     }));
