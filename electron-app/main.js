@@ -3,9 +3,11 @@
 // sign-in inside apps, so sign-in happens in the browser: the app opens it with the hash of a one-time
 // secret, the browser hands back a code through localassets://signed-in, and the app swaps the code and
 // its secret for the session (api/google-auth POST). Only the app that started the sign-in can finish it.
-const { app, BrowserWindow, shell, ipcMain, Menu, net, nativeTheme, session, dialog } = require('electron')
+const { app, BrowserWindow, shell, ipcMain, Menu, net, nativeTheme, session, dialog, powerSaveBlocker } = require('electron')
 const crypto = require('crypto')
 const path = require('path')
+const fs = require('fs')
+const { pathToFileURL } = require('url')
 const thisMac = require('./this-mac')
 
 const SITE = 'https://local-assets.com'
@@ -194,6 +196,27 @@ async function checkForUpdate() {
   } catch {}
 }
 
+// The venue relay, built in: Camera Control's pan/tilt/zoom for OBSBOT cameras on this network, and
+// multi-camera edits rendered on this Mac (relay/la-camera-relay.mjs and la-multicam.mjs, copied in at build),
+// signed in as the account open in the window. Nothing to install or type in Terminal.
+let relay = null
+async function startRelay(getToken) {
+  const dir = [__dirname, path.join(__dirname, '..', 'relay')].find(d => fs.existsSync(path.join(d, 'la-camera-relay.mjs')))
+  if (!dir) return console.error('[a™] relay files missing')
+  try {
+    const { startRelay: start } = await import(pathToFileURL(path.join(dir, 'la-camera-relay.mjs')).href)
+    const mc = await import(pathToFileURL(path.join(dir, 'la-multicam.mjs')).href)
+    mc.configure({ ffmpeg: thisMac.FFMPEG, workDir: path.join(app.getPath('temp'), 'a-tm-edits'), nice: 10 })
+    // Keep the Mac awake while an edit renders and uploads
+    const multicam = { canRender: mc.canRender, runEdit: async (job, report) => {
+      const id = powerSaveBlocker.start('prevent-app-suspension')
+      try { return await mc.runEdit(job, report) } finally { powerSaveBlocker.stop(id) }
+    } }
+    relay = start({ auth: getToken, base: SITE, version: 'a™ ' + app.getVersion(), agent: 'a-tm', multicam, remoteOnly: true,
+      log: (...a) => console.log('[a™ relay]', ...a) })
+  } catch (e) { console.error('[a™] relay', e.message) }
+}
+
 // One copy of the app at a time; a second launch (or a localassets:// link) goes to the first
 if (!app.requestSingleInstanceLock()) {
   app.quit()
@@ -216,14 +239,26 @@ if (!app.requestSingleInstanceLock()) {
     })
     session.defaultSession.setPermissionCheckHandler((_wc, permission, origin) => permission === 'media' && origin === SITE)
     buildMenu()
-    thisMac.init(() => { if (win && !win.isDestroyed()) win.webContents.send('la:mac-changed') },
-      // The signed-in session's token, from the site's own storage in the window
-      () => win && !win.isDestroyed() ? win.webContents.executeJavaScript(`(function () { try { return (JSON.parse(localStorage.getItem('la_admin') || 'null') || {}).webToken || '' } catch (e) { return '' } })()`).catch(() => '') : Promise.resolve(''))
+    // The signed-in session's token, from the site's own storage in the window
+    const getToken = () => win && !win.isDestroyed() && onSite(win.webContents.getURL()) ? win.webContents.executeJavaScript(`(function () { try { return (JSON.parse(localStorage.getItem('la_admin') || 'null') || {}).webToken || '' } catch (e) { return '' } })()`).catch(() => '') : Promise.resolve('')
+    thisMac.init(() => { if (win && !win.isDestroyed()) win.webContents.send('la:mac-changed') }, getToken)
+    startRelay(getToken)
     createWindow()
     if (pendingLink) { handleLink(pendingLink); pendingLink = null }
     offerMoveToApplications().finally(() => { setTimeout(checkForUpdate, 8000); setInterval(checkForUpdate, 24 * 3600e3) })
   })
   app.on('activate', () => { if (!win) createWindow(); else win.show() })
-  app.on('before-quit', () => thisMac.stopAll())
+  // Quitting in the middle of an edit stops it: say so first (it can be started again from the session)
+  let quitOk = false
+  app.on('before-quit', e => {
+    if (!quitOk && relay && relay.editing) {
+      const r = dialog.showMessageBoxSync({ type: 'warning', buttons: ['Keep a™ open', 'Quit anyway'], defaultId: 0, cancelId: 0,
+        message: 'a™ is rendering a multi-camera edit', detail: 'Quitting stops the edit. You can start it again from the session later.' })
+      if (r === 0) { e.preventDefault(); return }
+      quitOk = true
+    }
+    if (relay) relay.stop()
+    thisMac.stopAll()
+  })
   app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit() })
 }

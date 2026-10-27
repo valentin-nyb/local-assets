@@ -21,6 +21,8 @@ for a in x64 arm64; do
   [ -x "$HERE/vendor/$a/ffmpeg" ] || { mkdir -p "$HERE/vendor/$a"; curl -sL --fail "https://github.com/eugeneware/ffmpeg-static/releases/download/b6.0/ffmpeg-darwin-$a.gz" | gunzip > "$HERE/vendor/$a/ffmpeg"; chmod +x "$HERE/vendor/$a/ffmpeg"; }
 done
 cp -R "$HERE/main.js" "$HERE/preload.js" "$HERE/this-mac.js" "$HERE/offline.html" "$HERE/package.json" "$HERE/entitlements.mac.plist" "$HERE/icons" "$HERE/vendor" "$TMP/"
+# The venue relay and multi-camera edits, shared with the Terminal relay (relay/ in the site)
+cp "$HERE/../relay/la-camera-relay.mjs" "$HERE/../relay/la-multicam.mjs" "$TMP/"
 cd "$TMP" && npm install --no-audit --no-fund --silent
 
 if [ -n "$IDENTITY" ]; then

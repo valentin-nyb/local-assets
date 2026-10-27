@@ -657,7 +657,7 @@
     }
 </script>
 <script>
-    // Multi-camera edit: the session's cameras cut together on the HQ audio, rendered on the venue's Mac mini
+    // Multi-camera edit: the session's cameras cut together on the HQ audio, rendered by a™ on the venue's Mac
     async function openMulticam(btn) {
         const artist = btn.dataset.artist, date = btn.dataset.date, e = window.vaultEsc;
         const m = document.createElement('div');
@@ -675,7 +675,7 @@
             const mins = s => Math.round(s / 60) + ' min';
             const cams = '<ul class="mc-cams">' + d.cameras.map(c => '<li>' + e(c.camera) + (c.main ? ' · main' : '') + '<span>' + mins(c.duration) + (c.hasAudio ? '' : ' · no sound') + '</span></li>').join('') +
                 '<li>HQ audio from the console<span>' + (d.audio ? 'Ready' : 'None: the main camera\'s sound is used') + '</span></li></ul>';
-            const mac = d.relay.online ? (d.relay.canRender ? 'The venue\'s Mac mini is online and ready.' : 'The Mac mini is online but needs ffmpeg: open Terminal on it and run <b>brew install ffmpeg</b>, then reinstall the relay from Camera Control.') : 'The venue\'s Mac mini is offline. The edit starts as soon as it is back online.';
+            const mac = d.relay.online ? (d.relay.canRender ? 'a™ on the venue\'s Mac is online and ready.' : 'The venue relay is online but can\'t render: open a™ for Mac on that Mac instead (it renders edits built in).') : 'a™ isn\'t open on the venue\'s Mac. The edit starts as soon as a™ is open there, signed in to this account.';
             const j = d.job;
             let html = cams;
             if (j && j.status !== 'failed') {
@@ -683,7 +683,7 @@
                     (j.warnings && j.warnings.length ? '<p class="mc-note" style="margin-top:8px">' + j.warnings.map(e).join('<br>') + '</p>' : '') +
                     (j.status === 'done' ? '<p class="mc-note" style="margin-top:8px">The edit appears as this session\'s long form when Mux has processed it; the vertical clips and thumbnails follow.</p>' : '');
             } else {
-                html += '<p class="mc-note" style="margin-top:12px">Each camera is lined up with the ' + (d.audio ? 'HQ audio' : 'main camera\'s sound') + ', the shots change on the music\'s phrases, and the full set is rendered on the venue\'s Mac mini, then saved as this session\'s long form with its vertical clips.</p>' +
+                html += '<p class="mc-note" style="margin-top:12px">Each camera is lined up with the ' + (d.audio ? 'HQ audio' : 'main camera\'s sound') + ', the shots change on the music\'s phrases, and the full set is rendered by a™ on the venue\'s Mac, then saved as this session\'s long form with its vertical clips.</p>' +
                     (j && j.status === 'failed' ? '<p class="vs-error" style="display:block">Last try failed: ' + e(j.message || j.stage) + '</p>' : '') +
                     '<p class="mc-note" style="margin-top:8px">' + mac + '</p>';
             }

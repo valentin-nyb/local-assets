@@ -445,4 +445,4 @@ function kick() {
 
 function stopAll() { for (const id of Object.keys(runs)) stop(id) }
 
-module.exports = { init, state, link, unlink, kick, stopAll, preview }
+module.exports = { init, state, link, unlink, kick, stopAll, preview, FFMPEG }

@@ -1727,7 +1727,7 @@
             // Remote control is for OBSBOT cameras: the line only shows when the account has one
             box.classList.toggle('hidden', _adminAll || !_cams.some(function(c) { return !c.external && (!c.kind || c.kind === 'obsbot'); }));
             box.dataset.on = _relay && _relay.online ? '1' : '';
-            document.getElementById('cam-relay-text').textContent = _relay && _relay.online ? 'Remote control on · venue relay connected' : _relay && _relay.set ? 'Remote control off · venue relay not connected' : 'Remote control not set up';
+            document.getElementById('cam-relay-text').textContent = _relay && _relay.online ? 'Remote control on · ' + (_relay.app ? 'a™ on the venue\'s Mac' : 'venue relay connected') : _relay && _relay.set ? 'Remote control off · open a™ on the venue\'s Mac' : 'Remote control not set up';
             var btn = box.querySelector('button');
             btn.textContent = _relay && _relay.online ? 'Relay' : 'Set up';
             btn.hidden = !_adminAll;   // only local / assets (admin) sets up the venue relay
@@ -1740,12 +1740,12 @@
             document.querySelector('#cam-dialog .cam-dialog-panel').classList.add('wide');
             var on = _relay && _relay.online;
             document.getElementById('cam-dialog-body').innerHTML =
-                '<p class="rl-text">Pan, tilt, zoom, presets and AI tracking are sent to the cameras by a small relay app on a computer at the venue (the Mac mini). It only talks to the cameras on the venue network.</p>' +
-                '<p class="rl-state' + (on ? ' on' : '') + '">' + (on ? 'Relay connected' + (_relay.version ? ' · version ' + esc(_relay.version) : '') : _relay && _relay.lastSeen ? 'Relay last seen ' + new Date(_relay.lastSeen).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Relay not connected yet') + '</p>' +
+                '<p class="rl-text">Pan, tilt, zoom, presets and AI tracking are sent to the cameras by a computer at the venue. <b>a™ for Mac does it built in</b>: open a™ on the venue\'s Mac, signed in to this account, and keep it open. It also renders the multi-camera edits. It only talks to the cameras on the venue network.</p>' +
+                '<p class="rl-state' + (on ? ' on' : '') + '">' + (on ? (_relay.app ? 'Connected through a™' : 'Relay connected') + (_relay.version ? ' · version ' + esc(String(_relay.version).replace(/^a™ /, '')) : '') : _relay && _relay.lastSeen ? 'Relay last seen ' + new Date(_relay.lastSeen).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Relay not connected yet') + '</p>' +
                 '<ol class="rl-steps">' +
                     '<li><b>On each camera</b> turn on <em>VISCA over IP</em> in the OBSBOT Start app, and add its IP address here with <em>Edit</em>.</li>' +
-                    '<li><b>On the venue computer</b> install Node.js from nodejs.org.</li>' +
-                    '<li><b>Make a relay key</b> and paste the command it gives you into Terminal on that computer. The relay starts now and every time the computer starts.</li>' +
+                    '<li><b>On the venue\'s Mac</b> install a™ from <a href="/download" target="_blank" rel="noopener">local-assets.com/download</a>, sign in to this account and leave it open. Nothing else to set up.</li>' +
+                    '<li><b>Only for a computer without a™:</b> install Node.js from nodejs.org, make a relay key and paste the command it gives you into Terminal. The relay starts now and every time the computer starts.</li>' +
                 '</ol>' +
                 '<div id="rl-key"></div>' +
                 '<p id="rl-error" class="cam-form-error"></p>' +

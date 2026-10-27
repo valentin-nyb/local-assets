@@ -15,7 +15,7 @@ import { readArt, eventKey, readLinks } from './next-event.js';
 async function relayStatus(redis, slug) {
   const seen = JSON.parse(await redis.get(seenKey(slug)) || 'null');
   const hasKey = !!(await redis.get(tokenKey(slug)));
-  return { set: hasKey, online: !!(seen && Date.now() - seen.at < 45000), lastSeen: seen?.at || null, version: seen?.version || '' };
+  return { set: hasKey || !!seen?.app, online: !!(seen && Date.now() - seen.at < 45000), lastSeen: seen?.at || null, version: seen?.version || '', app: !!seen?.app };
 }
 
 // Venue cameras (OBSBOT Tail 2 with NDI HX3).

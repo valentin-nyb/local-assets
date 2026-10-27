@@ -20,17 +20,41 @@ export function findFfmpeg() {
   }
   return null;
 }
-const FFMPEG = findFfmpeg();
-const FFPROBE = FFMPEG ? path.join(path.dirname(FFMPEG), 'ffprobe') : null;
+let FFMPEG = findFfmpeg();
+let FFPROBE = FFMPEG && fs.existsSync(path.join(path.dirname(FFMPEG), 'ffprobe')) ? path.join(path.dirname(FFMPEG), 'ffprobe') : null;
+let WORK = path.join(os.homedir(), 'la-relay', 'edits');
+// a™ for Mac runs the edits itself: its own ffmpeg (no ffprobe beside it) and its own working folder
+// nice: render at a lower priority, so the cameras a™ is recording on the same Mac never wait for the edit
+let NICE = 0;
+export function configure({ ffmpeg, workDir, nice } = {}) {
+  if (nice) NICE = Number(nice) || 0;
+  if (ffmpeg) { FFMPEG = ffmpeg; FFPROBE = fs.existsSync(path.join(path.dirname(ffmpeg), 'ffprobe')) ? path.join(path.dirname(ffmpeg), 'ffprobe') : null; }
+  if (workDir) WORK = workDir;
+}
+export const canRender = () => !!FFMPEG;
 const run = (bin, args, { onLine } = {}) => new Promise((ok, bad) => {
-  const p = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+  const p = NICE ? spawn('/usr/bin/nice', ['-n', String(NICE), bin, ...args], { stdio: ['ignore', 'pipe', 'pipe'] }) : spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] });
   let err = '';
   p.stdout.on('data', () => {});
   p.stderr.on('data', d => { const t = d.toString(); err = (err + t).slice(-4000); if (onLine) t.split(/\r|\n/).forEach(onLine); });
   p.on('error', bad);
   p.on('close', code => code === 0 ? ok() : bad(new Error(path.basename(bin) + ' failed: ' + err.split('\n').filter(Boolean).slice(-2).join(' '))));
 });
-const probe = file => JSON.parse(spawnSync(FFPROBE, ['-v', 'error', '-print_format', 'json', '-show_streams', '-show_format', file], { encoding: 'utf8' }).stdout || '{}');
+// A file's streams and length: ffprobe when there is one, else read from what ffmpeg prints about its input
+const probe = file => FFPROBE ? JSON.parse(spawnSync(FFPROBE, ['-v', 'error', '-print_format', 'json', '-show_streams', '-show_format', file], { encoding: 'utf8' }).stdout || '{}') : probeWithFfmpeg(file);
+export function probeWithFfmpeg(file) {
+  const t = spawnSync(FFMPEG, ['-hide_banner', '-i', file], { encoding: 'utf8' }).stderr || '';
+  const d = /Duration: (\d+):(\d+):(\d+(?:\.\d+)?)/.exec(t);
+  const streams = [];
+  for (const line of t.split('\n')) {
+    const m = /Stream #\d+:\d+.*?: (Video|Audio): (.*)$/.exec(line);
+    if (!m) continue;
+    if (m[1] === 'Audio') { streams.push({ codec_type: 'audio' }); continue; }
+    const size = /, (\d{2,5})x(\d{2,5})[ ,]/.exec(m[2]), fps = /([\d.]+) fps/.exec(m[2]);
+    streams.push({ codec_type: 'video', width: size ? Number(size[1]) : undefined, height: size ? Number(size[2]) : undefined, r_frame_rate: fps ? Math.round(Number(fps[1]) * 1000) + '/1000' : undefined });
+  }
+  return { streams, format: { duration: d ? String(Number(d[1]) * 3600 + Number(d[2]) * 60 + Number(d[3])) : undefined } };
+}
 const hwEncoder = () => /h264_videotoolbox/.test(spawnSync(FFMPEG, ['-hide_banner', '-encoders'], { encoding: 'utf8' }).stdout || '');
 
 // ── Mux streams: the best video rendition and the audio rendition of a playback ID ──
@@ -165,8 +189,8 @@ async function uploadChunked(url, file, onPct) {
 
 // ── The whole job ──
 export async function runEdit(job, report) {
-  if (!FFMPEG || !FFPROBE) throw new Error('ffmpeg is not installed on this Mac. Open Terminal and run: brew install ffmpeg');
-  const dir = path.join(os.homedir(), 'la-relay', 'edits', job.id);
+  if (!FFMPEG) throw new Error('ffmpeg is not installed on this Mac. Open Terminal and run: brew install ffmpeg');
+  const dir = path.join(WORK, job.id);
   fs.mkdirSync(dir, { recursive: true });
   const warnings = [];
   const step = (stage, pct) => report({ stage, pct: Math.round(pct) });

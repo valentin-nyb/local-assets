@@ -7,14 +7,14 @@ import { seenKey } from './camera-relay.js';
 
 // Multi-camera edit: every long form of a session (same artist and date, filmed by several cameras at the
 // same time) cut together into one full set, on the HQ audio from the DJ's console.
-// The platform finds the recordings and queues the job; the venue's Mac mini (relay/la-camera-relay.mjs)
+// The platform finds the recordings and queues the job; the venue's Mac (a™ for Mac, or relay/la-camera-relay.mjs)
 // downloads them, lines each camera up with the HQ audio, cuts on the music's phrases, renders and
 // uploads the edit back as the session's long form (camera "EDIT").
 //   GET  ?artist=&date=                  what the session has and the edit's progress
 //   POST { action:'start', artist, date } queue the edit
 
 export const jobsKey = slug => `mc_jobs:${slug}`;     // hash: jobId → job
-export const queueKey = slug => `mc_queue:${slug}`;   // list of jobIds waiting for the Mac mini
+export const queueKey = slug => `mc_queue:${slug}`;   // list of jobIds waiting for the venue's Mac
 const sessionKey = (slug, artist, date) => `mc_session:${slug}:${artist}|${date}`;
 const SUB = ['AUDIO', 'SOCIAL', 'SOCIALRAW', 'THUMB', 'EDIT'];
 
@@ -36,13 +36,22 @@ export function sessionSources(assets, artist, date) {
   return { cams, audio: audio ? { id: audio.id, pid: audio.playback_ids[0].id, duration: Number(audio.duration) } : null, edit: edit ? { id: edit.id, pid: edit.playback_ids[0].id } : null };
 }
 
-// Queues the edit for the venue's Mac mini. Without HQ audio from the console, the main camera's sound is
+// An edit the Mac stopped reporting on (a™ closed, the Mac asleep or offline): it reports every few seconds
+// while it works, so after 10 minutes of silence the edit counts as failed and can be started again
+const STALE_MS = 10 * 60e3;
+export function settleStale(job) {
+  if (job && job.status === 'running' && Date.now() - (job.updatedAt || 0) > STALE_MS)
+    Object.assign(job, { status: 'failed', stage: 'Failed', message: 'The Mac stopped working on the edit (a™ was closed, or the Mac went to sleep or offline). Start it again.' });
+  return job;
+}
+
+// Queues the edit for the venue's Mac. Without HQ audio from the console, the main camera's sound is
 // the edit's sound, and the Mac also uploads it on its own as the session's HQ AUDIO.
 export async function startMulticam(r, slug, auth, artist, date, src, { title = '', auto = false } = {}) {
   if (src.cams.length < 2) return { status: 400, error: 'A multi-camera edit needs at least two camera recordings of this session' };
   if (!src.audio && !src.cams.some(c => c.hasAudio)) return { status: 400, error: 'Upload the HQ audio from the DJ\'s console for this session first' };
   const prevId = await r.get(sessionKey(slug, artist, date));
-  const prev = prevId ? JSON.parse(await r.hGet(jobsKey(slug), prevId) || 'null') : null;
+  const prev = settleStale(prevId ? JSON.parse(await r.hGet(jobsKey(slug), prevId) || 'null') : null);
   if (prev && !['done', 'failed'].includes(prev.status)) return { status: 409, error: 'The edit is already ' + prev.status };
   const upload = async (camera, extra) => {
     const up = await fetch('https://api.mux.com/video/v1/uploads', {
@@ -52,7 +61,7 @@ export async function startMulticam(r, slug, auth, artist, date, src, { title = 
     if (!up?.data?.url) throw new Error('Mux did not create the upload: ' + (up?.error?.messages?.[0] || 'unknown'));
     return { id: up.data.id, url: up.data.url };
   };
-  const job = { id: crypto.randomBytes(8).toString('hex'), slug, artist, date, title: String(title).slice(0, 80), auto, status: 'queued', stage: 'Waiting for the Mac mini',
+  const job = { id: crypto.randomBytes(8).toString('hex'), slug, artist, date, title: String(title).slice(0, 80), auto, status: 'queued', stage: 'Waiting for the venue\'s Mac',
     pct: 0, createdAt: Date.now(), updatedAt: Date.now(), sources: src.cams, audio: src.audio,
     upload: await upload('EDIT', { max_resolution_tier: '2160p', name: `${artist} — ${date} · Multi-camera edit`, static_renditions: [{ resolution: 'highest' }] }),
     audioUpload: src.audio ? null : await upload('AUDIO', { name: `${artist} — ${date} · HQ audio`, static_renditions: [{ resolution: 'audio-only' }] }) };
@@ -87,6 +96,7 @@ export default async function handler(req, res) {
       const relay = { online: !!seen && Date.now() - seen.at < 120e3, canRender: !!seen?.render, version: seen?.version || null };
       const jobId = await r.get(sessionKey(slug, artist, date));
       let job = jobId ? JSON.parse(await r.hGet(jobsKey(slug), jobId) || 'null') : null;
+      if (job && job.status === 'running' && settleStale(job).status === 'failed') await r.hSet(jobsKey(slug), job.id, JSON.stringify(job));
 
       if (req.method === 'POST' && body.action === 'start') {
         const started = await startMulticam(r, slug, session.muxAuth, artist, date, src, { title: body.title });
