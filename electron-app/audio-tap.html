@@ -1,0 +1,37 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>a™ sound</title>
+<script>
+// One sound input captured by Chromium (CoreAudio, buffered), handed to a™ in small pieces for its ffmpeg.
+// ffmpeg's own capture kept only the newest piece of a USB input's sound and lost about one in fifteen.
+(async () => {
+  const want = new URLSearchParams(location.search).get('dev') || ''
+  try {
+    // Device names are only listed once sound may be used
+    await navigator.mediaDevices.getUserMedia({ audio: true }).then(s => s.getTracks().forEach(t => t.stop()))
+    const list = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audioinput')
+    // Chromium adds the USB ids to the name: "OsmoPocket4P (2ca3:0023)"
+    const dev = list.find(d => d.label === want) || list.find(d => d.label.startsWith(want + ' (')) || list.find(d => d.label.startsWith(want))
+    if (!dev) return laTap.fail('no sound input called ' + want + ' (found: ' + list.map(d => d.label).join(', ') + ')')
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: { exact: dev.deviceId },
+      echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: { ideal: 2 }, sampleRate: { ideal: 48000 } } })
+    const reader = new MediaStreamTrackProcessor({ track: stream.getAudioTracks()[0] }).readable.getReader()
+    // Pieces of about 20 ms, left and right interleaved (a mono input on both sides)
+    let buf = null, n = 0, size = 0, ready = false
+    for (;;) {
+      const { value: f, done } = await reader.read()
+      if (done) return laTap.fail('the sound input stopped')
+      if (!ready) { ready = true; size = Math.round(f.sampleRate / 50); laTap.ready(f.sampleRate, dev.label) }
+      const frames = f.numberOfFrames, l = new Float32Array(frames), r = new Float32Array(frames)
+      f.copyTo(l, { planeIndex: 0, format: 'f32-planar' })
+      if (f.numberOfChannels > 1) f.copyTo(r, { planeIndex: 1, format: 'f32-planar' }); else r.set(l)
+      f.close()
+      for (let i = 0; i < frames; i++) {
+        if (!buf) { buf = new Float32Array(size * 2); n = 0 }
+        buf[n++] = l[i]; buf[n++] = r[i]
+        if (n === buf.length) { laTap.pcm(buf.buffer); buf = null }
+      }
+    }
+  } catch (e) { laTap.fail(e.message || String(e)) }
+})()
+</script>

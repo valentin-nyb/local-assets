@@ -5,7 +5,7 @@
 //   Outside a set the calendar keeps the stream closed, so Mux refuses the connection: the link waits
 //   and tries again until the set opens it, then records, exactly as an OBSBOT left on all night.
 // - Stream keys are kept only encrypted by the macOS Keychain (safeStorage) and never written to logs.
-const { app, safeStorage, powerSaveBlocker, systemPreferences, net, session } = require('electron')
+const { app, safeStorage, powerSaveBlocker, systemPreferences, net, session, BrowserWindow, ipcMain } = require('electron')
 const { spawn, execFile } = require('child_process')
 const path = require('path')
 const fs = require('fs')
@@ -106,6 +106,75 @@ async function allowed(link) {
   return null
 }
 
+// ── Sound: captured by Chromium, not by ffmpeg ───────────────────────────────
+// ffmpeg's capture keeps only the newest piece of a USB input's sound: from an Osmo Pocket 4 it lost about
+// one piece in fifteen, and the sound came through cut. A hidden page (audio-tap.html) captures the input
+// with Chromium instead and its pieces go into ffmpeg through a pipe. Sound sample 0 is the moment ffmpeg
+// starts; the picture is stamped with the Mac's clock from there, so the two stay in sync. If the page
+// can't open the input, ffmpeg captures the sound itself as before.
+const taps = {}         // the page's webContents id → tap
+let tapSes = null
+function tapSession() {
+  if (tapSes) return tapSes
+  tapSes = session.fromPartition('la-audio-tap')
+  tapSes.setPermissionRequestHandler((_wc, permission, cb) => cb(permission === 'media'))
+  tapSes.setPermissionCheckHandler((_wc, permission) => permission === 'media')
+  ipcMain.on('la-tap', (e, what, a, b) => {
+    const tap = taps[e.sender.id]
+    if (!tap) return
+    if (what === 'pcm') return feed(tap, a)
+    if (what === 'ready') { tap.rate = Number(a) || 48000; tap.label = String(b || ''); if (tap.onReady) tap.onReady() }
+    if (what === 'fail') { log('sound capture: ' + a); if (tap.onFail) tap.onFail(); else if (tap.out) tap.lost = true }
+  })
+  return tapSes
+}
+function openTap(name) {
+  return new Promise(resolve => {
+    const win = new BrowserWindow({ show: false, width: 120, height: 80, skipTaskbar: true,
+      webPreferences: { session: tapSession(), preload: path.join(__dirname, 'audio-tap-preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: false } })
+    const tap = { win, id: win.webContents.id, rate: 0, out: null, t0: 0, written: 0, drift: 0, lastAt: 0 }
+    taps[tap.id] = tap
+    const done = ok => { clearTimeout(timer); tap.onReady = tap.onFail = null; if (!ok) closeTap(tap); resolve(ok ? tap : null) }
+    const timer = setTimeout(() => { log('sound capture: no sound from ' + name + ' within 8 s'); done(false) }, 8000)
+    tap.onReady = () => done(true)
+    tap.onFail = () => done(false)
+    win.webContents.on('render-process-gone', () => { if (tap.onFail) tap.onFail(); else tap.lost = true })
+    win.loadFile(path.join(__dirname, 'audio-tap.html'), { query: { dev: name } }).catch(() => done(false))
+  })
+}
+function closeTap(tap) {
+  if (!tap) return
+  clearInterval(tap.filler)
+  delete taps[tap.id]
+  tap.out = null
+  try { tap.win.destroy() } catch {}
+}
+// From now on the pieces go into ffmpeg (stdin pipe 4)
+function startTap(tap, pipe) {
+  tap.out = pipe; tap.written = 0; tap.drift = 0; tap.lastAt = Date.now()
+  pipe.on('error', () => {})
+  // Nothing from the page for a moment (the input unplugged, the page gone): silence keeps the stream going
+  tap.filler = setInterval(() => {
+    if (!tap.out || Date.now() - tap.lastAt < 300) return
+    const behind = Math.floor((Date.now() - tap.t0) / 1000 * tap.rate) - tap.written
+    if (behind > tap.rate / 10) { tap.out.write(Buffer.alloc(behind * 8)); tap.written += behind }
+  }, 100)
+}
+// The input's clock and the Mac's drift apart slowly (about a second in a few hours): a single sample is
+// left out or repeated now and then (never heard) so the sound stays with the picture
+function feed(tap, data) {
+  if (!tap.out) return
+  let buf = Buffer.isBuffer(data) ? data : Buffer.from(data)
+  const frames = buf.length / 8
+  const due = (Date.now() - tap.t0) / 1000 * tap.rate
+  tap.drift = tap.drift * 0.98 + (tap.written + frames - due) * 0.02
+  if (tap.drift > tap.rate * 0.03 && frames > 1) buf = buf.subarray(0, buf.length - 8)
+  else if (tap.drift < -tap.rate * 0.03) buf = Buffer.concat([buf, buf.subarray(buf.length - 8)])
+  tap.lastAt = Date.now()
+  tap.written += buf.length / 8
+  tap.out.write(buf)
+}
+
 // ── Streaming ────────────────────────────────────────────────────────────────
 function argsFor(link, key, run) {
   const out = ['-rtmp_tcurl', `rtmps://${MUX_HOST}:443/app`, '-f', 'flv', ingest() + key]
@@ -114,11 +183,13 @@ function argsFor(link, key, run) {
   // while the video encoder is busy.
   const audioOut = ['-af', 'aresample=async=1000', '-c:a', 'aac', '-b:a', '320k', '-ar', '48000', '-ac', '2']
   const Q = ['-thread_queue_size', '4096']
+  const tap = run.tap
+  const tapIn = tap ? [...Q, '-f', 'f32le', '-ar', String(tap.rate), '-ac', '2', '-i', 'pipe:4'] : null
   if (link.kind === 'audio') {
     // Decks: the mixer's sound with a still black picture (the platform keeps the sound as the set's HQ audio)
     return ['-hide_banner', '-nostats', '-loglevel', 'error', '-progress', 'pipe:1',
       '-re', ...Q, '-f', 'lavfi', '-i', 'color=c=black:s=640x360:r=10',
-      ...Q, '-f', 'avfoundation', '-i', ':' + indexOf('audio', link.audio),
+      ...(tapIn || [...Q, '-f', 'avfoundation', '-i', ':' + indexOf('audio', link.audio)]),
       '-map', '0:v', '-map', '1:a',
       '-c:v', 'libx264', '-preset', 'veryfast', '-tune', 'zerolatency',
       '-b:v', '300k', '-maxrate', '300k', '-bufsize', '600k', '-g', '20', '-keyint_min', '20', '-sc_threshold', '0', '-pix_fmt', 'yuv420p', ...audioOut, ...out]
@@ -128,6 +199,18 @@ function argsFor(link, key, run) {
   // A picture over 1080p is scaled to fit 1920 on its long side before encoding
   const [w, h] = (size || '').split('x').map(Number)
   const fit = w * h > HD ? ['-vf', w >= h ? 'scale=1920:-2' : 'scale=-2:1920'] : []
+  // x264 as OBS sends it (Mux hung up on the Mac's hardware encoder after ~15 s): steady bitrate,
+  // a keyframe every 2 s, no B-frames
+  const videoOut = ['-c:v', 'libx264', '-preset', 'veryfast', '-tune', 'zerolatency', '-profile:v', 'high',
+    '-b:v', '4500k', '-maxrate', '4500k', '-bufsize', '9000k', '-r', '30', '-g', '60', '-keyint_min', '60', '-sc_threshold', '0', '-pix_fmt', 'yuv420p']
+  // The sound from the page: both inputs keep the Mac's clock (-copyts), the picture stamped as it arrives
+  // and the sound's first sample at the moment ffmpeg starts, then moved back to zero on the way out
+  if (a != null && tap) return ['-hide_banner', '-nostats', '-loglevel', 'error', '-progress', 'pipe:1', '-y', '-copyts',
+    ...Q, '-use_wallclock_as_timestamps', '1', '-f', 'avfoundation', ...(fps ? ['-framerate', fps] : []), ...(size ? ['-video_size', size] : []),
+    '-i', indexOf('video', link.video) + ':none',
+    '-itsoffset', String(tap.t0 / 1000), ...tapIn,
+    '-map', '0:v', '-map', '1:a', ...fit, ...videoOut, ...audioOut, '-output_ts_offset', String(-tap.t0 / 1000), ...out,
+    ...previewOut()]
   return ['-hide_banner', '-nostats', '-loglevel', 'error', '-progress', 'pipe:1', '-y',
     ...Q, '-f', 'avfoundation', ...(fps ? ['-framerate', fps] : []), ...(size ? ['-video_size', size] : []),
     // Picture and sound opened together, so they keep one clock and stay in sync (as two inputs each would
@@ -135,11 +218,7 @@ function argsFor(link, key, run) {
     '-i', indexOf('video', link.video) + ':' + (a == null ? 'none' : a),
     ...(a == null ? [...Q, '-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo'] : []),
     '-map', '0:v', '-map', a == null ? '1:a' : '0:a', ...fit,
-    // x264 as OBS sends it (Mux hung up on the Mac's hardware encoder after ~15 s): steady bitrate,
-    // a keyframe every 2 s, no B-frames
-    '-c:v', 'libx264', '-preset', 'veryfast', '-tune', 'zerolatency', '-profile:v', 'high',
-    '-b:v', '4500k', '-maxrate', '4500k', '-bufsize', '9000k', '-r', '30', '-g', '60', '-keyint_min', '60', '-sc_threshold', '0', '-pix_fmt', 'yuv420p',
-    ...audioOut, ...out,
+    ...videoOut, ...audioOut, ...out,
     // What the camera sees, for Camera Control (two small frames a second)
     ...previewOut()]
 }
@@ -244,9 +323,19 @@ async function begin(id) {
   await relayReady
   await stopPreview(run)
   if (run.proc || !links[id]) return
-  run.startedAt = Date.now(); run.sentAt = 0; run.sound = soundOf(link)
+  run.sound = soundOf(link)
   if (run.sound && run.sound !== link.audio) log(link.slotName + ' sound from ' + run.sound)
-  const proc = spawn(FFMPEG, argsFor(link, key, run), { stdio: ['ignore', 'pipe', 'pipe', link.kind === 'audio' ? 'ignore' : 'pipe'] })
+  // The sound through Chromium; after a failure, ffmpeg's own capture for 10 minutes before trying again
+  closeTap(run.tap); run.tap = null
+  if (run.sound && !(Date.now() - (run.noTapAt || 0) < 600e3)) {
+    run.tap = await openTap(run.sound)
+    if (!run.tap) run.noTapAt = Date.now()
+    if (run.proc || !links[id]) { closeTap(run.tap); run.tap = null; return }
+  }
+  run.startedAt = Date.now(); run.sentAt = 0
+  if (run.tap) run.tap.t0 = Date.now()
+  const proc = spawn(FFMPEG, argsFor(link, key, run), { stdio: ['ignore', 'pipe', 'pipe', link.kind === 'audio' ? 'ignore' : 'pipe', run.tap ? 'pipe' : 'ignore'] })
+  if (run.tap) startTap(run.tap, proc.stdio[4])
   if (link.kind !== 'audio') readFrames(id, proc.stdio[3])
   run.proc = proc
   let errText = ''
@@ -273,6 +362,7 @@ async function begin(id) {
   })
   proc.on('exit', code => {
     run.proc = null
+    closeTap(run.tap); run.tap = null
     clearInterval(run.stallCheck)
     const stalled = run.stalled; run.stalled = null
     if (!links[id]) return
@@ -330,6 +420,7 @@ function stop(id) {
   if (run.proc) { run.proc.removeAllListeners('exit'); end(run.proc) }
   if (run.preview) end(run.preview)
   clearInterval(run.stallCheck)
+  closeTap(run.tap)
   delete runs[id]
 }
 
