@@ -21,8 +21,7 @@ let pendingLink = null       // a localassets:// link that arrived before the wi
 const onSite = url => { try { return new URL(url).origin === SITE } catch { return false } }
 
 // Every window of the app: only local-assets.com inside it; other sites open in the browser.
-// Pages the site opens in a new tab (the video player, files) open as a pop-up window over the app,
-// so the client never leaves it; Back or closing the pop-up returns to where they were.
+// Pages the site opens in a new tab (the video player, files) open in the app's window; Back returns.
 function guard(wc) {
   const keepOnSite = (e, url, isMain = true) => {
     if (!isMain || onSite(url) || url.startsWith('file:')) return
@@ -32,16 +31,10 @@ function guard(wc) {
   wc.on('will-navigate', (e, url) => keepOnSite(e, url))
   // Redirects too (e.g. /api/google-auth → Google): Google sign-in never runs inside the app
   wc.on('will-redirect', (e, url, _inPage, isMain) => keepOnSite(e, url, isMain))
+  // A page of the site (the player, an invoice) opens in the same window, and its Back (or Cmd+[) returns.
+  // As a second window over a full-screen a™ it left a black full-screen space behind when it closed.
   wc.setWindowOpenHandler(({ url }) => {
-    if (onSite(url)) {
-      const parent = BrowserWindow.fromWebContents(wc)
-      const [w, h] = parent ? parent.getSize() : [1280, 820]
-      return { action: 'allow', overrideBrowserWindowOptions: {
-        parent, width: Math.round(w * 0.86), height: Math.round(h * 0.86), minWidth: 640, minHeight: 420,
-        backgroundColor: '#070905', title: 'a™', show: true,
-        webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true },
-      } }
-    }
+    if (onSite(url)) { wc.loadURL(url, { httpReferrer: wc.getURL() }); return { action: 'deny' } }
     if (/^https?:\/\//.test(url)) shell.openExternal(url)
     return { action: 'deny' }
   })

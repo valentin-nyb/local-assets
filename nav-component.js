@@ -78,6 +78,12 @@
         disconnectedCallback() { clearInterval(this._g); clearInterval(this._t); }
     });
 })();
+// A page of the site that opens in a new tab (the video player): in the a™ Mac app it opens in the same
+// window instead (its Back returns). A second window over a full-screen a™ left the app black when it closed.
+window.laOpenPage = function(url) {
+    if (window.laApp) location.href = url;
+    else window.open(url, '_blank');
+};
 // The breadcrumb's account name: the local / assets account shows its company name as written.
 // Defined before the page loads: pages call it from their own scripts while still loading.
 window.laSetBreadcrumb = function(el, name) {
