@@ -2636,7 +2636,10 @@
         var _heroLoop = null, _heroWait = {}, _heroWaitTimer = null;
         function playHeroLoop(a) {
             var wrap = document.getElementById('live-feed-player-wrap');
-            if (!wrap || !window.customElements || !customElements.get('mux-player')) return;
+            // iPhone and iPad: a plain muted video playing Mux's stream natively. The player's own video sits inside it,
+            // where iOS didn't always see it as muted and inline, so the banner waited for a touch to start.
+            var ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            if (!wrap || (!ios && (!window.customElements || !customElements.get('mux-player')))) return;
             var pid = a.playback_ids[0].id, dur = Number(a.duration) || 0;
             if (_peaks[a.id] == null) requestPeak(a.id);   // re-renders with the peak once known
             var dj = djSpot(a);
@@ -2659,29 +2662,43 @@
             }
             wrap.style.opacity = '0';
             wrap.innerHTML = '';
-            var mp = document.createElement('mux-player');
-            mp.setAttribute('playback-id', pid);
-            mp.setAttribute('stream-type', 'on-demand');
-            mp.setAttribute('muted', '');
-            mp.setAttribute('autoplay', 'muted');
-            mp.setAttribute('playsinline', '');
-            mp.setAttribute('preload', 'auto');
-            mp.setAttribute('start-time', String(Math.round(start)));
-            mp.setAttribute('thumbnail-time', String(Math.round(start)));
-            mp.setAttribute('max-resolution', window.innerWidth >= 768 ? '1080p' : '720p');
-            // Sharp from the first frame: no blurry low-quality start
-            mp.setAttribute('min-resolution', window.innerWidth >= 768 ? '720p' : '480p');
-            mp.setAttribute('disable-tracking', '');
-            mp.setAttribute('nohotkeys', '');
-            mp.setAttribute('default-hidden-captions', '');
-            // Never show subtitles on the banner
-            var noCaptions = function() {
-                var tracks = mp.textTracks || (mp.media && mp.media.textTracks) || [];
-                for (var i = 0; i < tracks.length; i++) tracks[i].mode = 'disabled';
-            };
-            mp.addEventListener('loadedmetadata', noCaptions);
-            mp.addEventListener('playing', noCaptions);
-            mp.style.cssText = 'width:100%;height:100%;--controls:none;--media-object-fit:cover;--media-background-color:transparent;--center-controls:none;--bottom-play-button:none;';
+            var mp;
+            if (ios) {
+                mp = document.createElement('video');
+                mp.muted = true; mp.defaultMuted = true; mp.playsInline = true; mp.autoplay = true;
+                ['muted', 'playsinline', 'webkit-playsinline', 'autoplay'].forEach(function(n) { mp.setAttribute(n, ''); });
+                mp.setAttribute('preload', 'auto');
+                mp.setAttribute('disablepictureinpicture', ''); mp.setAttribute('disableremoteplayback', '');
+                mp.setAttribute('aria-hidden', 'true');
+                // Starts at the moment (#t=), at the same sharpness as the player
+                mp.src = 'https://stream.mux.com/' + pid + '.m3u8?min_resolution=' + (window.innerWidth >= 768 ? '720p&max_resolution=1080p' : '480p&max_resolution=720p') + '#t=' + Math.round(start);
+                mp.poster = 'https://image.mux.com/' + pid + '/thumbnail.webp?time=' + Math.round(start) + '&width=1280';   // the moment, until it plays
+                mp.style.cssText = 'display:block;width:100%;height:100%;object-fit:cover;object-position:var(--media-object-position, 50% 50%);background:transparent;';
+            } else {
+                mp = document.createElement('mux-player');
+                mp.setAttribute('playback-id', pid);
+                mp.setAttribute('stream-type', 'on-demand');
+                mp.setAttribute('muted', '');
+                mp.setAttribute('autoplay', 'muted');
+                mp.setAttribute('playsinline', '');
+                mp.setAttribute('preload', 'auto');
+                mp.setAttribute('start-time', String(Math.round(start)));
+                mp.setAttribute('thumbnail-time', String(Math.round(start)));
+                mp.setAttribute('max-resolution', window.innerWidth >= 768 ? '1080p' : '720p');
+                // Sharp from the first frame: no blurry low-quality start
+                mp.setAttribute('min-resolution', window.innerWidth >= 768 ? '720p' : '480p');
+                mp.setAttribute('disable-tracking', '');
+                mp.setAttribute('nohotkeys', '');
+                mp.setAttribute('default-hidden-captions', '');
+                // Never show subtitles on the banner
+                var noCaptions = function() {
+                    var tracks = mp.textTracks || (mp.media && mp.media.textTracks) || [];
+                    for (var i = 0; i < tracks.length; i++) tracks[i].mode = 'disabled';
+                };
+                mp.addEventListener('loadedmetadata', noCaptions);
+                mp.addEventListener('playing', noCaptions);
+                mp.style.cssText = 'width:100%;height:100%;--controls:none;--media-object-fit:cover;--media-background-color:transparent;--center-controls:none;--bottom-play-button:none;';
+            }
             // Once the video is really playing, show only the video (no second, see-through layer)
             // Show the player right away (its cover is the loop's first frame), then make sure it
             // plays: iOS can refuse autoplay (Low Power Mode), so retry once metadata is in and
@@ -2703,7 +2720,7 @@
             var tryPlay = function() { mp.muted = true; var p = mp.play && mp.play(); if (p && p.catch) p.catch(function(e) { if (e && e.name === 'NotAllowedError') showAnim(); }); };
             // Still not playing after a while (a slow connection takes a few seconds to start): the moving picture
             setTimeout(function() { if (mp.paused) showAnim(); }, 7000);
-            mp.addEventListener('loadedmetadata', tryPlay);
+            mp.addEventListener('loadedmetadata', function() { if (ios && mp.currentTime < start - 1) { try { mp.currentTime = start; } catch (_) {} } tryPlay(); });
             mp.addEventListener('canplay', function() { if (mp.paused) tryPlay(); });
             var kick = function() { if (mp.paused) tryPlay(); };
             document.addEventListener('touchstart', kick, { once: true, passive: true });
