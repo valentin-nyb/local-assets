@@ -49,6 +49,9 @@ const validHost = v => !v || /^[a-zA-Z0-9.-]{1,63}(:\d{1,5})?$/.test(v);
 
 // A recording started with Record now (api/camera-schedule.js keeps the stream open until Stop)
 export const manualKey = streamId => `cam_manual:${streamId}`;
+// Decks recorded on an iPad or phone (la-deckrec.js): its last word (20 s), and what a session asked of it
+const deckHereKey = (slug, id) => `deck_here:${slug}:${id}`;
+const deckCmdKey = (slug, id) => `deck_cmd:${slug}:${id}`;
 
 async function withRedis(fn) {
   const redis = createClient({ url: process.env.REDIS_URL });
@@ -107,16 +110,18 @@ export default async function handler(req, res) {
     if (saved.length) {
       await withRedis(r => r.hSet(STREAM_MAP, Object.fromEntries(saved.map(c => [c.streamId, vslug])))).catch(() => {});
     }
-    const [manual, ended, sess] = saved.length ? await withRedis(r => Promise.all([
+    const [manual, ended, sess, here] = saved.length ? await withRedis(r => Promise.all([
       Promise.all(saved.map(c => c.streamId ? r.get(manualKey(c.streamId)) : null)),
       Promise.all(saved.map(c => c.streamId ? r.exists(`cam_ended:${c.streamId}`) : 0)),
       Promise.all(saved.map(c => c.streamId ? inSession(r, c.streamId) : false)),
-    ])).catch(() => [[], [], []]) : [[], [], []];
+      // Decks on an iPad or phone that said it's there in the last 20 s
+      Promise.all(saved.map(c => c.kind === 'audio' ? r.get(deckHereKey(vslug, c.id)) : null)),
+    ])).catch(() => [[], [], [], []]) : [[], [], [], []];
     const byId = new Map(streams.map(s => [s.id, s]));
     const cameras = saved.map(c => {
       const s = byId.get(c.streamId);
       byId.delete(c.streamId);
-      return { ...c, manual: Number(manual[saved.indexOf(c)]) || null, ended: !!ended[saved.indexOf(c)], status: s ? s.status : 'missing', playbackId: s?.playbackId || null, liveSince: s?.liveSince || null, recording: s ? s.recording : true, inSession: !!sess[saved.indexOf(c)] };
+      return { ...c, manual: Number(manual[saved.indexOf(c)]) || null, ended: !!ended[saved.indexOf(c)], status: s ? s.status : 'missing', playbackId: s?.playbackId || null, liveSince: s?.liveSince || null, recording: s ? s.recording : true, inSession: !!sess[saved.indexOf(c)], here: (() => { try { return JSON.parse(here[saved.indexOf(c)] || 'null'); } catch { return null; } })() };
     });
     // Streams created directly in Mux still show up, without camera details.
     for (const s of byId.values()) {
@@ -354,6 +359,21 @@ export default async function handler(req, res) {
       });
     }
 
+    // Decks recorded on an iPad or phone: every few seconds the device says it's there (input, level, recording)
+    // and gets what Create a session or Stop recording asked of it
+    if (body.action === 'deckHere') {
+      const id = String(body.id || '').slice(0, 40);
+      return await withRedis(async redis => {
+        const cams = await readCameras(redis, slug);
+        if (!cams.some(c => c.id === id && c.kind === 'audio')) return res.status(404).json({ error: 'No such decks slot' });
+        const here = { state: body.state === 'recording' ? 'recording' : 'ready', input: clean(body.input, 80), device: clean(body.device, 40),
+          artist: clean(body.artist, 60), level: Math.max(-90, Math.min(0, Number(body.level) || -90)), at: Date.now() };
+        await redis.set(deckHereKey(slug, id), JSON.stringify(here), { EX: 20 });
+        let cmd = null; try { cmd = JSON.parse(await redis.get(deckCmdKey(slug, id)) || 'null'); } catch {}
+        return res.status(200).json({ ok: true, cmd });
+      });
+    }
+
     if (body.action === 'recordNow' || body.action === 'stopRecording') {
       // Record at any time, outside the calendar: the chosen slots' streams open until Stop. The recording
       // is saved under the On stage name (the same name on the camera and the decks makes one session).
@@ -389,6 +409,9 @@ export default async function handler(req, res) {
             await redis.set(`cam_sched:${cam.streamId}`, 'enabled');
             await openSession(redis, session.muxAuth, cam.streamId);
           }
+          // Decks recorded on an iPad or phone (la-deckrec.js): that device starts recording now, under this session
+          const date = /^\d{4}-\d{2}-\d{2}$/.test(String(body.date || '')) ? String(body.date) : new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date(since));
+          for (const cam of chosen.filter(c => c.kind === 'audio')) await redis.set(deckCmdKey(slug, cam.id), JSON.stringify({ op: 'start', at: since, artist, date }), { EX: 12 * 3600 });
           return res.status(200).json({ ok: true, since });
         }
         // Stop: the recording ends now and is saved; between sets the stream closes again
@@ -403,6 +426,7 @@ export default async function handler(req, res) {
           // The calendar in Camera Control shows this set as finished, at the time it was stopped
           if (setStart) await redis.set(`cam_set_end:${slug}`, JSON.stringify({ start: setStart, endedAt: Date.now() }), { PX: closesAt - Date.now() + 6 * 3600e3 });
         }
+        for (const cam of chosen.filter(c => c.kind === 'audio')) await redis.set(deckCmdKey(slug, cam.id), JSON.stringify({ op: 'stop', at: Date.now() }), { EX: 12 * 3600 });
         for (const cam of chosen) {
           await redis.del(manualKey(cam.streamId));
           await redis.del(`cam_preview:${cam.streamId}`);

@@ -983,7 +983,7 @@
                 camCount(live, camsOnly.length);
 
                 // Only rebuild when something changed, so playing video isn't interrupted
-                var key = JSON.stringify(_cams.map(function(c) { return [c.id, c.status, c.name, c.ndiName, c.ip, c.artist, c.autoClips, c.recording, c.inSession, c.followCalendar]; }).concat([_calNow && _calNow.artist, _calSched]));
+                var key = JSON.stringify(_cams.map(function(c) { return [c.id, c.status, c.name, c.ndiName, c.ip, c.artist, c.autoClips, c.recording, c.inSession, c.followCalendar, hereKey(c)]; }).concat([_calNow && _calNow.artist, _calSched]));
                 if (key === _camKey) return;
                 _camKey = key;
                 grid.innerHTML = '';
@@ -1021,7 +1021,7 @@
             setTimeout(renderMac); paintRecBar();
             var live = _cams.filter(function(c) { return c.status === 'active'; }).length;
             camCount(live, _cams.length, venues.some(function(x) { return x.error; }));
-            var key = 'all' + JSON.stringify(venues.map(function(x) { return x.error || ''; }).concat(_cams.map(function(c) { return [c._venue, c.id, c.status, c.name, c.ndiName, c.ip, c.artist, c.autoClips, c.recording]; })));
+            var key = 'all' + JSON.stringify(venues.map(function(x) { return x.error || ''; }).concat(_cams.map(function(c) { return [c._venue, c.id, c.status, c.name, c.ndiName, c.ip, c.artist, c.autoClips, c.recording, hereKey(c)]; })));
             if (key === _camKey) return;
             _camKey = key;
             grid.innerHTML = '';
@@ -1198,6 +1198,8 @@
         }
         document.addEventListener('pointerdown', function first() { if (_deckMeters.length) startMeters(); }, { once: false, passive: true });
         // Broadcast colour bars: what a camera shows until its picture arrives (live, waiting, or starting)
+        // Decks on an iPad or phone: the card is drawn again when it comes or goes, starts recording or sound starts
+        function hereKey(c) { var h = c.here; return h ? [h.state, h.device, h.input, h.artist, h.level > -60] : null; }
         function camBars(text) { return '<div class="cam-bars"><span><i></i>' + esc(text) + '</span></div>'; }
         // A live camera: colour bars until the picture actually plays (instead of Mux's own placeholder)
         function livePlayer(stage, pid, fit, extra) {
@@ -1225,12 +1227,15 @@
             var card = document.createElement('div');
             card.className = 'cam-card';
             var isLive = c.status === 'active' && c.playbackId;
-            var pill = isLive ? '<span class="cam-pill on">' + (c.inSession ? 'LIVE · REC' : 'LIVE') + '</span>'
+            // Decks on an iPad or phone (la-deckrec.js) that's there now: live on the card, recording or ready
+            var here = c.kind === 'audio' && c.here && Date.now() - c.here.at < 30e3 ? c.here : null;
+            var pill = here ? '<span class="cam-pill on">' + (here.state === 'recording' ? 'REC · ' : 'LIVE · ') + esc((here.device || 'device').toUpperCase()) + '</span>' : isLive ? '<span class="cam-pill on">' + (c.inSession ? 'LIVE · REC' : 'LIVE') + '</span>'
                 : c.status === 'missing' ? '<span class="cam-pill warn">STREAM MISSING</span>'
                 : '<span class="cam-pill">OFFLINE</span>';
             var chips = c._venueName ? '<span class="cam-chip acct">' + esc(c._venueName) + '</span>' : '';
             if (c.model && c.kind !== 'audio') chips += '<span class="cam-chip">' + esc(c.model) + '</span>';
             if (c.ndiName) chips += '<span class="cam-chip ndi" title="NDI source name">NDI · ' + esc(c.ndiName) + '</span>';
+            if (here && here.input) chips += '<span class="cam-chip ndi" title="The decks input on the ' + esc(here.device || 'device') + '">' + esc(here.device || '') + ' · ' + esc(here.input) + '</span>';
             if (c.ip) chips += '<span class="cam-chip">' + esc(c.ip) + '</span>';
             var actions = '';
             if (!c.external && (!c.kind || c.kind === 'obsbot')) actions += '<button type="button" class="cam-link cam-ctl" data-act="control">Control</button>';
@@ -1259,7 +1264,8 @@
             stage.dataset.cam = c.id; stage.dataset.live = isLive ? '1' : '';
             if (c.kind === 'audio') {
                 // The decks: a level look instead of a picture, and the sound to listen in when live
-                stage.innerHTML = '<div class="cam-audio' + (isLive ? ' on' : '') + '"><div class="cam-eq">' + Array.from({ length: 24 }, function(_, k) { return '<i style="animation-delay:' + (k * 0.07 % 0.9).toFixed(2) + 's"></i>'; }).join('') + '</div><span>' + (isLive ? 'Decks audio · live' : 'Waiting for the mixer') + '</span></div>';
+                var on = isLive || !!(here && here.level > -60);
+                stage.innerHTML = '<div class="cam-audio' + (on ? ' on' : '') + '"><div class="cam-eq">' + Array.from({ length: 24 }, function(_, k) { return '<i style="animation-delay:' + (k * 0.07 % 0.9).toFixed(2) + 's"></i>'; }).join('') + '</div><span>' + (here ? (here.state === 'recording' ? 'Recording ' + esc(here.artist || '') + ' on the ' + esc(here.device || 'device') : 'Decks live on the ' + esc(here.device || 'device')) + (here.level > -60 ? '' : ' · no sound coming in') : isLive ? 'Decks audio · live' : 'Waiting for the mixer') + '</span></div>';
                 if (isLive) deckMeter(stage, c.playbackId);
             } else if (isLive) {
                 livePlayer(stage, c.playbackId, 'cover', '');

@@ -8,7 +8,7 @@
     if (window.laDeckRec) return;
     var DB = 'la-deckrec', STORE = 'chunks', META = 'sets';
     var PAD = 120e3;                       // the cameras' 2 minutes before and after each set
-    var st = { stream: null, ctx: null, node: null, analyser: null, deviceId: '', label: '', rate: 48000,
+    var st = { lastCmd: 0, levelDb: null, stream: null, ctx: null, node: null, analyser: null, deviceId: '', label: '', rate: 48000,
         seg: null, follow: false, timer: null, wake: null, uploading: false, cal: null, slot: null, manualArtist: '' };
 
     // ── Storage on the device (IndexedDB): pieces of sound, and the sets waiting to go up ──
@@ -58,9 +58,16 @@
             var ctx = st.ctx = new AC({ sampleRate: 48000, latencyHint: 'playback' });
             st.rate = ctx.sampleRate;
             var src = ctx.createMediaStreamSource(stream);
-            st.analyser = ctx.createAnalyser(); st.analyser.fftSize = 2048; src.connect(st.analyser);
+            // The level: the analyser goes on to a silent output, or the browser never feeds it
             var mute = ctx.createGain(); mute.gain.value = 0; mute.connect(ctx.destination);
-            var onBlock = function(l, r) { if (st.seg) take(l, r); };
+            st.analyser = ctx.createAnalyser(); st.analyser.fftSize = 2048; src.connect(st.analyser); st.analyser.connect(mute);
+            // Every piece of sound: its loudest point counts towards the level, and it's kept while recording
+            var onBlock = function(l, r) {
+                var p = st.peakAcc || 0;
+                for (var i = 0; i < l.length; i++) { var v = Math.abs(l[i]); if (v > p) p = v; v = Math.abs(r[i]); if (v > p) p = v; }
+                st.peakAcc = p;
+                if (st.seg) take(l, r);
+            };
             // Pieces of sound off the audio thread (an AudioWorklet); older browsers: a ScriptProcessor
             var code = "registerProcessor('la-rec', class extends AudioWorkletProcessor { process(i) { var c = i[0]; if (c && c.length) this.port.postMessage([c[0].slice(), (c[1] || c[0]).slice()]); return true; } })";
             var viaWorklet = ctx.audioWorklet ? ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([code], { type: 'application/javascript' }))).then(function() {
@@ -100,10 +107,10 @@
         return tx(STORE, 'readwrite', function(o) { o.add({ set: id, at: Date.now(), blob: blob }); })
             .then(function() { return putSet(seg); }).catch(function(e) { status('Could not keep the recording on this device: ' + (e && e.message || e), true); });
     }
-    function startSet(artist, setStart, setEnd) {
+    function startSet(artist, setStart, setEnd, date, fromSession) {
         if (st.seg) return Promise.resolve();
-        st.seg = { id: 'set-' + Date.now(), artist: String(artist || '').toUpperCase().trim(), date: londonDay(setStart || Date.now()),
-            setStart: setStart || null, setEnd: setEnd || null, startedAt: Date.now(), frames: 0, rate: st.rate, input: st.label, state: 'recording' };
+        st.seg = { id: 'set-' + Date.now(), artist: String(artist || '').toUpperCase().trim(), date: date || londonDay(setStart || Date.now()),
+            setStart: setStart || null, setEnd: setEnd || null, startedAt: Date.now(), frames: 0, rate: st.rate, input: st.label, state: 'recording', fromSession: !!fromSession };
         keepAwake(true);
         return putSet(st.seg).then(render);
     }
@@ -156,7 +163,7 @@
         return laFetch('/api/cameras').then(function(r) { return r.ok ? r.json() : null; }).then(function(d) {
             if (!d) return;
             st.cal = d.calendar || null;
-            if (!st.follow || !st.stream) return render();
+            if (!st.follow || !st.stream || !(st.cal && st.cal.connected)) return render();
             var now = Date.now(), cal = st.cal || {}, cur = cal.current, next = (cal.upcoming || [])[0];
             if (st.seg && st.seg.setEnd && now > st.seg.setEnd + PAD) return stopSet();
             var set = cur && !(cur.endedAt && now > cur.endedAt + PAD) ? cur : next && now >= next.start - PAD ? next : null;
@@ -165,6 +172,29 @@
             render();
         }).catch(function() {});
     }
+    // Every 3 s while on: this device tells the Decks card it's there (input, level, recording), so the card
+    // shows it live to everyone, and picks up Create a session / Stop recording for this slot
+    var deviceName = function() { var u = navigator.userAgent; return /iPad/.test(u) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ? 'iPad' : /iPhone/.test(u) ? 'iPhone' : /Android/.test(u) ? 'Android' : 'Computer'; };
+    function here() {
+        if (!st.slot || !(st.follow || st.seg) || !st.stream) return;
+        var h = { 'Content-Type': 'application/json' }; if (st.slot._venue) h['X-LA-Venue'] = st.slot._venue;
+        laFetch('/api/cameras', { method: 'POST', headers: h, body: JSON.stringify({ action: 'deckHere', id: st.slot.id, state: st.seg ? 'recording' : 'ready',
+            input: st.label, device: deviceName(), artist: st.seg ? st.seg.artist : '', level: Math.round(st.levelDb == null ? -90 : st.levelDb) }) })
+        .then(function(r) { return r.ok ? r.json() : null; }).then(function(d) {
+            var cmd = d && d.cmd; if (!cmd || !(cmd.at > st.lastCmd)) return;
+            st.lastCmd = cmd.at;
+            if (cmd.op === 'start' && !st.seg && Date.now() - cmd.at < 8 * 3600e3) startSet(cmd.artist, null, null, cmd.date, true);
+            if (cmd.op === 'stop' && st.seg && st.seg.fromSession) stopSet();
+        }).catch(function() {});
+    }
+    setInterval(here, 3000);
+    // The level for the card, also when the panel is closed
+    // (the loudest point of the last second, from the sound itself)
+    setInterval(function() {
+        if (!st.stream) { st.levelDb = null; return; }
+        var peak = st.peakAcc || 0; st.peakAcc = 0;
+        st.levelDb = peak > 0 ? Math.max(-90, 20 * Math.log10(peak)) : -90;
+    }, 1000);
     function keepAwake(on) {
         if (!('wakeLock' in navigator)) return;
         if (on && !st.wake) navigator.wakeLock.request('screen').then(function(w) { st.wake = w; w.addEventListener('release', function() { st.wake = null; }); }).catch(function() {});
@@ -190,7 +220,7 @@
         // The bar: while armed or recording, on every visit to the page
         if (st.follow || st.seg) {
             if (!bar) { bar = document.createElement('div'); bar.className = 'dr-bar'; document.body.appendChild(bar); bar.addEventListener('click', function(e) { if (e.target.closest('[data-dr-open]')) open(st.slot); if (e.target.closest('[data-dr-stop]')) disarm(); }); }
-            bar.innerHTML = '<span class="dr-dot' + (st.seg ? '' : ' idle') + '"></span><b>' + (st.seg ? 'Recording ' + (st.ownChosen ? 'from the microphone' : 'decks') + ' · ' + esc(st.seg.artist || 'No artist') + ' · ' + fmtLen(st.seg.frames, st.rate) : 'Decks ready · records each set') + '</b>' +
+            bar.innerHTML = '<span class="dr-dot' + (st.seg ? '' : ' idle') + '"></span><b>' + (st.seg ? 'Recording ' + (st.ownChosen ? 'from the microphone' : 'decks') + ' · ' + esc(st.seg.artist || 'No artist') + ' · ' + fmtLen(st.seg.frames, st.rate) : 'Decks ready on this ' + deviceName() + ' · records with each session') + '</b>' +
                 '<button type="button" data-dr-open>Open</button><button type="button" data-dr-stop>' + (st.seg ? 'Stop' : 'Turn off') + '</button>';
         } else if (bar) { bar.remove(); bar = null; }
         var body = document.getElementById('dr-body');
@@ -200,11 +230,11 @@
             var cal = st.cal || {}, cur = cal.current, next = (cal.upcoming || [])[0];
             var when = cur ? 'On now: ' + esc(cur.artist) + ', until ' + clock(cur.endedAt || cur.end) : next ? 'Next: ' + esc(next.artist) + ', ' + new Date(next.start).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/London' }) + ' ' + clock(next.start) : '';
             var el = body.querySelector('[data-dr-state]');
-            if (el) el.innerHTML = st.seg ? 'Recording <b>' + esc(st.seg.artist || 'No artist') + '</b> from <b>' + esc(st.label || 'the input') + '</b> · ' + fmtLen(st.seg.frames, st.rate) : st.follow ? 'Waiting for the next set. ' + when : (cal.connected ? when : 'No venue calendar: press Record when the set starts.');
+            if (el) el.innerHTML = st.seg ? 'Recording <b>' + esc(st.seg.artist || 'No artist') + '</b> from <b>' + esc(st.label || 'the input') + '</b> · ' + fmtLen(st.seg.frames, st.rate) : st.follow ? 'On: recording starts with <b>Create a session</b> (tick this Decks audio, with the camera)' + (cal.connected ? ' and with every set in the calendar. ' + when : '.') : 'Turn it on to record with Create a session' + (cal.connected ? ' and every set in the calendar. ' + when : ', or press Record now.');
             var btns = body.querySelector('[data-dr-btns]');
             if (btns) btns.innerHTML = !st.stream ? '' : st.seg ? '<button type="button" class="cam-btn" data-dr="stop">Stop and upload</button>'
-                : (cal.connected ? '<button type="button" class="cam-btn primary" data-dr="' + (st.follow ? 'unfollow' : 'follow') + '">' + (st.follow ? 'Stop following the calendar' : 'Record every set') + '</button>' : '') +
-                  '<button type="button" class="cam-btn' + (cal.connected ? '' : ' primary') + '" data-dr="now">Record now</button>';
+                : '<button type="button" class="cam-btn primary" data-dr="' + (st.follow ? 'unfollow' : 'follow') + '">' + (st.follow ? 'Turn off' : 'Turn on') + '</button>' +
+                  '<button type="button" class="cam-btn" data-dr="now">Record now</button>';
             var list = body.querySelector('[data-dr-list]');
             if (list) list.innerHTML = waiting.length ? waiting.map(function(s) {
                 var what = s.state === 'uploading' ? 'Uploading ' + (s.progress || 0) + '%' : s.state === 'failed' ? '<span class="dr-err">Not uploaded: ' + esc(s.error || '') + '</span>' : s.state === 'recording' ? 'Stopped before the end (kept here)' : 'Waiting to upload';
@@ -276,7 +306,8 @@
         body.addEventListener('click', function(e) {
             var b = e.target.closest('[data-dr]'); if (!b) return;
             var a = b.dataset.dr;
-            if (a === 'follow') { st.follow = true; keepAwake(true); tick(); }
+            // Turned on during a session already started: it joins it (a session's start counts for 8 hours)
+            if (a === 'follow') { st.follow = true; st.lastCmd = 0; keepAwake(true); tick(); here(); }
             if (a === 'unfollow') disarm();
             if (a === 'stop') { st.follow = false; stopSet(); }
             if (a === 'upload') uploadAll();
