@@ -224,6 +224,12 @@ async function begin(id) {
   const missing = (link.video && indexOf('video', link.video) == null) ? link.video
     : (soundOf(link) && indexOf('audio', soundOf(link)) == null) ? soundOf(link) : null
   if (missing) return setState(id, 'missing', missing)
+  // Decks audio on the sound a camera on this Mac already sends (a DJI Mic paired to the camera comes in
+  // as the camera's sound): opening the one input twice broke up the sound of both, so the camera keeps it
+  if (link.kind === 'audio' && Object.entries(links).some(([o, l]) => o !== id && l.kind !== 'audio' && soundOf(l) === link.audio)) {
+    setState(id, 'error', link.audio + ' is already the sound of a camera on this Mac. Choose "Not from this Mac" here: the camera records it.')
+    return later(id, RETRY_WAITING_MS)
+  }
   const blocked = await allowed(link)
   if (blocked) { setState(id, 'blocked', blocked); return later(id, RETRY_WAITING_MS) }
   const key = open(link.key)
