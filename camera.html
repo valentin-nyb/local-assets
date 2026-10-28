@@ -469,7 +469,7 @@
         .cam-field > div { display:flex; align-items:center; gap:6px; background:var(--la-input); border:1px solid var(--la-line); border-radius:10px; padding:4px 4px 4px 12px; }
         .cam-field code { flex:1; min-width:0; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--la-text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .cam-field code.secret:not(:hover):not(:focus) { filter:blur(4px); cursor:pointer; }
-        .cam-intro { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,400px); grid-template-rows:auto 1fr; grid-template-areas:'copy ex' 'how ex'; gap:0 48px; align-items:start; border:1px solid var(--la-line); background:var(--la-surface); border-radius:20px; padding:32px; }
+        .cam-intro { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,400px); grid-template-rows:auto 1fr; grid-template-areas:'copy ex' 'how ex'; gap:0 48px; max-width:1180px; align-items:start; border:1px solid var(--la-line); background:var(--la-surface); border-radius:20px; padding:32px; }
         .cam-intro.hidden { display:none; }
         .ci-title { font-size:26px; line-height:1.2; font-weight:600; letter-spacing:-.02em; color:var(--la-text); margin:10px 0 12px; }
         .ci-text { font-size:14px; line-height:1.65; color:var(--la-sub); max-width:520px; }
@@ -507,7 +507,7 @@
         /* The 8 steps under the text, two across, a numbered circle each (as on the home page) */
         .ci-how { grid-area:how; container-type:inline-size; }
         .ci-steps { list-style:none; margin:28px 0 0; padding:24px 0 0; border-top:1px solid var(--la-line-soft); display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px 28px; }
-        @container (max-width: 480px) { .ci-steps { grid-template-columns:minmax(0,1fr); } }
+        @container (max-width: 380px) { .ci-steps { grid-template-columns:minmax(0,1fr); } }
         .ci-steps li { display:flex; gap:12px; min-width:0; }
         .ci-steps li > div { min-width:0; }
         .ci-steps li > b { flex-shrink:0; width:24px; height:24px; border-radius:999px; background:color-mix(in srgb, var(--la-accent) 12%, transparent); color:var(--la-accent); font-size:12px; font-weight:600; display:flex; align-items:center; justify-content:center; }
@@ -518,9 +518,18 @@
         /* Animated logos in orange (a lighter orange on the dark theme) */
         .ci-anim { font-style:normal; color:#F472B6; }
         html:not(.dark) .ci-anim { color:#EA580C; }
-        @media (max-width: 900px) {
-            .cam-intro { grid-template-columns:minmax(0,1fr); grid-template-areas:'copy' 'ex' 'how'; padding:22px 18px; gap:28px; }
+        /* Not wide enough for the two columns: the text, the example's two halves side by side, then the steps */
+        @media (max-width: 1180px) {
+            .cam-intro { grid-template-columns:minmax(0,1fr); grid-template-areas:'copy' 'ex' 'how'; gap:28px; }
             .ci-steps { margin-top:0; }
+            .ci-example { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); grid-template-rows:auto 1fr; column-gap:16px; align-items:start; }
+            .ci-example > .cam-card { grid-column:1; grid-row:1 / span 2; }
+            .ci-example > .ci-arrow { grid-column:2; grid-row:1; justify-content:flex-start; padding:0 0 10px; }
+            .ci-example > .ci-result { grid-column:2; grid-row:2; }
+        }
+        @media (max-width: 700px) { .ci-example { display:block; } .ci-example > .ci-arrow { justify-content:center; padding:12px 0; } }
+        @media (max-width: 900px) {
+            .cam-intro { padding:22px 18px; }
             .ci-title { font-size:22px; }
             .ci-actions .cam-btn { flex:1 1 auto; justify-content:center; }
         }
