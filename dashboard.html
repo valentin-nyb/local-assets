@@ -964,11 +964,28 @@
             (e.SOCIAL || []).forEach(function(c) { files.push({ id: c.id }); });
             (e.THUMB || []).forEach(function(t) { files.push({ id: t.id, url: (t.meta && t.meta.thumbnail_url) || '' }); });
             (_sessionAll[String(artist).toUpperCase().trim() + '|' + date] || []).forEach(function(a) { files.push({ id: a.id }); });
+            // Every other file labelled with this artist on this day: the working copies the vertical clips are
+            // cut from ("ARTIST // SOCIALRAW // 01"), a second HQ audio, clips not listed
+            var all = window._muxAll || [], up = String(artist).toUpperCase().trim();
+            all.forEach(function(a) {
+                var pt = typeof a.passthrough === 'string' ? a.passthrough : '';
+                if (pt.toUpperCase().indexOf(' // ') < 0 || pt.charAt(0) === '{') return;
+                var ms = Number(a.created_at) * 1000;
+                if (pt.toUpperCase().split(' // ')[0].trim() === up && !isNaN(ms) && new Date(ms).toISOString().slice(0, 10) === date) files.push({ id: a.id });
+            });
             // Every clip cut from these recordings, and the watermarked copies of those clips, goes too
             var gone = {}; files.forEach(function(f) { gone[f.id] = true; });
-            for (var pass = 0; pass < 3; pass++) (window._muxAll || []).forEach(function(a) {
+            for (var pass = 0; pass < 3; pass++) all.forEach(function(a) {
                 if (gone[a.id]) return;
                 if ((a.meta && gone[a.meta.external_id]) || gone[a.source_asset_id]) { gone[a.id] = true; files.push({ id: a.id }); }
+            });
+            // The camera's full recording the session was cut from, when it has no name of its own (it isn't a
+            // session in Distribution History) and nothing else was cut from it
+            all.forEach(function(a) {
+                if (gone[a.id] || !all.some(function(c) { return gone[c.id] && c.source_asset_id === a.id; })) return;
+                var named = parsePassthrough(a.passthrough, a.name, a.id).artist !== 'UNTITLED';
+                if (named || all.some(function(c) { return c.source_asset_id === a.id && !gone[c.id]; })) return;
+                gone[a.id] = true; files.push({ id: a.id });
             });
             files = files.filter(function(f, i) { return f.id && files.findIndex(function(x) { return x.id === f.id; }) === i; });
             var parts = [];
