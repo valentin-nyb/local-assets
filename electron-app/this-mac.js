@@ -149,6 +149,12 @@ function closeTap(tap) {
   tap.out = null
   try { tap.win.destroy() } catch {}
 }
+// Between tries: the capture stays open, its pieces go nowhere
+function pauseTap(tap) {
+  if (!tap) return
+  clearInterval(tap.filler)
+  tap.out = null
+}
 // From now on the pieces go into ffmpeg (stdin pipe 4)
 function startTap(tap, pipe) {
   tap.out = pipe; tap.written = 0; tap.drift = 0; tap.lastAt = Date.now()
@@ -325,13 +331,17 @@ async function begin(id) {
   if (run.proc || !links[id]) return
   run.sound = soundOf(link)
   if (run.sound && run.sound !== link.audio) log(link.slotName + ' sound from ' + run.sound)
-  // The sound through Chromium; after a failure, ffmpeg's own capture for 10 minutes before trying again
-  closeTap(run.tap); run.tap = null
-  if (run.sound && !(Date.now() - (run.noTapAt || 0) < 600e3)) {
+  // The sound through Chromium; after a failure, ffmpeg's own capture for 10 minutes before trying again.
+  // The capture stays open between tries (a slot waiting for its set is tried every 20 s: opening the page
+  // and the input each time kept the Mac busy); it's opened again only for another input or after a loss.
+  if (run.tap && (run.tap.name !== run.sound || run.tap.lost)) { closeTap(run.tap); run.tap = null }
+  if (!run.tap && run.sound && !(Date.now() - (run.noTapAt || 0) < 600e3)) {
     run.tap = await openTap(run.sound)
-    if (!run.tap) run.noTapAt = Date.now()
-    if (run.proc || !links[id]) { closeTap(run.tap); run.tap = null; return }
+    if (run.tap) run.tap.name = run.sound
+    else run.noTapAt = Date.now()
+    if (run.proc || !links[id]) return
   }
+  if (!run.sound && run.tap) { closeTap(run.tap); run.tap = null }
   run.startedAt = Date.now(); run.sentAt = 0
   if (run.tap) run.tap.t0 = Date.now()
   const proc = spawn(FFMPEG, argsFor(link, key, run), { stdio: ['ignore', 'pipe', 'pipe', link.kind === 'audio' ? 'ignore' : 'pipe', run.tap ? 'pipe' : 'ignore'] })
@@ -362,7 +372,7 @@ async function begin(id) {
   })
   proc.on('exit', code => {
     run.proc = null
-    closeTap(run.tap); run.tap = null
+    pauseTap(run.tap)
     clearInterval(run.stallCheck)
     const stalled = run.stalled; run.stalled = null
     if (!links[id]) return
@@ -476,7 +486,7 @@ async function poll() {
     for (const id of Object.keys(runs)) {
       const l = links[id], r = runs[id]
       const gone = (l.video && indexOf('video', l.video) == null) || (soundOf(l) && indexOf('audio', soundOf(l)) == null)
-      if (gone) { if (r.proc) end(r.proc); stopPreview(r) } else if (!gone && r.state === 'missing') { r.state = 'starting'; start(id) }
+      if (gone) { if (r.proc) end(r.proc); stopPreview(r); closeTap(r.tap); r.tap = null } else if (!gone && r.state === 'missing') { r.state = 'starting'; start(id) }
       else if (r.proc && l.kind !== 'audio' && r.sound !== soundOf(l)) { log(l.slotName + ' sound now ' + (soundOf(l) || 'none')); r.switching = true; end(r.proc) }
     }
     notify()
