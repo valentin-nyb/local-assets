@@ -228,9 +228,9 @@
 
             <div class="kpi-grid">
                 <div class="kpi kpi-account">
-                    <div class="kpi-head"><span class="kpi-label">Total assets</span></div>
+                    <div class="kpi-head"><span class="kpi-label">Sessions</span></div>
                     <div id="live-asset-total" class="kpi-value">—</div>
-                    <div class="kpi-sub"><span id="growth-pct"></span></div>
+                    <div class="kpi-sub"><span id="growth-pct"></span><span id="asset-kinds" style="display:block;margin-top:8px"></span></div>
                 </div>
                 <div class="kpi kpi-account">
                     <div class="kpi-head"><span class="kpi-label">Cloud storage</span></div>
@@ -1333,17 +1333,36 @@
             } catch (e) { /* network error → treat as empty */ }
 
             // Update real asset count and 30-day growth %
-            // A recording still being made (the camera is live) or one that failed isn't a file yet: not counted
-            const counted = muxAssets.filter(a => !a.is_live && a.status !== 'preparing' && a.status !== 'errored');
+            // Sessions (each recording's full set), with the files they hold by kind underneath. Every vertical
+            // clip, the HQ audio and each thumbnail is its own file, so counting files read as many more
+            // than the sessions in Distribution History. A recording still being made (the camera is live),
+            // one that failed and the working copies the clips are cut from aren't counted.
+            const kindOf = a => {
+                if (Array.isArray(a.tracks) && a.tracks.length && !a.tracks.some(t => t.type === 'video')) return 'audio';
+                const pt = String(a.passthrough || '');
+                let cam = '';
+                try { const o = JSON.parse(pt); cam = String((o && o.camera) || ''); } catch (_) { cam = pt.split(' // ')[1] || ''; }
+                cam = cam.toUpperCase().trim();
+                return cam === 'AUDIO' ? 'audio' : cam === 'SOCIAL' ? 'clip' : cam === 'SOCIALRAW' ? 'raw' : cam === 'THUMB' ? 'thumb' : 'long';
+            };
+            const counted = muxAssets.filter(a => !a.is_live && a.status !== 'preparing' && a.status !== 'errored' && kindOf(a) !== 'raw');
+            const sessionsList = counted.filter(a => kindOf(a) === 'long');
             const totalEl = document.getElementById('live-asset-total');
-            if (totalEl) totalEl.textContent = counted.length.toLocaleString();
+            if (totalEl) totalEl.textContent = sessionsList.length.toLocaleString();
             const nowTs = Date.now() / 1000;
             const thirtyDaysAgo = nowTs - (30 * 86400);
-            const recentCount = counted.filter(a => a.created_at > thirtyDaysAgo).length;
+            const recentCount = sessionsList.filter(a => a.created_at > thirtyDaysAgo).length;
             const pctEl = document.getElementById('growth-pct');
             if (pctEl) pctEl.innerHTML = recentCount > 0
                 ? '<span class="kpi-up">+' + recentCount + ' in the last 30 days</span>'
                 : 'None in the last 30 days';
+            const kindsEl = document.getElementById('asset-kinds');
+            if (kindsEl) {
+                const n = {}; counted.forEach(a => { const k = kindOf(a); n[k] = (n[k] || 0) + 1; });
+                const part = (k, one, many) => n[k] ? n[k] + ' ' + (n[k] === 1 ? one : many) : '';
+                const parts = [part('long', 'long form', 'long forms'), part('audio', 'HQ audio', 'HQ audios'), part('clip', 'vertical clip', 'vertical clips'), part('thumb', 'thumbnail', 'thumbnails')].filter(Boolean);
+                kindsEl.textContent = counted.length ? counted.length + ' file' + (counted.length !== 1 ? 's' : '') + ': ' + parts.join(' · ') : '';
+            }
 
             // Calculate real cloud storage from static rendition file sizes
             let totalBytes = 0;
