@@ -190,7 +190,7 @@
         // The bar: while armed or recording, on every visit to the page
         if (st.follow || st.seg) {
             if (!bar) { bar = document.createElement('div'); bar.className = 'dr-bar'; document.body.appendChild(bar); bar.addEventListener('click', function(e) { if (e.target.closest('[data-dr-open]')) open(st.slot); if (e.target.closest('[data-dr-stop]')) disarm(); }); }
-            bar.innerHTML = '<span class="dr-dot' + (st.seg ? '' : ' idle') + '"></span><b>' + (st.seg ? 'Recording decks · ' + esc(st.seg.artist || 'No artist') + ' · ' + fmtLen(st.seg.frames, st.rate) : 'Decks ready · records each set') + '</b>' +
+            bar.innerHTML = '<span class="dr-dot' + (st.seg ? '' : ' idle') + '"></span><b>' + (st.seg ? 'Recording ' + (st.ownChosen ? 'from the microphone' : 'decks') + ' · ' + esc(st.seg.artist || 'No artist') + ' · ' + fmtLen(st.seg.frames, st.rate) : 'Decks ready · records each set') + '</b>' +
                 '<button type="button" data-dr-open>Open</button><button type="button" data-dr-stop>' + (st.seg ? 'Stop' : 'Turn off') + '</button>';
         } else if (bar) { bar.remove(); bar = null; }
         var body = document.getElementById('dr-body');
@@ -200,7 +200,7 @@
             var cal = st.cal || {}, cur = cal.current, next = (cal.upcoming || [])[0];
             var when = cur ? 'On now: ' + esc(cur.artist) + ', until ' + clock(cur.endedAt || cur.end) : next ? 'Next: ' + esc(next.artist) + ', ' + new Date(next.start).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/London' }) + ' ' + clock(next.start) : '';
             var el = body.querySelector('[data-dr-state]');
-            if (el) el.innerHTML = st.seg ? 'Recording <b>' + esc(st.seg.artist || 'No artist') + '</b> · ' + fmtLen(st.seg.frames, st.rate) : st.follow ? 'Waiting for the next set. ' + when : (cal.connected ? when : 'No venue calendar: press Record when the set starts.');
+            if (el) el.innerHTML = st.seg ? 'Recording <b>' + esc(st.seg.artist || 'No artist') + '</b> from <b>' + esc(st.label || 'the input') + '</b> · ' + fmtLen(st.seg.frames, st.rate) : st.follow ? 'Waiting for the next set. ' + when : (cal.connected ? when : 'No venue calendar: press Record when the set starts.');
             var btns = body.querySelector('[data-dr-btns]');
             if (btns) btns.innerHTML = !st.stream ? '' : st.seg ? '<button type="button" class="cam-btn" data-dr="stop">Stop and upload</button>'
                 : (cal.connected ? '<button type="button" class="cam-btn primary" data-dr="' + (st.follow ? 'unfollow' : 'follow') + '">' + (st.follow ? 'Stop following the calendar' : 'Record every set') + '</button>' : '') +
@@ -235,6 +235,7 @@
         openCamDialog('Record the decks here', '<div id="dr-body">' +
             '<p class="cam-dialog-text">Plug the mixer into this device: its USB, a USB audio interface, or the audio jack (on an iPad without one, a USB-C to 3.5 mm adapter with a mic input). Then choose it below. The sound is recorded here, uncompressed, and each set goes up as that session’s HQ audio when it ends.</p>' +
             '<label class="cam-field" style="margin-top:14px"><span>Decks input</span><select data-dr-in style="height:40px;border-radius:10px;border:1px solid var(--la-line);background:var(--la-input);color:var(--la-text);padding:0 10px"><option>Looking for inputs…</option></select></label>' +
+            '<div data-dr-warn></div>' +
             '<div class="dr-meter" aria-hidden="true"><i></i></div><p class="dr-note" style="margin-top:2px">The bar moves with the music. Red means too loud: turn the mixer’s output down a little.</p>' +
             '<p class="dr-note" data-dr-state style="color:var(--la-text);font-size:13px"></p>' +
             '<label class="cam-field" style="margin-top:10px"><span>Artist (when there\u2019s no set in the calendar)</span><input data-dr-artist maxlength="60" placeholder="DJ name" value="' + esc(st.manualArtist || (st.slot && st.slot.artist) || '') + '" style="height:40px;border-radius:10px;border:1px solid var(--la-line);background:var(--la-input);color:var(--la-text);padding:0 12px;font-size:14px"></label>' +
@@ -243,15 +244,34 @@
             '<div class="dr-list" data-dr-list></div>' +
             '<p class="dr-note">Keep this page open on screen and the device on charge: it records only while the page is showing (the screen stays on by itself).</p></div>');
         var body = document.getElementById('dr-body'), sel = body.querySelector('[data-dr-in]');
-        inputs().then(function(list) {
-            if (!list.length) { sel.innerHTML = '<option>No sound input found</option>'; return; }
-            var pick = st.deviceId && list.find(function(d) { return d.deviceId === st.deviceId; }) || list.find(function(d) { return !builtIn.test(d.label); }) || list[0];
-            sel.innerHTML = list.map(function(d, i) { return '<option value="' + esc(d.deviceId) + '"' + (d === pick ? ' selected' : '') + '>' + esc(d.label || 'Input ' + (i + 1)) + '</option>'; }).join('');
-            return (st.stream && st.deviceId === pick.deviceId ? Promise.resolve() : openInput(pick.deviceId)).then(meter);
-        }).catch(function(e) { status('Could not open the sound input: ' + (e && e.message || e) + '. Allow the microphone for this site and try again.', true); });
+        // The decks are only ever an input plugged in: the device's own microphone is listed last, marked, and
+        // used only when chosen by hand (it once recorded the room instead of the decks, with nothing said)
+        var warn = body.querySelector('[data-dr-warn]');
+        var fill = function() {
+            return inputs().then(function(list) {
+                var ext = list.filter(function(d) { return !builtIn.test(d.label); }), own = list.filter(function(d) { return builtIn.test(d.label); });
+                var cur = st.deviceId && list.find(function(d) { return d.deviceId === st.deviceId; });
+                var pick = cur && (!builtIn.test(cur.label) || st.ownChosen) ? cur : ext[0] || null;
+                sel.innerHTML = (pick ? '' : '<option value="" selected>Choose the decks</option>') +
+                    ext.map(function(d, i) { return '<option value="' + esc(d.deviceId) + '"' + (d === pick ? ' selected' : '') + '>' + esc(d.label || 'Input ' + (i + 1)) + '</option>'; }).join('') +
+                    own.map(function(d) { return '<option value="' + esc(d.deviceId) + '"' + (d === pick ? ' selected' : '') + '>' + esc((d.label || 'Microphone') + ' \u2014 this device\u2019s microphone, not the decks') + '</option>'; }).join('');
+                warn.innerHTML = ext.length ? '' : '<div class="dr-item" style="display:block;margin-top:10px;line-height:1.55"><b class="dr-err">This device doesn\u2019t see the decks yet: only its own microphone.</b><br>' +
+                    'Connect the mixer as a sound input, then press Look again:<br>\u2022 <b>USB:</b> the mixer\u2019s USB, if it works as a USB sound card without a driver on this device, or a USB audio interface with the mixer\u2019s <b>Rec Out</b> or <b>Booth Out</b> in its line inputs (through a powered USB-C hub if it needs power).<br>' +
+                    '\u2022 <b>Audio jack:</b> the headphone jack only takes a microphone plug (4 rings, TRRS): use a line-to-mic TRRS cable or an iRig-type adapter from the mixer\u2019s Rec or Booth Out. A plain stereo cable isn\u2019t heard as an input.' +
+                    '<br><button type="button" class="cam-btn" data-dr="rescan" style="margin-top:10px">Look again</button></div>';
+                if (!pick) { if (!st.seg) closeInput(); render(); return; }
+                return (st.stream && st.deviceId === pick.deviceId ? Promise.resolve() : openInput(pick.deviceId)).then(meter).then(render);
+            }).catch(function(e) { status('Could not open the sound input: ' + (e && e.message || e) + '. Allow the microphone for this site and try again.', true); });
+        };
+        fill();
+        // Plugged in (or out) while the panel is open: the list follows
+        if (navigator.mediaDevices.addEventListener) navigator.mediaDevices.addEventListener('devicechange', function() { if (document.body.contains(sel) && !st.seg) fill(); });
         sel.addEventListener('change', function() {
             if (st.seg) { status('Stop the recording before changing the input.', true); sel.value = st.deviceId; return; }
-            openInput(sel.value).then(meter).catch(function(e) { status('Could not open that input: ' + (e && e.message || e), true); });
+            var opt = sel.options[sel.selectedIndex];
+            st.ownChosen = !!(opt && /not the decks/.test(opt.textContent));
+            if (!sel.value) { closeInput(); render(); return; }
+            openInput(sel.value).then(meter).then(render).catch(function(e) { status('Could not open that input: ' + (e && e.message || e), true); });
         });
         body.addEventListener('click', function(e) {
             var b = e.target.closest('[data-dr]'); if (!b) return;
@@ -260,6 +280,7 @@
             if (a === 'unfollow') disarm();
             if (a === 'stop') { st.follow = false; stopSet(); }
             if (a === 'upload') uploadAll();
+            if (a === 'rescan') { status(''); fill(); }
             if (a === 'now') {
                 // The calendar's set, else the artist typed here (or On stage on the card)
                 var cal = st.cal || {}, typed = body.querySelector('[data-dr-artist]');
