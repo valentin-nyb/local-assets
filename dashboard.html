@@ -640,7 +640,7 @@
             return String(name).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
         }
         var _linkedWant = {}, _linkedAsked = {}, _linkedLogos = {};   // other accounts' logos (?logosFor), asked once per name
-        var _brandPhotos = null, _venueLogos = {}, _venueLogosByName = {}, _venueOwnerByName = {}, _brandPhotosAt = 0, _venueRefetched = false;
+        var _brandPhotos = null, _artistLogos = {}, _venueLogos = {}, _venueLogosByName = {}, _venueOwnerByName = {}, _brandPhotosAt = 0, _venueRefetched = false;
         function nameKey(v) { return String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ''); }
         // Brand Kit data: this account's, or on the admin account every client's merged
         function brandForView() {
@@ -665,11 +665,21 @@
         }
         function applyArtistPhotos() {
             var paint = function() {
+                var darkNow = document.documentElement.classList.contains('dark');
                 document.querySelectorAll('[data-artist-photo]').forEach(function(box) {
                     var url = _brandPhotos && _brandPhotos[box.dataset.artistPhoto];
-                    if (!url || box.dataset.painted === url) return;
-                    box.dataset.painted = url;
-                    box.innerHTML = '<img src="' + url.replace(/"/g, '&quot;') + '" alt="" style="width:100%;height:100%;object-fit:cover">';
+                    if (!url) return;
+                    // A logo chosen as the artist's picture shows whole, in its version for the theme (as the venue
+                    // tiles do); cropped to fill the tile it was cut off. A photo still fills the tile.
+                    var logos = _artistLogos[box.dataset.artistPhoto] || (_venueLogos['venue-' + box.dataset.artistPhoto.slice(7)] || []).filter(function(x) { return x.logo; });
+                    var isLogo = logos.some(function(x) { return x.url === url; });
+                    if (isLogo) url = pickVenueLogo(logos, darkNow);
+                    var key = url + (isLogo ? (darkNow ? '#d' : '#l') : '');
+                    if (box.dataset.painted === key) return;
+                    box.dataset.painted = key;
+                    if (isLogo) box.style.setProperty('background', darkNow ? '#141416' : '#f4f4f5', 'important');
+                    else box.style.removeProperty('background');
+                    box.innerHTML = '<img src="' + url.replace(/"/g, '&quot;') + '" alt="" ' + (isLogo ? 'crossorigin="anonymous" onload="fitLogoBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}" style="width:100%;height:100%;object-fit:contain;padding:5px"' : 'crossorigin="anonymous" onload="fitArtistPic(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}" style="width:100%;height:100%;object-fit:cover"') + '>';
                 });
                 // Session rows: the venue's logo from the Brand Kit replaces the calendar icon.
                 // Dark theme shows a white logo on a dark tile, light theme a black logo on a light tile.
@@ -748,6 +758,13 @@
                     list[better ? 'unshift' : 'push']({ url: f.url, name: f.name, logo: better });
                     _venueLogosByName[nameKey(f.owner === 'venue' ? (d.orgName || getVenueName()) : (names[f.owner] || f.owner.replace(/^(venue|label)-/, '')))] = list;
                 });
+                // Each artist's logos (an artist account's own kit is "venue"), for a logo chosen as its picture
+                _artistLogos = {};
+                ((d && d.files) || []).forEach(function(f) {
+                    var k = f.owner === 'venue' && d.orgType === 'artist' ? 'artist-' + brandSlug(d.orgName || getVenueName()) : f.owner;
+                    if (k.indexOf('artist-') !== 0 || f.category !== 'logos' || !/\.(png|jpe?g|svg|webp|gif)$/i.test(f.name)) return;
+                    (_artistLogos[k] = _artistLogos[k] || []).push({ url: f.url, name: f.name, logo: true });
+                });
                 _brandPhotosAt = Date.now(); paint();
             }).catch(function() {});
         }
@@ -764,6 +781,20 @@
         // a colourful one keeps its colours on a contrasting tile
         // An animated GIF: a browser reads only its first frame onto a canvas, and that frame can be empty
         // (a logo that animates in). Decode a frame from the middle instead, where the logo shows.
+        // An artist picture with see-through parts is a logo (not in the kit's logos): shown whole, like one
+        function fitArtistPic(img) {
+            try {
+                var c = document.createElement('canvas'), n = 24; c.width = n; c.height = n;
+                var ctx = c.getContext('2d', { willReadFrequently: true }); ctx.drawImage(img, 0, 0, n, n);
+                var d = ctx.getImageData(0, 0, n, n).data, clear = 0;
+                for (var i = 3; i < d.length; i += 4) if (d[i] < 40) clear++;
+                if (clear / (n * n) < 0.05) return;
+            } catch (_) { return; }
+            var dark = document.documentElement.classList.contains('dark');
+            img.parentNode.style.setProperty('background', dark ? '#141416' : '#f4f4f5', 'important');
+            img.style.objectFit = 'contain'; img.style.padding = '5px';
+            fitLogoBg(img);
+        }
         var _gifStats = {};
         function gifStats(url) {
             if (_gifStats[url]) return _gifStats[url];
