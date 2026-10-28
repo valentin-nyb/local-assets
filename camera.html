@@ -40,6 +40,7 @@
     <script src="/la-djframe.js?v=4"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player@3"></script>
     <script src="nav-component.js?v=49"></script>
+    <script src="la-deckrec.js?v=1"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
         .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
@@ -1235,6 +1236,8 @@
             if (!c.external && (!c.kind || c.kind === 'obsbot')) actions += '<button type="button" class="cam-link cam-ctl" data-act="control">Control</button>';
             if (c.ip) actions += '<a class="cam-link" href="http://' + esc(c.ip) + '/" target="_blank" rel="noopener" title="The camera\'s own settings page. Works on the venue network.">Camera page</a>';
             if (c._venue && !c.external && (!c.kind || c.kind === 'obsbot')) actions += '<button type="button" class="cam-link" data-act="relay" title="Remote control through this account\'s venue relay">Relay</button>';
+            // Decks into this iPad or computer (USB or the audio jack): recorded here (la-deckrec.js); a™ on a Mac links them in This Mac
+            if (!c.external && c.kind === 'audio' && window.laDeckRec && !(window.laApp && window.laApp.mac)) actions += '<button type="button" class="cam-link" data-act="here">Record here</button>';
             if (!c.external) {
                 actions += '<button type="button" class="cam-link" data-act="setup">Stream setup</button>';
                 actions += '<button type="button" class="cam-link" data-act="edit">Edit</button>';
@@ -1269,6 +1272,7 @@
                 b.addEventListener('click', function() {
                     var act = b.dataset.act;
                     if (act === 'setup') openStreamSetup(c);
+                    if (act === 'here') window.laDeckRec.open(c);
                     if (act === 'edit') openCamForm(c);
                     if (act === 'remove') removeCamera(c, b);
                     if (act === 'stage') openOnStage(c);
@@ -2023,6 +2027,7 @@
                     '<li><b>Pan, tilt, zoom and tracking</b> work from Controls on the camera card, on the venue network.</li>' +
                     '</ol>' +
                 '</div>') +
+                (!inApp && !c && window.laDeckRec ? '<label class="cam-check cam-audio-only"><input type="checkbox" name="hereRec" checked><span>Decks plugged into this device<small>The mixer into this iPad, iPhone or computer by USB or the audio jack: recorded here and uploaded as each set\'s HQ audio.</small></span></label>' : '') +
                 (inApp && !c ? '<label class="cam-audio-only">Mixer on this Mac<select name="macMixer"></select><small>Plug the mixer in by USB, or into an audio interface, and choose it here. a™ sends it by itself during every set. No OBS needed.</small></label>' : '') +
                 '<div class="cam-audio-only cam-howto">' +
                     '<p class="cam-howto-t">How to connect your decks</p>' +
@@ -2094,6 +2099,7 @@
                         }
                         _camKey = ''; await loadCameras();
                         if (c || linkKind) { closeCamDialog(); if (linkKind) laToast(d.camera.name + ' is linked to this Mac. It records with the calendar, or press Create a session.'); }
+                        else if (k === 'audio' && form.hereRec && form.hereRec.checked && window.laDeckRec) window.laDeckRec.open(d.camera);
                         else openStreamSetup(d.camera);
                     })
                     .catch(function(err) { document.getElementById('cam-form-error').textContent = err.message; btn.disabled = false; btn.textContent = c ? 'Save' : 'Add camera'; });
