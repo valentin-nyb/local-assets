@@ -1544,7 +1544,9 @@
                     (deck
                         ? '<label>Mixer or audio input<select data-mac="audio">' + macOptions(d.audio, cur.audio, 'Not from this Mac') + '</select></label>'
                         : '<label>Camera<select data-mac="video">' + macOptions(d.video, cur.video, 'Not from this Mac') + '</select></label>' +
-                          '<label>Sound<select data-mac="audio">' + macOptions(d.audio, cur.audio, 'No sound') + '</select></label>') +
+                          '<label>Sound<select data-mac="audio">' + macOptions(d.audio, cur.audio, 'No sound') + '</select>' +
+                          // a™ takes the sound from a wireless mic's receiver (DJI Mic and the like) while it's plugged in
+                          (cur.sound && cur.sound !== cur.audio ? '<small style="color:var(--la-accent)">Using ' + esc(cur.sound) + ' while it\u2019s plugged in</small>' : '') + '</label>') +
                     macChip(l) + '</div>';
             }).join('');
             macPreviews(st);

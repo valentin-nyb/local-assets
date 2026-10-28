@@ -85,12 +85,17 @@ function listDevices() {
   })
 }
 const indexOf = (kind, name) => (devices[kind].find(d => d.name === name) || {}).index
+// A wireless mic's receiver (DJI Mic and the like) plugged into the Mac: a camera takes its sound from it
+// while it's there, whatever sound was picked, and goes back to that sound when it's unplugged
+const WIRELESS = /\bDJI\b.*\b(mic|rx)\b|\bmic\s*(mini|[23])\b|wireless|\blark\b|hollyland|saramonic/i
+const wirelessMic = () => (devices.audio.find(d => WIRELESS.test(d.name)) || {}).name
+const soundOf = link => link.kind === 'audio' ? link.audio : (wirelessMic() || link.audio)
 
 // ── Permissions (asked once by macOS) ────────────────────────────────────────
 async function allowed(link) {
   const need = []
   if (link.video) need.push('camera')
-  if (link.audio) need.push('microphone')
+  if (soundOf(link)) need.push('microphone')
   for (const m of need) {
     const s = systemPreferences.getMediaAccessStatus(m)
     if (s === 'granted') continue
@@ -118,7 +123,7 @@ function argsFor(link, key, run) {
       '-b:v', '300k', '-maxrate', '300k', '-bufsize', '600k', '-g', '20', '-keyint_min', '20', '-sc_threshold', '0', '-pix_fmt', 'yuv420p', ...audioOut, ...out]
   }
   const [size, fps] = run.picked || VIDEO_MODES[run.mode] || VIDEO_MODES[VIDEO_MODES.length - 1]
-  const a = link.audio ? indexOf('audio', link.audio) : null
+  const a = soundOf(link) ? indexOf('audio', soundOf(link)) : null
   return ['-hide_banner', '-nostats', '-loglevel', 'error', '-progress', 'pipe:1', '-y',
     ...Q, '-f', 'avfoundation', ...(fps ? ['-framerate', fps] : []), ...(size ? ['-video_size', size] : []),
     '-i', indexOf('video', link.video) + ':' + (a == null ? 'none' : a),
@@ -217,7 +222,7 @@ async function begin(id) {
   const link = links[id], run = runs[id]
   if (!link || !run || run.proc) return
   const missing = (link.video && indexOf('video', link.video) == null) ? link.video
-    : (link.audio && indexOf('audio', link.audio) == null) ? link.audio : null
+    : (soundOf(link) && indexOf('audio', soundOf(link)) == null) ? soundOf(link) : null
   if (missing) return setState(id, 'missing', missing)
   const blocked = await allowed(link)
   if (blocked) { setState(id, 'blocked', blocked); return later(id, RETRY_WAITING_MS) }
@@ -228,7 +233,8 @@ async function begin(id) {
   await relayReady
   await stopPreview(run)
   if (run.proc || !links[id]) return
-  run.startedAt = Date.now(); run.sentAt = 0
+  run.startedAt = Date.now(); run.sentAt = 0; run.sound = soundOf(link)
+  if (run.sound && run.sound !== link.audio) log(link.slotName + ' sound from ' + run.sound)
   const proc = spawn(FFMPEG, argsFor(link, key, run), { stdio: ['ignore', 'pipe', 'pipe', link.kind === 'audio' ? 'ignore' : 'pipe'] })
   if (link.kind !== 'audio') readFrames(id, proc.stdio[3])
   run.proc = proc
@@ -259,6 +265,8 @@ async function begin(id) {
     clearInterval(run.stallCheck)
     const stalled = run.stalled; run.stalled = null
     if (!links[id]) return
+    // Its sound changed (a wireless mic plugged in or out): straight back with the new one
+    if (run.switching) { run.switching = false; setState(id, 'starting', 'Switching sound'); return later(id, 300) }
     const wasSending = run.state === 'sending'
     const lived = Date.now() - run.startedAt
     log(link.slotName + ' exit ' + code + ' after ' + Math.round(lived / 1000) + 's' + (wasSending ? ' (was sending)' : '') + ': ' + errText.split('\n').filter(Boolean).slice(-3).join(' | '))
@@ -362,8 +370,9 @@ async function poll() {
   if (changed) {
     for (const id of Object.keys(runs)) {
       const l = links[id], r = runs[id]
-      const gone = (l.video && indexOf('video', l.video) == null) || (l.audio && indexOf('audio', l.audio) == null)
+      const gone = (l.video && indexOf('video', l.video) == null) || (soundOf(l) && indexOf('audio', soundOf(l)) == null)
       if (gone) { if (r.proc) end(r.proc); stopPreview(r) } else if (!gone && r.state === 'missing') { r.state = 'starting'; start(id) }
+      else if (r.proc && l.kind !== 'audio' && r.sound !== soundOf(l)) { log(l.slotName + ' sound now ' + (soundOf(l) || 'none')); r.switching = true; end(r.proc) }
     }
     notify()
   }
@@ -419,7 +428,7 @@ function state(venue) {
   for (const [id, l] of Object.entries(links)) {
     if (venue && l.venue !== venue) continue
     const r = runs[id] || {}
-    out[l.slotId] = { video: l.video || '', audio: l.audio || '', kind: l.kind, state: r.state || 'starting', detail: r.detail || (confirmed.has(id) ? '' : 'Checking Camera Control'), frame: !!l.frameCam }
+    out[l.slotId] = { video: l.video || '', audio: l.audio || '', sound: soundOf(l) || '', kind: l.kind, state: r.state || 'starting', detail: r.detail || (confirmed.has(id) ? '' : 'Checking Camera Control'), frame: !!l.frameCam }
   }
   return { devices: { video: devices.video.map(d => d.name), audio: devices.audio.map(d => d.name) }, links: out }
 }
