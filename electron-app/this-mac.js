@@ -109,10 +109,10 @@ async function allowed(link) {
 // ── Streaming ────────────────────────────────────────────────────────────────
 function argsFor(link, key, run) {
   const out = ['-rtmp_tcurl', `rtmps://${MUX_HOST}:443/app`, '-f', 'flv', ingest() + key]
-  // The sound keeps its own clock: gaps when the Mac or the receiver hiccups are filled and drift is
-  // stretched out, instead of the sound breaking up (it did with a DJI Mic). A deep input queue so no
-  // audio is dropped while the video encoder is busy.
-  const audioOut = ['-af', 'aresample=async=1000:first_pts=0', '-c:a', 'aac', '-b:a', '320k', '-ar', '48000', '-ac', '2']
+  // Gaps when the Mac or the receiver hiccups are filled and drift is stretched out, keeping the sound's
+  // own timestamps (so it stays in sync with the picture). A deep input queue so no audio is dropped
+  // while the video encoder is busy.
+  const audioOut = ['-af', 'aresample=async=1000', '-c:a', 'aac', '-b:a', '320k', '-ar', '48000', '-ac', '2']
   const Q = ['-thread_queue_size', '4096']
   if (link.kind === 'audio') {
     // Decks: the mixer's sound with a still black picture (the platform keeps the sound as the set's HQ audio)
@@ -130,12 +130,11 @@ function argsFor(link, key, run) {
   const fit = w * h > HD ? ['-vf', w >= h ? 'scale=1920:-2' : 'scale=-2:1920'] : []
   return ['-hide_banner', '-nostats', '-loglevel', 'error', '-progress', 'pipe:1', '-y',
     ...Q, '-f', 'avfoundation', ...(fps ? ['-framerate', fps] : []), ...(size ? ['-video_size', size] : []),
-    '-i', indexOf('video', link.video) + ':none',
-    // The sound is opened as its own input, read on its own thread. Read with the picture, it waited while
-    // each large frame was copied, and the capture keeps only the newest piece of sound: the rest was lost
-    // and the sound came through cut. Mux drops a live stream with no sound, so "No sound" sends silence.
-    ...(a == null ? [...Q, '-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo'] : [...Q, '-f', 'avfoundation', '-i', ':' + a]),
-    '-map', '0:v', '-map', '1:a', ...fit,
+    // Picture and sound opened together, so they keep one clock and stay in sync (as two inputs each would
+    // start at zero on its own). Mux drops a live stream with no sound, so "No sound" sends silence.
+    '-i', indexOf('video', link.video) + ':' + (a == null ? 'none' : a),
+    ...(a == null ? [...Q, '-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo'] : []),
+    '-map', '0:v', '-map', a == null ? '1:a' : '0:a', ...fit,
     // x264 as OBS sends it (Mux hung up on the Mac's hardware encoder after ~15 s): steady bitrate,
     // a keyframe every 2 s, no B-frames
     '-c:v', 'libx264', '-preset', 'veryfast', '-tune', 'zerolatency', '-profile:v', 'high',
