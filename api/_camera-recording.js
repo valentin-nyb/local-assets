@@ -150,6 +150,17 @@ export async function processCameraRecording(event) {
     }
     console.log(`[camera-rec] ${slug} ${camName}${calSets.length ? ' (calendar)' : ''}: ${sessions.map(s => s.artist).join(', ')}`);
 
+    // No Decks slot: the main camera's sound is the decks' (a mic or transmitter on the mixer, into the camera),
+    // so a single set's recording also gives its HQ AUDIO. Sets cut by the calendar get theirs when Mux has
+    // each one ready (api/mux-webhook.js).
+    if (!isAudio && camLabel === 'MASTER' && !calSets.length && sets.length === 1 && !cams.some(c => c.kind === 'audio' && c.streamId)
+        && (asset.tracks || []).some(t => t.type === 'audio')) {
+      await muxReq(auth, '/video/v1/assets', { method: 'POST', body: JSON.stringify({
+        input: [{ url: `mux://assets/${assetId}` }], playback_policy: ['public'], video_quality: 'basic',
+        passthrough: tag(sets[0].artist, date, null, 'AUDIO'), static_renditions: [{ resolution: 'audio-only' }],
+      }) }).then(a => console.log(`[camera-rec] ${slug} HQ audio from ${camName}: ${a.id}`))
+        .catch(e => console.error('[camera-rec] HQ audio', assetId, e.message));
+    }
     // A single decks recording (no split): saved as audio only (the sets cut by the calendar are handled
     // when Mux has them ready, in api/mux-webhook.js)
     if (isAudio && !calSets.length && sets.length === 1) {

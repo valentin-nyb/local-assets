@@ -1545,7 +1545,7 @@
                         ? '<label>Mixer or audio input<select data-mac="audio">' + macOptions(d.audio, cur.audio, 'Not from this Mac') + '</select>' +
                           // The same input as a camera's sound (a DJI Mic paired to the camera comes in through it): the camera records it
                           (cur.audio && Object.keys(st.links).some(function(o) { var x = st.links[o]; return o !== c.id && x.kind !== 'audio' && (x.sound || x.audio) === cur.audio; })
-                              ? '<small style="color:var(--la-bad)">A camera on this Mac already sends this sound. Choose \u201cNot from this Mac\u201d: the camera records it.</small>' : '') + '</label>'
+                              ? '<small style="color:var(--la-bad)">A camera on this Mac already sends this sound. Remove this Decks audio slot: with none, the camera\u2019s sound is saved as each set\u2019s HQ audio.</small>' : '') + '</label>'
                         : '<label>Camera<select data-mac="video">' + macOptions(d.video, cur.video, 'Not from this Mac') + '</select></label>' +
                           '<label>Sound<select data-mac="audio">' + macOptions(d.audio, cur.audio, 'No sound') + '</select>' +
                           // a™ takes the sound from a wireless mic's receiver (DJI Mic and the like) while it's plugged in

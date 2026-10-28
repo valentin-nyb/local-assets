@@ -669,11 +669,10 @@
                 document.querySelectorAll('[data-artist-photo]').forEach(function(box) {
                     var url = _brandPhotos && _brandPhotos[box.dataset.artistPhoto];
                     if (!url) return;
-                    // A logo chosen as the artist's picture shows whole, in its version for the theme (as the venue
-                    // tiles do); cropped to fill the tile it was cut off. A photo still fills the tile.
+                    // A logo chosen as the artist's picture (a GIF plays) shows whole, the one chosen, a one-colour
+                    // logo flipped for the theme; cropped to fill the tile it was cut off. A photo still fills the tile.
                     var logos = _artistLogos[box.dataset.artistPhoto] || (_venueLogos['venue-' + box.dataset.artistPhoto.slice(7)] || []).filter(function(x) { return x.logo; });
-                    var isLogo = logos.some(function(x) { return x.url === url; });
-                    if (isLogo) url = pickVenueLogo(logos, darkNow);
+                    var isLogo = logos.some(function(x) { return x.url === url; }) || /\.gif(\?|$)/i.test(url);
                     var key = url + (isLogo ? (darkNow ? '#d' : '#l') : '');
                     if (box.dataset.painted === key) return;
                     box.dataset.painted = key;
@@ -1334,11 +1333,13 @@
             } catch (e) { /* network error → treat as empty */ }
 
             // Update real asset count and 30-day growth %
+            // A recording still being made (the camera is live) or one that failed isn't a file yet: not counted
+            const counted = muxAssets.filter(a => !a.is_live && a.status !== 'preparing' && a.status !== 'errored');
             const totalEl = document.getElementById('live-asset-total');
-            if (totalEl) totalEl.textContent = muxAssets.length.toLocaleString();
+            if (totalEl) totalEl.textContent = counted.length.toLocaleString();
             const nowTs = Date.now() / 1000;
             const thirtyDaysAgo = nowTs - (30 * 86400);
-            const recentCount = muxAssets.filter(a => a.created_at > thirtyDaysAgo).length;
+            const recentCount = counted.filter(a => a.created_at > thirtyDaysAgo).length;
             const pctEl = document.getElementById('growth-pct');
             if (pctEl) pctEl.innerHTML = recentCount > 0
                 ? '<span class="kpi-up">+' + recentCount + ' in the last 30 days</span>'
