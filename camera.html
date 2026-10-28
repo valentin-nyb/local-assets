@@ -469,14 +469,15 @@
         .cam-field > div { display:flex; align-items:center; gap:6px; background:var(--la-input); border:1px solid var(--la-line); border-radius:10px; padding:4px 4px 4px 12px; }
         .cam-field code { flex:1; min-width:0; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--la-text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .cam-field code.secret:not(:hover):not(:focus) { filter:blur(4px); cursor:pointer; }
-        .cam-intro { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,400px); grid-template-rows:auto 1fr; gap:28px 48px; align-items:start; border:1px solid var(--la-line); background:var(--la-surface); border-radius:20px; padding:32px; }
+        .cam-intro { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,400px); grid-template-rows:auto 1fr; grid-template-areas:'copy ex' 'how ex'; gap:0 48px; align-items:start; border:1px solid var(--la-line); background:var(--la-surface); border-radius:20px; padding:32px; }
         .cam-intro.hidden { display:none; }
         .ci-title { font-size:26px; line-height:1.2; font-weight:600; letter-spacing:-.02em; color:var(--la-text); margin:10px 0 12px; }
         .ci-text { font-size:14px; line-height:1.65; color:var(--la-sub); max-width:520px; }
         .ci-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:22px; }
         .ci-actions .cam-btn { height:42px; padding:0 18px; font-size:13px; }
         .ci-note { font-size:12px; color:var(--la-dim); margin-top:12px; }
-        .ci-example { position:relative; }
+        .ci-copy { grid-area:copy; }
+        .ci-example { grid-area:ex; position:relative; }
         .ci-tag { position:absolute; top:-10px; left:16px; z-index:2; font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.2em; padding:3px 8px; border-radius:999px; background:var(--la-raised); border:1px solid var(--la-line); color:var(--la-sub); }
         .ci-example .cam-card { pointer-events:none; }
         .ci-example .cam-stage img { width:100%; height:100%; object-fit:cover; display:block; }
@@ -503,42 +504,23 @@
         .ci-wm:empty::after { content:'LOGO'; }
         .ci-name { position:absolute; z-index:1; bottom:9.5%; transform:translateY(50%); right:calc(6.5% + 4px); max-width:60%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font:900 7px/1 "Helvetica Neue", Helvetica, Arial, sans-serif; letter-spacing:.02em; color:#fff; text-transform:uppercase; }
         .ci-wm.has-logo { background-color:transparent; -webkit-backdrop-filter:none; backdrop-filter:none; }
-        /* Set up in 8 steps: sized to the space it has (container query), so it reads on any screen.
-           Wide: the four phases side by side, left to right. Medium: two by two. Narrow: one under another. */
-        .ci-how { align-self:start; padding-top:24px; border-top:1px solid var(--la-line-soft); container-type:inline-size; }
-        .ci-how .cam-eyebrow { margin-bottom:14px; }
-        .ci-steps { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
-        @container (min-width: 1040px) { .ci-steps { grid-template-columns:repeat(4,minmax(0,1fr)); } }
-        @container (max-width: 540px) { .ci-steps { grid-template-columns:minmax(0,1fr); gap:10px; } .ci-phase { padding:14px 14px 4px; } }
-        .ci-phase { display:flex; flex-direction:column; border:1px solid var(--la-line); border-radius:14px; background:var(--la-raised, rgba(255,255,255,.02)); padding:18px 18px 6px; min-width:0; }
-        .ci-phase-h { font:500 10px/1 'JetBrains Mono',monospace; letter-spacing:.18em; text-transform:uppercase; color:var(--la-accent); margin-bottom:14px; }
-        .ci-phase ol { list-style:none; margin:0; padding:0; }
-        .ci-phase li { display:flex; gap:10px; padding-bottom:14px; min-width:0; }
-        .ci-phase li + li { padding-top:14px; border-top:1px solid var(--la-line-soft); }
-        .ci-phase li > div { min-width:0; }
-        .ci-phase li > b { flex-shrink:0; font:500 10px/18px 'JetBrains Mono',monospace; letter-spacing:.06em; color:var(--la-accent); }
-        html:not(.dark) .ci-phase li > b { color:#EA580C; }
-        .ci-phase strong { display:block; font:700 13px/18px "Helvetica Neue", Helvetica, Arial, sans-serif; color:var(--la-text); margin-bottom:4px; text-transform:uppercase; letter-spacing:.02em; overflow-wrap:anywhere; }
-        .ci-phase span { display:block; font-size:12px; line-height:1.5; color:var(--la-sub); }
+        /* The 8 steps under the text, two across, a numbered circle each (as on the home page) */
+        .ci-how { grid-area:how; container-type:inline-size; }
+        .ci-steps { list-style:none; margin:28px 0 0; padding:24px 0 0; border-top:1px solid var(--la-line-soft); display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px 28px; }
+        @container (max-width: 480px) { .ci-steps { grid-template-columns:minmax(0,1fr); } }
+        .ci-steps li { display:flex; gap:12px; min-width:0; }
+        .ci-steps li > div { min-width:0; }
+        .ci-steps li > b { flex-shrink:0; width:24px; height:24px; border-radius:999px; background:color-mix(in srgb, var(--la-accent) 12%, transparent); color:var(--la-accent); font-size:12px; font-weight:600; display:flex; align-items:center; justify-content:center; }
+        html:not(.dark) .ci-steps li > b { background:rgba(234,88,12,.1); color:#EA580C; }
+        .ci-steps strong { display:block; font:700 14px/1.35 "Helvetica Neue", Helvetica, Arial, sans-serif; color:var(--la-text); margin-bottom:4px; }
+        .ci-steps span { display:block; font-size:13px; line-height:1.55; color:var(--la-sub); }
         .ci-link { color:var(--la-text); text-decoration:underline; text-underline-offset:2px; }
         /* Animated logos in orange (a lighter orange on the dark theme) */
         .ci-anim { font-style:normal; color:#F472B6; }
         html:not(.dark) .ci-anim { color:#EA580C; }
-        /* Wide: the text and the 8 steps on the left, the example beside them (no empty space under the text).
-           Narrower: one column, the text, the example (not wider than it reads well), then the steps. */
-        @media (min-width: 1400px) { .ci-example { grid-row:span 2; } }
-        @media (max-width: 1399px) {
-            .cam-intro { grid-template-columns:minmax(0,1fr); }
-            /* The example's two halves side by side: the camera, then what arrives when the stream stops */
-            .ci-example { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); grid-template-rows:auto 1fr; column-gap:16px; align-items:start; }
-            .ci-example > .cam-card { grid-column:1; grid-row:1 / span 2; }
-            .ci-example > .ci-arrow { grid-column:2; grid-row:1; justify-content:flex-start; padding:0 0 10px; }
-            .ci-example > .ci-result { grid-column:2; grid-row:2; }
-        }
-        @media (max-width: 700px) { .ci-example { display:block; } .ci-example > .ci-arrow { justify-content:center; padding:12px 0; } }
         @media (max-width: 900px) {
-            .cam-intro { grid-template-columns:minmax(0,1fr); padding:22px 18px; gap:28px; }
-            .ci-example { grid-row:auto; }
+            .cam-intro { grid-template-columns:minmax(0,1fr); grid-template-areas:'copy' 'ex' 'how'; padding:22px 18px; gap:28px; }
+            .ci-steps { margin-top:0; }
             .ci-title { font-size:22px; }
             .ci-actions .cam-btn { flex:1 1 auto; justify-content:center; }
         }
@@ -771,13 +753,16 @@
                     </div>
 
                     <div class="ci-how">
-                        <p class="cam-eyebrow">Set up in 8 steps</p>
-                    <ol class="ci-steps">
-                        <li class="ci-phase"><p class="ci-phase-h">Set up</p><ol><li><b>01</b><div><strong>Plug in</strong><span>Power the camera and connect it to the venue's Wi-Fi or Ethernet.</span></div></li><li><b>02</b><div><strong>Connect it here</strong><span>Press <em>Add camera</em> and name it. You get a stream address and key.</span></div></li></ol></li>
-                        <li class="ci-phase"><p class="ci-phase-h">Record</p><ol><li><b>03</b><div><strong>Connect Google or Apple Calendar</strong><span>Paste the calendar's private iCal link in <a href="/calendar" class="ci-link">Calendar</a>. Each event is a set, titled with the DJ.</span></div></li><li><b>04</b><div><strong>Leave it streaming</strong><span>Recording starts 2 minutes before each set and stops 2 minutes after. Each set lands in Distribution History.</span></div></li></ol></li>
-                        <li class="ci-phase"><p class="ci-phase-h">Brand</p><ol><li><b>05</b><div><strong>Add your Brand Kit</strong><span>Logos and fonts for your venue and each artist, in <a href="/brand" class="ci-link">Brand Kit</a>. <em class="ci-anim">Logos can move too:</em> add a GIF or MP4.</span></div></li><li><b>06</b><div><strong>Set the watermark</strong><span>Logo, position, size and a line of text. Every clip gets it.</span></div></li></ol></li>
-                        <li class="ci-phase"><p class="ci-phase-h">Post</p><ol><li><b>07</b><div><strong>Choose thumbnails</strong><span>Any artwork or photo, horizontal and vertical, watermarked.</span></div></li><li><b>08</b><div><strong>Share</strong><span>Download the clips, or send them to YouTube and SoundCloud.</span></div></li></ol></li>
-                    </ol>
+                        <ol class="ci-steps" aria-label="Set up in 8 steps">
+                            <li><b>1</b><div><strong>Plug in</strong><span>Power the camera and connect it to the venue's Wi-Fi or an Ethernet cable.</span></div></li>
+                            <li><b>2</b><div><strong>Connect it here</strong><span>Press <em>Add camera</em> and give it a name. It gets its own stream address and key.</span></div></li>
+                            <li><b>3</b><div><strong>Connect Google or Apple Calendar</strong><span>Paste the calendar's private iCal link in <a href="/calendar" class="ci-link">Calendar</a>. Each event is a set: the title is the DJ, the start and end are the times.</span></div></li>
+                            <li><b>4</b><div><strong>Leave it streaming</strong><span>Recording starts 2 minutes before each set and stops 2 minutes after. Each set lands in Distribution History.</span></div></li>
+                            <li><b>5</b><div><strong>Add your Brand Kit</strong><span>Logos and fonts for your venue and each artist, in <a href="/brand" class="ci-link">Brand Kit</a>. <em class="ci-anim">Logos can move too:</em> add a GIF or MP4.</span></div></li>
+                            <li><b>6</b><div><strong>Set the watermark</strong><span>Pick the logo, position and size, and add a line of text. Every clip gets it.</span></div></li>
+                            <li><b>7</b><div><strong>Choose thumbnails</strong><span>Use any artwork or photo as a session thumbnail, horizontal and vertical, watermarked.</span></div></li>
+                            <li><b>8</b><div><strong>Share</strong><span>Download the clips, or send them to YouTube and SoundCloud.</span></div></li>
+                        </ol>
                     </div>
                 </div>
 
