@@ -49,3 +49,10 @@ fi
 mkdir -p "$HERE/dist" && cp dist/local-assets-*.dmg "$HERE/dist/"
 rm -rf "$TMP"
 echo "Built: $HERE/dist/local-assets-arm64.dmg and local-assets-x64.dmg"
+# The latest installers are also kept in the shared APP/INSTALL folder next to the project, where they're
+# always found (replacing the previous version); LA_INSTALL_DIR names another folder
+for d in "$LA_INSTALL_DIR" "$HERE/../../APP/INSTALL" "$HERE/../../../APP/INSTALL"; do
+  [ -n "$d" ] && [ -d "$d" ] || continue
+  cp "$HERE/dist/local-assets-arm64.dmg" "$HERE/dist/local-assets-x64.dmg" "$d/" && echo "Copied to: $(cd "$d" && pwd)"
+  break
+done
