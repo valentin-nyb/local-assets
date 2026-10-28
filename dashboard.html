@@ -2696,7 +2696,18 @@
             m.querySelectorAll('.hp-frame').forEach(function(fb) { fb.addEventListener('click', function() { pickAt(Number(fb.dataset.t)); }); });
         });
         function djSpot(a) {
-            if (!(a.id in _djSpot) && window.laDjSpot) { _djSpot[a.id] = undefined; window.laDjSpot(a).then(function(s) { _djSpot[a.id] = s || null; if (s) renderHero(); }); }
+            if (!(a.id in _djSpot) && window.laDjSpot) {
+                // The moment chosen before, as this device last saw it, straight away: the banner starts there
+                // instead of somewhere else and jumping once the account's saved moment comes in
+                var seen = null; try { seen = JSON.parse(localStorage.getItem('la_dj3:' + a.id) || 'null'); } catch (_) {}
+                _djSpot[a.id] = seen && seen.time != null ? seen : undefined;
+                window.laDjSpot(a).then(function(s) {
+                    var was = _djSpot[a.id];
+                    _djSpot[a.id] = s || was || null;
+                    if (s && (!was || Math.round(was.time) !== Math.round(s.time))) renderHero();
+                    else if (!s && !was) renderHero();
+                });
+            }
             return _djSpot[a.id] || null;
         }
         // The banner is a muted, autoplaying loop of the long-form video around its peak,
@@ -2724,7 +2735,8 @@
             }
             // Wait a moment for the peak and the DJ's moment (usually known within a second), so the banner
             // starts where it stays instead of jumping
-            if (!dj && _peaks[a.id] == null && (a.id in _djSpot ? _djSpot[a.id] === undefined || _peakPending[a.id] : true)) {
+            // (the chosen moment first: the banner never starts at the loudest part and then jumps to it)
+            if (!dj && (_djSpot[a.id] === undefined || (_peaks[a.id] == null && _peakPending[a.id]))) {
                 _heroWait[a.id] = _heroWait[a.id] || Date.now();
                 if (Date.now() - _heroWait[a.id] < 2500) { clearTimeout(_heroWaitTimer); _heroWaitTimer = setTimeout(renderHero, 2600 - (Date.now() - _heroWait[a.id])); return; }
             }
