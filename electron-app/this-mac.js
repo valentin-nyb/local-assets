@@ -36,6 +36,7 @@ const POLL_MS = 15000
 const POLL_IDLE_MS = 60000
 const RETRY_WAITING_MS = 20000      // the slot is closed (no set on): try again in 20 s
 const RETRY_DROPPED_MS = 3000       // it was sending and stopped: reconnect quickly
+const HD = 1920 * 1080
 const VIDEO_MODES = [['1920x1080', '30'], ['1280x720', '30'], [null, '30'], [null, null]]
 
 const configFile = () => path.join(app.getPath('userData'), 'this-mac.json')
@@ -124,12 +125,17 @@ function argsFor(link, key, run) {
   }
   const [size, fps] = run.picked || VIDEO_MODES[run.mode] || VIDEO_MODES[VIDEO_MODES.length - 1]
   const a = soundOf(link) ? indexOf('audio', soundOf(link)) : null
+  // A picture over 1080p is scaled to fit 1920 on its long side before encoding
+  const [w, h] = (size || '').split('x').map(Number)
+  const fit = w * h > HD ? ['-vf', w >= h ? 'scale=1920:-2' : 'scale=-2:1920'] : []
   return ['-hide_banner', '-nostats', '-loglevel', 'error', '-progress', 'pipe:1', '-y',
     ...Q, '-f', 'avfoundation', ...(fps ? ['-framerate', fps] : []), ...(size ? ['-video_size', size] : []),
-    '-i', indexOf('video', link.video) + ':' + (a == null ? 'none' : a),
-    // Mux drops a live stream that has no sound, so "No sound" sends a silent track
-    ...(a == null ? [...Q, '-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo'] : []),
-    '-map', '0:v', '-map', a == null ? '1:a' : '0:a',
+    '-i', indexOf('video', link.video) + ':none',
+    // The sound is opened as its own input, read on its own thread. Read with the picture, it waited while
+    // each large frame was copied, and the capture keeps only the newest piece of sound: the rest was lost
+    // and the sound came through cut. Mux drops a live stream with no sound, so "No sound" sends silence.
+    ...(a == null ? [...Q, '-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo'] : [...Q, '-f', 'avfoundation', '-i', ':' + a]),
+    '-map', '0:v', '-map', '1:a', ...fit,
     // x264 as OBS sends it (Mux hung up on the Mac's hardware encoder after ~15 s): steady bitrate,
     // a keyframe every 2 s, no B-frames
     '-c:v', 'libx264', '-preset', 'veryfast', '-tune', 'zerolatency', '-profile:v', 'high',
@@ -281,12 +287,15 @@ async function begin(id) {
       setState(id, 'error', 'No ' + (link.kind === 'audio' ? 'sound' : 'picture') + ' from ' + (link.kind === 'audio' ? link.audio : link.video) + '. In System Settings → Privacy & Security → ' + what + ', turn a™ off and on again, then reopen a™.')
       return later(id, 60e3)
     }
-    // The camera said which modes it has: use the best one (largest picture, then up to 30 fps)
+    // The camera said which modes it has: the largest picture up to 1080p (either way up), then up to 30 fps.
+    // Larger (an Osmo Pocket 4 offers 1728x3072) was more than the Mac could encode live: frames and sound
+    // broke up. With nothing that small, the smallest one, scaled down to 1080p before encoding.
     if (!run.picked && /Supported modes|not supported by the device/i.test(errText)) {
       const modes = [...errText.matchAll(/(\d{3,4})x(\d{3,4})@\[(\d+(?:\.\d+)?)/g)].map(m => ({ w: +m[1], h: +m[2], fps: +m[3] }))
-        .filter(m => m.fps >= 10 && m.fps <= 31 && m.w <= 1920)
-        .sort((a, b) => b.w * b.h - a.w * a.h || b.fps - a.fps)
-      if (modes.length) { run.picked = [modes[0].w + 'x' + modes[0].h, String(modes[0].fps)]; log(link.slotName + ' using ' + run.picked.join(' @ ')); return later(id, 500) }
+        .filter(m => m.fps >= 10 && m.fps <= 31)
+      const fits = modes.filter(m => m.w * m.h <= HD).sort((a, b) => b.w * b.h - a.w * a.h || b.fps - a.fps)
+      const best = fits[0] || modes.sort((a, b) => a.w * a.h - b.w * b.h || b.fps - a.fps)[0]
+      if (best) { run.picked = [best.w + 'x' + best.h, String(best.fps)]; log(link.slotName + ' using ' + run.picked.join(' @ ')); return later(id, 500) }
     }
     // It connected and dropped within a minute: every short connection leaves a broken recording in Cloud
     // Storage, so wait longer each time (30 s, 1, 2, 4… up to 10 min) and say which device keeps stopping
