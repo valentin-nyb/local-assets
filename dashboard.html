@@ -848,6 +848,16 @@
         }
         // Summary row pinned to the bottom of Distribution History, so the card
         // reads as complete when it holds only one or two artists.
+        // The Sessions card counts what Distribution History shows: one session per artist and date. (Counting
+        // long forms read 6 for 3 sessions: a second camera or a watermarked copy is another long form.)
+        function renderSessionCount(artists) {
+            var total = 0, recent = 0, since = new Date(Date.now() - 30 * 86400e3).toISOString().slice(0, 10);
+            (artists || []).forEach(function(a) { a.dates.forEach(function(d) { total++; if (String(d) >= since) recent++; }); });
+            var totalEl = document.getElementById('live-asset-total');
+            if (totalEl) totalEl.textContent = total.toLocaleString();
+            var pctEl = document.getElementById('growth-pct');
+            if (pctEl) pctEl.innerHTML = recent > 0 ? '<span class="kpi-up">+' + recent + ' in the last 30 days</span>' : 'None in the last 30 days';
+        }
         function renderDistFooter(artistCount, sessionCount, assetCount) {
             var el = document.getElementById('dist-footer');
             if (!el) return;
@@ -1363,16 +1373,6 @@
                 return cam === 'AUDIO' ? 'audio' : cam === 'SOCIAL' ? 'clip' : cam === 'SOCIALRAW' ? 'raw' : cam === 'THUMB' ? 'thumb' : 'long';
             };
             const counted = muxAssets.filter(a => !a.is_live && a.status !== 'preparing' && a.status !== 'errored' && kindOf(a) !== 'raw');
-            const sessionsList = counted.filter(a => kindOf(a) === 'long');
-            const totalEl = document.getElementById('live-asset-total');
-            if (totalEl) totalEl.textContent = sessionsList.length.toLocaleString();
-            const nowTs = Date.now() / 1000;
-            const thirtyDaysAgo = nowTs - (30 * 86400);
-            const recentCount = sessionsList.filter(a => a.created_at > thirtyDaysAgo).length;
-            const pctEl = document.getElementById('growth-pct');
-            if (pctEl) pctEl.innerHTML = recentCount > 0
-                ? '<span class="kpi-up">+' + recentCount + ' in the last 30 days</span>'
-                : 'None in the last 30 days';
             const kindsEl = document.getElementById('asset-kinds');
             if (kindsEl) {
                 const n = {}; counted.forEach(a => { const k = kindOf(a); n[k] = (n[k] || 0) + 1; });
@@ -1508,7 +1508,7 @@
 
             if (Object.keys(artistMap).length === 0) {
                 container.innerHTML = '<div class="p-8 text-center"><p class="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">NO ASSETS YET</p></div>';
-                renderDistFooter(0, 0, 0);
+                renderDistFooter(0, 0, 0); renderSessionCount([]);
                 return;
             }
 
@@ -2074,6 +2074,7 @@
             container.innerHTML = html;
             applyArtistPhotos();
             renderDistFooter(artists.length, artists.reduce(function(n, a) { return n + a.dates.length; }, 0), muxAssets.length);
+            renderSessionCount(artists);
             updateDistributionButtons();
             paintWatermarkButtons();
             pollProcessingClips();
