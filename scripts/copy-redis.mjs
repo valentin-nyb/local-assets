@@ -8,7 +8,7 @@ const isUrl = u => /^rediss?:\/\//.test(u || '');
 // The old REDIS_URL is a Secret and can't be pulled: copy it from the Redis page in Vercel, and it's read from the clipboard.
 let from = process.env.REDIS_URL;
 if (!isUrl(from)) {
-  try { from = execSync('pbpaste').toString().trim(); } catch { from = ''; }
+  try { from = (execSync("pbpaste").toString().match(/rediss?:\/\/[^\s"']+/) || [""])[0]; } catch { from = ""; }
   if (!isUrl(from)) { console.error('Copy the old Redis URL first (Vercel → Storage → redis-bisque-mirror → Show secret → copy REDIS_URL), then run this again.'); process.exit(1); }
   execSync('pbcopy < /dev/null'); // clear it from the clipboard
 }
