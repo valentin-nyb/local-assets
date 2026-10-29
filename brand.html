@@ -37,7 +37,7 @@
     <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=6"></script>
-    <script src="nav-component.js?v=50"></script>
+    <script src="nav-component.js?v=51"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
         .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
@@ -415,7 +415,7 @@
         .bk-q .st { width:44px; text-align:right; font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--la-dim); flex-shrink:0; }
         .cam-form select { height:40px; border-radius:10px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:0 10px; font-size:14px; outline:none; }
         .cam-form select:focus { border-color:var(--la-accent); }
-        .bk-row2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+        .bk-row2 { display:grid; grid-template-columns:minmax(0, 1.6fr) minmax(0, 1fr); gap:12px; }   /* "For" holds long names: "local / assets™ (management)" */
         @media (max-width:640px) {
             .bk-row2 { grid-template-columns:1fr; }
             .bk-owner-head { flex-wrap:wrap; row-gap:12px; }

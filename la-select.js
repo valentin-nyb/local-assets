@@ -27,19 +27,28 @@
   document.head.appendChild(css);
 
   var menu = null, sel = null, items = [], active = -1;
+  // Opened by a tap: focus never goes back to the select after a choice, because on an iPad or iPhone focusing
+  // a select during a tap opens the device's own picker as well (a second menu, higher up)
+  var byTouch = false;
+  // The page rebuilt the select's options (or removed it) while its menu was open: the menu closes rather than
+  // pick by an index that now means another option
+  var watch = null;
 
   function close(focusBack) {
     if (!menu) return;
     var m = menu, s = sel;
     if (s) s.classList.remove('las-open');
     menu = null; sel = null; items = []; active = -1;
+    if (watch) { watch.disconnect(); watch = null; }
     m.classList.remove('on');
     setTimeout(function () { m.remove(); }, 160);
     document.removeEventListener('mousedown', outside, true);
     document.removeEventListener('touchstart', outside, true);
     window.removeEventListener('resize', onWin, true);
     window.removeEventListener('scroll', onWin, true);
-    if (focusBack && s) s.focus({ preventScroll: true });
+    if (focusBack && s && !byTouch) s.focus({ preventScroll: true });
+    if (byTouch && s && document.activeElement === s) s.blur();
+    byTouch = false;
   }
   function outside(e) { if (menu && !menu.contains(e.target) && e.target !== sel) close(false); }
   function onWin(e) { if (menu && !(e && e.target && menu.contains(e.target))) close(false); }
@@ -55,6 +64,7 @@
   function choose(i) {
     var it = items[i], s = sel;
     if (!it || it.disabled) return;
+    if (!s.isConnected || !s.options[it.index] || s.options[it.index].text.trim().toLowerCase() !== it.text) { close(false); return; }
     close(true);
     if (s.selectedIndex !== it.index) {
       s.selectedIndex = it.index;
@@ -63,8 +73,9 @@
     }
   }
 
-  function open(s) {
+  function open(s, touch) {
     close(false);
+    byTouch = !!touch;
     sel = s;
     menu = document.createElement('div');
     menu.className = 'las-menu';
@@ -92,6 +103,7 @@
       menu.appendChild(el);
     });
     document.body.appendChild(menu);
+    if (window.MutationObserver) { watch = new MutationObserver(function () { close(false); }); watch.observe(s, { childList: true, subtree: true }); }
 
     // Place it under the select (or above when there's no room), at least as wide as the select
     var r = s.getBoundingClientRect(), vw = window.innerWidth, vh = window.innerHeight;
@@ -112,7 +124,7 @@
     var start = items.findIndex(function (it) { return it.index === s.selectedIndex; });
     setActive(start < 0 ? 0 : start, true);
     menu.addEventListener('keydown', keys);
-    menu.focus({ preventScroll: true });
+    if (!byTouch) menu.focus({ preventScroll: true });
     document.addEventListener('mousedown', outside, true);
     document.addEventListener('touchstart', outside, true);
     window.addEventListener('resize', onWin, true);
@@ -159,7 +171,8 @@
     if (Math.abs(c.clientX - t.x) > 10 || Math.abs(c.clientY - t.y) > 10) return;
     e.preventDefault();   // no native picker, no mouse events after it
     if (sel === t.s) { close(false); return; }
-    open(t.s);
+    if (document.activeElement === t.s) t.s.blur();   // a select already focused would open the picker too
+    open(t.s, true);
   }, { capture: true, passive: false });
   // Keyboard on a focused select: Space, Enter, Alt+Down open the same menu
   document.addEventListener('keydown', function (e) {
