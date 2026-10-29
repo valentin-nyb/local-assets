@@ -2784,22 +2784,10 @@
             // plays: iOS can refuse autoplay (Low Power Mode), so retry once metadata is in and
             // on the first touch anywhere on the page.
             requestAnimationFrame(function() { wrap.style.opacity = '1'; });
-            // Low Power Mode (iPhone, iPad) refuses every video that plays by itself: the same seconds
-            // then loop as a moving picture over it, which iOS allows, until the video really plays
-            var anim = null;
-            var showAnim = function() {
-                if (anim || !mp.paused || !_heroLoop || _heroLoop.el !== mp) return;
-                anim = document.createElement('img');
-                anim.alt = ''; anim.setAttribute('aria-hidden', 'true');
-                anim.src = 'https://image.mux.com/' + pid + '/animated.webp?start=' + Math.round(start) + '&end=' + Math.round(start + 6) + '&width=640&fps=15';
-                anim.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;object-position:' + (wrap.dataset.pos || '50% 50%');
-                if (getComputedStyle(wrap).position === 'static') wrap.style.position = 'relative';
-                wrap.appendChild(anim);
-            };
-            mp.addEventListener('playing', function() { if (anim) { anim.remove(); anim = null; } });
-            var tryPlay = function() { mp.muted = true; var p = mp.play && mp.play(); if (p && p.catch) p.catch(function(e) { if (e && e.name === 'NotAllowedError') showAnim(); }); };
-            // Still not playing after a while (a slow connection takes a few seconds to start): the moving picture
-            setTimeout(function() { if (mp.paused) showAnim(); }, 7000);
+            // Low Power Mode (iPhone, iPad) refuses every video that plays by itself: the banner then keeps the
+            // sharp still of the moment (the video's poster) and the video starts at the first touch. (A moving
+            // picture of the same seconds was shown before, but iPads draw it slowly: blurry and lagging.)
+            var tryPlay = function() { mp.muted = true; var p = mp.play && mp.play(); if (p && p.catch) p.catch(function() {}); };
             mp.addEventListener('loadedmetadata', function() { if (ios && mp.currentTime < start - 1) { try { mp.currentTime = start; } catch (_) {} } tryPlay(); });
             mp.addEventListener('canplay', function() { if (mp.paused) tryPlay(); });
             var kick = function() { if (mp.paused) tryPlay(); };
