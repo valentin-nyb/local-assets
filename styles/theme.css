@@ -683,6 +683,10 @@ html .la-page > .cam-toolbar .deck-h.deck-h, html .la-page .deck-section .deck-h
 header #venue-breadcrumb { white-space: nowrap !important; flex-shrink: 0; }
 header h1.font-mono { white-space: nowrap !important; overflow: hidden; text-overflow: ellipsis; min-width: 0; max-width: 100%; }
 header #venue-breadcrumb + * , header #venue-breadcrumb ~ h1 { min-width: 0; }
+/* The menu button and breadcrumb take the room left by the account button and shrink (the page name gets …),
+   so the title never runs under the round account button */
+header.la-topbar > div:first-child { min-width: 0; flex: 1 1 auto; overflow: hidden; }
+header.la-topbar > div:last-child { flex-shrink: 0; margin-left: 12px; }
 @media (max-width: 767px) {
     header #venue-breadcrumb { display: inline-block !important; font-size: 14px !important; }
     header h1.font-mono { font-size: 14px !important; }
@@ -700,4 +704,5 @@ body.h-screen { position: fixed; inset: 0; width: auto !important; height: auto 
 html.la-standalone, html.la-standalone body { overflow: hidden; }
 html.la-standalone body.h-screen { bottom: auto; height: var(--la-app-h, 100%) !important; }
 /* The footer: one compact line on every screen, just clear of the home indicator */
-.la-statusbar.la-statusbar { height: auto !important; min-height: 0 !important; padding-top: 12px !important; padding-bottom: calc(env(safe-area-inset-bottom) + 12px) !important; }
+/* The version strip sits low on iPhones: just above the home bar, not a home bar's height above it */
+.la-statusbar.la-statusbar { height: auto !important; min-height: 0 !important; padding-top: 10px !important; padding-bottom: max(10px, calc(env(safe-area-inset-bottom) - 14px)) !important; }
