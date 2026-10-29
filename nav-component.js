@@ -6,7 +6,7 @@
     if (document.querySelector('script[type=speculationrules]')) return;
     var sr = document.createElement('script');
     sr.type = 'speculationrules';
-    sr.textContent = JSON.stringify({ prerender: [{ where: { href_matches: ['/dashboard', '/camera', '/brand', '/assets', '/billing', '/contacts', '/accounts'] }, eagerness: 'moderate' }] });
+    sr.textContent = JSON.stringify({ prerender: [{ where: { href_matches: ['/dashboard', '/camera', '/brand', '/assets', '/billing', '/contacts', '/accounts', '/inbox'] }, eagerness: 'moderate' }] });
     document.head.appendChild(sr);
 })();
 // Inside the iPhone app (ios-app): sign-in through Safari and push notifications (la-native.js)
@@ -41,6 +41,7 @@
         brand: ['Opening the Brand Kit…', 'Finding the logos…', 'Sorting fonts and artwork…', 'Loading the GIF animations…', 'Checking the watermark…'],
         contacts: ['Finding your contacts…', 'Matching artists and venues…', 'Sorting by name…'],
         accounts: ['Listing the client accounts…', 'Checking plans and payments…', 'Counting the logins…'],
+        inbox: ['Opening the inbox…', 'Fetching the emails from Resend…', 'Looking for replies to approve…'],
         billing: ['Adding up this month…', 'Fetching the invoices from Stripe…', 'Checking what’s been paid…'],
         stage: ['Loading the artist’s brand…', 'Finding the logos and fonts…'],
         stream: ['Preparing the stream address…', 'Fetching the stream key…'],
@@ -171,6 +172,9 @@ document.addEventListener("DOMContentLoaded", () => {
             <a href="/accounts" style="${_isAdminAcct ? '' : 'display:none !important'}" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('/accounts')}">
                 <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3 2.9-5 5.5-5s4.9 2 5.5 5"/><path d="M15.5 5.2a3 3 0 0 1 0 5.6M17.5 14.4c1.6.7 2.7 2.4 3 4.6"/></svg><span>Accounts</span>
             </a>
+            <a href="/inbox" style="${_isAdminAcct ? '' : 'display:none !important'}" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('/inbox')}">
+                <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 13.5l2.6-7.4A2 2 0 0 1 8 4.8h8a2 2 0 0 1 1.9 1.3l2.6 7.4V18a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/><path d="M3.5 13.5h4.8l1.4 2.5h4.6l1.4-2.5h4.8"/></svg><span>Inbox</span><b id="la-inbox-n" style="margin-left:auto;display:none;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--la-accent);color:var(--la-accent-ink);font:700 10px/18px 'JetBrains Mono',monospace;text-align:center"></b>
+            </a>
             <a href="/contacts" style="${_isAdminAcct ? 'display:none !important' : ''}" class="nav-link flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${isActive('/contacts')}">
                 <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h3.2l1.6 4-2 1.3a11 11 0 0 0 4.9 4.9l1.3-2 4 1.6V17a2 2 0 0 1-2 2A15 15 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg><span>Contacts</span>
             </a>
@@ -195,6 +199,20 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>
         </div>
     `;
+
+    // The admin's Inbox: how many unread emails, beside the menu link (checked every minute while on screen)
+    window.laInboxBadge = function(n) { var b = document.getElementById('la-inbox-n'); if (b) { b.textContent = n > 99 ? '99+' : String(n || ''); b.style.display = n ? 'inline-block' : 'none'; } };
+    if (_isAdminAcct && !window._laInboxPoll) {
+        window._laInboxPoll = true;
+        var _inboxCheck = function() {
+            if (document.hidden || location.pathname.indexOf('/inbox') === 0) return;   // the Inbox page counts for itself
+            var t = ''; try { t = JSON.parse(localStorage.getItem('la_admin') || '{}').webToken || ''; } catch (_) {}
+            if (!t) return;
+            fetch('/api/inbox?view=count', { headers: { Authorization: 'Bearer ' + t } }).then(function(r) { return r.ok ? r.json() : null; }).then(function(d) { if (d) window.laInboxBadge(d.unread); }).catch(function() {});
+        };
+        _inboxCheck(); setInterval(_inboxCheck, 60000);
+        document.addEventListener('visibilitychange', _inboxCheck);
+    }
 
     // Initialize theme engine (event delegation — works for sidebar + any other switcher)
     if (!window._laThemeInit) {

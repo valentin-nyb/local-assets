@@ -1,0 +1,299 @@
+
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+<head>
+    <script>
+      (function(){
+        var s = localStorage.getItem('la_admin');
+        if (!s) { window.location.replace('/login.html'); return; }
+        try {
+          var d = JSON.parse(s);
+          if (!d.ts || Date.now() - d.ts > 10 * 60 * 1000) {
+            localStorage.removeItem('la_admin');
+            window.location.replace('/login.html');
+          }
+        } catch(e) {
+          localStorage.removeItem('la_admin');
+          window.location.replace('/login.html');
+        }
+      })();
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="a™">
+    <meta name="theme-color" content="#000000">
+    <title>local / assets™ - Inbox</title>
+    <link rel="icon" type="image/x-icon" href="favicon/favicon.ico?v=4">
+    <link rel="icon" type="image/svg+xml" href="favicon/favicon.svg?v=4">
+    <link rel="apple-touch-icon" href="favicon/apple-touch-icon.png?v=2">
+    <link rel="manifest" href="favicon/site.webmanifest?v=2">
+
+    <link rel="stylesheet" href="styles/tailwind.css">
+    <link rel="stylesheet" href="styles/theme.css?v=36">
+    <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <script src="/la-dialogs.js?v=6"></script>
+    <script src="nav-component.js?v=50"></script>
+    <style>
+        .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
+        .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
+        .nav-link:hover:not(.active) { background: rgba(255, 255, 255, 0.03); color: white; }
+        body { background-color: #050505; color: #ffffff; -webkit-font-smoothing: antialiased; }
+        .nav-link.active { background-color: rgba(255, 255, 255, 0.05); border: 1px solid #27272a; color: white; }
+        ::-webkit-scrollbar { display: none; }
+        @media (max-width: 767px) { #sidebar { position: fixed; z-index: 50; height: 100vh; } }
+        .ib-eyebrow { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--la-dim); }
+        .ib-h { font-size:26px; line-height:1.2; color:var(--la-text); margin-top:6px; }
+        .ib-sub { font-size:13px; line-height:1.6; color:var(--la-sub); margin-top:6px; max-width:680px; }
+        .ib-tabs { display:flex; gap:6px; flex-wrap:wrap; }
+        .ib-tab { height:34px; padding:0 14px; border-radius:999px; border:1px solid var(--la-line); background:none; color:var(--la-sub); font:500 10px/1 'JetBrains Mono', monospace; letter-spacing:.14em; text-transform:uppercase; cursor:pointer; }
+        .ib-tab[aria-selected="true"] { border-color:var(--la-accent); color:var(--la-text); }
+        .ib-tab b { color:var(--la-accent); margin-left:6px; }
+        .ib-wrap { display:grid; grid-template-columns:minmax(280px, 380px) minmax(0, 1fr); gap:16px; align-items:start; }
+        @media (max-width: 900px) { .ib-wrap { grid-template-columns:minmax(0, 1fr); } .ib-wrap.open .ib-list { display:none; } .ib-wrap:not(.open) .ib-view { display:none; } }
+        .ib-list { border:1px solid var(--la-line); background:var(--la-surface); border-radius:16px; overflow:hidden; }
+        .ib-t { display:block; width:100%; text-align:left; padding:14px 16px; border:0; background:none; color:var(--la-text); cursor:pointer; }
+        .ib-t + .ib-t { border-top:1px solid var(--la-line); }
+        .ib-t:hover, .ib-t.on { background:color-mix(in srgb, var(--la-text) 5%, transparent); }
+        .ib-t-top { display:flex; gap:10px; align-items:baseline; }
+        .ib-t-from { flex:1; min-width:0; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--la-sub); }
+        .ib-t.unread .ib-t-from { color:var(--la-text); font-weight:600; }
+        .ib-t.unread .ib-t-from::before { content:''; display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--la-accent); margin-right:8px; vertical-align:1px; }
+        .ib-t-when { font:500 9.5px/1 'JetBrains Mono', monospace; letter-spacing:.1em; text-transform:uppercase; color:var(--la-dim); white-space:nowrap; }
+        .ib-t-subj { margin-top:5px; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .ib-pill { display:inline-block; margin-top:7px; padding:4px 8px; border-radius:999px; border:1px solid var(--la-accent); color:var(--la-accent); font:600 9px/1 'JetBrains Mono', monospace; letter-spacing:.14em; text-transform:uppercase; }
+        .ib-none { padding:28px 16px; font-size:13px; color:var(--la-sub); text-align:center; }
+        .ib-more { display:block; width:100%; padding:12px; border:0; border-top:1px solid var(--la-line); background:none; color:var(--la-sub); font-size:12px; cursor:pointer; }
+        .ib-view { display:flex; flex-direction:column; gap:12px; min-width:0; }
+        .ib-empty { border:1px dashed var(--la-line); border-radius:16px; padding:48px 20px; text-align:center; color:var(--la-sub); font-size:13px; }
+        .ib-bar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+        .ib-bar h3 { flex:1 1 100%; font-size:20px; line-height:1.3; color:var(--la-text); margin:0 0 4px; overflow-wrap:anywhere; }
+        .ib-back { display:none; }
+        @media (max-width: 900px) { .ib-back { display:inline-flex; } }
+        .ib-mail { border:1px solid var(--la-line); background:var(--la-surface); border-radius:16px; overflow:hidden; }
+        .ib-mail-h { display:flex; gap:10px; align-items:baseline; padding:12px 16px; border-bottom:1px solid var(--la-line); font-size:13px; color:var(--la-text); }
+        .ib-mail-h span { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .ib-mail-h small { font:500 9.5px/1 'JetBrains Mono', monospace; letter-spacing:.1em; text-transform:uppercase; color:var(--la-dim); white-space:nowrap; }
+        .ib-mail-h .out { color:var(--la-accent); }
+        .ib-mail iframe { display:block; width:100%; height:120px; border:0; background:#fff; }
+        .ib-mail pre { margin:0; padding:16px; white-space:pre-wrap; overflow-wrap:anywhere; font:14px/1.6 inherit; font-family:inherit; color:var(--la-text); }
+        .ib-files { padding:10px 16px; border-top:1px solid var(--la-line); font-size:12px; color:var(--la-sub); }
+        .ib-draft { border:1px solid var(--la-accent); background:var(--la-surface); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:10px; }
+        .ib-draft p { margin:0; font:600 10px/1.4 'JetBrains Mono', monospace; letter-spacing:.16em; text-transform:uppercase; color:var(--la-accent); }
+        .ib-draft small { font-size:12px; color:var(--la-sub); }
+        .ib-draft textarea, .ib-reply textarea { width:100%; min-height:160px; resize:vertical; border-radius:12px; border:1px solid var(--la-line); background:var(--la-input); color:var(--la-text); padding:12px 14px; font:14px/1.6 inherit; font-family:inherit; outline:none; }
+        .ib-draft textarea:focus, .ib-reply textarea:focus { border-color:var(--la-accent); }
+        .ib-acts { display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
+        .ib-err { color:var(--la-bad); font-size:12px; } .ib-err:empty { display:none; }
+        .ib-reply { display:flex; flex-direction:column; gap:10px; }
+        .ib-reply textarea { min-height:110px; }
+        .cam-btn.danger-line { border-color:var(--la-bad); color:var(--la-bad); }
+    </style>
+</head>
+<body class="font-sans antialiased bg-background text-foreground overflow-hidden h-screen w-screen flex selection:bg-primary selection:text-black">
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/90 z-40 hidden backdrop-blur-md opacity-0 transition-opacity duration-300"></div>
+    <aside id="sidebar" class="w-64 border-r border-[#27272a] bg-[#0a0a0a] flex flex-col transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 shrink-0 h-full"></aside>
+    <main class="flex-1 flex flex-col overflow-hidden relative w-full bg-[#050505]">
+        <header class="la-topbar h-16 flex items-center px-4 md:px-8 border-b border-[#27272a] bg-[#050505] shrink-0 justify-between w-full z-40">
+            <div class="flex items-center gap-2 md:gap-3 min-w-0"><button type="button" onclick="toggleSidebar()" class="la-menu-btn" aria-label="Open menu"><iconify-icon icon="solar:hamburger-menu-linear"></iconify-icon></button>
+                <span id="venue-breadcrumb" class="text-zinc-600 text-[10px] font-mono uppercase tracking-[0.3em] hidden md:inline"></span>
+                <h1 class="text-[10px] font-mono uppercase tracking-[0.2em] md:tracking-[0.3em] text-[#39FF14] font-bold m-0 truncate">INBOX</h1>
+            </div>
+            <div class="flex items-center gap-4 shrink-0">
+                <button id="venue-avatar" class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center font-bold text-xs shrink-0"></button>
+            </div>
+        </header>
+        <div class="flex-1 w-full overflow-y-auto no-scrollbar" id="ib-scroll">
+            <div class="la-page">
+                <div>
+                    <p class="ib-eyebrow">Admin</p>
+                    <h2 class="ib-h">Inbox</h2>
+                    <p class="ib-sub" id="ib-sub">Every email sent to info@local-assets.com. When the Resend agent writes a reply it waits here as a draft: send it as it is, change it first, or discard it. Nothing goes out until you send it.</p>
+                </div>
+                <div class="ib-tabs" role="tablist" id="ib-tabs">
+                    <button type="button" class="ib-tab" role="tab" data-f="inbox" aria-selected="true">Inbox<b id="ib-unread"></b></button>
+                    <button type="button" class="ib-tab" role="tab" data-f="archive" aria-selected="false">Archive</button>
+                    <button type="button" class="ib-tab" role="tab" data-f="sent" aria-selected="false">Sent</button>
+                    <button type="button" class="ib-tab" role="tab" data-f="spam" aria-selected="false">Spam</button>
+                    <button type="button" class="ib-tab" role="tab" data-f="trash" aria-selected="false">Trash</button>
+                </div>
+                <div class="ib-wrap" id="ib-wrap">
+                    <div class="ib-list" id="ib-list"><la-spin topic="inbox" inset></la-spin></div>
+                    <div class="ib-view" id="ib-view"><div class="ib-empty">Pick a conversation to read it.</div></div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <script>
+        function toggleSidebar() {
+            var sidebar = document.getElementById('sidebar'), overlay = document.getElementById('sidebar-overlay');
+            if (sidebar.classList.contains('-translate-x-full')) { sidebar.classList.remove('-translate-x-full'); overlay.classList.remove('hidden'); setTimeout(function() { overlay.classList.add('opacity-100'); }, 10); }
+            else { sidebar.classList.add('-translate-x-full'); overlay.classList.add('opacity-0'); setTimeout(function() { overlay.classList.add('hidden'); }, 300); }
+        }
+        function laFetch(url, opts) {
+            var sess = {}; try { sess = JSON.parse(localStorage.getItem('la_admin') || '{}'); } catch (_) {}
+            opts = Object.assign({}, opts); opts.headers = Object.assign({}, opts.headers);
+            if (sess.webToken) opts.headers['Authorization'] = 'Bearer ' + sess.webToken;
+            return fetch(url, opts);
+        }
+        function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+        (function() {
+            try { var s = JSON.parse(localStorage.getItem('la_admin') || '{}'); var v = (s.venue || '').toUpperCase();
+                window.laSetBreadcrumb(document.getElementById('venue-breadcrumb'), v); document.getElementById('venue-avatar').textContent = (v || '?').charAt(0); } catch (_) {}
+        })();
+        function api(q) { return laFetch('/api/inbox' + q).then(function(r) { return r.json().catch(function() { return {}; }).then(function(d) { if (!r.ok) throw new Error(d.error || r.status); return d; }); }); }
+        function post(body) {
+            return laFetch('/api/inbox', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+                .then(function(r) { return r.json().catch(function() { return {}; }).then(function(d) { if (!r.ok) throw new Error(d.error || r.status); return d; }); });
+        }
+        // "Ada Lovelace <ada@x.com>" → "Ada Lovelace"
+        function who(f) { var s = Array.isArray(f) ? f.join(', ') : String(f || ''); var m = s.match(/^\s*"?([^"<]+?)"?\s*<[^>]+>/); return m ? m[1] : s; }
+        function when(iso) {
+            var d = new Date(iso); if (isNaN(d)) return '';
+            var now = new Date();
+            if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+            return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: d.getFullYear() === now.getFullYear() ? undefined : 'numeric' });
+        }
+        function plain(html) { var el = document.createElement('div'); el.innerHTML = String(html || '').replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>\s*<p[^>]*>/gi, '\n\n'); return (el.textContent || '').trim(); }
+
+        var folder = 'inbox', threads = [], more = false, openId = null;
+        var listEl = document.getElementById('ib-list'), viewEl = document.getElementById('ib-view'), wrapEl = document.getElementById('ib-wrap');
+
+        function paintList() {
+            if (!threads.length) { listEl.innerHTML = '<div class="ib-none">' + (folder === 'inbox' ? 'No emails yet. New ones show up here by themselves.' : 'Nothing in ' + folder + '.') + '</div>'; return; }
+            listEl.innerHTML = threads.map(function(t) {
+                return '<button type="button" class="ib-t' + (t.read ? '' : ' unread') + (t.id === openId ? ' on' : '') + '" data-id="' + esc(t.id) + '">'
+                    + '<span class="ib-t-top"><span class="ib-t-from">' + esc(folder === 'sent' ? 'To ' + who(t.to) : who(t.from)) + (t.email_count > 1 ? ' · ' + t.email_count : '') + '</span><span class="ib-t-when">' + esc(when(t.received_at)) + '</span></span>'
+                    + '<span class="ib-t-subj" style="display:block">' + esc(t.subject || '(no subject)') + '</span>'
+                    + (t.has_draft ? '<span class="ib-pill">Reply waiting</span>' : '')
+                    + '</button>';
+            }).join('') + (more ? '<button type="button" class="ib-more" id="ib-more">Show older</button>' : '');
+        }
+        function loadList(quiet) {
+            if (!quiet) listEl.innerHTML = '<la-spin topic="inbox" inset></la-spin>';
+            return api('?folder=' + folder).then(function(d) { threads = d.threads; more = d.more; paintList(); })
+                .catch(function(e) { if (!quiet) listEl.innerHTML = '<div class="ib-none ib-err">' + esc(e.message) + '</div>'; });
+        }
+        function loadCount() {
+            api('?view=count').then(function(d) { document.getElementById('ib-unread').textContent = d.unread ? d.unread : ''; if (window.laInboxBadge) window.laInboxBadge(d.unread); }).catch(function() {});
+        }
+        listEl.addEventListener('click', function(e) {
+            if (e.target.id === 'ib-more') {
+                e.target.disabled = true;
+                api('?folder=' + folder + '&after=' + encodeURIComponent(threads[threads.length - 1].id)).then(function(d) { threads = threads.concat(d.threads); more = d.more; paintList(); }).catch(function() { e.target.disabled = false; });
+                return;
+            }
+            var b = e.target.closest('.ib-t'); if (b) openThread(b.getAttribute('data-id'));
+        });
+        document.getElementById('ib-tabs').addEventListener('click', function(e) {
+            var b = e.target.closest('.ib-tab'); if (!b) return;
+            folder = b.getAttribute('data-f');
+            Array.prototype.forEach.call(this.children, function(x) { x.setAttribute('aria-selected', x === b ? 'true' : 'false'); });
+            closeThread(); loadList();
+        });
+
+        function closeThread() { openId = null; wrapEl.classList.remove('open'); viewEl.innerHTML = '<div class="ib-empty">Pick a conversation to read it.</div>'; paintList(); }
+
+        // An email's own HTML, shown in a frame that can't run scripts (links open in a new tab)
+        function frame(html) {
+            var doc = '<!doctype html><html><head><meta charset="utf-8"><base target="_blank"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src https: data: cid:; style-src \'unsafe-inline\' https:; font-src https: data:">'
+                + '<style>html,body{margin:0;padding:12px 16px;font:14px/1.6 -apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;color:#111;background:#fff;overflow-wrap:anywhere}img{max-width:100%;height:auto}blockquote{margin:8px 0;padding-left:12px;border-left:2px solid #ddd;color:#555}</style></head><body>' + html + '</body></html>';
+            var f = document.createElement('iframe');
+            f.setAttribute('sandbox', 'allow-same-origin allow-popups allow-popups-to-escape-sandbox');
+            f.setAttribute('referrerpolicy', 'no-referrer');
+            f.srcdoc = doc;
+            f.addEventListener('load', function() { try { f.style.height = Math.min(4000, f.contentDocument.documentElement.scrollHeight + 2) + 'px'; } catch (_) {} });
+            return f;
+        }
+
+        function openThread(tid) {
+            openId = tid; wrapEl.classList.add('open'); paintList();
+            viewEl.innerHTML = '<la-spin topic="inbox" inset></la-spin>';
+            api('?thread=' + encodeURIComponent(tid)).then(function(d) {
+                if (openId !== tid) return;
+                var t = threads.filter(function(x) { return x.id === tid; })[0]; if (t && !t.read) { t.read = true; paintList(); loadCount(); }
+                paintThread(d);
+            }).catch(function(e) { viewEl.innerHTML = '<div class="ib-empty ib-err">' + esc(e.message) + '</div>'; });
+        }
+
+        function paintThread(d) {
+            var th = d.thread || {}, emails = d.emails || [], drafts = d.drafts || [];
+            var last = emails.filter(function(m) { return m.direction === 'inbound'; }).slice(-1)[0];
+            var f = th.folder || folder;
+            viewEl.innerHTML = '<div class="ib-bar"><h3>' + esc(th.subject || '(no subject)') + '</h3>'
+                + '<button type="button" class="cam-btn ib-back" data-a="back">Back</button>'
+                + (f !== 'inbox' && f !== 'sent' ? '<button type="button" class="cam-btn" data-a="move" data-f="inbox">Move to Inbox</button>' : '')
+                + (f === 'inbox' ? '<button type="button" class="cam-btn" data-a="move" data-f="archive">Archive</button>' : '')
+                + (f !== 'spam' && f !== 'sent' ? '<button type="button" class="cam-btn" data-a="move" data-f="spam">Spam</button>' : '')
+                + (f !== 'trash' ? '<button type="button" class="cam-btn danger-line" data-a="move" data-f="trash">Trash</button>' : '')
+                + '<button type="button" class="cam-btn" data-a="unread">Mark unread</button></div>';
+            emails.forEach(function(m) {
+                var box = document.createElement('div'); box.className = 'ib-mail';
+                var out = m.direction === 'outbound';
+                box.innerHTML = '<div class="ib-mail-h"><span>' + (out ? '<b class="out">You</b> to ' + esc(who(m.to)) : esc(Array.isArray(m.from) ? m.from.join(', ') : m.from)) + '</span><small>' + esc(when(m.received_at || m.created_at)) + '</small></div>';
+                if (m.html) box.appendChild(frame(m.html)); else { var pre = document.createElement('pre'); pre.textContent = m.text || ''; box.appendChild(pre); }
+                if (m.attachments && m.attachments.length) { var fl = document.createElement('div'); fl.className = 'ib-files'; fl.textContent = 'Attached: ' + m.attachments.map(function(a) { return a.filename; }).join(', '); box.appendChild(fl); }
+                viewEl.appendChild(box);
+            });
+            drafts.forEach(function(dr) {
+                var box = document.createElement('div'); box.className = 'ib-draft'; box.setAttribute('data-draft', dr.id);
+                box.innerHTML = '<p>Reply waiting for you</p><small>To ' + esc((dr.to || []).join(', ')) + (dr.subject ? ' · ' + esc(dr.subject) : '') + '</small>'
+                    + '<textarea aria-label="Reply"></textarea><span class="ib-err"></span>'
+                    + '<div class="ib-acts"><button type="button" class="cam-btn danger-line" data-a="discard">Discard</button><button type="button" class="cam-btn primary" data-a="send">Send reply</button></div>';
+                box.querySelector('textarea').value = dr.text || plain(dr.html);
+                box._orig = box.querySelector('textarea').value;
+                viewEl.appendChild(box);
+            });
+            if (!drafts.length && last) {
+                var r = document.createElement('div'); r.className = 'ib-reply'; r.setAttribute('data-email', last.id);
+                r.innerHTML = '<textarea placeholder="Write a reply to ' + esc(who(last.from)) + '" aria-label="Reply"></textarea><span class="ib-err"></span><div class="ib-acts"><button type="button" class="cam-btn primary" data-a="reply">Send reply</button></div>';
+                viewEl.appendChild(r);
+            }
+            if (window.innerWidth <= 900) document.getElementById('ib-scroll').scrollTop = 0;
+        }
+
+        viewEl.addEventListener('click', function(e) {
+            var b = e.target.closest('[data-a]'); if (!b) return;
+            var a = b.getAttribute('data-a'), tid = openId;
+            if (a === 'back') { closeThread(); return; }
+            if (a === 'move') {
+                b.disabled = true;
+                post({ action: 'move', thread: tid, folder: b.getAttribute('data-f') }).then(function() { threads = threads.filter(function(x) { return x.id !== tid; }); closeThread(); loadCount(); })
+                    .catch(function(err) { b.disabled = false; window.laAlert(err.message); });
+                return;
+            }
+            if (a === 'unread') {
+                post({ action: 'read', thread: tid, read: false }).then(function() { var t = threads.filter(function(x) { return x.id === tid; })[0]; if (t) t.read = false; closeThread(); loadCount(); }).catch(function(err) { window.laAlert(err.message); });
+                return;
+            }
+            var box = b.closest('.ib-draft, .ib-reply'), err = box.querySelector('.ib-err'), ta = box.querySelector('textarea');
+            var btns = box.querySelectorAll('button'), busy = function(on) { Array.prototype.forEach.call(btns, function(x) { x.disabled = on; }); };
+            err.textContent = '';
+            if (a === 'discard') {
+                window.laConfirm({ title: 'Discard this reply?', message: 'The drafted reply is thrown away. The email stays in the inbox.', confirmText: 'Discard', danger: true }).then(function(ok) {
+                    if (!ok) return; busy(true);
+                    post({ action: 'discard', draft: box.getAttribute('data-draft') }).then(function() { openThread(tid); refresh(); }).catch(function(x) { busy(false); err.textContent = x.message; });
+                });
+                return;
+            }
+            var text = ta.value.trim(); if (!text) { err.textContent = 'The reply is empty.'; return; }
+            busy(true); b.textContent = 'Sending…';
+            var go = a === 'reply'
+                ? post({ action: 'reply', thread: tid, email: box.getAttribute('data-email'), text: text, key: tid + '-' + Date.now() })
+                : (text !== box._orig ? post({ action: 'editDraft', draft: box.getAttribute('data-draft'), text: text }) : Promise.resolve())
+                    .then(function() { return post({ action: 'send', draft: box.getAttribute('data-draft') }); });
+            go.then(function() { openThread(tid); refresh(); })
+              .catch(function(x) { busy(false); b.textContent = 'Send reply'; err.textContent = x.message; });
+        });
+
+        // New emails show up by themselves while the page is on screen
+        function refresh() { loadCount(); return loadList(true); }
+        setInterval(function() { if (!document.hidden) refresh(); }, 30000);
+        document.addEventListener('visibilitychange', function() { if (!document.hidden) refresh(); });
+        loadList(); loadCount();
+    </script>
+</body>
+</html>
