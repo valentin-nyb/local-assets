@@ -35,7 +35,7 @@ export default async function handler(req, res) {
   const ok = secret ? req.headers.authorization === `Bearer ${secret}` : /vercel-cron/i.test(req.headers['user-agent'] || '');
   if (!ok) return res.status(401).json({ error: 'Cron only' });
 
-  const redis = createClient({ url: process.env.REDIS_URL });
+  const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
   await redis.connect();
   const changes = [];
   try {

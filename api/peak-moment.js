@@ -16,7 +16,7 @@ const EDGE         = 0.1;   // ignore the first and last 10% (intro / outro)
 const ASSET_ID     = /^[A-Za-z0-9]{10,64}$/;
 
 async function withRedis(fn) {
-  const redis = createClient({ url: process.env.REDIS_URL });
+  const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
   await redis.connect();
   try { return await fn(redis); } finally { await redis.quit().catch(() => {}); }
 }

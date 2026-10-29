@@ -22,7 +22,7 @@ export default async function handler(req, res) {
     if (!auth) return res.status(403).json({ error: 'No Cloud Storage for this venue' });
     // Answer straight away; the cut carries on in this function
     waitUntil((async () => {
-      const redis = createClient({ url: process.env.REDIS_URL });
+      const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
       await redis.connect();
       try {
         const out = await cutVertical(redis, auth, job);
@@ -42,7 +42,7 @@ export default async function handler(req, res) {
   if (session.member && body.action !== 'limits') return res.status(403).json({ error: 'Only the account can do this' });
   if (body.action === 'limits') {
     // The plan's clip limit, and how many the recording is long enough for
-    const r0 = createClient({ url: process.env.REDIS_URL }); await r0.connect();
+    const r0 = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) }); await r0.connect();
     try {
       const max = await planMaxClips(r0, session.venueSlug);
       const { master, shown } = session.muxAuth ? sessionClips(await listAllAssets(session.muxAuth), String(body.artist || '').toUpperCase().trim(), String(body.date || '')) : {};
@@ -56,7 +56,7 @@ export default async function handler(req, res) {
   if (body.action === 'intake') {
     // New uploads whose recording is now ready start their vertical clips (once)
     if (!session.venueSlug || !session.muxAuth) return res.status(200).json({ started: 0 });
-    const r1 = createClient({ url: process.env.REDIS_URL }); await r1.connect();
+    const r1 = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) }); await r1.connect();
     try {
       const started = await processIntakes(r1, session.venueSlug, session.muxAuth, `https://${req.headers.host}`);
       if (started) console.log('[vertical-clips] intake', session.venueSlug, 'started', started);
@@ -70,7 +70,7 @@ export default async function handler(req, res) {
   if (!artist) return res.status(400).json({ error: 'Choose a session' });
   { const _p = await pausedBy(session.venueSlug, `artist:${artist}`); if (_p) return sendPaused(res, _p); }
 
-  const redis = createClient({ url: process.env.REDIS_URL });
+  const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
   await redis.connect();
   try {
     const { master, shown } = sessionClips(await listAllAssets(session.muxAuth), artist, String(body.date || ''));

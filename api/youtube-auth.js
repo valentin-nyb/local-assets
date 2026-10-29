@@ -25,7 +25,7 @@ export default async function handler(req, res) {
     return res.status(503).json({ error: 'Google OAuth not configured — set GOOGLE_CLIENT_ID in Vercel env vars' });
   }
 
-  const redis = createClient({ url: process.env.REDIS_URL });
+  const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
   await redis.connect();
   try {
     const state = crypto.randomBytes(16).toString('hex');

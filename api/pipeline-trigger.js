@@ -26,7 +26,7 @@ export default async function handler(req, res) {
   // recording is ready (the old worker, which used shared keys, is retired).
   const venueSlug = session.venueSlug || '';
   if (!venueSlug) return res.status(403).json({ error: 'No Cloud Storage for this account' });
-  const redis = createClient({ url: process.env.REDIS_URL });
+  const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
   try {
     await redis.connect();
     await redis.hSet(intakeKey(venueSlug), String(uploadId), JSON.stringify({ artist, at: Date.now() }));

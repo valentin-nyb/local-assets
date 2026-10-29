@@ -19,7 +19,7 @@ export default async function handler(req, res) {
   const venueSlug = session.venueSlug;
   if (!venueSlug) return res.status(200).json({ connected: false, plays: 0, estimatedRevenue: 0 });
 
-  const redis = createClient({ url: process.env.REDIS_URL });
+  const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
   await redis.connect();
   try {
     const raw = await redis.get(`sc_tokens:${venueSlug}`);

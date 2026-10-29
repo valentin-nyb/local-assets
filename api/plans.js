@@ -5,7 +5,7 @@ import { readPlans, planForType } from './_billing.js';
 // Nothing private: the same numbers the pricing section shows. Cached at the edge for a minute.
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
-  const redis = createClient({ url: process.env.REDIS_URL });
+  const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
   try {
     await redis.connect();
     const plans = (await readPlans(redis)).filter(p => p.id !== 'payg').map(p => ({

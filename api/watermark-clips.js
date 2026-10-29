@@ -82,7 +82,7 @@ async function removeWatermark(redis, slug, auth, artist, date, only = null) {
 // A moving (GIF) logo: Mux overlays only take still images, so the clip is drawn again with ffmpeg,
 // the GIF looping in the logo's place over the clean clip, the text as a still layer. One clip per call.
 async function animateClip(job) {
-  const redis = createClient({ url: process.env.REDIS_URL });
+  const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
   await redis.connect();
   const out = path.join(os.tmpdir(), `wm-${job.oldId}-${Date.now()}.mp4`);
   const auth = venueAuthFor(job.slug);
@@ -135,7 +135,7 @@ async function animateClip(job) {
 // The sound alone is copied out (no re-encoding) and saved as an audio-only recording with an M4A file;
 // the video version is deleted once that copy is ready (api/mux-webhook.js).
 async function audioOnly(job) {
-  const redis = createClient({ url: process.env.REDIS_URL });
+  const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
   await redis.connect();
   const out = path.join(os.tmpdir(), `aud-${job.assetId}-${Date.now()}.m4a`);
   try {
@@ -263,7 +263,7 @@ export default async function handler(req, res) {
     } finally { fs.rmSync(dir, { recursive: true, force: true }); }
   }
 
-  const redis = createClient({ url: process.env.REDIS_URL });
+  const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
   await redis.connect();
   try {
     if (body.action === 'sweep') {

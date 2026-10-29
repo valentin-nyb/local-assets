@@ -31,14 +31,14 @@ export default async function handler(req, res) {
     const device = DEVICES.includes(body.ping.device) ? body.ping.device : 'Other';
     const page = String(body.ping.page || '').replace(/[^a-z0-9/_-]/gi, '').slice(0, 40);
     const entry = { email, slug: session.venueSlug || '', account: session.venue?.name || session.venueSlug || '', member: session.member?.name || null, page, device, app: !!body.ping.app, at: Date.now() };
-    const redis = createClient({ url: process.env.REDIS_URL });
+    const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
     try { await redis.connect(); await redis.hSet(PRESENCE_KEY, email + '|' + device + (entry.app ? '|app' : ''), JSON.stringify(entry)); }
     finally { await redis.quit().catch(() => {}); }
     return res.status(200).json({ ok: true });
   }
   if (body?.presence) {
     if (!platformAdmins().includes(String(session.email).toLowerCase()) || !isAdminVenue(session.venue)) return res.status(403).json({ error: 'Admin only' });
-    const redis = createClient({ url: process.env.REDIS_URL });
+    const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
     try {
       await redis.connect();
       const raw = await redis.hGetAll(PRESENCE_KEY) || {}, cutoff = Date.now() - PRESENCE_DAYS * 864e5, old = [], people = [];
@@ -56,7 +56,7 @@ export default async function handler(req, res) {
   // The terms: whether this person has agreed to the current version, and recording that they have
   // (asked once, the first time they sign in; kept with the date so it can be shown later)
   if (body?.termsStatus || body?.acceptTerms) {
-    const redis = createClient({ url: process.env.REDIS_URL });
+    const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
     try {
       await redis.connect();
       const email = String(session.email).toLowerCase();
@@ -73,7 +73,7 @@ export default async function handler(req, res) {
   }
   // Log out, and renewals checked against Redis itself (the in-memory list can be a minute behind)
   if (body?.signOut || body?.refresh) {
-    const redis = createClient({ url: process.env.REDIS_URL });
+    const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
     try {
       await redis.connect();
       if (body.signOut) { await endSignIn(redis, session.sid); console.log('[switch-venue] signed out', session.email); return res.status(200).json({ ok: true }); }

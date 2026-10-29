@@ -11,7 +11,7 @@ export default async function handler(req, res) {
   }
   if (!code || !state) return res.status(400).send('Missing parameters');
 
-  const redis = createClient({ url: process.env.REDIS_URL });
+  const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
   await redis.connect();
   try {
     const venueSlug = await redis.get(`yt_oauth_state:${state}`);

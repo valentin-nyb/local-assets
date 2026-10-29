@@ -9,7 +9,7 @@ async function appExchange(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   const code = String(req.body?.code || ''), verifier = String(req.body?.verifier || '');
   if (!/^[A-Za-z0-9_-]{43}$/.test(code) || !/^[A-Za-z0-9_-]{43,128}$/.test(verifier)) return res.status(400).json({ error: 'Sign-in link not valid. Sign in again.' });
-  const redis = createClient({ url: process.env.REDIS_URL });
+  const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
   await redis.connect();
   let raw;
   try { raw = await redis.getDel('app_signin:' + code); } finally { await redis.quit().catch(() => {}); }

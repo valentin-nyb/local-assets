@@ -63,7 +63,7 @@ async function decksAudio(found, data, playbackId) {
   const isDecks = o && String(o.camera || '').toUpperCase() === 'AUDIO';
   if (!isDecks) return;
   const hasVideo = (data.tracks || []).some(t => t.type === 'video');
-  const redis = createClient({ url: process.env.REDIS_URL });
+  const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
   await redis.connect();
   try {
     if (hasVideo && data.source_asset_id) {
@@ -122,7 +122,7 @@ async function createSocialClips(auth, found, assetId, artistName, duration) {
 
     // Vertical originals (9:16, 1080×1920), cut once from the full recording by api/vertical-clips.js.
     // They are kept as the originals; a Brand Kit watermark only ever goes on copies of them.
-    const redis = createClient({ url: process.env.REDIS_URL });
+    const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
     await redis.connect();
     try {
         const n = await startVerticals(redis, found.slug, found.asset, artistName, 'https://local-assets.com');
@@ -178,8 +178,8 @@ async function createThumbnails(auth, assetId, artistName, playbackId, duration)
 // Minutes Mux encoded this month, by account and kind (vod|live : quality : resolution); Redis hash mux_ledger:<YYYY-MM>
 async function noteEncoded(slug, a) {
   const min = (Number(a.duration) || 0) / 60;
-  if (!min || !process.env.REDIS_URL) return;
-  const r = createClient({ url: process.env.REDIS_URL }); await r.connect();
+  if (!min || !(process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL)) return;
+  const r = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) }); await r.connect();
   try {
     if (!(await r.set(`mux_ledgered:${a.id}`, '1', { NX: true, EX: 60 * 86400 }))) return;
     const q = ({ baseline: 'basic', smart: 'plus' })[a.encoding_tier] || a.video_quality || 'plus';
@@ -246,7 +246,7 @@ export default async function handler(req, res) {
             const hasSound = (data.tracks || []).some(t => t.type === 'audio');
             let firstReady = true;
             try {
-                const rc = createClient({ url: process.env.REDIS_URL }); await rc.connect();
+                const rc = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) }); await rc.connect();
                 try { firstReady = !!(await rc.set(`pipe_ready:${assetId}`, '1', { NX: true, EX: 30 * 86400 })); } finally { await rc.quit().catch(() => {}); }
             } catch (e) { console.error('[Pipeline] dedupe', e.message); }
             if (!firstReady) { console.log(`[Pipeline] "${artist}" ${assetId} already handled`); return res.status(200).send('OK'); }

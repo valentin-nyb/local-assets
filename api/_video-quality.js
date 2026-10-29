@@ -8,7 +8,7 @@ let _cache = null, _at = 0;
 export async function videoQuality(slug) {
   if (!slug) return 'basic';
   if (!_cache || Date.now() - _at > 30000) {
-    const r = createClient({ url: process.env.REDIS_URL });
+    const r = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
     try { await r.connect(); _cache = (await r.hGetAll(VIDEO_QUALITY_KEY)) || {}; _at = Date.now(); }
     catch { _cache = _cache || {}; }
     finally { r.quit().catch(() => {}); }

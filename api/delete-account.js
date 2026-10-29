@@ -49,7 +49,7 @@ export default async function handler(req, res) {
   if (isAdminVenue({ slug, ...venue })) return res.status(400).json({ error: 'The admin account cannot be deleted' });
 
   const prefixes = [`brand/${slug}/`, thumbnailPrefix(slug), `watermarks/${slug}/`];
-  const redis = createClient({ url: process.env.REDIS_URL });
+  const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
   await redis.connect();
   try {
     // Every Redis record of the account: the named keys plus any "<key>:<slug>:…" variants

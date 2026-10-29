@@ -37,7 +37,7 @@ export default async function handler(req, res) {
   const paidSub = event.type === 'invoice.paid' ? (event.data.object.subscription || event.data.object.parent?.subscription_details?.subscription) : null;
   if (paidSub) {
     const subId = typeof paidSub === 'string' ? paidSub : paidSub.id;
-    const redis = createClient({ url: process.env.REDIS_URL });
+    const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
     try {
       await redis.connect();
       const pending = JSON.parse(await redis.get(`billing_pending_plan:${subId}`) || 'null');
@@ -56,7 +56,7 @@ export default async function handler(req, res) {
   // ── USAGE INVOICES: paid lifts a pause; written off as uncollectible pauses the account ─
   if ((event.type === 'invoice.paid' || event.type === 'invoice.marked_uncollectible') && event.data.object.metadata?.venueSlug) {
     const inv = event.data.object, slug = inv.metadata.venueSlug;
-    const redis = createClient({ url: process.env.REDIS_URL });
+    const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
     try {
       await redis.connect();
       if (event.type === 'invoice.paid') {
@@ -80,7 +80,7 @@ export default async function handler(req, res) {
   // ── PTZ CAMERA RENTED (£149/month, 12-month minimum): kept with the account for shipping ─────
   if (event.type === 'checkout.session.completed' && event.data.object.metadata?.kind === 'addon-camera') {
     const cs = event.data.object, slug = cs.metadata.venueSlug;
-    const redis = createClient({ url: process.env.REDIS_URL });
+    const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
     try {
       await redis.connect();
       await redis.hSet(`billing_cameras:${slug}`, cs.subscription || cs.id, JSON.stringify({ at: Date.now(), commitEnd: cs.metadata.commitEnd, email: cs.customer_details?.email || '' }));
@@ -93,7 +93,7 @@ export default async function handler(req, res) {
   // ── PLAN CHOSEN FROM THE BILLING PAGE (no subscription before) ─────
   if (event.type === 'checkout.session.completed' && event.data.object.metadata?.kind === 'upgrade') {
     const cs = event.data.object, slug = cs.metadata.venueSlug;
-    const redis = createClient({ url: process.env.REDIS_URL });
+    const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
     try {
       await redis.connect();
       const prev = JSON.parse(await redis.hGet(`billing_assign:${slug}`, 'venue') || '{}');
@@ -209,7 +209,7 @@ async function recordCameraOrder(session, stripe) {
   };
   console.log('[Stripe Webhook] camera order', order.id, order.venueSlug, 'x' + quantity);
 
-  const redis = createClient({ url: process.env.REDIS_URL });
+  const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
   try {
     await redis.connect();
     await redis.lPush('camera_orders', JSON.stringify(order));
@@ -273,7 +273,7 @@ async function createClientAccount(session, stripe) {
   // The invoice details Stripe collected at checkout (billing address is required there)
   const cd = session.customer_details || {}, ad = cd.address || {};
   const details = { legalName: String(cd.name || name).slice(0, 100), line1: ad.line1 || '', line2: ad.line2 || '', city: ad.city || '', postcode: ad.postal_code || '', country: ad.country || 'GB', vat: '' };
-  const redis = createClient({ url: process.env.REDIS_URL });
+  const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
   await redis.connect();
   let slug, same, storage = null, left = 0;
   try {

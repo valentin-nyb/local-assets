@@ -17,7 +17,7 @@ export async function refreshScToken(venueSlug, refreshToken) {
   const data = await res.json();
   if (!data.access_token) return null;
 
-  const redis = createClient({ url: process.env.REDIS_URL });
+  const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
   try {
     await redis.connect();
     await redis.set(`sc_tokens:${venueSlug}`, JSON.stringify({

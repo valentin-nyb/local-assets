@@ -27,7 +27,7 @@ async function refreshYtToken(venueSlug, stored) {
     refresh_token: data.refresh_token || stored.refresh_token,
     expires_at:    Date.now() + (data.expires_in || 3600) * 1000,
   };
-  const redis = createClient({ url: process.env.REDIS_URL });
+  const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
   try {
     await redis.connect();
     await redis.set(`youtube_token:${venueSlug}`, JSON.stringify(updated), { EX: 60 * 60 * 24 * 365 });
@@ -137,7 +137,7 @@ async function putChunk(uploadUrl, accessToken, muxVideoUrl, start, end, total) 
 }
 
 async function withRedis(fn) {
-  const redis = createClient({ url: process.env.REDIS_URL });
+  const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
   try { await redis.connect(); return await fn(redis); }
   finally { await redis.quit().catch(() => {}); }
 }
@@ -182,7 +182,7 @@ export default async function handler(req, res) {
   if (!venueSlug) return res.status(403).json({ error: 'No venue associated with this account' });
   if (isThumbnail && (!upload || upload.videoId !== videoId)) return res.status(403).json({ error: 'Cover can only be set right after uploading' });
 
-  const redis = createClient({ url: process.env.REDIS_URL });
+  const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
   let stored;
   try {
     await redis.connect();

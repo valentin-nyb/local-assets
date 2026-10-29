@@ -11,7 +11,7 @@ export default async function handler(req, res) {
   const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
   const token = String(body.token || '');
   if (!/^[A-Fa-f0-9]{32,200}$/.test(token)) return res.status(400).json({ error: 'Invalid token' });
-  const redis = createClient({ url: process.env.REDIS_URL });
+  const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
   await redis.connect();
   try {
     await redis.hSet(`push_tokens:${session.venueSlug}`, token, JSON.stringify({

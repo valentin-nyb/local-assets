@@ -36,7 +36,7 @@ export function openSecret(sealed) {
 export async function refreshRegistry(redis = null) {
   const own = !redis;
   try {
-    if (own) { redis = createClient({ url: process.env.REDIS_URL }); await redis.connect(); }
+    if (own) { redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) }); await redis.connect(); }
     const raw = await redis.hGetAll(REGISTRY_KEY);
     const out = {};
     for (const [slug, v] of Object.entries(raw || {})) {
@@ -81,18 +81,18 @@ export async function saveRegistryEntry(redis, slug, entry) {
   await redis.hSet(REGISTRY_KEY, slug, JSON.stringify(entry));
   await refreshRegistry(redis);
 }
-if (process.env.REDIS_URL) await refreshRegistry();
+if ((process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL)) await refreshRegistry();
 // Re-reads sign-ups and deleted accounts when the cached copy is older than a few seconds, so an
 // account the admin deletes disappears from every list straight away, not after the 60 s refresh
 export async function freshVenues(maxAgeMs = 5000) {
-  if (process.env.REDIS_URL && Date.now() - _registryAt > maxAgeMs) await (_registryLoading || refreshRegistry());
+  if ((process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) && Date.now() - _registryAt > maxAgeMs) await (_registryLoading || refreshRegistry());
 }
 
 
 // ── VENUES_CONFIG helpers ─────────────────────────────────────────────────────
 
 export function getVenuesConfig() {
-  if (Date.now() - _registryAt > 60_000 && !_registryLoading && process.env.REDIS_URL) {
+  if (Date.now() - _registryAt > 60_000 && !_registryLoading && (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL)) {
     _registryLoading = refreshRegistry().finally(() => { _registryLoading = null; });
   }
   // Configured venues win over sign-ups with the same slug
@@ -218,9 +218,9 @@ export function findVenueByEmail(email, preferredSlug, as) {
 // from its Brand Kit, so the account menu can show the right icon
 export async function venueChoicesTyped(email) {
   const list = venueChoices(email);
-  if (!process.env.REDIS_URL || !list.length) return list;
+  if (!(process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) || !list.length) return list;
   const isAdmin = v => v.slug === (process.env.BILLING_ADMIN_VENUE || 'local-assets-admin') || /^local\s*[\/-]?\s*assets\b/i.test(String(v.name || '').trim());
-  const redis = createClient({ url: process.env.REDIS_URL });
+  const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
   try {
     await redis.connect();
     const brand = await redis.mGet(list.map(v => `brand_org_type:${v.slug}`));

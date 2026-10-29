@@ -14,7 +14,7 @@ export async function readUnpaid(redis, slug) {
 export async function pausedBy(slug, target = null, redis = null) {
   if (!slug) return null;
   const own = !redis;
-  if (own) { redis = createClient({ url: process.env.REDIS_URL }); await redis.connect(); }
+  if (own) { redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) }); await redis.connect(); }
   try {
     const list = await readUnpaid(redis, slug);
     return list.find(i => i.target === 'venue') || (target && list.find(i => i.target.toUpperCase() === String(target).toUpperCase())) || null;

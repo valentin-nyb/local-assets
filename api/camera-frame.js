@@ -11,7 +11,7 @@ const key = (slug, camId) => `cam_frame:${slug}:${camId}`;
 const MAX = 400 * 1024;
 
 async function withRedis(fn) {
-  const redis = createClient({ url: process.env.REDIS_URL });
+  const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
   await redis.connect();
   try { return await fn(redis); } finally { await redis.quit().catch(() => {}); }
 }

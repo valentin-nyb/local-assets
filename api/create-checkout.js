@@ -25,7 +25,7 @@ export default async function handler(req, res) {
   const accountName = String(body?.accountName || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 60);
   if (!accountType || !accountName) return res.status(400).json({ error: 'Choose the account type and enter its name' });
 
-  const redis = createClient({ url: process.env.REDIS_URL });
+  const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
   let plan;
   try { await redis.connect(); plan = (await readPlans(redis)).find(p => p.id === body?.tier); }
   finally { await redis.quit().catch(() => {}); }

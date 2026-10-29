@@ -72,7 +72,7 @@ export async function processCameraRecording(event) {
   const assetId  = event?.id;
   if (!streamId || !assetId) return;
 
-  const redis = createClient({ url: process.env.REDIS_URL });
+  const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
   await redis.connect();
   try {
     const slug = await redis.hGet('camera_streams', streamId);

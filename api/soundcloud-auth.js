@@ -24,7 +24,7 @@ export default async function handler(req, res) {
   const codeChallenge = crypto.createHash('sha256').update(codeVerifier).digest('base64url');
   const state         = crypto.randomBytes(16).toString('hex');
 
-  const redis = createClient({ url: process.env.REDIS_URL });
+  const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
   await redis.connect();
   try {
     await redis.set(`sc_oauth_state:${state}`, JSON.stringify({

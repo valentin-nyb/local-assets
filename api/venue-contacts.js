@@ -6,7 +6,7 @@ import { getWebSessionAuth } from './_venues.js';
 const clean = (v, max) => String(v ?? '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, max);
 
 async function withRedis(fn) {
-  const redis = createClient({ url: process.env.REDIS_URL });
+  const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
   await redis.connect();
   try { return await fn(redis); } finally { await redis.quit().catch(() => {}); }
 }

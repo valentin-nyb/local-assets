@@ -53,7 +53,7 @@ export default async function handler(req, res) {
       const used = new Set([...shown.keys(), ...hidden.keys()]);
       // Without a long form in Cloud Storage the clip is matched to the session by its date
       if (!master) for (const a of assets) { const i = socialInfo(a); let d = null; try { d = JSON.parse(a.passthrough).date; } catch {} if (i && i.artist === artist && i.n && d === date) used.add(i.n); }
-      const redis = createClient({ url: process.env.REDIS_URL });
+      const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
       await redis.connect();
       let n = null;
       try {

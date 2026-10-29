@@ -47,7 +47,7 @@ export default async function handler(req, res) {
     }
 
     if (intent === 'client') {
-      const redis = createClient({ url: process.env.REDIS_URL });
+      const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
       await redis.connect();
       try {
         let clientId = await redis.get(`client:email:${email}`);
@@ -123,7 +123,7 @@ export default async function handler(req, res) {
     // Only the app that started the sign-in holds the secret that collects it.
     if (/^[A-Za-z0-9_-]{43}$/.test(appChallenge)) {
       const code = crypto.randomBytes(32).toString('base64url');
-      const redis = createClient({ url: process.env.REDIS_URL });
+      const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
       await redis.connect();
       try { await redis.set('app_signin:' + code, JSON.stringify({ challenge: appChallenge, session: sessionData }), { EX: 120 }); }
       finally { await redis.quit().catch(() => {}); }

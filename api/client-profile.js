@@ -2,7 +2,7 @@ import { createClient } from 'redis';
 import Stripe from 'stripe';
 
 async function getRedis() {
-  const client = createClient({ url: process.env.REDIS_URL });
+  const client = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
   await client.connect();
   return client;
 }

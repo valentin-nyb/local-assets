@@ -6,7 +6,7 @@ export const artKey = slug => `event_art:${slug}`;
 // The Brand Kit artist an event is linked to (chosen in the event's details on the Calendar page): event key → artist-<slug>
 export const linkKey = slug => `event_artist:${slug}`;
 export async function readLinks(slug) {
-  const redis = createClient({ url: process.env.REDIS_URL });
+  const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
   try { await redis.connect(); return (await redis.hGetAll(linkKey(slug))) || {}; }
   catch { return {}; } finally { await redis.quit().catch(() => {}); }
 }
@@ -14,7 +14,7 @@ export const eventKey = ev => `${ev.start}|${String(ev.artist || ev.title || '')
 // event key → the artworks added to it (a list; an early version kept one URL)
 const artList = v => { try { const a = JSON.parse(v); return Array.isArray(a) ? a : [String(a)]; } catch { return v ? [String(v)] : []; } };
 export async function readArt(slug) {
-  const redis = createClient({ url: process.env.REDIS_URL });
+  const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
   try { await redis.connect(); const raw = (await redis.hGetAll(artKey(slug))) || {}; return Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, artList(v)])); }
   catch { return {}; } finally { await redis.quit().catch(() => {}); }
 }
@@ -26,7 +26,7 @@ export default async function handler(req, res) {
   const session = getWebSessionAuth(req);
   let calUrl = null;
   if (session?.venueSlug) {
-    const redis = createClient({ url: process.env.REDIS_URL });
+    const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
     try { await redis.connect(); calUrl = await redis.get(calendarKey(session.venueSlug)); }
     catch (e) { console.error('[next-event] redis', e.message); }
     finally { await redis.quit().catch(() => {}); }
@@ -43,7 +43,7 @@ export default async function handler(req, res) {
     if ('artistOwner' in (body || {})) {
       const owner = String(body.artistOwner || '');
       if (owner && !/^artist-[a-z0-9-]+$/.test(owner)) return res.status(400).json({ error: 'Choose an artist' });
-      const redis = createClient({ url: process.env.REDIS_URL });
+      const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
       try { await redis.connect(); owner ? await redis.hSet(linkKey(session.venueSlug), key, owner) : await redis.hDel(linkKey(session.venueSlug), key); }
       finally { await redis.quit().catch(() => {}); }
       return res.status(200).json({ ok: true, key, artistOwner: owner || null });
@@ -51,7 +51,7 @@ export default async function handler(req, res) {
     let ok = false; try { const u = new URL(url); ok = /\.public\.blob\.vercel-storage\.com$/.test(u.hostname) && decodeURIComponent(u.pathname).startsWith(`/brand/${session.venueSlug}/`); } catch {}
     if (!ok) return res.status(403).json({ error: 'Not your file' });
     // Adds the artwork to the event, or with remove takes it off; an event can have several
-    const redis = createClient({ url: process.env.REDIS_URL });
+    const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
     let list;
     try {
       await redis.connect();

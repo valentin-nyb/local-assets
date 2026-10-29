@@ -54,7 +54,7 @@ const deckHereKey = (slug, id) => `deck_here:${slug}:${id}`;
 const deckCmdKey = (slug, id) => `deck_cmd:${slug}:${id}`;
 
 async function withRedis(fn) {
-  const redis = createClient({ url: process.env.REDIS_URL });
+  const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
   await redis.connect();
   try { return await fn(redis); } finally { await redis.quit().catch(() => {}); }
 }

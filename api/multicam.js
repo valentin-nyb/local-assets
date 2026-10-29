@@ -73,7 +73,7 @@ export async function startMulticam(r, slug, auth, artist, date, src, { title = 
 }
 
 async function withRedis(fn) {
-  const r = createClient({ url: process.env.REDIS_URL });
+  const r = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
   await r.connect();
   try { return await fn(r); } finally { await r.quit().catch(() => {}); }
 }
