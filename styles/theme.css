@@ -706,3 +706,13 @@ html.la-standalone body.h-screen { bottom: auto; height: var(--la-app-h, 100%) !
 /* The footer: one compact line on every screen, just clear of the home indicator */
 /* The version strip sits low on iPhones: just above the home bar, not a home bar's height above it */
 .la-statusbar.la-statusbar { height: auto !important; min-height: 0 !important; padding-top: 10px !important; padding-bottom: max(10px, calc(env(safe-area-inset-bottom) - 14px)) !important; }
+
+/* The version strip, as Resend's bottom bar: a slim, slightly lighter strip; the page above it is a card with
+   rounded bottom corners; the text on the left, centred in the strip */
+:root { --la-bar: #111113; }
+html:not(.dark) { --la-bar: #ebebed; }
+html body main:has(> .la-statusbar) { background: var(--la-bar) !important; }
+html body main > :has(+ .la-statusbar) { background: var(--la-bg) !important; border-radius: 0 0 16px 16px; overflow-y: auto; }
+html body .la-statusbar.la-statusbar { background: var(--la-bar) !important; border-top: 0 !important; justify-content: flex-start !important; align-items: center !important;
+    min-height: 40px !important; padding: 0 20px max(0px, calc(env(safe-area-inset-bottom) - 14px)) !important; }
+html body .la-statusbar.la-statusbar > div, html body .la-statusbar.la-statusbar span { font-size: 11px !important; letter-spacing: .08em !important; color: var(--la-sub) !important; }
