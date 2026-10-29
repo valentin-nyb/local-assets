@@ -123,6 +123,34 @@ export function mailError(e) {
 }
 // Every email comes from info@ (the Google Workspace account), so Gmail shows its profile photo, the a
 export const mailFrom = (box, name = 'local / assets') => `${name} <info@${SEND_DOMAIN}>`;
+
+// An email to a client sent from the Resend inbox (info@), so it shows in Inbox → Sent and their reply lands in
+// the same conversation (as a draft, then sent; the inbox's own sender name is used). If the inbox can't take
+// it, it goes out the usual way instead; never twice: once the send itself was tried, there's no second try.
+// Returns what resend.emails.send returns: { data: { id } } or { error }.
+export async function sendFromInbox(resend, { to, subject, html, text }) {
+  const key = (process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY || '').trim();
+  const box = 'https://api.resend.com/inboxes/' + encodeURIComponent((process.env.LA_INBOX || 'info@' + SEND_DOMAIN).trim());
+  const call = async (path, method, body) => {
+    const r = await fetch(box + path, { method, headers: { Authorization: 'Bearer ' + key, 'User-Agent': 'local-assets', ...(body ? { 'Content-Type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(15000) });
+    const d = r.status === 204 ? {} : await r.json().catch(() => ({}));
+    if (!r.ok) throw Object.assign(new Error(d.message || ('inbox answered ' + r.status)), { status: r.status });
+    return d;
+  };
+  let draft = null;
+  try {
+    draft = await call('/drafts', 'POST', { to: [].concat(to), subject, html, text });
+    const sent = await call('/drafts/' + draft.id + '/send', 'POST');
+    return { data: { id: sent.id } };
+  } catch (e) {
+    // Resend refused the send (4xx/5xx): nothing went out, so the draft goes and the email is sent directly.
+    // No answer at all (timeout): it may have gone, so it isn't sent again.
+    if (draft && !e.status) { console.error('[emails] inbox send gave no answer', to, e.message); return { error: e }; }
+    if (draft) await call('/drafts/' + draft.id, 'DELETE').catch(() => {});
+    console.error('[emails] inbox could not send, sending directly', to, mailError(e));
+    return resend.emails.send({ from: mailFrom(), replyTo: 'info@' + SEND_DOMAIN, to, subject, html, text }).catch(er => ({ error: er }));
+  }
+}
 const plainText = v => String(v).replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&trade;/g, '™').replace(/&[a-z]+;|&#\d+;/g, ' ');
 
 // Welcome email after a sign-up. plan: { name, line } where line says what was paid and what's next.
@@ -253,13 +281,15 @@ const ACCESS = {
 };
 export function accessInviteEmail({ artist, account, email, example, kind = 'artist' }) {
   const K = ACCESS[kind] || ACCESS.artist;
+  // A login of the whole account is an admin of it; an artist given access to their own sets is a visitor
+  const role = kind === 'team' ? 'ADMIN' : 'VISITOR';
   const title = kind === 'team' ? account : artist;
   const list = [['Sign in', `With Google, using ${esc(email)}. There is no password to remember.`]].concat(K.can(account));
   const preheader = kind === 'team' ? `You've been added to ${account} on local / assets. Sign in with Google to start.` : `${account} gave you access to your sets on local / assets. Sign in with Google to see them.`;
   const html = page({ title: 'You have access to local / assets', preheader, body: [
     header('Access'),
     hero('You have access', esc(title), K.lead(account)),
-    infoCard([[kind === 'team' ? 'Access' : 'Account', kind === 'team' ? 'The whole account' : esc(account)], ['Sign in with', esc(email)]]),
+    infoCard([['Account', esc(account)], ['Access', role], ['Sign in with', esc(email)]]),
     buttons([[`${SITE}/login.html`, 'Sign in to your workspace']]),
     section('What you can do'),
     steps(list),
@@ -271,7 +301,7 @@ export function accessInviteEmail({ artist, account, email, example, kind = 'art
   const text = [
     kind === 'team' ? `You've been added to ${account} on local / assets.` : `You have access to local / assets, ${artist}.`, '',
     plainText(K.lead(account)), '',
-    `Sign in with: ${email}`, '',
+    `Account: ${account}`, `Access: ${role}`, `Sign in with: ${email}`, '',
     'What you can do:',
     ...list.map(([t, d], i) => `0${i + 1}  ${t}: ${plainText(d)}`), '',
     `Sign in: ${SITE}/login.html`,

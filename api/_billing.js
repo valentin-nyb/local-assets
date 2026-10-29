@@ -2,7 +2,7 @@ import Stripe from 'stripe';
 import { list } from '@vercel/blob';
 import { getVenuesConfig, getMuxAuthForVenue } from './_venues.js';
 import { Resend } from 'resend';
-import { invoiceEmail, mailFrom, mailError } from './_emails.js';
+import { invoiceEmail, mailFrom, mailError, sendFromInbox } from './_emails.js';
 
 // Usage-based billing: each venue's real usage of the services it runs on (Mux video, Vercel Blob
 // files), priced at cost plus the local / assets margin, invoiced monthly through Stripe.
@@ -647,7 +647,7 @@ export async function accountTypeOf(redis, slug) {
 export async function sendInvoiceEmail(to, data) {
   if (!(process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY || '').trim()) throw new Error("Email is not set up (LA_RESEND_API_KEY)");
   const m = invoiceEmail(data);
-  const r = await new Resend((process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY || '').trim()).emails.send({ from: mailFrom(), replyTo: 'info@local-assets.com', to, subject: m.subject, html: m.html, text: m.text });
+  const r = await sendFromInbox(new Resend((process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY || '').trim()), { to, subject: m.subject, html: m.html, text: m.text });
   if (r?.error) throw new Error(mailError(r.error));
   console.log('[billing] invoice email accepted', to, r?.data?.id || '');
   return r;

@@ -6,7 +6,7 @@ import { readAssignments, readPlans, stripeClient, accountTypeOf, DISCOUNTS_KEY,
 import { unpaidKey, readUnpaid } from './_suspend.js';
 import { thumbnailPrefix } from './_thumbnails.js';
 import { Resend } from 'resend';
-import { accessInviteEmail, mailFrom, mailError } from './_emails.js';
+import { accessInviteEmail, mailFrom, mailError, sendFromInbox } from './_emails.js';
 
 // Resend's latest event for one email: sent, delivered, delivery_delayed, bounced, complained…
 // waited for up to ms while it is still only "sent" or "queued"
@@ -140,7 +140,7 @@ export default async function handler(req, res) {
       const artist = pick ? await withRedis(async r => Object.entries(await r.hGetAll(`brand_owner_names:${pick[0]}`) || {}).filter(([k]) => k.startsWith('artist-')).map(([, v]) => v)[0] || '').catch(() => '') : '';
       const m = accessInviteEmail({ kind: body.kind === 'team' ? 'team' : 'artist', artist: String(artist || 'Artist name').toUpperCase(), account, email: to, example: true });
       const resend = new Resend(key), from = mailFrom();
-      const r = await resend.emails.send({ from, replyTo: 'info@local-assets.com', to, subject: m.subject, html: m.html, text: m.text }).catch(e => ({ error: e }));
+      const r = await sendFromInbox(resend, { to, subject: m.subject, html: m.html, text: m.text });
       if (r?.error) return res.status(502).json({ error: 'Could not send it: ' + mailError(r.error) });
       const id = r?.data?.id || null;
       // What Resend knows a few seconds later (delivered, bounced…), and whether the sender's domain is verified
@@ -184,7 +184,7 @@ export default async function handler(req, res) {
         if (key) try {
           const m = accessInviteEmail({ kind: 'team', account: name, email });
           const resend = new Resend(key);
-          const r = await resend.emails.send({ from: mailFrom(), replyTo: 'info@local-assets.com', to: email, subject: m.subject, html: m.html, text: m.text }).catch(e => ({ error: e }));
+          const r = await sendFromInbox(resend, { to: email, subject: m.subject, html: m.html, text: m.text });
           emailed = !r?.error;
           if (r?.error) { console.error('[admin-accounts] access email', slug, mailError(r.error)); emailError = mailError(r.error); }
           // What Resend knows a few seconds later: delivered, bounced, suppressed…

@@ -5,7 +5,7 @@ import crypto from 'crypto';
 import { createClient } from 'redis';
 import { readRegistryRaw, saveRegistryEntry, getVenuesConfig } from './_venues.js';
 import { activateFromPool, poolSize } from './_mux-pool.js';
-import { welcomeEmail, mailFrom } from './_emails.js';
+import { welcomeEmail, mailFrom, mailError, sendFromInbox } from './_emails.js';
 
 // Vercel: disable body parsing so we get raw bytes for signature verification
 export const config = { api: { bodyParser: false } };
@@ -320,10 +320,8 @@ async function createClientAccount(session, stripe) {
     : session.mode === 'payment' ? `${money(paid)} paid today. After that, pay only for what you use, charged to your card on the 1st.`
     : 'No monthly fee. What you use is charged to your card on the 1st.';
   const mail = welcomeEmail({ name, email, type, plan: { name: m.tierName || m.tier || 'local / assets', line }, ready: !!storage });
-  await resend.emails.send({
-    from: mailFrom(), to: email, replyTo: 'info@local-assets.com',
-    subject: mail.subject, html: mail.html, text: mail.text,
-  }).catch(e => console.error('[Stripe Webhook] welcome email', e.message));
+  const sent = await sendFromInbox(resend, { to: email, subject: mail.subject, html: mail.html, text: mail.text });
+  if (sent?.error) console.error('[Stripe Webhook] welcome email', mailError(sent.error));
 }
 
 async function sendGoogleLoginNotice(email) {
