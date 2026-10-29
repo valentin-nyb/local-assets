@@ -4,7 +4,7 @@ import { mailError } from './_emails.js';
 // Admin only (local / assets): the Resend inbox (info@local-assets.com) in the side menu's Inbox.
 // The inbox's agent writes its replies as drafts; nothing goes out until one is sent from here (or Resend).
 //   GET  ?view=count                         unread threads and drafts waiting, for the menu badge
-//   GET  ?folder=inbox|archive|sent|spam|trash[&after=id]   the threads in a folder, newest first
+//   GET  ?folder=inbox|archive|sent|spam|trash[&after=id]   the threads in a folder, newest first (inbox: with the sent ones)
 //   GET  ?thread=id                          its emails and its drafts (marks it read)
 //   POST { action: 'send', draft }           a draft goes out
 //   POST { action: 'discard', draft }        a draft is thrown away
@@ -54,7 +54,7 @@ export default async function handler(req, res) {
       }
       const folder = FOLDERS.includes(q.folder) ? q.folder : 'inbox';
       const after = id(q.after);
-      const list = await rs('/threads?folders=' + folder + '&limit=50' + (after ? '&after=' + after : ''));
+      const list = await rs('/threads?folders=' + (folder === 'inbox' ? 'inbox,sent' : folder) + '&limit=50' + (after ? '&after=' + after : ''));
       return res.json({ folder, threads: list.data || [], more: !!list.has_more });
     }
 
