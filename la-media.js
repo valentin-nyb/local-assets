@@ -7,17 +7,21 @@
 (function() {
     if (window.laMux) return;
     var KEY = 'la_mkey', key = '', exp = 0;
+    // A shared link (player.html?s=…): no sign-in; the share id opens its one video
+    var share = (new URLSearchParams(location.search).get('s') || '').replace(/[^A-Za-z0-9_-]/g, '');
     try { var c = JSON.parse(localStorage.getItem(KEY) || 'null'); if (c && c.exp > Date.now() + 60e3) { key = c.key; exp = c.exp; } } catch (_) {}
     var token = function() { try { return JSON.parse(localStorage.getItem('la_admin') || '{}').webToken || ''; } catch (_) { return ''; } };
     var post = function(body) {
-        var t = token(); if (!t) return Promise.reject(new Error('Not signed in'));
-        return fetch('/api/media', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + t }, body: JSON.stringify(body) })
+        var t = token();
+        if (share) body.share = share; else if (!t) return Promise.reject(new Error('Not signed in'));
+        var h = { 'Content-Type': 'application/json' }; if (t && !share) h.Authorization = 'Bearer ' + t;
+        return fetch('/api/media', { method: 'POST', headers: h, body: JSON.stringify(body) })
             .then(function(r) { return r.json().then(function(d) { if (!r.ok) throw new Error(d.error || r.status); return d; }); });
     };
     var isMux = function(u) { return /^https:\/\/(stream|image)\.mux\.com\//.test(String(u || '')); };
     function laMux(url, o) {
         if (!isMux(url)) return url;
-        return '/api/media?u=' + encodeURIComponent(url) + (o && o.dl ? '&dl=' + encodeURIComponent(o.dl) : '') + '&k=' + encodeURIComponent(key);
+        return '/api/media?u=' + encodeURIComponent(url) + (o && o.dl ? '&dl=' + encodeURIComponent(o.dl) : '') + (share ? '&s=' + share : '&k=' + encodeURIComponent(key));
     }
     // Addresses written before the key arrived (k empty) get it once it's here
     function fix() {
@@ -33,8 +37,11 @@
             fix();
         });
     }
-    laMux.ready = key && exp - Date.now() > 2 * 3600e3 ? Promise.resolve() : renew().catch(function() {});
-    setInterval(function() { if (exp - Date.now() < 2 * 3600e3) renew().catch(function() {}); }, 30 * 60e3);
+    laMux.ready = share || (key && exp - Date.now() > 2 * 3600e3) ? Promise.resolve() : renew().catch(function() {});
+    if (!share) setInterval(function() { if (exp - Date.now() < 2 * 3600e3) renew().catch(function() {}); }, 30 * 60e3);
+    // A link to one video for anyone (days: until it ends, 7 unless given)
+    laMux.share = function(pid, title, days) { return post({ action: 'share', pid: pid, title: title || '', days: days || 7 }); };
+    laMux.shared = !!share;
     // Mux Player: tickets for its playback, poster and storyboard, then the playback ID (public videos: none needed)
     var _tickets = {};
     laMux.player = function(el, pid) {

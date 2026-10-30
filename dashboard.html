@@ -39,7 +39,7 @@
     <script>(function(){try{var a=localStorage.getItem('la_accent');if(a)document.documentElement.setAttribute('data-accent',a)}catch(e){}window.laAccentHex=function(){return getComputedStyle(document.documentElement).getPropertyValue('--la-accent').trim()||'#39FF14'};var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=7"></script>
-    <script src="/la-media.js?v=1"></script>
+    <script src="/la-media.js?v=2"></script>
     <script src="/la-djframe.js?v=4"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player@3"></script>
     <!-- Video.js 10: the latest session's banner, a muted looping video with no controls (its hls.js element:
@@ -520,15 +520,18 @@
             btn.textContent = s.state === 'loading' ? 'Preparing…' : s.state === 'error' ? 'Share' : 'Share';
         }
         // On a computer: open the clip on your phone (QR code) and share it from there
-        function shareFromComputer(item) {
-            var link = item.kind === 'video'
-                ? location.origin + '/player.html?v=' + encodeURIComponent(item.pid) + '&title=' + encodeURIComponent(_mediaModal.title + ' ' + String(_mediaModal.idx + 1).padStart(2, '0'))
-                : item.url;
+        async function shareFromComputer(item) {
+            // A link that ends after 7 days (anyone can open it until then); videos are never shared by their own address
+            var link = item.url;
+            if (item.kind === 'video') {
+                try { link = (await laMux.share(item.pid, _mediaModal.title + ' ' + String(_mediaModal.idx + 1).padStart(2, '0'), 7)).url; }
+                catch (e) { laAlert('Could not make a link: ' + e.message, { tone: 'error' }); return; }
+            }
             var m = document.createElement('div');
             m.className = 'se-backdrop';
             m.innerHTML = '<div class="se-panel" role="dialog" aria-modal="true" style="max-width:380px;text-align:center">' +
                 '<p class="se-title">Share to Instagram, TikTok…</p>' +
-                '<p style="font-size:13px;line-height:1.5;color:var(--la-sub);margin:8px 0 16px">Scan with your phone to open this clip, then tap <b>Share</b> and choose Instagram Story, Reels, TikTok or any app.</p>' +
+                '<p style="font-size:13px;line-height:1.5;color:var(--la-sub);margin:8px 0 16px">Scan with your phone to open this clip, then tap <b>Share</b> and choose Instagram Story, Reels, TikTok or any app. The link works for 7 days.</p>' +
                 '<div id="share-qr" style="display:flex;justify-content:center;background:#fff;padding:12px;border-radius:12px;width:max-content;margin:0 auto"></div>' +
                 '<div style="display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap">' +
                     '<button type="button" class="se-btn" data-copy>Copy link</button>' +

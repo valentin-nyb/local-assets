@@ -11,6 +11,9 @@ import { signingFor, signUrl, playerTickets } from './_signing.js';
 //   POST { action: 'sign', urls: [] }      these Mux addresses, signed (scripts that fetch or play directly)
 //   GET  ?u=<Mux address>&k=<media key>[&dl=<file name>]   → the signed address (a download when dl is given)
 //   POST { action: 'check' }               (local / assets) each account's signing key and site-only rule
+//   POST { action: 'share', pid, title, days }   a link to one video for anyone, ending after days (7, at most 30)
+//   POST { action: 'unshare', share }      ends a link now
+// Someone opening a shared link has no sign-in: the share id (s) stands in for the media key, for its video only.
 const TTL = 2 * 3600, DL_TTL = 15 * 60;
 const mediaSecret = () => (process.env.LOCAL_ASSETS_API_KEY || 'dev-secret-change-me') + ':media';
 const hmac = d => crypto.createHmac('sha256', mediaSecret()).update(d).digest('base64url');
@@ -68,16 +71,41 @@ async function signAddress(redis, url, slugs, member, ttl, extra = {}) {
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   // Who's asking, before anything else: a media key in the address (GET), or the sign-in (POST)
-  const k = req.method === 'GET' ? readKey(req.query?.k) : null;
-  if (req.method === 'GET' && !k) return res.status(401).send('Sign in again to see this.');
+  const shareId = String((req.method === 'GET' ? req.query?.s : (typeof req.body === 'string' ? (() => { try { return JSON.parse(req.body).share; } catch { return ''; } })() : req.body?.share)) || '');
+  const shareMode = /^[A-Za-z0-9_-]{16,32}$/.test(shareId);
+  const k = req.method === 'GET' && !shareMode ? readKey(req.query?.k) : null;
+  if (req.method === 'GET' && !k && !shareMode) return res.status(401).send('Sign in again to see this.');
   if (req.method !== 'GET' && req.method !== 'POST') return res.status(405).end();
   const session = req.method === 'POST' ? getWebSessionAuth(req) : null;
-  if (req.method === 'POST' && !session?.email) return res.status(401).json({ error: 'Not signed in' });
+  if (req.method === 'POST' && !session?.email && !shareMode) return res.status(401).json({ error: 'Not signed in' });
   await freshVenues();
   const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
   await redis.connect();
   try {
     // <img>, video and download addresses: the media key in the address
+    // A shared link: its one video, until the link ends
+    const share = shareMode ? JSON.parse(await redis.get(`share:${shareId}`).catch(() => null) || 'null') : null;
+    if (shareMode && (!share || share.exp < Date.now())) return req.method === 'GET' ? res.status(410).send('This link has ended. Ask for a new one.') : res.status(410).json({ error: 'This link has ended. Ask for a new one.' });
+    if (share) {
+      const pidOf = u => { try { return (/^\/([A-Za-z0-9]+)/.exec(new URL(u).pathname) || [])[1]; } catch { return null; } };
+      const auth = authOf(share.slug);
+      // The video's policy now (it may have been switched to signed since the link was made)
+      const pol = (await ownerOf(redis, share.pid, [share.slug]).catch(() => null))?.policy || share.policy;
+      if (req.method === 'GET') {
+        const u = String(req.query.u || '');
+        if (pidOf(u) !== share.pid || !/^https:\/\/(stream|image)\.mux\.com\//.test(u)) return res.status(403).send('This link opens one video only.');
+        const dl = req.query.dl ? String(req.query.dl).replace(/[^\w.\- ]/g, '').slice(0, 120) : '';
+        const x = new URL(u); if (dl) x.searchParams.set('download', dl);
+        const out = pol === 'signed' ? signUrl(await signingFor(redis, auth), x.href, dl ? DL_TTL : TTL) : x.href;
+        if (dl) { await redis.lPush(`downloads:${share.slug}`, JSON.stringify({ at: Date.now(), by: 'shared link ' + shareId.slice(0, 6), file: dl, url: u.split('?')[0] })).catch(() => {}); await redis.lTrim(`downloads:${share.slug}`, 0, 1999).catch(() => {}); }
+        res.setHeader('Cache-Control', dl ? 'no-store' : 'private, max-age=3000');
+        return res.redirect(302, out);
+      }
+      const b = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
+      if (b.action === 'tickets') return res.status(200).json({ tickets: { [share.pid]: pol === 'signed' ? playerTickets(await signingFor(redis, auth), share.pid, TTL) : null } });
+      return res.status(403).json({ error: 'This link opens one video only.' });
+    }
+
     if (req.method === 'GET') {
       const venue = findVenueByEmail(k.e, k.v);
       const dl = req.query.dl ? String(req.query.dl).replace(/[^\w.\- ]/g, '').slice(0, 120) : '';
@@ -115,6 +143,25 @@ export default async function handler(req, res) {
         try { const r = await signAddress(redis, String(url), slugs, member, TTL); out.push(r ? r.url : null); } catch { out.push(null); }
       }
       return res.status(200).json({ urls: out });
+    }
+
+    if (body.action === 'share') {
+      const pid = String(body.pid || '');
+      const o = /^[A-Za-z0-9]{10,80}$/.test(pid) ? await ownerOf(redis, pid, slugs).catch(() => null) : null;
+      if (!allowed(o, member)) return res.status(403).json({ error: 'This isn\'t yours to share.' });
+      const days = Math.min(30, Math.max(1, Math.round(Number(body.days) || 7)));
+      const id = crypto.randomBytes(15).toString('base64url');
+      const exp = Date.now() + days * 86400e3;
+      await redis.set(`share:${id}`, JSON.stringify({ slug: o.slug, pid, policy: o.policy, title: String(body.title || '').slice(0, 120), by: session.email, exp }), { EX: days * 86400 });
+      await redis.hSet(`shares:${o.slug}`, id, JSON.stringify({ pid, title: String(body.title || '').slice(0, 120), by: session.email, exp })).catch(() => {});
+      const title = String(body.title || '');
+      return res.status(200).json({ url: `https://local-assets.com/player.html?s=${id}&v=${encodeURIComponent(pid)}${title ? '&title=' + encodeURIComponent(title) : ''}`, exp, days });
+    }
+    if (body.action === 'unshare') {
+      const sh = JSON.parse(await redis.get(`share:${String(body.share || '')}`).catch(() => null) || 'null');
+      if (!sh || !slugs.includes(sh.slug)) return res.status(404).json({ error: 'No such link' });
+      await redis.del(`share:${body.share}`); await redis.hDel(`shares:${sh.slug}`, String(body.share)).catch(() => {});
+      return res.status(200).json({ ok: true });
     }
 
     if (body.action === 'check') {
