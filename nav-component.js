@@ -202,6 +202,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <div class="la-accent-dots" role="radiogroup" aria-label="Accent colour">
                 ${LA_ACCENTS.map(function(a) { return '<button type="button" role="radio" data-accent="' + a[0] + '" aria-label="' + a[1] + '" title="' + a[1] + '" aria-checked="' + ((localStorage.getItem('la_accent') || '') === a[0]) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>'; }).join('')}
             </div>
+            <div class="la-accent-save" hidden><button type="button" id="la-accent-save">Save colour</button><span id="la-accent-msg" role="status"></span></div>
         </div>
     `;
 
@@ -251,23 +252,44 @@ document.addEventListener("DOMContentLoaded", () => {
 
         window._laApplyTheme = apply;
 
-        // Accent colour: one of the Brand Kit's colours for every detail (buttons, links, the logo's sweep, active menu item…).
-        // Kept on this device; '' is the original neon green (orange in light mode)
+        // Accent colour: one of the Brand Kit's colours for every detail (buttons, links, the logo, active menu item…).
+        // A dot shows the colour; Save keeps it with the login, so every device shows it ('' = the original neon green).
+        // This device remembers the saved one (la_accent) so pages open in it straight away.
+        var _accSaved = ''; try { _accSaved = localStorage.getItem('la_accent') || ''; } catch (_) {}
+        var _accToken = function() { try { return JSON.parse(localStorage.getItem('la_admin') || '{}').webToken || ''; } catch (_) { return ''; } };
         function applyAccent(a) {
             if (a) document.documentElement.setAttribute('data-accent', a); else document.documentElement.removeAttribute('data-accent');
-            try { if (a) localStorage.setItem('la_accent', a); else localStorage.removeItem('la_accent'); } catch (_) {}
             document.querySelectorAll('.la-accent-dots button[data-accent]').forEach(function(b) { b.setAttribute('aria-checked', b.getAttribute('data-accent') === a ? 'true' : 'false'); });
+            // Save shows while the colour on screen isn't the saved one
+            document.querySelectorAll('.la-accent-save').forEach(function(r) { if (a !== _accSaved) { r.hidden = false; var m = r.querySelector('#la-accent-msg'); if (m) m.textContent = ''; } else if (!r.dataset.justSaved) r.hidden = true; });
             // Video players take a colour value, not the CSS variable
             var hex = getComputedStyle(document.documentElement).getPropertyValue('--la-accent').trim();
             if (hex) document.querySelectorAll('mux-player').forEach(function(m) { m.setAttribute('accent-color', hex); });
             document.dispatchEvent(new CustomEvent('accentchange'));
         }
+        function keepAccent(a) { _accSaved = a; try { if (a) localStorage.setItem('la_accent', a); else localStorage.removeItem('la_accent'); } catch (_) {} }
         document.addEventListener('click', function(e) {
             var btn = e.target.closest('.la-accent-dots button[data-accent]');
-            if (btn) applyAccent(btn.getAttribute('data-accent'));
+            if (btn) { applyAccent(btn.getAttribute('data-accent')); return; }
+            var save = e.target.closest('#la-accent-save');
+            if (!save) return;
+            var a = document.documentElement.getAttribute('data-accent') || '', row = save.parentNode, msg = row.querySelector('#la-accent-msg');
+            save.disabled = true; if (msg) msg.textContent = 'Saving…';
+            fetch('/api/prefs', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + _accToken() }, body: JSON.stringify({ accent: a }) })
+                .then(function(r) { if (!r.ok) throw new Error(r.status); keepAccent(a); save.hidden = true; if (msg) msg.textContent = 'Saved on every device'; row.dataset.justSaved = '1';
+                    setTimeout(function() { delete row.dataset.justSaved; save.hidden = false; if ((document.documentElement.getAttribute('data-accent') || '') === _accSaved) row.hidden = true; }, 2500); })
+                .catch(function() { if (msg) msg.textContent = 'Could not save. Try again.'; })
+                .then(function() { save.disabled = false; });
         });
         document.addEventListener('themechange', function() { applyAccent(document.documentElement.getAttribute('data-accent') || ''); });
-        try { var _acc = localStorage.getItem('la_accent'); if (_acc && !document.documentElement.getAttribute('data-accent')) document.documentElement.setAttribute('data-accent', _acc); } catch (_) {}
+        if (_accSaved && !document.documentElement.getAttribute('data-accent')) document.documentElement.setAttribute('data-accent', _accSaved);
+        // The colour saved with the login (from another device): shown here too, unless a new one is being tried
+        if (_accToken()) fetch('/api/prefs', { headers: { Authorization: 'Bearer ' + _accToken() } }).then(function(r) { return r.ok ? r.json() : null; }).then(function(d) {
+            if (!d || d.accent === _accSaved) return;
+            var showing = document.documentElement.getAttribute('data-accent') || '', trying = showing !== _accSaved;
+            keepAccent(d.accent);
+            if (!trying) applyAccent(d.accent);
+        }).catch(function() {});
         window._laApplyAccent = applyAccent;
     }
 

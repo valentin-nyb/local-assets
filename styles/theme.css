@@ -815,3 +815,12 @@ html:not(.dark) .la-accent-dots [data-accent="blue"]   { --dot: #2563EB; }
 html:not(.dark) .la-accent-dots [data-accent="teal"]   { --dot: #0D9488; }
 /* A chosen accent colours the side menu's logo all the time, not only on hover */
 html[data-accent] .la-logo { background-position: 0 0; }
+/* Save, under the accent dots, while a new colour is being tried */
+.la-accent-save { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 12px; }
+.la-accent-save[hidden] { display: none; }
+.la-accent-save button { all: unset; box-sizing: border-box; cursor: pointer; padding: 6px 14px; border-radius: 9999px; background: var(--la-accent); color: var(--la-accent-ink); font: 600 10px/14px 'JetBrains Mono', monospace; letter-spacing: .08em; text-transform: uppercase; }
+.la-accent-save button[hidden] { display: none; }
+.la-accent-save button:disabled { opacity: .6; cursor: default; }
+.la-accent-save button:focus-visible { outline: 2px solid var(--la-text); outline-offset: 2px; }
+.la-accent-save span { font: 500 10px/1.3 'JetBrains Mono', monospace; color: var(--la-sub); text-align: center; }
+.la-accent-save span:empty { display: none; }
