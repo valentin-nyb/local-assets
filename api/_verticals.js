@@ -275,7 +275,7 @@ async function streamParts(url) {
 
 // The session's HQ AUDIO ("ARTIST // AUDIO", or { artist, camera: 'AUDIO' }): the one dated like the recording,
 // else the one uploaded after this recording and before the artist's next one
-async function sessionAudio(auth, job) {
+export async function sessionAudio(auth, job) {
   const assets = await listAllAssets(auth);
   const master = assets.find(a => a.id === job.masterId);
   if (!master) return null;
@@ -521,7 +521,7 @@ function maxVolume(url, seconds = 20) {
 // A long form whose camera sent no sound (its microphone off: silence all through) plays with the session's
 // decks recording instead, lined up with the picture. { silent, audio: { pid, offset } }: the player plays the
 // decks' sound offset seconds ahead of the picture's time. Kept per playback ID for a week once decided.
-export async function longFormSound(redis, auth, pid) {
+export async function longFormSound(redis, auth, pid, slug = null) {
   const key = `lf_sound:${pid}`;
   const cached = await redis.get(key).catch(() => null);
   if (cached) return JSON.parse(cached);
@@ -550,8 +550,86 @@ export async function longFormSound(redis, auth, pid) {
     const hq = artist ? await sessionAudio(auth, { masterId: asset.id, artist: artist.toUpperCase().trim() }).catch(() => null) : null;
     out = { silent, audio: hq ? { pid: hq.pid, offset: Math.round((hq.offset || 0) * 1000) / 1000, timed: hq.timed } : null };
   }
+  // A downloadable copy with the decks' sound in it is made on a Mac (a™): the player plays the decks alongside meanwhile
+  if (out.silent && out.audio && slug) {
+    let artist = ''; try { artist = String(JSON.parse(asset.passthrough)?.artist || '').toUpperCase().trim(); } catch {}
+    if (artist) await queueMacRender(redis, { slug, artist, masterId: asset.id, kind: 'sound', wm: null, audio: out.audio }).catch(e => console.error('[mac-render] queue', e.message));
+  }
   // A silent long form with no decks recording yet is looked at again in an hour (the decks may still be uploading)
   await redis.set(key, JSON.stringify(out), { EX: out.silent && !out.audio ? 3600 : 7 * 86400 }).catch(() => {});
   console.log('[long-form sound]', pid, out.silent ? (out.audio ? 'decks ' + out.audio.pid + ' offset ' + out.audio.offset + 's' : 'silent, no decks recording') : 'has sound');
   return out;
+}
+
+// ── Long forms rendered on a Mac (a™) ────────────────────────────────────────────────────────────────────
+// A 2-hour 4K set can't be drawn again in a 5-minute function, so the a™ app on a Mac does it with the Mac's
+// video hardware: the moving (GIF) watermark over the picture, and the decks' sound when the camera's is
+// silence. The Mac takes the next job, renders, and uploads straight to Mux; the copy ("ARTIST // 4KWM", or
+// "ARTIST // 4KSOUND" for sound only) is tied to the recording and shown, played and downloaded in its place.
+// Redis hash mac_renders: job id → job. A job left without news for 15 minutes goes back in the queue.
+export const MAC_RENDERS = 'mac_renders';
+const STALE_MS = 15 * 60e3;
+
+export async function queueMacRender(redis, job) {
+  const id = `${job.masterId}:${job.kind}`;
+  const old = JSON.parse(await redis.hGet(MAC_RENDERS, id) || 'null');
+  if (old && old.state === 'rendering' && Date.now() - (old.beat || 0) < STALE_MS) return { id, already: true };
+  await redis.hSet(MAC_RENDERS, id, JSON.stringify({ ...job, id, state: 'queued', queuedAt: Date.now(), tries: old?.tries || 0 }));
+  console.log('[mac-render] queued', id, job.slug, job.artist, job.kind, job.audio ? 'with decks sound' : '');
+  return { id, queued: true };
+}
+
+// The jobs of these accounts, for the dashboard (what's waiting or rendering, and how far)
+export async function macRenders(redis, slugs) {
+  const all = Object.values(await redis.hGetAll(MAC_RENDERS) || {}).map(v => { try { return JSON.parse(v); } catch { return null; } }).filter(Boolean);
+  return all.filter(j => slugs.includes(j.slug)).map(j => ({ id: j.id, masterId: j.masterId, kind: j.kind, state: j.state, progress: j.progress || 0, by: j.by || '', error: j.error || '' }));
+}
+
+// A Mac asks for work: the oldest waiting job of the accounts it may open. It gets the sources to read and
+// a Mux upload address for the result (the asset is made with its tag when the upload ends).
+export async function claimMacRender(redis, slugs, device) {
+  const all = Object.values(await redis.hGetAll(MAC_RENDERS) || {}).map(v => { try { return JSON.parse(v); } catch { return null; } }).filter(Boolean);
+  const job = all.filter(j => slugs.includes(j.slug) && (j.state === 'queued' || (j.state === 'rendering' && Date.now() - (j.beat || 0) > STALE_MS)))
+    .sort((a, b) => a.queuedAt - b.queuedAt)[0];
+  if (!job) return null;
+  const auth = venueAuth(job.slug);
+  if (!auth) return null;
+  const master = await muxReq(auth, `/video/v1/assets/${encodeURIComponent(job.masterId)}`).catch(() => null);
+  const pid = master?.playback_ids?.[0]?.id;
+  if (!pid) { await redis.hDel(MAC_RENDERS, job.id); return null; }
+  // The picture: the full-quality MP4 when Mux has one, else the stream's best rendition; its own sound with it
+  const mp4 = (master.static_renditions?.files || []).find(f => f.status === 'ready' && /\.mp4$/.test(f.name || ''));
+  const parts = mp4 ? null : await streamParts(`https://stream.mux.com/${pid}.m3u8?rendition_order=desc`).catch(() => null);
+  const video = mp4 ? `https://stream.mux.com/${pid}/${mp4.name}` : parts?.video;
+  if (!video) return null;
+  const [vw, vh] = videoSize(master);
+  const tag = `${job.artist} // ${job.kind === 'wm' ? '4KWM' : '4KSOUND'}`;
+  const upload = await muxReq(auth, '/video/v1/uploads', { method: 'POST', body: JSON.stringify({
+    cors_origin: '*', timeout: 3 * 86400,
+    new_asset_settings: { playback_policy: ['public'], video_quality: await videoQuality(job.slug), passthrough: tag, meta: { external_id: job.masterId }, static_renditions: [{ resolution: 'highest' }] },
+  }) });
+  const claimed = { ...job, state: 'rendering', by: String(device || 'a Mac').slice(0, 60), beat: Date.now(), progress: 0, tries: (job.tries || 0) + 1, uploadId: upload.id };
+  await redis.hSet(MAC_RENDERS, job.id, JSON.stringify(claimed));
+  console.log('[mac-render] taken', job.id, 'by', claimed.by);
+  return {
+    id: job.id, kind: job.kind, artist: job.artist, dur: Number(master.duration) || job.dur || 0, vw: vw || 3840, vh: vh || 2160,
+    video, sound: parts?.audio || null,   // the stream's sound, when the picture is a rendition without it
+    decks: job.audio ? { url: `https://stream.mux.com/${job.audio.pid}.m3u8`, offset: job.audio.offset || 0 } : null,
+    wm: job.wm || null, upload: upload.url,
+  };
+}
+
+export async function reportMacRender(redis, slugs, id, r) {
+  const job = JSON.parse(await redis.hGet(MAC_RENDERS, String(id)) || 'null');
+  if (!job || !slugs.includes(job.slug)) return false;
+  if (r.done) { await redis.hDel(MAC_RENDERS, job.id); console.log('[mac-render] done', job.id, 'by', job.by); return true; }
+  if (r.failed) {
+    // Tried three times: it stays failed (shown on the dashboard) until it's asked for again
+    const again = (job.tries || 0) < 3;
+    await redis.hSet(MAC_RENDERS, job.id, JSON.stringify({ ...job, state: again ? 'queued' : 'failed', error: String(r.failed).slice(0, 300), beat: Date.now() }));
+    console.error('[mac-render] failed', job.id, String(r.failed).slice(0, 300), again ? '(again)' : '');
+    return true;
+  }
+  await redis.hSet(MAC_RENDERS, job.id, JSON.stringify({ ...job, beat: Date.now(), progress: Math.max(0, Math.min(100, Math.round(Number(r.progress) || 0))), stage: r.stage || job.stage }));
+  return true;
 }

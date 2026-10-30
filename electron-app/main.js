@@ -9,6 +9,7 @@ const path = require('path')
 const fs = require('fs')
 const { pathToFileURL } = require('url')
 const thisMac = require('./this-mac')
+const renders = require('./renders')
 
 const SITE = 'https://local-assets.com'
 const HOME = SITE + '/dashboard'
@@ -236,6 +237,7 @@ if (!app.requestSingleInstanceLock()) {
     const getToken = () => win && !win.isDestroyed() && onSite(win.webContents.getURL()) ? win.webContents.executeJavaScript(`(function () { try { return (JSON.parse(localStorage.getItem('la_admin') || 'null') || {}).webToken || '' } catch (e) { return '' } })()`).catch(() => '') : Promise.resolve('')
     thisMac.init(() => { if (win && !win.isDestroyed()) win.webContents.send('la:mac-changed') }, getToken)
     startRelay(getToken)
+    renders.init(getToken)   // long forms rendered on this Mac (moving watermark, decks' sound)
     createWindow()
     if (pendingLink) { handleLink(pendingLink); pendingLink = null }
     offerMoveToApplications().finally(() => { setTimeout(checkForUpdate, 8000); setInterval(checkForUpdate, 24 * 3600e3) })

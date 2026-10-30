@@ -13,6 +13,8 @@ import { resolveWatermark } from './_watermark.js';
 import { renderWatermarkPng, renderWatermarkParts, animatedLogo, VERTICAL, HORIZONTAL } from './_watermark-render.js';
 import { spawn } from 'child_process';
 import ffmpegPath from 'ffmpeg-static';
+import { queueMacRender, longFormSound, claimMacRender, reportMacRender, macRenders, MAC_RENDERS } from './_verticals.js';
+import { platformAdmins, getVenuesConfig } from './_venues.js';
 import { run, signJob, verifyJob, venueAuth as venueAuthFor, muxReq, SUB, socialInfo, tagFor, clipTimes, listAllAssets, sessionClips, videoSize, finishVerticals, originalsKey, isUploadedClip, clipOwner, artistMasters } from './_verticals.js';
 
 // Puts the Brand Kit watermark on a session's vertical clips, and takes it off again.
@@ -187,6 +189,20 @@ export default async function handler(req, res) {
   if (!session.venueSlug || !session.muxAuth) return res.status(403).json({ error: 'No Cloud Storage for this account' });
   const slug = session.venueSlug, auth = session.muxAuth;
   const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+  // Long forms rendered on a Mac (a™): the app asks for the next job and reports on it; the dashboard lists them.
+  // A Mac takes jobs of the accounts its user may open (local / assets: every account).
+  if (body.action === 'macNext' || body.action === 'macReport' || body.action === 'macList') {
+    if (session.member) return res.status(403).json({ error: 'Only the account can do this' });
+    const slugs = platformAdmins().includes(session.email) ? Object.keys(getVenuesConfig()) : [slug];
+    const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
+    await redis.connect();
+    try {
+      if (body.action === 'macList') return res.status(200).json({ jobs: await macRenders(redis, slugs) });
+      if (body.action === 'macNext') return res.status(200).json({ job: await claimMacRender(redis, slugs, body.device) });
+      const ok = await reportMacRender(redis, slugs, body.id, { progress: body.progress, stage: body.stage, done: !!body.done, failed: body.failed || null });
+      return res.status(ok ? 200 : 404).json({ ok });
+    } finally { await redis.quit().catch(() => {}); }
+  }
   // An artist with access only watches and downloads (the account cuts and watermarks)
   if (session.member && body.action !== 'sweep' && body.action !== 'exportGif' && body.action !== 'prepareAnimation') return res.status(403).json({ error: 'Only the account can do this' });
   if (body.action === 'apply' || body.action === 'applyMaster') { const _p = await pausedBy(slug, body.artist ? `artist:${String(body.artist).toUpperCase()}` : null); if (_p) return sendPaused(res, _p); }
@@ -344,6 +360,7 @@ export default async function handler(req, res) {
       const copies = assets.filter(a => a.meta?.external_id === master.id && /\/\/ 4KWM$/i.test(String(a.passthrough || '').trim()));
       if (body.action === 'removeMaster') {
         for (const c of copies) await del(auth, c.id);
+        await redis.hDel(MAC_RENDERS, `${master.id}:wm`).catch(() => {});   // not drawn on a Mac after all
         console.log('[watermark-clips] 4K watermark removed', slug, artist, copies.length);
         return res.status(200).json({ removed: copies.length });
       }
@@ -353,7 +370,24 @@ export default async function handler(req, res) {
       if (!wm) return res.status(400).json({ error: 'The watermark is off, or there is no logo or text to apply. Set it up in Brand Kit.' });
       const [w, h] = videoSize(master);
       const L = (w || 1920) >= (h || 1080) ? HORIZONTAL : VERTICAL;
-      const png = await renderWatermarkPng(wm, L, Math.max(L.W, Math.round(w) || L.W));
+      const width = Math.max(L.W, Math.round(w) || L.W);
+      // A moving (GIF) logo, or a recording whose camera sent no sound: drawn again on a Mac with a™ (the GIF
+      // moving, the decks' sound in), since Mux can only stamp a still and can't add sound
+      const gif = !!(wm.url && /\.gif(\?|$)/i.test(wm.url));
+      const mpid = master.playback_ids?.[0]?.id;
+      const sound = mpid ? await longFormSound(redis, auth, mpid, slug).catch(() => null) : null;
+      if (gif || (sound?.silent && sound.audio)) {
+        const frame = gif ? await animatedLogo(wm) : null;
+        let base, at = null;
+        if (frame) { const r = await renderWatermarkParts(wm, L, width, frame); base = r.png; at = r.logoAt; }
+        else base = await renderWatermarkPng(wm, L, width);
+        if (!base) return res.status(400).json({ error: 'The watermark could not be drawn. Check the logo and font in Brand Kit.' });
+        const baseUrl = (await put(`watermarks/${slug}/${crypto.randomBytes(6).toString('hex')}.png`, base, { access: 'public', contentType: 'image/png', addRandomSuffix: false })).url;
+        const q = await queueMacRender(redis, { slug, artist, date: String(body.date || ''), masterId: master.id, kind: 'wm',
+          wm: { base: baseUrl, gif: frame ? wm.url : null, at }, audio: sound?.silent && sound.audio ? sound.audio : null });
+        return res.status(200).json({ started: 1, mac: true, ...q });
+      }
+      const png = await renderWatermarkPng(wm, L, width);
       if (!png) return res.status(400).json({ error: 'The watermark could not be drawn. Check the logo and font in Brand Kit.' });
       const overlayUrl = (await put(`watermarks/${slug}/${crypto.randomBytes(6).toString('hex')}.png`, png, { access: 'public', contentType: 'image/png', addRandomSuffix: false })).url;
       const copy = await muxReq(auth, '/video/v1/assets', {

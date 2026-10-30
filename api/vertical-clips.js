@@ -28,7 +28,7 @@ export default async function handler(req, res) {
     try {
       for (const slug of slugs) {
         const auth = venueAuth(slug); if (!auth) continue;
-        const out = await longFormSound(redis, auth, pid);
+        const out = await longFormSound(redis, auth, pid, slug);
         if (!out.notHere) return res.status(200).json(out);
       }
       return res.status(200).json({ silent: false });
