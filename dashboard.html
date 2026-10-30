@@ -39,6 +39,7 @@
     <script>(function(){try{var a=localStorage.getItem('la_accent');if(a)document.documentElement.setAttribute('data-accent',a)}catch(e){}window.laAccentHex=function(){return getComputedStyle(document.documentElement).getPropertyValue('--la-accent').trim()||'#39FF14'};var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=7"></script>
+    <script src="/la-media.js?v=1"></script>
     <script src="/la-djframe.js?v=4"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player@3"></script>
     <!-- Video.js 10: the latest session's banner, a muted looping video with no controls (its hls.js element:
@@ -367,7 +368,7 @@
         function thumbUrl(asset, width) {
             if (asset.meta && asset.meta.thumbnail_url) return asset.meta.thumbnail_url;
             if (thumbState(asset) !== 'ready') return null;
-            return 'https://image.mux.com/' + asset.playback_ids[0].id + '/thumbnail.png?width=' + (width || 1920);
+            return laMux('https://image.mux.com/' + asset.playback_ids[0].id + '/thumbnail.png?width=' + (width || 1920));
         }
         function thumbFileName(url, idx) {
             var ext = /\.jpe?g(\?|$)/i.test(url) ? 'jpg' : 'png';
@@ -451,7 +452,7 @@
                 stage.style.cssText = 'width:min(calc(78vh * 9 / 16), calc(100vw - var(--mm-side)));aspect-ratio:9/16;max-width:100%;';
                 // The poster is the clip's first frame (Mux would show a frame from the middle, then jump to the start when it plays)
                 stage.innerHTML = '<mux-player stream-type="on-demand" accent-color="' + laAccentHex() + '" autoplay preload="auto" thumbnail-time="0" style="width:100%;height:100%;--media-object-fit:contain;"></mux-player>';
-                stage.firstChild.setAttribute('playback-id', item.pid);
+                laMux.player(stage.firstChild, item.pid);
                 // Once the clip is known, the box takes its exact shape: the whole clip shows, with no black edges
                 stage.firstChild.addEventListener('loadedmetadata', function() {
                     var w = this.videoWidth || (this.media && this.media.videoWidth), h = this.videoHeight || (this.media && this.media.videoHeight);
@@ -504,7 +505,7 @@
             var key = shareKey(item), num = _mediaModal.idx + 1;
             paintShare();
             if (_shareFiles[key]) return;
-            var url = item.kind === 'video' ? 'https://stream.mux.com/' + item.pid + '/highest.mp4' : item.url;
+            var url = item.kind === 'video' ? laMux('https://stream.mux.com/' + item.pid + '/highest.mp4') : item.url;
             _shareFiles[key] = { state: 'loading' };
             fetch(url).then(function(r) { if (!r.ok) throw new Error(r.status); return r.blob(); }).then(function(blob) {
                 _shareFiles[key] = { state: 'ready', file: new File([blob], shareItemName(item, num), { type: blob.type || (item.kind === 'video' ? 'video/mp4' : 'image/jpeg') }) };
@@ -555,7 +556,7 @@
         function downloadMediaModal() {
             var item = _mediaModal.items[_mediaModal.idx];
             var num  = _mediaModal.idx + 1;
-            var url  = item.kind === 'video' ? 'https://stream.mux.com/' + item.pid + '/highest.mp4' : item.url;
+            var url  = item.kind === 'video' ? laMux('https://stream.mux.com/' + item.pid + '/highest.mp4') : item.url;
             var name = item.kind === 'video'
                 ? _mediaModal.title.replace(/[^a-z0-9 _-]/gi, '') + '_' + String(num).padStart(2, '0') + '.mp4'
                 : thumbFileName(url, num);
@@ -586,7 +587,7 @@
                 for (var i = 0; i < pids.length; i++) {
                     var resp = null;
                     for (var n of ['highest.mp4', 'capped-1080p.mp4', 'high.mp4', 'medium.mp4']) {
-                        var r = await fetch('https://stream.mux.com/' + pids[i] + '/' + n);
+                        var r = await fetch(laMux('https://stream.mux.com/' + pids[i] + '/' + n));
                         if (r.ok) { resp = r; break; }
                     }
                     if (!resp) throw new Error('clip ' + (i + 1) + ' is not ready to download yet. Try again in a few minutes.');
@@ -1166,7 +1167,7 @@
                         var has = _wmState.watermarked.indexOf(id) >= 0, done = removing ? !has : has, pid = pids[i];
                         return '<label class="wp-clip' + (done ? ' done' : '') + '">' +
                             '<input type="checkbox" value="' + escHtml(id) + '"' + (done ? ' disabled' : ' checked') + '>' +
-                            (pid ? '<img src="https://image.mux.com/' + escHtml(pid) + '/thumbnail.png?width=180&height=320&fit_mode=smartcrop&time=5" alt="" loading="lazy">' : '<span class="wp-ph">Processing</span>') +
+                            (pid ? '<img src="' + laMux('https://image.mux.com/' + escHtml(pid) + '/thumbnail.png?width=180&height=320&fit_mode=smartcrop&time=5') + '" alt="" loading="lazy">' : '<span class="wp-ph">Processing</span>') +
                             '<span class="wp-num">' + String(i + 1).padStart(2, '0') + (done ? (removing ? ' · No watermark' : ' · Watermarked') : '') + '</span></label>';
                     }).join('') + '</div>' +
                     '<div class="wp-bar"><button type="button" class="se-btn ghost" data-all>Select all</button><span class="wp-count"></span></div>' +
@@ -1260,7 +1261,7 @@
                 var pid = lim.pid, dur = lim.duration, max = Math.max(1, lim.max || 5), picked = [];
                 var times = []; for (var i = 0; i < 12; i++) times.push(Math.round(dur * (0.04 + 0.86 * i / 11)));
                 var fmt = function(t) { var mm = Math.floor(t / 60), ss = Math.round(t % 60); return mm + ':' + (ss < 10 ? '0' : '') + ss; };
-                var thumb = function(t, w) { return 'https://image.mux.com/' + pid + '/thumbnail.jpg?time=' + t + '&width=' + w; };
+                var thumb = function(t, w) { return laMux('https://image.mux.com/' + pid + '/thumbnail.jpg?time=' + t + '&width=' + w); };
                 var m = document.createElement('div'); m.className = 'se-backdrop';
                 m.innerHTML = '<div class="se-panel hp-panel" role="dialog" aria-modal="true"><div class="se-head"><p class="se-title">' + (max === 1 ? 'Choose the moment to clip' : 'Choose the moments to clip') + '</p><button type="button" class="se-x" data-cancel aria-label="Close">&times;</button></div>' +
                     '<p class="hp-sub">Choose ' + (max === 1 ? 'the moment of the set to clip' : 'up to ' + max + ' moments of the set to clip') + ': tap a point in the set or type a time. Each clip runs 45 seconds from there' + (lim.free ? (max === 1 ? ' and goes in the free place' : ' and they go in the free places') : '') + '.</p>' +
@@ -1631,7 +1632,7 @@
                     if (isAudioAsset && pid) {
                         html += '<div class="pl-16 pr-4 pb-4" style="border-left: 2px solid var(--la-accent);">';
                         html += '<div class="rounded-md overflow-hidden" style="background:var(--la-surface);border:1px solid var(--la-line);">';
-                        html += '<mux-player id="aud-' + uid + '" audio playback-id="' + pid + '" stream-type="on-demand" style="display:block;width:100%;--media-accent-color:var(--la-accent);--media-primary-color:var(--la-text);--media-secondary-color:var(--la-surface);--media-control-background:var(--la-surface);--media-control-hover-background:var(--la-chip);"></mux-player>';
+                        html += '<mux-player id="aud-' + uid + '" audio data-pid="' + pid + '" stream-type="on-demand" style="display:block;width:100%;--media-accent-color:var(--la-accent);--media-primary-color:var(--la-text);--media-secondary-color:var(--la-surface);--media-control-background:var(--la-surface);--media-control-hover-background:var(--la-chip);"></mux-player>';
                         html += '</div>';
                         html += '</div>';
                     }
@@ -1806,8 +1807,8 @@
                     // Mux gives a playback ID straight away, but there is no picture until the clip is ready
                     var pid = clip.status === 'ready' && clip.playback_ids && clip.playback_ids[0] ? clip.playback_ids[0].id : null;
                     var num = String(i + 1).padStart(2, '0');
-                    var staticSrc = pid ? 'https://image.mux.com/' + pid + '/thumbnail.png?width=180&height=320&fit_mode=smartcrop&time=5' : '';
-                    var animSrc   = pid ? 'https://image.mux.com/' + pid + '/animated.webp?width=180&height=320&fit_mode=smartcrop&fps=24&start=5&end=8' : '';
+                    var staticSrc = pid ? laMux('https://image.mux.com/' + pid + '/thumbnail.png?width=180&height=320&fit_mode=smartcrop&time=5') : '';
+                    var animSrc   = pid ? laMux('https://image.mux.com/' + pid + '/animated.webp?width=180&height=320&fit_mode=smartcrop&fps=24&start=5&end=8') : '';
                     var readyIdx = pid ? allPids.indexOf(pid) : -1;
                     var imgId = 'sclip-' + pid;
                     var clipDel = '<button type="button" class="tile-x" title="Delete clip" data-del-id="' + escHtml(clip.id) + '" data-del-label="' + escHtml(name + ' vertical clip ' + num) + '" onclick="event.stopPropagation(); deleteAsset(this)">&times;</button>';
@@ -2194,7 +2195,7 @@
         // Ask the browser to save a file natively (no memory buffering), even for multi-GB masters.
         function nativeDownloadUrl(f) {
             var name = f.path.split('/').pop();
-            if (f.url.indexOf('https://stream.mux.com/') === 0) return f.url + '?download=' + encodeURIComponent(name.replace(/\.[^.]+$/, ''));
+            if (f.url.indexOf('https://stream.mux.com/') === 0) return laMux(f.url, { dl: name.replace(/\.[^.]+$/, '') });
             if (f.url.indexOf('.blob.vercel-storage.com/') > 0) return f.url + (f.url.indexOf('?') > 0 ? '&' : '?') + 'download=1';
             return null;
         }
@@ -2212,7 +2213,7 @@
         async function startStreamingZip(files, folderName, totalBytes, btn) {
             if (!('serviceWorker' in navigator) || !window.ReadableStream || !window.TransformStream) return false;
             var id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-            var msg = { type: 'la-zip', id: id, folder: folderName, files: files.map(function(f) { return { url: f.url, path: f.path }; }) };
+            var msg = { type: 'la-zip', id: id, folder: folderName, files: files.map(function(f) { return { url: new URL(laMux(f.url), location.href).href, path: f.path }; }) };
             var ok = false;
             try {
                 var reg = await navigator.serviceWorker.register('/sw.js');
@@ -2299,7 +2300,7 @@
                         var prefix = (i + 1) + '/' + files.length + ' — ' + f.label;
                         status(prefix);
                         try {
-                            var res = await fetch(f.url);
+                            var res = await fetch(laMux(f.url));
                             if (!res.ok || !res.body) throw new Error('HTTP ' + res.status);
                             var total = Number(res.headers.get('content-length')) || f.size;
                             var handle = await target.getFileHandle(parts[parts.length - 1], { create: true });
@@ -2367,12 +2368,12 @@
                 const tries = [dlFile].concat(['audio.m4a', 'highest.mp4', 'capped-1080p.mp4', 'high.mp4', 'medium.mp4', 'low.mp4'].filter(function(n) { return n !== dlFile; }));
                 let found = null;
                 for (const n of tries) {
-                    const r = await fetch('https://stream.mux.com/' + pid + '/' + n, { method: 'HEAD' }).catch(function() { return null; });
+                    const r = await fetch(laMux('https://stream.mux.com/' + pid + '/' + n), { method: 'HEAD' }).catch(function() { return null; });
                     if (r && r.ok) { found = n; break; }
                 }
                 if (!found) throw new Error('the file is not ready to download yet. Try again in a few minutes.');
                 const a = document.createElement('a');
-                a.href = 'https://stream.mux.com/' + pid + '/' + found + '?download=' + encodeURIComponent(name);
+                a.href = laMux('https://stream.mux.com/' + pid + '/' + found, { dl: name });
                 a.rel = 'noopener';
                 document.body.appendChild(a); a.click(); a.remove();
             } catch (e) {
@@ -2625,7 +2626,7 @@
                 var since = s.liveSince ? s.liveSince * 1000 : null;
                 var tick = function() { v1.textContent = since ? fmtDuration((Date.now() - since) / 1000) : '—'; };
                 tick(); _heroTimer = setInterval(tick, 1000);
-                setImg(s.playbackId ? 'https://image.mux.com/' + s.playbackId + '/thumbnail.jpg?width=1600&height=280&fit_mode=smartcrop&_=' + Math.floor(Date.now() / 30000) : '');
+                setImg(s.playbackId ? laMux('https://image.mux.com/' + s.playbackId + '/thumbnail.jpg?width=1600&height=280&fit_mode=smartcrop') + '&_=' + Math.floor(Date.now() / 30000) : '');
                 stopHeroLoop();
                 return;
             }
@@ -2689,7 +2690,7 @@
             m.innerHTML = '<div class="se-panel hp-panel" role="dialog" aria-modal="true"><div class="se-head"><p class="se-title">Choose the banner moment</p><button type="button" class="se-x" data-cancel aria-label="Close">&times;</button></div>' +
                 '<p class="hp-sub">Pick a frame where the DJ is playing. The banner loops a few seconds from there.</p>' +
                 '<div class="hp-grid">' + times.map(function(t) {
-                    return '<button type="button" class="hp-frame' + (t === near && Math.abs(cur - t) < 5 ? ' on' : '') + '" data-t="' + t + '"><img src="https://image.mux.com/' + pid + '/thumbnail.jpg?time=' + t + '&width=360" alt="" loading="lazy"><span>' + fmt(t) + '</span></button>';
+                    return '<button type="button" class="hp-frame' + (t === near && Math.abs(cur - t) < 5 ? ' on' : '') + '" data-t="' + t + '"><img src="' + laMux('https://image.mux.com/' + pid + '/thumbnail.jpg?time=' + t + '&width=360') + '" alt="" loading="lazy"><span>' + fmt(t) + '</span></button>';
                 }).join('') + '</div>' +
                 // Or an exact time, e.g. 27:27
                 '<form class="hp-time"><label>Or a time<input name="t" placeholder="27:27" inputmode="numeric" value="' + (cur != null && times.indexOf(cur) < 0 ? fmt(cur) : '') + '"></label><img alt="" class="hp-time-pv hidden"><button type="submit" class="se-btn">Use this moment</button></form>' +
@@ -2699,7 +2700,7 @@
             m.addEventListener('click', function(ev) { if (ev.target === m || ev.target.closest('[data-cancel]')) close(); });
             var parseT = function(s) { var p = String(s || '').trim().split(':').map(Number); if (p.some(isNaN) || !p.length || p.length > 3) return null; var t = p.reduce(function(a, x) { return a * 60 + x; }, 0); return t >= 0 && (!dur || t < dur) ? t : null; };
             var tf = m.querySelector('.hp-time'), tpv = m.querySelector('.hp-time-pv');
-            tf.t.addEventListener('input', function() { var t = parseT(tf.t.value); tpv.classList.toggle('hidden', t == null); if (t != null) tpv.src = 'https://image.mux.com/' + pid + '/thumbnail.jpg?time=' + t + '&width=240'; });
+            tf.t.addEventListener('input', function() { var t = parseT(tf.t.value); tpv.classList.toggle('hidden', t == null); if (t != null) tpv.src = laMux('https://image.mux.com/' + pid + '/thumbnail.jpg?time=' + t + '&width=240'); });
             tf.addEventListener('submit', function(ev) { ev.preventDefault(); var t = parseT(tf.t.value); if (t == null) { m.querySelector('.se-error').textContent = 'Type a time in the set, like 27:27'; return; } pickAt(t); });
             var pickAt = function(t) {
                 var spot = { time: t, focus: { x: 50, y: 45 } };
@@ -2749,8 +2750,8 @@
             // Only those seconds, as a stream of their own (Mux instant clipping): the loop is the whole video,
             // so it loops by itself and never loads the rest of the set. Sharp from the first frame.
             var wide = window.innerWidth >= 768;
-            var clip = function(s) { return 'https://stream.mux.com/' + pid + '.m3u8?asset_start_time=' + Math.floor(s) + '&asset_end_time=' + Math.ceil(s + 8) + '&min_resolution=' + (wide ? '720p' : '480p') + '&max_resolution=' + (wide ? '1080p' : '720p'); };
-            var still = function(s) { return 'https://image.mux.com/' + pid + '/thumbnail.webp?time=' + Math.round(s) + '&width=1280'; };
+            var clip = function(s) { return laMux('https://stream.mux.com/' + pid + '.m3u8?asset_start_time=' + Math.floor(s) + '&asset_end_time=' + Math.ceil(s + 8) + '&min_resolution=' + (wide ? '720p' : '480p') + '&max_resolution=' + (wide ? '1080p' : '720p')); };
+            var still = function(s) { return laMux('https://image.mux.com/' + pid + '/thumbnail.webp?time=' + Math.round(s) + '&width=1280'); };
             // The same video at a new moment (its peak or the DJ came in after it started): the playing banner
             // switches to that clip. Building a new one instead flashed black on phones and could wait for a touch.
             if (_heroLoop && _heroLoop.pid === pid && _heroLoop.el.isConnected) {
@@ -2834,14 +2835,14 @@
             var key = pid + '|' + time + '|' + aspect.toFixed(2);
             if (_focusCache[key]) return _focusCache[key];
             var base = 'https://image.mux.com/' + pid + '/thumbnail.jpg?time=' + time;
-            var full = await loadImg(base + '&width=320');
+            var full = await loadImg(laMux(base + '&width=320'));
             var W = 320, H = Math.round(320 * full.naturalHeight / full.naturalWidth);
             var frameAspect = W / H, pos = { x: 50, y: 50 };
             if (Math.abs(aspect - frameAspect) < 0.05) return (_focusCache[key] = pos);
             var wide = aspect > frameAspect;                       // banner wider than video → pick a row band
             var cw = wide ? W : Math.max(8, Math.round(H * aspect));
             var ch = wide ? Math.max(8, Math.round(W / aspect)) : H;
-            var crop = await loadImg(base + '&width=' + cw + '&height=' + ch + '&fit_mode=smartcrop');
+            var crop = await loadImg(laMux(base + '&width=' + cw + '&height=' + ch + '&fit_mode=smartcrop'));
             var F = grey(full, W, H), C = grey(crop, cw, ch);
             var range = wide ? H - ch : W - cw, best = 0, bestErr = Infinity;
             for (var off = 0; off <= range; off++) {

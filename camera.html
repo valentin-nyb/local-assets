@@ -37,6 +37,7 @@
     <script>(function(){try{var a=localStorage.getItem('la_accent');if(a)document.documentElement.setAttribute('data-accent',a)}catch(e){}window.laAccentHex=function(){return getComputedStyle(document.documentElement).getPropertyValue('--la-accent').trim()||'#39FF14'};var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=7"></script>
+    <script src="/la-media.js?v=1"></script>
     <script src="/la-djframe.js?v=4"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player@3"></script>
     <!-- Video.js 10: the decks' live sound, Mux audio with no player around it (hls.js) -->
@@ -1058,7 +1059,7 @@
                     try { var o = JSON.parse(pt); master = o && o.artist && ['AUDIO', 'SOCIAL', 'SOCIALRAW', 'THUMB'].indexOf(String(o.camera || '').toUpperCase()) < 0; } catch (_) {}
                     return master && a.status === 'ready' && (a.playback_ids || []).length && Number(a.duration) > 120;
                 }).sort(function(a, b) { return Number(b.created_at) - Number(a.created_at); })[0];
-                if (m) { var t = Math.round(Number(m.duration) * 0.4); cb('https://image.mux.com/' + m.playback_ids[0].id + '/animated.webp?start=' + t + '&end=' + (t + 5) + '&width=640&fps=12'); }
+                if (m) { var t = Math.round(Number(m.duration) * 0.4); cb(laMux('https://image.mux.com/' + m.playback_ids[0].id + '/animated.webp?start=' + t + '&end=' + (t + 5) + '&width=640&fps=12')); }
             }).catch(function() {});
         }
         // The intro's example card uses this venue's latest session, when there is one
@@ -1087,7 +1088,7 @@
                 // The account's own DJ on the example clips
                 document.querySelectorAll('.ci-name').forEach(function(n) { n.textContent = name; });
                 // Short silent loops from the session (animated WebP: plays like a GIF, smaller)
-                var loop = function(t, w) { var a = Math.round(t); return 'https://image.mux.com/' + pid + '/animated.webp?start=' + a + '&end=' + (a + 4) + '&width=' + w + '&fps=10'; };
+                var loop = function(t, w) { var a = Math.round(t); return laMux('https://image.mux.com/' + pid + '/animated.webp?start=' + a + '&end=' + (a + 4) + '&width=' + w + '&fps=10'); };
                 // One picture only: the account's saved DJ moment (la-djframe.js, as on the dashboard banner), so it
                 // doesn't start somewhere else and then jump. The middle of the set if none comes within 4 s.
                 var shown = false, show = function(d) {
@@ -1134,7 +1135,7 @@
                     img.alt = ''; img.className = 'ci-loop'; img.loading = 'lazy';
                     var c = clips[i];
                     t.classList.toggle('real', !!c);   // a real clip carries its own watermark: no example one on top
-                    if (c) { var cd = Number(c.duration) || 8, cs = Math.max(0, Math.round(cd * 0.35)); img.src = 'https://image.mux.com/' + c.playback_ids[0].id + '/animated.webp?start=' + cs + '&end=' + Math.min(cs + 4, Math.floor(cd)) + '&width=240&fps=10'; }
+                    if (c) { var cd = Number(c.duration) || 8, cs = Math.max(0, Math.round(cd * 0.35)); img.src = laMux('https://image.mux.com/' + c.playback_ids[0].id + '/animated.webp?start=' + cs + '&end=' + Math.min(cs + 4, Math.floor(cd)) + '&width=240&fps=10'); }
                     else img.src = loop(dur * (0.12 + i * 0.25), 240);
                     t.insertBefore(img, t.firstChild);
                 });
@@ -1153,7 +1154,7 @@
             // crossorigin before loading, or the browser hides the sound from the meter
             mp.setAttribute('crossorigin', 'anonymous');
             mp.setAttribute('preload', 'auto');
-            mp.setAttribute('src', 'https://stream.mux.com/' + pid + '.m3u8');
+            mp.setAttribute('src', laMux('https://stream.mux.com/' + pid + '.m3u8'));
             mp.style.cssText = 'position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;';
             stage.appendChild(mp);
             var btn = document.createElement('button');
@@ -1211,7 +1212,7 @@
         function livePlayer(stage, pid, fit, extra) {
             stage.innerHTML = camBars('LIVE · Connecting…');
             var mp = document.createElement('mux-player');
-            mp.setAttribute('stream-type', 'live'); mp.setAttribute('playback-id', pid);
+            mp.setAttribute('stream-type', 'live'); laMux.player(mp, pid);
             mp.setAttribute('muted', ''); mp.setAttribute('autoplay', 'muted'); mp.setAttribute('playsinline', ''); mp.setAttribute('accent-color', laAccentHex());
             mp.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;opacity:0;transition:opacity .4s ease;--media-object-fit:' + fit + ';' + extra;
             var show = function() { mp.style.opacity = '1'; var b = stage.querySelector('.cam-bars'); if (b) setTimeout(function() { b.remove(); }, 450); };

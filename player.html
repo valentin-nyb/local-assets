@@ -30,6 +30,7 @@
     <script>(function(){try{var a=localStorage.getItem('la_accent');if(a)document.documentElement.setAttribute('data-accent',a)}catch(e){}window.laAccentHex=function(){return getComputedStyle(document.documentElement).getPropertyValue('--la-accent').trim()||'#39FF14'};var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=7"></script>
+    <script src="/la-media.js?v=1"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player@3"></script>
     <style>
         html, body { height: 100%; height: 100dvh; overflow: hidden; }
@@ -181,7 +182,7 @@
                             ${pids.map((p, i) => `
                                 <div class="clip-thumb${i === current ? ' active' : ''}" data-idx="${i}">
                                     <div class="clip-thumb-img">
-                                        <img src="https://image.mux.com/${p}/thumbnail.png?width=120&height=213&fit_mode=smartcrop&time=5" loading="lazy" alt="Clip ${i+1}">
+                                        <img src="${laMux(`https://image.mux.com/${p}/thumbnail.png?width=120&height=213&fit_mode=smartcrop&time=5`)}" loading="lazy" alt="Clip ${i+1}">
                                     </div>
                                     <div class="clip-thumb-num">${String(i+1).padStart(2,'0')}</div>
                                 </div>
@@ -202,14 +203,14 @@
                 function loadClip(idx) {
                     current = Math.max(0, Math.min(pids.length - 1, idx));
 
-                    muxEl.setAttribute('playback-id', pids[current]);
+                    laMux.player(muxEl, pids[current]);
                     clipCounter.textContent = 'Clip ' + (current + 1) + ' of ' + pids.length;
                     clipName.textContent    = baseTitle + ' · clip ' + String(current + 1).padStart(2, '0');
                     prevBtn.disabled = current === 0;
                     nextBtn.disabled = current === pids.length - 1;
 
                     // Download URL for this clip
-                    const dlUrl = 'https://stream.mux.com/' + pids[current] + '/highest.mp4';
+                    const dlUrl = laMux('https://stream.mux.com/' + pids[current] + '/highest.mp4');
                     dlBtn.onclick = function() { downloadClip(dlUrl, current); };
 
                     // Update filmstrip
@@ -268,7 +269,7 @@
         } else if (!pid) {
             container.innerHTML = '<p class="pl-empty">This link has no video. Open it again from Distribution History.</p>';
         } else if (type === 'thumb') {
-            const imgUrl = 'https://image.mux.com/' + pid + '/thumbnail.png?width=1920';
+            const imgUrl = laMux('https://image.mux.com/' + pid + '/thumbnail.png?width=1920');
             container.innerHTML = '<img src="' + imgUrl + '" class="pl-image" alt="Thumbnail">';
             dlLink.href = imgUrl;
             dlLink.classList.remove('hidden');
@@ -276,7 +277,7 @@
 
         // ── FILE / AUDIO / VIDEO MODE ────────────────────────────────────
         } else if (file) {
-            const streamUrl = 'https://stream.mux.com/' + pid + '/' + file;
+            const streamUrl = laMux('https://stream.mux.com/' + pid + '/' + file);
             const ext = file.split('.').pop().toLowerCase();
             if (ext === 'm4a' || ext === 'wav' || ext === 'mp3') {
                 container.innerHTML = `
@@ -286,16 +287,16 @@
                         </audio>
                     </div>`;
             } else {
-                container.innerHTML = '<div class="pl-frame"><mux-player playback-id="' + pid + '" stream-type="on-demand" accent-color="' + laAccentHex() + '" autoplay preload="auto" thumbnail-time="0" style="width:100%;height:100%;"></mux-player></div>';
+                container.innerHTML = '<div class="pl-frame"><mux-player data-pid="' + pid + '" stream-type="on-demand" accent-color="' + laAccentHex() + '" autoplay preload="auto" thumbnail-time="0" style="width:100%;height:100%;"></mux-player></div>';
                 decksSound(container, pid);
             }
-            dlLink.href = streamUrl;
+            dlLink.href = laMux('https://stream.mux.com/' + pid + '/' + file, { dl: (title || 'download').replace(/[^\w.\- ]/g, '').trim() || 'download' });
             dlLink.classList.remove('hidden');
             dlLink.classList.add('flex');
 
         // ── PLAIN PLAYBACK ID ─────────────────────────────────────────────
         } else {
-            container.innerHTML = '<div class="pl-frame"><mux-player playback-id="' + pid + '" stream-type="on-demand" accent-color="' + laAccentHex() + '" autoplay preload="auto" thumbnail-time="0" style="width:100%;height:100%;"></mux-player></div>';
+            container.innerHTML = '<div class="pl-frame"><mux-player data-pid="' + pid + '" stream-type="on-demand" accent-color="' + laAccentHex() + '" autoplay preload="auto" thumbnail-time="0" style="width:100%;height:100%;"></mux-player></div>';
             decksSound(container, pid);
         }
 
@@ -312,7 +313,7 @@
                     return import('https://cdn.jsdelivr.net/npm/@videojs/html@10.1.0/media/mux-audio/+esm').then(function() {
                         var a = document.createElement('mux-audio');
                         a.setAttribute('preload', 'auto');
-                        a.setAttribute('src', 'https://stream.mux.com/' + d.audio.pid + '.m3u8');
+                        a.setAttribute('src', laMux('https://stream.mux.com/' + d.audio.pid + '.m3u8'));
                         a.style.display = 'none';
                         document.body.appendChild(a);
                         var off = Number(d.audio.offset) || 0;
@@ -351,7 +352,7 @@
         }
 
         function thumbImageUrl(ref) {
-            return ref.startsWith('https://') ? ref : 'https://image.mux.com/' + encodeURIComponent(ref) + '/thumbnail.png?width=1920';
+            return laMux(ref.startsWith('https://') ? ref : 'https://image.mux.com/' + encodeURIComponent(ref) + '/thumbnail.png?width=1920');
         }
         function downloadThumbBlob(pid, idx) {
             const url = thumbImageUrl(pid);
@@ -377,7 +378,7 @@
         var file = null;
         btn.style.display = '';
         btn.disabled = true; btn.textContent = 'Preparing…';
-        fetch('https://stream.mux.com/' + v + '/highest.mp4').then(function (r) { if (!r.ok) throw new Error(r.status); return r.blob(); })
+        fetch(laMux('https://stream.mux.com/' + v + '/highest.mp4')).then(function (r) { if (!r.ok) throw new Error(r.status); return r.blob(); })
             .then(function (b) { file = new File([b], t + '.mp4', { type: b.type || 'video/mp4' }); btn.disabled = false; btn.textContent = 'Share'; })
             .catch(function () { btn.style.display = 'none'; });
         btn.addEventListener('click', function () { if (file) navigator.share({ files: [file] }).catch(function () {}); });

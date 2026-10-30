@@ -40,7 +40,7 @@
         for (var i = 0; i < 16; i++) {
             var t = Math.round(dur * (0.08 + 0.84 * i / 15));
             var img;
-            try { img = await load('https://image.mux.com/' + pid + '/thumbnail.jpg?time=' + t + '&width=640'); } catch (_) { continue; }
+            try { img = await load(window.laMux ? laMux('https://image.mux.com/' + pid + '/thumbnail.jpg?time=' + t + '&width=640') : 'https://image.mux.com/' + pid + '/thumbnail.jpg?time=' + t + '&width=640'); } catch (_) { continue; }
             var W = img.naturalWidth, H = img.naturalHeight;
             var ppl = d.people.detect(img).detections || [];
             var fcs = d.faces ? (d.faces.detect(img).detections || []) : [];
