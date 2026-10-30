@@ -37,7 +37,9 @@ export default async function handler(req, res) {
 
   let passthrough;
   if (artist) {
-    passthrough = JSON.stringify({ artist, date, camera });
+    // at: when the recording's first second was recorded (decks recorded on a device), to line it up with the cameras
+    const at = Number(body?.at);
+    passthrough = JSON.stringify({ artist, date, camera, ...(Number.isFinite(at) && at > 1.6e12 && at < Date.now() + 864e5 ? { at: Math.round(at) } : {}) });
   } else {
     passthrough = legacyName || 'SESSION_ARCHIVE';
   }

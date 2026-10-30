@@ -7,7 +7,9 @@
 (function() {
     if (window.laDeckRec) return;
     var DB = 'la-deckrec', STORE = 'chunks', META = 'sets';
-    var PAD = 120e3;                       // the cameras' 2 minutes before and after each set
+    // A set's sound starts and stops at the set's exact times, like the cameras' kept recording, so picture and
+    // sound begin together (the cameras open 2 minutes early, but what's kept starts at the set)
+    var PAD = 0;
     var st = { lastCmd: 0, levelDb: null, stream: null, ctx: null, node: null, analyser: null, deviceId: '', label: '', rate: 48000,
         seg: null, follow: false, timer: null, wake: null, uploading: false, cal: null, slot: null, manualArtist: '' };
 
@@ -145,7 +147,7 @@
             var frames = chunks.reduce(function(n, c) { return n + c.blob.size / 4; }, 0);
             if (!frames) return dropSet(s.id);
             var file = new Blob([wavHeader(frames, s.rate)].concat(chunks.map(function(c) { return c.blob; })), { type: 'audio/wav' });
-            return laFetch('/api/get-upload-url', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ artist: s.artist, date: s.date, camera: 'AUDIO' }) })
+            return laFetch('/api/get-upload-url', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ artist: s.artist, date: s.date, camera: 'AUDIO', at: s.startedAt }) })
                 .then(function(r) { return r.json().catch(function() { return {}; }).then(function(d) { if (!r.ok || !d.url) throw new Error(d.error || 'could not start the upload (' + r.status + ')'); return d; }); })
                 .then(function(d) { return new Promise(function(ok, bad) {
                     var x = new XMLHttpRequest(); x.open('PUT', d.url);
@@ -234,7 +236,7 @@
             var btns = body.querySelector('[data-dr-btns]');
             if (btns) btns.innerHTML = !st.stream ? '' : st.seg ? '<button type="button" class="cam-btn" data-dr="stop">Stop and upload</button>'
                 : '<button type="button" class="cam-btn primary" data-dr="' + (st.follow ? 'unfollow' : 'follow') + '">' + (st.follow ? 'Turn off' : 'Turn on') + '</button>' +
-                  '<button type="button" class="cam-btn" data-dr="now">Record now</button>';
+                  (typeof window.openSession === 'function' ? '<button type="button" class="cam-btn" data-dr="session">Create a session</button>' : '');
             var list = body.querySelector('[data-dr-list]');
             if (list) list.innerHTML = waiting.length ? waiting.map(function(s) {
                 var what = s.state === 'uploading' ? 'Uploading ' + (s.progress || 0) + '%' : s.state === 'failed' ? '<span class="dr-err">Not uploaded: ' + esc(s.error || '') + '</span>' : s.state === 'recording' ? 'Stopped before the end (kept here)' : 'Waiting to upload';
@@ -311,6 +313,8 @@
             if (a === 'unfollow') disarm();
             if (a === 'stop') { st.follow = false; stopSet(); }
             if (a === 'upload') uploadAll();
+            // Recording by hand is a session: the cameras and the decks start together
+            if (a === 'session') { window.openSession(); return; }
             if (a === 'rescan') { status(''); fill(); }
             if (a === 'now') {
                 // The calendar's set, else the artist typed here (or On stage on the card)
@@ -325,7 +329,7 @@
         tick(); render();
     }
     // Every 20 s: the calendar, and sets finishing; every second while recording: the time recorded
-    setInterval(function() { if (st.follow || st.seg || document.getElementById('dr-body')) tick(); }, 20000);
+    setInterval(function() { if (st.follow || st.seg || document.getElementById('dr-body')) tick(); }, 5000);
     setInterval(function() { if (st.seg) render(); }, 1000);
     // Anything left from an earlier visit (the page closed while recording or uploading) goes up when the page opens
     if (window.indexedDB) setTimeout(function() {

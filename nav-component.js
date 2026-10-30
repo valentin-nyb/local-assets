@@ -51,8 +51,7 @@
     var FRAMES = ['\u280b', '\u2819', '\u2839', '\u2838', '\u283c', '\u2834', '\u2826', '\u2827', '\u2807', '\u280f'];
     // Pink in dark mode, orange in light mode
     var css = document.createElement('style');
-    css.textContent = 'la-spin{--ls-c:#F472B6;display:flex;align-items:center;padding:18px 0;font:400 12px/1.4 "JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--ls-c)}' +
-        'html:not(.dark) la-spin{--ls-c:#EA580C}' +
+    css.textContent = 'la-spin{--ls-c:var(--la-accent,#F472B6);display:flex;align-items:center;padding:18px 0;font:400 12px/1.4 "JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--ls-c)}' +
         'la-spin .ls-g{flex:none;width:14px;margin-right:10px;text-align:center;font-size:14px;line-height:1}' +
         'la-spin .ls-t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
         'la-spin .ls-k{display:inline-block;width:.6em;height:1.1em;margin-left:2px;vertical-align:-.2em;background:var(--ls-c);animation:ls-blink 1s steps(1) infinite}' +
