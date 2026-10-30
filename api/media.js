@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { createClient } from 'redis';
 import { getWebSessionAuth, findVenueByEmail, findVenuesByEmail, freshVenues, getVenuesConfig, getMuxAuthForVenue, platformAdmins, isAdminVenue, artistOf, sameArtist } from './_venues.js';
-import { signingFor, signUrl, playerTickets } from './_signing.js';
+import { signingFor, signUrl, playerTickets, storageOf } from './_signing.js';
 import { pathOf, readUrl, copyToPrivate, privateBrand } from './_brandstore.js';
 
 // Every video, thumbnail and download goes through here once videos are signed (Mux signed playback):
@@ -36,7 +36,13 @@ function readKey(k) {
 async function ownerOf(redis, pid, slugs) {
   const key = `pid_owner:${pid}`;
   const c = JSON.parse(await redis.get(key).catch(() => null) || 'null');
-  if (c) return slugs.includes(c.slug) ? c : null;
+  if (c) {
+    if (slugs.includes(c.slug)) return c;
+    // Accounts that share one Mux storage share its videos: one of theirs this person may open owns it too
+    const env = storageOf(authOf(c.slug) || '');
+    const same = env && slugs.find(s => storageOf(authOf(s) || '') === env);
+    return same ? { ...c, slug: same } : null;
+  }
   for (const slug of slugs) {
     const cfg = getVenuesConfig()[slug]; const auth = cfg && getMuxAuthForVenue({ slug, ...cfg });
     if (!auth) continue;
