@@ -82,6 +82,8 @@
         mux-player::part(time display) { --media-control-hover-background: transparent; }
         mux-player::part(time display):hover { color: var(--la-accent, #39FF14); }
 </style>
+    <script>// No right-click menu anywhere in the app (text fields keep theirs, to paste)
+    document.addEventListener('contextmenu', function(e) { var t = e.target; if (t && t.closest && t.closest('input, textarea, [contenteditable=""], [contenteditable="true"]')) return; e.preventDefault(); }, true);</script>
 </head>
 <body class="pg">
 

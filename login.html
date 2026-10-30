@@ -98,6 +98,8 @@
             .foot { bottom: 32px; }
         }
     </style>
+    <script>// No right-click menu anywhere in the app (text fields keep theirs, to paste)
+    document.addEventListener('contextmenu', function(e) { var t = e.target; if (t && t.closest && t.closest('input, textarea, [contenteditable=""], [contenteditable="true"]')) return; e.preventDefault(); }, true);</script>
 </head>
 <body>
 

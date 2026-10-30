@@ -84,6 +84,8 @@ window.laOpenPage = function(url) {
     if (window.laApp) location.href = url;
     else window.open(url, '_blank');
 };
+// No right-click menu anywhere in the app (text fields keep theirs, to paste)
+document.addEventListener('contextmenu', function(e) { var t = e.target; if (t && t.closest && t.closest('input, textarea, [contenteditable=""], [contenteditable="true"]')) return; e.preventDefault(); }, true);
 // The accent colours (the Brand Kit's colours), in the order the dots show them
 var LA_ACCENTS = [['', 'Neon green'], ['yellow', 'Yellow'], ['orange', 'Orange'], ['red', 'Red'], ['pink', 'Pink'], ['indigo', 'Indigo'], ['blue', 'Blue'], ['teal', 'Teal']];
 // The breadcrumb's account name: the local / assets account shows its company name as written.

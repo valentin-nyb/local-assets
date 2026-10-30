@@ -49,6 +49,8 @@
         .upload-zone { border: 2px dashed #333; transition: all 0.3s; }
         .upload-zone.dragover { border-color: var(--la-accent); background: color-mix(in srgb, var(--la-accent) 5%, transparent); }
     </style>
+    <script>// No right-click menu anywhere in the app (text fields keep theirs, to paste)
+    document.addEventListener('contextmenu', function(e) { var t = e.target; if (t && t.closest && t.closest('input, textarea, [contenteditable=""], [contenteditable="true"]')) return; e.preventDefault(); }, true);</script>
 </head>
 <body class="font-sans antialiased overflow-x-hidden">
 
