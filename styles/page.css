@@ -7,9 +7,9 @@
 .pg-left, .pg-right { display: flex; align-items: center; gap: 14px; min-width: 0; }
 .pg-right { flex-shrink: 0; gap: 10px; }
 /* The wordmark: green in dark, near-black in light (the logo's shape, recoloured) */
-.pg-wordmark { display: block; flex: none; width: 128px; aspect-ratio: 1328 / 165; background: #39FF14;
+.pg-wordmark { display: block; flex: none; width: 128px; aspect-ratio: 1328 / 165; background: var(--la-accent, #39FF14);
   -webkit-mask: url(/logos/Green@2x.png) left center / contain no-repeat; mask: url(/logos/Green@2x.png) left center / contain no-repeat; }
-html:not(.dark) .pg-wordmark { background: var(--la-text); }
+html:not(.dark):not([data-accent]) .pg-wordmark { background: var(--la-text); }
 .pg-sep { flex: none; width: 1px; height: 18px; background: var(--la-line); }
 .pg-title { min-width: 0; font-size: 14px; font-weight: 400; color: var(--la-sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pg-header .cam-btn { display: inline-flex; align-items: center; justify-content: center; line-height: 1; min-height: 36px; padding: 0 16px; font-size: 13px; font-weight: 500; gap: 8px; text-decoration: none; }
