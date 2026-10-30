@@ -141,6 +141,11 @@
                     <details class="ac-on-recent"><summary>Seen recently <span id="ac-on-rn"></span></summary><div id="ac-on-recent" class="ac-on-list"></div></details></section>
                 <div class="ac-tools"><input id="ac-q" type="search" placeholder="Search accounts" aria-label="Search accounts"><span class="ac-sub" id="ac-count" style="margin:0"></span><button type="button" class="cam-btn primary" id="ac-new" style="margin-left:auto">New account</button></div>
                 <div class="ac-list" id="ac-list"><la-spin topic="accounts"></la-spin></div>
+                <!-- Video protection: each account's Mux storage can sign its videos (signed playback) -->
+                <details class="ac-on-recent" id="ac-prot" style="margin-top:22px"><summary>Video protection</summary>
+                    <p class="ac-sub" style="margin:10px 0">Before videos are switched to signed links, each account's Cloud Storage needs a signing key and the site-only rule. Check makes them where they're missing and shows any account whose token can't.</p>
+                    <button type="button" class="cam-btn" id="ac-prot-check">Check every account</button>
+                    <div id="ac-prot-list" class="ac-on-list" style="margin-top:12px"></div></details>
                 <!-- The emails clients get, as examples -->
             </div>
         </div>
@@ -180,6 +185,19 @@
             return laFetch('/api/admin-accounts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
                 .then(function(r) { return r.json().catch(function() { return {}; }).then(function(d) { if (!r.ok) throw new Error(d.error || r.status); return d; }); });
         }
+        document.getElementById('ac-prot-check').addEventListener('click', async function() {
+            var b = this, list = document.getElementById('ac-prot-list');
+            b.disabled = true; list.textContent = 'Checking every account…';
+            try {
+                var r = await laFetch('/api/media', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'check' }) });
+                var d = await r.json(); if (!r.ok) throw new Error(d.error || r.status);
+                var names = {}; _accounts.forEach(function(a) { names[a.slug] = a.name; });
+                list.innerHTML = d.accounts.map(function(a) {
+                    return '<p class="ac-sub" style="margin:4px 0"><b>' + esc(names[a.slug] || a.slug) + '</b> · ' + (a.ok ? 'Ready' + (a.siteOnly ? ', plays only on local-assets.com' : ', site-only rule missing') : '<span style="color:var(--la-bad)">' + esc(a.error) + '</span>') + '</p>';
+                }).join('');
+            } catch (e) { list.textContent = 'Could not check: ' + e.message; }
+            b.disabled = false;
+        });
         var day = function(ms) { return new Date(ms).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); };
 
         var _accounts = [];

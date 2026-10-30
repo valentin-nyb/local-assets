@@ -351,7 +351,7 @@ export async function signInEnded(redis, sid) {
 // (their own folder; api/brand.js checks the rest). Everything else (cameras, uploads, billing) is refused.
 const MEMBER_GET = ['list-assets', 'asset', 'download', 'session-meta', 'next-event', 'cameras', 'brand',
   'peak-moment', 'vertical-clips', 'camera-frame', 'system-health', 'client-profile', 'venue-contacts'];
-const MEMBER_POST = ['brand', 'switch-venue', 'peak-moment', 'push-token'];
+const MEMBER_POST = ['brand', 'media', 'switch-venue', 'peak-moment', 'push-token'];
 export function memberAllowed(req) {
   const u = new URL(String(req.url || '/'), 'https://x');
   const name = u.pathname.replace(/^\/api\//, '').replace(/\/$/, '');
