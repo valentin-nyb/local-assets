@@ -39,6 +39,8 @@
     <script src="/la-dialogs.js?v=6"></script>
     <script src="/la-djframe.js?v=4"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player@3"></script>
+    <!-- Video.js 10: the decks' live sound, Mux audio with no player around it (hls.js) -->
+    <script type="module" async src="https://cdn.jsdelivr.net/npm/@videojs/html@10.1.0/media/mux-audio/+esm"></script>
     <script src="nav-component.js?v=52"></script>
     <script src="la-deckrec.js?v=1"></script>
     <style>
@@ -1144,10 +1146,14 @@
         // "Listen" turns the sound on.
         var _deckMeters = [], _audioCtx = null;
         function deckMeter(stage, pid) {
-            var mp = document.createElement('mux-player');
+            // Video.js's <mux-audio> plays the stream through Media Source; where there is none (older iPhones)
+            // Safari plays HLS in a plain <audio> itself
+            var mse = !!(window.MediaSource || window.ManagedMediaSource);
+            var mp = document.createElement(mse ? 'mux-audio' : 'audio');
             // crossorigin before loading, or the browser hides the sound from the meter
             mp.setAttribute('crossorigin', 'anonymous');
-            mp.setAttribute('stream-type', 'live'); mp.setAttribute('playback-id', pid); mp.setAttribute('audio', '');
+            mp.setAttribute('preload', 'auto');
+            mp.setAttribute('src', 'https://stream.mux.com/' + pid + '.m3u8');
             mp.style.cssText = 'position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;';
             stage.appendChild(mp);
             var btn = document.createElement('button');
@@ -1163,7 +1169,7 @@
             _deckMeters = _deckMeters.filter(function(m) { return m.stage.isConnected; });
             _deckMeters.forEach(function(m) {
                 if (m.started) return;
-                var el = (m.mp.media && (m.mp.media.nativeEl || m.mp.media)) || (m.mp.shadowRoot && m.mp.shadowRoot.querySelector('video,audio'));
+                var el = m.mp.tagName === 'AUDIO' ? m.mp : m.mp.target;   // the <audio> inside Video.js's element
                 if (!el || !el.play) { setTimeout(startMeters, 800); return; }
                 m.started = true;
                 try {

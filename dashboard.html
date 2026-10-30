@@ -41,6 +41,9 @@
     <script src="/la-dialogs.js?v=6"></script>
     <script src="/la-djframe.js?v=4"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player@3"></script>
+    <!-- Video.js 10: the latest session's banner, a muted looping video with no controls (its hls.js element:
+         Video.js's own background engine can't play Mux's MPEG-TS segments yet) -->
+    <script type="module" async src="https://cdn.jsdelivr.net/npm/@videojs/html@10.1.0/media/hlsjs-video/+esm"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="nav-component.js?v=52"></script>
     <style>
@@ -2716,10 +2719,11 @@
         var _heroLoop = null, _heroWait = {}, _heroWaitTimer = null;
         function playHeroLoop(a) {
             var wrap = document.getElementById('live-feed-player-wrap');
-            // iPhone and iPad: a plain muted video playing Mux's stream natively. The player's own video sits inside it,
-            // where iOS didn't always see it as muted and inline, so the banner waited for a touch to start.
+            // iPhone and iPad: a plain muted video playing the clip natively (a video inside another element's
+            // shadow wasn't always seen by iOS as muted and inline, so the banner waited for a touch).
+            // Elsewhere: Video.js's <hlsjs-video>, muted and looping, with no player around it.
             var ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-            if (!wrap || (!ios && (!window.customElements || !customElements.get('mux-player')))) return;
+            if (!wrap) return;
             var pid = a.playback_ids[0].id, dur = Number(a.duration) || 0;
             if (_peaks[a.id] == null) requestPeak(a.id);   // re-renders with the peak once known
             var dj = djSpot(a);
@@ -2727,11 +2731,18 @@
             var start = Math.max(0, Math.min(t - 4, dur - 10)), end = start + 8;
             var key = pid + '|' + Math.round(start);
             if (_heroLoop && _heroLoop.key === key) return;
-            // The same video at a new moment (its peak or the DJ came in after it started): the playing video
-            // moves there. Building a new player instead flashed black on phones and could wait for a touch.
+            // Only those seconds, as a stream of their own (Mux instant clipping): the loop is the whole video,
+            // so it loops by itself and never loads the rest of the set. Sharp from the first frame.
+            var wide = window.innerWidth >= 768;
+            var clip = function(s) { return 'https://stream.mux.com/' + pid + '.m3u8?asset_start_time=' + Math.floor(s) + '&asset_end_time=' + Math.ceil(s + 8) + '&min_resolution=' + (wide ? '720p' : '480p') + '&max_resolution=' + (wide ? '1080p' : '720p'); };
+            var still = function(s) { return 'https://image.mux.com/' + pid + '/thumbnail.webp?time=' + Math.round(s) + '&width=1280'; };
+            // The same video at a new moment (its peak or the DJ came in after it started): the playing banner
+            // switches to that clip. Building a new one instead flashed black on phones and could wait for a touch.
             if (_heroLoop && _heroLoop.pid === pid && _heroLoop.el.isConnected) {
                 _heroLoop.key = key; _heroLoop.start = start; _heroLoop.end = end;
-                try { _heroLoop.el.currentTime = start; } catch (_) {}
+                if (ios) { _heroLoop.el.poster = still(start); _heroLoop.el.src = clip(start); }
+                else { _heroLoop.el.setAttribute('poster', still(start)); _heroLoop.el.setAttribute('src', clip(start)); }
+                if (_heroLoop.play) setTimeout(_heroLoop.play, 300);
                 return;
             }
             // Wait a moment for the peak and the DJ's moment (usually known within a second), so the banner
@@ -2743,67 +2754,45 @@
             }
             wrap.style.opacity = '0';
             wrap.innerHTML = '';
-            var mp;
+            var mp, fill = 'display:block;width:100%;height:100%;object-fit:cover;object-position:var(--media-object-position, 50% 50%);';
             if (ios) {
                 mp = document.createElement('video');
-                mp.muted = true; mp.defaultMuted = true; mp.playsInline = true; mp.autoplay = true;
-                ['muted', 'playsinline', 'webkit-playsinline', 'autoplay'].forEach(function(n) { mp.setAttribute(n, ''); });
+                mp.muted = true; mp.defaultMuted = true; mp.playsInline = true; mp.autoplay = true; mp.loop = true;
+                ['muted', 'playsinline', 'webkit-playsinline', 'autoplay', 'loop'].forEach(function(n) { mp.setAttribute(n, ''); });
                 mp.setAttribute('preload', 'auto');
                 mp.setAttribute('disablepictureinpicture', ''); mp.setAttribute('disableremoteplayback', '');
                 mp.setAttribute('aria-hidden', 'true');
-                // Starts at the moment (#t=), at the same sharpness as the player
-                mp.src = 'https://stream.mux.com/' + pid + '.m3u8?min_resolution=' + (window.innerWidth >= 768 ? '720p&max_resolution=1080p' : '480p&max_resolution=720p') + '#t=' + Math.round(start);
-                mp.poster = 'https://image.mux.com/' + pid + '/thumbnail.webp?time=' + Math.round(start) + '&width=1280';   // the moment, until it plays
-                mp.style.cssText = 'display:block;width:100%;height:100%;object-fit:cover;object-position:var(--media-object-position, 50% 50%);background:transparent;';
+                mp.poster = still(start);   // the moment, until it plays
+                mp.src = clip(start);
+                mp.style.cssText = fill + 'background:transparent;';
             } else {
-                mp = document.createElement('mux-player');
-                mp.setAttribute('playback-id', pid);
-                mp.setAttribute('stream-type', 'on-demand');
-                mp.setAttribute('muted', '');
-                mp.setAttribute('autoplay', 'muted');
-                mp.setAttribute('playsinline', '');
-                mp.setAttribute('preload', 'auto');
-                mp.setAttribute('start-time', String(Math.round(start)));
-                mp.setAttribute('thumbnail-time', String(Math.round(start)));
-                mp.setAttribute('max-resolution', window.innerWidth >= 768 ? '1080p' : '720p');
-                // Sharp from the first frame: no blurry low-quality start
-                mp.setAttribute('min-resolution', window.innerWidth >= 768 ? '720p' : '480p');
-                mp.setAttribute('disable-tracking', '');
-                mp.setAttribute('nohotkeys', '');
-                mp.setAttribute('default-hidden-captions', '');
-                // Never show subtitles on the banner
-                var noCaptions = function() {
-                    var tracks = mp.textTracks || (mp.media && mp.media.textTracks) || [];
-                    for (var i = 0; i < tracks.length; i++) tracks[i].mode = 'disabled';
-                };
-                mp.addEventListener('loadedmetadata', noCaptions);
-                mp.addEventListener('playing', noCaptions);
-                mp.style.cssText = 'width:100%;height:100%;--controls:none;--media-object-fit:cover;--media-background-color:transparent;--center-controls:none;--bottom-play-button:none;';
+                // Muted, looping and playing by itself; the still of the moment shows until the first frame
+                mp = document.createElement('hlsjs-video');
+                ['muted', 'loop', 'autoplay', 'playsinline', 'crossorigin', 'disablepictureinpicture', 'disableremoteplayback'].forEach(function(n) { mp.setAttribute(n, ''); });
+                mp.setAttribute('aria-hidden', 'true');
+                mp.setAttribute('poster', still(start));
+                mp.style.cssText = 'display:block;width:100%;height:100%;--media-object-fit:cover;';
+                mp.setAttribute('src', clip(start));
             }
-            // Once the video is really playing, show only the video (no second, see-through layer)
-            // Show the player right away (its cover is the loop's first frame), then make sure it
-            // plays: iOS can refuse autoplay (Low Power Mode), so retry once metadata is in and
-            // on the first touch anywhere on the page.
             requestAnimationFrame(function() { wrap.style.opacity = '1'; });
             // Low Power Mode (iPhone, iPad) refuses every video that plays by itself: the banner then keeps the
-            // sharp still of the moment (the video's poster) and the video starts at the first touch. (A moving
-            // picture of the same seconds was shown before, but iPads draw it slowly: blurry and lagging.)
-            var tryPlay = function() { mp.muted = true; var p = mp.play && mp.play(); if (p && p.catch) p.catch(function() {}); };
-            mp.addEventListener('loadedmetadata', function() { if (ios && mp.currentTime < start - 1) { try { mp.currentTime = start; } catch (_) {} } tryPlay(); });
-            mp.addEventListener('canplay', function() { if (mp.paused) tryPlay(); });
-            var kick = function() { if (mp.paused) tryPlay(); };
+            // sharp still of the moment and the video starts at the first touch.
+            var vid = function() { return ios ? mp : mp.target; };   // the <video> inside Video.js's element
+            var tryPlay = function() { var v = vid(); if (!v) return; v.muted = true; var p = v.play && v.play(); if (p && p.catch) p.catch(function() {}); };
+            var watch = function() { var v = vid(); if (!v) { setTimeout(watch, 200); return; } v.addEventListener('loadedmetadata', tryPlay); v.addEventListener('canplay', function() { if (v.paused) tryPlay(); }); };
+            watch();
+            var kick = function() { var v = vid(); if (v && v.paused) tryPlay(); };
             document.addEventListener('touchstart', kick, { once: true, passive: true });
             document.addEventListener('click', kick, { once: true });
             // iOS pauses video when the app or tab goes to the background: start it again on return
             // (and keep trying for a few seconds after opening, until the player has loaded)
-            var resume = function() { if (_heroLoop && _heroLoop.el === mp && mp.paused && document.visibilityState === 'visible') tryPlay(); };
+            var resume = function() { var v = vid(); if (_heroLoop && _heroLoop.el === mp && v && v.paused && document.visibilityState === 'visible') tryPlay(); };
             document.addEventListener('visibilitychange', resume);
             window.addEventListener('pageshow', resume);
             window.addEventListener('focus', resume);
             [500, 1500, 3000, 6000].forEach(function(ms) { setTimeout(resume, ms); });
-            mp.addEventListener('timeupdate', function() { var l = _heroLoop && _heroLoop.el === mp ? _heroLoop : { start: start, end: end }; if (mp.currentTime >= l.end || mp.currentTime < l.start - 1) mp.currentTime = l.start; });
             wrap.appendChild(mp);
-            _heroLoop = { key: key, el: mp, pid: pid, start: start, end: end };
+            _heroLoop = { key: key, el: mp, pid: pid, start: start, end: end, play: tryPlay };
             if (wrap.dataset.pos) mp.style.setProperty('--media-object-position', wrap.dataset.pos);
         }
         function stopHeroLoop() {
