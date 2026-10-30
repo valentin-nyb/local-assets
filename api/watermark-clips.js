@@ -376,32 +376,16 @@ export default async function handler(req, res) {
       const gif = !!(wm.url && /\.gif(\?|$)/i.test(wm.url));
       const mpid = master.playback_ids?.[0]?.id;
       const sound = mpid ? await longFormSound(redis, auth, mpid, slug).catch(() => null) : null;
-      if (gif || (sound?.silent && sound.audio)) {
+      // Always drawn by a™ on the Mac that asked (the Apply button is only in the app)
         const frame = gif ? await animatedLogo(wm) : null;
         let base, at = null;
         if (frame) { const r = await renderWatermarkParts(wm, L, width, frame); base = r.png; at = r.logoAt; }
         else base = await renderWatermarkPng(wm, L, width);
         if (!base) return res.status(400).json({ error: 'The watermark could not be drawn. Check the logo and font in Brand Kit.' });
         const baseUrl = (await put(`watermarks/${slug}/${crypto.randomBytes(6).toString('hex')}.png`, base, { access: 'public', contentType: 'image/png', addRandomSuffix: false })).url;
-        const q = await queueMacRender(redis, { slug, artist, date: String(body.date || ''), masterId: master.id, kind: 'wm',
+        const q = await queueMacRender(redis, { slug, artist, date: String(body.date || ''), masterId: master.id, kind: 'wm', device: String(body.device || '').slice(0, 60) || null,
           wm: { base: baseUrl, gif: frame ? wm.url : null, at }, audio: sound?.silent && sound.audio ? sound.audio : null });
         return res.status(200).json({ started: 1, mac: true, ...q });
-      }
-      const png = await renderWatermarkPng(wm, L, width);
-      if (!png) return res.status(400).json({ error: 'The watermark could not be drawn. Check the logo and font in Brand Kit.' });
-      const overlayUrl = (await put(`watermarks/${slug}/${crypto.randomBytes(6).toString('hex')}.png`, png, { access: 'public', contentType: 'image/png', addRandomSuffix: false })).url;
-      const copy = await muxReq(auth, '/video/v1/assets', {
-        method: 'POST',
-        body: JSON.stringify({
-          input: [{ url: `mux://assets/${master.id}` }, { url: overlayUrl, overlay_settings: { vertical_align: 'top', horizontal_align: 'left', width: '100%', opacity: '100%' } }],
-          playback_policy: ['public'], video_quality: await videoQuality(slug),
-          passthrough: `${artist} // 4KWM`,
-          meta: { external_id: master.id },
-          static_renditions: [{ resolution: 'highest' }],
-        }),
-      });
-      console.log('[watermark-clips] 4K watermark started', slug, artist, copy.id, wm.url && /\.gif(\?|$)/i.test(wm.url) ? '(GIF as still)' : '');
-      return res.status(200).json({ started: 1, id: copy.id, gifStill: !!(wm.url && /\.gif(\?|$)/i.test(wm.url)) });
     }
 
     if (body.action !== 'apply') return res.status(400).json({ error: 'Unknown action' });

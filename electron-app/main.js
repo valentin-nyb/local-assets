@@ -93,6 +93,8 @@ ipcMain.handle('la:mac-link', (e, l) => {
 })
 ipcMain.handle('la:mac-preview', (e, venue, slotId) => fromSite(e) ? thisMac.preview(str(venue, 80), str(slotId, 80)) : null)
 ipcMain.handle('la:mac-kick', e => { if (fromSite(e)) thisMac.kick() })
+ipcMain.handle('la:render-now', e => { if (fromSite(e)) renders.look() })
+ipcMain.handle('la:render-device', e => fromSite(e) ? renders.device() : '')
 ipcMain.handle('la:mac-unlink', (e, venue, slotId) => {
   if (!fromSite(e)) throw new Error('Not allowed')
   thisMac.unlink(str(venue, 80), str(slotId, 80))

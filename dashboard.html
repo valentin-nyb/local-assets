@@ -1087,15 +1087,16 @@
         function scheduleWmRefresh() { if (!_wmRefresh) _wmRefresh = setTimeout(function() { _wmRefresh = null; fetchRecentUploads(); }, 30000); }
         async function masterWatermark(btn) {
             var apply = btn.dataset.mode === 'apply', artist = btn.dataset.artist, date = btn.dataset.date;
-            if (apply && !(await laConfirm({ title: 'Watermark the 4K long form?', message: 'Cloud Storage makes a watermarked copy at the full resolution; the original is kept and comes back if you remove the watermark. It takes about as long as the set. A moving (GIF) logo, or a set whose camera recorded no sound, is rendered by a™ on a Mac (it moves, and the decks sound goes in): keep a™ open on a Mac until it\'s done.', confirmText: 'Apply watermark' }))) return;
+            if (apply && !(await laConfirm({ title: 'Watermark the 4K long form?', message: 'a™ draws the watermark on this Mac at the full resolution, the moving logo included (and the decks sound when the camera recorded none), then uploads it. The original is kept and comes back if you remove the watermark. It takes about as long as the set: keep a™ open until it\'s done.', confirmText: 'Apply watermark' }))) return;
             if (!apply && !(await laConfirm({ title: 'Remove the watermark?', message: 'The watermarked copy is deleted and the original 4K long form is shown again.', confirmText: 'Remove watermark' }))) return;
             btn.disabled = true; btn.textContent = apply ? 'Starting…' : 'Removing…';
             var h = { 'Content-Type': 'application/json' };
             if (_adminView) { var v = _venueOfArtist[String(artist).toUpperCase().trim()]; if (v) h['X-LA-Venue'] = v; }
             try {
-                var r = await laFetch('/api/watermark-clips', { method: 'POST', headers: h, body: JSON.stringify({ action: apply ? 'applyMaster' : 'removeMaster', artist: artist, date: date }) });
+                var r = await laFetch('/api/watermark-clips', { method: 'POST', headers: h, body: JSON.stringify({ action: apply ? 'applyMaster' : 'removeMaster', artist: artist, date: date, device: apply && window.laApp && window.laApp.render ? await window.laApp.render.device() : '' }) });
                 var d = await r.json(); if (!r.ok) throw new Error(d.error || r.status);
-                laToast(!apply ? 'Watermark removed' : d.mac ? 'Queued for a™: the next Mac with a™ open renders the 4K long form (moving logo, and the decks sound if the camera had none) and uploads it' : 'Watermarking the 4K long form');
+                if (apply && window.laApp && window.laApp.render) window.laApp.render.now();   // this Mac starts on it straight away
+                laToast(!apply ? 'Watermark removed' : 'This Mac is watermarking the 4K long form (moving logo, and the decks sound if the camera had none). Keep a™ open until it\'s uploaded.');
                 fetchRecentUploads();
             } catch (e) {
                 btn.disabled = false; btn.textContent = apply ? 'Apply watermark' : 'Remove watermark';
@@ -1593,7 +1594,12 @@
                         html += '<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Play" onclick="' + (isAudioAsset ? 'toggleInlineAudio(\'aud-' + uid + '\')' : 'laOpenPage(\'/player.html?v=' + pid + '&f=' + dlFile + '&title=\' + encodeURIComponent(\'' + safeLabel + '\'), \'_blank\')') + '">';
                         html += '<iconify-icon icon="solar:play-linear" class="text-primary"></iconify-icon>';
                         html += '</button>';
-                        if (isMasterAsset && wmOrig) {
+                        // The 4K long form is watermarked by a™ on a Mac (the moving logo is drawn there): Apply shows
+                        // only in the app; the website points to it. Remove works anywhere.
+                        var inMacApp = !!(window.laApp && window.laApp.render);
+                        if (isMasterAsset && wmOrig && !wmCopy && !wmPending && !macJob && !inMacApp) {
+                            html += '<a class="wm-master" href="/download" title="The 4K long form is watermarked by a™ for Mac, which draws the moving logo">Watermark in a™ for Mac</a>';
+                        } else if (isMasterAsset && wmOrig && !(macJob && !wmCopy)) {
                             html += '<button type="button" class="wm-master" data-artist="' + escHtml(sessionName) + '" data-date="' + escHtml(sessionDate) + '" data-mode="' + (wmCopy ? 'remove' : 'apply') + '"' + (wmPending ? ' disabled' : '') + ' onclick="masterWatermark(this)">' + (wmPending ? 'Watermarking…' : wmCopy ? 'Remove watermark' : 'Apply watermark') + '</button>';
                             if (wmPending) scheduleWmRefresh();
                         }

@@ -12,4 +12,9 @@ contextBridge.exposeInMainWorld('laApp', {
     unlink: (venue, slotId) => ipcRenderer.invoke('la:mac-unlink', venue, slotId),
     onChange: cb => { ipcRenderer.on('la:mac-changed', () => cb()) },
   },
+  // Long forms rendered on this Mac (Apply watermark on a 4K long form): start now, and this Mac's name
+  render: {
+    now: () => ipcRenderer.invoke('la:render-now'),
+    device: () => ipcRenderer.invoke('la:render-device'),
+  },
 })

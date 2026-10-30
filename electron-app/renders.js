@@ -16,6 +16,9 @@ const IDLE_MS = 2 * 60e3          // look for work every 2 minutes
 const BEAT_MS = 30e3              // tell the site how far it is every 30 s
 let getToken = null, busy = false, proc = null, timer = null
 
+// This Mac's name: a watermark asked for here is rendered here
+const device = () => os.hostname().replace(/\.local$/, '')
+
 function log(line) {
   try {
     const f = path.join(app.getPath('userData'), 'renders.log')
@@ -134,7 +137,7 @@ async function look() {
   if (busy) return
   busy = true
   try {
-    const d = await api({ action: 'macNext', device: os.hostname().replace(/\.local$/, '') }).catch(() => null)
+    const d = await api({ action: 'macNext', device: device() }).catch(() => null)
     if (d && d.job) { await runJob(d.job); busy = false; return look() }
   } finally { busy = false }
   timer = setTimeout(look, IDLE_MS)
@@ -146,4 +149,4 @@ function init(tokenOf) {
   app.on('before-quit', () => { if (proc) try { proc.kill('SIGKILL') } catch {} })
 }
 
-module.exports = { init, look }
+module.exports = { init, look, device }

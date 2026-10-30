@@ -589,7 +589,9 @@ export async function macRenders(redis, slugs) {
 // a Mux upload address for the result (the asset is made with its tag when the upload ends).
 export async function claimMacRender(redis, slugs, device) {
   const all = Object.values(await redis.hGetAll(MAC_RENDERS) || {}).map(v => { try { return JSON.parse(v); } catch { return null; } }).filter(Boolean);
-  const job = all.filter(j => slugs.includes(j.slug) && (j.state === 'queued' || (j.state === 'rendering' && Date.now() - (j.beat || 0) > STALE_MS)))
+  // A watermark goes to the Mac that asked for it (any Mac takes it if that one hasn't in a day)
+  const mine = j => !j.device || j.device === device || Date.now() - (j.queuedAt || 0) > 86400e3;
+  const job = all.filter(j => slugs.includes(j.slug) && mine(j) && (j.state === 'queued' || (j.state === 'rendering' && Date.now() - (j.beat || 0) > STALE_MS)))
     .sort((a, b) => a.queuedAt - b.queuedAt)[0];
   if (!job) return null;
   const auth = venueAuth(job.slug);
