@@ -294,14 +294,19 @@ async function sessionAudio(auth, job) {
   return pick ? { id: pick.id, pid: pick.playback_ids[0].id } : null;
 }
 
-// Whether a file has a sound stream
+// Whether a file has sound you can hear: a sound stream that isn't silence. A camera streaming with its
+// microphone off still sends a sound track, all silence (−91 dB), and clips cut from it came out mute.
 function hasAudio(file) {
   return new Promise(resolve => {
-    const ff = spawn(ffmpegPath, ['-hide_banner', '-i', file], { stdio: ['ignore', 'ignore', 'pipe'] });
+    const ff = spawn(ffmpegPath, ['-hide_banner', '-i', file, '-map', '0:a:0?', '-af', 'volumedetect', '-f', 'null', '-'], { stdio: ['ignore', 'ignore', 'pipe'] });
     let err = '';
     ff.stderr.on('data', d => { err += d; });
     ff.on('error', () => resolve(false));
-    ff.on('close', () => resolve(/Stream #\S+.*Audio:/.test(err)));
+    ff.on('close', () => {
+      if (!/Stream #\S+.*Audio:/.test(err)) return resolve(false);
+      const max = /max_volume:\s*(-?[\d.]+|-inf) dB/.exec(err);
+      resolve(!max || (max[1] !== '-inf' && Number(max[1]) > -60));
+    });
   });
 }
 
@@ -360,7 +365,8 @@ export async function cutVertical(redis, auth, job) {
     const maps = video && audio ? ['-map', '0:v:0', '-map', '1:a:0'] : ['-map', '0:v:0', '-map', '0:a:0?'];
     await run(['-hide_banner', '-loglevel', 'warning', '-y', ...inputs, '-t', String(len), ...maps, ...tail])
       .catch(e => console.error('[verticals] instant clip', e.message));
-    // Cut without the sound: the sound comes from the session's HQ AUDIO (same stretch of the set).
+    // Cut without sound, or with only silence (a camera with its microphone off): the sound comes from the
+    // session's HQ AUDIO, the decks (same stretch of the set).
     // Empty, or no HQ AUDIO: cut again from the downloadable MP4, which carries picture and sound together.
     let silent = sizeOf() >= 200 * 1024 && !(await hasAudio(out));
     if (silent) {
