@@ -141,6 +141,9 @@
         .bk-owners { display:flex; flex-direction:column; gap:16px; }
         .bk-owner { background:var(--la-surface); border:1px solid var(--la-line); border-radius:16px; overflow:hidden; }
         .bk-owner.bk-sub { margin-left:28px; border-left:2px solid var(--bk-label); }
+        /* Dragging a file: the kit under it lights up in the accent colour */
+        .bk-file[draggable="true"] { cursor:grab; }
+        .bk-owner.bk-drop-over { border-color:var(--la-accent); box-shadow:0 0 0 2px var(--la-accent) inset; background:color-mix(in srgb, var(--la-accent) 6%, var(--la-surface)); }
         /* Each kind of brand kit in its own colour: artists green, record labels and venues orange */
         :root { --bk-artist:#39FF14; --bk-label:#F97316; --bk-venue:#F97316; }
         html:not(.dark) { --bk-artist:#16a34a; --bk-label:#ea580c; --bk-venue:#ea580c; }
@@ -2063,6 +2066,40 @@
             var d = await r.json().catch(function() { return {}; });
             if (!r.ok) throw new Error(d.error || r.status);
         }
+        // Drag a file onto another artist's, venue's or label's kit: a copy goes into that kit
+        (function() {
+            var dragUrl = '', dragOwner = '';
+            var target = function(e) { var s = e.target.closest && e.target.closest('.bk-owner[data-owner]'); return s && dragUrl && s.dataset.owner !== dragOwner ? s : null; };
+            var clear = function() { document.querySelectorAll('.bk-owner.bk-drop-over').forEach(function(s) { s.classList.remove('bk-drop-over'); }); };
+            document.addEventListener('dragstart', function(e) {
+                var c = e.target.closest && e.target.closest('.bk-file[data-drag-url]');
+                if (!c) return;
+                dragUrl = c.dataset.dragUrl; dragOwner = c.dataset.dragOwner;
+                try { e.dataTransfer.effectAllowed = 'copy'; e.dataTransfer.setData('text/plain', dragUrl); } catch (_) {}
+                document.body.classList.add('bk-dragging');
+            });
+            document.addEventListener('dragend', function() { dragUrl = ''; clear(); document.body.classList.remove('bk-dragging'); });
+            document.addEventListener('dragover', function(e) {
+                var s = target(e); if (!s) return;
+                e.preventDefault(); try { e.dataTransfer.dropEffect = 'copy'; } catch (_) {}
+                if (!s.classList.contains('bk-drop-over')) { clear(); s.classList.add('bk-drop-over'); }
+            });
+            document.addEventListener('dragleave', function(e) { var s = target(e); if (s && !s.contains(e.relatedTarget)) s.classList.remove('bk-drop-over'); });
+            document.addEventListener('drop', async function(e) {
+                var s = target(e); if (!s) return;
+                e.preventDefault(); e.stopPropagation();
+                var url = dragUrl, name = (s.querySelector('.bk-owner-name') || {}).textContent || 'that kit';
+                dragUrl = ''; clear(); document.body.classList.remove('bk-dragging');
+                try {
+                    var r = await laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'copyTo', url: url, owner: s.dataset.owner }) });
+                    var d = await r.json().catch(function() { return {}; });
+                    if (!r.ok) throw new Error(d.error || r.status);
+                    laToast('Copied to ' + name.trim());
+                    s.classList.remove('is-closed');
+                    await loadBrand();
+                } catch (err) { laToast('Could not copy: ' + err.message); }
+            });
+        })();
         function fileCard(f) {
             var ext = (f.name.split('.').pop() || 'file').slice(0, 5);
             var cat = CATS.filter(function(c) { return c.key === f.category; })[0] || CATS[CATS.length - 1];
@@ -2088,7 +2125,7 @@
                 ? '<div class="bk-preview bk-font" data-font="' + esc(f.url) + '">' + tag +
                     '<div class="bk-font-sample"><span class="aa">Aa</span><span class="line">ABC abc 123</span></div></div>'
                 : '<div class="bk-preview doc">' + tag + '<div class="bk-ext"><span>' + esc(ext) + '</span></div></div>';
-            return '<div class="bk-file">' + preview +
+            return '<div class="bk-file"' + (_member ? '' : ' draggable="true" data-drag-url="' + esc(f.url) + '" data-drag-owner="' + esc(f.owner) + '"') + '>' + preview +
                 '<div class="bk-info"><p class="bk-name" title="' + esc(f.name) + '">' + esc(f.name) + '</p><p class="bk-meta">' + fmtSize(f.size) + ' · ' + fmtDate(f.uploadedAt) + '</p></div>' +
                 '<div class="bk-file-actions">' +
                     '<a href="' + esc(f.link ? f.link + '?download' : f.downloadUrl) + '" title="Download"><iconify-icon icon="solar:download-minimalistic-linear"></iconify-icon></a>' +

@@ -380,6 +380,23 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, post: intoPost, url: moved.url });
     }
 
+    if (body.action === 'copyTo') {
+      // A file dragged onto another artist's, venue's or label's kit: a copy goes into that kit, same type.
+      // A copy, not a move: the watermark, thumbnails and photos that use the original keep working.
+      const url = String(body.url || '');
+      let pathname = '';
+      try { pathname = decodeURIComponent(new URL(url).pathname.slice(1)); } catch {}
+      const meta = pathname.startsWith(prefixFor(slug)) ? parsePath(pathname, slug) : null;
+      if (!meta || !/\.public\.blob\.vercel-storage\.com$/.test(new URL(url).hostname)) return res.status(403).json({ error: 'Not your file' });
+      const owner = String(body.owner || '');
+      if (!OWNER.test(owner)) return res.status(400).json({ error: 'Which brand kit?' });
+      if (owner === meta.owner) return res.status(200).json({ ok: true, same: true });
+      const fileName = pathname.split('/').pop();
+      const to = prefixFor(slug) + [owner, meta.category].concat(meta.category === 'posts' ? [newPostId()] : [], [fileName]).join('/');
+      const copied = await copy(url, to, { access: 'public', addRandomSuffix: false, allowOverwrite: true });
+      return res.status(200).json({ ok: true, url: copied.url });
+    }
+
     if (body.action === 'setFileLabel') {
       const url = String(body.url || '');
       let pathname = '';
