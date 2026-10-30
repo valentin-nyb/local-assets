@@ -65,11 +65,16 @@ async function signAddress(redis, url, slugs, member, ttl, extra = {}) {
   // A Brand Kit file (brand/<account>/…): the account's own; a signed link of a few minutes in the private store
   const bp = pathOf(url);
   if (bp && bp.startsWith('brand/')) {
-    const slug = bp.split('/')[1];
-    if (!slugs.includes(slug)) return null;
+    const folder = bp.split('/')[1] || '';
+    const slug = slugs.find(s => s.toLowerCase() === folder.toLowerCase());
+    if (!slug) {
+      console.error('[media] refused brand', bp.split('/').slice(1, 4).join('/'), 'reach', slugs.join(','));
+      // Still in the public store (before Copy Brand Kit files + LA_PRIVATE_BRAND=1): open to anyone anyway, shown as before
+      return privateBrand() ? null : { url, o: { slug: folder } };
+    }
     return { url: await readUrl(url, Math.min(ttl, 900)), o: { slug } };
   }
-  if (!/^(stream|image)\.mux\.com$/.test(u.hostname)) return null;
+  if (!/^(stream|image)\.mux\.com$/.test(u.hostname)) { console.error('[media] refused', u.hostname, (bp || u.pathname).slice(0, 40)); return null; }
   const pid = (/^\/([A-Za-z0-9]+)/.exec(u.pathname) || [])[1];
   if (!pid) return null;
   const o = await ownerOf(redis, pid, slugs);
