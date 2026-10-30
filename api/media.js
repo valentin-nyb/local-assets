@@ -73,7 +73,13 @@ async function signAddress(redis, url, slugs, member, ttl, extra = {}) {
   const pid = (/^\/([A-Za-z0-9]+)/.exec(u.pathname) || [])[1];
   if (!pid) return null;
   const o = await ownerOf(redis, pid, slugs);
-  if (!allowed(o, typeof member === 'function' ? member(o?.slug) : member)) return null;
+  const m = typeof member === 'function' ? member(o?.slug) : member;
+  if (!allowed(o, m)) {
+    // Why it was refused, for support (no keys or addresses): whose the video is, and what this login can open
+    const c = JSON.parse(await redis.get(`pid_owner:${pid}`).catch(() => null) || 'null');
+    console.error('[media] refused', pid.slice(0, 6) + '…', 'owner', c ? c.slug + (c.artist ? '/' + c.artist : '') : 'not found in ' + slugs.join(','), 'reach', slugs.join(','), m ? 'as artist ' + m.name : 'full access');
+    return null;
+  }
   if (o.policy !== 'signed') return { url, o };   // still public: as it is
   for (const [k, v] of Object.entries(extra)) u.searchParams.set(k, v);
   const s = await signingFor(redis, authOf(o.slug));
