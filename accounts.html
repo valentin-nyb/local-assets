@@ -146,6 +146,7 @@
                 <details class="ac-on-recent" id="ac-prot" style="margin-top:22px"><summary>Video protection</summary>
                     <p class="ac-sub" style="margin:10px 0">Before videos are switched to signed links, each account's Cloud Storage needs a signing key and the site-only rule. Check makes them where they're missing and shows any account whose token can't.</p>
                     <button type="button" class="cam-btn" id="ac-prot-check">Check every account</button>
+                    <button type="button" class="cam-btn" id="ac-prot-brand">Copy Brand Kit files to the private store</button> <span class="ac-sub" id="ac-prot-brand-msg"></span>
                     <div id="ac-prot-list" class="ac-on-list" style="margin-top:12px"></div></details>
                 <!-- The emails clients get, as examples -->
             </div>
@@ -199,6 +200,22 @@
                         (a.ok ? '<button type="button" class="cam-btn" data-sw="add" data-slug="' + esc(a.slug) + '">1 · Add signed IDs</button><button type="button" class="cam-btn" data-sw="lock" data-slug="' + esc(a.slug) + '">2 · Lock</button><button type="button" class="cam-btn" data-sw="undo" data-slug="' + esc(a.slug) + '">Undo</button><span data-sw-msg></span>' : '') + '</div>';
                 }).join('');
             } catch (e) { list.textContent = 'Could not check: ' + e.message; }
+            b.disabled = false;
+        });
+        // Brand Kit files into the private store, a few minutes at a time until all are there (safe to run again)
+        document.getElementById('ac-prot-brand').addEventListener('click', async function() {
+            var b = this, msg = document.getElementById('ac-prot-brand-msg'), cursor = null, copied = 0, skipped = 0, failed = 0;
+            b.disabled = true;
+            try {
+                for (;;) {
+                    msg.textContent = 'Copying… ' + copied + ' copied, ' + skipped + ' already there';
+                    var r = await laFetch('/api/media', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'copyBrand', cursor: cursor }) });
+                    var d = await r.json(); if (!r.ok) throw new Error(d.error || r.status);
+                    copied += d.copied; skipped += d.skipped; failed += d.failed;
+                    if (!d.more) break; cursor = d.cursor;
+                }
+                msg.textContent = 'Done: ' + copied + ' copied, ' + skipped + ' already there' + (failed ? ', ' + failed + ' failed (run it again)' : '');
+            } catch (e) { msg.textContent = 'Stopped: ' + e.message + ' (run it again; it goes on)'; }
             b.disabled = false;
         });
         // One account's switch: a step runs page by page (100 videos at a time) until it's done

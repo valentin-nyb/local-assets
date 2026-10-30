@@ -18,7 +18,8 @@
         return fetch('/api/media', { method: 'POST', headers: h, body: JSON.stringify(body) })
             .then(function(r) { return r.json().then(function(d) { if (!r.ok) throw new Error(d.error || r.status); return d; }); });
     };
-    var isMux = function(u) { return /^https:\/\/(stream|image)\.mux\.com\//.test(String(u || '')); };
+    // Mux videos, and Brand Kit files (the storage's brand/ folder)
+    var isMux = function(u) { return /^https:\/\/((stream|image)\.mux\.com|[a-z0-9]+\.public\.blob\.vercel-storage\.com\/brand)\//.test(String(u || '')); };
     function laMux(url, o) {
         if (!isMux(url)) return url;
         return '/api/media?u=' + encodeURIComponent(url) + (o && o.dl ? '&dl=' + encodeURIComponent(o.dl) : '') + (share ? '&s=' + share : '&k=' + encodeURIComponent(key));

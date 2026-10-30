@@ -1,5 +1,5 @@
 import { VIDEO_QUALITY_KEY } from './_video-quality.js';
-import { list, del } from '@vercel/blob';
+import { blist as list, bdel as del } from './_brandstore.js';
 import { createClient } from 'redis';
 import { getWebSessionAuth, getVenuesConfig, isAdminVenue, refreshRegistry, getMuxAuthForVenue, MEMBERS_KEY, freshVenues, LOGINS_KEY, EDITS_KEY, accountLogins } from './_venues.js';
 import { readAssignments, readPlans, stripeClient, accountTypeOf, DISCOUNTS_KEY, assignKey } from './_billing.js';

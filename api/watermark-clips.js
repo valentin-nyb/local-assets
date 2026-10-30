@@ -5,7 +5,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { waitUntil } from '@vercel/functions';
-import { put, del as delBlob } from '@vercel/blob';
+import { bput as put, bdel as delBlob, readUrl } from './_brandstore.js';
 import sharp from 'sharp';
 import { createClient } from 'redis';
 import { getWebSessionAuth } from './_venues.js';
@@ -99,8 +99,9 @@ async function animateClip(job) {
       `[s][b]overlay=0:0[v1];[v1][g]overlay=${Math.round(a.left * vw / a.W)}:${Math.round(a.top * vw / a.W)}:shortest=1,format=yuv420p[v]`;
     const t0 = Date.now();
     // Capped at the clip's length (the GIF loops forever) and stopped before the function's 5-minute limit
+    const gifUrl = await readUrl(job.gif, 3600);   // the moving logo (a Brand Kit file): a signed link
     const enc = (src) => new Promise((resolve, reject) => {
-      const args = ['-hide_banner', '-loglevel', 'error', '-y', '-i', src, '-i', job.base, '-ignore_loop', '0', '-i', job.gif,
+      const args = ['-hide_banner', '-loglevel', 'error', '-y', '-i', src, '-i', job.base, '-ignore_loop', '0', '-i', gifUrl,
         '-filter_complex', filter, '-map', '[v]', '-map', '0:a:0?', ...(job.dur ? ['-t', String(job.dur)] : []),
         '-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '20', '-pix_fmt', 'yuv420p', '-threads', '0', '-c:a', 'copy', '-movflags', '+faststart', out];
       const ff = spawn(ffmpegPath, args, { stdio: ['ignore', 'ignore', 'pipe'] });
@@ -219,7 +220,7 @@ export default async function handler(req, res) {
     if (parts.length < 3 || parts[1] !== 'animations') return res.status(400).json({ error: 'Not one of your animations' });
     if (session.member && parts[0] !== session.member.owner) return res.status(403).json({ error: 'Only your own animations' });
     if (/\.gif$/i.test(pathname)) {
-      const m = await fetch(url).then(r => r.arrayBuffer()).then(b => sharp(Buffer.from(b), { animated: true }).metadata()).catch(() => null);
+      const m = await fetch(await readUrl(url)).then(r => r.arrayBuffer()).then(b => sharp(Buffer.from(b), { animated: true }).metadata()).catch(() => null);
       if (!m) return res.status(400).json({ error: 'This GIF could not be read' });
       return res.status(200).json({ url, moving: (m.pages || 1) > 1 });
     }
@@ -227,7 +228,7 @@ export default async function handler(req, res) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'anim-'));
     try {
       const src = path.join(dir, 'src' + path.extname(pathname).toLowerCase()), out = path.join(dir, 'anim.gif');
-      fs.writeFileSync(src, Buffer.from(await (await fetch(url)).arrayBuffer()));
+      fs.writeFileSync(src, Buffer.from(await (await fetch(await readUrl(url))).arrayBuffer()));
       // WebM keeps its transparency only through the libvpx decoder. 10 s at most, 15 frames a second,
       // 720 px wide at most (a watermark logo is far smaller), each frame's transparent pixels kept clear
       await run(['-hide_banner', '-loglevel', 'error', '-y', ...(/\.webm$/i.test(src) ? ['-c:v', 'libvpx-vp9'] : []), '-t', '10', '-i', src,

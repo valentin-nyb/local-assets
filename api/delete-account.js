@@ -1,4 +1,4 @@
-import { list, del } from '@vercel/blob';
+import { blist as list, bdel as del } from './_brandstore.js';
 import { createClient } from 'redis';
 import { getWebSessionAuth, getVenuesConfig, isAdminVenue, refreshRegistry } from './_venues.js';
 import { thumbnailPrefix } from './_thumbnails.js';

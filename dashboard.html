@@ -685,7 +685,7 @@
                     box.dataset.painted = key;
                     if (isLogo) box.style.setProperty('background', darkNow ? '#141416' : '#f4f4f5', 'important');
                     else box.style.removeProperty('background');
-                    box.innerHTML = '<img src="' + url.replace(/"/g, '&quot;') + '" alt="" ' + (isLogo ? 'crossorigin="anonymous" onload="fitLogoBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}" style="width:100%;height:100%;object-fit:contain;padding:5px"' : 'crossorigin="anonymous" onload="fitArtistPic(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}" style="width:100%;height:100%;object-fit:cover"') + '>';
+                    box.innerHTML = '<img src="' + laMux(url).replace(/"/g, '&quot;') + '" alt="" ' + (isLogo ? 'crossorigin="anonymous" onload="fitLogoBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}" style="width:100%;height:100%;object-fit:contain;padding:5px"' : 'crossorigin="anonymous" onload="fitArtistPic(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}" style="width:100%;height:100%;object-fit:cover"') + '>';
                 });
                 // Session rows: the venue's logo from the Brand Kit replaces the calendar icon.
                 // Dark theme shows a white logo on a dark tile, light theme a black logo on a light tile.
@@ -715,7 +715,7 @@
                     box.dataset.painted = key;
                     box.title = 'Venue logo from Brand Kit';
                     box.style.setProperty('background', dark ? '#141416' : '#f4f4f5', 'important');
-                    box.innerHTML = '<img src="' + url.replace(/"/g, '&quot;') + '" alt="" crossorigin="anonymous" style="width:100%;height:100%;object-fit:contain;padding:4px" onload="fitLogoBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}">';
+                    box.innerHTML = '<img src="' + laMux(url).replace(/"/g, '&quot;') + '" alt="" crossorigin="anonymous" style="width:100%;height:100%;object-fit:contain;padding:4px" onload="fitLogoBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}">';
                 });
                 // Venues and labels with an account of their own on the platform: their own Brand Kit logos
                 var want = Object.keys(_linkedWant);
@@ -2199,7 +2199,7 @@
         function nativeDownloadUrl(f) {
             var name = f.path.split('/').pop();
             if (f.url.indexOf('https://stream.mux.com/') === 0) return laMux(f.url, { dl: name.replace(/\.[^.]+$/, '') });
-            if (f.url.indexOf('.blob.vercel-storage.com/') > 0) return f.url + (f.url.indexOf('?') > 0 ? '&' : '?') + 'download=1';
+            if (f.url.indexOf('.blob.vercel-storage.com/') > 0) return laMux(f.url) === f.url ? f.url + (f.url.indexOf('?') > 0 ? '&' : '?') + 'download=1' : laMux(f.url, { dl: name });
             return null;
         }
 
@@ -2524,7 +2524,7 @@
             var h = document.getElementById('venue-tier');
             if (!h || !v || !(v.mask || v.img) || !isClientAcct() || /^admin$/i.test(h.textContent.trim())) return;
             h.classList.add('has-logo'); h.classList.toggle('logo-img', !!v.img);
-            h.style.setProperty('--logo', 'url("' + (v.img ? v.url : v.mask).replace(/"/g, '%22') + '")');
+            h.style.setProperty('--logo', 'url("' + (v.img ? laMux(v.url) : v.mask).replace(/"/g, '%22') + '")');
             h.style.setProperty('--logo-w', Math.round(Math.min(200, Math.max(28, 28 * v.ar))) + 'px');
         }
         function venueLogoMask(url) {
@@ -2582,7 +2582,7 @@
                         res({ url: url, mask: o.toDataURL('image/png'), ar: o.width / o.height });
                     } catch (e) { res({ url: url, img: true, ar: im.naturalWidth && im.naturalHeight ? im.naturalWidth / im.naturalHeight : 3 }); }
                 };
-                im.onerror = function() { res({ url: url, img: true, ar: 3 }); }; im.src = url;
+                im.onerror = function() { res({ url: url, img: true, ar: 3 }); }; im.src = laMux(url);
             });
         }
         function showVenueLogo(url) {

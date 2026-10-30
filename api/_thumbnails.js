@@ -1,4 +1,4 @@
-import { list } from '@vercel/blob';
+import { blist as list } from './_brandstore.js';
 
 // Uploaded marketing thumbnails live in Vercel Blob as plain PNG/JPEG files:
 //   thumbnails/<venue>/<base64url(passthrough)>__<timestamp>-<random>.<png|jpg>

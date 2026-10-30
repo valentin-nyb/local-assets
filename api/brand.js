@@ -1,6 +1,6 @@
 import { videoQuality } from './_video-quality.js';
 import { pausedBy, sendPaused } from './_suspend.js';
-import { list, del, copy, put } from '@vercel/blob';
+import { blist as list, bdel as del, bcopy as copy, bput as put, privateBrand, readUrl } from './_brandstore.js';
 import crypto from 'crypto';
 import { createClient } from 'redis';
 import { handleUpload } from '@vercel/blob/client';
@@ -160,7 +160,7 @@ export default async function handler(req, res) {
         const mine = files.filter(f => seen.includes(f.owner));
         const pick = obj => Object.fromEntries(Object.entries(obj || {}).filter(([o]) => seen.includes(o)));
         // The account's own folder keeps the account's name (the page would otherwise show the artist's)
-        return res.status(200).json({ lut: '', files: mine, orgType: ORG_TYPES.includes(orgType) ? orgType : 'venue', orgName: orgName || getVenuesConfig()[slug]?.name || '', member: { owner: own, name: session.member.name, readOnly: seen.filter(o => o !== own) },
+        return res.status(200).json({ privateStore: privateBrand(), lut: '', files: mine, orgType: ORG_TYPES.includes(orgType) ? orgType : 'venue', orgName: orgName || getVenuesConfig()[slug]?.name || '', member: { owner: own, name: session.member.name, readOnly: seen.filter(o => o !== own) },
           labelArtists: Object.fromEntries(labels.map(l => [l, (labelArtists || {})[l] === own ? own : 'venue'])),
           ownerNames: { ...pick(ownerNames), [own]: (ownerNames || {})[own] || session.member.name }, // their own photo, and the account's chosen logo so the dashboard shows the venue's or label's logo
           ownerPhotos: pick(ownerPhotos), ownerPhotosPicked: ownerPhotosPicked.filter(o => seen.includes(o)),
@@ -170,7 +170,7 @@ export default async function handler(req, res) {
       }
       // Who has been given access to each artist's folder (Give access)
       const access = await withRedis(r => r.hGetAll(`artist_access:${slug}`)).then(m => Object.fromEntries(Object.entries(m || {}).map(([k, v]) => { try { return [k, JSON.parse(v)]; } catch { return [k, []]; } }))).catch(() => ({}));
-      return res.status(200).json({ access, lut: lut || '', files, orgType: ORG_TYPES.includes(orgType) ? orgType : 'venue', orgName: orgName || '', ownerNames: ownerNames || {}, ownerPhotos, ownerPhotosPicked, ownerGenres: ownerGenres || {}, ownerLinks: ownerLinks || {}, watermark, labelArtists: labelArtists || {}, hiddenOwners: hiddenOwners || [] });
+      return res.status(200).json({ privateStore: privateBrand(), access, lut: lut || '', files, orgType: ORG_TYPES.includes(orgType) ? orgType : 'venue', orgName: orgName || '', ownerNames: ownerNames || {}, ownerPhotos, ownerPhotosPicked, ownerGenres: ownerGenres || {}, ownerLinks: ownerLinks || {}, watermark, labelArtists: labelArtists || {}, hiddenOwners: hiddenOwners || [] });
     }
 
     if (req.method !== 'POST') return res.status(405).end();
@@ -248,7 +248,7 @@ export default async function handler(req, res) {
         if (!png) return { status: 400, error: 'Nothing to stamp' };
         const overlay = await put(`watermarks/${slug}/${crypto.randomBytes(6).toString('hex')}.png`, png, { access: 'public', contentType: 'image/png', addRandomSuffix: false });
         const mr = await fetch('https://api.mux.com/video/v1/assets', { method: 'POST', headers: { Authorization: session.muxAuth, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(15000),
-          body: JSON.stringify({ input: [{ url }, { url: overlay.url, overlay_settings: { vertical_align: 'top', horizontal_align: 'left', width: '100%', opacity: '100%' } }],
+          body: JSON.stringify({ input: [{ url: await readUrl(url, 86400) }, { url: overlay.url, overlay_settings: { vertical_align: 'top', horizontal_align: 'left', width: '100%', opacity: '100%' } }],
             playback_policy: playbackPolicy(), video_quality: await videoQuality(slug), static_renditions: [{ resolution: 'highest' }], passthrough: `BRANDKIT // VIDEO // ${meta.name}`.slice(0, 255) }) });
         const d = await mr.json().catch(() => ({}));
         if (!mr.ok || !d.data) return { status: 502, error: d?.error?.messages?.[0] || 'Cloud Storage refused the video' };
@@ -431,6 +431,8 @@ export default async function handler(req, res) {
     const result = await handleUpload({
       body,
       request: req,
+      // The private store once Brand Kit files are private (the page uploads with access 'private' then)
+      ...(privateBrand() ? { token: process.env.LA_PRIVATE_READ_WRITE_TOKEN } : {}),
       onBeforeGenerateToken: async pathname => {
         if (!pathname.startsWith(prefixFor(slug)) || !parsePath(pathname, slug)) {
           throw new Error('Invalid upload location');

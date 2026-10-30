@@ -494,7 +494,7 @@
     </div>
 
     <script type="module">
-        import { upload } from 'https://cdn.jsdelivr.net/npm/@vercel/blob@2.3.3/client/+esm';
+        import { upload } from 'https://cdn.jsdelivr.net/npm/@vercel/blob@2.8.2/client/+esm';
         import { downloadZip } from 'https://cdn.jsdelivr.net/npm/client-zip@2.5.0/index.js';
         window.blobUpload = upload;
         window.downloadZip = downloadZip;
@@ -536,7 +536,20 @@
         // Files are stored per owner: the venue, or "artist-<slug>" for each artist.
         // Brand Kit files are shown from local-assets.com/files/... (a proxy of the storage), so a file opened
         // in a new tab never shows the storage address
-        function fileSrc(u) { return String(u || '').replace(/^https:\/\/[a-z0-9]+\.public\.blob\.vercel-storage\.com\/brand\//, '/files/'); }
+        // Brand Kit files show through /api/media (the account's own, a signed link of a few minutes)
+        function fileSrc(u) { return laMux(String(u || '')); }
+        // A link to one Brand Kit file for anyone, ending after 7 days (local-assets.com/asset/…?s=…)
+        var _fileLinks = {};
+        function shareFileLink(url) {
+            if (_fileLinks[url] && _fileLinks[url].at > Date.now() - 3600e3) return Promise.resolve(_fileLinks[url].u);
+            return laFetch('/api/media', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'shareFile', url: url, days: 7 }) })
+                .then(function(r) { return r.json().then(function(d) { if (!r.ok) throw new Error(d.error || r.status); _fileLinks[url] = { u: d.url, at: Date.now() }; return d.url; }); });
+        }
+        // Copies text that's still on its way (Safari only allows the clipboard during the tap itself)
+        function copyLater(p) {
+            if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) return navigator.clipboard.write([new ClipboardItem({ 'text/plain': p.then(function(t) { return new Blob([t], { type: 'text/plain' }); }) })]);
+            return p.then(function(t) { return navigator.clipboard.writeText(t); });
+        }
         var CATS = [
             { key: 'logos',      label: 'Logos',      icon: 'solar:star-shine-linear', tag: 'Logo' },
             // Moving logos for the watermark: a GIF, or a video with a transparent background (turned into a GIF)
@@ -1018,7 +1031,7 @@
         function loadImage(url) {
             return new Promise(function(res, rej) {
                 var im = new Image(); im.crossOrigin = 'anonymous';
-                im.onload = function() { res(im); }; im.onerror = rej; im.src = url;
+                im.onload = function() { res(im); }; im.onerror = rej; im.src = laMux(url);
             });
         }
         // Draws the current watermark onto a canvas context, placed exactly as on the clips
@@ -1315,7 +1328,7 @@
                     laFetch('/api/brand').then(function(r) { return r.json().then(function(d) { if (!r.ok) throw new Error(d.error || r.status); return d; }); }),
                     laFetch('/api/list-assets').then(function(r) { return r.ok ? r.json() : []; }).catch(function() { return []; }),
                 ]);
-                _files = res[0].files || []; _lut = res[0].lut || '';
+                _files = res[0].files || []; _lut = res[0].lut || ''; window._privateStore = !!res[0].privateStore;
                 _orgType = res[0].orgType || 'venue';
                 _orgName = res[0].orgName || '';
                 _ownerPhotos = res[0].ownerPhotos || {};
@@ -1516,7 +1529,7 @@
             wrap.querySelectorAll('[data-del]').forEach(function(b) { b.addEventListener('click', function() { removeFile(b.dataset.del, b); }); });
             wrap.querySelectorAll('[data-copy]').forEach(function(b) {
                 b.addEventListener('click', function() {
-                    navigator.clipboard.writeText(b.dataset.copy).then(function() {
+                    copyLater(shareFileLink(b.dataset.copy)).then(function() { laToast('Link copied: it works for 7 days');
                         var i = b.querySelector('iconify-icon'); i.setAttribute('icon', 'solar:check-circle-linear');
                         setTimeout(function() { i.setAttribute('icon', 'solar:link-round-linear'); }, 1500);
                     });
@@ -1651,7 +1664,7 @@
         // ── Colour looks (.cube LUTs): applied in the browser to a frame of the latest session ──
         var _luts = {}, _lutFrame = null;
         function loadLut(url) {
-            if (!_luts[url]) _luts[url] = fetch(url).then(function(r) { if (!r.ok) throw new Error(r.status); return r.text(); }).then(function(t) {
+            if (!_luts[url]) _luts[url] = fetch(laMux(url)).then(function(r) { if (!r.ok) throw new Error(r.status); return r.text(); }).then(function(t) {
                 var n = 0, dmin = [0, 0, 0], dmax = [1, 1, 1], vals = [];
                 t.split(/\r?\n/).forEach(function(line) {
                     line = line.trim(); if (!line || line[0] === '#') return;
@@ -1738,7 +1751,7 @@
         function openFilePreview(url) {
             var f = _files.filter(function(x) { return x.url === url; })[0];
             if (!f) return;
-            var link = f.link || f.url;
+            var link = '';   // made below: a link that works for 7 days
             if (f.post) return openPostPreview(f.owner, f.post, postImages(f.owner, f.post).indexOf(f));
             if (/\.cube$/i.test(f.name)) return openLutPreview(f);
             var view = IMG_EXT.test(f.name)
@@ -1752,7 +1765,7 @@
                 view +
                 '<p class="bk-meta" style="margin-top:10px">' + fmtSize(f.size) + ' · ' + fmtDate(f.uploadedAt) + '</p>' +
                 '<label class="bk-share-label" for="bk-share-link">Share link</label>' +
-                '<div class="bk-share"><input id="bk-share-link" readonly value="' + esc(link) + '"><button type="button" class="cam-btn ghost" id="bk-share-copy">Copy link</button></div>' +
+                '<div class="bk-share"><input id="bk-share-link" readonly placeholder="Making a link (works for 7 days)…" value="' + esc(link) + '"><button type="button" class="cam-btn ghost" id="bk-share-copy">Copy link</button></div>' +
                 '<div class="cam-form-actions" style="margin-top:16px">' +
                     (thumbFile(f) ? '<button type="button" class="cam-btn ghost" id="bk-file-event">Add to event</button>' : '') +
                     (wmLogoFile(f) ? '<button type="button" class="cam-btn ghost" id="bk-file-wm">' + (wmUsesLogo(f) ? 'Used as watermark' : 'Use as watermark') + '</button>' : '') +
@@ -1763,9 +1776,10 @@
             if (addEvent) addEvent.addEventListener('click', function() { openAddToEvent(f); });
             document.querySelector('#cam-dialog .cam-dialog-panel').classList.add('wide');
             var input = document.getElementById('bk-share-link'), copy = document.getElementById('bk-share-copy');
+            var linkP = shareFileLink(f.url).then(function(u) { link = u; input.value = u; return u; }, function() { input.placeholder = 'Could not make a link'; throw new Error('no link'); });
             input.addEventListener('focus', function() { input.select(); });
             copy.addEventListener('click', function() {
-                navigator.clipboard.writeText(link).then(function() {
+                copyLater(linkP).then(function() {
                     copy.textContent = 'Copied';
                     setTimeout(function() { copy.textContent = 'Copy link'; }, 1500);
                 }).catch(function() { input.select(); });
@@ -1777,7 +1791,7 @@
         function loadBrandFont(url) {
             if (!_fontCache[url]) {
                 var family = 'bkfont-' + Object.keys(_fontCache).length;
-                var face = new FontFace(family, 'url("' + url.replace(/"/g, '%22') + '")');
+                var face = new FontFace(family, 'url("' + laMux(url).replace(/"/g, '%22') + '")');
                 _fontCache[url] = face.load().then(function(f) { document.fonts.add(f); return '"' + family + '", system-ui'; });
             }
             return _fontCache[url];
@@ -1939,7 +1953,7 @@
             head.lastElementChild.insertAdjacentHTML('beforebegin', '<button type="button" class="bk-post-share" id="bk-post-share">Share</button>');
             var shareBtn = document.getElementById('bk-post-share'), shareFiles = null;
             var touch = (function() { try { return window.matchMedia('(pointer: coarse)').matches && navigator.canShare && navigator.canShare({ files: [new File([''], 'x.jpg', { type: 'image/jpeg' })] }); } catch (_) { return false; } })();
-            var fileOf = function(x, i) { return fetch(x.url).then(function(r) { if (!r.ok) throw new Error(r.status); return r.blob(); }).then(function(b) { return new File([b], String(i + 1).padStart(2, '0') + '-' + x.name, { type: b.type || 'image/jpeg' }); }); };
+            var fileOf = function(x, i) { return fetch(laMux(x.url)).then(function(r) { if (!r.ok) throw new Error(r.status); return r.blob(); }).then(function(b) { return new File([b], String(i + 1).padStart(2, '0') + '-' + x.name, { type: b.type || 'image/jpeg' }); }); };
             if (touch) {
                 // Prepared on opening, so the tap itself can open the share sheet (iPhone needs that)
                 shareBtn.disabled = true; shareBtn.textContent = 'Preparing…';
@@ -1957,13 +1971,14 @@
             imgs.forEach(function(x) { var p = new Image(); p.src = fileSrc(x.url); });
             function show(i) {
                 idx = Math.max(0, Math.min(imgs.length - 1, i));
-                var f = imgs[idx], link = f.link || f.url, n = ++want;
+                var f = imgs[idx], n = ++want;
                 var pre = new Image();
                 pre.onload = pre.onerror = function() { if (n === want) pic.src = fileSrc(f.url); };
                 pre.src = fileSrc(f.url);
                 document.getElementById('bk-post-count').textContent = (idx + 1) + ' / ' + imgs.length;
                 document.getElementById('bk-post-meta').textContent = f.name + ' · ' + fmtSize(f.size) + ' · ' + fmtDate(f.uploadedAt);
-                document.getElementById('bk-share-link').value = link;
+                var li = document.getElementById('bk-share-link'); li.value = ''; li.placeholder = 'Making a link (works for 7 days)…';
+                shareFileLink(f.url).then(function(u) { if (n === want) li.value = u; }).catch(function() { li.placeholder = 'Could not make a link'; });
                 var prev = document.getElementById('bk-post-prev'), next = document.getElementById('bk-post-next');
                 if (prev) prev.disabled = idx === 0;
                 if (next) next.disabled = idx === imgs.length - 1;
@@ -2031,7 +2046,7 @@
                 if (progress) progress(i, list.length);
                 var safe = f.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^-+/, '').slice(-120) || 'image.jpg';
                 try {
-                    await window.blobUpload('brand/' + slug + '/' + owner + '/posts/' + post + '/' + safe, f, { access: 'public', handleUploadUrl: '/api/brand', headers: { Authorization: 'Bearer ' + session().webToken }, multipart: f.size > 50 * 1024 * 1024 });
+                    await window.blobUpload('brand/' + slug + '/' + owner + '/posts/' + post + '/' + safe, f, { access: window._privateStore ? 'private' : 'public', handleUploadUrl: '/api/brand', headers: { Authorization: 'Bearer ' + session().webToken }, multipart: f.size > 50 * 1024 * 1024 });
                 } catch (e) { failed++; }
             }
             _uploading = false;
@@ -2133,7 +2148,7 @@
                     (FONT_EXT.test(f.name) ? '' : '<button type="button" data-file-preview="' + esc(f.url) + '" title="Open"><iconify-icon icon="solar:eye-linear"></iconify-icon></button>') +
                     (f.category === 'photos' || (f.category === 'logos' && /\.(png|jpe?g|webp|gif|svg)$/i.test(f.name)) ? '<button type="button" data-photo="' + esc(f.url) + '" title="' + (f.owner.indexOf('artist-') === 0 ? 'Use as artist photo' : 'Use as profile photo') + '" class="' + (_ownerPhotos[f.owner] === f.url ? 'is-on' : '') + '"><iconify-icon icon="solar:user-circle-' + (_ownerPhotos[f.owner] === f.url ? 'bold' : 'linear') + '"></iconify-icon></button>' : '') +
                     (FONT_EXT.test(f.name) ? '<button type="button" data-font-preview="' + esc(f.url) + '" title="Preview font"><iconify-icon icon="solar:eye-linear"></iconify-icon></button>' : '') +
-                    '<button type="button" data-copy="' + esc(f.link || f.url) + '" title="Copy link"><iconify-icon icon="solar:link-round-linear"></iconify-icon></button>' +
+                    '<button type="button" data-copy="' + esc(f.url) + '" title="Copy a link that works for 7 days"><iconify-icon icon="solar:link-round-linear"></iconify-icon></button>' +
                     '<button type="button" class="del" data-del="' + esc(f.url) + '" title="Delete"><iconify-icon icon="solar:trash-bin-minimalistic-linear"></iconify-icon></button>' +
                 '</div></div>';
         }
@@ -2248,12 +2263,14 @@
                     var safe = f.name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^-+/, '').slice(-120) || 'file';
                     try {
                         var up = await window.blobUpload('brand/' + slug + '/' + owner + '/' + form.category.value + '/' + (postId ? postId + '/' : '') + safe, f, {
-                            access: 'public',
+                            access: window._privateStore ? 'private' : 'public',   // the private store once Brand Kit files are private
                             handleUploadUrl: '/api/brand',
                             headers: { Authorization: 'Bearer ' + session().webToken },
                             multipart: f.size > 50 * 1024 * 1024,
                             onUploadProgress: function(p) { row.querySelector('i').style.width = p.percentage + '%'; row.querySelector('.st').textContent = Math.round(p.percentage) + '%'; },
                         });
+                        // A file in the private store keeps the Brand Kit's usual address (its path): it's how it's known everywhere
+                        if (up && window._privateStore && up.pathname) up = Object.assign({}, up, { url: 'https://puws5w9zdemfusjd.public.blob.vercel-storage.com/' + up.pathname.split('/').map(encodeURIComponent).join('/') });
                         if (form.category.value === 'other' && form.otherLabel.value.trim() && up && up.url) {
                             await laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setFileLabel', url: up.url, label: form.otherLabel.value.trim() }) }).catch(function() {});
                         }
@@ -2445,7 +2462,7 @@
                 var folder = (owner ? owner.name : 'brand').replace(/[^A-Za-z0-9 _-]+/g, '').trim() + ' brand kit';
                 var used = {};
                 var entries = await Promise.all(files.map(async function(f) {
-                    var r = await fetch(f.url); if (!r.ok) throw new Error(f.name + ': ' + r.status);
+                    var r = await fetch(laMux(f.url)); if (!r.ok) throw new Error(f.name + ': ' + r.status);
                     var name = folder + '/' + f.category + '/' + (f.post ? f.post + '/' : '') + f.name;
                     while (used[name]) name = name.replace(/(\.[^.\/]+)?$/, '-2$1');
                     used[name] = 1;

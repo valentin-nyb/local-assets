@@ -1,4 +1,4 @@
-import { list } from '@vercel/blob';
+import { blist as list } from './_brandstore.js';
 
 // Watermark for vertical clips, set on the Brand Kit page and stored in Redis per venue.
 // When a clip job is queued, it is resolved to a concrete logo URL and saved on the job,

@@ -1,5 +1,5 @@
 import { pausedBy, sendPaused } from './_suspend.js';
-import { put } from '@vercel/blob';
+import { bput as put } from './_brandstore.js';
 import { getWebSessionAuth } from './_venues.js';
 import { thumbnailPrefix, encodeThumbPassthrough } from './_thumbnails.js';
 

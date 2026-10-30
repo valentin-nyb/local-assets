@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { createClient } from 'redis';
 import { getWebSessionAuth, findVenueByEmail, freshVenues, getVenuesConfig, getMuxAuthForVenue, platformAdmins, isAdminVenue, artistOf, sameArtist } from './_venues.js';
 import { signingFor, signUrl, playerTickets } from './_signing.js';
+import { pathOf, readUrl, copyToPrivate, privateBrand } from './_brandstore.js';
 
 // Every video, thumbnail and download goes through here once videos are signed (Mux signed playback):
 // the address is only signed for someone signed in to the account the video belongs to, for 2 hours
@@ -61,6 +62,13 @@ const authOf = slug => { const cfg = getVenuesConfig()[slug]; return cfg ? getMu
 
 async function signAddress(redis, url, slugs, member, ttl, extra = {}) {
   const u = new URL(url);
+  // A Brand Kit file (brand/<account>/…): the account's own; a signed link of a few minutes in the private store
+  const bp = pathOf(url);
+  if (bp && bp.startsWith('brand/')) {
+    const slug = bp.split('/')[1];
+    if (!slugs.includes(slug)) return null;
+    return { url: await readUrl(url, Math.min(ttl, 900)), o: { slug } };
+  }
   if (!/^(stream|image)\.mux\.com$/.test(u.hostname)) return null;
   const pid = (/^\/([A-Za-z0-9]+)/.exec(u.pathname) || [])[1];
   if (!pid) return null;
@@ -161,6 +169,16 @@ export default async function handler(req, res) {
       const title = String(body.title || '');
       return res.status(200).json({ url: `https://local-assets.com/player.html?s=${id}&v=${encodeURIComponent(pid)}${title ? '&title=' + encodeURIComponent(title) : ''}`, exp, days });
     }
+    if (body.action === 'shareFile') {
+      // A Brand Kit file, for anyone with the link until it ends: local-assets.com/asset/…?s=…
+      const path = pathOf(String(body.url || ''));
+      const slug = path && path.startsWith('brand/') ? path.split('/')[1] : '';
+      if (!slug || !slugs.includes(slug)) return res.status(403).json({ error: 'This isn\'t yours to share.' });
+      const days = Math.min(30, Math.max(1, Math.round(Number(body.days) || 7)));
+      const id = crypto.randomBytes(15).toString('base64url'), exp = Date.now() + days * 86400e3;
+      await redis.set(`share:${id}`, JSON.stringify({ kind: 'file', slug, path, by: session.email, exp }), { EX: days * 86400 });
+      return res.status(200).json({ url: 'https://local-assets.com/asset/' + path.slice('brand/'.length).split('/').map(encodeURIComponent).join('/') + '?s=' + id, exp, days });
+    }
     if (body.action === 'unshare') {
       const sh = JSON.parse(await redis.get(`share:${String(body.share || '')}`).catch(() => null) || 'null');
       if (!sh || !slugs.includes(sh.slug)) return res.status(404).json({ error: 'No such link' });
@@ -208,6 +226,12 @@ export default async function handler(req, res) {
       return res.status(200).json({ changed, failed, more, page: more ? page : null });
     }
 
+    if (body.action === 'copyBrand') {
+      // Brand Kit files into the private store (same paths; files already there are skipped), about 4 minutes a call
+      if (!platformAdmins().includes(session.email) || !isAdminVenue(session.venue)) return res.status(403).json({ error: 'Only local / assets' });
+      return res.status(200).json(await copyToPrivate('brand/', body.cursor || undefined));
+    }
+
     if (body.action === 'check') {
       if (!platformAdmins().includes(session.email) || !isAdminVenue(session.venue)) return res.status(403).json({ error: 'Only local / assets' });
       const accounts = [], signedAt = await redis.hGetAll('signed_accounts').catch(() => ({})) || {};
@@ -217,7 +241,7 @@ export default async function handler(req, res) {
         try { const s = await signingFor(redis, auth); accounts.push({ slug, ok: true, siteOnly: !!s.restriction, locked: Number(signedAt[slug]) || null }); }
         catch (e) { accounts.push({ slug, ok: false, error: e.message }); }
       }
-      return res.status(200).json({ accounts });
+      return res.status(200).json({ accounts, brandPrivate: privateBrand(), privateStore: !!process.env.LA_PRIVATE_READ_WRITE_TOKEN });
     }
     return res.status(400).json({ error: 'Unknown action' });
   } finally { await redis.quit().catch(() => {}); }

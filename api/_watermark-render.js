@@ -1,5 +1,6 @@
 import sharp from 'sharp';
 import opentype from 'opentype.js';
+import { readUrl } from './_brandstore.js';
 
 // Renders the Brand Kit watermark as a full-frame transparent PNG (1080×1920 for vertical clips),
 // laid out exactly like the clip worker (server/jobs/watermark.js) and the Brand Kit preview.
@@ -15,7 +16,7 @@ export const VERTICAL = { W: 1080, H: 1920, mx: 60, top: 140, bottom: 120 };
 export const HORIZONTAL = { W: 1920, H: 1080, mx: 60, top: 52, bottom: 52 };
 
 async function download(url) {
-  const r = await fetch(url, { signal: AbortSignal.timeout(20000) });
+  const r = await fetch(await readUrl(url), { signal: AbortSignal.timeout(20000) });   // Brand Kit files: a signed link
   if (!r.ok) throw new Error(`Download failed (${r.status})`);
   return Buffer.from(await r.arrayBuffer());
 }

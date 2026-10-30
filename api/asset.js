@@ -1,4 +1,5 @@
-import { head } from '@vercel/blob';
+import { bhead as head, readUrl, canon } from './_brandstore.js';
+import { createClient } from 'redis';
 
 // Branded links for brand-kit files: local-assets.com/asset/<venue>/<owner>/<category>/<file>
 // (rewritten here as ?path=brand/...). Opening a link shows the file on a local-assets.com page,
@@ -15,13 +16,13 @@ function fmtSize(n) {
   return Math.max(1, Math.round(n / 1e3)) + ' KB';
 }
 
-function viewer(blob, path) {
+function viewer(blob, path, s) {
   const file = path.split('/').pop();
   // addRandomSuffix turns "logo.png" into "logo-AbC123xyz.png"; show the original name
   const name = file.replace(/-[A-Za-z0-9]{20,40}(\.[^.]+)$/, '$1');
   const self = '/asset/' + path.slice('brand/'.length).split('/').map(encodeURIComponent).join('/');
   // Shown through local-assets.com/files/ (a proxy of the storage), so opening the image in a new tab keeps our address
-  const src = '/files/' + path.slice('brand/'.length).split('/').map(encodeURIComponent).join('/');
+  const src = self + '?raw&s=' + encodeURIComponent(s);
   const body = IMAGE.test(file)
     ? `<img src="${esc(src)}" alt="${esc(name)}">`
     : PDF.test(file)
@@ -48,22 +49,33 @@ function viewer(blob, path) {
   .none { color: #a1a1aa; }
   @media (max-width: 640px) { .meta { display: none; } main { padding: 12px; } }
 </style></head><body>
-<header><a class="brand" href="/">local / assets</a><span class="name">${esc(name)}</span><span class="meta">${esc(fmtSize(blob.size))}</span><a class="dl" href="${esc(self)}?download">Download</a></header>
+<header><a class="brand" href="/">local / assets</a><span class="name">${esc(name)}</span><span class="meta">${esc(fmtSize(blob.size))}</span><a class="dl" href="${esc(self)}?download&s=${esc(s)}">Download</a></header>
 <main>${body}</main>
 </body></html>`;
+}
+
+// A link opens only with its share id (s), made by Copy link in Brand Kit and ending after its days
+async function shareOf(id) {
+  if (!/^[A-Za-z0-9_-]{16,32}$/.test(String(id || ''))) return null;
+  const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
+  await redis.connect();
+  try { return JSON.parse(await redis.get(`share:${id}`) || 'null'); } finally { await redis.quit().catch(() => {}); }
 }
 
 export default async function handler(req, res) {
   const path = String(req.query.path || '');
   if (req.method !== 'GET' && req.method !== 'HEAD') return res.status(405).end();
   if (!PATH.test(path)) return res.status(404).send('Not found');
+  res.setHeader('Cache-Control', 'private, no-store');
+  const s = String(req.query.s || '');
+  const share = await shareOf(s).catch(() => null);
+  if (!share || share.kind !== 'file' || share.path !== path || share.exp < Date.now()) return res.status(410).send('This link has ended or isn\'t valid. Ask for a new one.');
   try {
     const blob = await head(path);
-    res.setHeader('Cache-Control', 'public, max-age=300');
-    if ('download' in req.query) return res.redirect(302, blob.downloadUrl);
-    if ('raw' in req.query) return res.redirect(302, blob.url);
+    // The file itself: a signed link of a few minutes (the private store), or the storage address before
+    if ('download' in req.query || 'raw' in req.query) return res.redirect(302, await readUrl(canon(path), 300));
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    return res.status(200).send(viewer(blob, path));
+    return res.status(200).send(viewer(blob, path, s));
   } catch (e) {
     return res.status(404).send('This file is no longer available.');
   }

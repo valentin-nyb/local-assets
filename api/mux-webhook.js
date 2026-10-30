@@ -1,4 +1,4 @@
-import { put } from '@vercel/blob';
+import { bput as put } from './_brandstore.js';
 import { muxUrlAuto, playbackPolicy } from './_signing.js';
 import { processCameraRecording } from './_camera-recording.js';
 import { createClient } from 'redis';

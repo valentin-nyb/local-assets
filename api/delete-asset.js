@@ -1,4 +1,4 @@
-import { del } from '@vercel/blob';
+import { bdel as del } from './_brandstore.js';
 import { getWebSessionAuth } from './_venues.js';
 import { thumbnailPrefix } from './_thumbnails.js';
 

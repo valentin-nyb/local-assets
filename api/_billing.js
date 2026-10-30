@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import { list } from '@vercel/blob';
+import { blist as list } from './_brandstore.js';
 import { getVenuesConfig, getMuxAuthForVenue } from './_venues.js';
 import { Resend } from 'resend';
 import { invoiceEmail, mailFrom, mailError, sendFromInbox } from './_emails.js';

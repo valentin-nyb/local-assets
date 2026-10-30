@@ -1,4 +1,4 @@
-import { list } from '@vercel/blob';
+import { blist as list } from './_brandstore.js';
 import { getWebSessionAuth } from './_venues.js';
 
 // The a™ installer for Mac, only for signed-in accounts (customers): the files live in Blob storage under

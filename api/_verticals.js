@@ -5,7 +5,7 @@ import os from 'os';
 import path from 'path';
 import { spawn } from 'child_process';
 import ffmpegPath from 'ffmpeg-static';
-import { put, del as delBlob, list as listBlobs } from '@vercel/blob';
+import { bput as put, bdel as delBlob, blist as listBlobs, readUrl } from './_brandstore.js';
 import { getVenuesConfig, getMuxAuthForVenue } from './_venues.js';
 import { planMaxClips } from './_billing.js';
 import { muxUrl, playbackPolicy } from './_signing.js';
@@ -348,7 +348,7 @@ async function colourLook(redis, slug) {
     const { blobs } = await listBlobs({ prefix: `brand/${slug}/`, limit: 1000 });
     const cube = blobs.find(b => b.url === chosen && /\.cube$/i.test(b.pathname));
     if (!cube) return null;
-    const r = await fetch(cube.url, { signal: AbortSignal.timeout(15000) });
+    const r = await fetch(await readUrl(cube.url), { signal: AbortSignal.timeout(15000) });
     if (!r.ok) return null;
     const file = path.join(os.tmpdir(), `look-${String(slug).replace(/[^A-Za-z0-9-]/g, '')}-${Date.now()}.cube`);
     fs.writeFileSync(file, Buffer.from(await r.arrayBuffer()));
@@ -624,7 +624,8 @@ export async function claimMacRender(redis, slugs, device) {
     id: job.id, kind: job.kind, artist: job.artist, dur: Number(master.duration) || job.dur || 0, vw: vw || 3840, vh: vh || 2160,
     video, sound: parts?.audio || null,   // the stream's sound, when the picture is a rendition without it
     decks: job.audio ? { url: await sign(`https://stream.mux.com/${job.audio.pid}.m3u8`), offset: job.audio.offset || 0 } : null,
-    wm: job.wm || null, upload: upload.url,
+    // The moving logo is a Brand Kit file: a signed link for as long as the render may take
+    wm: job.wm ? { ...job.wm, gif: job.wm.gif ? await readUrl(job.wm.gif, 2 * 86400) : null } : null, upload: upload.url,
   };
 }
 
