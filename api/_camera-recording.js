@@ -29,9 +29,11 @@ const londonDate = ms => new Date(ms).toLocaleDateString('en-CA', { timeZone: 'E
 const minute = ms => new Date(ms).toISOString().slice(0, 16) + 'Z';
 // camera: MASTER for the venue's main (first) camera, else the camera's own name, so a set filmed by several
 // cameras keeps them apart; multi: the set is filmed by several cameras and becomes one multi-camera edit
-const tag = (artist, date, set, camera = 'MASTER', multi = false) => JSON.stringify(set
-  ? { artist, date, camera, start: minute(set.from), end: minute(set.to), ...(multi ? { multi: true } : {}) }
-  : { artist, date, camera });
+// at: when the recording's first second was filmed (ms), so the decks' sound and a camera's picture,
+// recorded separately, can be lined up (vertical clips take the decks' sound)
+const tag = (artist, date, set, camera = 'MASTER', multi = false, at = null) => JSON.stringify({
+  ...(set ? { artist, date, camera, start: minute(set.from), end: minute(set.to), ...(multi ? { multi: true } : {}) } : { artist, date, camera }),
+  ...(at ? { at: Math.round(at) } : {}) });
 export const pendingKey = slug => `mc_pending:${slug}`;   // hash "ARTIST|DATE" → { end }: sets waiting for every camera's recording
 
 // Splits the recording at each artist change. Times are seconds from the start of the recording.
@@ -99,6 +101,8 @@ export async function processCameraRecording(event) {
     const camLabel = isAudio ? 'AUDIO' : recording[0]?.streamId === streamId ? 'MASTER' : camName.replace(/\s*\/\/\s*/g, ' - ').replace(/[^A-Z0-9 \-]/g, '').trim().slice(0, 30) || 'CAMERA';
     const multi = !isAudio && recording.length >= 2;
     const startMs = Number(asset.created_at) * 1000;
+    // The moment the first frame came in (Mux's recording times), more exact than when the asset was made
+    const filmedMs = Date.parse(asset.recording_times?.[0]?.started_at || '') || startMs;
     // Cameras stay live between sessions: what was streamed outside every session isn't kept
     const inSess = await sessionSeconds(redis, streamId, startMs, startMs + duration * 1000);
     if (inSess !== null && inSess < MIN_RECORDING_SEC) {
@@ -128,7 +132,7 @@ export async function processCameraRecording(event) {
 
     let sessions;
     if (!calSets.length && sets.length === 1) {
-      await muxReq(auth, `/video/v1/assets/${assetId}`, { method: 'PATCH', body: JSON.stringify({ passthrough: tag(sets[0].artist, date, null, camLabel) }) });
+      await muxReq(auth, `/video/v1/assets/${assetId}`, { method: 'PATCH', body: JSON.stringify({ passthrough: tag(sets[0].artist, date, null, camLabel, false, filmedMs) }) });
       sessions = [{ assetId, artist: sets[0].artist }];
     } else {
       // One clip per artist, cut from the full recording. The full recording stays as its own session.
@@ -139,7 +143,7 @@ export async function processCameraRecording(event) {
           body: JSON.stringify({
             input: [{ url: `mux://assets/${assetId}`, start_time: Math.floor(s.start), end_time: Math.ceil(s.end) }],
             playback_policy: ['public'], video_quality: await videoQuality(slug),
-            passthrough: tag(s.artist, date, calSets.length ? s : null, camLabel, multi && calSets.length > 0),
+            passthrough: tag(s.artist, date, calSets.length ? s : null, camLabel, multi && calSets.length > 0, filmedMs + Math.floor(s.start) * 1000),
             // The decks: a downloadable audio file; cameras: the full-quality MP4
             static_renditions: [{ resolution: isAudio ? 'audio-only' : 'highest' }],
           }),
@@ -157,14 +161,14 @@ export async function processCameraRecording(event) {
         && (asset.tracks || []).some(t => t.type === 'audio')) {
       await muxReq(auth, '/video/v1/assets', { method: 'POST', body: JSON.stringify({
         input: [{ url: `mux://assets/${assetId}` }], playback_policy: ['public'], video_quality: 'basic',
-        passthrough: tag(sets[0].artist, date, null, 'AUDIO'), static_renditions: [{ resolution: 'audio-only' }],
+        passthrough: tag(sets[0].artist, date, null, 'AUDIO', false, filmedMs), static_renditions: [{ resolution: 'audio-only' }],
       }) }).then(a => console.log(`[camera-rec] ${slug} HQ audio from ${camName}: ${a.id}`))
         .catch(e => console.error('[camera-rec] HQ audio', assetId, e.message));
     }
     // A single decks recording (no split): saved as audio only (the sets cut by the calendar are handled
     // when Mux has them ready, in api/mux-webhook.js)
     if (isAudio && !calSets.length && sets.length === 1) {
-      const passthrough = tag(sets[0].artist, date, null, camLabel);
+      const passthrough = tag(sets[0].artist, date, null, camLabel, false, filmedMs);
       await startAudioOnly(slug, { ...asset, passthrough }).catch(e => console.error('[camera-rec] audio only', assetId, e.message));
     }
     // Markers up to the end of this recording are used up

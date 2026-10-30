@@ -172,8 +172,11 @@ export async function venueForAsset(assetId) {
 export async function startAudioOnly(slug, asset, origin = 'https://local-assets.com') {
   const pid = asset.playback_ids?.[0]?.id;
   if (!pid) return;
+  // The copy keeps when the decks' first second was recorded, to line it up with the cameras
+  let passthrough = asset.passthrough;
+  try { const o = JSON.parse(passthrough); const at = Date.parse(asset.recording_times?.[0]?.started_at || ''); if (o && !o.at && at) passthrough = JSON.stringify({ ...o, at }); } catch {}
   await fetch(`${origin}/api/watermark-clips`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(20000),
-    body: JSON.stringify({ action: 'audioOnly', job: signJob({ kind: 'audio-only', slug, assetId: asset.id, pid, passthrough: asset.passthrough }) }) });
+    body: JSON.stringify({ action: 'audioOnly', job: signJob({ kind: 'audio-only', slug, assetId: asset.id, pid, passthrough }) }) });
 }
 
 // Starts one cutting job per clip that hasn't been cut yet; each runs in its own function
@@ -291,7 +294,17 @@ async function sessionAudio(auth, job) {
     .sort((a, b) => Number(b.created_at) - Number(a.created_at));
   const pick = audios.find(a => info(a).date === mdate)
     || audios.find(a => Number(a.created_at) >= Number(master.created_at) && (!later || Number(a.created_at) < Number(later.created_at)));
-  return pick ? { id: pick.id, pid: pick.playback_ids[0].id } : null;
+  if (!pick) return null;
+  // The decks and the camera are recorded separately and start at different moments: the sound for a moment
+  // of the picture is that much further on (or back) in the decks' recording. Both note when their first
+  // second was filmed ("at"); without it, sets cut by the calendar both start at the set's time, and older
+  // single recordings fall back to when Mux made them.
+  let mo = {}; try { mo = JSON.parse(master.passthrough) || {}; } catch {}
+  const ao = info(pick) || {};
+  const vAt = Number(mo.at) || Date.parse(master.recording_times?.[0]?.started_at || '') || (mo.start ? Date.parse(mo.start) : 0);
+  const aAt = Number(ao.at) || (ao.start ? Date.parse(ao.start) : 0);
+  const offset = vAt && aAt ? (vAt - aAt) / 1000 : 0;
+  return { id: pick.id, pid: pick.playback_ids[0].id, offset, timed: !!(vAt && aAt) };
 }
 
 // Whether a file has sound you can hear: a sound stream that isn't silence. A camera streaming with its
@@ -375,12 +388,15 @@ export async function cutVertical(redis, auth, job) {
       if (hq) {
         const keep = out + '.silent.mp4';
         fs.renameSync(out, keep);
+        // The same moment in the decks' recording: Mux clips to whole seconds and to its segments, so the exact
+        // start is a seek inside a stretch read from a little earlier
+        const aStart = Math.max(0, job.start + (hq.offset || 0)), from = Math.max(0, Math.floor(aStart) - 6);
         await run(['-hide_banner', '-loglevel', 'warning', '-y', '-i', keep,
-          '-i', `https://stream.mux.com/${hq.pid}.m3u8?asset_start_time=${Math.floor(job.start)}&asset_end_time=${Math.ceil(job.end)}`,
+          '-ss', (aStart - from).toFixed(3), '-i', `https://stream.mux.com/${hq.pid}.m3u8?asset_start_time=${from}&asset_end_time=${Math.ceil(aStart + len + 2)}`,
           '-t', String(len), '-map', '0:v:0', '-map', '1:a:0', '-c:v', 'copy', '-af', 'aresample=async=1000:first_pts=0', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', out])
           .catch(e => console.error('[verticals] hq audio', e.message));
         const ok = sizeOf() >= 200 * 1024 && await hasAudio(out);
-        console.log('[verticals] hq audio', job.n, hq.id, ok ? 'added' : 'failed');
+        console.log('[verticals] hq audio', job.n, hq.id, ok ? 'added' : 'failed', 'offset', (hq.offset || 0).toFixed(2) + 's', hq.timed ? '' : '(no start times)');
         if (ok) { silent = false; fs.rm(keep, { force: true }, () => {}); } else fs.renameSync(keep, out);
       }
     }
