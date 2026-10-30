@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { createClient } from 'redis';
-import { getWebSessionAuth, findVenueByEmail, freshVenues, getVenuesConfig, getMuxAuthForVenue, platformAdmins, isAdminVenue, artistOf, sameArtist } from './_venues.js';
+import { getWebSessionAuth, findVenueByEmail, findVenuesByEmail, freshVenues, getVenuesConfig, getMuxAuthForVenue, platformAdmins, isAdminVenue, artistOf, sameArtist } from './_venues.js';
 import { signingFor, signUrl, playerTickets } from './_signing.js';
 import { pathOf, readUrl, copyToPrivate, privateBrand } from './_brandstore.js';
 
@@ -73,7 +73,7 @@ async function signAddress(redis, url, slugs, member, ttl, extra = {}) {
   const pid = (/^\/([A-Za-z0-9]+)/.exec(u.pathname) || [])[1];
   if (!pid) return null;
   const o = await ownerOf(redis, pid, slugs);
-  if (!allowed(o, member)) return null;
+  if (!allowed(o, typeof member === 'function' ? member(o?.slug) : member)) return null;
   if (o.policy !== 'signed') return { url, o };   // still public: as it is
   for (const [k, v] of Object.entries(extra)) u.searchParams.set(k, v);
   const s = await signingFor(redis, authOf(o.slug));
@@ -119,10 +119,13 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'GET') {
-      const venue = findVenueByEmail(k.e, k.v);
+      // Every account this login can open (switching account keeps the same key): full access, or as an artist
+      const vs = findVenuesByEmail(k.e);
+      const full = new Set(vs.filter(v => !v.member).map(v => v.slug)), asArtist = {};
+      for (const v of vs) if (v.member && !full.has(v.slug) && !asArtist[v.slug]) asArtist[v.slug] = v.member;
       const dl = req.query.dl ? String(req.query.dl).replace(/[^\w.\- ]/g, '').slice(0, 120) : '';
       let out;
-      try { out = await signAddress(redis, String(req.query.u || ''), reachOf(venue), venue?.member, dl ? DL_TTL : TTL, dl ? { download: dl } : {}); }
+      try { out = await signAddress(redis, String(req.query.u || ''), [...new Set(vs.map(v => v.slug))], slug => asArtist[slug] || null, dl ? DL_TTL : TTL, dl ? { download: dl } : {}); }
       catch (e) { console.error('[media]', e.message); return res.status(502).send('Could not open this right now.'); }
       if (!out) return res.status(403).send('This isn\'t yours to open.');
       if (dl) {
