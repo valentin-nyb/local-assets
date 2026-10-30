@@ -716,3 +716,100 @@ html body main > :has(+ .la-statusbar) { background: var(--la-bg) !important; bo
 html body .la-statusbar.la-statusbar { background: var(--la-bar) !important; border-top: 0 !important; justify-content: flex-start !important; align-items: center !important;
     min-height: 40px !important; padding: 0 20px max(0px, calc(env(safe-area-inset-bottom) - 14px)) !important; }
 html body .la-statusbar.la-statusbar > div, html body .la-statusbar.la-statusbar span { font-size: 11px !important; letter-spacing: .08em !important; color: var(--la-sub) !important; }
+
+/* ── Accent colour (side menu → the dots under the theme switcher) ──
+   Each choice is one of the Brand Kit's colours: bright in dark mode, a deeper shade in light mode so it reads on white.
+   No choice (data-accent unset) keeps the original: neon green in dark, orange in light. */
+html[data-accent="yellow"] { --la-accent: #FACC15; }
+html[data-accent="orange"] { --la-accent: #FB923C; }
+html[data-accent="red"]    { --la-accent: #F87171; }
+html[data-accent="pink"]   { --la-accent: #F472B6; }
+html[data-accent="indigo"] { --la-accent: #818CF8; }
+html[data-accent="blue"]   { --la-accent: #60A5FA; }
+html[data-accent="teal"]   { --la-accent: #2DD4BF; }
+html[data-accent="yellow"]:not(.dark) { --la-accent: #CA8A04; }
+html[data-accent="orange"]:not(.dark) { --la-accent: #EA580C; }
+html[data-accent="red"]:not(.dark)    { --la-accent: #DC2626; }
+html[data-accent="pink"]:not(.dark)   { --la-accent: #DB2777; }
+html[data-accent="indigo"]:not(.dark) { --la-accent: #4F46E5; }
+html[data-accent="blue"]:not(.dark)   { --la-accent: #2563EB; }
+html[data-accent="teal"]:not(.dark)   { --la-accent: #0D9488; }
+html[data-accent] { --la-accent-soft: color-mix(in srgb, var(--la-accent) 9%, transparent); }
+html[data-accent].dark { --la-accent-ink: #000000; }
+html[data-accent]:not(.dark) { --la-accent-ink: #ffffff; }
+html[data-accent] ::selection { background-color: var(--la-accent) !important; color: var(--la-accent-ink) !important; }
+html[data-accent] .nav-link.active { color: var(--la-accent) !important; border-left-color: var(--la-accent) !important; background: color-mix(in srgb, var(--la-accent) 5%, transparent) !important; }
+html[data-accent] ::-webkit-scrollbar-thumb, html[data-accent] ::-webkit-scrollbar-thumb:hover { background: var(--la-accent) !important; }
+/* Tailwind's green classes (generated from styles/tailwind.css) */
+html[data-accent] .border-\[\#39FF14\]{border-color:var(--la-accent) !important}
+html[data-accent] .border-\[\#39FF14\]\/20{border-color:color-mix(in srgb,var(--la-accent) 20%,transparent) !important}
+html[data-accent] .border-\[\#39FF14\]\/30{border-color:color-mix(in srgb,var(--la-accent) 30%,transparent) !important}
+html[data-accent] .border-\[\#39FF14\]\/40{border-color:color-mix(in srgb,var(--la-accent) 40%,transparent) !important}
+html[data-accent] .border-primary{border-color:var(--la-accent) !important}
+html[data-accent] .border-primary\/20{border-color:color-mix(in srgb,var(--la-accent) 20%,transparent) !important}
+html[data-accent] .border-primary\/30{border-color:color-mix(in srgb,var(--la-accent) 30%,transparent) !important}
+html[data-accent] .border-primary\/50{border-color:color-mix(in srgb,var(--la-accent) 50%,transparent) !important}
+html[data-accent] .border-t-primary{border-top-color:var(--la-accent) !important}
+html[data-accent] .bg-\[\#39FF14\]{background-color:var(--la-accent) !important}
+html[data-accent] .bg-primary{background-color:var(--la-accent) !important}
+html[data-accent] .bg-primary\/10{background-color:color-mix(in srgb,var(--la-accent) 10%,transparent) !important}
+html[data-accent] .bg-primary\/20{background-color:color-mix(in srgb,var(--la-accent) 20%,transparent) !important}
+html[data-accent] .bg-primary\/90{background-color:color-mix(in srgb,var(--la-accent) 90%,transparent) !important}
+html[data-accent] .via-primary\/10{--tw-gradient-to:color-mix(in srgb,var(--la-accent) 0%,transparent) var(--tw-gradient-to-position) !important;--tw-gradient-stops:var(--tw-gradient-from),color-mix(in srgb,var(--la-accent) 10%,transparent) var(--tw-gradient-via-position),var(--tw-gradient-to) !important}
+html[data-accent] .text-\[\#39FF14\]{color:var(--la-accent) !important}
+html[data-accent] .text-\[\#39FF14\]\/70{color:color-mix(in srgb,var(--la-accent) 70%,transparent) !important}
+html[data-accent] .text-primary{color:var(--la-accent) !important}
+html[data-accent] .text-primary\/50{color:color-mix(in srgb,var(--la-accent) 50%,transparent) !important}
+html[data-accent] .text-primary\/70{color:color-mix(in srgb,var(--la-accent) 70%,transparent) !important}
+html[data-accent] .text-primary\/80{color:color-mix(in srgb,var(--la-accent) 80%,transparent) !important}
+html[data-accent] .shadow-\[0_0_10px_\#39FF14\]{--tw-shadow:0 0 10px var(--la-accent) !important;box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow) !important}
+html[data-accent] .shadow-\[0_0_10px_rgba\(57\2c 255\2c 20\2c 0\.5\)\]{--tw-shadow:0 0 10px color-mix(in srgb,var(--la-accent) 50%,transparent) !important;box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow) !important}
+html[data-accent] .shadow-\[0_0_10px_rgba\(57\2c 255\2c 20\2c 0\.8\)\]{--tw-shadow:0 0 10px color-mix(in srgb,var(--la-accent) 80%,transparent) !important;box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow) !important}
+html[data-accent] .shadow-\[0_0_15px_rgba\(57\2c 255\2c 20\2c 0\.2\)\]{--tw-shadow:0 0 15px color-mix(in srgb,var(--la-accent) 20%,transparent) !important;box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow) !important}
+html[data-accent] .shadow-\[0_0_15px_rgba\(57\2c 255\2c 20\2c 0\.3\)\]{--tw-shadow:0 0 15px color-mix(in srgb,var(--la-accent) 30%,transparent) !important;box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow) !important}
+html[data-accent] .shadow-\[0_0_20px_rgba\(57\2c 255\2c 20\2c 0\.05\)\]{--tw-shadow:0 0 20px color-mix(in srgb,var(--la-accent) 5%,transparent) !important;box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow) !important}
+html[data-accent] .shadow-\[0_0_20px_rgba\(57\2c 255\2c 20\2c 0\.12\)\]{--tw-shadow:0 0 20px color-mix(in srgb,var(--la-accent) 12%,transparent) !important;box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow) !important}
+html[data-accent] .shadow-\[0_0_5px_\#39FF14\]{--tw-shadow:0 0 5px var(--la-accent) !important;box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow) !important}
+html[data-accent] .shadow-\[0_0_8px_\#39FF14\]{--tw-shadow:0 0 8px var(--la-accent) !important;box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow) !important}
+html[data-accent] .selection\:bg-primary ::-moz-selection{background-color:var(--la-accent) !important}
+html[data-accent] .selection\:bg-primary ::selection{background-color:var(--la-accent) !important}
+html[data-accent] .selection\:bg-primary::-moz-selection{background-color:var(--la-accent) !important}
+html[data-accent] .selection\:bg-primary::selection{background-color:var(--la-accent) !important}
+html[data-accent] .hover\:border-\[\#39FF14\]:hover,html[data-accent] .hover\:border-primary:hover{border-color:var(--la-accent) !important}
+html[data-accent] .hover\:border-primary\/50:hover{border-color:color-mix(in srgb,var(--la-accent) 50%,transparent) !important}
+html[data-accent] .hover\:bg-primary:hover{background-color:var(--la-accent) !important}
+html[data-accent] .hover\:bg-primary\/10:hover{background-color:color-mix(in srgb,var(--la-accent) 10%,transparent) !important}
+html[data-accent] .hover\:bg-primary\/5:hover{background-color:color-mix(in srgb,var(--la-accent) 5%,transparent) !important}
+html[data-accent] .hover\:text-primary:hover{color:var(--la-accent) !important}
+html[data-accent] .hover\:shadow-\[0_0_30px_rgba\(57\2c 255\2c 20\2c 0\.3\)\]:hover{--tw-shadow:0 0 30px color-mix(in srgb,var(--la-accent) 30%,transparent) !important;box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow) !important}
+html[data-accent] .focus\:border-primary:focus{border-color:var(--la-accent) !important}
+html[data-accent] .group:hover .group-hover\:border-primary{border-color:var(--la-accent) !important}
+html[data-accent] .group:hover .group-hover\:border-primary\/50{border-color:color-mix(in srgb,var(--la-accent) 50%,transparent) !important}
+html[data-accent] .group:hover .group-hover\:bg-primary\/10{background-color:color-mix(in srgb,var(--la-accent) 10%,transparent) !important}
+html[data-accent] .group:hover .group-hover\:text-primary,html[data-accent] .group\/asset:hover .group-hover\/asset\:text-primary,html[data-accent] .group\/cat:hover .group-hover\/cat\:text-primary{color:var(--la-accent) !important}
+
+/* The accent dots under the theme switcher */
+.la-accent-dots { display: flex; gap: 6px; justify-content: center; margin-top: 12px; }
+.la-accent-dots button { all: unset; box-sizing: border-box; width: 20px; height: 20px; border-radius: 50%; cursor: pointer; background: var(--dot); display: grid; place-items: center; transition: transform .15s ease, box-shadow .15s ease; }
+.la-accent-dots button:hover { transform: scale(1.12); }
+.la-accent-dots button:focus-visible { outline: 2px solid var(--la-text); outline-offset: 2px; }
+.la-accent-dots button[aria-checked="true"] { box-shadow: 0 0 0 2px var(--la-surface, #0a0a0a), 0 0 0 3.5px var(--la-text); }
+.la-accent-dots button svg { width: 11px; height: 11px; opacity: 0; color: #000; }
+.la-accent-dots button[aria-checked="true"] svg { opacity: 1; }
+html:not(.dark) .la-accent-dots button svg { color: #fff; }
+.la-accent-dots [data-accent=""]       { --dot: #39FF14; }
+html:not(.dark) .la-accent-dots [data-accent=""] { --dot: #F97316; }
+.la-accent-dots [data-accent="yellow"] { --dot: #FACC15; }
+.la-accent-dots [data-accent="orange"] { --dot: #FB923C; }
+.la-accent-dots [data-accent="red"]    { --dot: #F87171; }
+.la-accent-dots [data-accent="pink"]   { --dot: #F472B6; }
+.la-accent-dots [data-accent="indigo"] { --dot: #818CF8; }
+.la-accent-dots [data-accent="blue"]   { --dot: #60A5FA; }
+.la-accent-dots [data-accent="teal"]   { --dot: #2DD4BF; }
+html:not(.dark) .la-accent-dots [data-accent="yellow"] { --dot: #CA8A04; }
+html:not(.dark) .la-accent-dots [data-accent="orange"] { --dot: #EA580C; }
+html:not(.dark) .la-accent-dots [data-accent="red"]    { --dot: #DC2626; }
+html:not(.dark) .la-accent-dots [data-accent="pink"]   { --dot: #DB2777; }
+html:not(.dark) .la-accent-dots [data-accent="indigo"] { --dot: #4F46E5; }
+html:not(.dark) .la-accent-dots [data-accent="blue"]   { --dot: #2563EB; }
+html:not(.dark) .la-accent-dots [data-accent="teal"]   { --dot: #0D9488; }

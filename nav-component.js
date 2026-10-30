@@ -85,6 +85,8 @@ window.laOpenPage = function(url) {
     if (window.laApp) location.href = url;
     else window.open(url, '_blank');
 };
+// The accent colours (the Brand Kit's colours), in the order the dots show them
+var LA_ACCENTS = [['', 'Neon green'], ['yellow', 'Yellow'], ['orange', 'Orange'], ['red', 'Red'], ['pink', 'Pink'], ['indigo', 'Indigo'], ['blue', 'Blue'], ['teal', 'Teal']];
 // The breadcrumb's account name: the local / assets account shows its company name as written.
 // Defined before the page loads: pages call it from their own scripts while still loading.
 window.laSetBreadcrumb = function(el, name) {
@@ -182,7 +184,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6.5 15h4"/></svg><span>Billing</span>
             </a>
         </nav>
-        <div class="px-4 pt-6 mt-4 flex justify-center" style="padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1.5rem)">
+        <div class="px-4 pt-6 mt-4 flex flex-col items-center" style="padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1.5rem)">
             <div class="la-theme-switcher" role="radiogroup" aria-label="Theme">
                 <button type="button" role="radio" aria-checked="${saved === 'light' ? 'true' : 'false'}" data-theme="light">
                     
@@ -196,6 +198,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     
                     <span>Auto</span>
                 </button>
+            </div>
+            <div class="la-accent-dots" role="radiogroup" aria-label="Accent colour">
+                ${LA_ACCENTS.map(function(a) { return '<button type="button" role="radio" data-accent="' + a[0] + '" aria-label="' + a[1] + '" title="' + a[1] + '" aria-checked="' + ((localStorage.getItem('la_accent') || '') === a[0]) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>'; }).join('')}
             </div>
         </div>
     `;
@@ -245,6 +250,25 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         window._laApplyTheme = apply;
+
+        // Accent colour: one of the Brand Kit's colours for every detail (buttons, links, the logo's sweep, active menu item…).
+        // Kept on this device; '' is the original neon green (orange in light mode)
+        function applyAccent(a) {
+            if (a) document.documentElement.setAttribute('data-accent', a); else document.documentElement.removeAttribute('data-accent');
+            try { if (a) localStorage.setItem('la_accent', a); else localStorage.removeItem('la_accent'); } catch (_) {}
+            document.querySelectorAll('.la-accent-dots button[data-accent]').forEach(function(b) { b.setAttribute('aria-checked', b.getAttribute('data-accent') === a ? 'true' : 'false'); });
+            // Video players take a colour value, not the CSS variable
+            var hex = getComputedStyle(document.documentElement).getPropertyValue('--la-accent').trim();
+            if (hex) document.querySelectorAll('mux-player').forEach(function(m) { m.setAttribute('accent-color', hex); });
+            document.dispatchEvent(new CustomEvent('accentchange'));
+        }
+        document.addEventListener('click', function(e) {
+            var btn = e.target.closest('.la-accent-dots button[data-accent]');
+            if (btn) applyAccent(btn.getAttribute('data-accent'));
+        });
+        document.addEventListener('themechange', function() { applyAccent(document.documentElement.getAttribute('data-accent') || ''); });
+        try { var _acc = localStorage.getItem('la_accent'); if (_acc && !document.documentElement.getAttribute('data-accent')) document.documentElement.setAttribute('data-accent', _acc); } catch (_) {}
+        window._laApplyAccent = applyAccent;
     }
 
     // --- Venue Name System (shared across all pages) ---
@@ -291,8 +315,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!popover.classList.contains('hidden')) {
             input.value = window.getVenueName();
             input.focus();
-            var isDark = document.documentElement.classList.contains('dark');
-            input.style.borderColor = isDark ? '#39FF14' : '#F97316';
+            input.style.borderColor = 'var(--la-accent)';
             input.setSelectionRange(input.value.length, input.value.length);
         }
     };
@@ -427,7 +450,7 @@ document.addEventListener("DOMContentLoaded", () => {
             '.la-acct-row.sub svg{width:15px;height:15px}' +
             '.la-acct-row span{flex:1;min-width:0}' +
             '.la-acct-check{display:flex;margin-left:auto}' +
-            '.la-acct-check svg{width:15px;height:15px;color:var(--la-accent,#39FF14)}';
+            '.la-acct-check svg{width:15px;height:15px;color:var(--la-accent, #39FF14)}';
         document.head.appendChild(_acs);
     }
     // Client names in capitals ("CAFE 1001"), the local / assets account as its wordmark
@@ -676,7 +699,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (session.picture) {
                 btn.innerHTML = '<img src="' + session.picture + '" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid transparent;transition:border-color .2s;" alt="" ' +
-                    'onmouseover="this.style.borderColor=\'#39FF14\'" onmouseout="this.style.borderColor=\'transparent\'" ' +
+                    'onmouseover="this.style.borderColor=\'var(--la-accent)\'" onmouseout="this.style.borderColor=\'transparent\'" ' +
                     'onerror="this.parentElement.innerHTML=\'<span style=&quot;width:32px;height:32px;border-radius:50%;background:#27272a;display:inline-flex;align-items:center;justify-content:center;font-family:monospace;font-size:12px;font-weight:700;color:#fff;&quot;>' + (session.name || 'A').charAt(0).toUpperCase() + '</span>\'">';
             } else {
                 btn.innerHTML = '<span style="width:32px;height:32px;border-radius:50%;background:#27272a;display:inline-flex;align-items:center;justify-content:center;font-family:monospace;font-size:12px;font-weight:700;color:#fff;">' + (session.name || 'A').charAt(0).toUpperCase() + '</span>';
@@ -719,9 +742,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (document.getElementById('la-terms')) return;
         var st = document.createElement('style');
         st.textContent = '#la-terms .lad-panel{width:480px}#la-terms .lat-eyebrow{font:500 10px/1 "JetBrains Mono",ui-monospace,monospace;letter-spacing:.24em;text-transform:uppercase;color:var(--la-dim,#7c8178);margin-bottom:14px}'
-            + '#la-terms a{color:var(--la-text,#fafafa);text-decoration:underline;text-decoration-color:var(--la-accent,#39FF14);text-underline-offset:3px}'
+            + '#la-terms a{color:var(--la-text,#fafafa);text-decoration:underline;text-decoration-color:var(--la-accent, #39FF14);text-underline-offset:3px}'
             + '#la-terms .lat-check{display:flex;gap:12px;align-items:flex-start;margin-top:20px;padding:14px 16px;border:1px solid var(--la-line,#27272a);border-radius:16px;cursor:pointer;font-size:14px;line-height:1.5;color:var(--la-text,#fafafa)}'
-            + '#la-terms .lat-check input{flex:none;width:18px;height:18px;margin-top:1px;accent-color:var(--la-accent,#39FF14);cursor:pointer}'
+            + '#la-terms .lat-check input{flex:none;width:18px;height:18px;margin-top:1px;accent-color:var(--la-accent, #39FF14);cursor:pointer}'
             + '#la-terms .lad-btn.primary[disabled]{opacity:.4;cursor:not-allowed;filter:none}'
             + '#la-terms .lat-err{margin-top:12px;font-size:13px;color:var(--la-bad,#ef4444);min-height:0}';
         document.head.appendChild(st);

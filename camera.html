@@ -33,17 +33,17 @@
     <link rel="manifest" href="favicon/site.webmanifest?v=3">
 
     <link rel="stylesheet" href="styles/tailwind.css">
-    <link rel="stylesheet" href="styles/theme.css?v=39">
-    <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
+    <link rel="stylesheet" href="styles/theme.css?v=40">
+    <script>(function(){try{var a=localStorage.getItem('la_accent');if(a)document.documentElement.setAttribute('data-accent',a)}catch(e){}window.laAccentHex=function(){return getComputedStyle(document.documentElement).getPropertyValue('--la-accent').trim()||'#39FF14'};var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=6"></script>
     <script src="/la-djframe.js?v=4"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player@3"></script>
-    <script src="nav-component.js?v=51"></script>
+    <script src="nav-component.js?v=52"></script>
     <script src="la-deckrec.js?v=1"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
-        .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
+        .nav-link.active { color: var(--la-accent) !important; background: color-mix(in srgb, var(--la-accent) 5%, transparent); border-left: 2px solid var(--la-accent); }
         .nav-link:hover:not(.active) { background: rgba(255, 255, 255, 0.03); color: white; }
         body { background-color: #050505; color: #ffffff; -webkit-font-smoothing: antialiased; }
         .nav-link.active { background-color: rgba(255, 255, 255, 0.05); border: 1px solid #27272a; color: white; }
@@ -59,15 +59,15 @@
         .cam-off iconify-icon { font-size:24px; }
         .cam-audio { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; background:radial-gradient(circle at 50% 40%, #16161a, #050505 70%); }
         .cam-audio span { font:600 10px 'JetBrains Mono', monospace; letter-spacing:.14em; text-transform:uppercase; color:#71717a; }
-        .cam-audio.on span { color:#39FF14; }
+        .cam-audio.on span { color:var(--la-accent); }
         .cam-eq { display:flex; align-items:center; gap:4px; height:56px; }
         .cam-eq i { width:5px; height:20%; border-radius:3px; background:#3f3f46; }
-        .cam-audio.on .cam-eq i { background:#39FF14; animation:camEq .9s ease-in-out infinite alternate; }
+        .cam-audio.on .cam-eq i { background:var(--la-accent); animation:camEq .9s ease-in-out infinite alternate; }
         .cam-audio.real .cam-eq i { animation:none !important; transition:height .06s linear; }
         .cam-audio.silent .cam-eq i { background:#3f3f46 !important; }
         .cam-audio.silent span { color:#71717a !important; }
         .cam-listen { position:absolute; right:12px; bottom:12px; z-index:2; height:28px; padding:0 12px; border-radius:999px; border:1px solid rgba(255,255,255,.3); background:rgba(0,0,0,.5); color:#fff; font:500 12px 'Helvetica Neue', Helvetica, Arial, sans-serif; cursor:pointer; }
-        .cam-listen.on { background:#39FF14; border-color:#39FF14; color:#000; }
+        .cam-listen.on { background:var(--la-accent); border-color:var(--la-accent); color:var(--la-accent-ink); }
         @keyframes camEq { from { height:15%; } to { height:100%; } }
         .cam-bars { position:absolute; inset:0; background:linear-gradient(90deg, #c0c0c0 0 14.28%, #c0c000 0 28.57%, #00c0c0 0 42.85%, #00c000 0 57.14%, #c000c0 0 71.42%, #c00000 0 85.71%, #0000c0 0); }
         .cam-bars::after { content:""; position:absolute; left:0; right:0; bottom:0; height:22%; background:linear-gradient(90deg, #00214c 0 18%, #fff 0 36%, #32006a 0 54%, #131313 0 72%, #090909 0 81%, #1d1d1d 0); }
@@ -229,7 +229,7 @@
         .mac-live { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; background:#000; }
         .mac-wait { position:absolute; inset:0; }
         .mac-tag { position:absolute; left:10px; bottom:10px; z-index:2; display:inline-flex; align-items:center; gap:6px; padding:4px 9px; border-radius:999px; background:rgba(0,0,0,.6); color:#fafafa; font:500 10px/1 'JetBrains Mono', monospace; letter-spacing:.14em; text-transform:uppercase; }
-        .mac-tag::before { content:""; width:6px; height:6px; border-radius:50%; background:#39FF14; box-shadow:0 0 8px #39FF14; }
+        .mac-tag::before { content:""; width:6px; height:6px; border-radius:50%; background:var(--la-accent); box-shadow:0 0 8px var(--la-accent); }
         .cam-audio.mac .cam-eq i { height:70%; animation:none; transition:transform .08s linear; transform-origin:center; }
         .mac-found { margin:-4px 0 14px; font-size:13px; line-height:1.5; color:var(--la-sub); }
         .mac-rows { display:grid; gap:10px; }
@@ -1206,7 +1206,7 @@
             stage.innerHTML = camBars('LIVE · Connecting…');
             var mp = document.createElement('mux-player');
             mp.setAttribute('stream-type', 'live'); mp.setAttribute('playback-id', pid);
-            mp.setAttribute('muted', ''); mp.setAttribute('autoplay', 'muted'); mp.setAttribute('playsinline', ''); mp.setAttribute('accent-color', '#39FF14');
+            mp.setAttribute('muted', ''); mp.setAttribute('autoplay', 'muted'); mp.setAttribute('playsinline', ''); mp.setAttribute('accent-color', laAccentHex());
             mp.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;opacity:0;transition:opacity .4s ease;--media-object-fit:' + fit + ';' + extra;
             var show = function() { mp.style.opacity = '1'; var b = stage.querySelector('.cam-bars'); if (b) setTimeout(function() { b.remove(); }, 450); };
             mp.addEventListener('playing', show);

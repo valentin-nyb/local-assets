@@ -13,8 +13,8 @@
     <link rel="apple-touch-icon" href="favicon/apple-touch-icon.png?v=3">
     <link rel="manifest" href="favicon/site.webmanifest?v=3">
     <link rel="stylesheet" href="styles/tailwind.css">
-    <link rel="stylesheet" href="styles/theme.css?v=39">
-    <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
+    <link rel="stylesheet" href="styles/theme.css?v=40">
+    <script>(function(){try{var a=localStorage.getItem('la_accent');if(a)document.documentElement.setAttribute('data-accent',a)}catch(e){}window.laAccentHex=function(){return getComputedStyle(document.documentElement).getPropertyValue('--la-accent').trim()||'#39FF14'};var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=6"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -24,12 +24,12 @@
         body { background-color: #050505; color: #ffffff; -webkit-font-smoothing: antialiased; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #050505; }
-        ::-webkit-scrollbar-thumb { background: #39FF14; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb { background: var(--la-accent); border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #32e612; }
         .asset-card { transition: all 0.2s ease; }
-        .asset-card:hover { border-color: rgba(57, 255, 20, 0.5); transform: translateY(-2px); }
+        .asset-card:hover { border-color: color-mix(in srgb, var(--la-accent) 50%, transparent); transform: translateY(-2px); }
         .type-badge { font-size: 9px; letter-spacing: 0.15em; padding: 2px 8px; border-radius: 2px; text-transform: uppercase; font-family: 'JetBrains Mono', monospace; }
-        .type-master { background: rgba(57, 255, 20, 0.15); color: #39FF14; }
+        .type-master { background: color-mix(in srgb, var(--la-accent) 15%, transparent); color: var(--la-accent); }
         @media (max-width: 640px) {
             .cp-hide-sm { display: none; }
             header img[alt="logo"] { height: 15px; }
@@ -45,9 +45,9 @@
         .type-audio { background: rgba(168, 85, 247, 0.15); color: #a855f7; }
         .type-thumbnail { background: rgba(234, 179, 8, 0.15); color: #eab308; }
         .pulse-dot { animation: pulse-glow 2s ease-in-out infinite; }
-        @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 4px #39FF14; } 50% { box-shadow: 0 0 12px #39FF14; } }
+        @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 4px var(--la-accent); } 50% { box-shadow: 0 0 12px var(--la-accent); } }
         .upload-zone { border: 2px dashed #333; transition: all 0.3s; }
-        .upload-zone.dragover { border-color: #39FF14; background: rgba(57, 255, 20, 0.05); }
+        .upload-zone.dragover { border-color: var(--la-accent); background: color-mix(in srgb, var(--la-accent) 5%, transparent); }
     </style>
 </head>
 <body class="font-sans antialiased overflow-x-hidden">
@@ -602,7 +602,7 @@
             return;
         }
         list.innerHTML = masters.map(function(asset) {
-            var statusColor = asset.status === 'ready' ? '#39FF14' : '#eab308';
+            var statusColor = asset.status === 'ready' ? 'var(--la-accent)' : '#eab308';
             var statusText = asset.status === 'ready' ? 'DISTRIBUTED' : 'PROCESSING';
             var clips = clientAssets.filter(a => a.type === 'social-clip' && a.passthrough && asset.passthrough &&
                 a.passthrough.toUpperCase().startsWith(asset.passthrough.toUpperCase().split('//')[0].trim())).length;
@@ -675,7 +675,7 @@
             if (!res.ok) throw new Error(data.error || 'Upload failed');
 
             btn.textContent = 'Live on SoundCloud';
-            btn.style.color = '#39FF14';
+            btn.style.color = 'var(--la-accent)';
             btn.disabled = false;
             btn.onclick = function() { window.open(data.url, '_blank'); };
             showToast('Track live on SoundCloud — click to open.');
@@ -691,7 +691,7 @@
     function showToast(msg) {
         var t = document.createElement('div');
         t.textContent = msg;
-        t.style.cssText = 'position:fixed;bottom:72px;left:50%;transform:translateX(-50%);background:#111;border:1px solid #39FF14;color:#fff;font-family:monospace;font-size:11px;padding:10px 20px;z-index:9999;pointer-events:none;white-space:nowrap;';
+        t.style.cssText = 'position:fixed;bottom:72px;left:50%;transform:translateX(-50%);background:#111;border:1px solid var(--la-accent);color:#fff;font-family:monospace;font-size:11px;padding:10px 20px;z-index:9999;pointer-events:none;white-space:nowrap;';
         document.body.appendChild(t);
         setTimeout(function() { t.remove(); }, 4000);
     }

@@ -35,18 +35,18 @@
     <link rel="manifest" href="favicon/site.webmanifest?v=3">
     
     <link rel="stylesheet" href="styles/tailwind.css">
-    <link rel="stylesheet" href="styles/theme.css?v=39">
-    <script>(function(){var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
+    <link rel="stylesheet" href="styles/theme.css?v=40">
+    <script>(function(){try{var a=localStorage.getItem('la_accent');if(a)document.documentElement.setAttribute('data-accent',a)}catch(e){}window.laAccentHex=function(){return getComputedStyle(document.documentElement).getPropertyValue('--la-accent').trim()||'#39FF14'};var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=6"></script>
     <script src="/la-djframe.js?v=4"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player@3"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-    <script src="nav-component.js?v=51"></script>
+    <script src="nav-component.js?v=52"></script>
     <style>
         /* Standardized sidebar styles used by the JS component */
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
-        .nav-link.active { color: #39FF14 !important; background: rgba(57, 255, 20, 0.05); border-left: 2px solid #39FF14; }
+        .nav-link.active { color: var(--la-accent) !important; background: color-mix(in srgb, var(--la-accent) 5%, transparent); border-left: 2px solid var(--la-accent); }
         .nav-link:hover:not(.active) { background: rgba(255, 255, 255, 0.03); color: white; }
             /* Latest session: its name, then venue and record label */
         .hero-meta .hero-session { margin:8px 0 0; font:500 15px/1.3 'Helvetica Neue', Helvetica, Arial, sans-serif; color:rgba(255,255,255,.88); }
@@ -65,9 +65,9 @@
         ::-webkit-scrollbar { display: none; }
         .session-group + .session-group { border-top: 1px solid rgba(39, 39, 42, 0.15); }
         .rev-btn { display:inline-flex;align-items:center;gap:5px;padding:3px 10px 3px 7px;border-radius:9999px;border:1px solid #333333;background:#111111;color:#888888;font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;transition:border-color .15s,color .15s,background .15s; }
-        .rev-btn:hover { border-color:#39FF14;color:#ffffff;background:#111111; }
+        .rev-btn:hover { border-color:var(--la-accent);color:#ffffff;background:#111111; }
         .rev-btn:disabled { opacity:.5;cursor:default; }
-        .rev-pill { display:inline-flex;align-items:center;gap:5px;padding:3px 9px 3px 6px;border-radius:9999px;border:1px solid rgba(57,255,20,.25);background:rgba(57,255,20,.04);color:#39FF14;font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em; }
+        .rev-pill { display:inline-flex;align-items:center;gap:5px;padding:3px 9px 3px 6px;border-radius:9999px;border:1px solid color-mix(in srgb, var(--la-accent) 25%, transparent);background:color-mix(in srgb, var(--la-accent) 4%, transparent);color:var(--la-accent);font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:.1em; }
         #revenue-modal * { box-sizing:border-box; }
         
         /* Mobile Overlay Fix */
@@ -447,7 +447,7 @@
                 // than the clip on iPad, so the player showed black bars above and below); the clip fills it
                 stage.style.cssText = 'width:min(calc(78vh * 9 / 16), calc(100vw - var(--mm-side)));aspect-ratio:9/16;max-width:100%;';
                 // The poster is the clip's first frame (Mux would show a frame from the middle, then jump to the start when it plays)
-                stage.innerHTML = '<mux-player stream-type="on-demand" accent-color="#39FF14" autoplay preload="auto" thumbnail-time="0" style="width:100%;height:100%;--media-object-fit:contain;"></mux-player>';
+                stage.innerHTML = '<mux-player stream-type="on-demand" accent-color="' + laAccentHex() + '" autoplay preload="auto" thumbnail-time="0" style="width:100%;height:100%;--media-object-fit:contain;"></mux-player>';
                 stage.firstChild.setAttribute('playback-id', item.pid);
                 // Once the clip is known, the box takes its exact shape: the whole clip shows, with no black edges
                 stage.firstChild.addEventListener('loadedmetadata', function() {
@@ -3239,7 +3239,7 @@
                 btn.style.background = '#FF5500';
                 setTimeout(function() {
                     var row = document.getElementById('sc-dist-' + uid);
-                    if (row) row.outerHTML = '<a id="sc-dist-' + uid + '" href="' + escHtml(/^https:\/\//.test(data.url || '') ? data.url : '#') + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#39FF14;text-decoration:none;">&#x2713; On SoundCloud</a>';
+                    if (row) row.outerHTML = '<a id="sc-dist-' + uid + '" href="' + escHtml(/^https:\/\//.test(data.url || '') ? data.url : '#') + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:var(--la-accent);text-decoration:none;">&#x2713; On SoundCloud</a>';
                 }, 400);
             } catch(e) {
                 clearInterval(timer);
@@ -3343,7 +3343,7 @@
                 btn.style.background = '#FF0000';
                 setTimeout(function() {
                     var row = document.getElementById('yt-dist-' + uid);
-                    if (row) row.outerHTML = '<a id="yt-dist-' + uid + '" href="' + escHtml(/^https:\/\//.test(data.url || '') ? data.url : '#') + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#39FF14;text-decoration:none;">&#x2713; On YouTube</a>';
+                    if (row) row.outerHTML = '<a id="yt-dist-' + uid + '" href="' + escHtml(/^https:\/\//.test(data.url || '') ? data.url : '#') + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;font-family:\'JetBrains Mono\',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:var(--la-accent);text-decoration:none;">&#x2713; On YouTube</a>';
                 }, 400);
             } catch(e) {
                 resetBtn();
@@ -4097,7 +4097,7 @@
             #media-modal #media-prev { left:8px; }
             #media-modal #media-next { right:8px; }
         }
-        #revenue-modal { --pm-bg:#0c0c0d; --pm-card:#121214; --pm-line:#232326; --pm-text:#fafafa; --pm-sub:#a1a1aa; --pm-dim:#71717a; --pm-chip:#1a1a1d; --pm-accent:#39FF14; }
+        #revenue-modal { --pm-bg:#0c0c0d; --pm-card:#121214; --pm-line:#232326; --pm-text:#fafafa; --pm-sub:#a1a1aa; --pm-dim:#71717a; --pm-chip:#1a1a1d; --pm-accent:var(--la-accent); }
         html:not(.dark) #revenue-modal { --pm-bg:#ffffff; --pm-card:#fafafa; --pm-line:#e4e4e7; --pm-text:#09090b; --pm-sub:#52525b; --pm-dim:#71717a; --pm-chip:#f4f4f5; --pm-accent:#16a34a; }
         #revenue-modal .pm-panel { width:440px; max-width:calc(100vw - 32px); background:var(--pm-bg); border:1px solid var(--pm-line); border-radius:16px; box-shadow:0 24px 80px rgba(0,0,0,.55); color:var(--pm-text); font-family:'Inter',sans-serif; }
         #revenue-modal .pm-eyebrow { font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--pm-dim); }
