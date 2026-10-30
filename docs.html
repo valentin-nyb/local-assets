@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+<head>
+    <script>
+      (function(){
+        var s = localStorage.getItem('la_admin');
+        if (!s) { window.location.replace('/login.html'); return; }
+        try {
+          var d = JSON.parse(s);
+          if (!d.ts || Date.now() - d.ts > 10 * 60 * 1000) {
+            localStorage.removeItem('la_admin');
+            window.location.replace('/login.html');
+          }
+        } catch(e) {
+          localStorage.removeItem('la_admin');
+          window.location.replace('/login.html');
+        }
+      })();
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="a™">
+    <meta name="theme-color" content="#000000">
+    <title>local / assets™ - Docs</title>
+    <link rel="icon" type="image/x-icon" href="favicon/favicon.ico?v=4">
+    <link rel="icon" type="image/svg+xml" href="favicon/favicon.svg?v=4">
+    <link rel="apple-touch-icon" href="favicon/apple-touch-icon.png?v=3">
+    <link rel="manifest" href="favicon/site.webmanifest?v=3">
+
+    <link rel="stylesheet" href="styles/tailwind.css">
+    <link rel="stylesheet" href="styles/theme.css?v=43">
+    <script>(function(){try{var a=localStorage.getItem('la_accent');if(a)document.documentElement.setAttribute('data-accent',a)}catch(e){}window.laAccentHex=function(){return getComputedStyle(document.documentElement).getPropertyValue('--la-accent').trim()||'#39FF14'};var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <script src="/la-dialogs.js?v=7"></script>
+    <script src="/la-media.js?v=2"></script>
+    <script src="nav-component.js?v=56"></script>
+    <style>
+        .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
+        .nav-link.active { color: var(--la-accent) !important; background: color-mix(in srgb, var(--la-accent) 5%, transparent); border-left: 2px solid var(--la-accent); }
+        .nav-link:hover:not(.active) { background: rgba(255, 255, 255, 0.03); color: white; }
+        body { background-color: #050505; color: #ffffff; -webkit-font-smoothing: antialiased; }
+        .nav-link.active { background-color: rgba(255, 255, 255, 0.05); border: 1px solid #27272a; color: white; }
+        ::-webkit-scrollbar { display: none; }
+        @media (max-width: 767px) { #sidebar { position: fixed; z-index: 50; height: 100vh; } }
+
+        /* Docs: a contents list on the left (a drop-down on phones), the guide on the right */
+        .dc-wrap { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 48px; align-items: start; }
+        .dc-toc { position: sticky; top: 24px; max-height: calc(100vh - 140px); overflow-y: auto; padding-right: 4px; }
+        .dc-toc p { font: 500 10px/1 'JetBrains Mono', monospace; letter-spacing: .2em; text-transform: uppercase; color: var(--la-dim); margin: 22px 0 8px; }
+        .dc-toc p:first-child { margin-top: 0; }
+        .dc-toc a { display: block; padding: 6px 10px; margin-left: -10px; border-radius: 8px; font-size: 13px; line-height: 1.35; color: var(--la-sub); text-decoration: none; border-left: 2px solid transparent; }
+        .dc-toc a:hover { color: var(--la-text); background: var(--la-chip); }
+        .dc-toc a.on { color: var(--la-accent); border-left-color: var(--la-accent); background: color-mix(in srgb, var(--la-accent) 6%, transparent); border-radius: 0 8px 8px 0; }
+        .dc-pick { display: none; }
+        .dc-main { max-width: 760px; min-width: 0; }
+        .dc-eyebrow { font: 500 10px/1 'JetBrains Mono', monospace; letter-spacing: .2em; text-transform: uppercase; color: var(--la-dim); }
+        .dc-title { font: 700 26px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif; text-transform: uppercase; color: var(--la-text); margin-top: 8px; }
+        .dc-lead { font-size: 15px; line-height: 1.6; color: var(--la-sub); margin-top: 10px; max-width: 640px; }
+        .dc-search { margin-top: 20px; width: 100%; max-width: 420px; height: 40px; border-radius: 999px; border: 1px solid var(--la-line); background: var(--la-input); color: var(--la-text); padding: 0 16px; font-size: 13px; outline: none; }
+        .dc-search:focus { border-color: var(--la-accent); }
+        .dc-sec { padding-top: 40px; margin-top: 40px; border-top: 1px solid var(--la-line); scroll-margin-top: 16px; }
+        .dc-sec .dc-k { font: 500 10px/1 'JetBrains Mono', monospace; letter-spacing: .2em; text-transform: uppercase; color: var(--la-accent); }
+        .dc-sec h3 { font: 700 18px/1.25 'Helvetica Neue', Helvetica, Arial, sans-serif; text-transform: uppercase; color: var(--la-text); margin: 8px 0 12px; }
+        .dc-sec h4 { font-size: 14px; font-weight: 600; color: var(--la-text); margin: 22px 0 8px; }
+        .dc-sec p, .dc-sec li { font-size: 14px; line-height: 1.65; color: var(--la-sub); }
+        .dc-sec p { margin-bottom: 12px; }
+        .dc-sec b, .dc-sec strong { color: var(--la-text); font-weight: 600; }
+        .dc-sec a { color: var(--la-text); text-decoration: underline; text-decoration-color: var(--la-accent); text-underline-offset: 3px; }
+        .dc-sec ul { margin: 0 0 14px; }
+        .dc-sec ul li { position: relative; padding-left: 18px; margin-bottom: 6px; }
+        .dc-sec ul li::before { content: ''; position: absolute; left: 2px; top: .68em; width: 6px; height: 6px; border-radius: 50%; background: var(--la-accent); }
+        .dc-steps { counter-reset: s; margin: 4px 0 16px; }
+        .dc-steps li { counter-increment: s; position: relative; padding-left: 36px; margin-bottom: 10px; min-height: 24px; }
+        .dc-steps li::before { content: counter(s); position: absolute; left: 0; top: 1px; width: 24px; height: 24px; border-radius: 50%; background: var(--la-accent); color: var(--la-accent-ink); font: 600 12px/24px 'JetBrains Mono', monospace; text-align: center; }
+        .dc-note { border: 1px solid var(--la-line); border-left: 3px solid var(--la-accent); background: var(--la-surface); border-radius: 12px; padding: 14px 16px; margin: 14px 0 18px; }
+        .dc-note.warn { border-left-color: var(--la-warn); }
+        .dc-note p:last-child { margin-bottom: 0; }
+        .dc-note .dc-nt { font: 500 10px/1 'JetBrains Mono', monospace; letter-spacing: .18em; text-transform: uppercase; color: var(--la-text); margin-bottom: 8px; display: block; }
+        .dc-table { width: 100%; border-collapse: collapse; margin: 6px 0 18px; font-size: 13px; }
+        .dc-table th { text-align: left; font: 500 10px/1.3 'JetBrains Mono', monospace; letter-spacing: .14em; text-transform: uppercase; color: var(--la-dim); padding: 0 12px 10px 0; border-bottom: 1px solid var(--la-line); }
+        .dc-table td { padding: 10px 12px 10px 0; border-bottom: 1px solid var(--la-line); color: var(--la-sub); vertical-align: top; line-height: 1.5; }
+        .dc-table td:first-child { color: var(--la-text); font-weight: 500; white-space: nowrap; }
+        .dc-scroll { overflow-x: auto; }
+        .dc-sec code, .dc-sec kbd { font: 12px 'JetBrains Mono', monospace; background: var(--la-chip); border: 1px solid var(--la-line); border-radius: 6px; padding: 1px 6px; color: var(--la-text); }
+        .dc-flow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0 16px; }
+        .dc-flow span { font: 500 11px/1 'JetBrains Mono', monospace; letter-spacing: .06em; padding: 9px 12px; border-radius: 999px; border: 1px solid var(--la-line); color: var(--la-text); background: var(--la-surface); }
+        .dc-flow i { font-style: normal; color: var(--la-accent); }
+        .dc-hide { display: none !important; }
+        .dc-none { font-size: 14px; color: var(--la-sub); margin-top: 32px; }
+        .dc-foot { margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--la-line); font-size: 13px; color: var(--la-sub); }
+        @media (max-width: 1023px) {
+            .dc-wrap { grid-template-columns: minmax(0, 1fr); gap: 0; }
+            .dc-toc { display: none; }
+            .dc-pick { display: block; margin-top: 16px; width: 100%; max-width: 420px; }
+        }
+    </style>
+</head>
+<body class="font-sans antialiased bg-background text-foreground overflow-hidden h-screen w-screen flex selection:bg-primary selection:text-black">
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/90 z-40 hidden backdrop-blur-md opacity-0 transition-opacity duration-300"></div>
+    <aside id="sidebar" class="w-64 border-r border-[#27272a] bg-[#0a0a0a] flex flex-col transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 shrink-0 h-full"></aside>
+    <main class="flex-1 flex flex-col overflow-hidden relative w-full bg-[#050505]">
+        <header class="la-topbar h-16 flex items-center px-4 md:px-8 border-b border-[#27272a] bg-[#050505] shrink-0 justify-between w-full z-40">
+            <div class="flex items-center gap-2 md:gap-3 min-w-0"><button type="button" onclick="toggleSidebar()" class="la-menu-btn" aria-label="Open menu"><iconify-icon icon="solar:hamburger-menu-linear"></iconify-icon></button>
+                <span id="venue-breadcrumb" class="text-zinc-600 text-[10px] font-mono uppercase tracking-[0.3em] hidden md:inline"></span>
+                <h1 class="text-[10px] font-mono uppercase tracking-[0.2em] md:tracking-[0.3em] text-[#39FF14] font-bold m-0 truncate">DOCS</h1>
+            </div>
+            <div class="flex items-center gap-4 shrink-0">
+                <button id="venue-avatar" class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center font-bold text-xs shrink-0"></button>
+            </div>
+        </header>
+        <div class="flex-1 w-full overflow-y-auto no-scrollbar" id="dc-scroller">
+            <div class="la-page">
+                <div class="dc-wrap">
+                    <nav class="dc-toc" id="dc-toc" aria-label="Contents"></nav>
+                    <div class="dc-main">
+                        <p class="dc-eyebrow">How it all works</p>
+                        <h2 class="dc-title">Docs</h2>
+                        <p class="dc-lead">Everything local / assets does, from plugging in a camera to posting the clips: set up, recording, the decks, sessions, clips, Brand Kit, sharing, billing and keeping your files safe.</p>
+                        <input type="search" class="dc-search" id="dc-q" placeholder="Search the docs" aria-label="Search the docs">
+                        <select class="dc-search dc-pick" id="dc-pick" aria-label="Go to a section"></select>
+                        <p class="dc-none dc-hide" id="dc-none">Nothing matches. Try another word, or email <a href="mailto:info@local-assets.com">info@local-assets.com</a>.</p>
+
+<!-- ═══════════════ GETTING STARTED ═══════════════ -->
+<section class="dc-sec" id="what" data-group="Getting started">
+    <p class="dc-k">Getting started</p>
+    <h3>What local / assets does</h3>
+    <p>local / assets turns every DJ set at a venue into content, automatically. Cameras at the venue switch on with your calendar, every set is recorded and saved for the DJ who played it, and the platform makes the rest: the full set in 4K, the HQ audio, vertical clips ready for Instagram, TikTok and Shorts, thumbnails, and the uploads to YouTube and SoundCloud.</p>
+    <div class="dc-flow"><span>Calendar</span><i>→</i><span>Cameras + decks record</span><i>→</i><span>Session saved for the DJ</span><i>→</i><span>Clips, audio, thumbnails</span><i>→</i><span>Watermark</span><i>→</i><span>Post or share</span></div>
+    <p>Nobody has to press a button on the night. You set it up once, and every set after that is handled.</p>
+</section>
+
+<section class="dc-sec" id="accounts" data-group="Getting started">
+    <p class="dc-k">Getting started</p>
+    <h3>Accounts and who sees what</h3>
+    <p>There are four kinds of account, and each has its own private storage for its videos:</p>
+    <ul>
+        <li><b>Venue</b>: a club, bar or event space. Its cameras record every set, and it sees every session.</li>
+        <li><b>Artist</b>: a DJ, with their own sets and Brand Kit.</li>
+        <li><b>Record label</b>: releases music for its artists, and keeps their sessions and brand files together.</li>
+        <li><b>Management</b>: looks after artists and their content.</li>
+    </ul>
+    <h4>Signing in</h4>
+    <p>You sign in with Google, using the email on the account (<a href="/login">local-assets.com/login</a>). A sign-in lasts while you use it and ends after a while away, for safety.</p>
+    <h4>Giving an artist access</h4>
+    <p>In <b>Brand Kit</b>, an artist's folder has <b>Give access</b>. Type their email: they sign in with Google and see <b>only their own sets</b>, the calendar and their own Brand Kit folder. They can watch and download, but not change the account.</p>
+</section>
+
+<section class="dc-sec" id="apps" data-group="Getting started">
+    <p class="dc-k">Getting started</p>
+    <h3>The apps: website, a™ for Mac, phone and iPad</h3>
+    <ul>
+        <li><b>The website</b> (local-assets.com) does everything, on any computer.</li>
+        <li><b>a™ for Mac</b> (<a href="/download">local-assets.com/download</a>) is the same platform as an app, plus things only a Mac can do: it streams cameras and the mixer plugged into the Mac (no OBS needed), and it renders the 4K long form with your moving watermark. It tells you when there's an update.</li>
+        <li><b>iPhone and iPad</b>: open local-assets.com in Safari and choose <b>Share → Add to Home Screen</b>. An iPad can also record the decks (see <a href="#decks-ipad">Decks on an iPad</a>).</li>
+    </ul>
+</section>
+
+<section class="dc-sec" id="look" data-group="Getting started">
+    <p class="dc-k">Getting started</p>
+    <h3>Theme and accent colour</h3>
+    <p>At the bottom of the side menu: <b>Light / Dark / Auto</b>, and the coloured dots for the <b>accent colour</b>, the colour of buttons, links, the active menu item, the logo and the loading text. Tap a dot to try it, then <b>Save colour</b>: it's kept with your sign-in, so every device you use shows it.</p>
+</section>
+
+<!-- ═══════════════ RECORDING ═══════════════ -->
+<section class="dc-sec" id="calendar" data-group="Recording">
+    <p class="dc-k">Recording</p>
+    <h3>The calendar: who plays when</h3>
+    <p>The calendar decides what's recorded and who it belongs to. Connect the venue's Google or Apple calendar once, and every event becomes a set.</p>
+    <ol class="dc-steps">
+        <li>In Google Calendar: <b>Settings → your calendar → Integrate calendar → Secret address in iCal format</b>. In Apple Calendar: share the calendar publicly and copy its link.</li>
+        <li>Open <b>Calendar</b> in local / assets, and paste the link.</li>
+        <li>Add your nights as events: the <b>event title is the DJ's name</b>, and the <b>start and end are the set's exact times</b>.</li>
+    </ol>
+    <p>The cameras and the decks open <b>2 minutes before</b> a set and close <b>2 minutes after</b>. What's kept is cut at the set's <b>exact</b> times and saved for that DJ, so back-to-back sets become separate sessions.</p>
+    <div class="dc-note"><span class="dc-nt">Good to know</span><p>Anything streamed outside a set isn't kept (it would cost storage for nothing). To record without a calendar event, use <a href="#session">Create a session</a>.</p></div>
+</section>
+
+<section class="dc-sec" id="cameras" data-group="Recording">
+    <p class="dc-k">Recording</p>
+    <h3>Cameras</h3>
+    <p>Each camera has its own slot in <b>Camera Control</b>, with a stream address and key. A camera streams over the venue's Wi-Fi or a network cable straight to your storage, and the platform does the rest.</p>
+    <h4>Adding a camera</h4>
+    <ol class="dc-steps">
+        <li>Power the camera and connect it to the venue's Wi-Fi or a network cable.</li>
+        <li>In <b>Camera Control</b>, add a camera and give it a name (for example <i>Main floor</i>).</li>
+        <li>Copy its <b>stream address</b> and <b>stream key</b> into the camera's live-streaming settings (OBSBOT, DJI, OBS, or any camera or app that streams RTMP).</li>
+        <li>Leave it on. It records whenever a set is on.</li>
+    </ol>
+    <p>Cameras ordered from us (OBSBOT Tail 2, bought or hired) are set up for you. Pro includes one camera and Live-Set two.</p>
+    <h4>Cameras on a Mac (no OBS)</h4>
+    <p>With <b>a™ for Mac</b> open, Camera Control shows <b>This Mac</b>: link a camera or capture card plugged into the Mac to a slot, and a™ streams it. It waits while no set is on and starts by itself when one opens.</p>
+    <h4>Camera Control on your phone</h4>
+    <p>See every camera live, and move, zoom and follow the DJ on cameras that support it (presets and tracking on PTZ cameras).</p>
+    <h4>Sound from the camera</h4>
+    <p>A camera records the sound it hears through its microphone or audio input. For the music itself, use the <a href="#decks">decks</a>: if a camera sends silence (its microphone off), the clips and the long form take the decks' sound instead.</p>
+    <div class="dc-note warn"><span class="dc-nt">"Could not access the stream key"</span><p>OBS or a camera says this when no set is on: the stream is closed to save cost. It opens 2 minutes before a calendar set, while Camera Control is open somewhere, or with Create a session.</p></div>
+</section>
+
+<section class="dc-sec" id="session" data-group="Recording">
+    <p class="dc-k">Recording</p>
+    <h3>Create a session (recording by hand)</h3>
+    <p>For a set that isn't in the calendar, press <b>Create a session</b> in Calendar: pick the cameras and the decks, type the artist, and everything starts recording <b>together</b>. Press <b>Stop and save</b> at the end. The recordings are saved as one session for that artist and date.</p>
+    <p>A set in the calendar that finishes early can be ended with <b>Stop set</b>, so nothing more is kept until its time is over.</p>
+</section>
+
+<!-- ═══════════════ THE DECKS ═══════════════ -->
+<section class="dc-sec" id="decks" data-group="The decks">
+    <p class="dc-k">The decks</p>
+    <h3>Recording the decks: the ways to do it</h3>
+    <p>The decks' sound becomes each session's <b>HQ audio</b>, and the sound of its clips and long form. There are four ways to get it in. Pick one:</p>
+    <div class="dc-scroll"><table class="dc-table">
+        <tr><th>Way</th><th>What you need</th><th>Best for</th></tr>
+        <tr><td>iPad or iPhone</td><td>A USB audio interface (or the mixer's USB), a USB hub, the website open</td><td>Most venues: simple, lossless, no extra software</td></tr>
+        <tr><td>a™ for Mac</td><td>The mixer or an interface plugged into the Mac</td><td>Venues with a Mac at the booth</td></tr>
+        <tr><td>OBS</td><td>OBS on a computer, the Decks slot's stream key</td><td>If you already stream with OBS</td></tr>
+        <tr><td>DJM-REC</td><td>A supported Pioneer mixer, a phone, a Restream account</td><td>Venues already using DJM-REC</td></tr>
+    </table></div>
+    <p>Whichever way, the decks start and stop <b>with the sets</b>, exactly like the cameras, and each recording notes the moment it started, so its sound lines up with the picture.</p>
+</section>
+
+<section class="dc-sec" id="decks-ipad" data-group="The decks">
+    <p class="dc-k">The decks</p>
+    <h3>Decks on an iPad or iPhone</h3>
+    <div class="dc-flow"><span>Mixer booth out</span><i>→</i><span>USB audio interface</span><i>→</i><span>USB hub</span><i>→</i><span>iPad</span></div>
+    <ol class="dc-steps">
+        <li>Plug the mixer's <b>booth out</b> (red and white RCA) into a USB audio interface's inputs. A <b>Behringer UCA202 or UCA222</b> (about £25) works with no driver.</li>
+        <li>Plug the interface into a USB hub's <b>rectangular USB-A port</b>, and the hub into the iPad.</li>
+        <li>On the iPad open <b>local-assets.com → Calendar → Decks audio</b>, and pick <b>USB Audio CODEC</b>.</li>
+        <li>Press <b>Turn on</b>. It records every set in the calendar, and every Create a session, by itself.</li>
+        <li>Keep the iPad <b>plugged in</b> and the page open for the night.</li>
+    </ol>
+    <p>The sound is kept on the iPad while it records (a dropped connection loses nothing) and uploads as the session's HQ audio when the set ends. Set the booth level so the meter peaks around <b>−6 dB</b> and never touches red.</p>
+</section>
+
+<section class="dc-sec" id="decks-usb" data-group="The decks">
+    <p class="dc-k">The decks</p>
+    <h3>Connecting a mixer by USB (Pioneer XDJ-RX2 and others)</h3>
+    <p>Many mixers and all-in-one systems send their sound over USB, like a sound card:</p>
+    <ol class="dc-steps">
+        <li>Use the <b>square USB port on the back</b> of the mixer (the one on top is for USB sticks with music).</li>
+        <li>Use a cable that carries <b>data</b> (many USB-C cables only charge), plugged <b>straight into the computer</b> or into a hub's <b>USB-A</b> port.</li>
+        <li>On a Mac: <b>System Settings → Sound → Input</b> should show the mixer. If it doesn't, install the maker's Mac software (pioneerdj.com → your model → Support → Software &amp; firmware) and restart.</li>
+        <li>Choose the mixer as the sound input (in a™, OBS, or on the iPad).</li>
+    </ol>
+    <div class="dc-note warn"><span class="dc-nt">Watch out</span><p>The <b>USB-C port at the end of slim hubs</b> (Satechi and similar) is often the charging input: it passes power but no data, so the computer never sees the mixer. And a red-and-white cable into the computer's headphone socket shows as <b>headphones</b> (an output), not as an input. Use an audio interface instead.</p></div>
+</section>
+
+<section class="dc-sec" id="decks-obs" data-group="The decks">
+    <p class="dc-k">The decks</p>
+    <h3>Decks with OBS</h3>
+    <ol class="dc-steps">
+        <li>In Calendar, add <b>Decks audio</b> and copy its stream address and key.</li>
+        <li>In OBS: <b>Settings → Stream → Custom</b>, paste the address and key.</li>
+        <li>Add an <b>Audio Input Capture</b> source and set its device to the mixer or audio interface (not <i>Default</i>, which is usually a microphone).</li>
+        <li>Play a track: the green meter in OBS's Audio Mixer should move.</li>
+        <li>Press <b>Start Streaming</b>. Outside a set OBS is refused (the stream is closed), so leave it running or start it when the set opens.</li>
+    </ol>
+</section>
+
+<section class="dc-sec" id="decks-djmrec" data-group="The decks">
+    <p class="dc-k">The decks</p>
+    <h3>Decks with Pioneer DJM-REC</h3>
+    <p><b>DJM-REC</b> is Pioneer DJ's phone app for recording and streaming a mix. It works with certain Pioneer mixers: <b>DJM-V10, DJM-V10-LF, DJM-V5, DJM-A9, DJM-900NXS2, DJM-750MK2, DJM-450</b> and the <b>XDJ-AN</b> (not the XDJ-RX2). Pioneer doesn't let other apps connect to it, but it can stream to Restream, which can pass the stream on to us:</p>
+    <div class="dc-flow"><span>Pioneer mixer</span><i>→</i><span>DJM-REC on a phone</span><i>→</i><span>Restream</span><i>→</i><span>Your Decks slot</span></div>
+    <ol class="dc-steps">
+        <li>Connect the mixer to the phone and set up DJM-REC as Pioneer explains.</li>
+        <li>In <a href="https://restream.io" target="_blank" rel="noopener">Restream</a>, add a <b>custom RTMP destination</b> with your Decks slot's stream address and key (Calendar → Decks audio).</li>
+        <li>In DJM-REC, stream to <b>Restream</b>.</li>
+    </ol>
+    <div class="dc-note"><span class="dc-nt">Before you choose this</span><p>It adds a paid Restream plan (custom destinations aren't on every plan) and DJM-REC's own price after its trial, a few seconds' delay, and the phone's camera picture with it. For most venues an <a href="#decks-ipad">iPad with an audio interface</a> is simpler, lossless and free.</p></div>
+</section>
+
+<section class="dc-sec" id="decks-sync" data-group="The decks">
+    <p class="dc-k">The decks</p>
+    <h3>How sound and picture stay together</h3>
+    <p>The cameras and the decks are separate recordings. Each notes the exact moment its first second was recorded, and the clips and long form use that to put the decks' sound at the right moment of the picture. Recordings made before this was added are lined up by their ends instead (stopping a session ends both together).</p>
+    <p>If a clip's sound is still out, delete the clip and add it back: it's cut again with the latest timing.</p>
+</section>
+
+<!-- ═══════════════ SESSIONS AND CLIPS ═══════════════ -->
+<section class="dc-sec" id="sessions" data-group="After the set">
+    <p class="dc-k">After the set</p>
+    <h3>Sessions and Distribution History</h3>
+    <p>Every set becomes a <b>session</b>: an artist and a date. <b>Overview</b> lists them in Distribution History, newest first, each with:</p>
+    <ul>
+        <li><b>4K Long Form</b>: the whole set, at the camera's full resolution.</li>
+        <li><b>HQ Audio</b>: the decks' recording, as an audio file to download or post.</li>
+        <li><b>Vertical clips</b>: 1080 × 1920, ready for Instagram, TikTok and Shorts.</li>
+        <li><b>Thumbnails</b>: stills of the set (and your own, from Brand Kit).</li>
+    </ul>
+    <p>The <b>latest session banner</b> at the top of Overview loops a few seconds of the set's best moment (found from the music's drops and the movement on stage). <b>Choose moment</b> picks another.</p>
+    <p>You can also upload a recording yourself in <b>Upload Asset</b>: a 4K long form, and the HQ audio, vertical clips and thumbnails are made from it.</p>
+</section>
+
+<section class="dc-sec" id="verticals" data-group="After the set">
+    <p class="dc-k">After the set</p>
+    <h3>Vertical clips</h3>
+    <p>Clips are cut automatically from the long form at the set's strongest moments, reframed on the DJ, in your colour look. Your plan sets how many each session gets (Live-Set: unlimited).</p>
+    <ul>
+        <li><b>Choose moments</b>: pick the exact moments yourself; they replace the clips.</li>
+        <li><b>Delete</b> a clip, and add it back with the <b>+</b> button (it's cut again).</li>
+        <li><b>Upload your own</b> vertical clips to a session (they're kept as they are, and can be watermarked).</li>
+        <li><b>Apply watermark</b> stamps your Brand Kit watermark on chosen clips (a GIF logo moves). <b>Remove watermark</b> brings back the clean ones.</li>
+    </ul>
+    <p>The clips take the session's decks sound when the camera recorded none.</p>
+</section>
+
+<section class="dc-sec" id="longform" data-group="After the set">
+    <p class="dc-k">After the set</p>
+    <h3>The 4K long form</h3>
+    <p>Play it, download it, or post it. If the camera recorded no sound, the player plays the decks' recording with it, and a copy with the sound inside (for downloads) is made on a Mac with a™.</p>
+    <h4>Watermarking the long form (a™ for Mac)</h4>
+    <p>A 2-hour 4K set is too long to redraw on the servers, so it's done by <b>a™ for Mac</b>, with the Mac's video hardware:</p>
+    <ol class="dc-steps">
+        <li>Open the session in <b>a™ for Mac</b> and press <b>Apply watermark</b> on the long form. (On the website it says <i>Watermark in a™ for Mac</i>.)</li>
+        <li>That Mac starts straight away: it draws your watermark at full resolution (a GIF logo moves) and puts the decks' sound in if the camera recorded none.</li>
+        <li>The row shows <b>Rendering on [your Mac] · %</b>, then <b>Uploading</b>, then <b>Watermarked</b>. The watermarked copy is played and downloaded in place of the original, which is kept.</li>
+    </ol>
+    <div class="dc-note"><span class="dc-nt">Keep a™ open</span><p>It takes about as long as the set, plus the upload, and needs about 30 to 40 GB free on the Mac's disk while it works. Remove watermark brings back the original.</p></div>
+</section>
+
+<section class="dc-sec" id="multicam" data-group="After the set">
+    <p class="dc-k">After the set</p>
+    <h3>Multi-camera edits (Live-Set)</h3>
+    <p>With two or more cameras, the venue's Mac mini edits every set into one video, cutting between the cameras in time with the music (every 4 to 16 bars), with the decks' sound. It runs after the set and the edit appears with the session.</p>
+</section>
+
+<!-- ═══════════════ BRAND KIT ═══════════════ -->
+<section class="dc-sec" id="brandkit" data-group="Brand Kit">
+    <p class="dc-k">Brand Kit</p>
+    <h3>Brand Kit</h3>
+    <p>Logos, fonts, artwork, covers, photos, guidelines, videos, GIF animations, Instagram posts and colour looks (.cube LUTs), kept for the account and for each artist, venue and record label you work with.</p>
+    <ul>
+        <li><b>Upload</b> into the right folder and type. A file's type tag changes its type.</li>
+        <li><b>Drag a file onto another kit</b> to copy it there (the kit lights up in your accent colour).</li>
+        <li><b>Use as profile photo</b>, <b>Use as watermark</b>, <b>Set as thumbnail</b>, and <b>Use as LUT</b> (the colour look for every vertical clip) are on the files themselves.</li>
+        <li><b>Videos</b> get a watermarked copy to download.</li>
+        <li><b>Copy link</b> makes a link to one file that works for <b>7 days</b>, to send a logo or press photo to a promoter.</li>
+        <li><b>Download all</b> saves a whole kit as a zip.</li>
+    </ul>
+</section>
+
+<section class="dc-sec" id="watermark" data-group="Brand Kit">
+    <p class="dc-k">Brand Kit</p>
+    <h3>The watermark</h3>
+    <p>Set it up once in <b>Brand Kit → Watermark</b>: the logo (bottom left, or a moving GIF from Animations), the artist's name in one of your fonts (bottom right), position, size and opacity. The preview shows a vertical and a horizontal frame. Each artist can have their own.</p>
+    <p>It's applied to vertical clips, thumbnails and Brand Kit videos on the website, and to the 4K long form in <a href="#longform">a™ for Mac</a>. <b>Export PNG</b> saves it as an image.</p>
+</section>
+
+<!-- ═══════════════ PUBLISHING AND SHARING ═══════════════ -->
+<section class="dc-sec" id="publish" data-group="Publishing">
+    <p class="dc-k">Publishing</p>
+    <h3>YouTube and SoundCloud</h3>
+    <p>Connect your channels once, then post a session straight from Distribution History: the long form to <b>YouTube</b> (with a thumbnail) and the HQ audio to <b>SoundCloud</b>. A posted session shows <b>On YouTube</b> and <b>On SoundCloud</b>, linking to it.</p>
+</section>
+
+<section class="dc-sec" id="share" data-group="Publishing">
+    <p class="dc-k">Publishing</p>
+    <h3>Sharing and downloading</h3>
+    <ul>
+        <li><b>On a phone</b>: open a clip and tap <b>Share</b> to send the video itself to Instagram (Story or Reel), TikTok, WhatsApp or any app.</li>
+        <li><b>On a computer</b>: Share shows a <b>QR code</b>: scan it with your phone to open the clip there, then share it.</li>
+        <li><b>Copy link</b> makes a link to <b>one</b> clip or file that anyone can open, for <b>7 days</b>. After that it stops; make a new one.</li>
+        <li><b>Downloads</b> come through a link that lasts 15 minutes and is noted for the account.</li>
+    </ul>
+</section>
+
+<!-- ═══════════════ ACCOUNT ═══════════════ -->
+<section class="dc-sec" id="billing" data-group="Account">
+    <p class="dc-k">Account</p>
+    <h3>Plans and billing</h3>
+    <p><b>Billing</b> shows your plan, what's included each month, your usage so far (video stored, watched and recorded, and files), and your invoices. Plans are monthly; storage and streaming beyond what's included are charged at the rates shown. Invoices come by email on the 1st and are paid by card.</p>
+    <ul>
+        <li><b>Trial month</b>: try it with your own cameras; it comes off your first month if you move to a plan within 30 days.</li>
+        <li><b>Starter, Pro, Live-Set</b>: more events, clips and cameras as you go up; Live-Set adds the multi-camera edit and the Mac mini.</li>
+        <li><b>Enterprise</b>: several rooms, festivals and groups. <a href="mailto:info@local-assets.com">Talk to us</a>.</li>
+    </ul>
+    <p>See the current prices at <a href="/#pricing-plans">local-assets.com</a>.</p>
+</section>
+
+<section class="dc-sec" id="contacts" data-group="Account">
+    <p class="dc-k">Account</p>
+    <h3>Contacts</h3>
+    <p>The people to call about your sessions (venue manager, sound engineer, bookings), with Call and Email on each. Edit them in <b>Contacts</b>.</p>
+</section>
+
+<section class="dc-sec" id="security" data-group="Account">
+    <p class="dc-k">Account</p>
+    <h3>Keeping your files safe</h3>
+    <ul>
+        <li><b>Private storage</b>: each account's videos are kept in its own storage, and Brand Kit files in private storage.</li>
+        <li><b>Signed links</b>: a video, thumbnail or file only plays or opens through a link that lasts a short time and is only given to someone signed in to that account. A link copied from the browser stops working within hours.</li>
+        <li><b>Only on local-assets.com</b>: videos don't play when embedded on other websites.</li>
+        <li><b>Shared links end</b> after 7 days.</li>
+        <li><b>Downloads are noted</b>: who took which file, and when.</li>
+        <li><b>No right-click menu</b> in the app, and sign-ins end after a while away.</li>
+        <li><b>The watermark</b> is the answer to screen recording: no website can stop someone filming a screen, but a watermarked clip is always traceable to you.</li>
+    </ul>
+</section>
+
+<!-- ═══════════════ HELP ═══════════════ -->
+<section class="dc-sec" id="trouble" data-group="Help">
+    <p class="dc-k">Help</p>
+    <h3>Troubleshooting</h3>
+    <h4>A camera isn't live, or OBS says "Could not access the stream key"</h4>
+    <p>No set is on, so the stream is closed. It opens 2 minutes before a calendar set, while Camera Control is open, or with Create a session.</p>
+    <h4>A recording wasn't kept</h4>
+    <p>It was streamed outside a set. Add the set to the calendar (title = the DJ), or use Create a session.</p>
+    <h4>The clips or the long form have no sound</h4>
+    <p>The camera's microphone was off. Turn its audio on, or record the <a href="#decks">decks</a>: the clips then take the decks' sound. Delete a silent clip and add it back to cut it again with sound.</p>
+    <h4>The mixer doesn't show up on the computer</h4>
+    <p>Check the cable carries data, use the mixer's square USB port on the back, avoid a hub's charging port, and install the maker's software. See <a href="#decks-usb">Connecting a mixer by USB</a>.</p>
+    <h4>The banner doesn't play on an iPhone or iPad</h4>
+    <p><b>Low Power Mode</b> stops videos playing by themselves on every website. The banner shows a still and plays at the first touch; turning Low Power Mode off brings the motion back.</p>
+    <h4>A shared link says it has ended</h4>
+    <p>Links work for 7 days. Make a new one with Copy link.</p>
+    <h4>a™ for Mac shows an error on opening</h4>
+    <p>Install the latest a™ from <a href="/download">local-assets.com/download</a> (quit a™ and eject its disk first).</p>
+</section>
+
+<section class="dc-sec" id="support" data-group="Help">
+    <p class="dc-k">Help</p>
+    <h3>Talk to us</h3>
+    <p>Email <a href="mailto:info@local-assets.com">info@local-assets.com</a>. Tell us the venue, the date and the artist, and what you see, and a screenshot helps. We reply the same day.</p>
+</section>
+
+                        <p class="dc-foot">local / assets™ · <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="mailto:info@local-assets.com">info@local-assets.com</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <script>
+        function toggleSidebar() {
+            var sidebar = document.getElementById('sidebar'), overlay = document.getElementById('sidebar-overlay');
+            if (sidebar.classList.contains('-translate-x-full')) { sidebar.classList.remove('-translate-x-full'); overlay.classList.remove('hidden'); setTimeout(function() { overlay.classList.add('opacity-100'); }, 10); }
+            else { sidebar.classList.add('-translate-x-full'); overlay.classList.add('opacity-0'); setTimeout(function() { overlay.classList.add('hidden'); }, 300); }
+        }
+        // The contents list (left on a computer, a drop-down on phones), built from the sections, the one on
+        // screen lit in the accent colour; the search keeps the sections that mention every word typed
+        (function() {
+            var secs = Array.prototype.slice.call(document.querySelectorAll('.dc-sec'));
+            var toc = document.getElementById('dc-toc'), pick = document.getElementById('dc-pick'), scroller = document.getElementById('dc-scroller');
+            var html = '', opts = '<option value="">Go to a section…</option>', group = '';
+            secs.forEach(function(s) {
+                var g = s.dataset.group, t = s.querySelector('h3').textContent;
+                if (g !== group) { html += '<p>' + g + '</p>'; opts += (group ? '</optgroup>' : '') + '<optgroup label="' + g + '">'; group = g; }
+                html += '<a href="#' + s.id + '" data-for="' + s.id + '">' + t + '</a>';
+                opts += '<option value="' + s.id + '">' + t + '</option>';
+            });
+            toc.innerHTML = html; pick.innerHTML = opts + '</optgroup>';
+            pick.addEventListener('change', function() { if (this.value) { document.getElementById(this.value).scrollIntoView({ behavior: 'smooth' }); history.replaceState(null, '', '#' + this.value); this.value = ''; } });
+            var light = function() {
+                var top = scroller.getBoundingClientRect().top + 120, cur = secs[0];
+                secs.forEach(function(s) { if (!s.classList.contains('dc-hide') && s.getBoundingClientRect().top <= top) cur = s; });
+                toc.querySelectorAll('a').forEach(function(a) { a.classList.toggle('on', a.dataset.for === cur.id); });
+            };
+            scroller.addEventListener('scroll', light, { passive: true }); light();
+            var q = document.getElementById('dc-q');
+            q.addEventListener('input', function() {
+                var words = q.value.toLowerCase().split(/\s+/).filter(Boolean), any = false;
+                secs.forEach(function(s) {
+                    var hit = !words.length || words.every(function(w) { return s.textContent.toLowerCase().indexOf(w) >= 0; });
+                    s.classList.toggle('dc-hide', !hit); if (hit) any = true;
+                    var a = toc.querySelector('[data-for="' + s.id + '"]'); if (a) a.classList.toggle('dc-hide', !hit);
+                });
+                document.getElementById('dc-none').classList.toggle('dc-hide', any);
+                light();
+            });
+            if (location.hash && document.getElementById(location.hash.slice(1))) setTimeout(function() { document.getElementById(location.hash.slice(1)).scrollIntoView(); }, 50);
+        })();
+    </script>
+</body>
+</html>
