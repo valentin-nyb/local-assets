@@ -2039,7 +2039,7 @@
         function newPostId() { return Math.random().toString(36).slice(2, 8) + Date.now().toString(36); }
         async function removePost(owner, post, btn) {
             var imgs = postImages(owner, post);
-            if (!(await laConfirm({ title: 'Delete this Instagram post?', message: 'All ' + imgs.length + ' image' + (imgs.length === 1 ? '' : 's') + ' are removed from the brand kit, and their links stop working. This can\'t be undone.', confirmText: 'Delete permanently', danger: true }))) return;
+            if (!(await laConfirm({ title: 'Delete this Instagram post?', message: 'All ' + imgs.length + ' image' + (imgs.length === 1 ? '' : 's') + ' are removed from the brand kit, and their links stop working. This can\'t be undone.', confirmText: 'Delete', danger: true }))) return;
             btn.disabled = true;
             try {
                 for (var i = 0; i < imgs.length; i++) {
@@ -2425,7 +2425,7 @@
 
         async function removeFile(url, btn) {
             var f = _files.filter(function(x) { return x.url === url; })[0];
-            if (!(await laConfirm({ title: 'Delete ' + (f ? f.name : 'this file') + '?', message: 'It will be removed from the brand kit, and links to it will stop working. This can\'t be undone.', confirmText: 'Delete permanently', danger: true }))) return;
+            if (!(await laConfirm({ title: 'Delete ' + (f ? f.name : 'this file') + '?', message: 'It will be removed from the brand kit, and links to it will stop working. This can\'t be undone.', confirmText: 'Delete', danger: true }))) return;
             btn.disabled = true;
             try {
                 var r = await laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete', url: url }) });

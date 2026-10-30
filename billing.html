@@ -1258,7 +1258,7 @@
                 var r = await laFetch('/api/delete-account?slug=' + encodeURIComponent(slug)), p = await r.json();
                 if (!r.ok) throw new Error(p.error || r.status);
                 msg.textContent = '';
-                if (!(await laConfirmDelete({ name: name, placeholder: 'Enter the account name', title: 'Delete ' + name + '?', message: 'This permanently deletes ' + p.redisKeys.length + ' saved records (cameras, calendar, Brand Kit, watermark, clips, billing settings) and ' + p.files + ' files, and removes the account from every login and list. Stripe invoices are kept. This cannot be undone.', confirmText: 'Delete permanently', danger: true }))) { btn.disabled = false; return; }
+                if (!(await laConfirmDelete({ name: name, placeholder: 'Enter the account name', title: 'Delete ' + name + '?', message: 'This permanently deletes ' + p.redisKeys.length + ' saved records (cameras, calendar, Brand Kit, watermark, clips, billing settings) and ' + p.files + ' files, and removes the account from every login and list. Stripe invoices are kept. This cannot be undone.', confirmText: 'Delete', danger: true }))) { btn.disabled = false; return; }
                 msg.textContent = 'Deleting ' + name + '…';
                 r = await laFetch('/api/delete-account', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slug: slug, confirm: slug }) });
                 var d = await r.json();
