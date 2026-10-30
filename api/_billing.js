@@ -380,6 +380,43 @@ export function cleanKit(list) {
   }).filter(Boolean);
 }
 
+// Running costs (admin): the services the platform runs on, what each is for and what it costs us a month.
+// Saved over in Redis (billing_running) from the Billing page. cost null = not entered yet; cur = the bill's currency.
+// auto: worked out on the page instead of typed (mux: this month's Mux usage; stripe: this month's Stripe fees).
+export const DEFAULT_RUNNING = [
+  { id: 'vercel', name: 'Vercel (Pro)', use: 'Hosting: the website, the app, every function and the crons, plus file storage (Blob)', how: '$20 a month for the Pro seat, with $20 of usage included; usage beyond it is added. 13 Oct–30 Oct: $43.29 ($20.64 of it builds)', cost: 45, cur: 'usd', auto: '' },
+  { id: 'mux', name: 'Mux', use: 'Video: camera live streams, recordings, encoding, storage and streaming of every session', how: 'Pay as you go, per minute encoded, stored and watched (100,000 minutes watched free a month)', cost: null, cur: 'usd', auto: 'mux' },
+  { id: 'upstash', name: 'Upstash Redis (London)', use: 'Database: accounts, sessions, calendars, billing and settings', how: 'Pay as you go through Vercel: $0.20 per 100,000 commands and $0.25 per GB stored. See the Upstash console for the month', cost: null, cur: 'usd', auto: '' },
+  { id: 'resend', name: 'Resend', use: 'Email: sign-in, welcome and access emails, invoices, the Inbox and its reply agent', how: 'Free up to 3,000 emails a month (100 a day); Pro is $20 a month for 50,000', cost: null, cur: 'usd', auto: '' },
+  { id: 'stripe', name: 'Stripe', use: 'Card payments, subscriptions and invoices', how: 'Per payment: UK cards 1.5% + 20p, European 2.5% + 20p, others 3.25% + 20p; subscriptions add 0.7% (Billing)', cost: null, cur: 'gbp', auto: 'stripe' },
+  { id: 'domain', name: 'Domain local-assets.com (Namecheap)', use: 'The address of the website and of every email', how: 'Renewed once a year: enter the yearly price divided by 12', cost: null, cur: 'usd', auto: '' },
+  { id: 'free', name: 'GitHub, Google account, SoundCloud and YouTube', use: 'The code, the info@ Google sign-in, and posting sets to SoundCloud and YouTube', how: 'Free', cost: 0, cur: 'gbp', auto: '' },
+];
+export async function readRunning(redis) {
+  try { const saved = JSON.parse(await redis.get('billing_running') || 'null'); if (Array.isArray(saved)) return saved; } catch {}
+  return DEFAULT_RUNNING;
+}
+export function cleanRunning(list) {
+  const txt = (v, n) => String(v || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, n);
+  return (Array.isArray(list) ? list : []).slice(0, 40).map((k, i) => {
+    const name = txt(k?.name, 80);
+    const c = k?.cost === '' || k?.cost == null ? null : Number(k.cost);
+    const id = String(k?.id || '').replace(/[^a-z0-9-]/g, '').slice(0, 40) || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `service-${i + 1}`;
+    return name ? { id, name, use: txt(k.use, 160), how: txt(k.how, 240), cost: Number.isFinite(c) && c >= 0 ? Math.round(c * 100) / 100 : null,
+      cur: k.cur === 'gbp' ? 'gbp' : 'usd', auto: ['mux', 'stripe'].includes(k.auto) ? k.auto : '' } : null;
+  }).filter(Boolean);
+}
+// What Stripe has taken in fees this month (payments, refunds and its Billing fee), in pounds
+export async function stripeFeesThisMonth(stripe) {
+  const { start } = monthRange();
+  let pence = 0;
+  for await (const t of stripe.balanceTransactions.list({ created: { gte: Math.floor(start / 1000) }, limit: 100 })) {
+    if (t.currency !== 'gbp') continue;
+    pence += t.type === 'stripe_fee' ? -t.amount : (t.fee || 0);
+  }
+  return Math.round(pence) / 100;
+}
+
 // Who an invoice is for: the venue itself ("venue") or one of its artists ("artist:DJ TENNIS")
 export const assignKey = slug => `billing_assign:${slug}`;   // hash target → JSON { plan, email, name, monthly }
 export async function readAssignments(redis, slug) {

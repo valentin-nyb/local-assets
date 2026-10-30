@@ -7,7 +7,7 @@ import { venueAuth } from './_verticals.js';
 import { createCheckout } from './_checkout.js';
 import {
   readRates, readPlans, cleanPlans, readAssignments, assignKey, venueUsage, venueArtists, priceUsage,
-  monthRange, stripeClient, invoiceVenue, venueEntries, DEFAULT_RATES, applyDetails, usageByDay, planForType, priceForType, commitEndFor, readKit, cleanKit, KIT_PLANS, accountTypeOf, sendInvoiceEmail, billingEmailFor, readDiscount, muxCost, MUX_PRICES, parseMuxReport, accountRatesKey } from './_billing.js';
+  monthRange, stripeClient, invoiceVenue, venueEntries, DEFAULT_RATES, applyDetails, usageByDay, planForType, priceForType, commitEndFor, readKit, cleanKit, KIT_PLANS, accountTypeOf, sendInvoiceEmail, billingEmailFor, readDiscount, muxCost, MUX_PRICES, parseMuxReport, accountRatesKey, readRunning, cleanRunning, stripeFeesThisMonth } from './_billing.js';
 
 // Minutes Mux had encoded by kind, read off Mux's bill (Billing → Summary) before the webhook noted every video;
 // a month's encoding never counts as less than this
@@ -23,6 +23,8 @@ const MUX_BILL_FLOOR = {
 //   POST { action: 'setRates', rates }                           admin
 //   POST { action: 'setPlans', plans }                           admin
 //   POST { action: 'setKit', kit }                               admin: kit expenses for Pro and Live-Set
+//   POST { action: 'setRunning', running }                       admin: running costs (the services we pay for)
+//   GET  ?runningFees=1                                          admin: this month's Stripe fees, for running costs
 //   POST { action: 'repriceSubscriptions', apply }               admin: subscriptions to their plan's current price
 //   POST { action: 'assign', target, plan, email, name, monthly } admin: who pays which plan
 //   POST { action: 'invoiceNow', target, plan, email, name, period } admin: send an invoice now
@@ -219,6 +221,22 @@ export default async function handler(req, res) {
       return res.status(200).json(out);
     }
 
+    // Running costs (admin): what Stripe has taken in fees this month, in pounds (kept 10 minutes)
+    if (req.method === 'GET' && req.query.runningFees) {
+      if (!isAdmin) return res.status(403).json({ error: 'Admin only' });
+      const stripe = stripeClient();
+      if (!stripe) return res.status(200).json({ stripe: null });
+      const out = await withRedis(async redis => {
+        const key = `billing_stripe_fees:${monthRange().key}`;
+        const c = await redis.get(key).catch(() => null);
+        if (c != null) return Number(c);
+        const fees = await stripeFeesThisMonth(stripe);
+        await redis.set(key, String(fees), { EX: 600 }).catch(() => {});
+        return fees;
+      });
+      return res.status(200).json({ stripe: out });
+    }
+
     // The usage chart: day-by-day usage over a range, with the billing cycles (calendar months) it covers
     if (req.method === 'GET' && req.query.usageDays) {
       const target = isAdmin ? cleanTarget(req.query.target) : 'venue';
@@ -403,7 +421,7 @@ export default async function handler(req, res) {
         // (pay-as-you-go plans are chosen at sign-up only; an account can move up to a monthly plan from them)
         plansOffered: data.plans.filter(p => p.price > 0 || p.id === ((data.assignments.venue || {}).plan || '')).map(p => planForType(p, data.accountType)).map(p => ({ signupFee: p.signupFee || 0, id: p.id, name: p.name, price: p.price, maxClips: p.maxClips, cameras: p.cameras || 0, features: p.features || [], included: p.included })),
         currentPlan: (data.assignments.venue || {}).plan || '',
-        ...(isAdmin ? { kit: await withRedis(readKit), kitPlans: KIT_PLANS,
+        ...(isAdmin ? { kit: await withRedis(readKit), kitPlans: KIT_PLANS, running: await withRedis(readRunning),
           // Each kit plan's monthly price for a venue, a record label and an artist (for the kit's share of the first month)
           kitPrices: Object.fromEntries(KIT_PLANS.map(id => { const p = data.plans.find(x => x.id === id); return [id, p ? { venue: priceForType(p.price, 'venue', id), label: priceForType(p.price, 'label', id), artist: priceForType(p.price, 'artist', id) } : {}]; })),
           stripeAccount, venueSlug: slug, venues: billable.map(k => ({ slug: k, name: cfg[k]?.name || k })), rates: data.rates, plans: data.plans, assignments: data.assignments, artists: data.artists, labels: data.labels, bkVenues: data.bkVenues, assignment: a } : {}),
@@ -733,6 +751,12 @@ export default async function handler(req, res) {
       } catch (e) { console.error('[billing] example invoice link', e.message); }
       await sendInvoiceEmail(to, data);
       return res.status(200).json({ ok: true, to, total: data.total });
+    }
+
+    if (body.action === 'setRunning') {
+      const running = cleanRunning(body.running);
+      await withRedis(redis => redis.set('billing_running', JSON.stringify(running)));
+      return res.status(200).json({ running });
     }
 
     if (body.action === 'setKit') {

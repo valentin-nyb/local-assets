@@ -245,6 +245,13 @@
         /* Kit expenses folded: only the totals row shows */
         #bl-kit-box.folded > .bl-scroll, #bl-usage-box.folded > .bl-scroll { display:block !important; }
         #bl-kit-box.folded #bl-kit thead, #bl-kit-box.folded #bl-kit tbody { display:none; }
+        /* Running costs folded: only the total a month */
+        #bl-run-box.folded > .bl-scroll { display:block !important; }
+        #bl-run-box.folded #bl-run thead, #bl-run-box.folded #bl-run tbody { display:none; }
+        #bl-run textarea.bl-plan-in { height:auto; min-height:34px; padding:7px 10px; resize:vertical; line-height:1.35; font-family:inherit; }
+        #bl-run td { vertical-align:top; }
+        #bl-run .bl-run-cost { display:flex; gap:6px; min-width:150px; }
+        #bl-run .bl-run-cost select { width:72px; flex:0 0 auto; height:34px; }
         /* All accounts folded: the three totals stay */
         #bl-overview.folded > .bl-grid { display:grid !important; padding-bottom:20px !important; }
         /* Usage this month folded: only the total */
@@ -381,6 +388,15 @@
                         <button type="button" class="cam-btn ghost" id="bl-add-kit">Add item</button>
                         <button type="button" class="cam-btn primary" id="bl-save-kit">Save kit</button>
                         <span class="bl-msg" id="bl-kit-msg"></span>
+                    </div>
+                </section>
+                <section class="bl-section hidden bl-fold folded" id="bl-run-box">
+                    <div class="bl-section-head bl-fold-head" role="button" tabindex="0" aria-expanded="false" onclick="if(event.target.closest('button,select,a,input,textarea'))return;var s=this.parentNode;s.classList.toggle('folded');this.setAttribute('aria-expanded',!s.classList.contains('folded'))" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><h3>Running costs <svg class="bl-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h3><span class="bl-msg">The services the platform runs on and what each costs us a month. Mux and Stripe fill in from this month's usage; leave a cost empty until you know it.</span></div>
+                    <div class="bl-scroll"><table class="bl-table" id="bl-run"></table></div>
+                    <div class="bl-admin-actions" style="padding-top:16px">
+                        <button type="button" class="cam-btn ghost" id="bl-add-run">Add service</button>
+                        <button type="button" class="cam-btn primary" id="bl-save-run">Save running costs</button>
+                        <span class="bl-msg" id="bl-run-msg"></span>
                     </div>
                 </section>
                 <section class="bl-section hidden bl-fold folded" id="bl-admin">
@@ -746,7 +762,7 @@
                     : 'Your plan stays active until the end of the current billing month' + (endTxt ? ' (' + endTxt + ')' : '') + '. Your recordings, clips and Brand Kit stay downloadable until then.';
                 cbtn.textContent = 'Cancel account'; cbtn.classList.add('bl-danger'); cbtn.classList.remove('primary'); cbtn.dataset.mode = 'cancel';
             }
-            ['bl-admin', 'bl-send-box', 'bl-plans-box', 'bl-kit-box', 'bl-overview'].forEach(function(id) { document.getElementById(id).classList.toggle('hidden', !admin); });
+            ['bl-admin', 'bl-send-box', 'bl-plans-box', 'bl-kit-box', 'bl-run-box', 'bl-overview'].forEach(function(id) { document.getElementById(id).classList.toggle('hidden', !admin); });
             // Admin: no invoice cards (they'd read as our own bill; All accounts has the totals), and the chart
             // shows every account added up or the one picked
             var cards = document.getElementById('bl-cards'); if (cards) cards.classList.toggle('hidden', !!admin);
@@ -807,6 +823,7 @@
             document.getElementById('bl-monthly').closest('label').hidden = (d.target || 'venue') === 'venue';
             renderPlans(d.plans);
             renderKit(d.kit || [], d.kitPlans || [], d.plans, d.kitPrices || {});
+            renderRunning(d.running || []);
         }
         // All accounts (admin): what every account's video and files cost us this month, next to what we bill
         document.addEventListener('visibilitychange', function() { if (document.hidden) return; try { load(); } catch (_) {} });
@@ -829,6 +846,8 @@
                 mt.innerHTML = (d.mux || []).length ? '<thead><tr><th>What Mux charges this month</th><th class="num">Usage</th><th class="num">Cost</th></tr></thead><tbody>' +
                     d.mux.map(function(l) { return '<tr><td data-l="Category">' + esc(l.label) + '</td><td class="num" data-l="Usage">' + Math.round(l.quantity).toLocaleString('en-GB') + '</td><td class="num" data-l="Cost">' + money(l.cost, 'usd') + '</td></tr>'; }).join('') +
                     '</tbody><tfoot><tr><td><b>' + (d.report ? 'Owed after credits' : 'Total') + '</b></td><td></td><td class="num"><b>' + money(d.totals.cost, 'usd') + '</b></td></tr></tfoot>' : '';
+                _runAuto.mux = d.report ? d.totals.cost : (d.mux || []).filter(function(l) { return !/^Files/.test(l.label); }).reduce(function(t, l) { return t + l.cost; }, 0);
+                runTotals();
                 document.getElementById('bl-ov-left').textContent = money(left, cur);
                 document.getElementById('bl-ov-left-note').textContent = d.totals.billed > 0 ? Math.round(left / d.totals.billed * 100) + '% of what we bill' : 'Nothing billed yet';
                 var TYPE = { venue: 'Venue', label: 'Record label', artist: 'Artist', management: 'Management', admin: 'local / assets' };
@@ -920,6 +939,64 @@
             var msg = document.getElementById('bl-kit-msg'), t = document.getElementById('bl-kit');
             this.disabled = true; msg.textContent = 'Saving…';
             try { await post({ action: 'setKit', kit: readKitRows() }); t.dataset.editing = ''; msg.textContent = 'Saved'; await load(); }
+            catch (e) { msg.textContent = 'Could not save: ' + e.message; }
+            this.disabled = false;
+        });
+        // Running costs: one row per service we pay for, its bill a month in its own currency; the total in pounds.
+        // Mux comes from All accounts (this month so far), Stripe from its fees this month.
+        var USD_GBP = 0.79, _runAuto = {}, _runFeesAsked = false;
+        function renderRunning(list) {
+            var t = document.getElementById('bl-run');
+            if (t.dataset.editing === '1') { runTotals(); return; }
+            t.innerHTML = '<thead><tr><th>Service</th><th>What it\'s for</th><th>How it\'s charged</th><th class="num">A month</th><th></th></tr></thead><tbody>' +
+                list.map(runRow).join('') + '</tbody><tfoot id="bl-run-foot"></tfoot>';
+            if (!_runFeesAsked) {
+                _runFeesAsked = true;
+                laFetch('/api/billing?runningFees=1').then(function(r) { return r.json(); }).then(function(d) { if (d && d.stripe != null) { _runAuto.stripe = d.stripe; runTotals(); } }).catch(function() {});
+            }
+            runTotals();
+        }
+        function runRow(k) {
+            k = k || { id: '', name: '', use: '', how: '', cost: null, cur: 'gbp', auto: '' };
+            var ta = function(key, v, ph) { return '<textarea class="bl-plan-in" rows="2" data-k="' + key + '" placeholder="' + ph + '">' + esc(v || '') + '</textarea>'; };
+            var cost = k.auto
+                ? '<span class="bl-run-auto" data-auto="' + esc(k.auto) + '">…</span><br><span class="bl-msg">' + (k.auto === 'mux' ? 'This month so far, from All accounts' : 'Fees this month so far') + '</span>'
+                : '<div class="bl-run-cost"><select class="bl-plan-in" data-k="cur" aria-label="Currency"><option value="gbp"' + (k.cur === 'gbp' ? ' selected' : '') + '>£</option><option value="usd"' + (k.cur !== 'gbp' ? ' selected' : '') + '>$</option></select>' +
+                  '<input class="bl-plan-in" data-k="cost" inputmode="decimal" placeholder="Add cost" value="' + esc(k.cost == null ? '' : k.cost) + '"></div>';
+            return '<tr data-id="' + esc(k.id) + '" data-auto="' + esc(k.auto || '') + '" data-cur="' + esc(k.cur || 'gbp') + '"><td data-l="Service"><input class="bl-plan-in" data-k="name" value="' + esc(k.name) + '" placeholder="Service"></td>' +
+                '<td data-l="What it\'s for">' + ta('use', k.use, 'What it\'s for') + '</td><td data-l="How it\'s charged">' + ta('how', k.how, 'Plan or price') + '</td>' +
+                '<td class="num" data-l="A month">' + cost + '</td><td><button type="button" class="cam-btn ghost" data-del-run>Remove</button></td></tr>';
+        }
+        function readRunRows() {
+            return Array.prototype.map.call(document.querySelectorAll('#bl-run tbody tr'), function(tr) {
+                var v = function(k) { var el = tr.querySelector('[data-k="' + k + '"]'); return el ? el.value.trim() : ''; };
+                var auto = tr.dataset.auto || '';
+                return { id: tr.dataset.id, name: v('name'), use: v('use'), how: v('how'), cost: auto || v('cost') === '' ? null : Number(v('cost')), cur: auto ? tr.dataset.cur : (v('cur') || 'gbp'), auto: auto };
+            });
+        }
+        function runTotals() {
+            var foot = document.getElementById('bl-run-foot'); if (!foot) return;
+            var gbp = 0, missing = 0;
+            readRunRows().forEach(function(r) {
+                if (!r.name) return;
+                var n = r.auto ? _runAuto[r.auto] : r.cost;
+                if (r.auto) {
+                    var el = document.querySelector('#bl-run tr[data-auto="' + r.auto + '"] .bl-run-auto');
+                    if (el) el.textContent = n == null ? '…' : money(n, r.cur) + (r.cur === 'usd' ? ' (≈ ' + money(n * USD_GBP, 'gbp') + ')' : '');
+                }
+                if (n == null || !isFinite(n)) { missing++; return; }
+                gbp += r.cur === 'usd' ? n * USD_GBP : n;
+            });
+            foot.innerHTML = '<tr><td><b>Running costs a month</b></td><td colspan="2">' + (missing ? '<span class="bl-msg">+ ' + missing + ' without a cost yet</span>' : '<span class="bl-msg">Dollars counted at $1 = £' + USD_GBP + '</span>') + '</td><td class="num"><b>' + money(gbp, 'gbp') + '</b></td><td></td></tr>';
+        }
+        document.getElementById('bl-run').addEventListener('input', function() { this.dataset.editing = '1'; runTotals(); });
+        document.getElementById('bl-run').addEventListener('change', function() { this.dataset.editing = '1'; runTotals(); });
+        document.getElementById('bl-run').addEventListener('click', function(e) { var b = e.target.closest('[data-del-run]'); if (b) { this.dataset.editing = '1'; b.closest('tr').remove(); runTotals(); } });
+        document.getElementById('bl-add-run').addEventListener('click', function() { var t = document.getElementById('bl-run'); t.dataset.editing = '1'; t.querySelector('tbody').insertAdjacentHTML('beforeend', runRow()); runTotals(); });
+        document.getElementById('bl-save-run').addEventListener('click', async function() {
+            var msg = document.getElementById('bl-run-msg'), t = document.getElementById('bl-run');
+            this.disabled = true; msg.textContent = 'Saving…';
+            try { await post({ action: 'setRunning', running: readRunRows() }); t.dataset.editing = ''; msg.textContent = 'Saved'; await load(); }
             catch (e) { msg.textContent = 'Could not save: ' + e.message; }
             this.disabled = false;
         });
@@ -1068,6 +1145,8 @@
             onReset: function() { document.getElementById('bl-plans').dataset.editing = ''; load(); } });
         laSaveBar.watch(document.getElementById('bl-kit-box'), { button: document.getElementById('bl-save-kit'), failed: saveFailed('bl-kit-msg'), clicks: '#bl-add-kit,[data-del-kit]',
             onReset: function() { document.getElementById('bl-kit').dataset.editing = ''; load(); } });
+        laSaveBar.watch(document.getElementById('bl-run-box'), { button: document.getElementById('bl-save-run'), failed: saveFailed('bl-run-msg'), clicks: '#bl-add-run,[data-del-run]',
+            onReset: function() { document.getElementById('bl-run').dataset.editing = ''; load(); } });
         // Changing who is billed, the plan or the period updates the preview
         document.getElementById('bl-inv-filter').addEventListener('change', function() { if (_data) render(_data); });
         document.getElementById('bl-venue').addEventListener('change', function() { _venue = this.value; _target = 'venue'; _planOverride = undefined; document.getElementById('bl-plans').dataset.editing = ''; load(); });
