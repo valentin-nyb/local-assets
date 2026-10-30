@@ -35,7 +35,7 @@
     <link rel="manifest" href="favicon/site.webmanifest?v=3">
     
     <link rel="stylesheet" href="styles/tailwind.css">
-    <link rel="stylesheet" href="styles/theme.css?v=42">
+    <link rel="stylesheet" href="styles/theme.css?v=43">
     <script>(function(){try{var a=localStorage.getItem('la_accent');if(a)document.documentElement.setAttribute('data-accent',a)}catch(e){}window.laAccentHex=function(){return getComputedStyle(document.documentElement).getPropertyValue('--la-accent').trim()||'#39FF14'};var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=7"></script>
@@ -4010,7 +4010,8 @@
         .se-error { font-size:12px; color:var(--la-bad); }
         .se-error:empty { display:none; }
         .se-actions { display:flex; justify-content:flex-end; gap:8px; }
-        .se-btn { height:36px; padding:0 16px; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer; border:1px solid transparent; }
+        .se-btn { height:36px; padding:0 16px; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer; border:1px solid transparent; white-space:nowrap; }
+        .se-btn kbd { flex:none; }
         .se-btn.primary { background:var(--la-accent); color:var(--la-accent-ink); }
         .se-btn.ghost { background:none; color:var(--la-text); border-color:var(--la-line); }
         .se-btn:disabled { opacity:.6; }
