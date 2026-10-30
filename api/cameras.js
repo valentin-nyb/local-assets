@@ -10,6 +10,7 @@ import { relayKeyHash, cmdsKey, seenKey, tokenKey } from './camera-relay.js';
 import { scheduleWindow } from './camera-schedule.js';
 import { inSession, openSession, closeSession, managedKey } from './_cam-sessions.js';
 import { readArt, eventKey, readLinks } from './next-event.js';
+import { playbackPolicy } from './_signing.js';
 
 // The venue relay is online when it polled in the last 45 s
 async function relayStatus(redis, slug) {
@@ -70,13 +71,13 @@ async function readCameras(redis, slug) {
 const reconnectFor = kind => (kind === 'obsbot' ? 60 : 10);
 function newStreamBody(name, kind = 'obsbot') {
   return JSON.stringify({
-    playback_policy: ['public'],
+    playback_policy: playbackPolicy(),
     latency_mode: 'low',
     reconnect_window: reconnectFor(kind),
     // Mux now takes one passthrough for the stream and its recordings; recordings keep this label until
     // each set is saved for its DJ (api/_camera-recording.js), so they never show as sessions on their own
     passthrough: 'CAMERA // RECORDING',
-    new_asset_settings: { playback_policy: ['public'] },
+    new_asset_settings: { playback_policy: playbackPolicy() },
   });
 }
 

@@ -13,6 +13,10 @@ import { signingFor, signUrl, playerTickets } from './_signing.js';
 //   POST { action: 'check' }               (local / assets) each account's signing key and site-only rule
 //   POST { action: 'share', pid, title, days }   a link to one video for anyone, ending after days (7, at most 30)
 //   POST { action: 'unshare', share }      ends a link now
+//   POST { action: 'switch', slug, step, page }   (local / assets) one account's existing videos and cameras:
+//        step add: each gets a signed playback ID beside its public one (nothing changes for viewers);
+//        lock: the public ones are removed, so only signed addresses play; undo: public ones are added again.
+//        A page of 100 videos at a time; { more, page } says where to go on.
 // Someone opening a shared link has no sign-in: the share id (s) stands in for the media key, for its video only.
 const TTL = 2 * 3600, DL_TTL = 15 * 60;
 const mediaSecret = () => (process.env.LOCAL_ASSETS_API_KEY || 'dev-secret-change-me') + ':media';
@@ -164,13 +168,53 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
+    if (body.action === 'switch') {
+      if (!platformAdmins().includes(session.email) || !isAdminVenue(session.venue)) return res.status(403).json({ error: 'Only local / assets' });
+      const slug = String(body.slug || ''), step = String(body.step || ''), auth = authOf(slug);
+      if (!auth || !['add', 'lock', 'undo'].includes(step)) return res.status(400).json({ error: 'Which account and step?' });
+      if (step === 'add' || step === 'lock') await signingFor(redis, auth);   // the key first: nothing is locked an account can't sign
+      const mux = (p, init = {}) => fetch('https://api.mux.com' + p, { ...init, headers: { Authorization: auth, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(15000) })
+        .then(async r => { const b = await r.json().catch(() => ({})); if (!r.ok && r.status !== 204) throw new Error(b?.error?.messages?.[0] || 'Mux ' + r.status); return b; });
+      const t0 = Date.now(); let page = Math.max(1, Number(body.page) || 1), changed = 0, failed = 0, more = true;
+      // One video or camera: what this step does to its playback IDs
+      const fix = async (base, ids) => {
+        const has = p => (ids || []).some(x => x.policy === p);
+        try {
+          if (step === 'add' && !has('signed')) { await mux(`${base}/playback-ids`, { method: 'POST', body: JSON.stringify({ policy: 'signed' }) }); changed++; }
+          if (step === 'undo' && !has('public')) { await mux(`${base}/playback-ids`, { method: 'POST', body: JSON.stringify({ policy: 'public' }) }); changed++; }
+          if (step === 'lock' && has('signed')) for (const x of ids.filter(x => x.policy === 'public')) { await mux(`${base}/playback-ids/${x.id}`, { method: 'DELETE' }); changed++; }
+        } catch (e) { failed++; console.error('[media] switch', slug, step, base, e.message); }
+      };
+      // Cameras first (one page), then the videos page by page, until about 4 minutes have gone
+      if (page === 1) for (const s of (await mux('/video/v1/live-streams?limit=100')).data || []) await fix(`/video/v1/live-streams/${s.id}`, s.playback_ids);
+      while (Date.now() - t0 < 240e3) {
+        const list = (await mux(`/video/v1/assets?limit=100&page=${page}`)).data || [];
+        for (const a of list) await fix(`/video/v1/assets/${a.id}`, a.playback_ids);
+        if (list.length < 100) { more = false; break; }
+        page++;
+      }
+      if (!more && step === 'lock') {
+        // Kept playback IDs that just stopped: Brand Kit videos' watermarked copies get their signed ID;
+        // the long forms' sound checks are made again
+        const wm = await redis.hGetAll(`brand_video_wm:${slug}`).catch(() => ({})) || {};
+        for (const [path, v] of Object.entries(wm)) {
+          try { const o = JSON.parse(v); if (!o.assetId) continue; const a = (await mux(`/video/v1/assets/${o.assetId}`)).data; const sp = (a?.playback_ids || []).find(x => x.policy === 'signed'); if (sp) await redis.hSet(`brand_video_wm:${slug}`, path, JSON.stringify({ ...o, pid: sp.id })); } catch {}
+        }
+        for await (const batch of redis.scanIterator({ MATCH: 'lf_sound2:*', COUNT: 200 })) { const ks = [].concat(batch); if (ks.length) await redis.del(ks); }
+        await redis.hSet('signed_accounts', slug, String(Date.now()));
+      }
+      if (!more && step === 'undo') await redis.hDel('signed_accounts', slug).catch(() => {});
+      console.log('[media] switch', slug, step, 'changed', changed, 'failed', failed, more ? 'page ' + page + ' next' : 'done');
+      return res.status(200).json({ changed, failed, more, page: more ? page : null });
+    }
+
     if (body.action === 'check') {
       if (!platformAdmins().includes(session.email) || !isAdminVenue(session.venue)) return res.status(403).json({ error: 'Only local / assets' });
-      const accounts = [];
+      const accounts = [], signedAt = await redis.hGetAll('signed_accounts').catch(() => ({})) || {};
       for (const slug of Object.keys(getVenuesConfig())) {
         const auth = authOf(slug);
         if (!auth) { accounts.push({ slug, ok: false, error: 'No Cloud Storage' }); continue; }
-        try { const s = await signingFor(redis, auth); accounts.push({ slug, ok: true, siteOnly: !!s.restriction }); }
+        try { const s = await signingFor(redis, auth); accounts.push({ slug, ok: true, siteOnly: !!s.restriction, locked: Number(signedAt[slug]) || null }); }
         catch (e) { accounts.push({ slug, ok: false, error: e.message }); }
       }
       return res.status(200).json({ accounts });

@@ -3,6 +3,7 @@ import { pausedBy, sendPaused } from './_suspend.js';
 import { getWebSessionAuth } from './_venues.js';
 import { createClient } from 'redis';
 import { listAllAssets, sessionClips, socialInfo, tagFor, UPLOAD_CLIPS } from './_verticals.js';
+import { playbackPolicy } from './_signing.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', 'https://local-assets.com');
@@ -85,7 +86,7 @@ export default async function handler(req, res) {
       signal: AbortSignal.timeout(15000),
       body: JSON.stringify({
         new_asset_settings: {
-          playback_policy: ['public'],
+          playback_policy: playbackPolicy(),
           // Basic (free to encode) unless Premium is on for the account in Accounts
           video_quality: await videoQuality(session?.venueSlug),
           passthrough: passthrough,

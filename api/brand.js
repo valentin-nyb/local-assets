@@ -10,6 +10,7 @@ import { accessInviteEmail, mailFrom } from './_emails.js';
 import { cleanWatermark, readWatermark, watermarkKey, readArtistWatermark, artistWatermarkKey, resolveWatermark, newestWatermark } from './_watermark.js';
 import { renderWatermarkPng, VERTICAL, HORIZONTAL } from './_watermark-render.js';
 import { ownerLimit, accountTypeOf, readAssignments } from './_billing.js';
+import { playbackPolicy } from './_signing.js';
 
 // Brand kit: logos, guidelines, fonts and other brand files for a venue and its artists.
 // Files live in Vercel Blob under brand/<venueSlug>/<owner>/<category>/<file>, where
@@ -248,7 +249,7 @@ export default async function handler(req, res) {
         const overlay = await put(`watermarks/${slug}/${crypto.randomBytes(6).toString('hex')}.png`, png, { access: 'public', contentType: 'image/png', addRandomSuffix: false });
         const mr = await fetch('https://api.mux.com/video/v1/assets', { method: 'POST', headers: { Authorization: session.muxAuth, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(15000),
           body: JSON.stringify({ input: [{ url }, { url: overlay.url, overlay_settings: { vertical_align: 'top', horizontal_align: 'left', width: '100%', opacity: '100%' } }],
-            playback_policy: ['public'], video_quality: await videoQuality(slug), static_renditions: [{ resolution: 'highest' }], passthrough: `BRANDKIT // VIDEO // ${meta.name}`.slice(0, 255) }) });
+            playback_policy: playbackPolicy(), video_quality: await videoQuality(slug), static_renditions: [{ resolution: 'highest' }], passthrough: `BRANDKIT // VIDEO // ${meta.name}`.slice(0, 255) }) });
         const d = await mr.json().catch(() => ({}));
         if (!mr.ok || !d.data) return { status: 502, error: d?.error?.messages?.[0] || 'Cloud Storage refused the video' };
         const v = { assetId: d.data.id, pid: d.data.playback_ids?.[0]?.id, ready: false };

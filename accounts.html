@@ -194,10 +194,31 @@
                 var d = await r.json(); if (!r.ok) throw new Error(d.error || r.status);
                 var names = {}; _accounts.forEach(function(a) { names[a.slug] = a.name; });
                 list.innerHTML = d.accounts.map(function(a) {
-                    return '<p class="ac-sub" style="margin:4px 0"><b>' + esc(names[a.slug] || a.slug) + '</b> · ' + (a.ok ? 'Ready' + (a.siteOnly ? ', plays only on local-assets.com' : ', site-only rule missing') : '<span style="color:var(--la-bad)">' + esc(a.error) + '</span>') + '</p>';
+                    return '<div class="ac-sub" style="margin:6px 0;display:flex;flex-wrap:wrap;align-items:center;gap:8px"><span><b>' + esc(names[a.slug] || a.slug) + '</b> · ' +
+                        (a.ok ? (a.locked ? '<b style="color:var(--la-accent)">Signed</b> since ' + day(a.locked) : 'Ready to switch') + (a.siteOnly ? ' · plays only on local-assets.com' : ' · site-only rule missing') : '<span style="color:var(--la-bad)">' + esc(a.error) + '</span>') + '</span>' +
+                        (a.ok ? '<button type="button" class="cam-btn" data-sw="add" data-slug="' + esc(a.slug) + '">1 · Add signed IDs</button><button type="button" class="cam-btn" data-sw="lock" data-slug="' + esc(a.slug) + '">2 · Lock</button><button type="button" class="cam-btn" data-sw="undo" data-slug="' + esc(a.slug) + '">Undo</button><span data-sw-msg></span>' : '') + '</div>';
                 }).join('');
             } catch (e) { list.textContent = 'Could not check: ' + e.message; }
             b.disabled = false;
+        });
+        // One account's switch: a step runs page by page (100 videos at a time) until it's done
+        document.getElementById('ac-prot-list').addEventListener('click', async function(e) {
+            var b = e.target.closest('[data-sw]'); if (!b) return;
+            var step = b.dataset.sw, slug = b.dataset.slug, row = b.parentNode, msg = row.querySelector('[data-sw-msg]');
+            if (step === 'lock' && !(await laConfirm({ title: 'Lock this account\'s videos?', message: 'Their public addresses stop working: they play only on local-assets.com for someone signed in, and in shared links. Undo puts public addresses back (with new links).', confirmText: 'Lock' }))) return;
+            row.querySelectorAll('[data-sw]').forEach(function(x) { x.disabled = true; });
+            var page = 1, changed = 0, failed = 0;
+            try {
+                for (;;) {
+                    msg.textContent = 'Working… ' + changed + ' done';
+                    var r = await laFetch('/api/media', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'switch', slug: slug, step: step, page: page }) });
+                    var d = await r.json(); if (!r.ok) throw new Error(d.error || r.status);
+                    changed += d.changed; failed += d.failed;
+                    if (!d.more) break; page = d.page;
+                }
+                msg.textContent = (step === 'add' ? 'Signed IDs added: ' : step === 'lock' ? 'Locked, public addresses removed: ' : 'Public addresses back: ') + changed + (failed ? ' · ' + failed + ' failed (try again)' : '');
+            } catch (err) { msg.textContent = 'Stopped: ' + err.message + ' (try again; it goes on where it stopped)'; }
+            row.querySelectorAll('[data-sw]').forEach(function(x) { x.disabled = false; });
         });
         var day = function(ms) { return new Date(ms).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); };
 

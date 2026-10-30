@@ -4,6 +4,7 @@ import { getVenuesConfig, getMuxAuthForVenue } from './_venues.js';
 import { venueEvents } from './_calendar.js';
 import { startAudioOnly } from './_verticals.js';
 import { sessionSeconds } from './_cam-sessions.js';
+import { playbackPolicy } from './_signing.js';
 
 // When a camera's broadcast ends, Mux has saved it as an asset. This turns that recording
 // into dashboard sessions: one per artist who was "on stage" (set on the Camera page),
@@ -142,7 +143,7 @@ export async function processCameraRecording(event) {
           method: 'POST',
           body: JSON.stringify({
             input: [{ url: `mux://assets/${assetId}`, start_time: Math.floor(s.start), end_time: Math.ceil(s.end) }],
-            playback_policy: ['public'], video_quality: await videoQuality(slug),
+            playback_policy: playbackPolicy(), video_quality: await videoQuality(slug),
             passthrough: tag(s.artist, date, calSets.length ? s : null, camLabel, multi && calSets.length > 0, filmedMs + Math.floor(s.start) * 1000),
             // The decks: a downloadable audio file; cameras: the full-quality MP4
             static_renditions: [{ resolution: isAudio ? 'audio-only' : 'highest' }],
@@ -160,7 +161,7 @@ export async function processCameraRecording(event) {
     if (!isAudio && camLabel === 'MASTER' && !calSets.length && sets.length === 1 && !cams.some(c => c.kind === 'audio' && c.streamId)
         && (asset.tracks || []).some(t => t.type === 'audio')) {
       await muxReq(auth, '/video/v1/assets', { method: 'POST', body: JSON.stringify({
-        input: [{ url: `mux://assets/${assetId}` }], playback_policy: ['public'], video_quality: 'basic',
+        input: [{ url: `mux://assets/${assetId}` }], playback_policy: playbackPolicy(), video_quality: 'basic',
         passthrough: tag(sets[0].artist, date, null, 'AUDIO', false, filmedMs), static_renditions: [{ resolution: 'audio-only' }],
       }) }).then(a => console.log(`[camera-rec] ${slug} HQ audio from ${camName}: ${a.id}`))
         .catch(e => console.error('[camera-rec] HQ audio', assetId, e.message));

@@ -8,7 +8,7 @@ import ffmpegPath from 'ffmpeg-static';
 import { put, del as delBlob, list as listBlobs } from '@vercel/blob';
 import { getVenuesConfig, getMuxAuthForVenue } from './_venues.js';
 import { planMaxClips } from './_billing.js';
-import { muxUrl } from './_signing.js';
+import { muxUrl, playbackPolicy } from './_signing.js';
 
 // Vertical clips: cut once from a session's full recording, cropped to 9:16 at 1080×1920, and kept as
 // the originals ("ARTIST // SOCIAL // NN"). A watermark is put on copies of these, never on the
@@ -427,7 +427,7 @@ export async function cutVertical(redis, auth, job) {
       method: 'POST',
       body: JSON.stringify({
         input: [{ url: blob.url }],
-        playback_policy: ['public'], video_quality: await videoQuality(job.slug),
+        playback_policy: playbackPolicy(), video_quality: await videoQuality(job.slug),
         passthrough: tagFor(job.artist, job.n, true),
         meta: { external_id: job.masterId },
         static_renditions: [{ resolution: 'highest' }],
@@ -615,7 +615,7 @@ export async function claimMacRender(redis, slugs, device) {
   const tag = `${job.artist} // ${job.kind === 'wm' ? '4KWM' : '4KSOUND'}`;
   const upload = await muxReq(auth, '/video/v1/uploads', { method: 'POST', body: JSON.stringify({
     cors_origin: '*', timeout: 3 * 86400,
-    new_asset_settings: { playback_policy: ['public'], video_quality: await videoQuality(job.slug), passthrough: tag, meta: { external_id: job.masterId }, static_renditions: [{ resolution: 'highest' }] },
+    new_asset_settings: { playback_policy: playbackPolicy(), video_quality: await videoQuality(job.slug), passthrough: tag, meta: { external_id: job.masterId }, static_renditions: [{ resolution: 'highest' }] },
   }) });
   const claimed = { ...job, state: 'rendering', by: String(device || 'a Mac').slice(0, 60), beat: Date.now(), progress: 0, tries: (job.tries || 0) + 1, uploadId: upload.id };
   await redis.hSet(MAC_RENDERS, job.id, JSON.stringify(claimed));

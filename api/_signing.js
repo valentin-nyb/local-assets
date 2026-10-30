@@ -103,3 +103,7 @@ export async function muxUrlAuto(auth, url, ttlSec) {
   await redis.connect();
   try { return await muxUrl(redis, auth, url, ttlSec); } finally { await redis.quit().catch(() => {}); }
 }
+
+// New videos: public until the switch, signed after it (LA_SIGNED_PLAYBACK=1 in Vercel, set once every
+// account is switched). Accounts → Video protection switches the ones already there.
+export const playbackPolicy = () => process.env.LA_SIGNED_PLAYBACK === '1' ? ['signed'] : ['public'];

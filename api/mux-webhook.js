@@ -1,5 +1,5 @@
 import { put } from '@vercel/blob';
-import { muxUrlAuto } from './_signing.js';
+import { muxUrlAuto, playbackPolicy } from './_signing.js';
 import { processCameraRecording } from './_camera-recording.js';
 import { createClient } from 'redis';
 import { startVerticals, venueForAsset, startAudioOnly } from './_verticals.js';
@@ -91,7 +91,7 @@ async function createAudioAsset(auth, assetId, artistName) {
         headers: { 'Content-Type': 'application/json', Authorization: auth },
         body: JSON.stringify({
             input: [{ url: `mux://assets/${assetId}` }],
-            playback_policy: ['public'], video_quality: 'basic',
+            playback_policy: playbackPolicy(), video_quality: 'basic',
             passthrough: tag,
             static_renditions: [{ resolution: 'audio-only' }]
         })
@@ -163,7 +163,7 @@ async function createThumbnails(auth, assetId, artistName, playbackId, duration)
                 headers: { 'Content-Type': 'application/json', Authorization: auth },
                 body: JSON.stringify({
                     input: [{ url: blob.url }],
-                    playback_policy: ['public'], video_quality: 'basic',
+                    playback_policy: playbackPolicy(), video_quality: 'basic',
                     passthrough: tag,
                     static_renditions: [{ resolution: 'highest' }]
                 })
