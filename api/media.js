@@ -77,9 +77,10 @@ async function signAddress(redis, url, slugs, member, ttl, extra = {}) {
   if (!allowed(o, m)) {
     // Why it was refused, for support (no keys or addresses): whose the video is, and what this login can open
     const c = JSON.parse(await redis.get(`pid_owner:${pid}`).catch(() => null) || 'null');
-    console.error('[media] refused', pid.slice(0, 6) + '…', 'owner', c ? c.slug + (c.artist ? '/' + c.artist : '') : 'not found in ' + slugs.join(','), 'reach', slugs.join(','), m ? 'as artist ' + m.name : 'full access');
+    console.error('[media] refused', u.hostname.split('.')[0], u.pathname.replace(pid, pid.slice(0, 6) + '…').slice(0, 40), 'owner', c ? c.slug + (c.artist ? '/' + c.artist : '') : 'not found in ' + slugs.join(','), 'reach', slugs.join(','), m ? 'as artist ' + m.name : 'full access');
     // A video still public on Mux (its account not switched to signed yet) is open to anyone anyway: shown as before
-    const pub = await fetch(`https://image.mux.com/${pid}/thumbnail.jpg?width=8`, { method: 'HEAD', signal: AbortSignal.timeout(5000) }).then(r => r.ok).catch(() => false);
+    const pub = await fetch(`https://image.mux.com/${pid}/thumbnail.jpg?width=8`, { signal: AbortSignal.timeout(5000) }).then(r => { r.body?.cancel?.().catch?.(() => {}); return r.ok; }).catch(() => false);
+    console.error('[media] refused', pid.slice(0, 6) + '…', pub ? 'public on Mux: shown' : 'not public on Mux: refused');
     return pub ? { url, o: c || { slug: '' } } : null;
   }
   if (o.policy !== 'signed') return { url, o };   // still public: as it is
