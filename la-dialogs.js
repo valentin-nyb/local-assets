@@ -19,10 +19,10 @@
   .lad-title{font-size:19px;font-weight:600;line-height:1.3;letter-spacing:-.01em;margin:0}
   .lad-msg{font-size:15px;line-height:1.55;color:var(--la-sub,#a1a1aa);margin-top:10px;white-space:pre-line;word-break:break-word}
   .lad-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px}
-  .lad-btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;height:40px;padding:0 16px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid transparent;font-family:inherit}
+  .lad-btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;white-space:nowrap;height:40px;padding:0 16px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid transparent;font-family:inherit}
   .lad-actions .lad-btn{height:48px;padding:0 18px;border-radius:14px;font-size:15px}
   .lad-actions .lad-btn:has(kbd){padding-right:8px}
-  .lad-btn kbd{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;padding:0 7px;border-radius:8px;font:500 13px Inter,ui-sans-serif,system-ui,sans-serif;background:color-mix(in srgb,currentColor 14%,transparent);color:inherit;opacity:.75}
+  .lad-btn kbd{display:inline-flex;flex:none;align-items:center;justify-content:center;min-width:30px;height:30px;padding:0 7px;border-radius:8px;font:500 13px Inter,ui-sans-serif,system-ui,sans-serif;background:color-mix(in srgb,currentColor 14%,transparent);color:inherit;opacity:.75}
   .lad-btn kbd + kbd{margin-left:-4px}
   /* Shortcut keys show only where there is a keyboard: the website on a computer and the Mac app */
   @media (hover:none),(pointer:coarse){.lad-btn kbd,.ladd-btn kbd{display:none}.lad-actions .lad-btn:has(kbd),.ladd-btn{padding-right:18px}}
@@ -78,7 +78,7 @@
   .ladd-err{margin-top:10px;font-size:13px;color:#f87171;min-height:0}
   .ladd-err:empty{display:none}
   .ladd-bar{display:flex;flex-wrap:wrap;gap:12px;margin-top:22px}
-  .ladd-btn{display:inline-flex;align-items:center;gap:10px;height:48px;padding:0 8px 0 18px;border-radius:14px;font:600 15px Inter,ui-sans-serif,system-ui,sans-serif;cursor:pointer;border:1px solid transparent}
+  .ladd-btn{display:inline-flex;align-items:center;gap:10px;white-space:nowrap;height:48px;padding:0 8px 0 18px;border-radius:14px;font:600 15px Inter,ui-sans-serif,system-ui,sans-serif;cursor:pointer;border:1px solid transparent}
   .ladd-btn kbd{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;padding:0 7px;border-radius:8px;font:500 13px Inter,ui-sans-serif,system-ui,sans-serif}
   .ladd-btn kbd + kbd{margin-left:-4px}
   .ladd-del{background:color-mix(in srgb,#ef4444 24%,transparent);color:#fca5a5;border-color:color-mix(in srgb,#ef4444 18%,transparent)}
