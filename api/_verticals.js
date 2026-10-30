@@ -303,8 +303,12 @@ export async function sessionAudio(auth, job) {
   const ao = info(pick) || {};
   const vAt = Number(mo.at) || Date.parse(master.recording_times?.[0]?.started_at || '') || (mo.start ? Date.parse(mo.start) : 0);
   const aAt = Number(ao.at) || (ao.start ? Date.parse(ao.start) : 0);
-  const offset = vAt && aAt ? (vAt - aAt) / 1000 : 0;
-  return { id: pick.id, pid: pick.playback_ids[0].id, offset, timed: !!(vAt && aAt) };
+  // Without them: stopping the session ends both recordings at the same moment (they start whenever each
+  // stream connected), so they're lined up by their ends: the decks' sound is ahead by the difference in length
+  const dA = Number(pick.duration) || 0, dV = Number(master.duration) || 0;
+  const byEnd = dA && dV && Math.abs(dA - dV) < 1800 ? dA - dV : 0;
+  const offset = vAt && aAt ? (vAt - aAt) / 1000 : byEnd;
+  return { id: pick.id, pid: pick.playback_ids[0].id, offset, timed: !!(vAt && aAt), byEnd: !(vAt && aAt) && !!byEnd };
 }
 
 // Whether a file has sound you can hear: a sound stream that isn't silence. A camera streaming with its
@@ -396,7 +400,7 @@ export async function cutVertical(redis, auth, job) {
           '-t', String(len), '-map', '0:v:0', '-map', '1:a:0', '-c:v', 'copy', '-af', 'aresample=async=1000:first_pts=0', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', out])
           .catch(e => console.error('[verticals] hq audio', e.message));
         const ok = sizeOf() >= 200 * 1024 && await hasAudio(out);
-        console.log('[verticals] hq audio', job.n, hq.id, ok ? 'added' : 'failed', 'offset', (hq.offset || 0).toFixed(2) + 's', hq.timed ? '' : '(no start times)');
+        console.log('[verticals] hq audio', job.n, hq.id, ok ? 'added' : 'failed', 'offset', (hq.offset || 0).toFixed(2) + 's', hq.timed ? '' : hq.byEnd ? '(lined up by their ends)' : '(no start times)');
         if (ok) { silent = false; fs.rm(keep, { force: true }, () => {}); } else fs.renameSync(keep, out);
       }
     }
@@ -522,7 +526,7 @@ function maxVolume(url, seconds = 20) {
 // decks recording instead, lined up with the picture. { silent, audio: { pid, offset } }: the player plays the
 // decks' sound offset seconds ahead of the picture's time. Kept per playback ID for a week once decided.
 export async function longFormSound(redis, auth, pid, slug = null) {
-  const key = `lf_sound:${pid}`;
+  const key = `lf_sound2:${pid}`;
   const cached = await redis.get(key).catch(() => null);
   if (cached) return JSON.parse(cached);
   const ref = await muxReq(auth, `/video/v1/playback-ids/${encodeURIComponent(pid)}`).catch(() => null);
