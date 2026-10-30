@@ -16,7 +16,7 @@ export async function listLiveStreams(muxAuth, { includeDisabled = false } = {})
       name:        s.passthrough || '',
       status:      s.status === 'disabled' ? 'idle' : s.status,   // 'active' while the camera is sending video
       disabled:    s.status === 'disabled',
-      playbackId:  (s.playback_ids || []).find(p => p.policy === 'public')?.id || null,
+      playbackId:  (s.playback_ids || [])[0]?.id || null,   // public or signed (pages sign through /api/media)
       activeAssetId: s.active_asset_id || null,
       recording:   !!s.new_asset_settings,          // saved as an asset when the broadcast ends
       createdAt:   Number(s.created_at) || null,

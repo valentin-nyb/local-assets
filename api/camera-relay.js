@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { createClient } from 'redis';
-import { verifyWebToken, getWebSessionAuth, freshVenues } from './_venues.js';
+import { verifyWebToken, getWebSessionAuth, freshVenues, getVenuesConfig, getMuxAuthForVenue } from './_venues.js';
+import { muxUrl } from './_signing.js';
 
 // The venue relay (relay/la-camera-relay.mjs on the venue's computer) picks up camera commands here.
 //   GET  ?wait=1   waits up to 20 s for commands, returns { commands: [{ ip, bytes, hold }] }
@@ -48,7 +49,11 @@ export default async function handler(req, res) {
       if (!job) return res.status(200).json({ job: null });
       Object.assign(job, { status: 'running', stage: 'Starting on the venue\'s Mac', pct: 0, updatedAt: now });
       await redis.hSet(`mc_jobs:${slug}`, id, JSON.stringify(job));
-      return res.status(200).json({ job: { id: job.id, artist: job.artist, date: job.date, sources: job.sources, audio: job.audio, upload: job.upload, audioUpload: job.audioUpload || null } });
+      // Each recording's stream address, signed for two days when the videos are signed (the Mac reads them for the whole edit)
+      const cfg = getVenuesConfig()[slug], auth = cfg && getMuxAuthForVenue({ slug, ...cfg });
+      const sign = async x => x && x.pid ? { ...x, url: await muxUrl(redis, auth, `https://stream.mux.com/${x.pid}.m3u8`, 2 * 86400) } : x;
+      const sources = await Promise.all((job.sources || []).map(sign)), audio = await sign(job.audio);
+      return res.status(200).json({ job: { id: job.id, artist: job.artist, date: job.date, sources, audio, upload: job.upload, audioUpload: job.audioUpload || null } });
     }
     if (req.method === 'POST' && req.query.job) {
       const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});

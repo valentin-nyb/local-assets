@@ -13,6 +13,7 @@ import { resolveWatermark } from './_watermark.js';
 import { renderWatermarkPng, renderWatermarkParts, animatedLogo, VERTICAL, HORIZONTAL } from './_watermark-render.js';
 import { spawn } from 'child_process';
 import ffmpegPath from 'ffmpeg-static';
+import { muxUrl } from './_signing.js';
 import { queueMacRender, longFormSound, claimMacRender, reportMacRender, macRenders, MAC_RENDERS } from './_verticals.js';
 import { platformAdmins, getVenuesConfig } from './_venues.js';
 import { run, signJob, verifyJob, venueAuth as venueAuthFor, muxReq, SUB, socialInfo, tagFor, clipTimes, listAllAssets, sessionClips, videoSize, finishVerticals, originalsKey, isUploadedClip, clipOwner, artistMasters } from './_verticals.js';
@@ -111,9 +112,9 @@ async function animateClip(job) {
     });
     const size = () => (fs.existsSync(out) ? fs.statSync(out).size : 0);
     // Only a file ffmpeg finished is used: one stopped part-way is a broken MP4 that Cloud Storage can't read
-    let done = await enc(`https://stream.mux.com/${job.pid}/highest.mp4`).then(() => true, e => { console.error('[watermark-gif] mp4', job.n, e.message); fs.rmSync(out, { force: true }); return false; });
+    let done = await enc(await muxUrl(redis, auth, `https://stream.mux.com/${job.pid}/highest.mp4`)).then(() => true, e => { console.error('[watermark-gif] mp4', job.n, e.message); fs.rmSync(out, { force: true }); return false; });
     console.log('[watermark-gif] rendered', job.slug, job.n, Math.round((Date.now() - t0) / 1000) + 's', Math.round(size() / 1024) + ' KB');
-    if (!done && Date.now() - t0 < 120e3) done = await enc(`https://stream.mux.com/${job.pid}.m3u8?rendition_order=desc`).then(() => true, e => { console.error('[watermark-gif] hls', job.n, e.message); fs.rmSync(out, { force: true }); return false; });
+    if (!done && Date.now() - t0 < 120e3) done = await enc(await muxUrl(redis, auth, `https://stream.mux.com/${job.pid}.m3u8?rendition_order=desc`)).then(() => true, e => { console.error('[watermark-gif] hls', job.n, e.message); fs.rmSync(out, { force: true }); return false; });
     if (!done || size() < 100 * 1024) throw new Error('The clip could not be drawn in time');
     const blob = await put(`watermarks/${job.slug}/gif-${crypto.randomBytes(6).toString('hex')}.mp4`, fs.readFileSync(out), { access: 'public', contentType: 'video/mp4', addRandomSuffix: false, multipart: size() > 50 * 1024 * 1024 });
     const copy = await muxReq(auth, '/video/v1/assets', {
@@ -150,8 +151,8 @@ async function audioOnly(job) {
       ff.on('close', code => { clearTimeout(kill); code === 0 ? resolve() : reject(new Error(err.trim().split('\n').pop())); });
     });
     const size = () => (fs.existsSync(out) ? fs.statSync(out).size : 0);
-    await grab(`https://stream.mux.com/${job.pid}/audio.m4a`).catch(() => {});
-    if (size() < 20 * 1024) await grab(`https://stream.mux.com/${job.pid}.m3u8`);
+    await grab(await muxUrl(redis, auth, `https://stream.mux.com/${job.pid}/audio.m4a`)).catch(() => {});
+    if (size() < 20 * 1024) await grab(await muxUrl(redis, auth, `https://stream.mux.com/${job.pid}.m3u8`));
     if (size() < 20 * 1024) throw new Error('no sound found in the recording');
     const blob = await put(`watermarks/${job.slug}/decks-${crypto.randomBytes(6).toString('hex')}.m4a`, fs.readFileSync(out), { access: 'public', contentType: 'audio/mp4', addRandomSuffix: false, multipart: size() > 50 * 1024 * 1024 });
     const copy = await muxReq(auth, '/video/v1/assets', { method: 'POST', body: JSON.stringify({ input: [{ url: blob.url }], playback_policy: ['public'], video_quality: await videoQuality(job.slug), passthrough: job.passthrough, static_renditions: [{ resolution: 'audio-only' }] }) });

@@ -60,7 +60,8 @@ const hwEncoder = () => /h264_videotoolbox/.test(spawnSync(FFMPEG, ['-hide_banne
 // ── Mux streams: the best video rendition and the audio rendition of a playback ID ──
 async function streamParts(pid) {
   if (String(pid).startsWith('/')) return { video: pid, audio: null };   // a local file (testing on this Mac)
-  const url = `https://stream.mux.com/${pid}.m3u8`;
+  // The site sends each recording's address (signed when the videos are signed); a bare playback ID is a public video
+  const url = /^https:\/\//.test(pid) ? pid : `https://stream.mux.com/${pid}.m3u8`;
   const text = await (await fetch(url)).text();
   const abs = u => new URL(u, url).href, lines = text.split(/\r?\n/);
   const audioLine = lines.find(l => /^#EXT-X-MEDIA:.*TYPE=AUDIO/.test(l) && /URI="/.test(l));
@@ -200,7 +201,7 @@ export async function runEdit(job, report) {
     for (let i = 0; i < job.sources.length; i++) {
       const s = job.sources[i];
       step(`Downloading camera ${i + 1} of ${job.sources.length} (${s.camera})`, 2 + 25 * i / job.sources.length);
-      const parts = await streamParts(s.pid);
+      const parts = await streamParts(s.url || s.pid);
       const file = path.join(dir, `cam${i}.mp4`);
       await run(FFMPEG, ['-y', '-i', parts.video, '-map', '0:v:0', '-c', 'copy', file]);
       const v = (probe(file).streams || []).find(x => x.codec_type === 'video') || {};
@@ -224,7 +225,7 @@ export async function runEdit(job, report) {
     let soundCam = null;
     if (job.audio) {
       step('Downloading the HQ audio', 28);
-      const hqParts = await streamParts(job.audio.pid);
+      const hqParts = await streamParts(job.audio.url || job.audio.pid);
       await run(FFMPEG, ['-y', '-i', hqParts.audio || hqParts.video, '-vn', '-ac', '2', '-ar', '48000', '-c:a', 'pcm_s16le', hqWav]);
       await run(FFMPEG, ['-y', '-i', hqWav, '-ac', '1', '-ar', String(PCM_RATE), '-f', 's16le', hqPcm]);
     } else {

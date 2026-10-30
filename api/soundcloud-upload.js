@@ -2,6 +2,7 @@ import { pausedBy, sendPaused } from './_suspend.js';
 import { createClient } from 'redis';
 import { getWebSessionAuth, getVenuesConfig } from './_venues.js';
 import { refreshScToken } from './_soundcloud.js';
+import { muxUrlAuto } from './_signing.js';
 
 // Large audio files need the full 300s window
 export const config = { maxDuration: 300 };
@@ -95,8 +96,8 @@ export default async function handler(req, res) {
 
   try {
     const audioPath = dlFile || 'audio.m4a';
-    const audioUrl  = `https://stream.mux.com/${playbackId}/${audioPath}`;
-    console.log(`[soundcloud-upload] fetching audio: ${audioUrl}`);
+    const audioUrl  = await muxUrlAuto(session.muxAuth, `https://stream.mux.com/${playbackId}/${audioPath}`);   // signed with this account's key: only its own videos open
+    console.log(`[soundcloud-upload] fetching audio: ${audioUrl.split('?')[0]}`);
 
     const audioRes = await fetch(audioUrl, { signal: AbortSignal.timeout(120000) });
     if (!audioRes.ok) {

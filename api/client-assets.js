@@ -1,4 +1,5 @@
 import { getClientSession, getMuxAuth } from './_client-auth.js';
+import { muxUrlAuto } from './_signing.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', 'https://local-assets.com');
@@ -21,7 +22,10 @@ export default async function handler(req, res) {
     const allAssets = result.data || [];
 
     // Clean originals kept behind watermarked clips ("… // SOCIALRAW // NN") are not shown
-    const enriched = allAssets.filter(a => !String(a.passthrough || '').toUpperCase().includes('// SOCIALRAW')).map(asset => {
+    // Signed videos: their addresses carry a ticket (2 hours), made with this storage's key
+    const muxAuth = `Basic ${auth}`;
+    const sign = u => muxUrlAuto(muxAuth, u);
+    const enriched = await Promise.all(allAssets.filter(a => !String(a.passthrough || '').toUpperCase().includes('// SOCIALRAW')).map(async asset => {
       const playbackId = asset.playback_ids?.[0]?.id;
       const pt = (asset.passthrough || '').toUpperCase();
       let assetType = 'master';
@@ -39,11 +43,12 @@ export default async function handler(req, res) {
         resolution: asset.resolution_tier,
         createdAt: asset.created_at,
         playbackId,
-        thumbnail: playbackId ? `https://image.mux.com/${playbackId}/thumbnail.png?width=640&height=360&fit_mode=smartcrop` : null,
-        streamUrl: playbackId ? `https://stream.mux.com/${playbackId}.m3u8` : null,
+        thumbnail: playbackId ? await sign(`https://image.mux.com/${playbackId}/thumbnail.png?width=640&height=360&fit_mode=smartcrop`) : null,
+        streamUrl: playbackId ? await sign(`https://stream.mux.com/${playbackId}.m3u8`) : null,
+        downloadUrl: playbackId ? await sign(`https://stream.mux.com/${playbackId}/high.mp4?download=1`) : null,
         downloadReady: asset.static_renditions?.status === 'ready',
       };
-    });
+    }));
 
     enriched.sort((a, b) => {
       const typeOrder = { master: 0, 'social-clip': 1, audio: 2, thumbnail: 3 };

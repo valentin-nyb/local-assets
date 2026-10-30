@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import ffmpegPath from 'ffmpeg-static';
 import { createClient } from 'redis';
 import { getWebSessionAuth, platformAdmins } from './_venues.js';
+import { muxUrlAuto } from './_signing.js';
 
 // Finds the peak moment of a set for the dashboard banner: among the stretches with the most bass
 // energy (the drops, measured on the smallest HLS rendition), the one where the picture shows someone
@@ -56,17 +57,18 @@ function grayFrame(bytes) {
     ff.stdin.end(bytes);
   });
 }
-async function frameAt(playbackId, t) {
+// auth: the Mux storage being read (signed videos need its key)
+async function frameAt(playbackId, t, auth) {
   try {
-    const r = await fetch(`https://image.mux.com/${playbackId}/thumbnail.jpg?time=${Math.max(0, Math.round(t))}&width=192`, { signal: AbortSignal.timeout(15000) });
+    const r = await fetch(await muxUrlAuto(auth, `https://image.mux.com/${playbackId}/thumbnail.jpg?time=${Math.max(0, Math.round(t))}&width=192`), { signal: AbortSignal.timeout(15000) });
     return r.ok ? await grayFrame(Buffer.from(await r.arrayBuffer())) : null;
   } catch { return null; }
 }
 // Movement across the banner's loop (frames 3 s apart): how much, and where. Each frame is evened out
 // for brightness first, so club lights changing don't count; a change over most of the picture
 // (a light sweep or a cut) counts for little.
-async function movement(playbackId, t) {
-  const frames = (await Promise.all([t - 3, t, t + 3].map(x => frameAt(playbackId, x)))).filter(Boolean);
+async function movement(playbackId, t, auth) {
+  const frames = (await Promise.all([t - 3, t, t + 3].map(x => frameAt(playbackId, x, auth)))).filter(Boolean);
   if (frames.length < 2) return null;
   const norm = frames.map(f => { let m = 0; for (const v of f) m += v; m /= f.length; return Float32Array.from(f, v => v - m); });
   const diff = new Float32Array(FW * FH);
@@ -89,8 +91,8 @@ async function movement(playbackId, t) {
   return { score, focus: { x: Math.round(sx / count / FW * 100), y: Math.round(rows[Math.floor(rows.length * 0.35)] / FH * 100) } };
 }
 
-export async function findPeak(playbackId, duration) {
-  const master = await (await fetch(`https://stream.mux.com/${playbackId}.m3u8`, { signal: AbortSignal.timeout(15000) })).text();
+export async function findPeak(playbackId, duration, auth) {
+  const master = await (await fetch(await muxUrlAuto(auth, `https://stream.mux.com/${playbackId}.m3u8`), { signal: AbortSignal.timeout(15000) })).text();
   const lines = master.split('\n');
   let low = null;
   lines.forEach((l, i) => {
@@ -138,7 +140,7 @@ export async function findPeak(playbackId, duration) {
   const cands = [];
   for (const c of scored) { if (cands.every(d => Math.abs(d.time - c.time) >= SPACING_SEC)) cands.push(c); if (cands.length >= (pts.every(p => p.e === 1) ? 12 : CANDIDATES)) break; }
   // Of those, the one where someone is playing on camera (louder breaks a tie)
-  await Promise.all(cands.map(async c => { c.move = await movement(playbackId, c.time); }));
+  await Promise.all(cands.map(async c => { c.move = await movement(playbackId, c.time, auth); }));
   const topBass = cands[0].score || 1, topMove = Math.max(...cands.map(c => c.move?.score || 0));
   const rank = c => (topMove > 0 ? 0.65 * (c.move?.score || 0) / topMove : 0) + 0.35 * c.score / topBass;
   const best = cands.reduce((a, b) => (rank(b) > rank(a) ? b : a));
@@ -195,11 +197,11 @@ export default async function handler(req, res) {
         });
         if (!ar.ok) return res.status(404).json({ error: 'Asset not found' });
         const asset = (await ar.json()).data;
-        const playbackId = (asset.playback_ids || []).find(p => p.policy === 'public')?.id;
+        const playbackId = (asset.playback_ids || [])[0]?.id;
         if (!playbackId || asset.status !== 'ready') return res.status(409).json({ error: 'Asset not ready' });
 
         const started = Date.now();
-        const { time, focus } = await findPeak(playbackId, Number(asset.duration) || 0);
+        const { time, focus } = await findPeak(playbackId, Number(asset.duration) || 0, session.muxAuth);
         const result = { time, focus, method: 'bass-and-movement' };
         await redis.set(`peak3:${assetId}`, JSON.stringify(result));
         console.log(`[peak-moment] ${assetId} peak at ${time}s focus ${JSON.stringify(focus)} (${Date.now() - started} ms)`);

@@ -68,3 +68,38 @@ export function signUrl(s, url, ttlSec) {
 export function playerTickets(s, pid, ttlSec) {
   return { playback: ticket(s, pid, 'v', {}, ttlSec), thumbnail: ticket(s, pid, 't', {}, ttlSec), storyboard: ticket(s, pid, 's', {}, ttlSec) };
 }
+
+// Our own servers reading a video (clips, watermarks, uploads to YouTube and SoundCloud, the a™ renders):
+// the address signed when the video is signed (its policy looked up once, kept 30 days), as it is when public.
+// ttlSec: as long as the job may read it (a Mac render reads for hours).
+export async function muxUrl(redis, auth, url, ttlSec = 6 * 3600) {
+  let u; try { u = new URL(url); } catch { return url; }
+  if (!/^(stream|image)\.mux\.com$/.test(u.hostname)) return url;
+  const pid = (/^\/([A-Za-z0-9]+)/.exec(u.pathname) || [])[1];
+  if (!pid || !auth) return url;
+  const key = `pid_policy:${pid}`;
+  let policy = _policy.get(pid) || await redis.get(key).catch(() => null);
+  if (!policy) {
+    const r = await fetch(`https://api.mux.com/video/v1/playback-ids/${encodeURIComponent(pid)}`, { headers: { Authorization: auth }, signal: AbortSignal.timeout(10000) }).catch(() => null);
+    if (!r || !r.ok) return url;
+    policy = (await r.json()).data?.policy || 'public';
+    await redis.set(key, policy, { EX: 30 * 86400 }).catch(() => {});
+  }
+  _policy.set(pid, policy);
+  if (policy !== 'signed') return url;
+  return signUrl(await signingFor(redis, auth), url, ttlSec);
+}
+const _policy = new Map();
+
+// The same, for code without a Redis connection of its own: one is opened only when the key or the
+// video's policy isn't known in this function yet
+export async function muxUrlAuto(auth, url, ttlSec) {
+  let pid = ''; try { pid = (/^\/([A-Za-z0-9]+)/.exec(new URL(url).pathname) || [])[1] || ''; } catch { return url; }
+  const env = storageOf(auth);
+  if (_policy.get(pid) === 'public') return url;
+  if (_policy.get(pid) === 'signed' && _mem.has(env)) return signUrl(_mem.get(env), url, ttlSec);
+  const { createClient } = await import('redis');
+  const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
+  await redis.connect();
+  try { return await muxUrl(redis, auth, url, ttlSec); } finally { await redis.quit().catch(() => {}); }
+}

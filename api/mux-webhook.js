@@ -1,4 +1,5 @@
 import { put } from '@vercel/blob';
+import { muxUrlAuto } from './_signing.js';
 import { processCameraRecording } from './_camera-recording.js';
 import { createClient } from 'redis';
 import { startVerticals, venueForAsset, startAudioOnly } from './_verticals.js';
@@ -140,7 +141,8 @@ async function createThumbnails(auth, assetId, artistName, playbackId, duration)
     for (let i = 0; i < count; i++) {
         const time = Math.round(interval * (i + 1));
         const tag = artistName + ' // THUMB // ' + String(i + 1).padStart(2, '0');
-        const imageUrl = `https://image.mux.com/${playbackId}/thumbnail.png?width=1920&height=1080&fit_mode=smartcrop&time=${time}`;
+        // Mux reads the frame itself to make the thumbnail: signed for a day when the video is signed
+        const imageUrl = await muxUrlAuto(auth, `https://image.mux.com/${playbackId}/thumbnail.png?width=1920&height=1080&fit_mode=smartcrop&time=${time}`, 86400);
         console.log(`[Thumb] ${i + 1}/${count}: ${tag} @ ${time}s`);
 
         try {

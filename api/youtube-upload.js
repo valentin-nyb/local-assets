@@ -2,6 +2,7 @@ import { pausedBy, sendPaused } from './_suspend.js';
 import crypto from 'crypto';
 import { createClient } from 'redis';
 import { getWebSessionAuth } from './_venues.js';
+import { muxUrlAuto } from './_signing.js';
 
 // Each call uploads as many chunks as fit in ~240s; long files continue over several calls
 export const config = { maxDuration: 300 };
@@ -228,7 +229,7 @@ export default async function handler(req, res) {
 
   try {
     const videoFile   = dlFile || 'highest.mp4';
-    const muxVideoUrl = `https://stream.mux.com/${playbackId}/${videoFile}`;
+    const muxVideoUrl = await muxUrlAuto(session.muxAuth, `https://stream.mux.com/${playbackId}/${videoFile}`);   // signed with this account's key: only its own videos open
     const stateKey    = id => `yt_upload:${id}`;
 
     // Start a new YouTube upload session, or continue one from a previous call.

@@ -8,6 +8,7 @@ import ffmpegPath from 'ffmpeg-static';
 import { put, del as delBlob, list as listBlobs } from '@vercel/blob';
 import { getVenuesConfig, getMuxAuthForVenue } from './_venues.js';
 import { planMaxClips } from './_billing.js';
+import { muxUrl } from './_signing.js';
 
 // Vertical clips: cut once from a session's full recording, cropped to 9:16 at 1080×1920, and kept as
 // the originals ("ARTIST // SOCIAL // NN"). A watermark is put on copies of these, never on the
@@ -374,7 +375,7 @@ export async function cutVertical(redis, auth, job) {
     const encode = ['-map', '0:v:0', '-map', '0:a:0?', ...tail];
     const sizeOf = () => (fs.existsSync(out) ? fs.statSync(out).size : 0);
     // Mux keeps the sound as its own track in the stream, so the best picture and the sound are read as two inputs
-    const clipUrl = `https://stream.mux.com/${job.pid}.m3u8?rendition_order=desc&asset_start_time=${Math.floor(job.start)}&asset_end_time=${Math.ceil(job.end)}`;
+    const clipUrl = await muxUrl(redis, auth, `https://stream.mux.com/${job.pid}.m3u8?rendition_order=desc&asset_start_time=${Math.floor(job.start)}&asset_end_time=${Math.ceil(job.end)}`);
     const { video, audio } = await streamParts(clipUrl).catch(e => { console.error('[verticals] playlist', e.message); return {}; });
     // Picture and sound are read side by side over the network: deep queues so neither waits on the other
     const q = ['-thread_queue_size', '4096'];
@@ -396,7 +397,7 @@ export async function cutVertical(redis, auth, job) {
         // start is a seek inside a stretch read from a little earlier
         const aStart = Math.max(0, job.start + (hq.offset || 0)), from = Math.max(0, Math.floor(aStart) - 6);
         await run(['-hide_banner', '-loglevel', 'warning', '-y', '-i', keep,
-          '-ss', (aStart - from).toFixed(3), '-i', `https://stream.mux.com/${hq.pid}.m3u8?asset_start_time=${from}&asset_end_time=${Math.ceil(aStart + len + 2)}`,
+          '-ss', (aStart - from).toFixed(3), '-i', await muxUrl(redis, auth, `https://stream.mux.com/${hq.pid}.m3u8?asset_start_time=${from}&asset_end_time=${Math.ceil(aStart + len + 2)}`),
           '-t', String(len), '-map', '0:v:0', '-map', '1:a:0', '-c:v', 'copy', '-af', 'aresample=async=1000:first_pts=0', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', out])
           .catch(e => console.error('[verticals] hq audio', e.message));
         const ok = sizeOf() >= 200 * 1024 && await hasAudio(out);
@@ -408,7 +409,7 @@ export async function cutVertical(redis, auth, job) {
       const keep = out + '.silent.mp4';
       if (silent) fs.renameSync(out, keep);
       await run(['-hide_banner', '-loglevel', 'warning', '-y',
-        '-ss', String(job.start), '-t', String(len), '-i', `https://stream.mux.com/${job.pid}/highest.mp4`, ...encode])
+        '-ss', String(job.start), '-t', String(len), '-i', await muxUrl(redis, auth, `https://stream.mux.com/${job.pid}/highest.mp4`), ...encode])
         .catch(e => console.error('[verticals] mp4 fallback', e.message));
       const ok = sizeOf() >= 200 * 1024 && await hasAudio(out);
       console.log('[verticals] mp4 fallback', job.n, ok ? 'with sound' : 'failed');
@@ -540,7 +541,7 @@ export async function longFormSound(redis, auth, pid, slug = null) {
     const dur = Number(asset.duration) || 0, heard = [];
     for (const f of dur > 90 ? [0.25, 0.5, 0.75] : [0]) {
       const t = Math.floor(dur * f);
-      const clip = `https://stream.mux.com/${pid}.m3u8?asset_start_time=${t}&asset_end_time=${t + 20}`;
+      const clip = await muxUrl(redis, auth, `https://stream.mux.com/${pid}.m3u8?asset_start_time=${t}&asset_end_time=${t + 20}`);
       const { audio } = await streamParts(clip).catch(() => ({}));
       heard.push(await maxVolume(audio || clip));
     }
@@ -605,8 +606,10 @@ export async function claimMacRender(redis, slugs, device) {
   if (!pid) { await redis.hDel(MAC_RENDERS, job.id); return null; }
   // The picture: the full-quality MP4 when Mux has one, else the stream's best rendition; its own sound with it
   const mp4 = (master.static_renditions?.files || []).find(f => f.status === 'ready' && /\.mp4$/.test(f.name || ''));
-  const parts = mp4 ? null : await streamParts(`https://stream.mux.com/${pid}.m3u8?rendition_order=desc`).catch(() => null);
-  const video = mp4 ? `https://stream.mux.com/${pid}/${mp4.name}` : parts?.video;
+  // Signed for two days: a Mac reads them for as long as the render takes
+  const sign = u => muxUrl(redis, auth, u, 2 * 86400);
+  const parts = mp4 ? null : await streamParts(await sign(`https://stream.mux.com/${pid}.m3u8?rendition_order=desc`)).catch(() => null);
+  const video = mp4 ? await sign(`https://stream.mux.com/${pid}/${mp4.name}`) : parts?.video;
   if (!video) return null;
   const [vw, vh] = videoSize(master);
   const tag = `${job.artist} // ${job.kind === 'wm' ? '4KWM' : '4KSOUND'}`;
@@ -620,7 +623,7 @@ export async function claimMacRender(redis, slugs, device) {
   return {
     id: job.id, kind: job.kind, artist: job.artist, dur: Number(master.duration) || job.dur || 0, vw: vw || 3840, vh: vh || 2160,
     video, sound: parts?.audio || null,   // the stream's sound, when the picture is a rendition without it
-    decks: job.audio ? { url: `https://stream.mux.com/${job.audio.pid}.m3u8`, offset: job.audio.offset || 0 } : null,
+    decks: job.audio ? { url: await sign(`https://stream.mux.com/${job.audio.pid}.m3u8`), offset: job.audio.offset || 0 } : null,
     wm: job.wm || null, upload: upload.url,
   };
 }

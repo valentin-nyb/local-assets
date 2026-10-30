@@ -1744,7 +1744,7 @@
             var view = IMG_EXT.test(f.name)
                 ? '<div class="bk-preview bk-file-view' + (f.category === 'logos' ? '' : ' photo') + '"><img src="' + esc(fileSrc(f.url)) + '" alt="" crossorigin="anonymous" onload="fitPreviewBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}"></div>'
                 : VID_EXT.test(f.name)
-                ? '<div class="bk-file-view"><video src="' + esc(fileSrc(f.watermarked && f.watermarked.ready ? f.watermarked.url.replace(/\?download=.*$/, '') : f.url)) + '" controls playsinline autoplay muted></video></div>'
+                ? '<div class="bk-file-view"><video src="' + esc(laMux(fileSrc(f.watermarked && f.watermarked.ready ? f.watermarked.url.replace(/\?download=.*$/, '') : f.url))) + '" controls playsinline autoplay muted></video></div>'
                 : /pdf$/i.test(f.name)
                 ? '<iframe class="bk-file-pdf" src="' + esc(fileSrc(f.url)) + '" title="' + esc(f.name) + '"></iframe>'
                 : '<p class="bk-meta">This file can\'t be shown in the browser. Download it to open it.</p>';
@@ -2116,7 +2116,7 @@
                     (wmLogoFile(f) ? '<button type="button" class="bk-use-wm' + (wmUsesLogo(f) ? ' is-on' : '') + '" data-use-wm="' + esc(f.url) + '" title="Stamp this logo bottom left on every vertical clip">' + (wmUsesLogo(f) ? 'Watermark' : 'Use as watermark') + '</button>' : '') + '</div>'
                 : VID_EXT.test(f.name)
                 ? '<div class="bk-preview photo bk-video">' + tag + '<video src="' + esc(fileSrc(f.url)) + '#t=0.5" muted playsinline preload="metadata"></video>' +
-                    (f.watermarked ? (f.watermarked.ready ? '<a class="bk-use-wm is-on" href="' + esc(f.watermarked.url) + '" title="Download the copy with your watermark">Watermarked</a>'
+                    (f.watermarked ? (f.watermarked.ready ? '<a class="bk-use-wm is-on" href="' + esc(laMux(f.watermarked.url)) + '" title="Download the copy with your watermark">Watermarked</a>'
                         : '<span class="bk-use-wm">' + (f.watermarked.error ? 'Watermark failed' : 'Watermarking…') + '</span>')
                         : '<button type="button" class="bk-use-wm" data-wm-video="' + esc(f.url) + '" title="Make a copy with your watermark">Watermark it</button>') + '</div>'
                 : /\.cube$/i.test(f.name)
