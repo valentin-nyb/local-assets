@@ -1,19 +1,39 @@
 import { pausedBy, sendPaused } from './_suspend.js';
 import { createClient } from 'redis';
 import { waitUntil } from '@vercel/functions';
-import { getWebSessionAuth } from './_venues.js';
-import { listAllAssets, sessionClips, startVerticals, startMoments, cutVertical, verifyJob, venueAuth, finishVerticals, processIntakes } from './_verticals.js';
+import { getWebSessionAuth, platformAdmins, getVenuesConfig } from './_venues.js';
+import { listAllAssets, sessionClips, startVerticals, startMoments, cutVertical, verifyJob, venueAuth, finishVerticals, processIntakes, longFormSound } from './_verticals.js';
 import { planMaxClips } from './_billing.js';
 
 // Vertical originals for a session, cut once from its full recording.
 //   POST { action: 'start', artist, date }   (signed-in venue) starts the clips that aren't cut yet
 //   POST { action: 'moments', artist, date, times } cuts clips at the moments picked (seconds), replacing clips 1…n
 //   POST { action: 'cut', job }              (signed job from 'start' or the Mux webhook) cuts one clip
+//   POST { action: 'longFormSound', pid }    (signed in) whether a long form is silent, and the decks' sound to play with it
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return res.status(405).end();
   const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+
+  if (body.action === 'longFormSound') {
+    const session = getWebSessionAuth(req);
+    if (!session?.venueSlug) return res.status(401).json({ error: 'Not signed in' });
+    const pid = String(body.pid || '');
+    if (!/^[A-Za-z0-9]{10,80}$/.test(pid)) return res.status(400).json({ error: 'Which video?' });
+    // The account's own videos; local / assets also opens its clients' (the combined Distribution History)
+    const slugs = [session.venueSlug, ...(platformAdmins().includes(session.email) ? Object.keys(getVenuesConfig()).filter(s => s !== session.venueSlug) : [])];
+    const redis = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) });
+    await redis.connect();
+    try {
+      for (const slug of slugs) {
+        const auth = venueAuth(slug); if (!auth) continue;
+        const out = await longFormSound(redis, auth, pid);
+        if (!out.notHere) return res.status(200).json(out);
+      }
+      return res.status(200).json({ silent: false });
+    } finally { await redis.quit().catch(() => {}); }
+  }
 
   if (body.action === 'cut') {
     const job = verifyJob(body.job);

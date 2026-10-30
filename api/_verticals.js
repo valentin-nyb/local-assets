@@ -505,3 +505,53 @@ export async function processIntakes(redis, slug, auth, origin) {
   }
   return started;
 }
+
+// The loudest point of a stretch of sound (dB), from its playlist; null if it can't be read
+function maxVolume(url, seconds = 20) {
+  return new Promise(resolve => {
+    const ff = spawn(ffmpegPath, ['-hide_banner', '-t', String(seconds), '-i', url, '-map', '0:a:0?', '-af', 'volumedetect', '-f', 'null', '-'], { stdio: ['ignore', 'ignore', 'pipe'] });
+    let err = '';
+    const kill = setTimeout(() => ff.kill('SIGKILL'), 45000);
+    ff.stderr.on('data', d => { err += d; });
+    ff.on('error', () => { clearTimeout(kill); resolve(null); });
+    ff.on('close', () => { clearTimeout(kill); const m = /max_volume:\s*(-?[\d.]+|-inf) dB/.exec(err); resolve(m ? (m[1] === '-inf' ? -Infinity : Number(m[1])) : null); });
+  });
+}
+
+// A long form whose camera sent no sound (its microphone off: silence all through) plays with the session's
+// decks recording instead, lined up with the picture. { silent, audio: { pid, offset } }: the player plays the
+// decks' sound offset seconds ahead of the picture's time. Kept per playback ID for a week once decided.
+export async function longFormSound(redis, auth, pid) {
+  const key = `lf_sound:${pid}`;
+  const cached = await redis.get(key).catch(() => null);
+  if (cached) return JSON.parse(cached);
+  const ref = await muxReq(auth, `/video/v1/playback-ids/${encodeURIComponent(pid)}`).catch(() => null);
+  const assetId = ref?.object?.type === 'asset' ? ref.object.id : null;
+  if (!assetId) return { silent: false, notHere: true };   // another account's video
+  const asset = await muxReq(auth, `/video/v1/assets/${encodeURIComponent(assetId)}`).catch(() => null);
+  if (!asset || asset.status !== 'ready' || !(asset.tracks || []).some(t => t.type === 'video')) return { silent: false };
+  // Three stretches of the set (a quarter, half and three quarters in): any sound you can hear and it plays as it is
+  let silent = !(asset.tracks || []).some(t => t.type === 'audio');
+  if (!silent) {
+    const dur = Number(asset.duration) || 0, heard = [];
+    for (const f of dur > 90 ? [0.25, 0.5, 0.75] : [0]) {
+      const t = Math.floor(dur * f);
+      const clip = `https://stream.mux.com/${pid}.m3u8?asset_start_time=${t}&asset_end_time=${t + 20}`;
+      const { audio } = await streamParts(clip).catch(() => ({}));
+      heard.push(await maxVolume(audio || clip));
+    }
+    if (heard.some(v => v === null)) return { silent: false };   // couldn't tell: try again next time
+    silent = heard.every(v => v <= -60);
+  }
+  let out = { silent };
+  if (silent) {
+    let artist = '';
+    try { artist = String(JSON.parse(asset.passthrough)?.artist || ''); } catch { artist = String(asset.passthrough || '').split(' // ')[0]; }
+    const hq = artist ? await sessionAudio(auth, { masterId: asset.id, artist: artist.toUpperCase().trim() }).catch(() => null) : null;
+    out = { silent, audio: hq ? { pid: hq.pid, offset: Math.round((hq.offset || 0) * 1000) / 1000, timed: hq.timed } : null };
+  }
+  // A silent long form with no decks recording yet is looked at again in an hour (the decks may still be uploading)
+  await redis.set(key, JSON.stringify(out), { EX: out.silent && !out.audio ? 3600 : 7 * 86400 }).catch(() => {});
+  console.log('[long-form sound]', pid, out.silent ? (out.audio ? 'decks ' + out.audio.pid + ' offset ' + out.audio.offset + 's' : 'silent, no decks recording') : 'has sound');
+  return out;
+}
