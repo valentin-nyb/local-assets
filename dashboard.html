@@ -2738,8 +2738,9 @@
         var _heroLoop = null, _heroWait = {}, _heroWaitTimer = null;
         // Out of sight (scrolled past, another tab, the app in the background) the banner pauses:
         // a playing loop keeps streaming from Mux, and every minute streamed is paid for
-        var _heroInView = true, _heroIO = null;
-        function heroCanPlay() { return _heroInView && document.visibilityState === 'visible'; }
+        // (a video kept in 4K, from an account with 4K on in Accounts, loops in full 4K all the time)
+        var _heroInView = true, _heroIO = null, _heroAlways = false;
+        function heroCanPlay() { return _heroAlways || (_heroInView && document.visibilityState === 'visible'); }
         function heroSight() {
             if (!_heroLoop) return;
             var v = _heroLoop.vid();
@@ -2764,7 +2765,10 @@
             // Only those seconds, as a stream of their own (Mux instant clipping): the loop is the whole video,
             // so it loops by itself and never loads the rest of the set. Sharp from the first frame.
             var wide = window.innerWidth >= 768;
-            var clip = function(s) { return laMux('https://stream.mux.com/' + pid + '.m3u8?asset_start_time=' + Math.floor(s) + '&asset_end_time=' + Math.ceil(s + 8) + '&min_resolution=' + (wide ? '720p' : '480p') + '&max_resolution=' + (wide ? '1080p' : '720p')); };
+            var uhd = a.resolution_tier === '2160p' || a.max_stored_resolution === 'UHD';
+            _heroAlways = uhd;
+            var res = uhd ? '&min_resolution=2160p&max_resolution=2160p' : '&min_resolution=' + (wide ? '720p' : '480p') + '&max_resolution=' + (wide ? '1080p' : '720p');
+            var clip = function(s) { return laMux('https://stream.mux.com/' + pid + '.m3u8?asset_start_time=' + Math.floor(s) + '&asset_end_time=' + Math.ceil(s + 8) + res); };
             var still = function(s) { return laMux('https://image.mux.com/' + pid + '/thumbnail.webp?time=' + Math.round(s) + '&width=1280'); };
             // The same video at a new moment (its peak or the DJ came in after it started): the playing banner
             // switches to that clip. Building a new one instead flashed black on phones and could wait for a touch.
@@ -2835,7 +2839,7 @@
         function stopHeroLoop() {
             var wrap = document.getElementById('live-feed-player-wrap');
             if (wrap) { wrap.style.opacity = '0'; wrap.innerHTML = ''; }
-            _heroLoop = null;
+            _heroLoop = null; _heroAlways = false;
         }
 
         // Keep the artist centred in the moving banner. Mux's smart crop finds the subject on a
