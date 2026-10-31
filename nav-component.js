@@ -43,6 +43,7 @@
         accounts: ['Listing the client accounts…', 'Checking plans and payments…', 'Counting the logins…'],
         inbox: ['Opening the inbox…', 'Fetching the emails from Resend…', 'Looking for replies to approve…'],
         billing: ['Adding up this month…', 'Fetching the invoices from Stripe…', 'Checking what’s been paid…'],
+        usage: ['Adding up every account…', 'Counting minutes streamed…', 'Measuring video stored…', 'Drawing the chart…'],
         stage: ['Loading the artist’s brand…', 'Finding the logos and fonts…'],
         stream: ['Preparing the stream address…', 'Fetching the stream key…'],
         page: ['Loading…', 'Almost there…']
