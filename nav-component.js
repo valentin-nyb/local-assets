@@ -268,6 +268,7 @@ document.addEventListener("DOMContentLoaded", () => {
         var isHex = function(a) { return /^#[0-9a-f]{6}$/i.test(a || ''); };
         var inkOf = function(h) { var n = parseInt(h.slice(1), 16); return 0.299 * (n >> 16) + 0.587 * (n >> 8 & 255) + 0.114 * (n & 255) > 150 ? '#000000' : '#ffffff'; };
         function applyAccent(a) {
+            a = a || '';
             var root = document.documentElement;
             if (a) root.setAttribute('data-accent', a); else root.removeAttribute('data-accent');
             if (isHex(a)) { root.style.setProperty('--la-accent', a); root.style.setProperty('--la-accent-ink', inkOf(a)); }
@@ -319,6 +320,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // The colour saved with the login (from another device): shown here too, unless a new one is being tried
         if (_accToken()) fetch('/api/prefs', { headers: { Authorization: 'Bearer ' + _accToken() } }).then(function(r) { return r.ok ? r.json() : null; }).then(function(d) {
             if (!d) return;
+            d.accent = d.accent || '';
             // The account with 4K on in Accounts (the dashboard banner plays its 4K videos in full 4K)
             var k4 = d.video4k ? d.slug : '';
             try { if ((localStorage.getItem('la_4k') || '') !== k4) { localStorage.setItem('la_4k', k4); document.dispatchEvent(new Event('la-4k')); } } catch (_) {}

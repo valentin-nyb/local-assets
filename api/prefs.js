@@ -27,6 +27,6 @@ export default async function handler(req, res) {
     }
     const p = await redis.hGetAll(key);
     const video4k = (await maxResolution(session.venueSlug).catch(() => '1080p')) === '2160p';
-    return res.status(200).json({ accent: ok(p?.accent || '') ? p.accent : '', video4k, slug: session.venueSlug || '' });
+    return res.status(200).json({ accent: ok(p?.accent || '') ? (p?.accent || '') : '', video4k, slug: session.venueSlug || '' });
   } finally { await redis.quit().catch(() => {}); }
 }
