@@ -1,9 +1,10 @@
 import { createClient } from 'redis';
 import { getWebSessionAuth } from './_venues.js';
+import { maxResolution } from './_video-quality.js';
 
 // How the app looks for one person, kept with their login so it's the same on every device
 // (side menu → the accent dots → Save). Redis hash ui_prefs:<email>.
-//   GET                        { accent }
+//   GET                        { accent, video4k } (video4k: the account has 4K on in Accounts)
 //   POST { accent }            saved ('' = the original neon green, or the person's own colour as #RRGGBB)
 const ACCENTS = ['', 'yellow', 'orange', 'red', 'pink', 'indigo', 'blue', 'teal'];
 const ok = a => ACCENTS.includes(a) || /^#[0-9a-f]{6}$/.test(a);
@@ -25,6 +26,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ accent });
     }
     const p = await redis.hGetAll(key);
-    return res.status(200).json({ accent: ok(p?.accent || '') ? p.accent : '' });
+    const video4k = (await maxResolution(session.venueSlug).catch(() => '1080p')) === '2160p';
+    return res.status(200).json({ accent: ok(p?.accent || '') ? p.accent : '', video4k, slug: session.venueSlug || '' });
   } finally { await redis.quit().catch(() => {}); }
 }

@@ -46,7 +46,7 @@
          Video.js's own background engine can't play Mux's MPEG-TS segments yet) -->
     <script type="module" async src="https://cdn.jsdelivr.net/npm/@videojs/html@10.1.0/media/hlsjs-video/+esm"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-    <script src="nav-component.js?v=59"></script>
+    <script src="nav-component.js?v=60"></script>
     <style>
         /* Standardized sidebar styles used by the JS component */
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
@@ -2748,6 +2748,9 @@
             else if (_heroLoop.play) _heroLoop.play();
         }
         document.addEventListener('visibilitychange', heroSight);
+        // Only an account with 4K on in Accounts (noted by the side menu from /api/prefs)
+        function account4k() { try { var s = JSON.parse(localStorage.getItem('la_admin') || '{}').venueSlug; return !!s && localStorage.getItem('la_4k') === s; } catch (_) { return false; } }
+        document.addEventListener('la-4k', function() { if (_heroLoop) { stopHeroLoop(); renderHero(); } });
         function playHeroLoop(a) {
             var wrap = document.getElementById('live-feed-player-wrap');
             // iPhone and iPad: a plain muted video playing the clip natively (a video inside another element's
@@ -2765,7 +2768,7 @@
             // Only those seconds, as a stream of their own (Mux instant clipping): the loop is the whole video,
             // so it loops by itself and never loads the rest of the set. Sharp from the first frame.
             var wide = window.innerWidth >= 768;
-            var uhd = a.resolution_tier === '2160p' || a.max_stored_resolution === 'UHD';
+            var uhd = account4k() && (a.resolution_tier === '2160p' || a.max_stored_resolution === 'UHD');
             _heroAlways = uhd;
             var res = uhd ? '&min_resolution=2160p&max_resolution=2160p' : '&min_resolution=' + (wide ? '720p' : '480p') + '&max_resolution=' + (wide ? '1080p' : '720p');
             var clip = function(s) { return laMux('https://stream.mux.com/' + pid + '.m3u8?asset_start_time=' + Math.floor(s) + '&asset_end_time=' + Math.ceil(s + 8) + res); };

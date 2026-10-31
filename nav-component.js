@@ -318,7 +318,11 @@ document.addEventListener("DOMContentLoaded", () => {
         if (_accSaved) applyAccent(document.documentElement.getAttribute('data-accent') || _accSaved);
         // The colour saved with the login (from another device): shown here too, unless a new one is being tried
         if (_accToken()) fetch('/api/prefs', { headers: { Authorization: 'Bearer ' + _accToken() } }).then(function(r) { return r.ok ? r.json() : null; }).then(function(d) {
-            if (!d || d.accent === _accSaved) return;
+            if (!d) return;
+            // The account with 4K on in Accounts (the dashboard banner plays its 4K videos in full 4K)
+            var k4 = d.video4k ? d.slug : '';
+            try { if ((localStorage.getItem('la_4k') || '') !== k4) { localStorage.setItem('la_4k', k4); document.dispatchEvent(new Event('la-4k')); } } catch (_) {}
+            if (d.accent === _accSaved) return;
             var showing = document.documentElement.getAttribute('data-accent') || '', trying = showing !== _accSaved;
             keepAccent(d.accent);
             if (!trying) applyAccent(d.accent);
