@@ -246,7 +246,9 @@
                 box.innerHTML = '<p>Reply waiting for you</p><small>To ' + esc((dr.to || []).join(', ')) + (dr.subject ? ' · ' + esc(dr.subject) : '') + '</small>'
                     + '<textarea aria-label="Reply"></textarea><span class="ib-err"></span>'
                     + '<div class="ib-acts"><button type="button" class="cam-btn danger-line" data-a="discard">Discard</button><button type="button" class="cam-btn primary" data-a="send">Send reply</button></div>';
-                box.querySelector('textarea').value = dr.text || plain(dr.html);
+                // The reply as the client will read it: the formatted version when it says more than the plain one
+                var fromHtml = dr.html ? plain(dr.html) : '', txt = dr.text || '';
+                box.querySelector('textarea').value = fromHtml.trim().length > txt.trim().length ? fromHtml : txt;
                 box._orig = box.querySelector('textarea').value;
                 viewEl.appendChild(box);
             });
