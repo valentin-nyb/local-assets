@@ -1,4 +1,4 @@
-import { videoQuality } from './_video-quality.js';
+import { videoQuality, maxResolution } from './_video-quality.js';
 import crypto from 'crypto';
 import { createClient } from 'redis';
 import { getWebSessionAuth } from './_venues.js';
@@ -64,7 +64,7 @@ export async function startMulticam(r, slug, auth, artist, date, src, { title = 
   };
   const job = { id: crypto.randomBytes(8).toString('hex'), slug, artist, date, title: String(title).slice(0, 80), auto, status: 'queued', stage: 'Waiting for the venue\'s Mac',
     pct: 0, createdAt: Date.now(), updatedAt: Date.now(), sources: src.cams, audio: src.audio,
-    upload: await upload('EDIT', { max_resolution_tier: '2160p', name: `${artist} — ${date} · Multi-camera edit`, static_renditions: [{ resolution: 'highest' }] }),
+    upload: await upload('EDIT', { max_resolution_tier: await maxResolution(slug), name: `${artist} — ${date} · Multi-camera edit`, static_renditions: [{ resolution: 'highest' }] }),
     audioUpload: src.audio ? null : await upload('AUDIO', { name: `${artist} — ${date} · HQ audio`, static_renditions: [{ resolution: 'audio-only' }] }) };
   await r.hSet(jobsKey(slug), job.id, JSON.stringify(job));
   await r.set(sessionKey(slug, artist, date), job.id);

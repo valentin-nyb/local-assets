@@ -34,7 +34,7 @@ export default async function handler(req, res) {
           passthrough: artistName,
           name: videoTitle,
           static_renditions: [{ resolution: isAudio ? 'audio-only' : 'highest' }],
-          ...(isAudio ? {} : { max_resolution_tier: '2160p' })   // kept in 4K when the file is 4K
+          ...(isAudio ? {} : { max_resolution_tier: '1080p' })   // at most 1080p: 4K costs more to keep and stream
         },
         cors_origin: '*'
       })

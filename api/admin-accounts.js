@@ -1,4 +1,4 @@
-import { VIDEO_QUALITY_KEY } from './_video-quality.js';
+import { VIDEO_QUALITY_KEY, VIDEO_4K_KEY } from './_video-quality.js';
 import { blist as list, bdel as del } from './_brandstore.js';
 import { createClient } from 'redis';
 import { getWebSessionAuth, getVenuesConfig, isAdminVenue, refreshRegistry, getMuxAuthForVenue, MEMBERS_KEY, freshVenues, LOGINS_KEY, EDITS_KEY, accountLogins } from './_venues.js';
@@ -26,6 +26,7 @@ async function deliveryOf(resend, id, ms) {
 //   POST { action: 'cancel', slug }        the plan ends at the end of its paid month (or its minimum term)
 //   POST { action: 'keep', slug }          a cancelled plan carries on
 //   POST { action: 'videoQuality', slug, quality }   'premium' or 'basic' for the account's new videos in Mux
+//   POST { action: 'video4k', slug, on }   new videos kept in 4K (when filmed in 4K), else at most 1080p
 //   POST { action: 'discount', slug, percent }   a discount (0–100%) on its usage prices, from its next bill
 //   (a new account is opened from Accounts → New account through api/billing.js openAccount)
 //   POST { action: 'emailExample', to, kind?, slug? }   the access email (artist, or kind 'team'), as an example
@@ -104,6 +105,7 @@ export default async function handler(req, res) {
         const members = await redis.hGetAll(MEMBERS_KEY).catch(() => ({}));
         const discounts = await redis.hGetAll(DISCOUNTS_KEY).catch(() => ({}));
         const qualities = await redis.hGetAll(VIDEO_QUALITY_KEY).catch(() => ({}));
+        const fourK = await redis.hGetAll(VIDEO_4K_KEY).catch(() => ({}));
         return Promise.all(clients.map(async ([slug, v]) => {
           const unpaid = await readUnpaid(redis, slug);
           const asg = (await readAssignments(redis, slug)).venue || {};
@@ -118,7 +120,7 @@ export default async function handler(req, res) {
             paused: unpaid.some(i => i.id === ADMIN_PAUSE), unpaid: unpaid.filter(i => i.id !== ADMIN_PAUSE && i.target === 'venue').map(i => i.number || i.id),
             subscription: sub ? sub.status : subId ? 'unknown' : 'none', endsAt: ends ? ends * 1000 : null,
             setupPending: v.status === 'pending', artists, video: !!getMuxAuthForVenue({ slug, ...v }), discount: Number(discounts?.[slug]) || 0,
-            videoQuality: qualities?.[slug] === 'premium' ? 'premium' : 'basic',
+            videoQuality: qualities?.[slug] === 'premium' ? 'premium' : 'basic', video4k: fourK?.[slug] === '1',
           };
         }));
       });
@@ -243,6 +245,13 @@ export default async function handler(req, res) {
       await withRedis(r => premium ? r.hSet(VIDEO_QUALITY_KEY, slug, 'premium') : r.hDel(VIDEO_QUALITY_KEY, slug));
       console.log('[admin-accounts] video quality', slug, premium ? 'premium' : 'basic', 'by', session.email);
       return res.status(200).json({ ok: true, videoQuality: premium ? 'premium' : 'basic' });
+    }
+    // 4K for an account that needs it: Mux charges more to encode, store and stream it
+    if (body.action === 'video4k') {
+      const on = body.on === true;
+      await withRedis(r => on ? r.hSet(VIDEO_4K_KEY, slug, '1') : r.hDel(VIDEO_4K_KEY, slug));
+      console.log('[admin-accounts] video 4k', slug, on, 'by', session.email);
+      return res.status(200).json({ ok: true, video4k: on });
     }
     if (body.action === 'discount') {
       const pct = Math.round(Number(body.percent) * 10) / 10;

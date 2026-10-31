@@ -319,6 +319,7 @@
                         '<button type="button" class="ac-btn" data-act="edit">Edit</button>' +
                         '<button type="button" class="ac-btn" data-act="logins">Logins' + ((a.logins || []).length ? ' ' + a.logins.length : '') + '</button>' +
                         '<button type="button" class="ac-btn' + (a.videoQuality === 'premium' ? ' is-premium' : '') + '" data-act="quality" aria-pressed="' + (a.videoQuality === 'premium') + '" title="Quality of the account\'s new videos in Mux. Basic is free to encode; Premium costs local / assets about $0.04 a minute">' + (a.videoQuality === 'premium' ? 'Premium video' : 'Basic video') + '</button>' +
+                        '<button type="button" class="ac-btn' + (a.video4k ? ' is-premium' : '') + '" data-act="4k" aria-pressed="' + !!a.video4k + '" title="Largest size new videos are kept at. 4K costs more to encode, store and stream">' + (a.video4k ? '4K video' : 'Up to 1080p') + '</button>' +
                         '<button type="button" class="ac-btn" data-act="discount">' + (a.discount ? 'Discount ' + a.discount + '%' : 'Discount') + '</button>' +
                         '<button type="button" class="ac-btn" data-act="' + (a.paused ? 'resume' : 'pause') + '">' + (a.paused ? 'Resume' : 'Pause') + '</button>' +
                         (live ? '<button type="button" class="ac-btn" data-act="' + (a.endsAt ? 'keep' : 'cancel') + '">' + (a.endsAt ? 'Keep plan' : 'Cancel plan') + '</button>' : '') +
@@ -364,6 +365,14 @@
             if (act === 'logins') return openLogins(a);
             if (act === 'edit') return openEdit(a);
             if (act === 'discount') return openDiscount(a);
+            if (act === '4k') {
+                var on = !a.video4k;
+                if (on && !(await laConfirm({ title: '4K video for ' + a.name + '?', message: 'Its new videos filmed in 4K are kept in 4K. Mux charges more to encode, store and stream 4K; without it they are kept at 1080p. Videos already uploaded stay as they are.', confirmText: 'Use 4K' }))) return;
+                b.disabled = true;
+                try { await post({ action: 'video4k', slug: slug, on: on }); laToast(a.name + ': ' + (on ? '4K' : 'up to 1080p') + ' for new uploads'); await load(); }
+                catch (er) { b.disabled = false; laAlert('Could not change the video size: ' + er.message, { tone: 'error' }); }
+                return;
+            }
             if (act === 'quality') {
                 var prem = a.videoQuality !== 'premium';
                 if (prem && !(await laConfirm({ title: 'Premium video for ' + a.name + '?', message: 'Its new videos are encoded at Premium quality: sharper, with more streaming sizes. Mux charges about $0.04 a minute of video for it; Basic is free. Videos already uploaded stay as they are.', confirmText: 'Use Premium' }))) return;

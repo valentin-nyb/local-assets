@@ -1,4 +1,4 @@
-import { videoQuality } from './_video-quality.js';
+import { videoQuality, maxResolution } from './_video-quality.js';
 import { pausedBy, sendPaused } from './_suspend.js';
 import { getWebSessionAuth } from './_venues.js';
 import { createClient } from 'redis';
@@ -92,8 +92,8 @@ export default async function handler(req, res) {
           passthrough: passthrough,
           meta: { title: videoTitle.slice(0, 512), ...(clipMeta || {}) },
           static_renditions: [{ resolution: isAudio ? 'audio-only' : 'highest' }],
-          // 4K uploads are kept in 4K (else Mux stores 1080p), so vertical clips cut from them stay sharp
-          ...(isAudio ? {} : { max_resolution_tier: '2160p' }),
+          // 4K uploads are kept in 4K only for accounts with 4K on in Accounts (else Mux stores 1080p)
+          ...(isAudio ? {} : { max_resolution_tier: await maxResolution(session?.venueSlug) }),
         },
         cors_origin: 'https://local-assets.com',
       }),
