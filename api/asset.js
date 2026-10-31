@@ -30,7 +30,7 @@ function viewer(blob, path, s) {
       : `<p class="none">This file can't be shown in the browser.</p>`;
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${esc(name)} · local / assets</title>
+<title>${esc(name)} · local / assets™</title>
 <link rel="icon" href="/favicon/favicon.svg?v=4" type="image/svg+xml">
 <meta name="robots" content="noindex">
 <style>
@@ -49,7 +49,7 @@ function viewer(blob, path, s) {
   .none { color: #a1a1aa; }
   @media (max-width: 640px) { .meta { display: none; } main { padding: 12px; } }
 </style></head><body>
-<header><a class="brand" href="/">local / assets</a><span class="name">${esc(name)}</span><span class="meta">${esc(fmtSize(blob.size))}</span><a class="dl" href="${esc(self)}?download&s=${esc(s)}">Download</a></header>
+<header><a class="brand" href="/">local / assets™</a><span class="name">${esc(name)}</span><span class="meta">${esc(fmtSize(blob.size))}</span><a class="dl" href="${esc(self)}?download&s=${esc(s)}">Download</a></header>
 <main>${body}</main>
 </body></html>`;
 }

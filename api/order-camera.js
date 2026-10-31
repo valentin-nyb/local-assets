@@ -7,7 +7,7 @@ import { createCheckout } from './_checkout.js';
 // so turning on Klarna there is all that's needed for monthly payments.
 export const CAMERA_PRODUCT = {
   name: 'OBSBOT Tail 2',
-  description: 'AI-powered PTZR 4K live production camera with NDI HX3. Setup and integration with your local / assets dashboard included.',
+  description: 'AI-powered PTZR 4K live production camera with NDI HX3. Setup and integration with your local / assets™ dashboard included.',
   unitAmount: 129900, // pence
   currency: 'gbp',
   maxQuantity: 10,
@@ -66,7 +66,7 @@ export default async function handler(req, res) {
           tax_behavior: 'inclusive',
           product_data: {
             name: `${CAMERA_PRODUCT.name} hire · ${days} day${days > 1 ? 's' : ''}`,
-            description: `${days === 1 ? fmt(start) : fmt(start) + ' to ' + fmt(until)}. £${rentalRate(days) / 100} per camera per day. UK delivery and collection, and setup with your local / assets dashboard, included.`,
+            description: `${days === 1 ? fmt(start) : fmt(start) + ' to ' + fmt(until)}. £${rentalRate(days) / 100} per camera per day. UK delivery and collection, and setup with your local / assets™ dashboard, included.`,
             images: ['https://local-assets.com/img/obsbot-tail-2.png'],
           },
         },

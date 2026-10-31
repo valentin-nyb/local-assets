@@ -204,7 +204,7 @@ export default async function handler(req, res) {
     }
 
     if (body.action === 'switch') {
-      if (!platformAdmins().includes(session.email) || !isAdminVenue(session.venue)) return res.status(403).json({ error: 'Only local / assets' });
+      if (!platformAdmins().includes(session.email) || !isAdminVenue(session.venue)) return res.status(403).json({ error: 'Only local / assets™' });
       const slug = String(body.slug || ''), step = String(body.step || ''), auth = authOf(slug);
       if (!auth || !['add', 'lock', 'undo'].includes(step)) return res.status(400).json({ error: 'Which account and step?' });
       if (step === 'add' || step === 'lock') await signingFor(redis, auth);   // the key first: nothing is locked an account can't sign
@@ -245,12 +245,12 @@ export default async function handler(req, res) {
 
     if (body.action === 'copyBrand') {
       // Brand Kit files into the private store (same paths; files already there are skipped), about 4 minutes a call
-      if (!platformAdmins().includes(session.email) || !isAdminVenue(session.venue)) return res.status(403).json({ error: 'Only local / assets' });
+      if (!platformAdmins().includes(session.email) || !isAdminVenue(session.venue)) return res.status(403).json({ error: 'Only local / assets™' });
       return res.status(200).json(await copyToPrivate('brand/', body.cursor || undefined));
     }
 
     if (body.action === 'check') {
-      if (!platformAdmins().includes(session.email) || !isAdminVenue(session.venue)) return res.status(403).json({ error: 'Only local / assets' });
+      if (!platformAdmins().includes(session.email) || !isAdminVenue(session.venue)) return res.status(403).json({ error: 'Only local / assets™' });
       const accounts = [], signedAt = await redis.hGetAll('signed_accounts').catch(() => ({})) || {};
       for (const slug of Object.keys(getVenuesConfig())) {
         const auth = authOf(slug);

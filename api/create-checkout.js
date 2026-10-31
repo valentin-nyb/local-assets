@@ -51,22 +51,22 @@ export default async function handler(req, res) {
       billing_address_collection: 'required',
       metadata,
     };
-    const feeItem = fee ? [{ quantity: 1, price_data: { currency: 'gbp', unit_amount: Math.round(fee * 100), tax_behavior: 'exclusive', product_data: { name: `local / assets · ${plan.name} · sign-up` } } }] : [];
+    const feeItem = fee ? [{ quantity: 1, price_data: { currency: 'gbp', unit_amount: Math.round(fee * 100), tax_behavior: 'exclusive', product_data: { name: `local / assets™ · ${plan.name} · sign-up` } } }] : [];
     let session;
     if (plan.price > 0) {
       // A monthly plan: Stripe subscription (plus any one-off sign-up fee on the first invoice)
       session = await createCheckout(stripe, { ...common, mode: 'subscription', allow_promotion_codes: true,
-        line_items: [{ quantity: 1, price_data: { currency: 'gbp', unit_amount: Math.round(plan.price * 100), tax_behavior: 'exclusive', recurring: { interval: 'month' }, product_data: { name: `local / assets · ${plan.name}` } } }, ...feeItem],
+        line_items: [{ quantity: 1, price_data: { currency: 'gbp', unit_amount: Math.round(plan.price * 100), tax_behavior: 'exclusive', recurring: { interval: 'month' }, product_data: { name: `local / assets™ · ${plan.name}` } } }, ...feeItem],
         subscription_data: { metadata } });
     } else if (fee) {
       // Pay as you go with a sign-up fee (the Trial Month): the fee now, and the card is kept for usage on the 1st
       session = await createCheckout(stripe, { ...common, mode: 'payment', allow_promotion_codes: true, customer_creation: 'always',
         line_items: feeItem, payment_intent_data: { setup_future_usage: 'off_session', metadata },
-        invoice_creation: { enabled: true, invoice_data: { description: `local / assets · ${plan.name}`, metadata } } });
+        invoice_creation: { enabled: true, invoice_data: { description: `local / assets™ · ${plan.name}`, metadata } } });
     } else {
       // Pay as you go: nothing to pay now, the card is saved for the usage charged on the 1st
       session = await createCheckout(stripe, { ...common, mode: 'setup', currency: 'gbp', customer_creation: 'always',
-        setup_intent_data: { metadata, description: `local / assets · ${plan.name}: usage charged monthly` } });
+        setup_intent_data: { metadata, description: `local / assets™ · ${plan.name}: usage charged monthly` } });
     }
     return res.status(200).json({ url: session.url });
   } catch (e) {

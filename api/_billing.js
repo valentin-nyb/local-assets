@@ -734,7 +734,7 @@ export async function invoiceVenue(redis, stripe, { slug, auth, email, name, tar
   const invoice = await stripe.invoices.create({
     customer, pending_invoice_items_behavior: 'include',
     ...(card ? { collection_method: 'charge_automatically', default_payment_method: card, auto_advance: true } : { collection_method: 'send_invoice', days_until_due: 14 }),
-    description: `local / assets · ${plan ? plan.name + ' · ' : ''}${period.label}`, metadata: { venueSlug: slug, target, period: period.key },
+    description: `local / assets™ · ${plan ? plan.name + ' · ' : ''}${period.label}`, metadata: { venueSlug: slug, target, period: period.key },
   });
   let sent = await stripe.invoices.finalizeInvoice(invoice.id);
   if (card) {

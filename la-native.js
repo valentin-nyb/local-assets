@@ -39,7 +39,7 @@
       if (s.venue && s.venue !== 'Admin') localStorage.setItem('la_venue_name', String(s.venue).toUpperCase()); else localStorage.removeItem('la_venue_name');
       localStorage.removeItem('la_revenue_cache_v2');
       location.replace('/dashboard');
-    } catch (_) { fail('Could not reach local / assets. Check your connection and try again.'); }
+    } catch (_) { fail('Could not reach local / assets™. Check your connection and try again.'); }
   });
 
   // Push notifications, once signed in: the token is sent again whenever it changes

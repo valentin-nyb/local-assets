@@ -128,7 +128,7 @@ async function handleLink(url) {
       location.replace('/dashboard');
     })(${JSON.stringify(s)})`)
   } catch {
-    showError('Could not reach local / assets. Check your connection and try again.')
+    showError('Could not reach local / assets™. Check your connection and try again.')
   }
 }
 

@@ -6,7 +6,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="local / assets">
+    <meta name="apple-mobile-web-app-title" content="local / assets™">
     <title>local / assets™</title>
      <link rel="icon" type="image/x-icon" href="favicon/favicon.ico?v=4">
     <link rel="icon" type="image/svg+xml" href="favicon/favicon.svg?v=4">
@@ -234,7 +234,7 @@
             <!-- The white wordmark sits 40px down and 24px in, 184px wide, as on the sign-in and download pages -->
             <nav class="flex z-20 pb-8 absolute top-0 right-0 left-0 items-center justify-between" style="padding-top:calc(env(safe-area-inset-top) + 40px);padding-left:24px;padding-right:24px">
                 <a href="index.html" class="flex items-center shrink-0 self-start">
-                    <img src="logos/White@2x.png" alt="local / assets" style="display:block;width:184px;height:auto">
+                    <img src="logos/White@2x.png" alt="local / assets™" style="display:block;width:184px;height:auto">
                 </a>
                 <div class="flex items-center gap-3">
                     <a href="dashboard.html" class="la-dashboard-btn" id="la-dashboard-btn"><span>Dashboard</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
@@ -746,7 +746,7 @@
 </section>
 
         <div id="la-footer-placeholder"></div>
-        <script src="/footer-component.js?v=5"></script>
+        <script src="/footer-component.js?v=6"></script>
 
     </main>
 
@@ -1098,7 +1098,7 @@
             if (su !== 'success') return;
             history.replaceState({}, '', '/');
             document.addEventListener('DOMContentLoaded', function() {
-                showCameraOrder('<p class="ord-eyebrow">Welcome to local / assets</p><h3 class="ord-title" id="ord-title">You\'re in</h3><p class="ord-done">Your account is being created. We\'ve emailed the address you used at checkout: sign in with Google using it to set up your Brand Kit and connect a camera.</p><a href="/login.html" class="ord-go" style="display:flex;align-items:center;justify-content:center;margin-top:16px;text-decoration:none">Sign in</a>');
+                showCameraOrder('<p class="ord-eyebrow">Welcome to local / assets™</p><h3 class="ord-title" id="ord-title">You\'re in</h3><p class="ord-done">Your account is being created. We\'ve emailed the address you used at checkout: sign in with Google using it to set up your Brand Kit and connect a camera.</p><a href="/login.html" class="ord-go" style="display:flex;align-items:center;justify-content:center;margin-top:16px;text-decoration:none">Sign in</a>');
             });
         })();
 
@@ -1138,10 +1138,10 @@
         if (mode === 'rent') {
             return '<div class="ord-price"><span class="ord-amount">' + gbp(rentRate(days)) + '</span><span class="ord-per">per camera per day, inc. VAT</span></div>' +
                 '<p class="ord-included">' + (days >= RENT_LONG_FROM ? 'Hire rate for 3 days or more' : gbp(RENT_LONG) + ' a day when you hire for 3 days or more') + '</p>' +
-                '<p class="ord-note">Delivered the day before and collected the day after, anywhere in the UK. Set up with your local / assets dashboard, so every set is recorded with vertical clips made automatically.</p>';
+                '<p class="ord-note">Delivered the day before and collected the day after, anywhere in the UK. Set up with your local / assets™ dashboard, so every set is recorded with vertical clips made automatically.</p>';
         }
         return '<div class="ord-price"><span class="ord-amount">' + gbp(CAMERA_PRICE) + '</span><span class="ord-per">per camera, inc. VAT</span></div>' +
-            '<p class="ord-included">Setup and integration with your local / assets dashboard included</p>' +
+            '<p class="ord-included">Setup and integration with your local / assets™ dashboard included</p>' +
             '<p class="ord-klarna"><b>Klarna.</b> Or pay in 3 interest-free payments of ' + gbp(Math.round(CAMERA_PRICE / 3)) + ', or spread the cost monthly.</p>';
     }
     // Wires the Buy / Hire switch, quantity and days; returns what to send to checkout
@@ -1181,9 +1181,9 @@
         ].map(function(f) { return '<div><b>' + f[0] + '</b><span>' + f[1] + '</span></div>'; }).join('');
         showCameraOrder(
             '<div class="ord-hero"><img src="/img/obsbot-tail-2.png" alt="OBSBOT Tail 2 camera" width="720" height="720"></div>' +
-            '<p class="ord-eyebrow">Buy or hire from local / assets</p>' +
+            '<p class="ord-eyebrow">Buy or hire from local / assets™</p>' +
             '<h3 class="ord-title" id="ord-title">OBSBOT Tail 2</h3>' +
-            '<p class="ord-sub">AI-powered PTZR 4K live production camera with NDI HX3. Records every set straight to your local / assets cloud, with vertical clips made automatically.</p>' +
+            '<p class="ord-sub">AI-powered PTZR 4K live production camera with NDI HX3. Records every set straight to your local / assets™ cloud, with vertical clips made automatically.</p>' +
             '' + ordModeHtml() +
             '<div class="ord-feats">' + feats + '</div>' +
             '<details class="ord-specs"><summary>Full specifications</summary><dl>' +

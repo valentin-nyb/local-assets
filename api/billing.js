@@ -173,7 +173,7 @@ export default async function handler(req, res) {
           const asg = (await readAssignments(redis, s)).venue || {};
           const plan = own ? null : planForType(plans.find(p => p.id === asg.plan) || null, type);
           const billed = own ? 0 : priceUsage(usage, await readRates(redis, s), plan, await readDiscount(redis, s)).total;
-          rows.push({ slug: s, name: c?.name || s, type, plan: plan?.name || (own ? 'local / assets' : 'No plan'), shared, notes: usage.notes,
+          rows.push({ slug: s, name: c?.name || s, type, plan: plan?.name || (own ? 'local / assets™' : 'No plan'), shared, notes: usage.notes,
             storedHours: usage.storedMinutes / 60, streamedHours: usage.deliveredMinutes / 60, newHours: usage.newMinutes / 60, recordedHours: (usage.liveMinutes || 0) / 60, fileGB: gb,
             billed: Math.round(billed * 100) / 100, _u: usage });
         }
@@ -454,8 +454,8 @@ export default async function handler(req, res) {
         const meta = { kind: 'card', venueSlug: slug };
         const checkout = await createCheckout(stripe, {
           mode: 'setup', currency: 'gbp', customer,
-          setup_intent_data: { metadata: meta, description: 'local / assets: invoices paid automatically on the 1st' },
-          custom_text: { submit: { message: 'Your local / assets invoices are charged to this card on the 1st of each month. Nothing is charged now.' } },
+          setup_intent_data: { metadata: meta, description: 'local / assets™: invoices paid automatically on the 1st' },
+          custom_text: { submit: { message: 'Your local / assets™ invoices are charged to this card on the 1st of each month. Nothing is charged now.' } },
           success_url: 'https://local-assets.com/billing?card=saved', cancel_url: 'https://local-assets.com/billing',
           metadata: meta,
         });
@@ -471,7 +471,7 @@ export default async function handler(req, res) {
         const checkout = await createCheckout(stripe, {
           mode: 'subscription',
           ...(customer ? { customer } : { customer_email: session.email }),
-          line_items: [{ quantity: 1, price_data: { currency: 'gbp', unit_amount: 14900, tax_behavior: 'exclusive', recurring: { interval: 'month' }, product_data: { name: 'local / assets · PTZ camera (12-month minimum)' } } }],
+          line_items: [{ quantity: 1, price_data: { currency: 'gbp', unit_amount: 14900, tax_behavior: 'exclusive', recurring: { interval: 'month' }, product_data: { name: 'local / assets™ · PTZ camera (12-month minimum)' } } }],
           custom_text: { submit: { message: 'PTZ camera, £149 a month for at least 12 months. The camera stays ours and goes back when the rental ends.' } },
           success_url: 'https://local-assets.com/billing?camera=added', cancel_url: 'https://local-assets.com/billing',
           metadata: meta, subscription_data: { metadata: meta },
@@ -508,7 +508,7 @@ export default async function handler(req, res) {
         });
         return res.status(200).json(out);
       }
-      if (body0.action !== 'changePlan') return res.status(403).json({ error: admins().includes(session.email) ? `You're now signed in to ${venueName || 'another account'}, not local / assets (switched in another tab or the account menu). Switch back to local / assets, then save again.` : 'Only local / assets can change billing', code: 'not_admin' });
+      if (body0.action !== 'changePlan') return res.status(403).json({ error: admins().includes(session.email) ? `You're now signed in to ${venueName || 'another account'}, not local / assets™ (switched in another tab or the account menu). Switch back to local / assets™, then save again.` : 'Only local / assets™ can change billing', code: 'not_admin' });
       const stripe = stripeClient();
       if (!stripe) return res.status(503).json({ error: 'Payments are not set up yet' });
       const out = await withRedis(async redis => {
@@ -521,7 +521,7 @@ export default async function handler(req, res) {
         if (subId) {
           const sub = await stripe.subscriptions.retrieve(subId).catch(() => null);
           if (sub && sub.status !== 'canceled' && sub.items.data[0]) {
-            const p = await stripe.prices.create({ ...price, product_data: { name: `local / assets · ${plan.name}` } });
+            const p = await stripe.prices.create({ ...price, product_data: { name: `local / assets™ · ${plan.name}` } });
             // Paid before it's switched: the difference for the rest of this month is invoiced and charged now
             // (pending_if_incomplete): if the card is declined or needs confirming, the plan stays as it was until paid
             const updated = await stripe.subscriptions.update(subId, { items: [{ id: sub.items.data[0].id, price: p.id }], proration_behavior: 'always_invoice', payment_behavior: 'pending_if_incomplete', expand: ['latest_invoice'] });
@@ -547,7 +547,7 @@ export default async function handler(req, res) {
           ...(credit ? { discounts: [{ coupon: credit.id }] } : {}),
           mode: 'subscription',
           ...(customer ? { customer } : { customer_email: session.email }),
-          line_items: [{ quantity: 1, price_data: { ...price, product_data: { name: `local / assets · ${plan.name}` } } }],
+          line_items: [{ quantity: 1, price_data: { ...price, product_data: { name: `local / assets™ · ${plan.name}` } } }],
           success_url: 'https://local-assets.com/billing?plan=updated', cancel_url: 'https://local-assets.com/billing',
           metadata: { kind: 'upgrade', venueSlug: slug, tier: plan.id, ...(credit ? { trialCredit: '1' } : {}) },
           subscription_data: { metadata: { kind: 'upgrade', venueSlug: slug, tier: plan.id, ...(commitEndFor(plan.id, acctType) ? { commitEnd: commitEndFor(plan.id, acctType), minimumMonths: '12' } : {}) } },
@@ -557,7 +557,7 @@ export default async function handler(req, res) {
       const { status, ...rest } = out;
       return res.status(status).json(rest);
     }
-    if (!isAdmin) return res.status(403).json({ error: admins().includes(session.email) ? `You're now signed in to ${venueName || 'another account'}, not local / assets (switched in another tab or the account menu). Switch back to local / assets, then save again.` : 'Only local / assets can change billing', code: 'not_admin' });
+    if (!isAdmin) return res.status(403).json({ error: admins().includes(session.email) ? `You're now signed in to ${venueName || 'another account'}, not local / assets™ (switched in another tab or the account menu). Switch back to local / assets™, then save again.` : 'Only local / assets™ can change billing', code: 'not_admin' });
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
 
     // Sign-ups waiting for their video storage (a Mux environment created by local / assets)
@@ -668,7 +668,7 @@ export default async function handler(req, res) {
         const { welcomeEmail, sendFromInbox } = await import('./_emails.js');
         const resend = new Resend(mailKey);
         for (const email of emails) {
-          const m = welcomeEmail({ name, email, type, plan: { name: out.plan ? out.plan.name : 'local / assets', line: out.plan ? (out.plan.price > 0 ? `£${Number(out.plan.price).toLocaleString('en-GB')} a month, billed on the 1st.` : 'Pay as you go, billed on the 1st.') : 'Set up for you by local / assets.' }, ready: !!out.label });
+          const m = welcomeEmail({ name, email, type, plan: { name: out.plan ? out.plan.name : 'local / assets™', line: out.plan ? (out.plan.price > 0 ? `£${Number(out.plan.price).toLocaleString('en-GB')} a month, billed on the 1st.` : 'Pay as you go, billed on the 1st.') : 'Set up for you by local / assets™.' }, ready: !!out.label });
           const sent = await sendFromInbox(resend, { to: email, subject: m.subject, html: m.html, text: m.text });
           if (!sent?.error) welcomed++;
           else console.error('[billing] welcome email', out.slug, sent.error?.message || sent.error);
@@ -743,7 +743,7 @@ export default async function handler(req, res) {
           if (Math.abs(from - to) < 0.01) continue;
           const row = { slug: s, name: cfg[s]?.name || s, type, plan: plan.name, from, to };
           if (body.apply) {
-            const p = await stripe.prices.create({ currency: 'gbp', unit_amount: Math.round(to * 100), recurring: { interval: 'month' }, product_data: { name: `local / assets · ${plan.name}` } });
+            const p = await stripe.prices.create({ currency: 'gbp', unit_amount: Math.round(to * 100), recurring: { interval: 'month' }, product_data: { name: `local / assets™ · ${plan.name}` } });
             await stripe.subscriptions.update(subId, { items: [{ id: item.id, price: p.id }], proration_behavior: 'none' });
             console.log('[billing] repriced', s, from, '→', to);
             row.done = true;

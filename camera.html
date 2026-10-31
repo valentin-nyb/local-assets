@@ -42,7 +42,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player@3"></script>
     <!-- Video.js 10: the decks' live sound, Mux audio with no player around it (hls.js) -->
     <script type="module" async src="https://cdn.jsdelivr.net/npm/@videojs/html@10.1.0/media/mux-audio/+esm"></script>
-    <script src="nav-component.js?v=60"></script>
+    <script src="nav-component.js?v=61"></script>
     <script src="la-deckrec.js?v=2"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
@@ -825,7 +825,7 @@
 
         <div class="la-statusbar w-full h-10 bg-black border-t border-[#27272a] flex items-center justify-between px-4 md:px-6 shrink-0">
             <div class="flex items-center gap-2 md:gap-4 text-[7px] md:text-[9px] font-mono text-zinc-600 uppercase tracking-widest">
-                <span>LOCAL / ASSETS <span data-la-version>V1.0.1</span></span>
+                <span>LOCAL / ASSETS™ <span data-la-version>V1.0.1</span></span>
             </div>
         </div>
     </main>
@@ -2164,7 +2164,7 @@
                 // The secure address (port 443) works on every Wi-Fi and mobile network
                 var audio = c.kind === 'audio', other = c.kind === 'other' || audio, full = d.rtmpsUrl.replace(/\/$/, '') + '/' + d.streamKey;
                 // Larix imports a ready-made connection from this link (scan the QR code, or tap it on the phone)
-                var larix = 'larix://set/v1?conn[][url]=' + encodeURIComponent(full) + '&conn[][name]=' + encodeURIComponent('local / assets · ' + c.name) + '&conn[][overwrite]=on';
+                var larix = 'larix://set/v1?conn[][url]=' + encodeURIComponent(full) + '&conn[][name]=' + encodeURIComponent('local / assets™ · ' + c.name) + '&conn[][overwrite]=on';
                 var onPhone = /iPhone|iPad|Android/i.test(navigator.userAgent);
                 var guide = function(key, title, steps) { return '<details class="cam-guide"><summary>' + title + '</summary><ol>' + steps.map(function(x) { return '<li>' + x + '</li>'; }).join('') + '</ol></details>'; };
                 // One of the cameras people bring (not a PTZ camera, not the decks): the camera first, and inside each one
@@ -2381,10 +2381,10 @@
         if (mode === 'rent') {
             return '<div class="ord-price"><span class="ord-amount">' + gbp(rentRate(days)) + '</span><span class="ord-per">per camera per day, inc. VAT</span></div>' +
                 '<p class="ord-included">' + (days >= RENT_LONG_FROM ? 'Hire rate for 3 days or more' : gbp(RENT_LONG) + ' a day when you hire for 3 days or more') + '</p>' +
-                '<p class="ord-note">Delivered the day before and collected the day after, anywhere in the UK. Set up with your local / assets dashboard, so every set is recorded with vertical clips made automatically.</p>';
+                '<p class="ord-note">Delivered the day before and collected the day after, anywhere in the UK. Set up with your local / assets™ dashboard, so every set is recorded with vertical clips made automatically.</p>';
         }
         return '<div class="ord-price"><span class="ord-amount">' + gbp(CAMERA_PRICE) + '</span><span class="ord-per">per camera, inc. VAT</span></div>' +
-            '<p class="ord-included">Setup and integration with your local / assets dashboard included</p>' +
+            '<p class="ord-included">Setup and integration with your local / assets™ dashboard included</p>' +
             '<p class="ord-klarna"><b>Klarna.</b> Or pay in 3 interest-free payments of ' + gbp(Math.round(CAMERA_PRICE / 3)) + ', or spread the cost monthly.</p>';
     }
     // Wires the Buy / Hire switch, quantity and days; returns what to send to checkout
@@ -2426,9 +2426,9 @@
             panel.classList.add('wide');
             document.getElementById('cam-dialog-body').innerHTML =
                 '<div class="ord-hero"><img src="/img/obsbot-tail-2.png" alt="OBSBOT Tail 2 camera" width="720" height="720"></div>' +
-                '<p class="cam-eyebrow">Buy or hire from local / assets</p>' +
+                '<p class="cam-eyebrow">Buy or hire from local / assets™</p>' +
                 '<h3 class="ord-title">OBSBOT Tail 2</h3>' +
-                '<p class="ord-sub">AI-powered PTZR 4K live production camera with NDI HX3. Connects straight to your local / assets dashboard.</p>' +
+                '<p class="ord-sub">AI-powered PTZR 4K live production camera with NDI HX3. Connects straight to your local / assets™ dashboard.</p>' +
                 '' + ordModeHtml() +
                 '<div class="ord-feats">' + feats + '</div>' +
                 '<details class="ord-specs"><summary>Full specifications</summary><dl>' +

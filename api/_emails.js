@@ -122,7 +122,7 @@ export function mailError(e) {
   return /header|bearer|api key|unauthori[sz]ed|forbidden/i.test(m) ? 'the email key saved in Vercel (LA_RESEND_API_KEY) is not a valid Resend key' : m.slice(0, 200);
 }
 // Every email comes from info@ (the Google Workspace account), so Gmail shows its profile photo, the a
-export const mailFrom = (box, name = 'local / assets') => `${name} <info@${SEND_DOMAIN}>`;
+export const mailFrom = (box, name = 'local / assets™') => `${name} <info@${SEND_DOMAIN}>`;
 
 // An email to a client sent from the Resend inbox (info@), so it shows in Inbox → Sent and their reply lands in
 // the same conversation (as a draft, then sent; the inbox's own sender name is used). If the inbox can't take
@@ -166,9 +166,9 @@ export function welcomeEmail({ name, email, type, plan, ready }) {
       : 'We’re preparing your private video storage and will email you the moment recordings can be saved.'],
   ];
   const preheader = `Your ${who} account is ${ready ? 'ready' : 'set up'}. Sign in with Google to get started.`;
-  const html = page({ title: 'Welcome to local / assets', preheader, body: [
+  const html = page({ title: 'Welcome to local / assets™', preheader, body: [
     header('Welcome'),
-    hero('Welcome', esc(name), `Your ${who} account on local / assets is ${ready ? 'ready' : 'set up'}. Every set you film becomes a full-length recording, branded vertical clips and thumbnails, kept in one place and ready to post.`),
+    hero('Welcome', esc(name), `Your ${who} account on local / assets™ is ${ready ? 'ready' : 'set up'}. Every set you film becomes a full-length recording, branded vertical clips and thumbnails, kept in one place and ready to post.`),
     infoCard([['Your plan', esc(plan.name), plan.line ? esc(plan.line) : '']]),
     buttons([[`${SITE}/login.html`, 'Sign in to your workspace'], [`${SITE}/download`, 'Download a&trade; for Mac']]),
     section('Getting started'),
@@ -176,7 +176,7 @@ export function welcomeEmail({ name, email, type, plan, ready }) {
     note(`Questions? Reply to this email or write to ${mailLink}. Invoices and your card are under Billing once you sign in.`),
   ].join('\n') });
   const text = [
-    `Welcome to local / assets, ${name}.`, '',
+    `Welcome to local / assets™, ${name}.`, '',
     `Your ${who} account is ${ready ? 'ready' : 'set up'}.`,
     `Plan: ${plan.name}${plan.line ? ' (' + plan.line + ')' : ''}`, '',
     ...list.map(([t, d], i) => `0${i + 1}  ${t}: ${plainText(d)}`), '',
@@ -185,7 +185,7 @@ export function welcomeEmail({ name, email, type, plan, ready }) {
     'Questions? Reply to this email or write to info@local-assets.com.',
     '', `© ${new Date().getUTCFullYear()} local / assets LTD`,
   ].join('\n');
-  return { subject: `Welcome to local / assets, ${name}`, html, text };
+  return { subject: `Welcome to local / assets™, ${name}`, html, text };
 }
 
 // Sent when a new account gets its private video storage after signing up (Billing → Finish setup or Ready
@@ -200,7 +200,7 @@ export function storageReadyEmail({ name, email, type }) {
     ['Film your first set', 'It lands in Distribution History with vertical clips and thumbnails, watermarked and ready to post.'],
   ];
   const preheader = `Your private video storage is set up. Recording, uploads and clips are open now.`;
-  const html = page({ title: 'Your local / assets account is ready', preheader, body: [
+  const html = page({ title: 'Your local / assets™ account is ready', preheader, body: [
     header('Account ready'),
     hero('You\'re ready', esc(name), `Your private video storage is set up, so your ${who} account is fully open: record sets, upload, and get branded vertical clips and thumbnails ready to post.`),
     buttons([[`${SITE}/login.html`, 'Open your workspace'], [`${SITE}/download`, 'Download a&trade; for Mac']], '36px 0 0'),
@@ -209,14 +209,14 @@ export function storageReadyEmail({ name, email, type }) {
     note(`Need a hand setting up the cameras? Reply to this email or write to ${mailLink}.`),
   ].join('\n') });
   const text = [
-    `${name}: your local / assets account is ready.`, '',
+    `${name}: your local / assets™ account is ready.`, '',
     `Your private video storage is set up, so your ${who} account is fully open: record sets, upload, and get branded vertical clips and thumbnails ready to post.`, '',
     'Start here:', ...list.map(([t, d], i) => `0${i + 1}  ${t}: ${plainText(d)}`), '',
     `Open your workspace: ${SITE}/login.html`, `Download a™ for Mac: ${SITE}/download`, '',
     'Need a hand setting up the cameras? Reply to this email or write to info@local-assets.com.',
     '', `© ${new Date().getUTCFullYear()} local / assets LTD`,
   ].join('\n');
-  return { subject: `Your local / assets account is ready, ${name}`, html, text };
+  return { subject: `Your local / assets™ account is ready, ${name}`, html, text };
 }
 
 // The monthly invoice, sent on the 1st with Stripe's invoice: what the month cost, line by line, and the link
@@ -234,10 +234,10 @@ export function invoiceEmail({ name, period, plan, lines, total, url, charged, e
         <td align="right" valign="top" class="e-t e-line" style="padding:18px 24px;${i ? `border-top:1px solid ${L.line};` : ''}font:600 15px/1.4 ${FONT};color:${L.text};white-space:nowrap">${money(a)}</td></tr>`).join('')}
       <tr><td class="e-t e-line" style="padding:20px 24px;border-top:1px solid ${L.line};font:700 13px/1.4 ${FONT};letter-spacing:.08em;text-transform:uppercase;color:${L.text}">Total</td><td align="right" class="e-acc e-line" style="padding:20px 24px;border-top:1px solid ${L.line};font:800 20px/1.2 ${FONT};color:${ORANGE};white-space:nowrap">${money(total)}</td></tr>
     </table>`, '36px 0 0');
-  const html = page({ title: 'Your local / assets invoice', preheader, body: [
+  const html = page({ title: 'Your local / assets™ invoice', preheader, body: [
     header(esc(period)),
     example ? row(`<p class="e-s e-ol" style="margin:0;padding:12px 16px;border:1px dashed ${L.outline};border-radius:14px;font:400 14px/1.5 ${FONT};color:${L.sub}">Example only: this is what ${esc(name)} receives on the 1st. Nothing was charged.</p>`, '0 0 28px') : '',
-    hero(`Invoice &middot; ${esc(period)}`, money(total), `${esc(name)}: your local / assets plan and usage for ${esc(period)}. ${status}`, 52),
+    hero(`Invoice &middot; ${esc(period)}`, money(total), `${esc(name)}: your local / assets™ plan and usage for ${esc(period)}. ${status}`, 52),
     table,
     // View and pay: Stripe's page for this invoice (card or bank transfer). Your billing: the account's Billing page
     buttons([...(url ? [[esc(url), charged ? 'View the invoice' : 'View and pay the invoice']] : []), [`${SITE}/billing`, 'Your billing']]),
@@ -245,12 +245,12 @@ export function invoiceEmail({ name, period, plan, lines, total, url, charged, e
     note(`Every invoice is also in your account under Billing, with its PDF. Questions? Reply to this email or write to ${mailLink}.`),
   ].join('\n') });
   const text = [
-    `${example ? '[Example] ' : ''}local / assets invoice · ${period}`, '', `${name}: ${money(total)}. ${status}`, '',
+    `${example ? '[Example] ' : ''}local / assets™ invoice · ${period}`, '', `${name}: ${money(total)}. ${status}`, '',
     ...items.map(([t, d, a]) => `${t} (${d}): ${money(a)}`), `Total: ${money(total)}`, '',
     ...(url ? [`${charged ? 'View' : 'View and pay'} the invoice: ${url}`] : []), `Your billing: ${SITE}/billing`, 'Questions? Reply to this email or write to info@local-assets.com.',
     '', `© ${new Date().getUTCFullYear()} local / assets LTD`,
   ].join('\n');
-  return { subject: `${example ? '[Example] ' : ''}Your local / assets invoice for ${period}: ${money(total)}`, html, text };
+  return { subject: `${example ? '[Example] ' : ''}Your local / assets™ invoice for ${period}: ${money(total)}`, html, text };
 }
 
 // The email someone gets when they're given access to an account: an artist given access to their own sets
@@ -258,7 +258,7 @@ export function invoiceEmail({ name, period, plan, lines, total, url, charged, e
 // what they can do in the app. example: a sample sent by local / assets.
 const ACCESS = {
   artist: {
-    lead: (account) => `${esc(account)} added you to local / assets. Every set you play there is recorded and turned into clips and thumbnails with your name on them, ready to post.`,
+    lead: (account) => `${esc(account)} added you to local / assets™. Every set you play there is recorded and turned into clips and thumbnails with your name on them, ready to post.`,
     can: (account) => [
       ['See your sets', `Every set you play at ${esc(account)}, kept in Distribution History.`],
       ['Watch and download', 'The full recording, the HQ audio, your vertical clips and thumbnails, in full quality.'],
@@ -268,7 +268,7 @@ const ACCESS = {
     mac: 'Your sets, clips and Brand Kit on your Mac.',
   },
   team: {
-    lead: (account) => `You've been added to ${esc(account)} on local / assets. Every set filmed there becomes a full recording, branded vertical clips and thumbnails, kept in one place and ready to post.`,
+    lead: (account) => `You've been added to ${esc(account)} on local / assets™. Every set filmed there becomes a full recording, branded vertical clips and thumbnails, kept in one place and ready to post.`,
     can: () => [
       ['Distribution History', 'Every set: watch, download, watermark, and send to YouTube and SoundCloud.'],
       ['Camera Control', 'Connect cameras and the mixer, see them live, and record with the calendar.'],
@@ -285,8 +285,8 @@ export function accessInviteEmail({ artist, account, email, example, kind = 'art
   const role = kind === 'team' ? 'ADMIN' : 'VISITOR';
   const title = kind === 'team' ? account : artist;
   const list = [['Sign in', `With Google, using ${esc(email)}. There is no password to remember.`]].concat(K.can(account));
-  const preheader = kind === 'team' ? `You've been added to ${account} on local / assets. Sign in with Google to start.` : `${account} gave you access to your sets on local / assets. Sign in with Google to see them.`;
-  const html = page({ title: 'You have access to local / assets', preheader, body: [
+  const preheader = kind === 'team' ? `You've been added to ${account} on local / assets™. Sign in with Google to start.` : `${account} gave you access to your sets on local / assets™. Sign in with Google to see them.`;
+  const html = page({ title: 'You have access to local / assets™', preheader, body: [
     header('Access'),
     hero('You have access', esc(title), K.lead(account)),
     infoCard([['Account', esc(account)], ['Access', role], ['Sign in with', esc(email)]]),
@@ -299,7 +299,7 @@ export function accessInviteEmail({ artist, account, email, example, kind = 'art
     note(`Questions? Reply to this email or write to ${mailLink}.`, '32px 0 0'),
   ].join('\n') });
   const text = [
-    kind === 'team' ? `You've been added to ${account} on local / assets.` : `You have access to local / assets, ${artist}.`, '',
+    kind === 'team' ? `You've been added to ${account} on local / assets™.` : `You have access to local / assets™, ${artist}.`, '',
     plainText(K.lead(account)), '',
     `Account: ${account}`, `Access: ${role}`, `Sign in with: ${email}`, '',
     'What you can do:',
@@ -310,5 +310,5 @@ export function accessInviteEmail({ artist, account, email, example, kind = 'art
     'Questions? Reply to this email or write to info@local-assets.com.',
     '', `© ${new Date().getUTCFullYear()} local / assets LTD`,
   ].join('\n');
-  return { subject: `${example ? '[Example] ' : ''}You have access to local / assets: ${account}`, html, text };
+  return { subject: `${example ? '[Example] ' : ''}You have access to local / assets™: ${account}`, html, text };
 }

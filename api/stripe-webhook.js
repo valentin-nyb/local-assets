@@ -326,7 +326,7 @@ async function createClientAccount(session, stripe) {
   const line = session.mode === 'subscription' ? `${money(paid)} paid today, then billed monthly. ${payg ? 'Pay as you go is on: usage above your plan is charged to your card on the 1st.' : 'Usage above your plan is invoiced on the 1st.'}`
     : session.mode === 'payment' ? `${money(paid)} paid today. After that, pay only for what you use, charged to your card on the 1st.`
     : 'No monthly fee. What you use is charged to your card on the 1st.';
-  const mail = welcomeEmail({ name, email, type, plan: { name: m.tierName || m.tier || 'local / assets', line }, ready: !!storage });
+  const mail = welcomeEmail({ name, email, type, plan: { name: m.tierName || m.tier || 'local / assets™', line }, ready: !!storage });
   const sent = await sendFromInbox(resend, { to: email, subject: mail.subject, html: mail.html, text: mail.text });
   if (sent?.error) console.error('[Stripe Webhook] welcome email', mailError(sent.error));
 }

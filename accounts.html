@@ -37,7 +37,7 @@
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=7"></script>
     <script src="/la-media.js?v=2"></script>
-    <script src="nav-component.js?v=60"></script>
+    <script src="nav-component.js?v=61"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
         .nav-link.active { color: var(--la-accent) !important; background: color-mix(in srgb, var(--la-accent) 5%, transparent); border-left: 2px solid var(--la-accent); }
@@ -318,7 +318,7 @@
                     '<div class="ac-actions">' +
                         '<button type="button" class="ac-btn" data-act="edit">Edit</button>' +
                         '<button type="button" class="ac-btn" data-act="logins">Logins' + ((a.logins || []).length ? ' ' + a.logins.length : '') + '</button>' +
-                        '<button type="button" class="ac-btn' + (a.videoQuality === 'premium' ? ' is-premium' : '') + '" data-act="quality" aria-pressed="' + (a.videoQuality === 'premium') + '" title="Quality of the account\'s new videos in Mux. Basic is free to encode; Premium costs local / assets about $0.04 a minute">' + (a.videoQuality === 'premium' ? 'Premium video' : 'Basic video') + '</button>' +
+                        '<button type="button" class="ac-btn' + (a.videoQuality === 'premium' ? ' is-premium' : '') + '" data-act="quality" aria-pressed="' + (a.videoQuality === 'premium') + '" title="Quality of the account\'s new videos in Mux. Basic is free to encode; Premium costs local / assets™ about $0.04 a minute">' + (a.videoQuality === 'premium' ? 'Premium video' : 'Basic video') + '</button>' +
                         '<button type="button" class="ac-btn' + (a.video4k ? ' is-premium' : '') + '" data-act="4k" aria-pressed="' + !!a.video4k + '" title="Largest size new videos are kept at. 4K costs more to encode, store and stream">' + (a.video4k ? '4K video' : 'Up to 1080p') + '</button>' +
                         '<button type="button" class="ac-btn" data-act="discount">' + (a.discount ? 'Discount ' + a.discount + '%' : 'Discount') + '</button>' +
                         '<button type="button" class="ac-btn" data-act="' + (a.paused ? 'resume' : 'pause') + '">' + (a.paused ? 'Resume' : 'Pause') + '</button>' +
@@ -382,7 +382,7 @@
                 return;
             }
             var ask = {
-                pause: { title: 'Pause ' + a.name + '?', message: 'Uploads, vertical clips, watermarks, recording and publishing stop, and the account sees a banner saying local / assets paused it. Everything is kept; resume it any time.', confirmText: 'Pause account', danger: true },
+                pause: { title: 'Pause ' + a.name + '?', message: 'Uploads, vertical clips, watermarks, recording and publishing stop, and the account sees a banner saying local / assets™ paused it. Everything is kept; resume it any time.', confirmText: 'Pause account', danger: true },
                 resume: { title: 'Resume ' + a.name + '?', message: 'The account works again straight away.', confirmText: 'Resume account' },
                 cancel: { title: 'Cancel ' + a.name + '\'s plan?', message: 'No more monthly charges after the paid month ends (or its 12-month minimum, if it has one). The account keeps working until then.', confirmText: 'Cancel plan', danger: true },
                 keep: { title: 'Keep ' + a.name + '\'s plan?', message: 'The cancellation is withdrawn and the plan carries on as before.', confirmText: 'Keep plan' },

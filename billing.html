@@ -37,7 +37,7 @@
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=7"></script>
     <script src="/la-media.js?v=2"></script>
-    <script src="nav-component.js?v=60"></script>
+    <script src="nav-component.js?v=61"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
         .nav-link.active { color: var(--la-accent) !important; background: color-mix(in srgb, var(--la-accent) 5%, transparent); border-left: 2px solid var(--la-accent); }
@@ -280,7 +280,7 @@
                 <div>
                     <p class="bl-eyebrow" id="bl-period">This month</p>
                     <h2 class="bl-h">Billing</h2>
-                    <p class="bl-sub">Everything local / assets runs for you, billed in one place: your plan, plus what you use of video storage, streaming and file storage. An itemised invoice is sent on the 1st of each month.</p>
+                    <p class="bl-sub">Everything local / assets™ runs for you, billed in one place: your plan, plus what you use of video storage, streaming and file storage. An itemised invoice is sent on the 1st of each month.</p>
                 </div>
                 <p id="bl-error" class="bl-msg hidden" style="color:var(--la-bad)"></p>
                 <section class="bl-section">
@@ -338,7 +338,7 @@
                         <div>
                             <p class="bl-soon-tag">Coming soon</p>
                             <h3 id="bl-pay-djs-h">Pay your DJs</h3>
-                            <p class="bl-soon-text">Pay each artist for their gig straight from local / assets: choose the session, enter the fee and it lands in their bank in a few days, with a receipt for both of you. Artists set up their payouts once, securely with Stripe.</p>
+                            <p class="bl-soon-text">Pay each artist for their gig straight from local / assets™: choose the session, enter the fee and it lands in their bank in a few days, with a receipt for both of you. Artists set up their payouts once, securely with Stripe.</p>
                         </div>
                         <a class="cam-btn ghost" href="mailto:info@local-assets.com?subject=Pay%20your%20DJs">Tell me when it's ready</a>
                     </div>
@@ -883,7 +883,7 @@
                 runTotals();
                 document.getElementById('bl-ov-left').textContent = money(left, cur);
                 document.getElementById('bl-ov-left-note').textContent = d.totals.billed > 0 ? Math.round(left / d.totals.billed * 100) + '% of what we bill' : 'Nothing billed yet';
-                var TYPE = { venue: 'Venue', label: 'Record label', artist: 'Artist', management: 'Management', admin: 'local / assets' };
+                var TYPE = { venue: 'Venue', label: 'Record label', artist: 'Artist', management: 'Management', admin: 'local / assets™' };
                 t.innerHTML = '<thead><tr><th>Account</th><th>Plan</th><th class="num">Video kept</th><th class="num">Watched</th><th class="num">Recorded</th><th class="num">Files</th><th class="num">Costs us</th><th class="num">We bill</th></tr></thead><tbody>' +
                     d.rows.map(function(x) {
                         if (x.error) return '<tr><td data-l="Account">' + esc(x.name) + '</td><td colspan="7" class="bl-msg">Could not read: ' + esc(x.error) + '</td></tr>';
@@ -1213,7 +1213,7 @@
             if (!lines.length) lines.push(['Usage', 'Nothing above the plan this period', 0]);
             var fmtD = function(x) { return x.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }); };
             return '<div class="inv">' +
-                '<div class="inv-top"><div><p class="inv-h">Invoice</p><p class="inv-muted">Preview · not sent yet</p></div><img src="/logos/a-black.png" alt="local / assets" class="inv-logo"></div>' +
+                '<div class="inv-top"><div><p class="inv-h">Invoice</p><p class="inv-muted">Preview · not sent yet</p></div><img src="/logos/a-black.png" alt="local / assets™" class="inv-logo"></div>' +
                 '<div class="inv-meta"><div><p class="inv-k">Date of issue</p><p>' + fmtD(today) + '</p><p class="inv-k">Date due</p><p>' + fmtD(due) + '</p></div>' +
                 '<div><p class="inv-k">From</p><p><b>local / assets LTD</b><br>info@local-assets.com</p></div>' +
                 '<div><p class="inv-k">Bill to</p>' + (det && det.legalName
@@ -1248,7 +1248,7 @@
             }).join('') || '<tr><td><b>Invoice</b></td><td class="r">' + money(i.total, cur) + '</td></tr>';
             var paid = i.status === 'paid';
             var html = '<div class="inv">' +
-                '<div class="inv-top"><div><p class="inv-h">Invoice</p><p class="inv-muted">' + esc(i.number || i.id) + '</p><span class="inv-paid ' + (paid ? 'ok' : 'open') + '">' + esc(LBL[i.status] || i.status) + '</span></div><img src="/logos/a-black.png" alt="local / assets" class="inv-logo"></div>' +
+                '<div class="inv-top"><div><p class="inv-h">Invoice</p><p class="inv-muted">' + esc(i.number || i.id) + '</p><span class="inv-paid ' + (paid ? 'ok' : 'open') + '">' + esc(LBL[i.status] || i.status) + '</span></div><img src="/logos/a-black.png" alt="local / assets™" class="inv-logo"></div>' +
                 '<div class="inv-meta"><div><p class="inv-k">Date of issue</p><p>' + fmtD(i.issued || i.created) + '</p>' + (i.due ? '<p class="inv-k">Date due</p><p>' + fmtD(i.due) + '</p>' : '') + (i.paidAt ? '<p class="inv-k">Paid on</p><p>' + fmtD(i.paidAt) + '</p>' : '') + '</div>' +
                 '<div><p class="inv-k">From</p><p><b>local / assets LTD</b><br>info@local-assets.com</p></div>' +
                 '<div><p class="inv-k">Bill to</p>' + billToHtml(i.billedTo, (i.address || []).map(function(l) { return COUNTRY_NAMES[l] || l; }), i.vat || [], i.email || '') + '</div></div>' +

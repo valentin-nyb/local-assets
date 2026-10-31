@@ -177,7 +177,7 @@ export default async function handler(req, res) {
     // The banner moment is chosen by local / assets: everyone else only saves the one found automatically, never over it
     const admin = platformAdmins().includes(String(session.email || '').toLowerCase());
     const saved = await withRedis(async r => (admin ? await r.set(`djframe${ver}:${assetId}`, JSON.stringify(v)) : await r.set(`djframe${ver}:${assetId}`, JSON.stringify(v), { NX: true })));
-    if (!saved) return res.status(403).json({ error: 'Only local / assets can change the banner moment' });
+    if (!saved) return res.status(403).json({ error: 'Only local / assets™ can change the banner moment' });
     return res.status(200).json({ ok: true });
   }
 

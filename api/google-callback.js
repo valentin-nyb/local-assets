@@ -208,7 +208,7 @@ h1 span{display:inline-block;white-space:nowrap;transition:color .3s,transform .
 </style></head>
 <body>
 <canvas class="dot-grid-canvas" aria-hidden="true"></canvas>
-<span class="wordmark" role="img" aria-label="local / assets"></span>
+<span class="wordmark" role="img" aria-label="local / assets™"></span>
 <main class="wrap">
   <p class="eyebrow">Signed in</p>
   <h1><span>Back to</span><br><span>the app</span></h1>

@@ -150,8 +150,8 @@ document.addEventListener("DOMContentLoaded", () => {
     var _isAdminAcct = (function() { try { var a = JSON.parse(localStorage.getItem('la_admin') || '{}'); return (a.venueSlug === 'local-assets-admin' || (function(c){ return /^local\s*[\/-]?\s*assets\b/i.test(String(c ? c.name : (a.venue || '')).trim()); })((a.venues || []).filter(function(v){ return v && v.slug === a.venueSlug; })[0])); } catch (_) { return false; } })();
     sidebar.innerHTML = `
         <div id="la-side-head" class="h-20 flex items-center justify-center px-8 border-b border-[#27272a] shrink-0" style="position:relative">
-            <a href="/dashboard" class="la-logo-link h-5 w-24 flex" aria-label="local / assets">
-                <span class="la-logo" role="img" aria-label="local / assets"></span>
+            <a href="/dashboard" class="la-logo-link h-5 w-24 flex" aria-label="local / assets™">
+                <span class="la-logo" role="img" aria-label="local / assets™"></span>
             </a>
             <button onclick="toggleSidebar()" aria-label="Close menu" class="md:hidden text-zinc-400 hover:text-white transition-colors" style="position:absolute;right:20px;top:50%;transform:translateY(-50%);width:36px;height:36px;line-height:0;">
                 <iconify-icon icon="solar:close-circle-linear" class="text-2xl"></iconify-icon>
@@ -331,7 +331,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // --- Venue Name System (shared across all pages) ---
-    var DEFAULT_VENUE = 'LOCAL / ASSETS';
+    var DEFAULT_VENUE = 'LOCAL / ASSETS™';
 
     window.getVenueName = function() {
         return localStorage.getItem('la_venue_name') || DEFAULT_VENUE;
@@ -515,7 +515,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Client names in capitals ("CAFE 1001"), the local / assets account as its wordmark
     function _niceName(n) {
         n = String(n || '').trim();
-        if (/^local\s*[\/-]?\s*assets\b/i.test(n)) return 'local / assets';
+        if (/^local\s*[\/-]?\s*assets\b/i.test(n)) return 'local / assets™';
         return n.toUpperCase();
     }
     function _venueSwitcherHtml(session) {
@@ -605,7 +605,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         var sb = document.createElement('div');
                         sb.id = 'la-setup';
                         sb.style.cssText = 'padding:12px 20px;background:#14532d;color:#fff;font:500 13px/1.4 Inter,system-ui,sans-serif;flex-shrink:0;z-index:45;';
-                        sb.innerHTML = '<b style="font-weight:700">Welcome to local / assets.</b> We\'re setting up your private video storage. You can set up your Brand Kit now; uploads and recordings open as soon as it\'s ready, and we\'ll email you.';
+                        sb.innerHTML = '<b style="font-weight:700">Welcome to local / assets™.</b> We\'re setting up your private video storage. You can set up your Brand Kit now; uploads and recordings open as soon as it\'s ready, and we\'ll email you.';
                         _placeBanner(mn, sb);
                     }
                     return;
@@ -617,7 +617,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 b.id = 'la-paused';
                 b.setAttribute('role', 'alert');
                 b.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 20px;background:#7f1d1d;color:#fff;font:500 13px/1.4 Inter,system-ui,sans-serif;flex-shrink:0;z-index:45;';
-                if (d.byAdmin) { b.innerHTML = '<span><b style="font-weight:700">Account paused.</b> local / assets has paused this account, so uploads, clips, watermarks and publishing are stopped. Email info@local-assets.com to start it again.</span>'; _placeBanner(main, b); return; }
+                if (d.byAdmin) { b.innerHTML = '<span><b style="font-weight:700">Account paused.</b> local / assets™ has paused this account, so uploads, clips, watermarks and publishing are stopped. Email info@local-assets.com to start it again.</span>'; _placeBanner(main, b); return; }
                 b.innerHTML = '<span><b style="font-weight:700">Account paused.</b> Invoice ' + _esc(d.number || '') + ' is unpaid, so uploads, clips, watermarks and publishing are stopped until it is paid.</span>' +
                     (d.payUrl ? '<a href="' + _esc(d.payUrl) + '" target="_blank" rel="noopener" style="background:#fff;color:#7f1d1d;font-weight:700;padding:7px 14px;border-radius:8px;text-decoration:none;white-space:nowrap">Pay now</a>' : '<a href="/billing" style="color:#fff;text-decoration:underline">Billing</a>');
                 _placeBanner(main, b);
@@ -708,7 +708,7 @@ document.addEventListener("DOMContentLoaded", () => {
             'box-shadow:0 18px 44px -16px rgba(0,0,0,.55)',
         ].join(';');
 
-        var venue = session.venue || localStorage.getItem('la_venue_name') || 'local / assets';
+        var venue = session.venue || localStorage.getItem('la_venue_name') || 'local / assets™';
 
         drop.innerHTML =
             '<div class="la-acct-head"><div class="la-acct-name">' + _esc(_niceName(venue)) + '</div><div class="la-acct-mail">' + _esc(session.email || '') + '</div></div>' +
@@ -813,7 +813,7 @@ document.addEventListener("DOMContentLoaded", () => {
         wrap.innerHTML = '<div class="lad-panel">'
             + '<p class="lat-eyebrow">Before you start</p>'
             + '<h2 class="lad-title" id="la-terms-title">Our terms</h2>'
-            + '<p class="lad-msg">To use local / assets, please agree to our <a href="/terms" target="_blank" rel="noopener">Terms of Service</a>. Our <a href="/privacy" target="_blank" rel="noopener">Privacy policy</a> explains what we keep and why. You only need to do this once.</p>'
+            + '<p class="lad-msg">To use local / assets™, please agree to our <a href="/terms" target="_blank" rel="noopener">Terms of Service</a>. Our <a href="/privacy" target="_blank" rel="noopener">Privacy policy</a> explains what we keep and why. You only need to do this once.</p>'
             + '<label class="lat-check"><input type="checkbox" id="la-terms-tick"><span>I agree to the Terms of Service and have read the Privacy policy.</span></label>'
             + '<p class="lat-err" id="la-terms-err"></p>'
             + '<div class="lad-actions"><button type="button" class="lad-btn primary" id="la-terms-ok" disabled>Continue</button><button type="button" class="lad-btn ghost" id="la-terms-out">Log out</button></div>'

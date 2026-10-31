@@ -39,7 +39,7 @@
       <div class="lf-wrap">
         <div class="lf-top">
           <div class="lf-brand">
-            <a href="/" class="lf-logo" aria-label="local / assets home"><span role="img" aria-label="local / assets"></span></a>
+            <a href="/" class="lf-logo" aria-label="local / assets™ home"><span role="img" aria-label="local / assets™"></span></a>
             <p class="lf-tag">Every set recorded, branded and ready to share: the full set in 4K, HQ audio, vertical clips and thumbnails.</p>
             <a href="mailto:info@local-assets.com" class="lf-btn">Talk to us</a>
           </div>
@@ -61,7 +61,7 @@
         </div>
         <div class="lf-bottom">
           <span>© ${YEAR} local / assets LTD · All rights reserved</span>
-          <span class="lf-status"><span class="lf-dot" aria-hidden="true"></span>Local / Assets <span data-la-version>${VERSION}</span> <b>// Connected</b></span>
+          <span class="lf-status"><span class="lf-dot" aria-hidden="true"></span>Local / Assets™ <span data-la-version>${VERSION}</span> <b>// Connected</b></span>
         </div>
       </div>
     </footer>

@@ -91,7 +91,7 @@ export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   const session = getWebSessionAuth(req);
   if (!session?.email || !admins().includes(String(session.email).toLowerCase()) || !isAdminVenue(session.venue)) {
-    return res.status(403).json({ error: 'Only local / assets can do this. Switch to the local / assets account first.' });
+    return res.status(403).json({ error: 'Only local / assets™ can do this. Switch to the local / assets™ account first.' });
   }
   await freshVenues(2000);   // an account just created (New account) or deleted shows straight away
   const cfg = getVenuesConfig();

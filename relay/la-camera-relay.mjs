@@ -127,7 +127,7 @@ export function startRelay({ auth, base = 'https://local-assets.com', version = 
 
   async function loop() {
     let failures = 0;
-    log('local / assets camera relay', version, 'connecting to', base);
+    log('local / assets™ camera relay', version, 'connecting to', base);
     heartbeat();
     timers.push(setInterval(heartbeat, 30000));
     if (multicam) { log(canRender ? 'multi-camera edits: ready' : 'multi-camera edits: install ffmpeg (brew install ffmpeg)'); timers.push(setInterval(editLoop, 60000)); editLoop(); }
