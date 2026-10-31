@@ -7,7 +7,7 @@ import { venueAuth } from './_verticals.js';
 import { createCheckout } from './_checkout.js';
 import {
   readRates, readPlans, cleanPlans, readAssignments, assignKey, venueUsage, venueArtists, priceUsage,
-  monthRange, stripeClient, invoiceVenue, venueEntries, DEFAULT_RATES, applyDetails, usageByDay, planForType, priceForType, commitEndFor, readKit, cleanKit, KIT_PLANS, accountTypeOf, sendInvoiceEmail, billingEmailFor, readDiscount, muxCost, MUX_PRICES, parseMuxReport, accountRatesKey, readRunning, cleanRunning, stripeFeesThisMonth } from './_billing.js';
+  monthRange, stripeClient, invoiceVenue, venueEntries, DEFAULT_RATES, applyDetails, usageByDay, planForType, priceForType, commitEndFor, readKit, cleanKit, KIT_PLANS, accountTypeOf, sendInvoiceEmail, billingEmailFor, readDiscount, muxCost, MUX_PRICES, parseMuxReport, accountRatesKey, readRunning, cleanRunning, stripeFeesThisMonth, venueCustomer } from './_billing.js';
 
 // Minutes Mux had encoded by kind, read off Mux's bill (Billing → Summary) before the webhook noted every video;
 // a month's encoding never counts as less than this
@@ -413,8 +413,16 @@ export default async function handler(req, res) {
         const ce = sub && sub.metadata && sub.metadata.commitEnd ? Date.parse(sub.metadata.commitEnd + 'T23:59:59Z') : 0;
         if (sub) subscription = { status: sub.status, cancelAtPeriodEnd: !!(sub.cancel_at_period_end || sub.cancel_at), periodEnd: sub.cancel_at ? sub.cancel_at * 1000 : end ? end * 1000 : null, commitEnd: ce > Date.now() ? ce : null, tier: sub.metadata?.tier || '' };
       }
+      // The card the account's invoices are charged to on the 1st (none: they're emailed with 14 days to pay)
+      let payment = null;
+      if (stripe && target === 'venue' && !isAdmin) {
+        const c = data.customer ? await stripe.customers.retrieve(data.customer, { expand: ['invoice_settings.default_payment_method'] }).catch(() => null) : null;
+        const pm = c && !c.deleted ? c.invoice_settings?.default_payment_method : null;
+        payment = pm && pm.card ? { card: { brand: pm.card.brand, last4: pm.card.last4, exp: pm.card.exp_month + '/' + String(pm.card.exp_year).slice(-2) } } : { card: null };
+      }
       const elapsed = Math.min(1, Math.max(0, (Date.now() - base.start) / (base.end - base.start)));
       return res.status(200).json({
+        payment,
         venue: venueName, target, period: { label: base.label, start: base.start, end: base.end, elapsed },
         usage: data.usage, ...priced, invoices, stripe: !!stripe, isAdmin, subscription, accountType: data.accountType, accountTypeLabel: TYPE_LABEL[data.accountType] || 'Account',
         // Plans a client can move to (name, price, what's included)
@@ -435,6 +443,25 @@ export default async function handler(req, res) {
       const body0 = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
       // Rent a PTZ camera: £149 a month as its own subscription, 12-month minimum (camera and cable cost us
       // ~£1,144, and its recordings ~£40 a month in Mux: paid back in about 10 months)
+      // Pay automatically: the client saves a card on Stripe's page; its invoices are then charged to it on the 1st
+      if (body0.action === 'addCard') {
+        const stripe = stripeClient();
+        if (!stripe) return res.status(503).json({ error: 'Payments are not set up yet' });
+        const customer = await withRedis(async r => {
+          const had = await r.get(`billing_customer:${slug}`);
+          return venueCustomer(stripe, r, slug, { email: had ? undefined : session.email, name: had ? undefined : (getVenuesConfig()[slug]?.name || '') });
+        });
+        const meta = { kind: 'card', venueSlug: slug };
+        const checkout = await createCheckout(stripe, {
+          mode: 'setup', currency: 'gbp', customer,
+          setup_intent_data: { metadata: meta, description: 'local / assets: invoices paid automatically on the 1st' },
+          custom_text: { submit: { message: 'Your local / assets invoices are charged to this card on the 1st of each month. Nothing is charged now.' } },
+          success_url: 'https://local-assets.com/billing?card=saved', cancel_url: 'https://local-assets.com/billing',
+          metadata: meta,
+        });
+        console.log('[billing] card checkout', slug);
+        return res.status(200).json({ url: checkout.url });
+      }
       if (body0.action === 'addCamera') {
         const stripe = stripeClient();
         if (!stripe) return res.status(503).json({ error: 'Payments are not set up yet' });

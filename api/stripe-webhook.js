@@ -90,6 +90,13 @@ export default async function handler(req, res) {
     return res.status(200).json({ received: true });
   }
 
+  // ── CARD SAVED FROM THE BILLING PAGE: invoices charged to it on the 1st ─────
+  if (event.type === 'checkout.session.completed' && event.data.object.metadata?.kind === 'card') {
+    const pm = await saveCardForUsage(stripe, event.data.object);
+    console.log('[Stripe Webhook] card saved for invoices', event.data.object.metadata.venueSlug, pm ? 'ok' : 'none');
+    return res.status(200).json({ received: true });
+  }
+
   // ── PLAN CHOSEN FROM THE BILLING PAGE (no subscription before) ─────
   if (event.type === 'checkout.session.completed' && event.data.object.metadata?.kind === 'upgrade') {
     const cs = event.data.object, slug = cs.metadata.venueSlug;

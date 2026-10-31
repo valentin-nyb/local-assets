@@ -420,6 +420,13 @@
                         <span class="bl-msg" id="bl-admin-msg"></span>
                     </div>
                 </section>
+                <section class="bl-section hidden" id="bl-paycard">
+                    <div class="bl-section-head"><h3>Payment</h3></div>
+                    <div class="bl-cancel-body">
+                        <p class="bl-msg" id="bl-paycard-text"></p>
+                        <button type="button" class="cam-btn primary" id="bl-paycard-btn">Pay automatically by card</button>
+                    </div>
+                </section>
                 <section class="bl-section hidden bl-fold folded" id="bl-cancel">
                     <div class="bl-section-head bl-fold-head" role="button" tabindex="0" aria-expanded="false" onclick="if(event.target.closest('button,select,a,input'))return;var s=this.parentNode;s.classList.toggle('folded');this.setAttribute('aria-expanded',!s.classList.contains('folded'))" onkeydown="if(event.target!==this)return;if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><h3>Cancel account <svg class="bl-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h3></div>
                     <div class="bl-cancel-body">
@@ -749,6 +756,29 @@
                             laToast('Paid. Your plan is now ' + out.plan); load();
                         } catch (e) { b.disabled = false; b.textContent = 'Upgrade'; laAlert('Could not change the plan: ' + e.message, { tone: 'error' }); }
                     });
+                });
+            }
+            // Payment (clients): the card invoices are charged to on the 1st, or a way to add one
+            var pbox = document.getElementById('bl-paycard'), pbtn = document.getElementById('bl-paycard-btn'), ptext = document.getElementById('bl-paycard-text');
+            pbox.classList.toggle('hidden', admin || !d.payment);
+            if (d.payment && d.payment.card) {
+                var cd = d.payment.card, brand = cd.brand ? cd.brand.charAt(0).toUpperCase() + cd.brand.slice(1) : 'Card';
+                ptext.textContent = 'Paid automatically: your invoices are charged on the 1st of each month to your ' + brand + ' ending ' + cd.last4 + ' (expires ' + cd.exp + '). Card details stay with Stripe; we never see them.';
+                pbtn.textContent = 'Change card'; pbtn.classList.remove('primary'); pbtn.classList.add('ghost');
+            } else if (d.payment) {
+                ptext.textContent = 'Your invoices are emailed on the 1st with 14 days to pay. Add a card and they\'re paid automatically on the 1st instead. You enter it on Stripe\'s secure page; we never see it.';
+                pbtn.textContent = 'Pay automatically by card'; pbtn.classList.add('primary'); pbtn.classList.remove('ghost');
+            }
+            if (!pbtn.dataset.wired) {
+                pbtn.dataset.wired = '1';
+                pbtn.addEventListener('click', async function() {
+                    var label = pbtn.textContent; pbtn.disabled = true; pbtn.textContent = 'Opening Stripe…';
+                    try {
+                        var r = await laFetch('/api/billing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'addCard' }) });
+                        var out = await r.json().catch(function() { return {}; });
+                        if (!r.ok || !out.url) throw new Error(out.error || r.status);
+                        location.href = out.url;
+                    } catch (e) { pbtn.disabled = false; pbtn.textContent = label; laAlert('Could not open the card page: ' + e.message, { tone: 'error' }); }
                 });
             }
             // Cancel account (clients)
@@ -1423,6 +1453,7 @@
             catch (e) { b.disabled = false; b.textContent = 'Add a camera'; laAlert('Could not open checkout: ' + e.message, { tone: 'error' }); }
         });
         if (new URLSearchParams(location.search).get('camera') === 'added') { history.replaceState({}, '', '/billing'); setTimeout(function() { laToast('Camera added. We\'ll be in touch to set it up'); }, 800); }
+        if (new URLSearchParams(location.search).get('card') === 'saved') { history.replaceState({}, '', '/billing'); setTimeout(function() { laToast('Card saved. Your invoices are now paid automatically on the 1st'); load(); }, 2500); }
         if (new URLSearchParams(location.search).get('plan') === 'updated') { history.replaceState({}, '', '/billing'); setTimeout(function() { laToast('Your plan is active'); }, 800); }
         document.getElementById('bl-cancel-btn').addEventListener('click', async function() {
             var b = this, resume = b.dataset.mode === 'resume';
