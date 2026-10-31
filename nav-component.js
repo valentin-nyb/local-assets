@@ -94,7 +94,7 @@ var LA_ACCENTS = [['', 'Neon green'], ['yellow', 'Yellow'], ['orange', 'Orange']
 window.laSetBreadcrumb = function(el, name) {
     if (!el) return;
     var isLa = /^local\s*[\/-]?\s*assets\b/i.test(String(name || ''));
-    el.textContent = isLa ? 'local / assets LTD' : name;
+    el.textContent = isLa ? 'local / assets™ LTD' : name;
     el.classList.toggle('is-la', isLa);
 };
 document.addEventListener("DOMContentLoaded", () => {
@@ -564,7 +564,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify({ refresh: true }),
             });
             if (res.status === 401) {
-                window.location.replace('/login.html?next=' + encodeURIComponent(location.pathname + location.search));
+                window.location.replace('/login.html');   // signing in again always starts on the Overview
                 return;
             }
             var data = await res.json().catch(function() { return {}; });
@@ -648,7 +648,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!_signedInAtLoad) return;
         if (_getAdminSession()) return;
         try { localStorage.removeItem('la_admin'); } catch (_) {}
-        window.location.replace('/login.html?next=' + encodeURIComponent(location.pathname + location.search));
+        window.location.replace('/login.html');   // signing in again always starts on the Overview
     }
     if (_signedInAtLoad) {
         _markActive();
