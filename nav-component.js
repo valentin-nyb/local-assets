@@ -681,7 +681,7 @@ document.addEventListener("DOMContentLoaded", () => {
             localStorage.setItem('la_admin', JSON.stringify(session));
             localStorage.setItem('la_venue_name', session.venue);
             localStorage.removeItem('la_revenue_cache_v2');
-            window.location.reload();
+            window.location.replace('/dashboard');   // another account always opens on its Overview
         } catch (e) { alert('Could not switch venue'); }
     };
 
