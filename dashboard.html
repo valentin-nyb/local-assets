@@ -1493,7 +1493,7 @@
                 { type: 'THUMB', label: 'Marketing Thumbnails', ext: '.JPG / .PNG', icon: 'solar:gallery-minimalistic-bold', color: 'text-primary' },
             ];
 
-            var artistMap = {};
+            var artistMap = {}, _artistLast = {};
             _sessionAll = {};
             for (var i = 0; i < muxAssets.length; i++) {
                 var a = muxAssets[i];
@@ -1512,6 +1512,7 @@
                 var dateStr = meta.date || (isNaN(tsMs) ? '1970-01-01' : new Date(tsMs).toISOString().slice(0, 10));
                 if (!artistMap[artistName]) artistMap[artistName] = {};
                 if (!artistMap[artistName][dateStr]) artistMap[artistName][dateStr] = true;
+                if (!(tsMs <= (_artistLast[artistName] || 0))) _artistLast[artistName] = tsMs;
                 // Every file that makes up the session, so Delete session leaves nothing behind
                 var allKey = artistName + '|' + dateStr;
                 (_sessionAll[allKey] = _sessionAll[allKey] || []).push(a);
@@ -1524,11 +1525,13 @@
             }
 
             var allSessions = [];
-            var artistNames = Object.keys(artistMap).sort();
+            // Newest first: the artist with the latest session at the top (by its date, then when it was made)
+            var lastDate = function(n) { return Object.keys(artistMap[n]).sort().pop(); };
+            var artistNames = Object.keys(artistMap).sort(function(x, y) { return lastDate(y).localeCompare(lastDate(x)) || (_artistLast[y] || 0) - (_artistLast[x] || 0) || x.localeCompare(y); });
             var artists = [];
             for (var ai = 0; ai < artistNames.length; ai++) {
                 var aName = artistNames[ai];
-                var dates = Object.keys(artistMap[aName]).sort();
+                var dates = Object.keys(artistMap[aName]).sort().reverse();
                 artists.push({ name: aName, dates: dates });
                 for (var di = 0; di < dates.length; di++) {
                     allSessions.push({
@@ -2126,7 +2129,7 @@
                     var _eId = 'artist_' + String(_eai + 1).padStart(2, '0');
                     var _eEl = document.getElementById('preview-' + _eId);
                     if (_eEl && _eEl.classList.contains('hidden')) toggleArtistFolder(_eId);
-                    var _dId = _eId + '_d_' + String(artists[_eai].dates.length).padStart(2, '0');
+                    var _dId = _eId + '_d_01';   // the latest date (dates are newest first)
                     var _dEl = document.getElementById('preview-' + _dId);
                     if (_dEl && _dEl.classList.contains('hidden')) toggleDateSection(_dId);
                     break;
