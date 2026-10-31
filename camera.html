@@ -527,6 +527,9 @@
         .ci-anim .ca-w > .ca-full { visibility:hidden; }
         .ci-anim .ca-w > .ca-t { position:absolute; left:0; top:0; }
         .ci-anim .ca-k { display:inline-block; width:.5em; height:1em; margin-left:1px; vertical-align:-.15em; background:currentColor; animation:ca-blink 1s steps(1) infinite; }
+        /* (the steps' own span style, grey and on its own line, doesn't reach the moving words) */
+        .ci-steps .ci-anim span { display:inline-block; color:inherit; font-size:inherit; line-height:inherit; }
+        .ci-steps .ci-anim .ca-t { position:absolute; left:0; top:0; white-space:nowrap; }
         @keyframes ca-blink { 50% { opacity:0; } }
         @media (prefers-reduced-motion: reduce) { .ci-anim .ca-k { display:none; } }
         /* Not wide enough for the two columns: the text, the example's two halves side by side, then the steps */
