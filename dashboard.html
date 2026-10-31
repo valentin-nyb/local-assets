@@ -2736,6 +2736,17 @@
         // The banner is a muted, autoplaying loop of the long-form video around its peak,
         // played as real video (hardware-decoded on phones) and faded in once it plays.
         var _heroLoop = null, _heroWait = {}, _heroWaitTimer = null;
+        // Out of sight (scrolled past, another tab, the app in the background) the banner pauses:
+        // a playing loop keeps streaming from Mux, and every minute streamed is paid for
+        var _heroInView = true, _heroIO = null;
+        function heroCanPlay() { return _heroInView && document.visibilityState === 'visible'; }
+        function heroSight() {
+            if (!_heroLoop) return;
+            var v = _heroLoop.vid();
+            if (!heroCanPlay()) { if (v && !v.paused) v.pause(); }
+            else if (_heroLoop.play) _heroLoop.play();
+        }
+        document.addEventListener('visibilitychange', heroSight);
         function playHeroLoop(a) {
             var wrap = document.getElementById('live-feed-player-wrap');
             // iPhone and iPad: a plain muted video playing the clip natively (a video inside another element's
@@ -2797,7 +2808,7 @@
             // Low Power Mode (iPhone, iPad) refuses every video that plays by itself: the banner then keeps the
             // sharp still of the moment and the video starts at the first touch.
             var vid = function() { return ios ? mp : mp.target; };   // the <video> inside Video.js's element
-            var tryPlay = function() { var v = vid(); if (!v) return; v.muted = true; var p = v.play && v.play(); if (p && p.catch) p.catch(function() {}); };
+            var tryPlay = function() { var v = vid(); if (!v || !heroCanPlay()) { if (v && !v.paused) v.pause(); return; } v.muted = true; var p = v.play && v.play(); if (p && p.catch) p.catch(function() {}); };
             var watch = function() { var v = vid(); if (!v) { setTimeout(watch, 200); return; } v.addEventListener('loadedmetadata', tryPlay); v.addEventListener('canplay', function() { if (v.paused) tryPlay(); }); };
             watch();
             var kick = function() { var v = vid(); if (v && v.paused) tryPlay(); };
@@ -2811,7 +2822,14 @@
             window.addEventListener('focus', resume);
             [500, 1500, 3000, 6000].forEach(function(ms) { setTimeout(resume, ms); });
             wrap.appendChild(mp);
-            _heroLoop = { key: key, el: mp, pid: pid, start: start, end: end, play: tryPlay };
+            _heroLoop = { key: key, el: mp, pid: pid, start: start, end: end, play: tryPlay, vid: vid };
+            if (!_heroIO && 'IntersectionObserver' in window) _heroIO = new IntersectionObserver(function(es) {
+                es.forEach(function(e) { if (e.target === document.getElementById('live-feed-player-wrap')) _heroInView = e.isIntersecting; });
+                heroSight();
+            });
+            if (_heroIO) _heroIO.observe(wrap);
+            // autoplay may start it before the first sighting: held until it's seen
+            mp.addEventListener('play', function() { if (!heroCanPlay()) heroSight(); }, true);
             if (wrap.dataset.pos) mp.style.setProperty('--media-object-position', wrap.dataset.pos);
         }
         function stopHeroLoop() {
