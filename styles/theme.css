@@ -544,6 +544,10 @@ h1:not(header h1), h2, h3,
 }
 /* Buttons without an outline or fill of their own (icon buttons inside them stay as they are) */
 :root body :is(.cam-btn, .se-btn, .vs-btn, .lad-btn):not(.ghost):not(.primary):not(.danger):not(.bl-danger):not(.la-danger)::before { --la-btn-fill: var(--la-text); }
+/* …and their text turns the page colour as the fill slides in, so it never sits white on white (or black on black) */
+@media (hover: hover) {
+    :root body :is(.cam-btn, .se-btn, .vs-btn, .lad-btn):not(.ghost):not(.primary):not(.danger):not(.bl-danger):not(.la-danger):not(.danger-line):hover:not(:disabled) { color: var(--la-bg); }
+}
 @media (prefers-reduced-motion: reduce) {
     :root body :is(.cam-btn, .se-btn, .vs-btn, .lad-btn, .ing-btn, .bl-pay), :root body :is(.cam-btn, .se-btn, .vs-btn, .lad-btn, .ing-btn, .bl-pay)::before { transition: none; }
 }

@@ -32,7 +32,7 @@
     <link rel="manifest" href="favicon/site.webmanifest?v=3">
 
     <link rel="stylesheet" href="styles/tailwind.css">
-    <link rel="stylesheet" href="styles/theme.css?v=45">
+    <link rel="stylesheet" href="styles/theme.css?v=46">
     <script>(function(){try{var a=localStorage.getItem('la_accent'),h=document.documentElement;if(a){h.setAttribute('data-accent',a);if(a[0]==='#'){var n=parseInt(a.slice(1),16);h.style.setProperty('--la-accent',a);h.style.setProperty('--la-accent-ink',(0.299*(n>>16)+0.587*(n>>8&255)+0.114*(n&255))>150?'#000000':'#ffffff')}}}catch(e){}window.laAccentHex=function(){return getComputedStyle(document.documentElement).getPropertyValue('--la-accent').trim()||'#39FF14'};var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=7"></script>
@@ -92,7 +92,8 @@
         .ib-err { color:var(--la-bad); font-size:12px; } .ib-err:empty { display:none; }
         .ib-reply { display:flex; flex-direction:column; gap:10px; }
         .ib-reply textarea { min-height:110px; }
-        .cam-btn.danger-line { border-color:var(--la-bad); color:var(--la-bad); }
+        .cam-btn.danger-line { border:1px solid var(--la-bad); color:var(--la-bad); background:var(--la-surface); --la-btn-fill:var(--la-bad); }
+        @media (hover:hover) { .cam-btn.danger-line:hover:not(:disabled) { color:#fff; } }
     </style>
 </head>
 <body class="font-sans antialiased bg-background text-foreground overflow-hidden h-screen w-screen flex selection:bg-primary selection:text-black">
@@ -226,12 +227,12 @@
             var last = emails.filter(function(m) { return m.direction === 'inbound'; }).slice(-1)[0];
             var f = th.folder || folder;
             viewEl.innerHTML = '<div class="ib-bar"><h3>' + esc(th.subject || '(no subject)') + '</h3>'
-                + '<button type="button" class="cam-btn ib-back" data-a="back">Back</button>'
-                + (f !== 'inbox' && f !== 'sent' ? '<button type="button" class="cam-btn" data-a="move" data-f="inbox">Move to Inbox</button>' : '')
-                + (f === 'inbox' ? '<button type="button" class="cam-btn" data-a="move" data-f="archive">Archive</button>' : '')
-                + (f !== 'spam' && f !== 'sent' ? '<button type="button" class="cam-btn" data-a="move" data-f="spam">Spam</button>' : '')
+                + '<button type="button" class="cam-btn ghost ib-back" data-a="back">Back</button>'
+                + (f !== 'inbox' && f !== 'sent' ? '<button type="button" class="cam-btn ghost" data-a="move" data-f="inbox">Move to Inbox</button>' : '')
+                + (f === 'inbox' ? '<button type="button" class="cam-btn ghost" data-a="move" data-f="archive">Archive</button>' : '')
+                + (f !== 'spam' && f !== 'sent' ? '<button type="button" class="cam-btn ghost" data-a="move" data-f="spam">Spam</button>' : '')
                 + (f !== 'trash' ? '<button type="button" class="cam-btn danger-line" data-a="move" data-f="trash">Trash</button>' : '')
-                + '<button type="button" class="cam-btn" data-a="unread">Mark unread</button></div>';
+                + '<button type="button" class="cam-btn ghost" data-a="unread">Mark unread</button></div>';
             emails.forEach(function(m) {
                 var box = document.createElement('div'); box.className = 'ib-mail';
                 var out = m.direction === 'outbound';
