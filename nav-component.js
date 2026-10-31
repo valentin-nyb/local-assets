@@ -206,7 +206,9 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>
             <div class="la-accent-dots" role="radiogroup" aria-label="Accent colour">
                 ${LA_ACCENTS.map(function(a) { return '<button type="button" role="radio" data-accent="' + a[0] + '" aria-label="' + a[1] + '" title="' + a[1] + '" aria-checked="' + ((localStorage.getItem('la_accent') || '') === a[0]) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>'; }).join('')}
+                <button type="button" role="radio" data-accent-own aria-label="Your own colour (HEX)" title="Your own colour (HEX)" aria-checked="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
             </div>
+            <div class="la-accent-hex" hidden><input type="color" id="la-accent-pick" aria-label="Pick a colour"><input type="text" id="la-accent-hex" maxlength="7" placeholder="#RRGGBB" spellcheck="false" autocomplete="off" aria-label="HEX colour"></div>
             <div class="la-accent-save" hidden><button type="button" id="la-accent-save">Save colour</button><span id="la-accent-msg" role="status"></span></div>
         </div>
     `;
@@ -262,9 +264,18 @@ document.addEventListener("DOMContentLoaded", () => {
         // This device remembers the saved one (la_accent) so pages open in it straight away.
         var _accSaved = ''; try { _accSaved = localStorage.getItem('la_accent') || ''; } catch (_) {}
         var _accToken = function() { try { return JSON.parse(localStorage.getItem('la_admin') || '{}').webToken || ''; } catch (_) { return ''; } };
+        // Your own colour: a HEX code (#RRGGBB), with black or white text on it, whichever reads better
+        var isHex = function(a) { return /^#[0-9a-f]{6}$/i.test(a || ''); };
+        var inkOf = function(h) { var n = parseInt(h.slice(1), 16); return 0.299 * (n >> 16) + 0.587 * (n >> 8 & 255) + 0.114 * (n & 255) > 150 ? '#000000' : '#ffffff'; };
         function applyAccent(a) {
-            if (a) document.documentElement.setAttribute('data-accent', a); else document.documentElement.removeAttribute('data-accent');
+            var root = document.documentElement;
+            if (a) root.setAttribute('data-accent', a); else root.removeAttribute('data-accent');
+            if (isHex(a)) { root.style.setProperty('--la-accent', a); root.style.setProperty('--la-accent-ink', inkOf(a)); }
+            else { root.style.removeProperty('--la-accent'); root.style.removeProperty('--la-accent-ink'); }
             document.querySelectorAll('.la-accent-dots button[data-accent]').forEach(function(b) { b.setAttribute('aria-checked', b.getAttribute('data-accent') === a ? 'true' : 'false'); });
+            document.querySelectorAll('.la-accent-dots button[data-accent-own]').forEach(function(b) { b.setAttribute('aria-checked', isHex(a) ? 'true' : 'false'); if (isHex(a)) b.style.setProperty('--dot', a); });
+            document.querySelectorAll('#la-accent-pick').forEach(function(i) { if (isHex(a)) i.value = a.toLowerCase(); });
+            document.querySelectorAll('#la-accent-hex').forEach(function(i) { if (isHex(a) && document.activeElement !== i) i.value = a.toUpperCase(); });
             // Save shows while the colour on screen isn't the saved one
             document.querySelectorAll('.la-accent-save').forEach(function(r) { if (a !== _accSaved) { r.hidden = false; var m = r.querySelector('#la-accent-msg'); if (m) m.textContent = ''; } else if (!r.dataset.justSaved) r.hidden = true; });
             // Video players take a colour value, not the CSS variable
@@ -272,14 +283,27 @@ document.addEventListener("DOMContentLoaded", () => {
             if (hex) document.querySelectorAll('mux-player').forEach(function(m) { m.setAttribute('accent-color', hex); });
             document.dispatchEvent(new CustomEvent('accentchange'));
         }
+        function hexRows(show) { document.querySelectorAll('.la-accent-hex').forEach(function(r) { r.hidden = !show; }); }
+        // Typing a HEX code (# optional, 3 or 6 digits) or picking a colour shows it straight away; Save keeps it
+        document.addEventListener('input', function(e) {
+            if (e.target.id === 'la-accent-pick') { applyAccent(e.target.value.toLowerCase()); return; }
+            if (e.target.id !== 'la-accent-hex') return;
+            var v = e.target.value.trim().replace(/^#?/, '#');
+            if (/^#[0-9a-f]{3}$/i.test(v)) v = '#' + v.slice(1).split('').map(function(c) { return c + c; }).join('');
+            if (isHex(v)) applyAccent(v.toLowerCase());
+        });
         function keepAccent(a) { _accSaved = a; try { if (a) localStorage.setItem('la_accent', a); else localStorage.removeItem('la_accent'); } catch (_) {} }
         document.addEventListener('click', function(e) {
             // Closed, the dots show only the chosen colour; clicking it opens them all, picking one closes them
             var btn = e.target.closest('.la-accent-dots button[data-accent]');
             var dots = btn && btn.parentNode;
             if (btn && !dots.classList.contains('open')) { dots.classList.add('open'); return; }
-            if (btn) { applyAccent(btn.getAttribute('data-accent')); dots.classList.remove('open'); return; }
-            if (!e.target.closest('.la-accent-dots')) document.querySelectorAll('.la-accent-dots.open').forEach(function(d) { d.classList.remove('open'); });
+            if (btn) { applyAccent(btn.getAttribute('data-accent')); dots.classList.remove('open'); hexRows(false); return; }
+            // Your own colour: opens the colour picker and the HEX box under the dots
+            var own = e.target.closest('.la-accent-dots button[data-accent-own]');
+            if (own && !own.parentNode.classList.contains('open')) { own.parentNode.classList.add('open'); return; }
+            if (own) { hexRows(true); var hx = document.getElementById('la-accent-hex'); if (hx) hx.focus(); return; }
+            if (!e.target.closest('.la-accent-dots, .la-accent-hex')) { document.querySelectorAll('.la-accent-dots.open').forEach(function(d) { d.classList.remove('open'); }); hexRows(false); }
             var save = e.target.closest('#la-accent-save');
             if (!save) return;
             var a = document.documentElement.getAttribute('data-accent') || '', row = save.parentNode, msg = row.querySelector('#la-accent-msg');
@@ -291,7 +315,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 .then(function() { save.disabled = false; });
         });
         document.addEventListener('themechange', function() { applyAccent(document.documentElement.getAttribute('data-accent') || ''); });
-        if (_accSaved && !document.documentElement.getAttribute('data-accent')) document.documentElement.setAttribute('data-accent', _accSaved);
+        if (_accSaved) applyAccent(document.documentElement.getAttribute('data-accent') || _accSaved);
         // The colour saved with the login (from another device): shown here too, unless a new one is being tried
         if (_accToken()) fetch('/api/prefs', { headers: { Authorization: 'Bearer ' + _accToken() } }).then(function(r) { return r.ok ? r.json() : null; }).then(function(d) {
             if (!d || d.accent === _accSaved) return;

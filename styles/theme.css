@@ -807,6 +807,15 @@ html:not(.dark) .la-accent-dots [data-accent=""] { --dot: #F97316; }
 .la-accent-dots [data-accent="indigo"] { --dot: #818CF8; }
 .la-accent-dots [data-accent="blue"]   { --dot: #60A5FA; }
 .la-accent-dots [data-accent="teal"]   { --dot: #2DD4BF; }
+.la-accent-dots [data-accent-own] { --dot: conic-gradient(#F87171, #FACC15, #39FF14, #2DD4BF, #60A5FA, #818CF8, #F472B6, #F87171); }
+.la-accent-dots [data-accent-own] svg { color: var(--la-accent-ink); }
+.la-accent-hex { display: flex; gap: 8px; justify-content: center; align-items: center; margin-top: 12px; }
+.la-accent-hex[hidden] { display: none; }
+.la-accent-hex input[type="color"] { width: 28px; height: 28px; padding: 0; border: 1px solid var(--la-border, #27272a); border-radius: 50%; background: none; cursor: pointer; overflow: hidden; }
+.la-accent-hex input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+.la-accent-hex input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 50%; }
+.la-accent-hex input[type="text"] { width: 96px; padding: 6px 10px; border: 1px solid var(--la-border, #27272a); border-radius: 9999px; background: transparent; color: var(--la-text); font: 500 11px/14px 'JetBrains Mono', monospace; letter-spacing: .06em; text-transform: uppercase; text-align: center; outline: none; }
+.la-accent-hex input[type="text"]:focus { border-color: var(--la-accent); }
 html:not(.dark) .la-accent-dots [data-accent="yellow"] { --dot: #CA8A04; }
 html:not(.dark) .la-accent-dots [data-accent="orange"] { --dot: #EA580C; }
 html:not(.dark) .la-accent-dots [data-accent="red"]    { --dot: #DC2626; }
