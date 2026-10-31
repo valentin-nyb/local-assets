@@ -273,8 +273,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         function keepAccent(a) { _accSaved = a; try { if (a) localStorage.setItem('la_accent', a); else localStorage.removeItem('la_accent'); } catch (_) {} }
         document.addEventListener('click', function(e) {
+            // Closed, the dots show only the chosen colour; clicking it opens them all, picking one closes them
             var btn = e.target.closest('.la-accent-dots button[data-accent]');
-            if (btn) { applyAccent(btn.getAttribute('data-accent')); return; }
+            var dots = btn && btn.parentNode;
+            if (btn && !dots.classList.contains('open')) { dots.classList.add('open'); return; }
+            if (btn) { applyAccent(btn.getAttribute('data-accent')); dots.classList.remove('open'); return; }
+            if (!e.target.closest('.la-accent-dots')) document.querySelectorAll('.la-accent-dots.open').forEach(function(d) { d.classList.remove('open'); });
             var save = e.target.closest('#la-accent-save');
             if (!save) return;
             var a = document.documentElement.getAttribute('data-accent') || '', row = save.parentNode, msg = row.querySelector('#la-accent-msg');
