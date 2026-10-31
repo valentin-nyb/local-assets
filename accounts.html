@@ -32,12 +32,12 @@
     <link rel="manifest" href="favicon/site.webmanifest?v=3">
 
     <link rel="stylesheet" href="styles/tailwind.css">
-    <link rel="stylesheet" href="styles/theme.css?v=46">
+    <link rel="stylesheet" href="styles/theme.css?v=47">
     <script>(function(){try{var a=localStorage.getItem('la_accent'),h=document.documentElement;if(a){h.setAttribute('data-accent',a);if(a[0]==='#'){var n=parseInt(a.slice(1),16);h.style.setProperty('--la-accent',a);h.style.setProperty('--la-accent-ink',(0.299*(n>>16)+0.587*(n>>8&255)+0.114*(n&255))>150?'#000000':'#ffffff')}}}catch(e){}window.laAccentHex=function(){return getComputedStyle(document.documentElement).getPropertyValue('--la-accent').trim()||'#39FF14'};var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=7"></script>
     <script src="/la-media.js?v=2"></script>
-    <script src="nav-component.js?v=58"></script>
+    <script src="nav-component.js?v=59"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
         .nav-link.active { color: var(--la-accent) !important; background: color-mix(in srgb, var(--la-accent) 5%, transparent); border-left: 2px solid var(--la-accent); }
@@ -115,6 +115,27 @@
         .ac-check { display:flex; align-items:center; gap:10px; font-size:13px; color:var(--la-sub); }
         .ac-check input { width:16px; height:16px; accent-color:var(--la-accent); }
         .ac-panel .ac-btn.primary-acc { background:var(--la-accent); border-color:var(--la-accent); color:var(--la-accent-ink); }
+        /* Video protection: plain steps, one card per account */
+        .vp-intro { font-size:13px; line-height:1.6; color:var(--la-sub); margin:10px 0 16px; max-width:720px; }
+        .vp-intro b { color:var(--la-text); font-weight:600; }
+        .vp-block { border:1px solid var(--la-line); border-radius:16px; padding:16px 18px; margin-bottom:12px; background:var(--la-surface); }
+        .vp-block h4 { margin:0 0 4px; font-size:14px; font-weight:600; color:var(--la-text); }
+        .vp-block p { margin:0 0 12px; font-size:12px; line-height:1.55; color:var(--la-sub); max-width:640px; }
+        .vp-row { display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
+        .vp-msg { font-size:12px; color:var(--la-sub); } .vp-msg:empty { display:none; }
+        .vp-acct { border:1px solid var(--la-line); border-radius:16px; padding:16px 18px; margin-top:10px; }
+        .vp-head { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom:12px; }
+        .vp-name { font-size:15px; font-weight:600; color:var(--la-text); }
+        .vp-pill { font:600 10px/1 'JetBrains Mono', monospace; letter-spacing:.12em; text-transform:uppercase; padding:5px 10px; border-radius:999px; border:1px solid var(--la-line); color:var(--la-sub); }
+        .vp-pill.on { border-color:var(--la-accent); color:var(--la-accent); }
+        .vp-pill.bad { border-color:var(--la-bad); color:var(--la-bad); }
+        .vp-steps { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:10px; }
+        .vp-step { border:1px solid var(--la-line); border-radius:12px; padding:12px 14px; display:flex; flex-direction:column; gap:8px; }
+        .vp-step small { font:600 10px/1 'JetBrains Mono', monospace; letter-spacing:.14em; text-transform:uppercase; color:var(--la-dim); }
+        .vp-step span { font-size:12px; line-height:1.5; color:var(--la-sub); flex:1; }
+        .vp-step .cam-btn { align-self:flex-start; }
+        .vp-undo { margin-top:10px; font-size:12px; color:var(--la-sub); }
+        .vp-undo button { all:unset; cursor:pointer; color:var(--la-text); text-decoration:underline; text-underline-offset:3px; }
 </style>
 </head>
 <body class="font-sans antialiased bg-background text-foreground overflow-hidden h-screen w-screen flex selection:bg-primary selection:text-black">
@@ -144,10 +165,18 @@
                 <div class="ac-list" id="ac-list"><la-spin topic="accounts"></la-spin></div>
                 <!-- Video protection: each account's Mux storage can sign its videos (signed playback) -->
                 <details class="ac-on-recent" id="ac-prot" style="margin-top:22px"><summary>Video protection</summary>
-                    <p class="ac-sub" style="margin:10px 0">Before videos are switched to signed links, each account's Cloud Storage needs a signing key and the site-only rule. Check makes them where they're missing and shows any account whose token can't.</p>
-                    <button type="button" class="cam-btn" id="ac-prot-check">Check every account</button>
-                    <button type="button" class="cam-btn" id="ac-prot-brand">Copy Brand Kit files to the private store</button> <span class="ac-sub" id="ac-prot-brand-msg"></span>
-                    <div id="ac-prot-list" class="ac-on-list" style="margin-top:12px"></div></details>
+                    <p class="vp-intro">Protected videos <b>only play on local-assets.com</b>, for someone signed in to that account (and in links you share). Anyone who copies a video's address can't play or download it anywhere else.</p>
+                    <div class="vp-block">
+                        <h4>1. Check the accounts</h4>
+                        <p>Gets every account ready for protection and lists them below with the next steps. Nothing changes for viewers.</p>
+                        <div class="vp-row"><button type="button" class="cam-btn ghost" id="ac-prot-check">Check accounts</button></div>
+                        <div id="ac-prot-list"></div>
+                    </div>
+                    <div class="vp-block">
+                        <h4>Brand Kit files</h4>
+                        <p>Copies every logo, font, photo and video in the Brand Kits into private storage, where only signed-in people can open them. Safe to run again: files already copied are skipped.</p>
+                        <div class="vp-row"><button type="button" class="cam-btn ghost" id="ac-prot-brand">Copy Brand Kit files</button><span class="vp-msg" id="ac-prot-brand-msg"></span></div>
+                    </div></details>
                 <!-- The emails clients get, as examples -->
             </div>
         </div>
@@ -195,9 +224,19 @@
                 var d = await r.json(); if (!r.ok) throw new Error(d.error || r.status);
                 var names = {}; _accounts.forEach(function(a) { names[a.slug] = a.name; });
                 list.innerHTML = d.accounts.map(function(a) {
-                    return '<div class="ac-sub" style="margin:6px 0;display:flex;flex-wrap:wrap;align-items:center;gap:8px"><span><b>' + esc(names[a.slug] || a.slug) + '</b> · ' +
-                        (a.ok ? (a.locked ? '<b style="color:var(--la-accent)">Signed</b> since ' + day(a.locked) : 'Ready to switch') + (a.siteOnly ? ' · plays only on local-assets.com' : ' · site-only rule missing') : '<span style="color:var(--la-bad)">' + esc(a.error) + '</span>') + '</span>' +
-                        (a.ok ? '<button type="button" class="cam-btn" data-sw="add" data-slug="' + esc(a.slug) + '">1 · Add signed IDs</button><button type="button" class="cam-btn" data-sw="lock" data-slug="' + esc(a.slug) + '">2 · Lock</button><button type="button" class="cam-btn" data-sw="undo" data-slug="' + esc(a.slug) + '">Undo</button><span data-sw-msg></span>' : '') + '</div>';
+                    var sl = esc(a.slug);
+                    var pill = !a.ok ? '<span class="vp-pill bad">Can\'t be protected</span>' : a.locked ? '<span class="vp-pill on">Protected since ' + day(a.locked) + '</span>' : '<span class="vp-pill">Not protected yet</span>';
+                    if (!a.ok) return '<div class="vp-acct"><div class="vp-head"><span class="vp-name">' + esc(names[a.slug] || a.slug) + '</span>' + pill + '</div><p class="vp-msg" style="color:var(--la-bad)">' + esc(a.error) + '</p></div>';
+                    return '<div class="vp-acct" data-row>'
+                        + '<div class="vp-head"><span class="vp-name">' + esc(names[a.slug] || a.slug) + '</span>' + pill + '</div>'
+                        + '<div class="vp-steps">'
+                        + '<div class="vp-step"><small>Step 2</small><span>Prepare: gives every video a private address beside its public one. Viewers notice nothing.</span><button type="button" class="cam-btn ghost" data-sw="add" data-slug="' + sl + '">Prepare videos</button></div>'
+                        + '<div class="vp-step"><small>Step 3</small><span>Protect: removes the public addresses, so the videos only play on local-assets.com.</span><button type="button" class="cam-btn primary" data-sw="lock" data-slug="' + sl + '">Protect videos</button></div>'
+                        + '</div>'
+                        + '<p class="vp-msg" data-sw-msg style="margin-top:10px"></p>'
+                        + '<p class="vp-undo" data-undo' + (a.locked ? '' : ' hidden') + '>Something not playing? <button type="button" data-sw="undo" data-slug="' + sl + '">Undo protection</button> puts the public addresses back.</p>'
+                        + (a.siteOnly ? '' : '<p class="vp-msg" style="color:var(--la-warn)">The "only on local-assets.com" rule is missing: check the accounts again.</p>')
+                        + '</div>';
                 }).join('');
             } catch (e) { list.textContent = 'Could not check: ' + e.message; }
             b.disabled = false;
@@ -221,8 +260,8 @@
         // One account's switch: a step runs page by page (100 videos at a time) until it's done
         document.getElementById('ac-prot-list').addEventListener('click', async function(e) {
             var b = e.target.closest('[data-sw]'); if (!b) return;
-            var step = b.dataset.sw, slug = b.dataset.slug, row = b.parentNode, msg = row.querySelector('[data-sw-msg]');
-            if (step === 'lock' && !(await laConfirm({ title: 'Lock this account\'s videos?', message: 'Their public addresses stop working: they play only on local-assets.com for someone signed in, and in shared links. Undo puts public addresses back (with new links).', confirmText: 'Lock' }))) return;
+            var step = b.dataset.sw, slug = b.dataset.slug, row = b.closest('[data-row]'), msg = row.querySelector('[data-sw-msg]');
+            if (step === 'lock' && !(await laConfirm({ title: 'Protect this account\'s videos?', message: 'Their public addresses stop working: the videos only play on local-assets.com for someone signed in, and in links you share. Do Prepare videos first. Undo protection puts public addresses back (with new links).', confirmText: 'Protect' }))) return;
             row.querySelectorAll('[data-sw]').forEach(function(x) { x.disabled = true; });
             var page = 1, changed = 0, failed = 0;
             try {
@@ -233,7 +272,8 @@
                     changed += d.changed; failed += d.failed;
                     if (!d.more) break; page = d.page;
                 }
-                msg.textContent = (step === 'add' ? 'Signed IDs added: ' : step === 'lock' ? 'Locked, public addresses removed: ' : 'Public addresses back: ') + changed + (failed ? ' · ' + failed + ' failed (try again)' : '');
+                msg.textContent = (step === 'add' ? 'Prepared: ' + changed + ' videos. Next: Protect videos.' : step === 'lock' ? 'Protected: ' + changed + ' videos now only play on local-assets.com.' : 'Undone: ' + changed + ' videos have public addresses again.') + (failed ? ' ' + failed + ' failed (press it again)' : '');
+                var u = row.querySelector('[data-undo]'); if (u) u.hidden = step !== 'lock';
             } catch (err) { msg.textContent = 'Stopped: ' + err.message + ' (try again; it goes on where it stopped)'; }
             row.querySelectorAll('[data-sw]').forEach(function(x) { x.disabled = false; });
         });

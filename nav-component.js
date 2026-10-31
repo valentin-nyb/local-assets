@@ -104,15 +104,15 @@ document.addEventListener("DOMContentLoaded", () => {
         style.id = 'la-theme-switcher-css';
         style.textContent = `
             .la-theme-switcher{display:inline-grid;grid-template-columns:repeat(3,1fr);background:#111;border:1px solid #27272a;border-radius:9999px;padding:3px;gap:2px}
-            .la-theme-switcher button{all:unset;display:inline-flex;align-items:center;justify-content:center;gap:0;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;line-height:14px;letter-spacing:.05em;text-transform:uppercase;padding:5px 10px;border-radius:9999px;cursor:pointer;color:rgba(255,255,255,.2);transition:color .3s ease-in-out,background-color .3s ease-in-out;white-space:nowrap;-webkit-user-select:none;user-select:none}
-            .la-theme-switcher button:hover{color:rgba(255,255,255,.45)}
+            .la-theme-switcher button{all:unset;display:inline-flex;align-items:center;justify-content:center;gap:0;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;line-height:14px;letter-spacing:.05em;text-transform:uppercase;padding:5px 10px;border-radius:9999px;cursor:pointer;color:rgba(255,255,255,.5);transition:color .3s ease-in-out,background-color .3s ease-in-out;white-space:nowrap;-webkit-user-select:none;user-select:none}
+            .la-theme-switcher button:hover{color:rgba(255,255,255,.8)}
             .la-theme-switcher button[aria-checked="true"]{background:rgba(255,255,255,.08);color:#fff}
             .la-theme-switcher button .la-theme-icon{font-size:12px;display:inline-flex;max-width:0;opacity:0;overflow:hidden;transition:max-width .3s ease-in-out,opacity .3s ease-in-out,margin .3s ease-in-out;margin-right:0}
             .la-theme-switcher button[aria-checked="true"] .la-theme-icon{max-width:18px;opacity:1;margin-right:5px}
             .la-theme-switcher button span{margin-right:-.05em}
             html:not(.dark) .la-theme-switcher{background:#e4e4e7;border-color:#d4d4d8}
-            html:not(.dark) .la-theme-switcher button{color:rgba(0,0,0,.3)}
-            html:not(.dark) .la-theme-switcher button:hover{color:rgba(0,0,0,.55)}
+            html:not(.dark) .la-theme-switcher button{color:rgba(0,0,0,.55)}
+            html:not(.dark) .la-theme-switcher button:hover{color:rgba(0,0,0,.8)}
             html:not(.dark) .la-theme-switcher button[aria-checked="true"]{background:rgba(0,0,0,.07);color:#18181b}
             .la-sign-in-btn{position:relative;isolation:isolate;overflow:hidden;height:36px;padding:0 18px;border-radius:999px;background:transparent;border:1px solid color-mix(in srgb,var(--la-text,#fafafa) 30%,transparent);color:var(--la-text,#fafafa);font:500 13px/1 'Helvetica Neue',Helvetica,Arial,sans-serif;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:color .3s cubic-bezier(.65,0,.35,1),border-color .3s cubic-bezier(.65,0,.35,1),transform .15s ease}
             .la-sign-in-btn::before{content:"";position:absolute;inset:-1px;z-index:-1;border-radius:inherit;background:var(--la-text,#fafafa);transform:scaleX(0);transform-origin:right center;transition:transform .42s cubic-bezier(.65,0,.35,1);pointer-events:none}
