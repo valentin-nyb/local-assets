@@ -320,14 +320,24 @@
                 .nt-live i, .nt-rec i { width:8px; height:8px; border-radius:50%; background:#ef4444; animation:ntPulse 1.4s ease-in-out infinite; }
                 @keyframes ntPulse { 50% { opacity:.3; } }
                 .nt-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; list-style:none; margin:0; padding:0; counter-reset:nt; }
-                .nt-card { border:1px solid #27272a; background:#0a0a0a; border-radius:18px; overflow:hidden; transition:border-color .25s ease, transform .25s ease; }
-                .nt-card:hover { border-color:rgba(57,255,20,.45); transform:translateY(-3px); }
-                .nt-vis { position:relative; height:190px; background:#0f0f11; border-bottom:1px solid #1f1f22; display:flex; align-items:center; justify-content:center; overflow:hidden; }
-                .nt-txt { padding:18px 20px 20px; }
+                /* Square cards like the rest of the page: mono label on the picture, step + night progress, specs as a key/value table */
+                .nt-card { position:relative; border:1px solid #27272a; background:rgba(10,10,10,.5); overflow:hidden; transition:border-color .25s ease, background-color .25s ease; }
+                .nt-card:hover { border-color:rgba(57,255,20,.5); background:rgba(57,255,20,.03); }
+                .nt-vis { position:relative; height:206px; padding-top:20px; box-sizing:border-box; background:#0c0c0e radial-gradient(rgba(255,255,255,.06) 1px, transparent 1px) 0 0/16px 16px; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+                .nt-vis::before { content:attr(data-tag); position:absolute; left:14px; top:12px; font:500 10px 'JetBrains Mono', monospace; letter-spacing:.2em; text-transform:uppercase; color:rgba(57,255,20,.7); }
+                .nt-vis::after { content:"AUTO"; position:absolute; right:14px; top:12px; font:500 10px 'JetBrains Mono', monospace; letter-spacing:.2em; color:#52525b; }
+                .nt-prog { height:2px; background:#1f1f22; }
+                .nt-prog::after { content:""; display:block; height:100%; width:calc(var(--n) * 100% / 6); background:#39FF14; box-shadow:0 0 6px rgba(57,255,20,.6); }
+                .nt-txt { padding:20px 22px 22px; }
+                .nt-meta { display:flex; justify-content:space-between; align-items:baseline; }
                 .nt-time { font:700 12px 'JetBrains Mono', monospace; color:#39FF14; letter-spacing:.06em; }
-                .nt-txt h3 { font:700 18px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif !important; text-transform:uppercase !important; letter-spacing:.01em; color:#fff; margin:8px 0 6px; }
-                .nt-spec { margin-top:10px !important; padding-top:10px; border-top:1px solid #1f1f22; font:400 11px/1.5 'JetBrains Mono', monospace !important; color:#71717a !important; letter-spacing:.02em; }
-                .nt-txt p { font:400 14px/1.45 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#a1a1aa; margin:0; }
+                .nt-step { font:500 10px 'JetBrains Mono', monospace; letter-spacing:.2em; color:#52525b; }
+                .nt-txt h3 { font:600 20px/1.2 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif !important; text-transform:uppercase !important; letter-spacing:-.01em; color:#fff; margin:10px 0 8px; }
+                .nt-txt p { font:400 13px/1.6 'JetBrains Mono', monospace; color:#a1a1aa; margin:0; }
+                .nt-spec { margin:16px 0 0; border-top:1px solid #1f1f22; }
+                .nt-spec div { display:flex; justify-content:space-between; gap:12px; padding:7px 0; border-bottom:1px dashed #1f1f22; font:400 11px/1.4 'JetBrains Mono', monospace; letter-spacing:.02em; }
+                .nt-spec dt { color:#71717a; text-transform:uppercase; letter-spacing:.14em; font-size:10px; white-space:nowrap; }
+                .nt-spec dd { margin:0; color:#d4d4d8; text-align:right; }
                 /* 1 calendar → camera on */
                 .nt-cal { width:120px; border:1px solid #2a2a2e; border-radius:12px; background:#141416; overflow:hidden; font:500 11px 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#d4d4d8; }
                 .nt-cal b { display:block; padding:7px 10px; background:#1c1c1f; font:700 10px 'JetBrains Mono', monospace; letter-spacing:.12em; color:#71717a; }
@@ -396,29 +406,35 @@
                     <span class="nt-live"><i></i>LIVE</span>
                 </div>
                 <ol class="nt-grid">
-                    <li class="nt-card reveal delay-100">
-                        <div class="nt-vis"><div class="nt-cal"><b>SAT 23:00</b><span>ARTIST NAME</span></div><span class="nt-arrow">→</span><div class="nt-camera"><span class="nt-rec"><i></i>REC</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3"/></svg></div></div>
-                        <div class="nt-txt"><span class="nt-time">22:00</span><h3>Cameras start themselves</h3><p>Your calendar switches them on for every set.</p><p class="nt-spec">iCal sync · opens 2 min early · RTMP to the cloud</p></div>
+                    <li style="--n:1" class="nt-card reveal delay-100">
+                        <div class="nt-vis" data-tag="// Schedule"><div class="nt-cal"><b>SAT 23:00</b><span>ARTIST NAME</span></div><span class="nt-arrow">→</span><div class="nt-camera"><span class="nt-rec"><i></i>REC</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3"/></svg></div></div>
+                        <div class="nt-prog"></div>
+                        <div class="nt-txt"><div class="nt-meta"><span class="nt-time">22:00</span><span class="nt-step">01 / 06</span></div><h3>Cameras start themselves</h3><p>Your calendar switches them on for every set.</p><dl class="nt-spec"><div><dt>Trigger</dt><dd>iCal sync</dd></div><div><dt>Pre-roll</dt><dd>2 min early</dd></div><div><dt>Ingest</dt><dd>RTMP → cloud</dd></div></dl></div>
                     </li>
-                    <li class="nt-card reveal delay-200">
-                        <div class="nt-vis"><div class="nt-phone"><div class="nt-screen"><span class="nt-island"></span><span class="nt-recb"><i></i>REC · CAM 01</span><span class="nt-track"></span><span class="nt-zoom"><b>1×</b><b class="on">2×</b><b>4×</b></span><span class="nt-joy"><i></i></span></div></div></div>
-                        <div class="nt-txt"><span class="nt-time">23:00</span><h3>Every angle, on your phone</h3><p>Move, zoom and follow the DJ.</p><p class="nt-spec">VISCA over IP · presets · AI tracking</p></div>
+                    <li style="--n:2" class="nt-card reveal delay-200">
+                        <div class="nt-vis" data-tag="// Control"><div class="nt-phone"><div class="nt-screen"><span class="nt-island"></span><span class="nt-recb"><i></i>REC · CAM 01</span><span class="nt-track"></span><span class="nt-zoom"><b>1×</b><b class="on">2×</b><b>4×</b></span><span class="nt-joy"><i></i></span></div></div></div>
+                        <div class="nt-prog"></div>
+                        <div class="nt-txt"><div class="nt-meta"><span class="nt-time">23:00</span><span class="nt-step">02 / 06</span></div><h3>Every angle, on your phone</h3><p>Move, zoom and follow the DJ.</p><dl class="nt-spec"><div><dt>Protocol</dt><dd>VISCA over IP</dd></div><div><dt>Recall</dt><dd>Presets</dd></div><div><dt>Follow</dt><dd>AI tracking</dd></div></dl></div>
                     </li>
-                    <li class="nt-card reveal delay-300">
-                        <div class="nt-vis"><div class="nt-stack"><div class="nt-sess"><div></div><div><b>ARTIST NAME</b><span>SAT · 2H 07M</span></div></div></div></div>
-                        <div class="nt-txt"><span class="nt-time">02:00</span><h3>Saved for the DJ</h3><p>Every set, filed by artist and date.</p><p class="nt-spec">Cut at the calendar times · 4K master</p></div>
+                    <li style="--n:3" class="nt-card reveal delay-300">
+                        <div class="nt-vis" data-tag="// Archive"><div class="nt-stack"><div class="nt-sess"><div></div><div><b>ARTIST NAME</b><span>SAT · 2H 07M</span></div></div></div></div>
+                        <div class="nt-prog"></div>
+                        <div class="nt-txt"><div class="nt-meta"><span class="nt-time">02:00</span><span class="nt-step">03 / 06</span></div><h3>Saved for the DJ</h3><p>Every set, filed by artist and date.</p><dl class="nt-spec"><div><dt>Split</dt><dd>Calendar times</dd></div><div><dt>Master</dt><dd>4K</dd></div><div><dt>Index</dt><dd>Artist · date</dd></div></dl></div>
                     </li>
-                    <li class="nt-card reveal delay-100">
-                        <div class="nt-vis"><div class="nt-mc"><div class="nt-tiles"><div></div><div></div><div></div></div><div class="nt-wave"><span style="height:30%"></span><span style="height:55%"></span><span style="height:80%"></span><span style="height:45%"></span><span style="height:95%"></span><span style="height:60%"></span><span style="height:35%"></span><span style="height:70%"></span><span style="height:90%"></span><span style="height:50%"></span><span style="height:25%"></span><span style="height:65%"></span><span style="height:85%"></span><span style="height:40%"></span><span style="height:75%"></span><span style="height:55%"></span><span style="height:30%"></span><span style="height:60%"></span><span style="height:95%"></span><span style="height:45%"></span><span style="height:70%"></span><span style="height:35%"></span><span style="height:80%"></span><span style="height:50%"></span></div></div></div>
-                        <div class="nt-txt"><span class="nt-time">02:15</span><h3>Cut to the music</h3><p>Every camera, edited into one full set.</p><p class="nt-spec">Synced to the console audio · cuts every 4–16 bars · rendered on the Mac mini</p></div>
+                    <li style="--n:4" class="nt-card reveal delay-100">
+                        <div class="nt-vis" data-tag="// Edit"><div class="nt-mc"><div class="nt-tiles"><div></div><div></div><div></div></div><div class="nt-wave"><span style="height:30%"></span><span style="height:55%"></span><span style="height:80%"></span><span style="height:45%"></span><span style="height:95%"></span><span style="height:60%"></span><span style="height:35%"></span><span style="height:70%"></span><span style="height:90%"></span><span style="height:50%"></span><span style="height:25%"></span><span style="height:65%"></span><span style="height:85%"></span><span style="height:40%"></span><span style="height:75%"></span><span style="height:55%"></span><span style="height:30%"></span><span style="height:60%"></span><span style="height:95%"></span><span style="height:45%"></span><span style="height:70%"></span><span style="height:35%"></span><span style="height:80%"></span><span style="height:50%"></span></div></div></div>
+                        <div class="nt-prog"></div>
+                        <div class="nt-txt"><div class="nt-meta"><span class="nt-time">02:15</span><span class="nt-step">04 / 06</span></div><h3>Cut to the music</h3><p>Every camera, edited into one full set.</p><dl class="nt-spec"><div><dt>Sync</dt><dd>Console audio</dd></div><div><dt>Cuts</dt><dd>Every 4–16 bars</dd></div><div><dt>Render</dt><dd>Mac mini</dd></div></dl></div>
                     </li>
-                    <li class="nt-card reveal delay-200">
-                        <div class="nt-vis"><div class="nt-clips"><div style="background-image:url(/img/af/v1.webp)"></div><div style="background-image:url(/img/af/v2.webp)"></div><div style="background-image:url(/img/af/v3.webp)"></div></div></div>
-                        <div class="nt-txt"><span class="nt-time">03:00</span><h3>Clips, ready to post</h3><p>Vertical and branded with your logo.</p><p class="nt-spec">1080 × 1920 · reframed on the DJ · watermark in your fonts</p></div>
+                    <li style="--n:5" class="nt-card reveal delay-200">
+                        <div class="nt-vis" data-tag="// Clips"><div class="nt-clips"><div style="background-image:url(/img/af/v1.webp)"></div><div style="background-image:url(/img/af/v2.webp)"></div><div style="background-image:url(/img/af/v3.webp)"></div></div></div>
+                        <div class="nt-prog"></div>
+                        <div class="nt-txt"><div class="nt-meta"><span class="nt-time">03:00</span><span class="nt-step">05 / 06</span></div><h3>Clips, ready to post</h3><p>Vertical and branded with your logo.</p><dl class="nt-spec"><div><dt>Format</dt><dd>1080 × 1920</dd></div><div><dt>Reframe</dt><dd>On the DJ</dd></div><div><dt>Brand</dt><dd>Logo · your fonts</dd></div></dl></div>
                     </li>
-                    <li class="nt-card reveal delay-300">
-                        <div class="nt-vis"><div class="nt-posts"><span><i>✓</i>YouTube</span><span><i>✓</i>SoundCloud</span><span><i>✓</i>Instagram</span><span><i>✓</i>TikTok</span></div></div>
-                        <div class="nt-txt"><span class="nt-time">10:00</span><h3>Out by morning</h3><p>Posted everywhere your fans are.</p><p class="nt-spec">Direct to YouTube &amp; SoundCloud · streaming and downloads</p></div>
+                    <li style="--n:6" class="nt-card reveal delay-300">
+                        <div class="nt-vis" data-tag="// Publish"><div class="nt-posts"><span><i>✓</i>YouTube</span><span><i>✓</i>SoundCloud</span><span><i>✓</i>Instagram</span><span><i>✓</i>TikTok</span></div></div>
+                        <div class="nt-prog"></div>
+                        <div class="nt-txt"><div class="nt-meta"><span class="nt-time">10:00</span><span class="nt-step">06 / 06</span></div><h3>Out by morning</h3><p>Posted everywhere your fans are.</p><dl class="nt-spec"><div><dt>Direct</dt><dd>YouTube · SoundCloud</dd></div><div><dt>Delivery</dt><dd>Streaming · downloads</dd></div></dl></div>
                     </li>
                 </ol>
             </div>
