@@ -521,18 +521,14 @@
         .ci-steps span { display:block; font-size:13px; line-height:1.55; color:var(--la-sub); }
         .ci-link { color:var(--la-text); text-decoration:underline; text-underline-offset:2px; }
         /* Animated logos in orange (a lighter orange on the dark theme) */
-        /* In the accent colour, moving like the loading text: a spinning glyph, the words typed again and again */
+        /* In the accent colour, slithering like a snake: each letter rises and falls just after the one before it,
+           so a wave runs through the words, again and again */
         .ci-anim { font-style:normal; color:var(--la-accent); white-space:nowrap; }
-        .ci-anim .ca-g { display:inline-block; width:1.1em; font-family:"JetBrains Mono",ui-monospace,Menlo,monospace; }
-        .ci-anim .ca-w { position:relative; display:inline-block; }
-        .ci-anim .ca-w > .ca-full { visibility:hidden; }
-        .ci-anim .ca-w > .ca-t { position:absolute; left:0; top:0; }
-        .ci-anim .ca-k { display:inline-block; width:.5em; height:1em; margin-left:1px; vertical-align:-.15em; background:currentColor; animation:ca-blink 1s steps(1) infinite; }
+        .ci-anim .ca-l { display:inline-block; white-space:pre; animation:ca-snake 1.4s ease-in-out infinite; }
         /* (the steps' own span style, grey and on its own line, doesn't reach the moving words) */
         .ci-steps .ci-anim span { display:inline-block; color:inherit; font-size:inherit; line-height:inherit; }
-        .ci-steps .ci-anim .ca-t { position:absolute; left:0; top:0; white-space:nowrap; }
-        @keyframes ca-blink { 50% { opacity:0; } }
-        @media (prefers-reduced-motion: reduce) { .ci-anim .ca-k { display:none; } }
+        @keyframes ca-snake { 0%, 100% { transform:translateY(.12em) rotate(4deg); } 50% { transform:translateY(-.12em) rotate(-4deg); } }
+        @media (prefers-reduced-motion: reduce) { .ci-anim .ca-l { animation:none; } }
         /* Not wide enough for the two columns: the text, the example's two halves side by side, then the steps */
         @media (max-width: 1180px) {
             .cam-intro { grid-template-columns:minmax(0,1fr); grid-template-areas:'copy' 'ex' 'how'; gap:28px; }
@@ -2501,22 +2497,14 @@
         }
     </script>
     <script>
-    // "Logos can move too": a braille spinner beside it and the words typed in, held, then typed again
+    // "Logos can move too": one span per letter, each a little later in the same wave, so a wave slithers through the words from left to right
     (function() {
-        var FR = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
         document.querySelectorAll('.ci-anim[data-text]').forEach(function(el) {
             var txt = el.getAttribute('data-text');
             el.setAttribute('aria-label', txt);
-            el.innerHTML = '<span class="ca-g" aria-hidden="true">' + FR[0] + '</span><span class="ca-w" aria-hidden="true"><span class="ca-full">' + txt + '</span><span class="ca-t">' + txt + '<span class="ca-k"></span></span></span>';
-            if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-            // the full words keep their place underneath, so the sentence doesn't move while they're typed
-            var g = el.firstChild, t = el.querySelector('.ca-t'), f = 0, n = txt.length, wait = 60;
-            setInterval(function() { f = (f + 1) % FR.length; g.textContent = FR[f]; }, 80);
-            setInterval(function() {
-                if (wait) { wait--; return; }
-                if (n < txt.length) { t.firstChild.textContent = txt.slice(0, ++n); if (n === txt.length) wait = 60; return; }
-                n = 0; t.firstChild.textContent = '';
-            }, 45);
+            el.innerHTML = txt.split('').map(function(c, i) {
+                return '<span class="ca-l" aria-hidden="true" style="animation-delay:' + (-(txt.length - i) * 0.08).toFixed(2) + 's">' + c + '</span>';
+            }).join('');
         });
     })();
     </script>
