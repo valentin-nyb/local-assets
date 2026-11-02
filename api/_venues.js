@@ -209,7 +209,7 @@ export function findVenueByEmail(email, preferredSlug, as) {
   const adminHome = platformAdmins().includes(String(email).toLowerCase().trim()) ? venues.find(v => isAdminVenue(v)) : null;
   const venue = (as && venues.find(v => v.slug === preferredSlug && v.member?.owner === as)) || venues.find(v => v.slug === preferredSlug) || adminHome || venues[0] || null;
   if (venue) console.log('[_venues] findVenueByEmail:', email, '→', venue.slug, venues.length > 1 ? `(1 of ${venues.length})` : '');
-  else console.error('[_venues] findVenueByEmail: no match for', email, '| venue slugs:', Object.keys(getVenuesConfig()));
+  else console.log('[_venues] findVenueByEmail: no match for', email, '| venue slugs:', Object.keys(getVenuesConfig()));
   return venue;
 }
 
@@ -310,11 +310,11 @@ export function getWebSessionAuth(req) {
   const email = payload?.email ? payload.email.toLowerCase().trim() : null;
 
   if (!email) {
-    console.error('[_venues] getWebSessionAuth: no valid session token');
+    console.log('[_venues] getWebSessionAuth: no valid session token');
     return null;
   }
   if (payload.sid && _signedOut.has(payload.sid)) {
-    console.error('[_venues] getWebSessionAuth: signed out');
+    console.log('[_venues] getWebSessionAuth: signed out');
     return null;
   }
 
@@ -330,7 +330,7 @@ export function getWebSessionAuth(req) {
   // An artist with access to a venue's or label's account reaches only what memberAllowed lets through
   const member = venue?.member || null;
   if (member && !memberAllowed(req)) {
-    console.error('[_venues] artist access: not allowed', email, req.method, String(req.url || '').split('?')[0]);
+    console.log('[_venues] artist access: not allowed', email, req.method, String(req.url || '').split('?')[0]);
     return null;
   }
 

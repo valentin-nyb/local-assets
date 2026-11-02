@@ -30,7 +30,7 @@ export default async function handler(req, res) {
 
   const session = getWebSessionAuth(req);
 
-  console.error('[list-assets] session:', JSON.stringify({
+  console.log('[list-assets] session:', JSON.stringify({
     email:          session?.email          ?? null,
     venueSlug:      session?.venueSlug      ?? null,
     hasMuxCreds:    !!session?.muxAuth,
@@ -72,7 +72,7 @@ export default async function handler(req, res) {
   }
 
   if (!session?.muxAuth) {
-    console.error('[list-assets] no muxAuth — returning []');
+    console.log('[list-assets] no muxAuth — returning []');
     return res.status(200).json([]);
   }
 
@@ -91,7 +91,7 @@ export default async function handler(req, res) {
     }
     // An artist with access sees only their own sets, clips and thumbnails
     if (session.member) allAssets = allAssets.filter(a => sameArtist(artistOf(a), session.member.name));
-    console.error('[list-assets] total assets returned:', allAssets.length);
+    console.log('[list-assets] total assets returned:', allAssets.length);
     return res.status(200).json(allAssets);
   } catch (e) {
     console.error('[list-assets] exception:', e.message);

@@ -26,7 +26,7 @@ export function report(err, note = '', extra = {}) {
   if (!TOKEN) return;
   const message = [note, err?.message ?? (err == null ? '' : String(err))].filter(Boolean).join(' ').slice(0, 1000);
   // Node's own warnings ("(node:8) ExperimentalWarning: …", from Vercel's runtime) aren't errors of ours
-  if (/^\(node:\d+\) \w*Warning:/.test(message)) return;
+  if (/^\(node:\d+\) (\[\w+\] )?\w*Warning:/.test(message)) return;   // also "(node:8) [DEP0169] DeprecationWarning: …"
   const key = message.slice(0, 200);
   const now = Date.now();
   if (now - (seen.get(key) || 0) < 10 * 60 * 1000) return;
