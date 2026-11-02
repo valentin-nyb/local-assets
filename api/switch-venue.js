@@ -69,7 +69,8 @@ export default async function handler(req, res) {
         return res.status(200).json({ ok: true, version: TERMS_VERSION });
       }
       let rec = null; try { rec = JSON.parse(await redis.hGet('terms_accepted', email) || 'null'); } catch (_) {}
-      return res.status(200).json({ accepted: rec?.v === TERMS_VERSION, version: TERMS_VERSION });
+      // updated: agreed to an earlier version, so the dialog says what changed rather than "before you start"
+      return res.status(200).json({ accepted: rec?.v === TERMS_VERSION, updated: !!rec && rec.v !== TERMS_VERSION, version: TERMS_VERSION });
     } finally { await redis.quit().catch(() => {}); }
   }
   // Log out, and renewals checked against Redis itself (the in-memory list can be a minute behind)

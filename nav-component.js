@@ -94,7 +94,7 @@ var LA_ACCENTS = [['', 'Neon green'], ['yellow', 'Yellow'], ['orange', 'Orange']
 window.laSetBreadcrumb = function(el, name) {
     if (!el) return;
     var isLa = /^local\s*[\/-]?\s*assets\b/i.test(String(name || ''));
-    el.textContent = isLa ? 'local / assets™ LTD' : name;
+    el.textContent = isLa ? 'local / assets™' : name;
     el.classList.toggle('is-la', isLa);
 };
 document.addEventListener("DOMContentLoaded", () => {
@@ -799,7 +799,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return fetch('/api/switch-venue', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify(body) })
             .then(function(r) { return r.json().catch(function() { return {}; }).then(function(d) { d._status = r.status; return d; }); });
     }
-    function ask(s, version) {
+    function ask(s, version, updated) {
         if (document.getElementById('la-terms')) return;
         var st = document.createElement('style');
         st.textContent = '#la-terms .lad-panel{width:480px}#la-terms .lat-eyebrow{font:500 10px/1 "JetBrains Mono",ui-monospace,monospace;letter-spacing:.24em;text-transform:uppercase;color:var(--la-dim,#7c8178);margin-bottom:14px}'
@@ -813,9 +813,11 @@ document.addEventListener("DOMContentLoaded", () => {
         wrap.className = 'lad-backdrop'; wrap.id = 'la-terms';
         wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true'); wrap.setAttribute('aria-labelledby', 'la-terms-title');
         wrap.innerHTML = '<div class="lad-panel">'
-            + '<p class="lat-eyebrow">Before you start</p>'
-            + '<h2 class="lad-title" id="la-terms-title">Our terms</h2>'
-            + '<p class="lad-msg">To use local / assets™, please agree to our <a href="/terms" target="_blank" rel="noopener">Terms of Service</a>. Our <a href="/privacy" target="_blank" rel="noopener">Privacy policy</a> explains what we keep and why. You only need to do this once.</p>'
+            + '<p class="lat-eyebrow">' + (updated ? 'Updated terms' : 'Before you start') + '</p>'
+            + '<h2 class="lad-title" id="la-terms-title">OUR TERMS</h2>'
+            + (updated
+                ? '<p class="lad-msg">We\'ve updated our <a href="/terms" target="_blank" rel="noopener">Terms of Service</a>: payments, cancellation and refunds now have their own section. Our <a href="/privacy" target="_blank" rel="noopener">Privacy policy</a> explains what we keep and why. Please agree to carry on.</p>'
+                : '<p class="lad-msg">To use local / assets™, please agree to our <a href="/terms" target="_blank" rel="noopener">Terms of Service</a>. Our <a href="/privacy" target="_blank" rel="noopener">Privacy policy</a> explains what we keep and why. You only need to do this once.</p>')
             + '<label class="lat-check"><input type="checkbox" id="la-terms-tick"><span>I agree to the Terms of Service and have read the Privacy policy.</span></label>'
             + '<p class="lat-err" id="la-terms-err"></p>'
             + '<div class="lad-actions"><button type="button" class="lad-btn primary" id="la-terms-ok" disabled>Continue</button><button type="button" class="lad-btn ghost" id="la-terms-out">Log out</button></div>'
@@ -840,7 +842,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!s || /^\/(login|download|privacy|terms)(\.html)?$/.test(location.pathname)) return;
         post(s.webToken, { termsStatus: true }).then(function(d) {
             if (d._status !== 200 || !d.version) return;
-            if (!d.accepted) ask(s, d.version);
+            if (!d.accepted) ask(s, d.version, d.updated);
         }).catch(function() {});
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run); else run();
