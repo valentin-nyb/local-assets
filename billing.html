@@ -127,6 +127,22 @@
         #bl-cards.hidden, #bl-chart-acct.hidden { display:none !important; }
         .bl-inv-tools { display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
         button.bl-del { color:var(--la-bad, #ef4444); }
+        .bl-pay-body { display:flex; align-items:center; gap:20px; padding:20px; }
+        .bl-pay-card { position:relative; flex-shrink:0; width:150px; height:94px; border-radius:12px; padding:12px 14px; display:flex; flex-direction:column; justify-content:flex-end;
+            border:1px solid color-mix(in srgb, var(--la-accent) 35%, var(--la-line)); background:linear-gradient(135deg, color-mix(in srgb, var(--la-accent) 22%, var(--la-surface)), var(--la-surface) 70%);
+            font-family:'JetBrains Mono',monospace; color:var(--la-text); overflow:hidden; }
+        .bl-pay-card.none { border:1px dashed var(--la-line); background:none; color:var(--la-dim); }
+        .bl-pay-chip { position:absolute; top:12px; left:14px; width:24px; height:18px; border-radius:4px; background:color-mix(in srgb, var(--la-text) 22%, transparent); }
+        .bl-pay-card.none .bl-pay-chip { background:color-mix(in srgb, var(--la-text) 8%, transparent); }
+        .bl-pay-brand { position:absolute; top:12px; right:14px; font-size:10px; font-weight:600; letter-spacing:.16em; text-transform:uppercase; }
+        .bl-pay-num { font-size:12px; letter-spacing:.12em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .bl-pay-card.txt .bl-pay-num { font-size:10.5px; letter-spacing:.04em; white-space:normal; word-break:break-all; line-height:1.35; }   /* Link: an email in place of the digits */
+        .bl-pay-exp { margin-top:3px; font-size:9.5px; letter-spacing:.14em; color:var(--la-dim); min-height:12px; }
+        .bl-pay-info { flex:1; min-width:0; }
+        .bl-pay-title { font-size:15px; font-weight:600; color:var(--la-text); }
+        .bl-pay-info .bl-msg { margin-top:6px; max-width:560px; line-height:1.55; }
+        .bl-pay-body .cam-btn { flex-shrink:0; }
+        @media (max-width:640px) { .bl-pay-body { flex-direction:column; align-items:stretch; } .bl-pay-card { width:100%; max-width:240px; } }
         .bl-cancel-body { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:18px 20px; flex-wrap:wrap; }
         .bl-cancel-body .bl-msg { max-width:620px; line-height:1.55; }
         .bl-danger { background:transparent; color:var(--la-bad, #ef4444); border-color:color-mix(in srgb, var(--la-bad, #ef4444) 45%, transparent); }
@@ -288,6 +304,23 @@
                     <div class="bl-section-head"><h3>Invoices</h3><div class="bl-inv-tools"><select id="bl-inv-filter" class="bl-inv-filter hidden" aria-label="Show invoices for"></select><button type="button" class="cam-btn ghost hidden" id="bl-inv-zip">Download all</button></div></div>
                     <div class="bl-scroll" id="bl-invoices"><la-spin topic="billing" inset></la-spin></div>
                 </section>
+                <!-- How the invoices get paid: the saved card (charged on the 1st), or emailed with 14 days to pay -->
+                <section class="bl-section hidden" id="bl-paycard">
+                    <div class="bl-section-head"><h3>Payment</h3><span class="bl-pill" id="bl-paycard-pill">Invoice by email</span></div>
+                    <div class="bl-pay-body">
+                        <div class="bl-pay-card none" id="bl-paycard-card" aria-hidden="true">
+                            <span class="bl-pay-chip"></span>
+                            <span class="bl-pay-brand" id="bl-paycard-brand">No card</span>
+                            <span class="bl-pay-num" id="bl-paycard-num">•••• ••••</span>
+                            <span class="bl-pay-exp" id="bl-paycard-exp"></span>
+                        </div>
+                        <div class="bl-pay-info">
+                            <p class="bl-pay-title" id="bl-paycard-title">Pay automatically on the 1st</p>
+                            <p class="bl-msg" id="bl-paycard-text"></p>
+                        </div>
+                        <button type="button" class="cam-btn primary" id="bl-paycard-btn">Pay automatically by card</button>
+                    </div>
+                </section>
                 <section class="bl-section hidden bl-fold folded" id="bl-send-box">
                     <div class="bl-section-head bl-fold-head" role="button" tabindex="0" aria-expanded="false" onclick="if(event.target.closest('button,select,a,input'))return;var s=this.parentNode;s.classList.toggle('folded');this.setAttribute('aria-expanded',!s.classList.contains('folded'))" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><h3>Bill to <svg class="bl-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h3><span class="bl-msg" id="bl-stripe-acct">Choose who to see and invoice: plan price, plus usage above what the plan includes</span></div>
                     <form id="bl-send-form" class="bl-admin">
@@ -419,13 +452,6 @@
                     <div class="bl-admin-actions">
                         <button type="button" class="cam-btn primary" id="bl-save">Save rates</button>
                         <span class="bl-msg" id="bl-admin-msg"></span>
-                    </div>
-                </section>
-                <section class="bl-section hidden" id="bl-paycard">
-                    <div class="bl-section-head"><h3>Payment</h3></div>
-                    <div class="bl-cancel-body">
-                        <p class="bl-msg" id="bl-paycard-text"></p>
-                        <button type="button" class="cam-btn primary" id="bl-paycard-btn">Pay automatically by card</button>
                     </div>
                 </section>
                 <section class="bl-section hidden bl-fold folded" id="bl-cancel">
@@ -763,13 +789,29 @@
             // Payment (clients): the card invoices are charged to on the 1st, or a way to add one
             var pbox = document.getElementById('bl-paycard'), pbtn = document.getElementById('bl-paycard-btn'), ptext = document.getElementById('bl-paycard-text');
             pbox.classList.toggle('hidden', admin || !d.payment);
+            var pcard = document.getElementById('bl-paycard-card'), ppill = document.getElementById('bl-paycard-pill'), ptitle = document.getElementById('bl-paycard-title');
+            var setCard = function(on, brand, num, exp) {
+                pcard.classList.toggle('none', !on);
+                pcard.classList.toggle('txt', !!on && !/^•/.test(num));
+                document.getElementById('bl-paycard-brand').textContent = brand;
+                document.getElementById('bl-paycard-num').textContent = num;
+                document.getElementById('bl-paycard-exp').textContent = exp;
+            };
             if (d.payment && d.payment.card) {
                 if (_cardPending) { _cardPending = 0; laToast('Card saved. Your invoices are now paid automatically on the 1st'); }
-                var cd = d.payment.card, brand = cd.brand ? cd.brand.charAt(0).toUpperCase() + cd.brand.slice(1) : 'Card';
-                ptext.textContent = 'Paid automatically: your invoices are charged on the 1st of each month to ' + (cd.label ? cd.label : 'your ' + brand + ' ending ' + cd.last4 + ' (expires ' + cd.exp + ')') + '. Card details stay with Stripe; we never see them.';
+                var cd = d.payment.card;
+                // A card: its brand, last 4 digits and expiry. Link (or another saved way to pay): its name and email
+                if (cd.last4) setCard(true, cd.brand || 'Card', '•••• ' + cd.last4, 'EXP ' + cd.exp);
+                else { var em = (cd.label || '').match(/\(([^)]+)\)/); setCard(true, (cd.label || cd.brand || 'Saved').replace(/\s*\(.*$/, ''), em ? em[1] : 'Saved with Stripe', ''); }
+                ppill.textContent = 'Auto-pay on'; ppill.className = 'bl-pill paid';
+                ptitle.textContent = 'Paid automatically on the 1st';
+                ptext.textContent = 'Each month\'s invoice is charged to this ' + (cd.last4 ? 'card' : 'payment method') + ' on the 1st, and the receipt is emailed to you. Card details stay with Stripe; we never see them.';
                 pbtn.textContent = 'Change card'; pbtn.classList.remove('primary'); pbtn.classList.add('ghost');
             } else if (d.payment) {
-                ptext.textContent = 'Your invoices are emailed on the 1st with 14 days to pay. Add a card and they\'re paid automatically on the 1st instead. You enter it on Stripe\'s secure page; we never see it.';
+                setCard(false, 'No card', '•••• ••••', '');
+                ppill.textContent = 'Invoice by email'; ppill.className = 'bl-pill';
+                ptitle.textContent = 'Pay automatically on the 1st';
+                ptext.textContent = 'Your invoices are emailed on the 1st with 14 days to pay. Add a card and they\'re paid automatically instead. You enter it on Stripe\'s secure page; we never see it.';
                 pbtn.textContent = 'Pay automatically by card'; pbtn.classList.add('primary'); pbtn.classList.remove('ghost');
             }
             if (!pbtn.dataset.wired) {
