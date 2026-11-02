@@ -1,3 +1,4 @@
+import './_report.js';   // errors go to Rollbar
 import crypto from 'crypto';
 import { createClient } from 'redis';
 import { getWebSessionAuth, findVenueByEmail, findVenuesByEmail, freshVenues, getVenuesConfig, getMuxAuthForVenue, platformAdmins, isAdminVenue, artistOf, sameArtist } from './_venues.js';

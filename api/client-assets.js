@@ -1,3 +1,4 @@
+import './_report.js';   // errors go to Rollbar
 import { getClientSession, getMuxAuth } from './_client-auth.js';
 import { muxUrlAuto } from './_signing.js';
 

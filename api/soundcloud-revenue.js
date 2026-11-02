@@ -1,3 +1,4 @@
+import './_report.js';   // errors go to Rollbar
 import { createClient } from 'redis';
 import { getWebSessionAuth } from './_venues.js';
 import { refreshScToken } from './_soundcloud.js';

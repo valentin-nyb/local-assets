@@ -1,3 +1,4 @@
+import './_report.js';   // errors go to Rollbar
 import { pausedBy, sendPaused } from './_suspend.js';
 import { bput as put } from './_brandstore.js';
 import { getWebSessionAuth } from './_venues.js';

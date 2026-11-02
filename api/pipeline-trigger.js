@@ -1,3 +1,4 @@
+import './_report.js';   // errors go to Rollbar
 import { getWebSessionAuth } from './_venues.js';
 import crypto from 'crypto';
 import { createClient } from 'redis';

@@ -1,3 +1,4 @@
+import './_report.js';   // errors go to Rollbar
 import { getWebSessionAuth } from './_venues.js';
 
 // Admin check: which Mux key sets are configured, how many videos each holds, and which share an

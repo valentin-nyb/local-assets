@@ -1,3 +1,4 @@
+import './_report.js';   // errors go to Rollbar
 import { listPool, addToPool, removeFromPool, activateFromPool, poolSize } from './_mux-pool.js';
 import { mailFrom, mailError } from './_emails.js';
 import { unpaidKey, readUnpaid } from './_suspend.js';

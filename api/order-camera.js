@@ -1,3 +1,4 @@
+import './_report.js';   // errors go to Rollbar
 import Stripe from 'stripe';
 import { getWebSessionAuth } from './_venues.js';
 import { createCheckout } from './_checkout.js';

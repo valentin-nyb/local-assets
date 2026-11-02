@@ -1,3 +1,4 @@
+import './_report.js';   // errors go to Rollbar
 import { spawn } from 'node:child_process';
 import ffmpegPath from 'ffmpeg-static';
 import { createClient } from 'redis';

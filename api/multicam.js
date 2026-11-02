@@ -1,3 +1,4 @@
+import './_report.js';   // errors go to Rollbar
 import { videoQuality, maxResolution } from './_video-quality.js';
 import crypto from 'crypto';
 import { createClient } from 'redis';

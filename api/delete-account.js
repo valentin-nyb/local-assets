@@ -1,3 +1,4 @@
+import './_report.js';   // errors go to Rollbar
 import { blist as list, bdel as del } from './_brandstore.js';
 import { createClient } from 'redis';
 import { getWebSessionAuth, getVenuesConfig, isAdminVenue, refreshRegistry } from './_venues.js';

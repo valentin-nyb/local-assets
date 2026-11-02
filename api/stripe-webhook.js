@@ -1,3 +1,4 @@
+import './_report.js';   // errors go to Rollbar
 import Stripe from 'stripe';
 import { kv } from '@vercel/kv';
 import { Resend } from 'resend';

@@ -1,3 +1,4 @@
+import './_report.js';   // errors go to Rollbar
 import { createClient } from 'redis';
 import { getWebSessionAuth, findVenuesByEmail, signWebToken, venueChoicesTyped, freshVenues, endSignIn, signInEnded, platformAdmins, isAdminVenue, getVenuesConfig } from './_venues.js';
 

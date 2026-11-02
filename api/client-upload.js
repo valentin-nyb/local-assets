@@ -1,3 +1,4 @@
+import './_report.js';   // errors go to Rollbar
 import { getClientSession, getMuxAuth } from './_client-auth.js';
 
 export default async function handler(req, res) {

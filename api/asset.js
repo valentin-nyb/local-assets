@@ -1,3 +1,4 @@
+import './_report.js';   // errors go to Rollbar
 import { bhead as head, readUrl, canon } from './_brandstore.js';
 import { createClient } from 'redis';
 

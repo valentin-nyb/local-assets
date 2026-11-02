@@ -1,3 +1,4 @@
+import './_report.js';   // errors go to Rollbar
 import { pausedBy, sendPaused } from './_suspend.js';
 import crypto from 'crypto';
 import { createClient } from 'redis';

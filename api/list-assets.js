@@ -1,3 +1,4 @@
+import './_report.js';   // errors go to Rollbar
 import { getWebSessionAuth, getVenuesConfig, getMuxAuthForVenue, isAdminVenue, platformAdmins, artistOf, sameArtist } from './_venues.js';
 import { listThumbnailAssets } from './_thumbnails.js';
 import crypto from 'crypto';

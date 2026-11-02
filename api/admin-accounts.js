@@ -1,3 +1,4 @@
+import './_report.js';   // errors go to Rollbar
 import { VIDEO_QUALITY_KEY, VIDEO_4K_KEY } from './_video-quality.js';
 import { blist as list, bdel as del } from './_brandstore.js';
 import { createClient } from 'redis';

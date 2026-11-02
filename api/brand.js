@@ -1,3 +1,4 @@
+import './_report.js';   // errors go to Rollbar
 import { videoQuality } from './_video-quality.js';
 import { pausedBy, sendPaused } from './_suspend.js';
 import { blist as list, bdel as del, bcopy as copy, bput as put, privateBrand, readUrl } from './_brandstore.js';

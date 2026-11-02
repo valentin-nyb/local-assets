@@ -1,3 +1,4 @@
+import './_report.js';   // errors go to Rollbar
 import { pausedBy, sendPaused } from './_suspend.js';
 import { createClient } from 'redis';
 import { getWebSessionAuth, getVenuesConfig, getMuxAuthForVenue, platformAdmins, isAdminVenue, framePass, sameArtist } from './_venues.js';

@@ -1,3 +1,4 @@
+import './_report.js';   // errors go to Rollbar
 import Stripe from 'stripe';
 import { createClient } from 'redis';
 import { readPlans, planForType, commitEndFor } from './_billing.js';

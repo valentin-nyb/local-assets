@@ -1,3 +1,4 @@
+import './_report.js';   // errors go to Rollbar
 import { blist as list } from './_brandstore.js';
 import { getWebSessionAuth } from './_venues.js';
 

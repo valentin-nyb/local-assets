@@ -1,3 +1,4 @@
+import './_report.js';   // errors go to Rollbar
 import { createClient } from 'redis';
 
 const CALLBACK_URI = 'https://local-assets.com/api/soundcloud-venue-callback';

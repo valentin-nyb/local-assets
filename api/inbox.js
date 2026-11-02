@@ -1,3 +1,4 @@
+import './_report.js';   // errors go to Rollbar
 import { getWebSessionAuth, isAdminVenue } from './_venues.js';
 import { mailError } from './_emails.js';
 
