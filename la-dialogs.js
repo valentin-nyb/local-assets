@@ -7,7 +7,7 @@
   .lad-backdrop{position:fixed;inset:0;z-index:2147483600;display:flex;align-items:center;justify-content:center;padding:16px;
     background:var(--la-overlay,rgba(0,0,0,.6));-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);opacity:0;transition:opacity .15s}
   .lad-backdrop.in{opacity:1}
-  .lad-panel{width:440px;max-width:100%;background:var(--la-raised,#0c0c0d);color:var(--la-text,#fafafa);border:1px solid var(--la-line,#27272a);
+  .lad-panel{width:auto;min-width:min(340px,100%);max-width:min(440px,100%);background:var(--la-raised,#0c0c0d);color:var(--la-text,#fafafa);border:1px solid var(--la-line,#27272a);
     border-radius:28px;padding:30px 32px 32px;box-shadow:var(--la-shadow,0 24px 80px rgba(0,0,0,.55));font-family:Inter,ui-sans-serif,system-ui,sans-serif;
     transform:translateY(6px) scale(.98);transition:transform .15s}
   .lad-backdrop.in .lad-panel{transform:none}
