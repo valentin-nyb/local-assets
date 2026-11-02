@@ -125,8 +125,8 @@
         .vp-block p { margin:0 0 12px; font-size:12px; line-height:1.55; color:var(--la-sub); max-width:640px; }
         .vp-row { display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
         .vp-msg { font-size:12px; color:var(--la-sub); } .vp-msg:empty { display:none; }
-        .vp-acct { border:1px solid var(--la-line); border-radius:16px; padding:16px 18px; margin-top:10px; }
-        .vp-head { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom:12px; }
+        .vp-acct { border:1px solid var(--la-line); border-radius:16px; padding:16px 18px; margin-top:14px; }
+        .vp-head { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom:14px; }
         .vp-name { font-size:15px; font-weight:600; color:var(--la-text); }
         .vp-pill { font:600 10px/1 'JetBrains Mono', monospace; letter-spacing:.12em; text-transform:uppercase; padding:5px 10px; border-radius:999px; border:1px solid var(--la-line); color:var(--la-sub); }
         .vp-pill.on { border-color:var(--la-accent); color:var(--la-accent); }
@@ -136,7 +136,12 @@
         .vp-step small { font:600 10px/1 'JetBrains Mono', monospace; letter-spacing:.14em; text-transform:uppercase; color:var(--la-dim); }
         .vp-step span { font-size:12px; line-height:1.5; color:var(--la-sub); flex:1; }
         .vp-step .cam-btn { align-self:flex-start; }
-        .vp-undo { margin-top:10px; font-size:12px; color:var(--la-sub); }
+        /* Inside an account's card the box's own paragraph spacing doesn't apply: the lines under the steps sit
+           as far below them as the card's edge is below the lines */
+        .vp-acct p { margin:0; max-width:none; }
+        .vp-acct p.vp-msg[data-sw-msg], .vp-acct .vp-undo, .vp-acct > .vp-msg { margin-top:16px !important; }
+        .vp-block p:last-child { margin-bottom:0; }
+        .vp-undo { font-size:12px; color:var(--la-sub); }
         .vp-undo button { all:unset; cursor:pointer; color:var(--la-text); text-decoration:underline; text-underline-offset:3px; }
 </style>
 </head>
