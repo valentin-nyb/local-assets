@@ -352,9 +352,17 @@
                 .nt-island { position:absolute; left:6px; top:50%; width:9px; height:34px; margin-top:-17px; border-radius:6px; background:#000; }
                 .nt-recb { position:absolute; left:22px; top:8px; display:flex; align-items:center; gap:5px; padding:3px 7px; border-radius:6px; background:rgba(0,0,0,.55); font:700 8px 'JetBrains Mono', monospace; letter-spacing:.1em; color:#fff; }
                 .nt-recb i { width:6px; height:6px; border-radius:50%; background:#ef4444; animation:ntPulse 1.4s ease-in-out infinite; }
-                .nt-track { position:absolute; left:38%; top:30%; width:46px; height:58px; border:1.5px solid #39FF14; border-radius:6px; animation:ntTrack 4s ease-in-out infinite; }
-                .nt-track::after { content:"AI TRACKING"; position:absolute; bottom:-13px; left:-1px; white-space:nowrap; padding:0 4px; border-radius:3px; background:#39FF14; color:#000; font:800 7px/11px 'Helvetica Neue', Helvetica, Arial, sans-serif; }
-                @keyframes ntTrack { 0%,100% { transform:translate(0,0); } 50% { transform:translate(14px,4px); } }
+                /* Tracking box like a real camera overlay: corner brackets, a confidence readout, a centre point, small uneven moves */
+                .nt-track { --c:rgba(57,255,20,.9); position:absolute; left:31%; top:33%; width:44px; height:50px; background:
+                    linear-gradient(var(--c),var(--c)) 0 0/9px 1px, linear-gradient(var(--c),var(--c)) 0 0/1px 9px,
+                    linear-gradient(var(--c),var(--c)) 100% 0/9px 1px, linear-gradient(var(--c),var(--c)) 100% 0/1px 9px,
+                    linear-gradient(var(--c),var(--c)) 0 100%/9px 1px, linear-gradient(var(--c),var(--c)) 0 100%/1px 9px,
+                    linear-gradient(var(--c),var(--c)) 100% 100%/9px 1px, linear-gradient(var(--c),var(--c)) 100% 100%/1px 9px;
+                    background-repeat:no-repeat; outline:1px solid rgba(57,255,20,.18); animation:ntTrack 6s cubic-bezier(.45,0,.3,1) infinite; }
+                .nt-track::before { content:""; position:absolute; left:50%; top:42%; width:3px; height:3px; margin:-1.5px 0 0 -1.5px; border-radius:50%; background:var(--c); }
+                .nt-track::after { content:"DJ 0.97"; position:absolute; top:-10px; left:0; white-space:nowrap; padding:0 3px; background:rgba(0,0,0,.6); color:#39FF14; font:500 6.5px/9px 'JetBrains Mono', monospace; letter-spacing:.06em; animation:ntConf 6s steps(1) infinite; }
+                @keyframes ntTrack { 0%,100% { transform:translate(0,0); width:44px; } 18% { transform:translate(3px,1px); } 37% { transform:translate(1px,2px); width:46px; } 55% { transform:translate(6px,2px); width:43px; } 72% { transform:translate(4px,0); } 86% { transform:translate(-1px,1px); width:45px; } }
+                @keyframes ntConf { 0% { content:"DJ 0.97"; } 33% { content:"DJ 0.94"; } 66% { content:"DJ 0.98"; } }
                 .nt-joy { position:absolute; right:12px; bottom:12px; width:44px; height:44px; border-radius:50%; border:1px solid rgba(255,255,255,.35); background:rgba(0,0,0,.35); backdrop-filter:blur(4px); }
                 .nt-joy i { position:absolute; left:50%; top:50%; width:18px; height:18px; margin:-9px 0 0 -9px; border-radius:50%; background:#fff; animation:ntPad 3.2s ease-in-out infinite; }
                 @keyframes ntPad { 0%,100% { transform:translate(0,0); } 25% { transform:translate(8px,-4px); } 50% { transform:translate(-7px,5px); } 75% { transform:translate(4px,7px); } }
