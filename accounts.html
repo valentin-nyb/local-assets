@@ -354,13 +354,21 @@
                 var d = await r.json(); if (!r.ok) throw new Error(d.error || r.status);
                 var now = d.now || Date.now(), people = d.people || [];
                 var on = people.filter(function(p) { return now - p.at < ONLINE_MS; }), rest = people.filter(function(p) { return now - p.at >= ONLINE_MS; });
+                // Someone who just came online (not on the first look, and not this admin): a short notice
+                var me = ''; try { me = (JSON.parse(localStorage.getItem('la_admin') || '{}').email || '').toLowerCase(); } catch (_) {}
+                var keys = on.map(function(p) { return p.email + '|' + (p.device || ''); });
+                if (_seenOnline) on.forEach(function(p, i) { if (!_seenOnline[keys[i]] && String(p.email).toLowerCase() !== me) laToast(p.email + ' is online' + (p.account ? ' · ' + p.account : '')); });
+                _seenOnline = {}; keys.forEach(function(k) { _seenOnline[k] = 1; });
                 document.getElementById('ac-on-n').textContent = on.length;
                 document.getElementById('ac-on-list').innerHTML = on.length ? on.map(function(p) { return personRow(p, now); }).join('') : '<p class="ac-on-none">No one is on the platform right now.</p>';
                 document.getElementById('ac-on-rn').textContent = rest.length ? '· ' + rest.length : '';
                 document.getElementById('ac-on-recent').innerHTML = rest.length ? rest.map(function(p) { return personRow(p, now); }).join('') : '<p class="ac-on-none">No one in the last 30 days.</p>';
             } catch (e) { document.getElementById('ac-on-n').textContent = '—'; document.getElementById('ac-on-list').innerHTML = '<p class="ac-on-none">' + esc(e.message) + '</p>'; }
         }
-        loadOnline(); setInterval(function() { if (document.visibilityState === 'visible') loadOnline(); }, 30000);
+        // Checked every 10 seconds while the page is on screen, and straight away when it comes back
+        var _seenOnline = null;
+        loadOnline(); setInterval(function() { if (document.visibilityState === 'visible') loadOnline(); }, 10000);
+        document.addEventListener('visibilitychange', function() { if (document.visibilityState === 'visible') loadOnline(); });
         document.getElementById('ac-list').addEventListener('click', async function(e) {
             var b = e.target.closest('[data-act]'); if (!b) return;
             var row = b.closest('[data-slug]'), slug = row.dataset.slug, a = _accounts.filter(function(x) { return x.slug === slug; })[0];
