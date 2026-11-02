@@ -1454,7 +1454,12 @@
             catch (e) { b.disabled = false; b.textContent = 'Add a camera'; laAlert('Could not open checkout: ' + e.message, { tone: 'error' }); }
         });
         if (new URLSearchParams(location.search).get('camera') === 'added') { history.replaceState({}, '', '/billing'); setTimeout(function() { laToast('Camera added. We\'ll be in touch to set it up'); }, 800); }
-        if (new URLSearchParams(location.search).get('card') === 'saved') { history.replaceState({}, '', '/billing'); setTimeout(function() { laToast('Card saved. Your invoices are now paid automatically on the 1st'); load(); }, 2500); }
+        if (new URLSearchParams(location.search).get('card') === 'saved') {
+            var cs = new URLSearchParams(location.search).get('cs');
+            history.replaceState({}, '', '/billing');
+            // The card is made the account's payment card now, then the Payment box shows it
+            (cs ? post({ action: 'cardSaved', session: cs }).catch(function() {}) : Promise.resolve()).then(function() { laToast('Card saved. Your invoices are now paid automatically on the 1st'); load(); });
+        }
         if (new URLSearchParams(location.search).get('plan') === 'updated') { history.replaceState({}, '', '/billing'); setTimeout(function() { laToast('Your plan is active'); }, 800); }
         document.getElementById('bl-cancel-btn').addEventListener('click', async function() {
             var b = this, resume = b.dataset.mode === 'resume';

@@ -457,11 +457,27 @@ export default async function handler(req, res) {
           mode: 'setup', currency: 'gbp', customer,
           setup_intent_data: { metadata: meta, description: 'local / assets™: invoices paid automatically on the 1st' },
           custom_text: { submit: { message: 'Your local / assets™ invoices are charged to this card on the 1st of each month. Nothing is charged now.' } },
-          success_url: 'https://local-assets.com/billing?card=saved', cancel_url: 'https://local-assets.com/billing',
+          success_url: 'https://local-assets.com/billing?card=saved&cs={CHECKOUT_SESSION_ID}', cancel_url: 'https://local-assets.com/billing',
           metadata: meta,
         });
         console.log('[billing] card checkout', slug);
         return res.status(200).json({ url: checkout.url });
+      }
+      // Back from Stripe's card page: the card becomes the one invoices are charged to straight away
+      // (the webhook does the same; this way the page shows it at once, even before the webhook arrives)
+      if (body0.action === 'cardSaved') {
+        const stripe = stripeClient();
+        const cs = String(body0.session || '');
+        if (!stripe || !/^cs_(test|live)_\w+$/.test(cs)) return res.status(400).json({ error: 'Which card?' });
+        const checkout = await stripe.checkout.sessions.retrieve(cs, { expand: ['setup_intent'] }).catch(() => null);
+        const mine = await withRedis(r => r.get(`billing_customer:${slug}`));
+        if (!checkout || checkout.mode !== 'setup' || checkout.metadata?.kind !== 'card' || checkout.metadata?.venueSlug !== slug || !mine || checkout.customer !== mine)
+          return res.status(404).json({ error: 'That card isn\'t for this account' });
+        const pm = checkout.setup_intent?.status === 'succeeded' ? checkout.setup_intent.payment_method : null;
+        if (!pm) return res.status(409).json({ error: 'Stripe hasn\'t finished saving the card yet' });
+        await stripe.customers.update(mine, { invoice_settings: { default_payment_method: typeof pm === 'object' ? pm.id : pm } });
+        console.log('[billing] card saved', slug);
+        return res.status(200).json({ ok: true });
       }
       if (body0.action === 'addCamera') {
         const stripe = stripeClient();
