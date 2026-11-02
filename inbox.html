@@ -115,10 +115,11 @@
                 <div>
                     <p class="ib-eyebrow">Admin</p>
                     <h2 class="ib-h">Inbox</h2>
-                    <p class="ib-sub" id="ib-sub">Every email sent to info@local-assets.com, and the ones the platform sends to clients (welcome, access, invoices). When the Resend agent writes a reply it waits here as a draft: send it as it is, change it first, or discard it. Nothing goes out until you send it.</p>
+                    <p class="ib-sub" id="ib-sub">Every email sent to info@local-assets.com, and the ones the platform sends to clients (welcome, access, invoices). When the Resend agent writes a reply it waits here as a draft: send it as it is, change it first, or discard it. Nothing goes out until you send it. Error and uptime alerts (Rollbar, Checkly) are kept apart in Alerts.</p>
                 </div>
                 <div class="ib-tabs" role="tablist" id="ib-tabs">
                     <button type="button" class="ib-tab" role="tab" data-f="inbox" aria-selected="true">Inbox<b id="ib-unread"></b></button>
+                    <button type="button" class="ib-tab" role="tab" data-f="alerts" aria-selected="false">Alerts</button>
                     <button type="button" class="ib-tab" role="tab" data-f="archive" aria-selected="false">Archive</button>
                     <button type="button" class="ib-tab" role="tab" data-f="sent" aria-selected="false">Sent</button>
                     <button type="button" class="ib-tab" role="tab" data-f="spam" aria-selected="false">Spam</button>
@@ -167,7 +168,7 @@
         var listEl = document.getElementById('ib-list'), viewEl = document.getElementById('ib-view'), wrapEl = document.getElementById('ib-wrap');
 
         function paintList() {
-            if (!threads.length) { listEl.innerHTML = '<div class="ib-none">' + (folder === 'inbox' ? 'No emails yet. New ones show up here by themselves.' : 'Nothing in ' + folder + '.') + '</div>'; return; }
+            if (!threads.length) { listEl.innerHTML = '<div class="ib-none">' + (folder === 'inbox' ? 'No emails yet. New ones show up here by themselves.' : folder === 'alerts' ? 'No alerts. Errors and downtime show up here.' : 'Nothing in ' + folder + '.') + '</div>'; return; }
             listEl.innerHTML = threads.map(function(t) {
                 return '<button type="button" class="ib-t' + (t.read ? '' : ' unread') + (t.id === openId ? ' on' : '') + '" data-id="' + esc(t.id) + '">'
                     + '<span class="ib-t-top"><span class="ib-t-from">' + esc((t.folder || folder) === 'sent' ? 'To ' + who(t.to) : who(t.from)) + (t.email_count > 1 ? ' · ' + t.email_count : '') + '</span><span class="ib-t-when">' + esc(when(t.received_at)) + '</span></span>'

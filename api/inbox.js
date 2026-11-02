@@ -5,7 +5,7 @@ import { mailError } from './_emails.js';
 // Admin only (local / assets): the Resend inbox (info@local-assets.com) in the side menu's Inbox.
 // The inbox's agent writes its replies as drafts; nothing goes out until one is sent from here (or Resend).
 //   GET  ?view=count                         unread threads and drafts waiting, for the menu badge
-//   GET  ?folder=inbox|archive|sent|spam|trash[&after=id]   the threads in a folder, newest first (inbox: with the sent ones)
+//   GET  ?folder=inbox|alerts|archive|sent|spam|trash[&after=id]   the threads in a folder, newest first (inbox: with the sent ones)
 //   GET  ?thread=id                          its emails and its drafts (marks it read)
 //   POST { action: 'send', draft }           a draft goes out
 //   POST { action: 'discard', draft }        a draft is thrown away
@@ -17,6 +17,11 @@ import { mailError } from './_emails.js';
 const INBOX = () => (process.env.LA_INBOX || 'info@local-assets.com').trim();
 const FOLDERS = ['inbox', 'archive', 'sent', 'spam', 'trash'];
 const admins = () => (process.env.BILLING_ADMINS || 'info@local-assets.com').split(/[\s,]+/).map(s => s.toLowerCase()).filter(Boolean);
+// Alerts: emails from our monitoring (Rollbar errors, Checkly uptime) get the Alerts label in Resend and leave the
+// Inbox for the Alerts tab, so clients' emails aren't buried under them. Done whenever the inbox is looked at.
+const ALERT_FROM = /@([\w-]+\.)*(rollbar\.com|checklyhq\.com)>?\s*$/i;
+const ALERTS = 'Alerts';
+let alertsLabel = null;
 const id = v => /^[\w-]{1,80}$/.test(String(v || '')) ? String(v) : null;
 
 async function rs(path, { method = 'GET', body, idem } = {}) {
@@ -31,6 +36,25 @@ async function rs(path, { method = 'GET', body, idem } = {}) {
   return d;
 }
 
+async function alertsLabelId() {
+  if (alertsLabel) return alertsLabel;
+  const list = await rs('/labels');
+  const found = (list.data || []).find(l => String(l.name).toLowerCase() === ALERTS.toLowerCase());
+  alertsLabel = found ? found.id : (await rs('/labels', { method: 'POST', body: { name: ALERTS, color: '#FF5C5C' } })).id;
+  return alertsLabel;
+}
+
+// Alert emails still in the Inbox (and not labelled yet: one moved back by hand stays) → Alerts label + archive
+async function sortAlerts() {
+  const list = await rs('/threads?folders=inbox&limit=100');
+  const found = (list.data || []).filter(t => ALERT_FROM.test(String(t.from || '')) && !(t.labels || []).some(l => String(l.name).toLowerCase() === ALERTS.toLowerCase()));
+  if (!found.length) return 0;
+  const label = await alertsLabelId();
+  await Promise.all(found.map(t => rs('/threads/' + t.id + '/labels', { method: 'POST', body: { labels: [label] } })
+    .then(() => rs('/threads/' + t.id, { method: 'PATCH', body: { folder: 'archive' } }))));
+  return found.length;
+}
+
 const toHtml = t => String(t).split(/\n{2,}/).map(p => '<p>' + p.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])).replace(/\n/g, '<br>') + '</p>').join('');
 
 export default async function handler(req, res) {
@@ -43,6 +67,7 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       const q = req.query || {};
       if (q.view === 'count') {
+        await sortAlerts().catch(e => console.error('[inbox] sorting alerts failed:', e.message));
         const box = await rs('');
         return res.json({ unread: box.unread || 0, drafts: box.drafts || 0, address: box.email_address || INBOX() });
       }
@@ -53,8 +78,13 @@ export default async function handler(req, res) {
         if (!thread.read) rs('/threads/' + t, { method: 'PATCH', body: { read: true } }).catch(() => {});
         return res.json({ thread, emails: emails.data || [], drafts: mine });
       }
-      const folder = FOLDERS.includes(q.folder) ? q.folder : 'inbox';
       const after = id(q.after);
+      if (!after && (q.folder === 'alerts' || !q.folder || q.folder === 'inbox')) await sortAlerts().catch(e => console.error('[inbox] sorting alerts failed:', e.message));
+      if (q.folder === 'alerts') {
+        const list = await rs('/threads?labels=' + await alertsLabelId() + '&folders=inbox,archive&limit=50' + (after ? '&after=' + after : ''));
+        return res.json({ folder: 'alerts', threads: list.data || [], more: !!list.has_more });
+      }
+      const folder = FOLDERS.includes(q.folder) ? q.folder : 'inbox';
       const list = await rs('/threads?folders=' + (folder === 'inbox' ? 'inbox,sent' : folder) + '&limit=50' + (after ? '&after=' + after : ''));
       return res.json({ folder, threads: list.data || [], more: !!list.has_more });
     }
