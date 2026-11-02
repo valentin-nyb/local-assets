@@ -418,7 +418,17 @@ export default async function handler(req, res) {
       let payment = null;
       if (stripe && target === 'venue' && !isAdmin) {
         const c = data.customer ? await stripe.customers.retrieve(data.customer, { expand: ['invoice_settings.default_payment_method'] }).catch(() => null) : null;
-        const pm = c && !c.deleted ? c.invoice_settings?.default_payment_method : null;
+        let pm = c && !c.deleted ? c.invoice_settings?.default_payment_method : null;
+        // A card saved on our card page that never became the payment card (the way back from Stripe lost, the
+        // webhook not in yet): it is made the payment card now, so the box always shows what Stripe holds
+        if (c && !c.deleted && !pm) {
+          const done = await stripe.setupIntents.list({ customer: c.id, limit: 10 }).then(r => r.data.find(s => s.status === 'succeeded' && s.metadata?.kind === 'card' && s.metadata?.venueSlug === slug && s.payment_method)).catch(() => null);
+          if (done) {
+            const id = typeof done.payment_method === 'object' ? done.payment_method.id : done.payment_method;
+            const upd = await stripe.customers.update(c.id, { invoice_settings: { default_payment_method: id }, expand: ['invoice_settings.default_payment_method'] }).catch(e => { console.error('[billing] could not set the saved card', slug, e.message); return null; });
+            if (upd) { pm = upd.invoice_settings?.default_payment_method; console.log('[billing] card saved (found on Stripe)', slug); }
+          }
+        }
         payment = pm && pm.card ? { card: { brand: pm.card.brand, last4: pm.card.last4, exp: pm.card.exp_month + '/' + String(pm.card.exp_year).slice(-2) } } : { card: null };
       }
       const elapsed = Math.min(1, Math.max(0, (Date.now() - base.start) / (base.end - base.start)));
