@@ -247,7 +247,9 @@ export default async function handler(req, res) {
     if (body.action === 'copyBrand') {
       // Brand Kit files into the private store (same paths; files already there are skipped), about 4 minutes a call
       if (!platformAdmins().includes(session.email) || !isAdminVenue(session.venue)) return res.status(403).json({ error: 'Only local / assets™' });
-      return res.status(200).json(await copyToPrivate('brand/', body.cursor || undefined));
+      const out = await copyToPrivate('brand/', body.cursor || undefined);
+      console.log('[media] copy Brand Kit files:', out.copied, 'copied,', out.skipped, 'already there,', out.failed, 'failed', out.more ? '(more to go)' : '(done)');
+      return res.status(200).json(out);
     }
 
     if (body.action === 'check') {

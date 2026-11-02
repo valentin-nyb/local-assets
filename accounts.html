@@ -83,6 +83,7 @@
         .ac-chip::before { content:''; width:6px; height:6px; border-radius:50%; background:currentColor; }
         .ac-chip.ok { color:var(--la-accent); border-color:color-mix(in srgb, var(--la-accent) 45%, transparent); }
         .ac-chip.warn { color:#f59e0b; border-color:rgba(245,158,11,.45); }
+        .ac-chip.stripe { color:#7A73FF; border-color:rgba(99,91,255,.55); }   /* Stripe's purple (#635BFF, lifted to read on dark) */
         .ac-chip.bad { color:var(--la-bad); border-color:color-mix(in srgb, var(--la-bad) 45%, transparent); }
         .ac-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
         .ac-btn { height:34px; padding:0 14px; border-radius:999px; border:1px solid var(--la-line); background:none; color:var(--la-text); font-size:13px; font-weight:500; cursor:pointer; white-space:nowrap; transition:border-color .15s, color .15s, background .15s; }
@@ -166,17 +167,18 @@
                 <div class="ac-list" id="ac-list"><la-spin topic="accounts"></la-spin></div>
                 <!-- Video protection: each account's Mux storage can sign its videos (signed playback) -->
                 <details class="ac-on-recent" id="ac-prot" style="margin-top:22px"><summary>Video protection</summary>
-                    <p class="vp-intro">Protected videos <b>only play on local-assets.com</b>, for someone signed in to that account (and in links you share). Anyone who copies a video's address can't play or download it anywhere else.</p>
+                    <p class="vp-intro">Today, anyone who has a video's link can watch or download it. <b>Protecting an account</b> makes its videos play only on local-assets.com, for people signed in to that account, and in links you share. Nothing else changes for your clients.</p>
                     <div class="vp-block">
-                        <h4>1. Check the accounts</h4>
-                        <p>Gets every account ready for protection and lists them below with the next steps. Nothing changes for viewers.</p>
+                        <h4>Videos, account by account</h4>
+                        <p><b>Check accounts</b> lists every account and whether it's protected. For each one: <b>Prepare</b> first (viewers notice nothing), then <b>Protect</b>. If something stops playing, <b>Undo</b> puts it back as it was.</p>
                         <div class="vp-row"><button type="button" class="cam-btn ghost" id="ac-prot-check">Check accounts</button></div>
                         <div id="ac-prot-list"></div>
                     </div>
                     <div class="vp-block">
                         <h4>Brand Kit files</h4>
-                        <p>Copies every logo, font, photo and video in the Brand Kits into private storage, where only signed-in people can open them. Safe to run again: files already copied are skipped.</p>
-                        <div class="vp-row"><button type="button" class="cam-btn ghost" id="ac-prot-brand">Copy Brand Kit files</button><span class="vp-msg" id="ac-prot-brand-msg"></span></div>
+                        <p>Logos, fonts, photos and videos in Brand Kits are kept in <b>public storage</b> now: anyone with a file's link can open it. <b>Copy to private storage</b> puts a copy of each in private storage, where only signed-in people can open them. It runs in batches of up to 4 minutes and can be run again; files already copied are skipped.</p>
+                        <div class="vp-row"><button type="button" class="cam-btn ghost" id="ac-prot-brand">Copy to private storage</button><span class="vp-msg" id="ac-prot-brand-msg"></span></div>
+                        <p class="vp-msg" id="ac-prot-brand-next" style="margin-top:10px" hidden></p>
                     </div></details>
                 <!-- The emails clients get, as examples -->
             </div>
@@ -233,8 +235,8 @@
                     return '<div class="vp-acct" data-row>'
                         + '<div class="vp-head"><span class="vp-name">' + esc(names[a.slug] || a.slug) + '</span>' + pill + '</div>'
                         + '<div class="vp-steps">'
-                        + '<div class="vp-step"><small>Step 2</small><span>Prepare: gives every video a private address beside its public one. Viewers notice nothing.</span><button type="button" class="cam-btn ghost" data-sw="add" data-slug="' + sl + '">Prepare videos</button></div>'
-                        + '<div class="vp-step"><small>Step 3</small><span>Protect: removes the public addresses, so the videos only play on local-assets.com.</span><button type="button" class="cam-btn primary" data-sw="lock" data-slug="' + sl + '">Protect videos</button></div>'
+                        + '<div class="vp-step"><small>1 · Prepare</small><span>Gives every video a private link beside its public one. Viewers notice nothing.</span><button type="button" class="cam-btn ghost" data-sw="add" data-slug="' + sl + '">Prepare videos</button></div>'
+                        + '<div class="vp-step"><small>2 · Protect</small><span>Turns the public links off, so the videos only play on local-assets.com.</span><button type="button" class="cam-btn primary" data-sw="lock" data-slug="' + sl + '">Protect videos</button></div>'
                         + '</div>'
                         + '<p class="vp-msg" data-sw-msg style="margin-top:10px"></p>'
                         + '<p class="vp-undo" data-undo' + (a.locked ? '' : ' hidden') + '>Something not playing? <button type="button" data-sw="undo" data-slug="' + sl + '">Undo protection</button> puts the public addresses back.</p>'
@@ -244,20 +246,23 @@
             } catch (e) { list.textContent = 'Could not check: ' + e.message; }
             b.disabled = false;
         });
-        // Brand Kit files into the private store, a few minutes at a time until all are there (safe to run again)
+        // Brand Kit files into the private store, a batch (up to 4 minutes) at a time until all are there (safe to run again)
         document.getElementById('ac-prot-brand').addEventListener('click', async function() {
-            var b = this, msg = document.getElementById('ac-prot-brand-msg'), cursor = null, copied = 0, skipped = 0, failed = 0;
-            b.disabled = true;
+            var b = this, msg = document.getElementById('ac-prot-brand-msg'), next = document.getElementById('ac-prot-brand-next'), cursor = null, copied = 0, skipped = 0, failed = 0, batch = 0;
+            b.disabled = true; next.hidden = true;
             try {
                 for (;;) {
-                    msg.textContent = 'Copying… ' + copied + ' copied, ' + skipped + ' already there';
+                    batch++;
+                    msg.textContent = 'Batch ' + batch + ' running (up to 4 minutes)…' + (copied + skipped ? ' ' + copied + ' copied, ' + skipped + ' already there so far' : '');
                     var r = await laFetch('/api/media', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'copyBrand', cursor: cursor }) });
                     var d = await r.json(); if (!r.ok) throw new Error(d.error || r.status);
                     copied += d.copied; skipped += d.skipped; failed += d.failed;
                     if (!d.more) break; cursor = d.cursor;
                 }
-                msg.textContent = 'Done: ' + copied + ' copied, ' + skipped + ' already there' + (failed ? ', ' + failed + ' failed (run it again)' : '');
-            } catch (e) { msg.textContent = 'Stopped: ' + e.message + ' (run it again; it goes on)'; }
+                if (!copied && !skipped && !failed) msg.textContent = 'No Brand Kit files found in public storage.';
+                else msg.textContent = 'Done: ' + copied + ' copied, ' + skipped + ' already copied' + (failed ? ', ' + failed + ' failed (run it again)' : '') + '.';
+                if (!failed && (copied || skipped)) { next.hidden = false; next.textContent = 'All files are in private storage. Last step: add LA_PRIVATE_BRAND = 1 in Vercel and deploy, so Brand Kits are read from private storage.'; }
+            } catch (e) { msg.textContent = 'Stopped: ' + e.message + '. Run it again: it carries on where it stopped.'; }
             b.disabled = false;
         });
         // One account's switch: a step runs page by page (100 videos at a time) until it's done
@@ -304,7 +309,7 @@
             else if (a.subscription === 'canceled') c.push(['bad', 'Plan cancelled']);
             else if (a.subscription === 'past_due' || a.subscription === 'unpaid') c.push(['bad', 'Payment ' + a.subscription.replace('_', ' ')]);
             // Paid month by month without a Stripe subscription (trials, plans set here): how its invoices get paid
-            else if (a.subscription === 'none') c.push(a.card ? ['ok', 'Card on file', 'Its invoices are charged to its card on the 1st'] : ['', 'No card', 'Its invoices are emailed on the 1st with 14 days to pay']);
+            else if (a.subscription === 'none') c.push(a.card ? ['stripe', 'Card on file', 'Its invoices are charged to its card on the 1st'] : ['', 'No card', 'Its invoices are emailed on the 1st with 14 days to pay']);
             return c.map(function(x) { return '<span class="ac-chip ' + x[0] + '"' + (x[2] ? ' title="' + esc(x[2]) + '"' : '') + '>' + esc(x[1]) + '</span>'; }).join('');
         }
         function render() {
