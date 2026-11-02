@@ -766,7 +766,7 @@
             if (d.payment && d.payment.card) {
                 if (_cardPending) { _cardPending = 0; laToast('Card saved. Your invoices are now paid automatically on the 1st'); }
                 var cd = d.payment.card, brand = cd.brand ? cd.brand.charAt(0).toUpperCase() + cd.brand.slice(1) : 'Card';
-                ptext.textContent = 'Paid automatically: your invoices are charged on the 1st of each month to your ' + brand + ' ending ' + cd.last4 + ' (expires ' + cd.exp + '). Card details stay with Stripe; we never see them.';
+                ptext.textContent = 'Paid automatically: your invoices are charged on the 1st of each month to ' + (cd.label ? cd.label : 'your ' + brand + ' ending ' + cd.last4 + ' (expires ' + cd.exp + ')') + '. Card details stay with Stripe; we never see them.';
                 pbtn.textContent = 'Change card'; pbtn.classList.remove('primary'); pbtn.classList.add('ghost');
             } else if (d.payment) {
                 ptext.textContent = 'Your invoices are emailed on the 1st with 14 days to pay. Add a card and they\'re paid automatically on the 1st instead. You enter it on Stripe\'s secure page; we never see it.';

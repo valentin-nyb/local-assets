@@ -429,7 +429,11 @@ export default async function handler(req, res) {
             if (upd) { pm = upd.invoice_settings?.default_payment_method; console.log('[billing] card saved (found on Stripe)', slug); }
           }
         }
-        payment = pm && pm.card ? { card: { brand: pm.card.brand, last4: pm.card.last4, exp: pm.card.exp_month + '/' + String(pm.card.exp_year).slice(-2) } } : { card: null };
+        // A card, or another saved way to pay (Link: brand 'link', its email in place of the last digits)
+        payment = pm && pm.card ? { card: { brand: pm.card.brand, last4: pm.card.last4, exp: pm.card.exp_month + '/' + String(pm.card.exp_year).slice(-2) } }
+          : pm && pm.type ? { card: { brand: pm.type, last4: '', exp: '', label: pm.type === 'link' ? 'Link' + (pm.link?.email ? ' (' + pm.link.email + ')' : '') : pm.type.replace(/_/g, ' ') } }
+          : { card: null };
+        if (pm && !pm.card) console.log('[billing] payment method is', pm.type, slug);
       }
       const elapsed = Math.min(1, Math.max(0, (Date.now() - base.start) / (base.end - base.start)));
       return res.status(200).json({
@@ -464,7 +468,7 @@ export default async function handler(req, res) {
         });
         const meta = { kind: 'card', venueSlug: slug };
         const checkout = await createCheckout(stripe, {
-          mode: 'setup', currency: 'gbp', customer,
+          mode: 'setup', currency: 'gbp', customer, payment_method_types: ['card'],   // a card, not Link: it shows in Billing as the card
           setup_intent_data: { metadata: meta, description: 'local / assets™: invoices paid automatically on the 1st' },
           custom_text: { submit: { message: 'Your local / assets™ invoices are charged to this card on the 1st of each month. Nothing is charged now.' } },
           success_url: 'https://local-assets.com/card-saved?cs={CHECKOUT_SESSION_ID}', cancel_url: 'https://local-assets.com/billing',
