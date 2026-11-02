@@ -116,13 +116,17 @@ export default async function handler(req, res) {
           const subId = await subscriptionOf(redis, slug);
           let sub = null;
           if (stripe && subId) sub = await stripe.subscriptions.retrieve(subId).catch(() => null);
+          // The card its invoices are charged to on the 1st (none: they're emailed with 14 days to pay)
+          const custId = stripe ? await redis.get(`billing_customer:${slug}`).catch(() => null) : null;
+          const cust = custId ? await stripe.customers.retrieve(custId).catch(() => null) : null;
+          const card = cust && !cust.deleted ? !!cust.invoice_settings?.default_payment_method : null;
           const ends = sub && (sub.cancel_at || (sub.cancel_at_period_end ? (sub.current_period_end || sub.items?.data?.[0]?.current_period_end) : 0));
           const artists = Object.values(members || {}).reduce((n, raw) => { try { return n + JSON.parse(raw).filter(m => m.slug === slug).length; } catch { return n; } }, 0);
           return {
             slug, name: v.name || slug, logins: accountLogins(slug, v), type: await accountTypeOf(redis, slug).catch(() => v.type || 'venue'),
             email: asg.email || v.email || '', plan: (plans.find(p => p.id === asg.plan) || {}).name || asg.plan || '', planId: asg.plan || '',
             paused: unpaid.some(i => i.id === ADMIN_PAUSE), unpaid: unpaid.filter(i => i.id !== ADMIN_PAUSE && i.target === 'venue').map(i => i.number || i.id),
-            subscription: sub ? sub.status : subId ? 'unknown' : 'none', endsAt: ends ? ends * 1000 : null,
+            subscription: sub ? sub.status : subId ? 'unknown' : 'none', card, endsAt: ends ? ends * 1000 : null,
             setupPending: v.status === 'pending', artists, video: !!getMuxAuthForVenue({ slug, ...v }), discount: Number(discounts?.[slug]) || 0,
             videoQuality: qualities?.[slug] === 'premium' ? 'premium' : 'basic', video4k: fourK?.[slug] === '1',
             ...(await (async () => { const byPlan = await multicamByPlan(redis, slug); const set = autoSet?.[slug];

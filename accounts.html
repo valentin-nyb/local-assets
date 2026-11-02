@@ -303,8 +303,9 @@
             if (a.endsAt) c.push(['warn', 'Plan ends ' + day(a.endsAt)]);
             else if (a.subscription === 'canceled') c.push(['bad', 'Plan cancelled']);
             else if (a.subscription === 'past_due' || a.subscription === 'unpaid') c.push(['bad', 'Payment ' + a.subscription.replace('_', ' ')]);
-            else if (a.subscription === 'none') c.push(['', 'No Stripe plan']);
-            return c.map(function(x) { return '<span class="ac-chip ' + x[0] + '">' + esc(x[1]) + '</span>'; }).join('');
+            // Paid month by month without a Stripe subscription (trials, plans set here): how its invoices get paid
+            else if (a.subscription === 'none') c.push(a.card ? ['ok', 'Card on file', 'Its invoices are charged to its card on the 1st'] : ['', 'No card', 'Its invoices are emailed on the 1st with 14 days to pay']);
+            return c.map(function(x) { return '<span class="ac-chip ' + x[0] + '"' + (x[2] ? ' title="' + esc(x[2]) + '"' : '') + '>' + esc(x[1]) + '</span>'; }).join('');
         }
         function render() {
             var q = document.getElementById('ac-q').value.trim().toLowerCase();
