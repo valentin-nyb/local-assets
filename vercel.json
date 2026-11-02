@@ -3,6 +3,19 @@
   "regions": ["lhr1"],
   "headers": [
     {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+      ]
+    },
+    {
+      "source": "/((?!player|api/asset).*)",
+      "headers": [
+        { "key": "X-Frame-Options", "value": "SAMEORIGIN" }
+      ]
+    },
+    {
       "source": "/(dashboard|assets|camera|calendar|login|brand|billing|contacts|accounts|inbox|docs)(.*)",
       "headers": [
         {
