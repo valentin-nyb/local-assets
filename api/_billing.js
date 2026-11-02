@@ -432,6 +432,16 @@ export async function planMaxClips(redis, slug) {
   const n = plan && plan.maxClips != null ? Number(plan.maxClips) : def ? def.maxClips : 5;
   return n === 0 ? 60 : Math.min(60, Math.max(1, n || 5));   // 0 = unlimited (up to 60 a session)
 }
+// The multi-camera edit comes with Live-Set and Enterprise: Live-Set itself, any plan named Enterprise, or a plan
+// whose features list it (a custom plan made in Billing). local / assets' own account can always use it.
+export const MULTICAM_PLANS = ['liveset-creative'];
+export async function canMulticam(redis, slug) {
+  if (slug === (process.env.BILLING_ADMIN_VENUE || 'local-assets-admin')) return true;
+  const plan = await readPlan(redis, slug, 'venue').catch(() => null);
+  if (!plan) return false;
+  return MULTICAM_PLANS.includes(plan.id) || /enterprise/i.test(String(plan.name || plan.id))
+    || (plan.features || []).some(f => /multi-?camera/i.test(String(f)));
+}
 export async function readPlan(redis, slug, target = 'venue') {
   const a = (await readAssignments(redis, slug))[target];
   if (!a?.plan) return null;

@@ -102,6 +102,7 @@ export default async function handler(req, res) {
           await redis.hDel(pendingKey(slug), key);
           if (src.cams.length < 2) { console.log('[multicam] only', src.cams.length, 'camera for', slug, key); continue; }
           const started = await startMulticam(redis, slug, auth, artist, date, src, { auto: true });
+          if (started.notOnPlan) { console.log('[multicam] not on this plan:', slug, key); continue; }
           changes.push(`${slug}/${artist}: multi-camera edit ${started.error ? 'not started (' + started.error + ')' : 'queued'}`);
         }
       } catch (e) { console.error('[camera-schedule] multicam', slug, e.message); }

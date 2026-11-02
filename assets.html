@@ -682,6 +682,12 @@
             const mac = d.relay.online ? (d.relay.canRender ? 'a™ on the venue\'s Mac is online and ready.' : 'The venue relay is online but can\'t render: open a™ for Mac on that Mac instead (it renders edits built in).') : 'a™ isn\'t open on the venue\'s Mac. The edit starts as soon as a™ is open there, signed in to this account.';
             const j = d.job;
             let html = cams;
+            if (d.allowed === false && !(j && j.status !== 'failed')) {
+                body.innerHTML = html + '<p class="mc-note" style="margin-top:12px">Multi-camera edits come with the <b>Live-Set</b> and <b>Enterprise</b> plans: every camera of a set cut together on the music, in 4K with the HQ audio, made by itself after each set.</p>' +
+                    '<p class="mc-note" style="margin-top:8px"><a href="/billing" style="color:var(--la-accent)">Change plan in Billing</a> or <a href="mailto:info@local-assets.com?subject=Live-Set" style="color:var(--la-accent)">talk to us</a>.</p>';
+                start.hidden = true;
+                return;
+            }
             if (j && j.status !== 'failed') {
                 html += '<p class="mc-note" style="margin-top:12px">' + e(j.stage) + (j.status === 'done' ? '' : ' · ' + j.pct + '%') + '</p><div class="mc-bar"><i style="width:' + (j.status === 'done' ? 100 : j.pct) + '%"></i></div>' +
                     (j.warnings && j.warnings.length ? '<p class="mc-note" style="margin-top:8px">' + j.warnings.map(e).join('<br>') + '</p>' : '') +

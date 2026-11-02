@@ -6,6 +6,7 @@ import { getWebSessionAuth } from './_venues.js';
 import { listAllAssets } from './_verticals.js';
 import { seenKey } from './camera-relay.js';
 import { playbackPolicy } from './_signing.js';
+import { canMulticam } from './_billing.js';
 
 // Multi-camera edit: every long form of a session (same artist and date, filmed by several cameras at the
 // same time) cut together into one full set, on the HQ audio from the DJ's console.
@@ -49,7 +50,9 @@ export function settleStale(job) {
 
 // Queues the edit for the venue's Mac. Without HQ audio from the console, the main camera's sound is
 // the edit's sound, and the Mac also uploads it on its own as the session's HQ AUDIO.
+export const NOT_ON_PLAN = 'Multi-camera edits come with the Live-Set and Enterprise plans.';
 export async function startMulticam(r, slug, auth, artist, date, src, { title = '', auto = false } = {}) {
+  if (!await canMulticam(r, slug)) return { status: 403, error: NOT_ON_PLAN, notOnPlan: true };
   if (src.cams.length < 2) return { status: 400, error: 'A multi-camera edit needs at least two camera recordings of this session' };
   if (!src.audio && !src.cams.some(c => c.hasAudio)) return { status: 400, error: 'Upload the HQ audio from the DJ\'s console for this session first' };
   const prevId = await r.get(sessionKey(slug, artist, date));
@@ -95,6 +98,7 @@ export default async function handler(req, res) {
     const src = sessionSources(assets, artist, date);
     const out = await withRedis(async r => {
       const seen = JSON.parse(await r.get(seenKey(slug)) || 'null');
+      const allowed = await canMulticam(r, slug);
       const relay = { online: !!seen && Date.now() - seen.at < 120e3, canRender: !!seen?.render, version: seen?.version || null };
       const jobId = await r.get(sessionKey(slug, artist, date));
       let job = jobId ? JSON.parse(await r.hGet(jobsKey(slug), jobId) || 'null') : null;
@@ -105,11 +109,11 @@ export default async function handler(req, res) {
         if (started.error) return started;
         job = started.job;
       }
-      return { relay, job };
+      return { relay, job, allowed };
     });
     if (out.error) return res.status(out.status).json({ error: out.error });
     const job = out.job ? { id: out.job.id, status: out.job.status, stage: out.job.stage, pct: out.job.pct, message: out.job.message || '', updatedAt: out.job.updatedAt, warnings: out.job.warnings || [] } : null;
-    return res.status(200).json({ cameras: src.cams.map(c => ({ camera: c.camera, duration: c.duration, hasAudio: c.hasAudio, main: c.main })), audio: !!src.audio, edit: src.edit, relay: out.relay, job });
+    return res.status(200).json({ cameras: src.cams.map(c => ({ camera: c.camera, duration: c.duration, hasAudio: c.hasAudio, main: c.main })), audio: !!src.audio, edit: src.edit, relay: out.relay, job, allowed: out.allowed });
   } catch (e) {
     console.error('[multicam]', slug, e.message);
     return res.status(500).json({ error: 'Could not check this session' });
