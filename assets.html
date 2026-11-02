@@ -683,9 +683,8 @@
             const j = d.job;
             let html = cams;
             if (d.allowed === false && !(j && j.status !== 'failed')) {
-                body.innerHTML = html + '<p class="mc-note" style="margin-top:12px">Multi-camera edits come with the <b>Live-Set</b> and <b>Enterprise</b> plans: every camera of a set cut together on the music, in 4K with the HQ audio, made by itself after each set.</p>' +
-                    '<p class="mc-note" style="margin-top:8px"><a href="/billing" style="color:var(--la-accent)">Change plan in Billing</a> or <a href="mailto:info@local-assets.com?subject=Live-Set" style="color:var(--la-accent)">talk to us</a>.</p>';
-                start.hidden = true;
+                body.innerHTML = html + '<p class="mc-note" style="margin-top:12px">Upgrade plan for auto-live edit.</p>';
+                start.hidden = false; start.textContent = 'Upgrade plan'; start.onclick = () => { location.href = '/billing'; };
                 return;
             }
             if (j && j.status !== 'failed') {

@@ -50,7 +50,7 @@ export function settleStale(job) {
 
 // Queues the edit for the venue's Mac. Without HQ audio from the console, the main camera's sound is
 // the edit's sound, and the Mac also uploads it on its own as the session's HQ AUDIO.
-export const NOT_ON_PLAN = 'Multi-camera edits come with the Live-Set and Enterprise plans.';
+export const NOT_ON_PLAN = 'Upgrade plan for auto-live edit.';
 export async function startMulticam(r, slug, auth, artist, date, src, { title = '', auto = false } = {}) {
   if (!await canMulticam(r, slug)) return { status: 403, error: NOT_ON_PLAN, notOnPlan: true };
   if (src.cams.length < 2) return { status: 400, error: 'A multi-camera edit needs at least two camera recordings of this session' };
