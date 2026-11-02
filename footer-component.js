@@ -48,6 +48,7 @@
             <a href="/">Home</a>
             <a href="/login">Log in</a>
             <a href="/dashboard">Dashboard</a>
+            <a href="/help">Help</a>
           </nav>
           <nav class="lf-col" aria-label="Legal">
             <p class="lf-h">Legal</p>

@@ -24,6 +24,12 @@ body { min-height: 100dvh; padding: calc(env(safe-area-inset-top) + 136px) 16px 
 .lg-main strong { font-weight: 600; color: var(--fg); }
 .lg-main a { color: var(--fg); text-decoration: underline; text-decoration-color: var(--green); text-underline-offset: 3px; text-decoration-thickness: 1px; }
 .lg-main a:hover { color: var(--green); }
+/* Help: the contents list under the title, and headings that stop below the top edge when jumped to */
+.hp-toc { display: flex; flex-wrap: wrap; gap: 8px; margin: -16px 0 8px; }
+.lg-main .hp-toc a { display: inline-flex; align-items: center; height: 32px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); color: var(--sub);
+        text-decoration: none; font: 500 12px/1 var(--display); transition: border-color .15s, color .15s; }
+.lg-main .hp-toc a:hover { border-color: var(--green); color: var(--fg); }
+.lg-main h2[id] { scroll-margin-top: 24px; }
 .foot { position: relative; z-index: 1; width: min(100%, 680px); margin: 72px auto 0; padding-top: 24px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 8px 20px;
         font: 500 10px/1.6 var(--mono); letter-spacing: .2em; text-transform: uppercase; color: var(--dim); }
 .foot a { color: var(--dim); text-decoration: none; }
