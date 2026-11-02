@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en" style="color-scheme:dark">
+<head>
+    <meta charset="UTF-8">
+    <script src="/la-errors.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="robots" content="noindex">
+    <title>local / assets™ — Card saved</title>
+    <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico?v=4">
+    <link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg?v=4">
+    <link rel="apple-touch-icon" href="/favicon/apple-touch-icon.png?v=3">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles/legal.css?v=2">
+</head>
+<body>
+    <!-- Where Stripe's card page returns (from Billing → Pay automatically by card). It opens in the browser even
+         when the card was added from a™, where nobody may be signed in, so it needs no sign-in: api/card-saved.js
+         makes the card the account's payment card, then this says to go back to a™ (or goes on to Billing). -->
+    <canvas class="dot-grid-canvas" aria-hidden="true"></canvas>
+    <a class="wordmark" href="/" aria-label="local / assets™"></a>
+
+    <main class="lg-main">
+        <p class="lg-eyebrow">Billing</p>
+        <h1 id="cs-h">Saving your card…</h1>
+        <p id="cs-text" style="margin-top:18px">One moment.</p>
+        <p id="cs-next" hidden><a href="/billing">Open Billing</a></p>
+    </main>
+
+    <footer class="foot">
+        <a href="/help">Help</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="mailto:info@local-assets.com">info@local-assets.com</a>
+        <span>© 2026 local / assets™</span>
+    </footer>
+
+    <script>
+    (function() {
+        var h = document.getElementById('cs-h'), text = document.getElementById('cs-text'), next = document.getElementById('cs-next');
+        var cs = new URLSearchParams(location.search).get('cs') || '';
+        // Signed in in this browser: Billing shows the card straight away
+        var signedIn = false;
+        try { var d = JSON.parse(localStorage.getItem('la_admin') || 'null'); signedIn = !!(d && d.ts && Date.now() - d.ts < 600000); } catch (_) {}
+        function done() {
+            h.textContent = 'Card saved';
+            if (signedIn) { text.textContent = 'Your invoices are now paid automatically on the 1st. Taking you to Billing…'; setTimeout(function() { location.replace('/billing?card=saved'); }, 1500); return; }
+            text.textContent = 'Your invoices are now paid automatically on the 1st. You can close this tab and go back to a™: Billing shows the card there.';
+            next.hidden = false;
+        }
+        function fail(msg) { h.textContent = 'Card not saved yet'; text.textContent = msg + ' Open Billing and press Pay automatically by card again, or email info@local-assets.com.'; next.hidden = false; }
+        if (!cs) return fail('This page didn\'t get the card from Stripe.');
+        // Stripe can take a few seconds to finish the card: asked again for up to about 20 seconds
+        var tries = 0;
+        (function ask() {
+            fetch('/api/card-saved', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session: cs }) })
+                .then(function(r) { return r.json().catch(function() { return {}; }).then(function(b) { return { status: r.status, body: b }; }); })
+                .then(function(x) {
+                    if (x.status === 200) return done();
+                    if (x.status === 409 && ++tries < 8) return setTimeout(ask, 2500);
+                    fail((x.body && x.body.error) || 'Something went wrong.');
+                })
+                .catch(function() { if (++tries < 8) setTimeout(ask, 2500); else fail('The connection dropped.'); });
+        })();
+    })();
+    </script>
+    <script src="/la-dotgrid.js?v=1"></script>
+</body>
+</html>

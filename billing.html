@@ -479,6 +479,7 @@
         })();
 
         var _data = null, _target = 'venue', _planOverride, _venue = '';
+        var _cardPending = 0;   // when Pay automatically by card opened Stripe's card page
         async function load() {
             var err = document.getElementById('bl-error');
             try {
@@ -763,6 +764,7 @@
             var pbox = document.getElementById('bl-paycard'), pbtn = document.getElementById('bl-paycard-btn'), ptext = document.getElementById('bl-paycard-text');
             pbox.classList.toggle('hidden', admin || !d.payment);
             if (d.payment && d.payment.card) {
+                if (_cardPending) { _cardPending = 0; laToast('Card saved. Your invoices are now paid automatically on the 1st'); }
                 var cd = d.payment.card, brand = cd.brand ? cd.brand.charAt(0).toUpperCase() + cd.brand.slice(1) : 'Card';
                 ptext.textContent = 'Paid automatically: your invoices are charged on the 1st of each month to your ' + brand + ' ending ' + cd.last4 + ' (expires ' + cd.exp + '). Card details stay with Stripe; we never see them.';
                 pbtn.textContent = 'Change card'; pbtn.classList.remove('primary'); pbtn.classList.add('ghost');
@@ -778,9 +780,16 @@
                         var r = await laFetch('/api/billing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'addCard' }) });
                         var out = await r.json().catch(function() { return {}; });
                         if (!r.ok || !out.url) throw new Error(out.error || r.status);
+                        // In a™ the card page opens in the browser and this page stays: it looks again on coming back
+                        _cardPending = Date.now();
                         location.href = out.url;
+                        setTimeout(function() { pbtn.disabled = false; pbtn.textContent = label; }, 4000);
                     } catch (e) { pbtn.disabled = false; pbtn.textContent = label; laAlert('Could not open the card page: ' + e.message, { tone: 'error' }); }
                 });
+                // Back from the card page (a™, or another tab): the Payment box shows the card Stripe now holds
+                var lookAgain = function() { if (_cardPending && Date.now() - _cardPending < 30 * 60e3 && document.visibilityState === 'visible') load(); };
+                window.addEventListener('focus', lookAgain);
+                document.addEventListener('visibilitychange', lookAgain);
             }
             // Cancel account (clients)
             var cbox = document.getElementById('bl-cancel'), cbtn = document.getElementById('bl-cancel-btn'), ctext = document.getElementById('bl-cancel-text');

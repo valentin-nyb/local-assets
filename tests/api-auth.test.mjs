@@ -9,7 +9,7 @@ const API = path.resolve('api');
 // Public on purpose: Brand Kit file links, plan prices, sign-in and OAuth callbacks, signed webhooks, page error reports
 const PUBLIC = new Set(['asset.js', 'plans.js', 'google-auth.js', 'google-callback.js', 'verify-magic-link.js',
   'soundcloud-callback.js', 'soundcloud-venue-callback.js', 'youtube-callback.js', 'mux-webhook.js', 'stripe-webhook.js',
-  'order-camera.js', 'create-checkout.js', 'next-event.js', 'list-assets.js', 'client-error.js']);
+  'order-camera.js', 'create-checkout.js', 'next-event.js', 'list-assets.js', 'client-error.js', 'card-saved.js']);
 const REFUSED = new Set([400, 401, 403, 404, 405]);
 
 function fakeRes() {

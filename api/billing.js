@@ -467,7 +467,7 @@ export default async function handler(req, res) {
           mode: 'setup', currency: 'gbp', customer,
           setup_intent_data: { metadata: meta, description: 'local / assets™: invoices paid automatically on the 1st' },
           custom_text: { submit: { message: 'Your local / assets™ invoices are charged to this card on the 1st of each month. Nothing is charged now.' } },
-          success_url: 'https://local-assets.com/billing?card=saved&cs={CHECKOUT_SESSION_ID}', cancel_url: 'https://local-assets.com/billing',
+          success_url: 'https://local-assets.com/card-saved?cs={CHECKOUT_SESSION_ID}', cancel_url: 'https://local-assets.com/billing',
           metadata: meta,
         });
         console.log('[billing] card checkout', slug);
