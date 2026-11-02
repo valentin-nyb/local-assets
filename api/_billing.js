@@ -434,13 +434,20 @@ export async function planMaxClips(redis, slug) {
 }
 // The multi-camera edit comes with Live-Set and Enterprise: Live-Set itself, any plan named Enterprise, or a plan
 // whose features list it (a custom plan made in Billing). local / assets' own account can always use it.
+// Admin → Accounts → Auto edit turns it on or off for one account whatever its plan (multicam_auto: slug → on/off).
 export const MULTICAM_PLANS = ['liveset-creative'];
-export async function canMulticam(redis, slug) {
+export const MULTICAM_SWITCH_KEY = 'multicam_auto';
+export async function multicamByPlan(redis, slug) {
   if (slug === (process.env.BILLING_ADMIN_VENUE || 'local-assets-admin')) return true;
   const plan = await readPlan(redis, slug, 'venue').catch(() => null);
   if (!plan) return false;
   return MULTICAM_PLANS.includes(plan.id) || /enterprise/i.test(String(plan.name || plan.id))
     || (plan.features || []).some(f => /multi-?camera/i.test(String(f)));
+}
+export async function canMulticam(redis, slug) {
+  const set = await redis.hGet(MULTICAM_SWITCH_KEY, slug).catch(() => null);
+  if (set === 'on' || set === 'off') return set === 'on';
+  return multicamByPlan(redis, slug);
 }
 export async function readPlan(redis, slug, target = 'venue') {
   const a = (await readAssignments(redis, slug))[target];

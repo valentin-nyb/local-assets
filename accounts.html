@@ -213,6 +213,8 @@
             }[status] || 'Delivery not known yet.';
             return t + dom;
         }
+        // Premium video comes in 4K, Basic up to 1080p: one switch (either setting on counts as Premium)
+        function prem(a) { return a.videoQuality === 'premium' || !!a.video4k; }
         function post(body) {
             return laFetch('/api/admin-accounts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
                 .then(function(r) { return r.json().catch(function() { return {}; }).then(function(d) { if (!r.ok) throw new Error(d.error || r.status); return d; }); });
@@ -319,8 +321,8 @@
                     '<div class="ac-actions">' +
                         '<button type="button" class="ac-btn" data-act="edit">Edit</button>' +
                         '<button type="button" class="ac-btn" data-act="logins">Logins' + ((a.logins || []).length ? ' ' + a.logins.length : '') + '</button>' +
-                        '<button type="button" class="ac-btn' + (a.videoQuality === 'premium' ? ' is-premium' : '') + '" data-act="quality" aria-pressed="' + (a.videoQuality === 'premium') + '" title="Quality of the account\'s new videos in Mux. Basic is free to encode; Premium costs local / assets™ about $0.04 a minute">' + (a.videoQuality === 'premium' ? 'Premium video' : 'Basic video') + '</button>' +
-                        '<button type="button" class="ac-btn' + (a.video4k ? ' is-premium' : '') + '" data-act="4k" aria-pressed="' + !!a.video4k + '" title="Largest size new videos are kept at. 4K costs more to encode, store and stream">' + (a.video4k ? '4K video' : 'Up to 1080p') + '</button>' +
+                        '<button type="button" class="ac-btn' + (prem(a) ? ' is-premium' : '') + '" data-act="quality" aria-pressed="' + prem(a) + '" title="The account\'s new videos in Mux. Basic: free to encode, kept at up to 1080p. Premium: sharper, kept in 4K when filmed in 4K; costs more to encode, store and stream">' + (prem(a) ? 'Premium · 4K' : 'Basic · 1080p') + '</button>' +
+                        '<button type="button" class="ac-btn' + (a.autoEdit ? ' is-premium' : '') + '" data-act="autoedit" aria-pressed="' + !!a.autoEdit + '" title="Multi-camera auto edit after each set filmed with two cameras or more. ' + (a.autoEditSet ? 'Set here (its plan gives it ' + (a.autoEditByPlan ? 'on' : 'off') + ')' : 'As its plan gives it') + '">' + (a.autoEdit ? 'Auto edit on' : 'Auto edit off') + '</button>' +
                         '<button type="button" class="ac-btn" data-act="discount">' + (a.discount ? 'Discount ' + a.discount + '%' : 'Discount') + '</button>' +
                         '<button type="button" class="ac-btn" data-act="' + (a.paused ? 'resume' : 'pause') + '">' + (a.paused ? 'Resume' : 'Pause') + '</button>' +
                         (live ? '<button type="button" class="ac-btn" data-act="' + (a.endsAt ? 'keep' : 'cancel') + '">' + (a.endsAt ? 'Keep plan' : 'Cancel plan') + '</button>' : '') +
@@ -366,20 +368,12 @@
             if (act === 'logins') return openLogins(a);
             if (act === 'edit') return openEdit(a);
             if (act === 'discount') return openDiscount(a);
-            if (act === '4k') {
-                var on = !a.video4k;
-                if (on && !(await laConfirm({ title: '4K video for ' + a.name + '?', message: 'Its new videos filmed in 4K are kept in 4K. Mux charges more to encode, store and stream 4K; without it they are kept at 1080p. Videos already uploaded stay as they are.', confirmText: 'Use 4K' }))) return;
-                b.disabled = true;
-                try { await post({ action: 'video4k', slug: slug, on: on }); laToast(a.name + ': ' + (on ? '4K' : 'up to 1080p') + ' for new uploads'); await load(); }
-                catch (er) { b.disabled = false; laAlert('Could not change the video size: ' + er.message, { tone: 'error' }); }
-                return;
-            }
             if (act === 'quality') {
-                var prem = a.videoQuality !== 'premium';
-                if (prem && !(await laConfirm({ title: 'Premium video for ' + a.name + '?', message: 'Its new videos are encoded at Premium quality: sharper, with more streaming sizes. Mux charges about $0.04 a minute of video for it; Basic is free. Videos already uploaded stay as they are.', confirmText: 'Use Premium' }))) return;
+                var up = !prem(a);
+                if (up && !(await laConfirm({ title: 'Premium video for ' + a.name + '?', message: 'Its new videos are encoded at Premium quality and kept in 4K when filmed in 4K. Mux charges more to encode, store and stream them; Basic is free to encode and kept at up to 1080p. Videos already uploaded stay as they are.', confirmText: 'Use Premium' }))) return;
                 b.disabled = true;
-                try { await post({ action: 'videoQuality', slug: slug, quality: prem ? 'premium' : 'basic' }); laToast(a.name + ': ' + (prem ? 'Premium' : 'Basic') + ' video for new uploads'); await load(); }
-                catch (er) { b.disabled = false; laAlert('Could not change the video quality: ' + er.message, { tone: 'error' }); }
+                try { await post({ action: 'videoTier', slug: slug, premium: up }); laToast(a.name + ': ' + (up ? 'Premium · 4K' : 'Basic · up to 1080p') + ' for new uploads'); await load(); }
+                catch (er) { b.disabled = false; laAlert('Could not change the video: ' + er.message, { tone: 'error' }); }
                 return;
             }
             var ask = {

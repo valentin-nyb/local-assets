@@ -48,8 +48,9 @@ test('no 4K line when nothing was watched in 4K', () => {
 test('only Live-Set, Enterprise and the admin account get the multi-camera edit', async () => {
   const { canMulticam } = await import('../api/_billing.js');
   const custom = [{ id: 'ent-fabric', name: 'Enterprise · Fabric', price: 12000, features: ['3 rooms'] }];
-  const fake = (plan, plans = null) => ({
+  const fake = (plan, plans = null, set = null) => ({
     get: async k => k === 'billing_plans' && plans ? JSON.stringify(plans) : null,
+    hGet: async (k, f) => k === 'multicam_auto' ? set : null,
     hGetAll: async () => plan ? { venue: JSON.stringify({ plan }) } : {},
   });
   assert.equal(await canMulticam(fake('liveset-creative'), 'club'), true);
@@ -59,4 +60,7 @@ test('only Live-Set, Enterprise and the admin account get the multi-camera edit'
   assert.equal(await canMulticam(fake(null), 'club'), false);
   assert.equal(await canMulticam(fake('ent-fabric', custom), 'club'), true);
   assert.equal(await canMulticam(fake(null), 'local-assets-admin'), true);
+  // Admin → Accounts → Auto edit, whatever the plan
+  assert.equal(await canMulticam(fake('starter-distribution', null, 'on'), 'club'), true);
+  assert.equal(await canMulticam(fake('liveset-creative', null, 'off'), 'club'), false);
 });

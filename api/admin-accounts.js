@@ -3,7 +3,7 @@ import { VIDEO_QUALITY_KEY, VIDEO_4K_KEY } from './_video-quality.js';
 import { blist as list, bdel as del } from './_brandstore.js';
 import { createClient } from 'redis';
 import { getWebSessionAuth, getVenuesConfig, isAdminVenue, refreshRegistry, getMuxAuthForVenue, MEMBERS_KEY, freshVenues, LOGINS_KEY, EDITS_KEY, accountLogins } from './_venues.js';
-import { readAssignments, readPlans, stripeClient, accountTypeOf, DISCOUNTS_KEY, assignKey } from './_billing.js';
+import { readAssignments, readPlans, stripeClient, accountTypeOf, DISCOUNTS_KEY, assignKey, MULTICAM_SWITCH_KEY, multicamByPlan } from './_billing.js';
 import { unpaidKey, readUnpaid } from './_suspend.js';
 import { thumbnailPrefix } from './_thumbnails.js';
 import { Resend } from 'resend';
@@ -26,8 +26,10 @@ async function deliveryOf(resend, id, ms) {
 //   POST { action: 'resume', slug }        running again
 //   POST { action: 'cancel', slug }        the plan ends at the end of its paid month (or its minimum term)
 //   POST { action: 'keep', slug }          a cancelled plan carries on
+//   POST { action: 'videoTier', slug, premium }   Premium video in 4K, or Basic up to 1080p (the switch in Accounts)
 //   POST { action: 'videoQuality', slug, quality }   'premium' or 'basic' for the account's new videos in Mux
 //   POST { action: 'video4k', slug, on }   new videos kept in 4K (when filmed in 4K), else at most 1080p
+//   POST { action: 'autoEdit', slug, on }   the multi-camera auto edit on or off for the account, whatever its plan
 //   POST { action: 'discount', slug, percent }   a discount (0–100%) on its usage prices, from its next bill
 //   (a new account is opened from Accounts → New account through api/billing.js openAccount)
 //   POST { action: 'emailExample', to, kind?, slug? }   the access email (artist, or kind 'team'), as an example
@@ -107,6 +109,7 @@ export default async function handler(req, res) {
         const discounts = await redis.hGetAll(DISCOUNTS_KEY).catch(() => ({}));
         const qualities = await redis.hGetAll(VIDEO_QUALITY_KEY).catch(() => ({}));
         const fourK = await redis.hGetAll(VIDEO_4K_KEY).catch(() => ({}));
+        const autoSet = await redis.hGetAll(MULTICAM_SWITCH_KEY).catch(() => ({}));
         return Promise.all(clients.map(async ([slug, v]) => {
           const unpaid = await readUnpaid(redis, slug);
           const asg = (await readAssignments(redis, slug)).venue || {};
@@ -122,6 +125,8 @@ export default async function handler(req, res) {
             subscription: sub ? sub.status : subId ? 'unknown' : 'none', endsAt: ends ? ends * 1000 : null,
             setupPending: v.status === 'pending', artists, video: !!getMuxAuthForVenue({ slug, ...v }), discount: Number(discounts?.[slug]) || 0,
             videoQuality: qualities?.[slug] === 'premium' ? 'premium' : 'basic', video4k: fourK?.[slug] === '1',
+            ...(await (async () => { const byPlan = await multicamByPlan(redis, slug); const set = autoSet?.[slug];
+              return { autoEdit: set === 'on' || set === 'off' ? set === 'on' : byPlan, autoEditByPlan: byPlan, autoEditSet: set === 'on' || set === 'off' }; })()),
           };
         }));
       });
@@ -247,12 +252,32 @@ export default async function handler(req, res) {
       console.log('[admin-accounts] video quality', slug, premium ? 'premium' : 'basic', 'by', session.email);
       return res.status(200).json({ ok: true, videoQuality: premium ? 'premium' : 'basic' });
     }
+    // One switch in Accounts: Basic (up to 1080p) or Premium (4K when filmed in 4K), both settings together
+    if (body.action === 'videoTier') {
+      const premium = body.premium === true;
+      await withRedis(async r => {
+        if (premium) { await r.hSet(VIDEO_QUALITY_KEY, slug, 'premium'); await r.hSet(VIDEO_4K_KEY, slug, '1'); }
+        else { await r.hDel(VIDEO_QUALITY_KEY, slug); await r.hDel(VIDEO_4K_KEY, slug); }
+      });
+      console.log('[admin-accounts] video', slug, premium ? 'premium 4K' : 'basic 1080p', 'by', session.email);
+      return res.status(200).json({ ok: true, premium });
+    }
     // 4K for an account that needs it: Mux charges more to encode, store and stream it
     if (body.action === 'video4k') {
       const on = body.on === true;
       await withRedis(r => on ? r.hSet(VIDEO_4K_KEY, slug, '1') : r.hDel(VIDEO_4K_KEY, slug));
       console.log('[admin-accounts] video 4k', slug, on, 'by', session.email);
       return res.status(200).json({ ok: true, video4k: on });
+    }
+    // Multi-camera auto edit: on or off for this account. Back to what its plan gives: the switch is cleared
+    if (body.action === 'autoEdit') {
+      const on = body.on === true;
+      const now = await withRedis(async r => {
+        if (on === await multicamByPlan(r, slug)) await r.hDel(MULTICAM_SWITCH_KEY, slug); else await r.hSet(MULTICAM_SWITCH_KEY, slug, on ? 'on' : 'off');
+        return on;
+      });
+      console.log('[admin-accounts] auto edit', slug, now, 'by', session.email);
+      return res.status(200).json({ ok: true, autoEdit: now });
     }
     if (body.action === 'discount') {
       const pct = Math.round(Number(body.percent) * 10) / 10;
@@ -341,6 +366,7 @@ export default async function handler(req, res) {
         }
         await redis.hDel('la_venues', slug);
         await redis.hDel(DISCOUNTS_KEY, slug);
+        await redis.hDel(MULTICAM_SWITCH_KEY, slug);
         await redis.hDel(LOGINS_KEY, slug);
         await redis.hDel(EDITS_KEY, slug);
         await redis.sAdd('la_deleted', slug);
