@@ -210,8 +210,19 @@ export default async function handler(req, res) {
       const slug = String(body.slug || ''), step = String(body.step || ''), auth = authOf(slug);
       if (!auth || !['add', 'lock', 'undo'].includes(step)) return res.status(400).json({ error: 'Which account and step?' });
       if (step === 'add' || step === 'lock') await signingFor(redis, auth);   // the key first: nothing is locked an account can't sign
-      const mux = (p, init = {}) => fetch('https://api.mux.com' + p, { ...init, headers: { Authorization: auth, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(15000) })
-        .then(async r => { const b = await r.json().catch(() => ({})); if (!r.ok && r.status !== 204) throw new Error(b?.error?.messages?.[0] || 'Mux ' + r.status); return b; });
+      // Mux takes a few requests a second: a "too many" answer waits as Mux asks (or 2 s) and tries again, and each
+      // change is spaced out a little so a long list stays under the limit
+      const wait = ms => new Promise(ok => setTimeout(ok, ms));
+      const mux = async (p, init = {}) => {
+        for (let tries = 0; ; tries++) {
+          const r = await fetch('https://api.mux.com' + p, { ...init, headers: { Authorization: auth, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(15000) });
+          if (r.status === 429 && tries < 5) { await wait(Math.min(10000, (Number(r.headers.get('retry-after')) || 2) * 1000)); continue; }
+          const b = await r.json().catch(() => ({}));
+          if (!r.ok && r.status !== 204) throw new Error(b?.error?.messages?.[0] || 'Mux ' + r.status);
+          if (init.method && init.method !== 'GET') await wait(250);
+          return b;
+        }
+      };
       const t0 = Date.now(); let page = Math.max(1, Number(body.page) || 1), changed = 0, failed = 0, more = true;
       // One video or camera: what this step does to its playback IDs
       const fix = async (base, ids) => {
@@ -265,5 +276,9 @@ export default async function handler(req, res) {
       return res.status(200).json({ accounts, brandPrivate: privateBrand(), privateStore: !!process.env.LA_PRIVATE_READ_WRITE_TOKEN });
     }
     return res.status(400).json({ error: 'Unknown action' });
+  } catch (e) {
+    // An answer the page can read (not Vercel's error page), and the error still reaches Rollbar
+    console.error('[media]', req.method, e);
+    if (!res.headersSent) return req.method === 'GET' ? res.status(500).send('Something went wrong. Try again.') : res.status(500).json({ error: e.message || 'Something went wrong' });
   } finally { await redis.quit().catch(() => {}); }
 }
