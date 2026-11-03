@@ -69,24 +69,25 @@ async function signAddress(redis, url, slugs, member, ttl, extra = {}) {
     const folder = bp.split('/')[1] || '';
     const slug = slugs.find(s => s.toLowerCase() === folder.toLowerCase());
     if (!slug) {
-      console.error('[media] refused brand', bp.split('/').slice(1, 4).join('/'), 'reach', slugs.join(','));
+      console.warn('[media] refused brand', bp.split('/').slice(1, 4).join('/'), 'reach', slugs.join(','));
       // Still in the public store (before Copy Brand Kit files + LA_PRIVATE_BRAND=1): open to anyone anyway, shown as before
       return privateBrand() ? null : { url, o: { slug: folder } };
     }
     return { url: await readUrl(url, Math.min(ttl, 900)), o: { slug } };
   }
-  if (!/^(stream|image)\.mux\.com$/.test(u.hostname)) { console.error('[media] refused', u.hostname, (bp || u.pathname).slice(0, 40)); return null; }
+  if (!/^(stream|image)\.mux\.com$/.test(u.hostname)) { console.warn('[media] refused', u.hostname, (bp || u.pathname).slice(0, 40)); return null; }
   const pid = (/^\/([A-Za-z0-9]+)/.exec(u.pathname) || [])[1];
   if (!pid) return null;
   const o = await ownerOf(redis, pid, slugs);
   const m = typeof member === 'function' ? member(o?.slug) : member;
   if (!allowed(o, m)) {
-    // Why it was refused, for support (no keys or addresses): whose the video is, and what this login can open
+    // Why it was refused, for support (no keys or addresses). Warnings, not errors: a refusal is the check working,
+    // and each video's own line was a new Rollbar error and email: whose the video is, and what this login can open
     const c = JSON.parse(await redis.get(`pid_owner:${pid}`).catch(() => null) || 'null');
-    console.error('[media] refused', u.hostname.split('.')[0], u.pathname.replace(pid, pid.slice(0, 6) + '…').slice(0, 40), 'owner', c ? c.slug + (c.artist ? '/' + c.artist : '') : 'not found in ' + slugs.join(','), 'reach', slugs.join(','), m ? 'as artist ' + m.name : 'full access');
+    console.warn('[media] refused', u.hostname.split('.')[0], u.pathname.replace(pid, pid.slice(0, 6) + '…').slice(0, 40), 'owner', c ? c.slug + (c.artist ? '/' + c.artist : '') : 'not found in ' + slugs.join(','), 'reach', slugs.join(','), m ? 'as artist ' + m.name : 'full access');
     // A video still public on Mux (its account not switched to signed yet) is open to anyone anyway: shown as before
     const pub = await fetch(`https://image.mux.com/${pid}/thumbnail.jpg?width=8`, { signal: AbortSignal.timeout(5000) }).then(r => { r.body?.cancel?.().catch?.(() => {}); return r.ok; }).catch(() => false);
-    console.error('[media] refused', pid.slice(0, 6) + '…', pub ? 'public on Mux: shown' : 'not public on Mux: refused');
+    console.warn('[media] refused', pid.slice(0, 6) + '…', pub ? 'public on Mux: shown' : 'not public on Mux: refused');
     return pub ? { url, o: c || { slug: '' } } : null;
   }
   if (o.policy !== 'signed') return { url, o };   // still public: as it is

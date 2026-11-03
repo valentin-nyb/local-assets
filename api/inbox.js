@@ -50,8 +50,11 @@ async function sortAlerts() {
   const found = (list.data || []).filter(t => ALERT_FROM.test(String(t.from || '')) && !(t.labels || []).some(l => String(l.name).toLowerCase() === ALERTS.toLowerCase()));
   if (!found.length) return 0;
   const label = await alertsLabelId();
-  await Promise.all(found.map(t => rs('/threads/' + t.id + '/labels', { method: 'POST', body: { labels: [label] } })
-    .then(() => rs('/threads/' + t.id, { method: 'PATCH', body: { folder: 'archive' } }))));
+  // One at a time: Resend takes 10 requests a second, and a burst of alerts all at once went over it and stayed in the Inbox
+  for (const t of found) {
+    await rs('/threads/' + t.id + '/labels', { method: 'POST', body: { labels: [label] } });
+    await rs('/threads/' + t.id, { method: 'PATCH', body: { folder: 'archive' } });
+  }
   return found.length;
 }
 
@@ -86,7 +89,8 @@ export default async function handler(req, res) {
       }
       const folder = FOLDERS.includes(q.folder) ? q.folder : 'inbox';
       const list = await rs('/threads?folders=' + (folder === 'inbox' ? 'inbox,sent' : folder) + '&limit=50' + (after ? '&after=' + after : ''));
-      return res.json({ folder, threads: list.data || [], more: !!list.has_more });
+      // Alert emails only ever show under Alerts, even ones not sorted yet
+      return res.json({ folder, threads: (list.data || []).filter(t => !ALERT_FROM.test(String(t.from || ''))), more: !!list.has_more });
     }
 
     if (req.method === 'POST') {

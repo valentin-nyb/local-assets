@@ -50,6 +50,7 @@ const doneKey = masterId => `v_done:${masterId}`;           // hash: n → origi
 const failKey = masterId => `v_fail:${masterId}`;
 const failedKey = slug => `v_failed:${slug}`;               // hash: masterId:n → JSON { artist, n, at, error } (cleared when it's cut)
 const readyKey = slug => `v_ready:${slug}`;                 // sorted set: originals that finished, by time
+const host = u => { try { return new URL(u).hostname; } catch { return String(u || '').slice(0, 30); } };   // an address for the logs, without its signed part
 
 // Vertical clips health for System Health: cutting now, failed (last 24 h) and finished (last 24 h)
 export async function verticalsHealth(redis, slug) {
@@ -388,7 +389,7 @@ export async function cutVertical(redis, auth, job) {
     // Empty, or no HQ AUDIO: cut again from the downloadable MP4, which carries picture and sound together.
     let silent = sizeOf() >= 200 * 1024 && !(await hasAudio(out));
     if (silent) {
-      console.error('[verticals] no sound in the stream cut', job.n, 'video', video || clipUrl, 'audio', audio || 'none');
+      console.warn('[verticals] no sound in the stream cut', job.n, 'video', host(video || clipUrl), 'audio', audio ? host(audio) : 'none');   // handled below: a warning, and only the host (the address is signed)
       const hq = await sessionAudio(auth, job).catch(e => { console.error('[verticals] hq audio lookup', e.message); return null; });
       if (hq) {
         const keep = out + '.silent.mp4';
