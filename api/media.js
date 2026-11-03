@@ -237,7 +237,8 @@ export default async function handler(req, res) {
       if (page === 1) for (const s of (await mux('/video/v1/live-streams?limit=100')).data || []) await fix(`/video/v1/live-streams/${s.id}`, s.playback_ids);
       while (Date.now() - t0 < 240e3) {
         const list = (await mux(`/video/v1/assets?limit=100&page=${page}`)).data || [];
-        for (const a of list) await fix(`/video/v1/assets/${a.id}`, a.playback_ids);
+        // An upload Mux couldn't process ("errored") never plays and can't take a playback ID: left out, not a failure
+        for (const a of list) if (a.status !== 'errored') await fix(`/video/v1/assets/${a.id}`, a.playback_ids);
         if (list.length < 100) { more = false; break; }
         page++;
       }
