@@ -1180,11 +1180,11 @@
     }
     function ordPricingHtml(mode, days) {
         if (mode === 'rent') {
-            return '<div class="ord-price"><span class="ord-amount">' + gbp(rentRate(days)) + '</span><span class="ord-per">per camera per day, inc. VAT</span></div>' +
+            return '<div class="ord-price"><span class="ord-amount">' + gbp(rentRate(days)) + '</span><span class="ord-per">per camera per day</span></div>' +
                 '<p class="ord-included">' + (days >= RENT_LONG_FROM ? 'Hire rate for 3 days or more' : gbp(RENT_LONG) + ' a day when you hire for 3 days or more') + '</p>' +
                 '<p class="ord-note">Delivered the day before and collected the day after, anywhere in the UK. Set up with your local / assets™ dashboard, so every set is recorded with vertical clips made automatically.</p>';
         }
-        return '<div class="ord-price"><span class="ord-amount">' + gbp(CAMERA_PRICE) + '</span><span class="ord-per">per camera, inc. VAT</span></div>' +
+        return '<div class="ord-price"><span class="ord-amount">' + gbp(CAMERA_PRICE) + '</span><span class="ord-per">per camera</span></div>' +
             '<p class="ord-included">Setup and integration with your local / assets™ dashboard included</p>' +
             '<p class="ord-klarna"><b>Klarna.</b> Or pay in 3 interest-free payments of ' + gbp(Math.round(CAMERA_PRICE / 3)) + ', or spread the cost monthly.</p>';
     }
