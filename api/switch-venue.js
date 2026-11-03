@@ -4,7 +4,7 @@ import { getWebSessionAuth, findVenuesByEmail, signWebToken, venueChoicesTyped, 
 
 // The version of the Terms of Service and Privacy policy people agree to (their effective date).
 // Changing it asks everyone to agree again the next time they open the dashboard.
-export const TERMS_VERSION = '2026-11-02';   // payments, cancellation and refunds added
+export const TERMS_VERSION = '2026-11-03';   // the company named: LOCAL / ASSETS LTD
 
 // Who is on the platform: each open page says it's still there about once a minute ({ ping }), kept per
 // person and device (la_presence). The admin account reads it ({ presence }); entries over 30 days old go.

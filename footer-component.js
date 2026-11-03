@@ -61,7 +61,7 @@
           </div>
         </div>
         <div class="lf-bottom">
-          <span>© ${YEAR} local / assets™ · All rights reserved</span>
+          <span>© ${YEAR} LOCAL / ASSETS LTD · Registered in England and Wales, company no. 17559431 · 66 Paul Street, London EC2A 4NA</span>
           <span class="lf-status"><span class="lf-dot" aria-hidden="true"></span>Local / Assets™ <span data-la-version>${VERSION}</span> <b>// Connected</b></span>
         </div>
       </div>
