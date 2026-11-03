@@ -425,6 +425,14 @@
                         <span class="bl-msg" id="bl-kit-msg"></span>
                     </div>
                 </section>
+                <section class="bl-section hidden" id="bl-metrics-box">
+                    <div class="bl-section-head"><h3>Weekly numbers</h3><span class="bl-msg">MRR, churn, cost per venue and gross margin, emailed to info@local-assets.com every Monday at 7:00 (UK time in winter).</span></div>
+                    <div class="bl-scroll"><table class="bl-table" id="bl-metrics"><tbody><tr><td class="bl-msg">No weeks yet: the first is sent on Monday, or press Email now.</td></tr></tbody></table></div>
+                    <div class="bl-admin-actions" style="padding-top:16px">
+                        <button type="button" class="cam-btn primary" id="bl-metrics-send">Email now</button>
+                        <span class="bl-msg" id="bl-metrics-msg"></span>
+                    </div>
+                </section>
                 <section class="bl-section hidden bl-fold folded" id="bl-run-box">
                     <div class="bl-section-head bl-fold-head" role="button" tabindex="0" aria-expanded="false" onclick="if(event.target.closest('button,select,a,input,textarea'))return;var s=this.parentNode;s.classList.toggle('folded');this.setAttribute('aria-expanded',!s.classList.contains('folded'))" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><h3>Running costs <svg class="bl-fold-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></h3><span class="bl-msg">The services the platform runs on and what each costs us a month. Mux and Stripe fill in from this month's usage; leave a cost empty until you know it.</span></div>
                     <div class="bl-scroll"><table class="bl-table" id="bl-run"></table></div>
@@ -847,7 +855,7 @@
                     : 'Your plan stays active until the end of the current billing month' + (endTxt ? ' (' + endTxt + ')' : '') + '. Your recordings, clips and Brand Kit stay downloadable until then.';
                 cbtn.textContent = 'Cancel account'; cbtn.classList.add('bl-danger'); cbtn.classList.remove('primary'); cbtn.dataset.mode = 'cancel';
             }
-            ['bl-admin', 'bl-send-box', 'bl-plans-box', 'bl-kit-box', 'bl-run-box', 'bl-overview'].forEach(function(id) { document.getElementById(id).classList.toggle('hidden', !admin); });
+            ['bl-admin', 'bl-send-box', 'bl-plans-box', 'bl-kit-box', 'bl-run-box', 'bl-metrics-box', 'bl-overview'].forEach(function(id) { document.getElementById(id).classList.toggle('hidden', !admin); });
             // Admin: no invoice cards (they'd read as our own bill; All accounts has the totals), and the chart
             // shows every account added up or the one picked
             var cards = document.getElementById('bl-cards'); if (cards) cards.classList.toggle('hidden', !!admin);
@@ -909,6 +917,7 @@
             renderPlans(d.plans);
             renderKit(d.kit || [], d.kitPlans || [], d.plans, d.kitPrices || {});
             renderRunning(d.running || []);
+            loadMetrics();
         }
         // All accounts (admin): what every account's video and files cost us this month, next to what we bill
         document.addEventListener('visibilitychange', function() { if (document.hidden) return; try { load(); } catch (_) {} });
@@ -1025,6 +1034,35 @@
             this.disabled = true; msg.textContent = 'Saving…';
             try { await post({ action: 'setKit', kit: readKitRows() }); t.dataset.editing = ''; msg.textContent = 'Saved'; await load(); }
             catch (e) { msg.textContent = 'Could not save: ' + e.message; }
+            this.disabled = false;
+        });
+        // Weekly numbers (admin): this week next to last week, as in the Monday email
+        function renderMetrics(weeks) {
+            var t = document.getElementById('bl-metrics'), m = weeks[0], p = weeks[1];
+            if (!m) return;
+            var esc = function(v) { return String(v == null ? '' : v).replace(/[&<>"]/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+            var money = function(n) { return n == null ? '—' : '£' + Number(n).toLocaleString('en-GB', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }); };
+            var pct = function(n) { return n == null ? '—' : (Math.round(n * 1000) / 10) + '%'; };
+            var g = function(o, path) { return path.split('.').reduce(function(v, k) { return v == null ? v : v[k]; }, o); };
+            var rows = [['MRR', 'mrr', money], ['New this week', 'newMrr7', money], ['Churned this week', 'churn.mrr7', money], ['Churn, last 30 days', 'churn.rate30', pct],
+                ['Cash in, last 30 days', 'revenue30', money], ['Running cost a month', 'cost.monthly', money], ['Cost per venue', 'cost.perVenue', money], ['Cost per account', 'cost.perAccount', money], ['Gross margin', 'margin', pct]];
+            var when = new Date(m.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+            t.innerHTML = '<thead><tr><th></th><th class="num">' + esc(when) + '</th><th class="num">' + (p ? esc(new Date(p.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })) : 'Week before') + '</th></tr></thead><tbody>' +
+                rows.map(function(r) { return '<tr><td><b>' + r[0] + '</b></td><td class="num">' + esc(r[2](g(m, r[1]))) + '</td><td class="num bl-msg">' + (p ? esc(r[2](g(p, r[1]))) : '—') + '</td></tr>'; }).join('') + '</tbody>';
+        }
+        function loadMetrics() {
+            laFetch('/api/billing?metrics=1').then(function(r) { return r.json(); }).then(function(d) { if (d && d.weeks) renderMetrics(d.weeks); }).catch(function() {});
+        }
+        document.getElementById('bl-metrics-send').addEventListener('click', async function() {
+            var msg = document.getElementById('bl-metrics-msg');
+            this.disabled = true; msg.textContent = 'Working out the numbers…';
+            try {
+                var r = await laFetch('/api/billing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'sendMetrics' }) });
+                var d = await r.json();
+                if (!r.ok) throw new Error(d.error || r.status);
+                msg.textContent = d.sent ? 'Sent to info@local-assets.com' : 'Worked out, but the email could not be sent';
+                loadMetrics();
+            } catch (e) { msg.textContent = 'Could not send: ' + e.message; }
             this.disabled = false;
         });
         // Running costs: one row per service we pay for, its bill a month in its own currency; the total in pounds.

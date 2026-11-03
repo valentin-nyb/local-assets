@@ -1,6 +1,7 @@
 import './_report.js';   // errors go to Rollbar
 import { listPool, addToPool, removeFromPool, activateFromPool, poolSize } from './_mux-pool.js';
 import { mailFrom, mailError } from './_emails.js';
+import { weeklyMetrics, metricsEmail, METRICS_KEY } from './_metrics.js';
 import { unpaidKey, readUnpaid } from './_suspend.js';
 import { createClient } from 'redis';
 import { getWebSessionAuth, getVenuesConfig, readRegistryRaw, saveRegistryEntry, sealSecret, freshVenues, isAdminVenue } from './_venues.js';
@@ -25,6 +26,8 @@ const MUX_BILL_FLOOR = {
 //   POST { action: 'setPlans', plans }                           admin
 //   POST { action: 'setKit', kit }                               admin: kit expenses for Pro and Live-Set
 //   POST { action: 'setRunning', running }                       admin: running costs (the services we pay for)
+//   GET  ?metrics=1 · POST { action: 'sendMetrics' }             admin: the weekly numbers, or email them now
+//   GET  ?cron=weekly                      (Vercel cron, Mondays) emails the weekly numbers
 //   GET  ?runningFees=1                                          admin: this month's Stripe fees, for running costs
 //   POST { action: 'repriceSubscriptions', apply }               admin: subscriptions to their plan's current price
 //   POST { action: 'assign', target, plan, email, name, monthly } admin: who pays which plan
@@ -58,12 +61,110 @@ async function withRedis(fn) {
 }
 function previousMonth() { const d = new Date(); return monthRange(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - 1, 15))); }
 
+// Every account this month so far: what its video and files cost us and what it is billed (cached 10 minutes).
+// Used by the admin overview and the weekly report.
+async function overviewThisMonth(redis, fresh = false, isAdminEntry = k => isAdminVenue({ slug: k, ...(getVenuesConfig()[k] || {}) })) {
+    const period = monthRange();
+    const cacheKey = `billing_overview3:${period.key}`;
+    if (!fresh) { const c = await redis.get(cacheKey).catch(() => null); if (c) return JSON.parse(c); }
+    const [rates, plans] = await Promise.all([readRates(redis), readPlans(redis)]);
+    const seenEnv = new Set(), rows = [], usages = [];
+    const entries = venueEntries();
+    for (const { slug: s, cfg: c, auth: a } of entries) {
+      const own = isAdminEntry(s);
+      const type = own ? 'admin' : await accountTypeOf(redis, s);
+      // Accounts sharing one environment: its video is counted once (on the first), files for each
+      const shared = !!(a && seenEnv.has(a));
+      if (a) seenEnv.add(a);
+      let usage;
+      try { usage = await venueUsage(s, shared ? null : a, period); }
+      catch (e) { rows.push({ slug: s, name: c?.name || s, type, error: e.message }); continue; }
+      const gb = usage.fileBytes / 1e9;
+      usages.push(usage);
+      const asg = (await readAssignments(redis, s)).venue || {};
+      const plan = own ? null : planForType(plans.find(p => p.id === asg.plan) || null, type);
+      const billed = own ? 0 : priceUsage(usage, await readRates(redis, s), plan, await readDiscount(redis, s)).total;
+      rows.push({ slug: s, name: c?.name || s, type, plan: plan?.name || (own ? 'local / assets™' : 'No plan'), shared, notes: usage.notes,
+        storedHours: usage.storedMinutes / 60, streamedHours: usage.deliveredMinutes / 60, newHours: usage.newMinutes / 60, recordedHours: (usage.liveMinutes || 0) / 60, fileGB: gb,
+        billed: Math.round(billed * 100) / 100, _u: usage });
+    }
+    // What Mux charges, in dollars: each account's own rows; the free streaming minutes are shared out
+    // between the accounts by how much each streamed (Mux gives them to the organisation, not to an account)
+    const monthPart = Math.min(1, (Date.now() - period.start) / (period.end - period.start));
+    // Videos encoded this month and deleted since: still charged by Mux. The webhook notes each one's minutes
+    // (mux_ledger); per account and kind, the larger of that and what's still in storage counts.
+    const ledger = await redis.hGetAll(`mux_ledger:${period.key}`).catch(() => ({})) || {};
+    const bySlug = {};
+    for (const [f, v] of Object.entries(ledger)) { const [sl, k] = f.split('|'); (bySlug[sl] = bySlug[sl] || {})[k] = Number(v) || 0; }
+    for (const r of rows) {
+      const led = bySlug[r.slug]; if (!r._u || !led) continue;
+      for (const [k, m] of Object.entries(led)) r._u.muxEncode[k] = Math.max(r._u.muxEncode[k] || 0, m);
+      delete bySlug[r.slug];
+    }
+    // Accounts deleted since (and videos no account claimed): their encoding is still on Mux's bill
+    const gone = { storedMinutes: 0, deliveredMinutes: 0, delivered4KMinutes: 0, fileBytes: 0, muxEncode: {} };
+    for (const led of Object.values(bySlug)) for (const [k, m] of Object.entries(led)) gone.muxEncode[k] = (gone.muxEncode[k] || 0) + m;
+    // A month's minimum per kind, from Mux's own bill, for videos deleted before the webhook noted them
+    const floor = MUX_BILL_FLOOR[period.key] || {};
+    for (const [k, m] of Object.entries(floor)) {
+      const have = usages.reduce((t, u) => t + ((u.muxEncode || {})[k] || 0), 0) + (gone.muxEncode[k] || 0);
+      if (m > have) gone.muxEncode[k] = (gone.muxEncode[k] || 0) + (m - have);
+    }
+    if (Object.keys(gone.muxEncode).length) { usages.push(gone); rows.push({ slug: '', name: 'Deleted accounts and videos', type: 'admin', plan: '—', storedHours: 0, streamedHours: 0, newHours: 0, recordedHours: 0, fileGB: 0, billed: 0, _u: gone }); }
+    const allDelivered = usages.reduce((t, u) => t + (u.deliveredMinutes || 0), 0);
+    for (const r of rows) {
+      if (!r._u) continue;
+      const share = allDelivered ? (r._u.deliveredMinutes || 0) / allDelivered : 0;
+      r.cost = muxCost([r._u], monthPart, MUX_PRICES.deliveryFree * share).total;
+      delete r._u;
+    }
+    const mux = muxCost(usages, monthPart);
+    rows.sort((x, y) => (y.cost || 0) - (x.cost || 0));
+    const sum = k => Math.round(rows.reduce((t, r) => t + (r[k] || 0), 0) * 100) / 100;
+    // Mux's own report for this month, when one was uploaded: its rows and what's owed after its credits
+    const report = JSON.parse(await redis.get(`mux_report:${period.key}`).catch(() => null) || 'null');
+    const cost = report ? report.net : mux.total;
+    const result = { period: period.label, at: Date.now(), rows, mux: report ? report.lines : mux.lines, report: report ? { gross: report.gross, credits: report.credits, through: report.through, uploadedAt: report.uploadedAt } : null,
+      usdToGbp: MUX_PRICES.usdToGbp, totals: { cost, costGbp: Math.round(cost * MUX_PRICES.usdToGbp * 100) / 100, billed: sum('billed'), storedHours: sum('storedHours'), streamedHours: sum('streamedHours'), recordedHours: sum('recordedHours'), fileGB: sum('fileGB') }, currency: rates.currency || 'gbp' };
+    await redis.set(cacheKey, JSON.stringify(result), { EX: 600 }).catch(() => {});
+    return result;
+}
+
+// The weekly numbers (api/_metrics.js): worked out, kept with the weeks before, and emailed to the founders
+async function sendWeeklyMetrics(stripe) {
+  return withRedis(async redis => {
+    const m = await weeklyMetrics(redis, stripe, await overviewThisMonth(redis).catch(() => null));
+    const prev = JSON.parse(await redis.lIndex(METRICS_KEY, 0).catch(() => null) || 'null');
+    await redis.lPush(METRICS_KEY, JSON.stringify(m));
+    await redis.lTrim(METRICS_KEY, 0, 155);   // three years of Mondays
+    const mail = metricsEmail(m, prev);
+    const key = (process.env.LA_RESEND_API_KEY || process.env.RESEND_API_KEY || '').trim();
+    if (!key) return { metrics: m, sent: false };
+    const { Resend } = await import('resend');
+    const to = (process.env.METRICS_EMAIL || process.env.ORDERS_EMAIL || 'info@local-assets.com').split(/[\s,]+/).filter(Boolean);
+    const sent = await new Resend(key).emails.send({ from: mailFrom(), to, ...mail });
+    if (sent?.error) console.error('[billing] weekly numbers email', mailError(sent.error));
+    return { metrics: m, sent: !sent?.error };
+  });
+}
+
 export default async function handler(req, res) {
   await freshVenues();
   res.setHeader('Cache-Control', 'no-store');
 
   // Monthly run, on the 1st: every client account is invoiced for last month (and any artist or label in it
   // marked to be billed monthly), emailed to the address in Bill to or the account's sign-in email
+  // Every Monday: the weekly numbers emailed to the founders
+  if (req.method === 'GET' && req.query.cron === 'weekly') {
+    const secret = process.env.CRON_SECRET;
+    const ok = secret ? req.headers.authorization === `Bearer ${secret}` : /vercel-cron/i.test(req.headers['user-agent'] || '');
+    if (!ok) return res.status(401).end();
+    const stripe = stripeClient();
+    if (!stripe) return res.status(503).json({ error: 'Stripe is not connected' });
+    const out = await sendWeeklyMetrics(stripe);
+    console.log('[billing] weekly numbers', JSON.stringify({ mrr: out.metrics.mrr, margin: out.metrics.margin, sent: out.sent }));
+    return res.status(200).json(out);
+  }
   if (req.method === 'GET' && req.query.cron) {
     const secret = process.env.CRON_SECRET;
     const ok = secret ? req.headers.authorization === `Bearer ${secret}` : /vercel-cron/i.test(req.headers['user-agent'] || '');
@@ -153,73 +254,15 @@ export default async function handler(req, res) {
     // Storage environments, and the local / assets one) and what it is billed. Kept 10 minutes (?fresh=1 to redo).
     if (req.method === 'GET' && req.query.overview) {
       if (!isAdmin) return res.status(403).json({ error: 'Admin only' });
-      const period = monthRange();
-      const out = await withRedis(async redis => {
-        const cacheKey = `billing_overview3:${period.key}`;
-        if (!req.query.fresh) { const c = await redis.get(cacheKey).catch(() => null); if (c) return JSON.parse(c); }
-        const [rates, plans] = await Promise.all([readRates(redis), readPlans(redis)]);
-        const seenEnv = new Set(), rows = [], usages = [];
-        const entries = venueEntries();
-        for (const { slug: s, cfg: c, auth: a } of entries) {
-          const own = isAdminEntry(s);
-          const type = own ? 'admin' : await accountTypeOf(redis, s);
-          // Accounts sharing one environment: its video is counted once (on the first), files for each
-          const shared = !!(a && seenEnv.has(a));
-          if (a) seenEnv.add(a);
-          let usage;
-          try { usage = await venueUsage(s, shared ? null : a, period); }
-          catch (e) { rows.push({ slug: s, name: c?.name || s, type, error: e.message }); continue; }
-          const gb = usage.fileBytes / 1e9;
-          usages.push(usage);
-          const asg = (await readAssignments(redis, s)).venue || {};
-          const plan = own ? null : planForType(plans.find(p => p.id === asg.plan) || null, type);
-          const billed = own ? 0 : priceUsage(usage, await readRates(redis, s), plan, await readDiscount(redis, s)).total;
-          rows.push({ slug: s, name: c?.name || s, type, plan: plan?.name || (own ? 'local / assets™' : 'No plan'), shared, notes: usage.notes,
-            storedHours: usage.storedMinutes / 60, streamedHours: usage.deliveredMinutes / 60, newHours: usage.newMinutes / 60, recordedHours: (usage.liveMinutes || 0) / 60, fileGB: gb,
-            billed: Math.round(billed * 100) / 100, _u: usage });
-        }
-        // What Mux charges, in dollars: each account's own rows; the free streaming minutes are shared out
-        // between the accounts by how much each streamed (Mux gives them to the organisation, not to an account)
-        const monthPart = Math.min(1, (Date.now() - period.start) / (period.end - period.start));
-        // Videos encoded this month and deleted since: still charged by Mux. The webhook notes each one's minutes
-        // (mux_ledger); per account and kind, the larger of that and what's still in storage counts.
-        const ledger = await redis.hGetAll(`mux_ledger:${period.key}`).catch(() => ({})) || {};
-        const bySlug = {};
-        for (const [f, v] of Object.entries(ledger)) { const [sl, k] = f.split('|'); (bySlug[sl] = bySlug[sl] || {})[k] = Number(v) || 0; }
-        for (const r of rows) {
-          const led = bySlug[r.slug]; if (!r._u || !led) continue;
-          for (const [k, m] of Object.entries(led)) r._u.muxEncode[k] = Math.max(r._u.muxEncode[k] || 0, m);
-          delete bySlug[r.slug];
-        }
-        // Accounts deleted since (and videos no account claimed): their encoding is still on Mux's bill
-        const gone = { storedMinutes: 0, deliveredMinutes: 0, delivered4KMinutes: 0, fileBytes: 0, muxEncode: {} };
-        for (const led of Object.values(bySlug)) for (const [k, m] of Object.entries(led)) gone.muxEncode[k] = (gone.muxEncode[k] || 0) + m;
-        // A month's minimum per kind, from Mux's own bill, for videos deleted before the webhook noted them
-        const floor = MUX_BILL_FLOOR[period.key] || {};
-        for (const [k, m] of Object.entries(floor)) {
-          const have = usages.reduce((t, u) => t + ((u.muxEncode || {})[k] || 0), 0) + (gone.muxEncode[k] || 0);
-          if (m > have) gone.muxEncode[k] = (gone.muxEncode[k] || 0) + (m - have);
-        }
-        if (Object.keys(gone.muxEncode).length) { usages.push(gone); rows.push({ slug: '', name: 'Deleted accounts and videos', type: 'admin', plan: '—', storedHours: 0, streamedHours: 0, newHours: 0, recordedHours: 0, fileGB: 0, billed: 0, _u: gone }); }
-        const allDelivered = usages.reduce((t, u) => t + (u.deliveredMinutes || 0), 0);
-        for (const r of rows) {
-          if (!r._u) continue;
-          const share = allDelivered ? (r._u.deliveredMinutes || 0) / allDelivered : 0;
-          r.cost = muxCost([r._u], monthPart, MUX_PRICES.deliveryFree * share).total;
-          delete r._u;
-        }
-        const mux = muxCost(usages, monthPart);
-        rows.sort((x, y) => (y.cost || 0) - (x.cost || 0));
-        const sum = k => Math.round(rows.reduce((t, r) => t + (r[k] || 0), 0) * 100) / 100;
-        // Mux's own report for this month, when one was uploaded: its rows and what's owed after its credits
-        const report = JSON.parse(await redis.get(`mux_report:${period.key}`).catch(() => null) || 'null');
-        const cost = report ? report.net : mux.total;
-        const result = { period: period.label, at: Date.now(), rows, mux: report ? report.lines : mux.lines, report: report ? { gross: report.gross, credits: report.credits, through: report.through, uploadedAt: report.uploadedAt } : null,
-          usdToGbp: MUX_PRICES.usdToGbp, totals: { cost, costGbp: Math.round(cost * MUX_PRICES.usdToGbp * 100) / 100, billed: sum('billed'), storedHours: sum('storedHours'), streamedHours: sum('streamedHours'), recordedHours: sum('recordedHours'), fileGB: sum('fileGB') }, currency: rates.currency || 'gbp' };
-        await redis.set(cacheKey, JSON.stringify(result), { EX: 600 }).catch(() => {});
-        return result;
-      });
+      const out = await withRedis(redis => overviewThisMonth(redis, !!req.query.fresh, isAdminEntry));
       return res.status(200).json(out);
+    }
+
+    // Weekly numbers (admin): the weeks so far, newest first; POST { action: 'sendMetrics' } emails them now
+    if (req.method === 'GET' && req.query.metrics) {
+      if (!isAdmin) return res.status(403).json({ error: 'Admin only' });
+      const weeks = await withRedis(async redis => (await redis.lRange(METRICS_KEY, 0, 51).catch(() => [])).map(v => JSON.parse(v)));
+      return res.status(200).json({ weeks });
     }
 
     // Running costs (admin): what Stripe has taken in fees this month, in pounds (kept 10 minutes)
@@ -812,6 +855,14 @@ export default async function handler(req, res) {
       } catch (e) { console.error('[billing] example invoice link', e.message); }
       await sendInvoiceEmail(to, data);
       return res.status(200).json({ ok: true, to, total: data.total });
+    }
+
+    // Weekly numbers emailed now (they're also sent every Monday)
+    if (body.action === 'sendMetrics') {
+      const stripe = stripeClient();
+      if (!stripe) return res.status(503).json({ error: 'Stripe is not connected' });
+      const out = await sendWeeklyMetrics(stripe);
+      return res.status(200).json(out);
     }
 
     if (body.action === 'setRunning') {
