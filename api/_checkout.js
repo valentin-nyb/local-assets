@@ -7,6 +7,8 @@ export async function createCheckout(stripe, params) {
   } catch (e) {
     if (!/terms of service|consent_collection/i.test(e?.message || '')) throw e;
     console.error('[checkout] terms tick-box unavailable (add the terms URL in Stripe → Settings → Public details):', e.message);
-    return stripe.checkout.sessions.create(params);
+    // Without the tick-box, the terms still show above the pay button
+    const terms = 'By paying you agree to the [Terms](https://local-assets.com/terms) and [Privacy policy](https://local-assets.com/privacy) of LOCAL / ASSETS LTD.';
+    return stripe.checkout.sessions.create({ ...params, custom_text: { ...(params.custom_text || {}), submit: params.custom_text?.submit || { message: terms } } });
   }
 }
