@@ -28,7 +28,10 @@ export default async function handler(req, res) {
   try {
     event = stripe.webhooks.constructEvent(buf, sig, whSecret);
   } catch (err) {
-    console.error('Webhook signature verification failed:', err.message);
+    // Which event it was (from the unchecked body: nothing in it is trusted), to tell a wrong secret from a
+    // destination in another Stripe sandbox or mode; the secret itself is never logged
+    let about = {}; try { const e = JSON.parse(buf.toString('utf8')); about = { id: e.id, type: e.type, livemode: e.livemode, api: e.api_version }; } catch {}
+    console.error('Webhook signature verification failed:', err.message.split('.')[0], JSON.stringify(about), 'body', buf.length, 'bytes', sig ? 'signed' : 'no signature header');
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
