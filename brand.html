@@ -1613,6 +1613,11 @@
                 return best;
             })().catch(function() { return null; }));
         }
+        // White or black from the file's name ("GIF-WHITE.gif"), when the pixels don't say
+        function nameTone(img) {
+            var nm = (img.dataset.name || '') + ' ' + (img.currentSrc || img.src);
+            return /white|light|blanc|bianco|blanco/i.test(nm) ? 'light' : /black|dark|noir|nero|negro/i.test(nm) ? 'dark' : '';
+        }
         function fitPreviewBg(img) {
             var box = img.parentNode, tone = '';
             try {
@@ -1630,9 +1635,19 @@
                     return;
                 }
                 if (cnt && cnt / (n * n) < 0.97) tone = sum / cnt > 0.6 ? 'light' : sum / cnt < 0.4 ? 'dark' : '';
+                // Not clear from the picture (a GIF frame fading in is grey, not white): the file's name decides,
+                // then a frame from the middle of the GIF
+                if (!tone && cnt / (n * n) < 0.97) tone = nameTone(img);
+                if (!tone && /\.gif(\?|$)/i.test((img.dataset.name || '') + ' ' + (img.currentSrc || img.src))) {
+                    gifStats(img.currentSrc || img.src).then(function(st) {
+                        var t = !st ? 'light' : st.cover >= 0.97 ? '' : st.lum > 0.5 ? 'light' : 'dark';
+                        if (t) { box.setAttribute('data-tone', t); delete box.dataset.toneFrom; }
+                    });
+                    return;
+                }
             } catch (_) {
                 // Not readable: go by the file name
-                tone = /white|light|blanco/i.test(img.src) ? 'light' : /black|dark|negro/i.test(img.src) ? 'dark' : '';
+                tone = nameTone(img);
             }
             if (tone) { box.setAttribute('data-tone', tone); delete box.dataset.toneFrom; } else if (box.dataset.toneFrom !== 'text') box.removeAttribute('data-tone');
         }
@@ -1756,7 +1771,7 @@
             if (f.post) return openPostPreview(f.owner, f.post, postImages(f.owner, f.post).indexOf(f));
             if (/\.cube$/i.test(f.name)) return openLutPreview(f);
             var view = IMG_EXT.test(f.name)
-                ? '<div class="bk-preview bk-file-view' + (f.category === 'logos' ? '' : ' photo') + '"><img src="' + esc(fileSrc(f.url)) + '" alt="" crossorigin="anonymous" onload="fitPreviewBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}"></div>'
+                ? '<div class="bk-preview bk-file-view' + (f.category === 'logos' ? '' : ' photo') + '"><img src="' + esc(fileSrc(f.url)) + '" alt="" data-name="' + esc(f.name) + '" crossorigin="anonymous" onload="fitPreviewBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}"></div>'
                 : VID_EXT.test(f.name)
                 ? '<div class="bk-file-view"><video src="' + esc(laMux(fileSrc(f.watermarked && f.watermarked.ready ? f.watermarked.url.replace(/\?download=.*$/, '') : f.url))) + '" controls playsinline autoplay muted></video></div>'
                 : /pdf$/i.test(f.name)
@@ -2126,7 +2141,7 @@
             // Photos fill the card; JPGs filed as logos are photos too (no transparency). Transparent logos stay whole.
             var isPhoto = f.category === 'covers' || f.category === 'artwork' || f.category === 'photos' || /\.jpe?g$/i.test(f.name);
             var preview = IMG_EXT.test(f.name)
-                ? '<div class="bk-preview' + (isPhoto ? ' photo' : '') + '">' + tag + '<img src="' + esc(fileSrc(f.url)) + '" alt="" loading="lazy" crossorigin="anonymous" onload="fitPreviewBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}">' +
+                ? '<div class="bk-preview' + (isPhoto ? ' photo' : '') + '">' + tag + '<img src="' + esc(fileSrc(f.url)) + '" alt="" data-name="' + esc(f.name) + '" loading="lazy" crossorigin="anonymous" onload="fitPreviewBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}">' +
                     '' +
                     (thumbFile(f) ? '<button type="button" class="bk-use-wm" data-set-thumb="' + esc(f.url) + '" title="Use this image as a session thumbnail, with your watermark">Set as thumbnail</button>' : '') +
                     (wmLogoFile(f) ? '<button type="button" class="bk-use-wm' + (wmUsesLogo(f) ? ' is-on' : '') + '" data-use-wm="' + esc(f.url) + '" title="Stamp this logo bottom left on every vertical clip">' + (wmUsesLogo(f) ? 'Watermark' : 'Use as watermark') + '</button>' : '') + '</div>'
