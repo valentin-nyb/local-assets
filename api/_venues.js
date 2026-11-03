@@ -20,7 +20,15 @@ export const LOGINS_KEY = 'la_logins';
 // Changes made in Accounts (slug → JSON { name, removed: [setup emails taken off in Logins] }), laid over
 // the account's setup, VENUES_CONFIG included
 export const EDITS_KEY = 'la_account_edits';
-const encKey = () => crypto.createHash('sha256').update(process.env.LOCAL_ASSETS_API_KEY || 'dev-secret-change-me').digest();
+// The platform's own secret (sign-ins, encrypted tokens, media links). Production never falls back to the
+// development one: without LOCAL_ASSETS_API_KEY it stops, rather than sign with a key anyone can read here.
+export const appSecret = () => {
+  const k = process.env.LOCAL_ASSETS_API_KEY;
+  if (k) return k;
+  if (process.env.VERCEL_ENV === 'production') throw new Error('LOCAL_ASSETS_API_KEY is not set');
+  return 'dev-secret-change-me';
+};
+const encKey = () => crypto.createHash('sha256').update(appSecret()).digest();
 export function sealSecret(text) {
   const iv = crypto.randomBytes(12), c = crypto.createCipheriv('aes-256-gcm', encKey(), iv);
   const data = Buffer.concat([c.update(String(text), 'utf8'), c.final()]);
@@ -259,7 +267,7 @@ export function getMuxAuthForVenue(venue) {
 
 // ── Signed web-session token (HMAC-SHA256, 1-hour TTL, renewed by open pages) ────────────────────────
 
-const getSecret = () => process.env.LOCAL_ASSETS_API_KEY || 'dev-secret-change-me';
+const getSecret = appSecret;
 
 // A camera slot's pass for sending its live picture (api/camera-frame.js): given to the a™ app when it
 // links a camera, valid only for that slot

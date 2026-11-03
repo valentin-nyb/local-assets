@@ -6,7 +6,7 @@ import path from 'path';
 import { spawn } from 'child_process';
 import ffmpegPath from 'ffmpeg-static';
 import { bput as put, bdel as delBlob, blist as listBlobs, readUrl } from './_brandstore.js';
-import { getVenuesConfig, getMuxAuthForVenue } from './_venues.js';
+import { getVenuesConfig, getMuxAuthForVenue, appSecret } from './_venues.js';
 import { planMaxClips } from './_billing.js';
 import { muxUrl, playbackPolicy } from './_signing.js';
 
@@ -141,7 +141,7 @@ export function sessionClips(assets, artist, date) {
 export const videoSize = a => { const t = (a?.tracks || []).find(x => x.type === 'video'); return t ? [Number(t.max_width) || 0, Number(t.max_height) || 0] : [0, 0]; };
 
 // ── Signed requests between our own functions ──
-const secret = () => process.env.LOCAL_ASSETS_API_KEY || 'dev-secret-change-me';
+const secret = appSecret;
 export function signJob(job) {
   const data = Buffer.from(JSON.stringify({ ...job, exp: Date.now() + 10 * 60e3 })).toString('base64url');
   return data + '.' + crypto.createHmac('sha256', secret()).update(data).digest('base64url');

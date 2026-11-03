@@ -1,7 +1,7 @@
 import './_report.js';   // errors go to Rollbar
 import crypto from 'crypto';
 import { createClient } from 'redis';
-import { getWebSessionAuth, findVenueByEmail, findVenuesByEmail, freshVenues, getVenuesConfig, getMuxAuthForVenue, platformAdmins, isAdminVenue, artistOf, sameArtist } from './_venues.js';
+import { getWebSessionAuth, findVenueByEmail, findVenuesByEmail, freshVenues, getVenuesConfig, getMuxAuthForVenue, platformAdmins, isAdminVenue, artistOf, sameArtist, appSecret } from './_venues.js';
 import { signingFor, signUrl, playerTickets } from './_signing.js';
 import { pathOf, readUrl, copyToPrivate, privateBrand } from './_brandstore.js';
 
@@ -21,7 +21,7 @@ import { pathOf, readUrl, copyToPrivate, privateBrand } from './_brandstore.js';
 //        A page of 100 videos at a time; { more, page } says where to go on.
 // Someone opening a shared link has no sign-in: the share id (s) stands in for the media key, for its video only.
 const TTL = 2 * 3600, DL_TTL = 15 * 60;
-const mediaSecret = () => (process.env.LOCAL_ASSETS_API_KEY || 'dev-secret-change-me') + ':media';
+const mediaSecret = () => appSecret() + ':media';
 const hmac = d => crypto.createHmac('sha256', mediaSecret()).update(d).digest('base64url');
 function makeKey(session) {
   const d = Buffer.from(JSON.stringify({ e: session.email, v: session.venueSlug, x: Date.now() + 12 * 3600e3 })).toString('base64url');
