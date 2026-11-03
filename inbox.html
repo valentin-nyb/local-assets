@@ -54,6 +54,7 @@
         .ib-tab { height:34px; padding:0 14px; border-radius:999px; border:1px solid var(--la-line); background:none; color:var(--la-sub); font:500 10px/1 'JetBrains Mono', monospace; letter-spacing:.14em; text-transform:uppercase; cursor:pointer; }
         .ib-tab[aria-selected="true"] { border-color:var(--la-accent); color:var(--la-text); }
         .ib-tab b { color:var(--la-accent); margin-left:6px; }
+        .ib-tab b:empty { display:none; }   /* no count: the label stays centred */
         .ib-wrap { display:grid; grid-template-columns:minmax(280px, 380px) minmax(0, 1fr); gap:16px; align-items:start; }
         @media (max-width: 900px) { .ib-wrap { grid-template-columns:minmax(0, 1fr); } .ib-wrap.open .ib-list { display:none; } .ib-wrap:not(.open) .ib-view { display:none; } }
         .ib-list { border:1px solid var(--la-line); background:var(--la-surface); border-radius:16px; overflow:hidden; }
