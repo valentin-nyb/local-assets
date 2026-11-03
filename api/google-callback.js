@@ -115,7 +115,7 @@ export default async function handler(req, res) {
       ts:       Date.now(),
     });
 
-    console.error('[google-callback] web login OK:', email, 'venue:', venueSlug);
+    console.log('[google-callback] web login OK, venue:', venueSlug);
 
     res.setHeader('Set-Cookie', clearState);
     // Local development: the session goes to the dev server on this computer only (in the URL fragment,
