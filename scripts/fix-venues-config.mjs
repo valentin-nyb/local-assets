@@ -40,6 +40,11 @@ function parse(raw) {
 const summary = cfg => Object.entries(cfg).map(([slug, v]) => `  ${slug.padEnd(28)} ${String(v?.name || '').padEnd(28)} ${(Array.isArray(v?.emails) ? v.emails.length : v?.email ? 1 : 0)} email(s)`).join('\n');
 
 const raw = pullRaw();
+// A Secret (sensitive) variable is never handed back, only a placeholder: nothing can be repaired from here
+if (!/^\s*\{/.test(raw)) {
+  console.log('VENUES_CONFIG is stored as a Secret, so Vercel does not hand its value back (only the running site can read it).\nNothing was changed. To clean it, replace it in Vercel with the full value as clean JSON.');
+  process.exit(0);
+}
 const { cfg, how } = parse(raw);
 console.log(`VENUES_CONFIG reads as: ${how} · ${Object.keys(cfg).length} accounts`);
 console.log(summary(cfg));
