@@ -417,7 +417,7 @@ export async function stripeFeesThisMonth(stripe) {
   return Math.round(pence) / 100;
 }
 
-// Who an invoice is for: the venue itself ("venue") or one of its artists ("artist:DJ TENNIS")
+// Who an invoice is for: the venue itself ("venue") or one of its artists ("artist:ARTIST NAME")
 export const assignKey = slug => `billing_assign:${slug}`;   // hash target → JSON { plan, email, name, monthly }
 export async function readAssignments(redis, slug) {
   const raw = await redis.hGetAll(assignKey(slug));

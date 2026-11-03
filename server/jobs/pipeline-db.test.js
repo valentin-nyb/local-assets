@@ -8,7 +8,7 @@ test('claims the next job transactionally and maps database fields', async () =>
     async query(sql, values) {
       statements.push({ sql, values });
       if (sql.includes('UPDATE pipeline_jobs AS job')) {
-        return { rows: [{ id: 'job-1', upload_id: 'upload-1', artist_name: 'DJ TENNIS', venue_slug: 'DJ_Tennis' }] };
+        return { rows: [{ id: 'job-1', upload_id: 'upload-1', artist_name: 'ARTIST NAME', venue_slug: 'Venue_Name' }] };
       }
       return { rows: [] };
     },
@@ -21,8 +21,8 @@ test('claims the next job transactionally and maps database fields', async () =>
   assert.deepEqual(job, {
     jobId: 'job-1',
     uploadId: 'upload-1',
-    artistName: 'DJ TENNIS',
-    venueSlug: 'DJ_Tennis',
+    artistName: 'ARTIST NAME',
+    venueSlug: 'Venue_Name',
   });
   assert.equal(statements[0].sql, 'BEGIN');
   assert.match(statements[1].sql, /FOR UPDATE SKIP LOCKED/);

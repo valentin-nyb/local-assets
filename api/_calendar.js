@@ -30,7 +30,7 @@ export function cleanCalendarUrl(input) {
   } catch { return null; }
 }
 
-// "DJ Tennis @ Fold" or "DJ Tennis - Main room" → "DJ TENNIS"
+// "Artist Name @ Fold" or "Artist Name - Main room" → "ARTIST NAME"
 export function artistFromTitle(title) {
   return String(title || '').split(/\s+(?:@|–|—|-|\|)\s+/)[0].replace(/[<>]/g, '').trim().toUpperCase().slice(0, 60);
 }

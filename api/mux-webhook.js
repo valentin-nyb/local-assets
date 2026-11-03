@@ -8,7 +8,7 @@ import crypto from 'crypto';
 import { freshVenues, registryWebhookSecrets } from './_venues.js';
 
 // Signature check: every event must be signed by one of our Mux environments' webhook secrets
-// (DJ_TENNIS_TEAM_MUX_WEBHOOK_SECRET, AMONGST_FEW_MUX_WEBHOOK_SECRET, … and MUX_WEBHOOK_SECRET).
+// (<ACCOUNT>_MUX_WEBHOOK_SECRET for each account, and MUX_WEBHOOK_SECRET).
 // Header "mux-signature: t=<unix seconds>,v1=<hex HMAC-SHA256 of '<t>.<raw body>'>"; at most 5 minutes old.
 export const config = { api: { bodyParser: false } };
 // Sign-ups' environments keep their secret in the account registry (Billing → Ready video storage).
