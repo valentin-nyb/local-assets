@@ -8,17 +8,20 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import JSON5 from 'json5';
 import { repairJson } from '../api/_venues.js';
 
 const apply = process.argv.includes('--apply');
-const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+// The vercel command: where npm installs it globally, else whatever the shell finds
+const VERCEL = [process.env.VERCEL_BIN, path.join(os.homedir(), '.npm-global/bin/vercel'), '/opt/homebrew/bin/vercel', '/usr/local/bin/vercel'].find(p => p && fs.existsSync(p)) || 'vercel';
 
 function pullRaw() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'la-vc-'));
   const file = path.join(dir, '.env');
   try {
-    execFileSync('vercel', ['env', 'pull', file, '--environment=production', '--yes'], { cwd: root, stdio: 'ignore' });
+    execFileSync(VERCEL, ['env', 'pull', file, '--environment=production', '--yes'], { cwd: root, stdio: 'ignore' });
     const line = fs.readFileSync(file, 'utf8').split('\n').find(l => l.startsWith('VENUES_CONFIG='));
     if (!line) throw new Error('VENUES_CONFIG is not in Production (or is a Secret, which can\'t be read back)');
     const v = line.slice('VENUES_CONFIG='.length);
@@ -45,7 +48,7 @@ if (how === 'clean') { console.log('\nAlready clean JSON: nothing to do.'); proc
 const value = JSON.stringify(cfg, null, 2);
 if (!apply) { console.log('\nNothing saved. Run again with --apply to save the repaired value.'); process.exit(0); }
 
-execFileSync('vercel', ['env', 'update', 'VENUES_CONFIG', 'production', '--yes'], { cwd: root, input: value, stdio: ['pipe', 'ignore', 'inherit'] });
+execFileSync(VERCEL, ['env', 'update', 'VENUES_CONFIG', 'production', '--yes'], { cwd: root, input: value, stdio: ['pipe', 'ignore', 'inherit'] });
 const back = parse(pullRaw());
 const same = back.how === 'clean' && JSON.stringify(back.cfg) === JSON.stringify(cfg);
 console.log(same ? `\nSaved and checked: clean JSON, ${Object.keys(back.cfg).length} accounts, nothing lost. Redeploy for the site to use it.`
