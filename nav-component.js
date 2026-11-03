@@ -267,11 +267,18 @@ document.addEventListener("DOMContentLoaded", () => {
         // Your own colour: a HEX code (#RRGGBB), with black or white text on it, whichever reads better
         var isHex = function(a) { return /^#[0-9a-f]{6}$/i.test(a || ''); };
         var inkOf = function(h) { var n = parseInt(h.slice(1), 16); return 0.299 * (n >> 16) + 0.587 * (n >> 8 & 255) + 0.114 * (n & 255) > 150 ? '#000000' : '#ffffff'; };
+        // Light theme: a colour too pale to read on white (neon, yellow, pastel) is darkened, same hue, until it does (3:1)
+        var onWhite = function(h) {
+            var rgb = [1, 3, 5].map(function(i) { return parseInt(h.substr(i, 2), 16); });
+            var lum = function(c) { return c.map(function(v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }).reduce(function(s, v, i) { return s + v * [0.2126, 0.7152, 0.0722][i]; }, 0); };
+            for (var k = 1; k > 0.2 && 1.05 / (lum(rgb.map(function(v) { return v * k; })) + 0.05) < 3; k -= 0.02) {}
+            return '#' + rgb.map(function(v) { return ('0' + Math.round(v * k).toString(16)).slice(-2); }).join('');
+        };
         function applyAccent(a) {
             a = a || '';
             var root = document.documentElement;
             if (a) root.setAttribute('data-accent', a); else root.removeAttribute('data-accent');
-            if (isHex(a)) { root.style.setProperty('--la-accent', a); root.style.setProperty('--la-accent-ink', inkOf(a)); }
+            if (isHex(a)) { var shown = root.classList.contains('dark') ? a : onWhite(a); root.style.setProperty('--la-accent', shown); root.style.setProperty('--la-accent-ink', inkOf(shown)); }
             else { root.style.removeProperty('--la-accent'); root.style.removeProperty('--la-accent-ink'); }
             document.querySelectorAll('.la-accent-dots button[data-accent]').forEach(function(b) { b.setAttribute('aria-checked', b.getAttribute('data-accent') === a ? 'true' : 'false'); });
             document.querySelectorAll('.la-accent-dots button[data-accent-own]').forEach(function(b) { b.setAttribute('aria-checked', isHex(a) ? 'true' : 'false'); if (isHex(a)) b.style.setProperty('--dot', a); });
