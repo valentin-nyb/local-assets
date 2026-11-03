@@ -2774,7 +2774,10 @@
             var wide = window.innerWidth >= 768;
             var uhd = account4k() && (a.resolution_tier === '2160p' || a.max_stored_resolution === 'UHD');
             _heroAlways = uhd;
-            var res = uhd ? '&min_resolution=2160p&max_resolution=2160p' : '&min_resolution=' + (wide ? '720p' : '480p') + '&max_resolution=' + (wide ? '1080p' : '720p');
+            // A private (signed) video: Mux takes the clip's times inside the token but not a resolution range,
+            // so the range is left out and the player picks the quality
+            var signed = a.playback_ids[0].policy === 'signed';
+            var res = signed ? '' : uhd ? '&min_resolution=2160p&max_resolution=2160p' : '&min_resolution=' + (wide ? '720p' : '480p') + '&max_resolution=' + (wide ? '1080p' : '720p');
             var clip = function(s) { return laMux('https://stream.mux.com/' + pid + '.m3u8?asset_start_time=' + Math.floor(s) + '&asset_end_time=' + Math.ceil(s + 8) + res); };
             var still = function(s) { return laMux('https://image.mux.com/' + pid + '/thumbnail.webp?time=' + Math.round(s) + '&width=1280'); };
             // The same video at a new moment (its peak or the DJ came in after it started): the playing banner
@@ -2822,6 +2825,15 @@
             var tryPlay = function() { var v = vid(); if (!v || !heroCanPlay()) { if (v && !v.paused) v.pause(); return; } v.muted = true; var p = v.play && v.play(); if (p && p.catch) p.catch(function() {}); };
             var watch = function() { var v = vid(); if (!v) { setTimeout(watch, 200); return; } v.addEventListener('loadedmetadata', tryPlay); v.addEventListener('canplay', function() { if (v.paused) tryPlay(); }); };
             watch();
+            // The clip refused (a private video's token): the whole stream instead, from the same moment
+            var fellBack = false;
+            var fallBack = function() {
+                var v = vid(); if (fellBack || !v) return; fellBack = true;
+                var whole = laMux('https://stream.mux.com/' + pid + '.m3u8');
+                v.addEventListener('loadedmetadata', function() { try { v.currentTime = start; } catch (_) {} }, { once: true });
+                if (ios) mp.src = whole; else mp.setAttribute('src', whole);
+            };
+            (function onErr() { var v = vid(); if (!v) { setTimeout(onErr, 200); return; } v.addEventListener('error', fallBack, { once: true }); })();
             var kick = function() { var v = vid(); if (v && v.paused) tryPlay(); };
             document.addEventListener('touchstart', kick, { once: true, passive: true });
             document.addEventListener('click', kick, { once: true });
