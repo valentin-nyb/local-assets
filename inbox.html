@@ -119,7 +119,7 @@
                 </div>
                 <div class="ib-tabs" role="tablist" id="ib-tabs">
                     <button type="button" class="ib-tab" role="tab" data-f="inbox" aria-selected="true">Inbox<b id="ib-unread"></b></button>
-                    <button type="button" class="ib-tab" role="tab" data-f="alerts" aria-selected="false">Alerts</button>
+                    <button type="button" class="ib-tab" role="tab" data-f="alerts" aria-selected="false">Alerts<b id="ib-alerts"></b></button>
                     <button type="button" class="ib-tab" role="tab" data-f="archive" aria-selected="false">Archive</button>
                     <button type="button" class="ib-tab" role="tab" data-f="sent" aria-selected="false">Sent</button>
                     <button type="button" class="ib-tab" role="tab" data-f="spam" aria-selected="false">Spam</button>
@@ -183,7 +183,7 @@
                 .catch(function(e) { if (!quiet) listEl.innerHTML = '<div class="ib-none ib-err">' + esc(e.message) + '</div>'; });
         }
         function loadCount() {
-            api('?view=count').then(function(d) { document.getElementById('ib-unread').textContent = d.unread ? d.unread : ''; if (window.laInboxBadge) window.laInboxBadge(d.unread); }).catch(function() {});
+            api('?view=count').then(function(d) { document.getElementById('ib-unread').textContent = d.unread ? d.unread : ''; document.getElementById('ib-alerts').textContent = d.alerts ? d.alerts : ''; if (window.laInboxBadge) window.laInboxBadge(d.unread); }).catch(function() {});
         }
         listEl.addEventListener('click', function(e) {
             if (e.target.id === 'ib-more') {

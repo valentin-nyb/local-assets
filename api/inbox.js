@@ -71,8 +71,12 @@ export default async function handler(req, res) {
       const q = req.query || {};
       if (q.view === 'count') {
         await sortAlerts().catch(e => console.error('[inbox] sorting alerts failed:', e.message));
-        const box = await rs('');
-        return res.json({ unread: box.unread || 0, drafts: box.drafts || 0, address: box.email_address || INBOX() });
+        // Unread per tab: the mailbox's own count also has the alerts in it, which belong to Alerts only
+        const [box, inbox, alerts] = await Promise.all([rs(''), rs('/threads?folders=inbox&limit=100'),
+          alertsLabelId().then(l => rs('/threads?labels=' + l + '&folders=inbox,archive&limit=100'))]);
+        const unread = (inbox.data || []).filter(t => !t.read && !ALERT_FROM.test(String(t.from || ''))).length;
+        const alertsUnread = (alerts.data || []).filter(t => !t.read).length;
+        return res.json({ unread, alerts: alertsUnread, drafts: box.drafts || 0, address: box.email_address || INBOX() });
       }
       if (q.thread) {
         const t = id(q.thread); if (!t) return res.status(400).json({ error: 'Which conversation?' });
