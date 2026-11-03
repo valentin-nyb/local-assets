@@ -685,6 +685,11 @@
         .tr-offer .tr-btn { margin-top:0 !important; }
         @media (max-width:1000px) { .tr-offer { grid-template-columns:minmax(0,1fr); max-width:520px; gap:18px; padding:24px; } .tr-offer-feats { grid-template-columns:minmax(0,1fr); } }
         .tr-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; align-items:stretch; }
+        /* One plan per kind of account: one or two cards, centred */
+        .tr-grid[data-n="1"] { grid-template-columns:minmax(0,1fr); max-width:520px; margin:0 auto; }
+        .tr-grid[data-n="2"] { grid-template-columns:repeat(2,minmax(0,1fr)); max-width:900px; margin:0 auto; }
+        .tr-card[hidden] { display:none !important; }
+        @media (max-width:1000px) { .tr-grid[data-n] { grid-template-columns:minmax(0,1fr); max-width:520px; } }
         .tr-card { position:relative; display:flex; flex-direction:column; padding:28px; border:1px solid #27272a; border-radius:18px; background:#0a0a0a; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; }
         .tr-feat { border-color:#39FF14; box-shadow:0 0 0 1px rgba(57,255,20,.25), 0 30px 60px -30px rgba(57,255,20,.18); }
         .tr-badge { position:absolute; top:-12px; left:28px; padding:4px 10px; border-radius:999px; background:#39FF14; color:#000; font:600 11px 'Helvetica Neue', Helvetica, Arial, sans-serif; }
@@ -731,27 +736,11 @@
     <div class="tr-top reveal active">
         <p class="tr-eyebrow">Pricing</p>
         <h2>Pick your plan</h2>
-        <p class="tr-lede" id="tr-lede">Every set filmed, edited, branded and posted. Three plans, no setup fees.</p>
-    </div>
-
-    <div class="max-w-7xl mx-auto reveal active" style="position:relative;z-index:20">
-        <div class="tr-offer">
-            <div class="tr-offer-main">
-                <p class="tr-offer-tag">Special offer · limited time</p>
-                <div class="tr-offer-name"><span class="tr-offer-pick"><input type="hidden" id="tr-offer-type" value="artist"><button type="button" id="tr-offer-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Who the trial is for"><span id="tr-offer-type-name">Artist</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><ul class="tr-offer-menu" id="tr-offer-menu" role="listbox" aria-label="Who the trial is for"><li role="option" data-v="artist" tabindex="-1" aria-selected="true"><span><b>Artist</b><small>DJ</small></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></li><li role="option" data-v="label" tabindex="-1" aria-selected="false"><span><b>Label</b><small>Releases music for its artists</small></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></li><li role="option" data-v="venue" tabindex="-1" aria-selected="false"><span><b>Venue</b><small>Club, bar or event space</small></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></li></ul></span>Trial Month</div>
-                <p class="tr-offer-for" id="tr-offer-for">For DJs trying it with their own cameras.</p>
-            </div>
-            <ul class="tr-offer-feats"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>6 vertical clips per session</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Brand Kit, your logo on every clip</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Connect your DJI, Sony Alpha and more</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Then pay as you go, charged on the 1st</span></li></ul>
-            <div class="tr-offer-buy">
-                <div class="tr-offer-price"><b>£49</b><span>to join</span></div>
-                <p class="tr-offer-credit">Comes off your first month if you upgrade within 30 days</p>
-                <button type="button" onclick="selectTier('dj-trial')" class="tr-btn tr-btn-main">Start the trial</button>
-            </div>
-        </div>
+        <p class="tr-lede" id="tr-lede">Every set filmed, edited, branded and posted. One plan for who you are, no setup fees.</p>
     </div>
 
     <div class="max-w-7xl mx-auto reveal delay-200 active">
-        <!-- Who the account is for: changes every plan's price and what it includes -->
+        <!-- Who the account is for: shows the one plan for that kind of account -->
         <div class="tr-who" id="tr-who">
             <p class="tr-who-q">I'm signing up as</p>
             <div class="tr-who-seg" role="radiogroup" aria-label="Account type">
@@ -760,33 +749,39 @@
             <p class="tr-who-txt" id="tr-who-txt"></p>
         </div>
         <div id="pricing-plans" class="grid tr-grid">
-            <div class="tr-card">
-                
-                <p class="tr-name">Starter</p>
-                <div class="tr-price"><b>£2,750</b><span>/ month</span></div>
-                <p class="tr-for">For venues and artists who want their sets on social media.</p>
-                <p class="tr-h">Filming</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Connect your DJI, Sony Alpha and more</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span data-artist="No camera included&#10;Or add one of our cameras for £149 a month (12-month minimum)" data-def="No camera included&#10;Or add one of our cameras for £149 a month (12-month minimum), or buy one for £1,250">No camera included<span class="tr-feat-add">Or add one of our cameras for £149 a month (12-month minimum), or buy one for £1,250</span></span></li></ul><p class="tr-h">Every set gives you</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Your recording checked and kept safe in your vault</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>6 vertical clips per session</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Brand Kit, thumbnails and watermark</span></li></ul><p class="tr-h">Each month</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span data-artist="Up to 4 sets a month" data-label="Up to 12 sets a month">Up to 8 events a month</span></li></ul><p class="tr-h">Included every month</p><div class="tr-stats"><div><b data-artist="33 h" data-label="100 h">167 h</b><span>of sets stored</span></div><div><b data-artist="≈ 83 h" data-label="≈ 250 h">≈ 415 h</b><span>watched or downloaded</span></div><div><b data-artist="100 GB" data-label="300 GB">1 TB</b><span>of brand files</span></div></div>
-                <span class="tr-spacer"></span><button type="button" onclick="selectTier('starter-distribution')" class="tr-btn">Choose this plan</button>
+            <div class="tr-card" data-for="artist" data-plan="dj-trial">
+                <p class="tr-name">Free</p>
+                <div class="tr-price"><b>£0</b><span>to join</span></div>
+                <p class="tr-for">For DJs starting out: pay only for what you use.</p>
+                <ul class="tr-feats"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>6 vertical clips from every set, with a small local / assets™ mark</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Brand Kit: your logo and fonts on every clip</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Connect your DJI, Sony Alpha and more</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>What you use is charged to your card on the 1st</span></li></ul>
+                <span class="tr-spacer"></span><button type="button" onclick="selectTier('dj-trial')" class="tr-btn">Start free</button>
             </div>
-            <div class="tr-card tr-feat">
+            <div class="tr-card tr-feat" data-for="artist" data-plan="starter-distribution">
                 <span class="tr-badge">Most popular</span>
-                <p class="tr-name">Pro</p>
-                <div class="tr-price"><b>£3,500</b><span>/ month</span></div>
-                <p class="tr-for">For venues and labels posting every week.</p>
-                <p class="tr-h">Filming</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span data-artist="No camera included&#10;Or add one of our cameras for £149 a month (12-month minimum)">1 PTZ camera included, set up for you (12-month minimum)</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Starts and stops with your calendar</span></li></ul><p class="tr-h">Every set gives you</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Your recording checked and kept safe in your vault</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>12 vertical clips per session</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Brand Kit, thumbnails and watermark</span></li></ul><p class="tr-h">Each month</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span data-artist="Up to 8 sets a month" data-label="Up to 24 sets a month">Up to 16 events a month</span></li></ul><p class="tr-h">Included every month</p><div class="tr-stats"><div><b data-artist="100 h" data-label="250 h">333 h</b><span>of sets stored</span></div><div><b data-artist="≈ 250 h" data-label="≈ 665 h">≈ 830 h</b><span>watched or downloaded</span></div><div><b data-artist="300 GB" data-label="750 GB">2 TB</b><span>of brand files</span></div></div>
-                <span class="tr-spacer"></span><button type="button" onclick="selectTier('liveset-distribution')" class="tr-btn tr-btn-main">Choose this plan</button>
+                <p class="tr-name">Artist</p>
+                <div class="tr-price"><b>£29</b><span>/ month</span></div>
+                <p class="tr-for">Your brand only, no local / assets™ mark.</p>
+                <ul class="tr-feats"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Up to 4 sets a month, each checked and stored safely</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>6 vertical clips from every set</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Brand Kit: your logo, animations and custom fonts</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Connect your DJI, Sony Alpha and more</span></li></ul>
+                <span class="tr-spacer"></span><button type="button" onclick="selectTier('starter-distribution')" class="tr-btn tr-btn-main">Choose Artist</button>
             </div>
-            <div class="tr-card">
-                <p class="tr-name">Live-Set</p>
-                <div class="tr-price"><b>£7,500</b><span>/ month</span></div>
-                <p class="tr-for">For venues filming every night, from every angle.</p>
-                <p class="tr-h">Filming</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span data-artist="1 PTZ camera included, set up for you (12-month minimum)&#10;Or add a second camera for £149 a month, for the multi-camera auto-edit">2 PTZ cameras included, set up for you: two angles for the multi-camera auto-edit (12-month minimum)</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Starlink Mini + Mac mini</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>12-month minimum. The hardware stays ours and goes back when the plan ends</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Control every camera from your phone</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Starts and stops with your calendar</span></li></ul><p class="tr-h">Every set gives you</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Multi-camera auto-edit, the full length of the set</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>The full set in 4K, with HQ audio</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Unlimited vertical clips per session</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Brand Kit, thumbnails and watermark</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Quarterly performance reports</span></li></ul><p class="tr-h">Each month</p><ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span data-artist="Up to 12 sets a month" data-label="Up to 30 sets a month">Unlimited events</span></li></ul><p class="tr-h">Included every month</p><div class="tr-stats"><div><b data-artist="333 h" data-label="833 h">1,667 h</b><span>of sets stored</span></div><div><b data-artist="≈ 1,000 h" data-label="≈ 3,330 h">≈ 8,330 h</b><span>watched or downloaded</span></div><div><b data-artist="1 TB" data-label="3 TB">10 TB</b><span>of brand files</span></div></div>
-                <span class="tr-spacer"></span><button type="button" onclick="selectTier('liveset-creative')" class="tr-btn">Choose this plan</button>
+            <div class="tr-card tr-feat" data-for="label" data-plan="starter-distribution">
+                <p class="tr-name">Label</p>
+                <div class="tr-price"><b>£499</b><span>/ month</span></div>
+                <p class="tr-for">For labels filming their artists, at any venue.</p>
+                <ul class="tr-feats"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Up to 12 sets a month, for up to 5 artists</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>6 vertical clips from every set</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Brand Kit: the label's logo, animations and fonts</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Connect your DJI, Sony Alpha and more</span></li></ul>
+                <span class="tr-spacer"></span><button type="button" onclick="selectTier('starter-distribution')" class="tr-btn tr-btn-main">Choose Label</button>
+            </div>
+            <div class="tr-card tr-feat" data-for="venue" data-plan="liveset-distribution">
+                <p class="tr-name">Venue</p>
+                <div class="tr-price"><b>£995</b><span>/ month</span></div>
+                <p class="tr-for">Every night filmed, clipped and posted.</p>
+                <ul class="tr-feats"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>1 PTZ camera included, set up for you</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Starts and stops with your calendar</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Up to 16 events a month</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>12 vertical clips from every set</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>12-month minimum</span></li></ul>
+                <span class="tr-spacer"></span><button type="button" onclick="selectTier('liveset-distribution')" class="tr-btn tr-btn-main">Choose Venue</button>
             </div>
         </div>
         <div class="tr-ent">
-            <div><p class="tr-name">Enterprise</p><p class="tr-for">For groups, festivals and venues with several rooms: a full camera setup in every room, a dedicated team, unlimited sets and storage.</p></div>
-            <a href="mailto:info@local-assets.com?subject=Enterprise%20Enquiry" class="tr-btn">Talk to us</a>
+            <div><p class="tr-name">Live-Set &amp; groups · on request</p><p class="tr-for">Two cameras, Starlink and a Mac mini, multi-camera auto-edit and the full set in 4K with HQ audio. For venues with several rooms, groups and festivals.</p></div>
+            <a href="mailto:info@local-assets.com?subject=Live-Set%20enquiry" class="tr-btn">Talk to us</a>
         </div>
     </div>
 </section>
@@ -797,59 +792,10 @@
     </main>
 
     <script>
-        // Plans as edited in Billing → Plans: names, prices, clips, cameras and what's included every month
-        (function livePlans() {
-            var money = function(n) { return '£' + Number(n).toLocaleString('en-GB', { maximumFractionDigits: n % 1 ? 2 : 0, minimumFractionDigits: n % 1 ? 2 : 0 }); };
-            var hours = function(min) { return Math.round(min / 60).toLocaleString('en-GB'); };
-            var size = function(gb) { return gb >= 1000 ? (Math.round(gb / 100) / 10).toLocaleString('en-GB') + ' TB' : Math.round(gb).toLocaleString('en-GB') + ' GB'; };
-            var short = function(name) { var i = name.lastIndexOf('·'); return (i >= 0 ? name.slice(i + 1) : name).trim(); };
-            fetch('/api/plans').then(function(r) { return r.ok ? r.json() : null; }).then(function(d) {
-                if (!d || !d.plans) return;
-                // Every plan's features in words, as each kind of account gets them (the same lines as Billing)
-                if (d.byType) { window._plansByType = d.byType; if (typeof paintWho === 'function') paintWho(); }
-                // The sign-up window's plan details (defined further down the page, so applied once it exists)
-                var tiers = function() {
-                    if (typeof SIGNUP_TIERS === 'undefined') return false;
-                    d.plans.forEach(function(p) {
-                        var tier = SIGNUP_TIERS[p.id];
-                        if (!tier) return;
-                        tier.price = money(p.signupFee && !p.price ? p.signupFee : p.price);
-                        tier.feats = tier.feats.map(function(f) {
-                            f = f.replace(/^(\d+|Unlimited) vertical clips/, p.maxClips ? p.maxClips + ' vertical clips' : 'Unlimited vertical clips');
-                            f = f.replace(/^[\d,]+ hours of sets stored/, hours(p.included.storedMinutes) + ' hours of sets stored');
-                            if (p.cameras) f = f.replace(/^\d+ OBSBOT 4K cameras?/, p.cameras + ' OBSBOT 4K camera' + (p.cameras > 1 ? 's' : ''));
-                            return f;
-                        });
-                    });
-                    return true;
-                };
-                if (!tiers()) window.addEventListener('DOMContentLoaded', tiers);
-                d.plans.forEach(function(p) {
-                    if (p.id === 'dj-trial') {
-                        // The join price depends on who it's for (TRIAL_FEES): shown by trialType()
-                        document.querySelectorAll('.tr-offer-feats span').forEach(function(sp) { sp.textContent = sp.textContent.replace(/^(\d+|Unlimited) vertical clips/, p.maxClips ? p.maxClips + ' vertical clips' : 'Unlimited vertical clips'); });
-                        return;
-                    }
-                    document.querySelectorAll('.tr-card').forEach(function(card) {
-                        var btn = card.querySelector('[onclick="selectTier(\'' + p.id + '\')"]');
-                        if (!btn) return;
-                        var nm = card.querySelector('.tr-name'); if (nm) nm.textContent = short(p.name);
-                        var pr = card.querySelector('.tr-price b'); if (pr && p.price) { card.dataset.base = p.price; pr.textContent = money(p.price); if (typeof trialType === 'function') trialType(); }
-                        card.querySelectorAll('li span').forEach(function(sp) {
-                            var t = sp.textContent;
-                            if (/vertical clips/.test(t)) sp.textContent = t.replace(/^(\d+ vertical clips|Unlimited vertical clips)/, p.maxClips ? p.maxClips + ' vertical clips' : 'Unlimited vertical clips');
-                            if (p.cameras && /^\d+ OBSBOT 4K cameras?/.test(t)) sp.textContent = t.replace(/^\d+ OBSBOT 4K cameras?/, p.cameras + ' OBSBOT 4K camera' + (p.cameras > 1 ? 's' : ''));
-                        });
-                        var st = card.querySelectorAll('.tr-stats > div > b');
-                        if (st.length === 3) {
-                            st[0].textContent = hours(p.included.storedMinutes) + ' h';
-                            st[1].textContent = '≈ ' + hours(p.included.deliveredMinutes) + ' h';
-                            st[2].textContent = size(p.included.fileGB);
-                        }
-                    });
-                });
-            }).catch(function() {});
-        })();
+        // Plans as edited in Billing → Plans: each kind of account's price and what it includes (painted by paintWho)
+        fetch('/api/plans').then(function(r) { return r.ok ? r.json() : null; }).then(function(d) {
+            if (d && d.byType) { window._plansByType = d.byType; if (typeof paintWho === 'function') paintWho(); }
+        }).catch(function() {});
 
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -977,120 +923,46 @@
     </script>
 
     <script>
-        // Sign up: choose the account type and name, then pay the monthly plan through Stripe
-        var SIGNUP_TIERS = {
-            'starter-distribution': { group: 'Monthly plan', name: 'Starter', price: '£2,750', feats: ['Camera available as an add-on', '6 vertical clips per session', 'Brand Kit, thumbnails and watermark', 'Up to 8 sets a month', '167 hours of sets stored', 'Your recordings kept safe in your vault'] },
-            'liveset-distribution': { group: 'Monthly plan', name: 'Pro', price: '£3,500', feats: ['1 OBSBOT 4K camera', '12 vertical clips per session', 'Brand Kit, thumbnails and watermark', 'Up to 8 sets a month', '333 hours of sets stored'] },
-            'starter-creative': { group: 'Creative & Production', name: 'Starter', price: '£5,500', feats: ['1 OBSBOT 4K camera + Starlink Mini', 'Recording runs on your calendar', '12 vertical clips per session', 'Brand Kit, thumbnails and watermark', '833 hours of sets stored'] },
-            'dj-trial': { group: 'Special offer · limited time', name: 'Trial Month', price: '£49', per: 'to join', type: 'artist', only: 'artist', payg: true, go: 'Continue to payment', feats: ['6 vertical clips per session', 'Brand Kit and Camera Control', 'Then pay as you go, charged on the 1st'] },
-            'liveset-creative': { group: 'Monthly plan', name: 'Live-Set', price: '£7,500', feats: ['2 OBSBOT 4K cameras + Starlink Mini + Mac mini', 'Multi-camera auto-edit', 'Unlimited vertical clips per session', 'Brand Kit, thumbnails and watermark', '1,667 hours of sets stored'] }
-        };
-        var TIER_NAMES = { 'starter-distribution': 'Starter', 'liveset-distribution': 'Pro', 'starter-creative': 'Creative & Production · Starter', 'liveset-creative': 'Live-Set' };
-        // The trial is for a venue, an artist or a label: picked in its title, and the sign-up is for that type
-        var TRIAL_TYPES = { venue: ['Venue', 'For venues trying it with their own cameras.'], artist: ['Artist', 'For DJs trying it with their own cameras.'], label: ['Label', 'For record labels trying it with their own cameras.'] };
-        // To join the Trial Month: £49 for an artist, £149 for a record label, £349 for a venue (as charged at checkout)
-        var TRIAL_FEES = { artist: 49, label: 149, venue: 349 };
-        // Monthly plans by type, as charged (api/_billing.js TYPE_PRICE): venues the list price, record labels and artists their own
-        var TYPE_FACTOR = { venue: 1, label: 0.5, artist: 0.25 };
-        var TYPE_PRICE = { 'starter-distribution': { artist: 79, label: 599 }, 'liveset-distribution': { artist: 199, label: 1299 }, 'liveset-creative': { artist: 895, label: 1995 } };   // as api/_billing.js
-        function typePrice(price, t, planId) { if (planId && TYPE_PRICE[planId] && TYPE_PRICE[planId][t]) return TYPE_PRICE[planId][t]; var f = TYPE_FACTOR[t] || 1; return f === 1 ? price : Math.round(price * f / 5) * 5; }
-        // Who the account is for, in words, and every plan's features for that kind of account
-        // Each plan's one line, for this kind of account
-        var WHO_FOR = {
-            artist: { 'starter-distribution': 'For artists who want every set on social media.', 'liveset-distribution': 'For artists posting every week.', 'liveset-creative': 'For artists filming every set, from every angle.' },
-            label: { 'starter-distribution': 'For labels starting to film their artists.', 'liveset-distribution': 'For labels posting every week.', 'liveset-creative': 'For labels filming every showcase, from every angle.' },
-            venue: { 'starter-distribution': 'For venues that want their sets on social media.', 'liveset-distribution': 'For venues posting every week.', 'liveset-creative': 'For venues filming every night, from every angle.' },
-        };
+        // Pricing: one plan for each kind of account (api/_billing.js OFFERED). Artists: Free or Artist; record
+        // labels: Label; venues: Venue. Live-Set is on request. Prices and features come from /api/plans.
         var WHO_TEXT = {
             artist: '<b>An artist account is you: one artist.</b> Tag any record labels you release on and any venues you play. Every set, clip and file is under your name.',
-            label: '<b>A record label account is one label.</b> Upload sets for your artists, how many depends on the plan, played at any venue.',
-            venue: '<b>A venue account is one venue.</b> Upload every artist who plays there and the record labels they come with, how many depends on the plan.',
+            label: '<b>A record label account is one label.</b> Upload sets for up to 5 artists, played at any venue.',
+            venue: '<b>A venue account is one venue.</b> Upload every artist who plays there and the record labels they come with.',
         };
+        var _whoType = 'artist';
         function paintWho() {
-            var t = (document.getElementById('tr-offer-type') || {}).value || 'artist';
+            var t = _whoType;
             document.querySelectorAll('.tr-who-seg button').forEach(function(b) { b.setAttribute('aria-checked', b.dataset.t === t ? 'true' : 'false'); });
             var txt = document.getElementById('tr-who-txt'); if (txt) txt.innerHTML = WHO_TEXT[t] || '';
-            // Each card's one line for this kind of account, straight away (before the plan list loads)
-            document.querySelectorAll('.tr-card').forEach(function(card) {
-                var pb = card.querySelector('[onclick^="selectTier("]'), pid = pb ? (/selectTier\('([^']+)'/.exec(pb.getAttribute('onclick')) || [])[1] : '';
-                var forEl = card.querySelector('.tr-for'); if (forEl && WHO_FOR[t] && WHO_FOR[t][pid]) forEl.textContent = WHO_FOR[t][pid];
-            });
+            var shown = 0;
+            document.querySelectorAll('.tr-card').forEach(function(card) { var on = card.dataset.for === t; card.hidden = !on; if (on) shown++; });
+            var grid = document.getElementById('pricing-plans'); if (grid) grid.dataset.n = shown;
             var list = (window._plansByType || {})[t];
             if (!list) return;
             var tick = (document.querySelector('.tr-card li svg') || {}).outerHTML || '';
-            var esc = function(v) { return String(v).replace(/[&<>"]/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
-            var featHtml = laFeatHtml;
-            document.querySelectorAll('.tr-card').forEach(function(card) {
-                var pb = card.querySelector('[onclick^="selectTier("]'), pid = pb ? (/selectTier\('([^']+)'/.exec(pb.getAttribute('onclick')) || [])[1] : '';
-                var p = list.filter(function(x) { return x.id === pid; })[0];
-                if (!p || !p.features.length) return;
-                card.querySelectorAll('.tr-h, ul, .tr-stats').forEach(function(el) { el.remove(); });
-                var ul = document.createElement('ul'); ul.className = 'tr-feats';
-                ul.innerHTML = p.features.map(function(f) { return '<li>' + tick + '<span>' + featHtml(f) + '</span></li>'; }).join('');
-                var after = card.querySelector('.tr-for') || card.querySelector('.tr-price');
-                after.insertAdjacentElement('afterend', ul);
+            document.querySelectorAll('.tr-card[data-for="' + t + '"]').forEach(function(card) {
+                var p = list.filter(function(x) { return x.id === card.dataset.plan; })[0];
+                if (!p) return;
+                var b = card.querySelector('.tr-price b'); if (b && p.price > 0) b.textContent = '£' + Number(p.price).toLocaleString('en-GB');
+                // The first line (who it's for) is already in the card's own words
+                var feats = p.features.slice(1);
+                if (feats.length) card.querySelector('.tr-feats').innerHTML = feats.map(function(f) { return '<li>' + tick + '<span>' + laFeatHtml(f) + '</span></li>'; }).join('');
             });
-            // The trial's own list: the same lines, without the join price (shown beside it)
-            var trial = list.filter(function(x) { return x.id === 'dj-trial'; })[0], tf = document.querySelector('.tr-offer-feats');
-            if (trial && tf) tf.innerHTML = trial.features.filter(function(f) { return !/^£/.test(f); }).map(function(f) { return '<li>' + tick + '<span>' + featHtml(f) + '</span></li>'; }).join('');
         }
         document.addEventListener('click', function(e) {
             var b = e.target.closest('.tr-who-seg button'); if (!b) return;
-            var t = b.dataset.t, li = document.querySelector('#tr-offer-menu li[data-v="' + t + '"]');
-            document.getElementById('tr-offer-type').value = t;
-            if (li) { document.querySelectorAll('#tr-offer-menu li').forEach(function(x) { x.setAttribute('aria-selected', x === li ? 'true' : 'false'); }); document.getElementById('tr-offer-type-name').textContent = li.querySelector('b').textContent; }
-            trialType();
+            _whoType = b.dataset.t; paintWho();
         });
-        function trialType() {
-            var t = (document.getElementById('tr-offer-type') || {}).value || 'artist';
-            var f = document.getElementById('tr-offer-for'); if (f) f.textContent = TRIAL_TYPES[t][1];
-            document.querySelectorAll('.tr-offer-price b').forEach(function(b) { b.textContent = '£' + TRIAL_FEES[t]; });
-            // Lines that differ by type (data-artist, data-label); venues keep the default
-            document.querySelectorAll('.tr-card [data-artist], .tr-card [data-label]').forEach(function(sp) { if (!sp.dataset.def) sp.dataset.def = sp.textContent; sp.innerHTML = laFeatHtml(t === 'artist' && sp.dataset.artist ? sp.dataset.artist : t === 'label' && sp.dataset.label ? sp.dataset.label : sp.dataset.def); });
-            // Every monthly plan at this type's price: venues the list price, record labels half, artists a quarter
-            document.querySelectorAll('.tr-card').forEach(function(card) {
-                var b = card.querySelector('.tr-price b'); if (!b) return;
-                if (!card.dataset.base) { var n = parseInt(b.textContent.replace(/[^0-9]/g, ''), 10); if (!n) return; card.dataset.base = n; }
-                var pb = card.querySelector('[onclick^="selectTier("]'), pid = pb ? (/selectTier\('([^']+)'/.exec(pb.getAttribute('onclick')) || [])[1] : '';
-                b.textContent = '£' + typePrice(Number(card.dataset.base), t, pid).toLocaleString('en-GB');
-            });
-            paintWho();
-            return t;
-        }
-        // The trial's own dropdown (Venue, Artist or Label), in the site's style rather than the browser's menu
-        (function() {
-            var btn = document.getElementById('tr-offer-btn'), menu = document.getElementById('tr-offer-menu');
-            if (!btn || !menu) return;
-            var items = [].slice.call(menu.querySelectorAll('li'));
-            var open = function(on) { menu.classList.toggle('open', on); btn.setAttribute('aria-expanded', on ? 'true' : 'false'); if (on) (menu.querySelector('[aria-selected="true"]') || items[0]).focus(); };
-            var pick = function(li) {
-                items.forEach(function(x) { x.setAttribute('aria-selected', x === li ? 'true' : 'false'); });
-                document.getElementById('tr-offer-type').value = li.dataset.v;
-                document.getElementById('tr-offer-type-name').textContent = li.querySelector('b').textContent;
-                trialType(); open(false); btn.focus();
-            };
-            btn.addEventListener('click', function(e) { e.stopPropagation(); open(!menu.classList.contains('open')); });
-            items.forEach(function(li) { li.addEventListener('click', function(e) { e.stopPropagation(); pick(li); }); });
-            menu.addEventListener('keydown', function(e) {
-                var i = items.indexOf(document.activeElement);
-                if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); items[(i + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length].focus(); }
-                else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (i >= 0) pick(items[i]); }
-                else if (e.key === 'Escape' || e.key === 'Tab') { open(false); btn.focus(); }
-            });
-            document.addEventListener('click', function() { open(false); });
-        })();
-        // On load: the plans at the price for the type shown (Artist by default)
-        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function() { trialType(); }); else trialType();
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', paintWho); else paintWho();
         function selectTier(tierId) {
             var esc = function(v) { return String(v).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
-            var T = SIGNUP_TIERS[tierId] || { group: '', name: TIER_NAMES[tierId] || tierId, price: '', feats: [] };
-            if (tierId === 'dj-trial') { var tt = trialType(); T = Object.assign({}, T, { type: tt, only: tt, name: TRIAL_TYPES[tt][0] + ' Trial Month', price: '£' + TRIAL_FEES[tt] }); }
-            else if (SIGNUP_TIERS[tierId]) {
-                // A monthly plan for the type chosen above (Artist, Label or Venue), at that type's price
-                var mt = trialType(), card = document.querySelector('[onclick="selectTier(\'' + tierId + '\')"]'), cc = card && card.closest('.tr-card');
-                var base = cc && cc.dataset.base ? Number(cc.dataset.base) : parseInt(String(T.price).replace(/[^0-9]/g, ''), 10);
-                T = Object.assign({}, T, { type: mt, only: mt, price: '£' + typePrice(base, mt, tierId).toLocaleString('en-GB') });
-            }
+            // The plan as its card shows it, for the kind of account picked above
+            var mt = _whoType, card = document.querySelector('.tr-card[data-for="' + mt + '"][data-plan="' + tierId + '"]');
+            var txt = function(sel) { var el = card && card.querySelector(sel); return el ? el.textContent : ''; };
+            var free = tierId === 'dj-trial';
+            var T = { group: free ? 'Free plan' : 'Monthly plan', name: txt('.tr-name'), price: txt('.tr-price b'), per: txt('.tr-price span'), type: mt, only: mt, payg: free, go: free ? 'Continue' : 'Continue to payment',
+                feats: card ? [].slice.call(card.querySelectorAll('.tr-feats li span')).map(function(sp) { return sp.firstChild ? sp.firstChild.textContent : sp.textContent; }) : [] };
             var ICON = {
                 venue: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V9l8-5 8 5v12"/><path d="M9 21v-6h6v6"/></svg>',
                 label: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.5"/><path d="M12 6.5a5.5 5.5 0 0 0-5.5 5.5"/></svg>',
@@ -1119,7 +991,7 @@
                             '<label class="su-field"><span id="su-name-label">Venue name</span><input name="name" maxlength="60" required autocomplete="organization" placeholder="e.g. Venue Name"></label>' +
                             // Pay as you go: usage above the plan charged to the card on the 1st. Optional on monthly plans, part of the trial.
                             '<label class="su-payg' + (T.payg ? ' locked' : '') + '"><input type="checkbox" name="payg"' + (T.payg ? ' checked disabled' : '') + '><span class="su-sw" aria-hidden="true"></span>' +
-                                '<span class="su-payg-t"><b>Pay as you go</b><small>' + (T.payg ? 'Included with the trial. After the ' + esc(T.price) + ', what you use is charged to your card on the 1st.' : 'Keep going past your plan. Extra usage is charged to your card on the 1st, instead of an emailed invoice.') + '</small></span></label>' +
+                                '<span class="su-payg-t"><b>Pay as you go</b><small>' + (T.payg ? 'Included with Free. What you use is charged to your card on the 1st; nothing to pay today.' : 'Keep going past your plan. Extra usage is charged to your card on the 1st, instead of an emailed invoice.') + '</small></span></label>' +
                             '<button type="submit" class="ord-go su-go">' + esc(T.go || 'Continue to payment') + '</button>' +
                             '<p id="su-error" class="ord-error"></p>' +
                             '<p class="su-secure"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Secure checkout with Stripe · Cancel anytime</p>' +

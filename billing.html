@@ -742,7 +742,7 @@
             var offer = document.getElementById('bl-plans-offer');
             offer.classList.toggle('hidden', admin || !(d.plansOffered || []).length);
             if (!admin && d.plansOffered) {
-                // Cheapest first, so a trial month (£0) is on the left, then Starter, Pro, Live-Set
+                // Cheapest first: Free on the left, then the plan offered to this kind of account (Artist, Label or Venue)
                 d.plansOffered = d.plansOffered.slice().sort(function(a, b) { return (a.price || 0) - (b.price || 0); });
                 var curIdx = d.plansOffered.findIndex(function(p) { return p.id === d.currentPlan; });
                 var nextUp = curIdx + 1;   // the plan to suggest

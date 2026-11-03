@@ -1,4 +1,5 @@
 import { blist as list } from './_brandstore.js';
+import { isFreePlan } from './_billing.js';
 
 // Watermark for vertical clips, set on the Brand Kit page and stored in Redis per venue.
 // When a clip job is queued, it is resolved to a concrete logo URL and saved on the job,
@@ -73,7 +74,9 @@ export async function resolveWatermark(redis, slug, artist, date = null) {
   // The artist's own watermark (set by them with access) or the account's, whichever was saved last
   const own = artist ? await readArtistWatermark(redis, slug, 'artist-' + String(artist).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')) : null;
   const w = newestWatermark(own, await readWatermark(redis, slug));
-  if (!w.enabled) return null;
+  // Free plan: the local / assets™ mark goes on every clip, with the Brand Kit's watermark or on its own
+  const house = await isFreePlan(redis, slug).catch(() => false);
+  if (!w.enabled) return house ? { url: null, position: w.position, size: w.size, opacity: w.opacity, text: null, house } : null;
 
   const prefix = `brand/${slug}/`;
   const logos = [], anims = [];
@@ -108,6 +111,6 @@ export async function resolveWatermark(redis, slug, artist, date = null) {
   // "Artist name": each session's own artist
   if (text?.source === 'artist') text = artist ? { ...text, value: String(artist).toUpperCase().trim() } : null;
   if (text && !text.value) text = null;
-  if (!url && !text) return null;
-  return { url, position: w.position, size: w.size, opacity: w.opacity, text };
+  if (!url && !text && !house) return null;
+  return { url, position: w.position, size: w.size, opacity: w.opacity, text, ...(house ? { house } : {}) };
 }

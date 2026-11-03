@@ -8,7 +8,7 @@ import { venueAuth } from './_verticals.js';
 import { createCheckout } from './_checkout.js';
 import {
   readRates, readPlans, cleanPlans, readAssignments, assignKey, venueUsage, venueArtists, priceUsage,
-  monthRange, stripeClient, invoiceVenue, venueEntries, DEFAULT_RATES, applyDetails, usageByDay, planForType, priceForType, commitEndFor, readKit, cleanKit, KIT_PLANS, accountTypeOf, sendInvoiceEmail, billingEmailFor, readDiscount, muxCost, MUX_PRICES, parseMuxReport, accountRatesKey, readRunning, cleanRunning, stripeFeesThisMonth, venueCustomer } from './_billing.js';
+  monthRange, stripeClient, invoiceVenue, venueEntries, DEFAULT_RATES, applyDetails, usageByDay, planForType, priceForType, commitEndFor, OFFERED, readKit, cleanKit, KIT_PLANS, accountTypeOf, sendInvoiceEmail, billingEmailFor, readDiscount, muxCost, MUX_PRICES, parseMuxReport, accountRatesKey, readRunning, cleanRunning, stripeFeesThisMonth, venueCustomer } from './_billing.js';
 
 // Minutes Mux had encoded by kind, read off Mux's bill (Billing → Summary) before the webhook noted every video;
 // a month's encoding never counts as less than this
@@ -442,7 +442,8 @@ export default async function handler(req, res) {
         usage: data.usage, ...priced, invoices, stripe: !!stripe, isAdmin, subscription, accountType: data.accountType, accountTypeLabel: TYPE_LABEL[data.accountType] || 'Account',
         // Plans a client can move to (name, price, what's included)
         // (pay-as-you-go plans are chosen at sign-up only; an account can move up to a monthly plan from them)
-        plansOffered: data.plans.filter(p => p.price > 0 || p.id === ((data.assignments.venue || {}).plan || '')).map(p => planForType(p, data.accountType)).map(p => ({ signupFee: p.signupFee || 0, id: p.id, name: p.name, price: p.price, maxClips: p.maxClips, cameras: p.cameras || 0, features: p.features || [], included: p.included })),
+        // Only the plan offered to this kind of account (OFFERED), and the one it's on; the rest are on request
+        plansOffered: data.plans.filter(p => p.id === ((data.assignments.venue || {}).plan || '') || (p.price > 0 && (OFFERED[data.accountType] || OFFERED.venue).includes(p.id))).map(p => planForType(p, data.accountType)).map(p => ({ signupFee: p.signupFee || 0, id: p.id, name: p.name, price: p.price, maxClips: p.maxClips, cameras: p.cameras || 0, features: p.features || [], included: p.included })),
         currentPlan: (data.assignments.venue || {}).plan || '',
         ...(isAdmin ? { kit: await withRedis(readKit), kitPlans: KIT_PLANS, running: await withRedis(readRunning),
           // Each kit plan's monthly price for a venue, a record label and an artist (for the kit's share of the first month)
@@ -547,6 +548,8 @@ export default async function handler(req, res) {
         const plan = planForType((await readPlans(redis)).find(p => p.id === String(body0.plan || '')), acctType);
         if (!plan || !(plan.price > 0)) return { status: 400, error: 'Unknown plan' };
         const a = (await readAssignments(redis, slug)).venue || {};
+        if (!(OFFERED[acctType] || OFFERED.venue).includes(plan.id) && plan.id !== a.plan && !admins().includes(session.email))
+          return { status: 400, error: 'This plan is on request: email info@local-assets.com' };
         const subId = a.subscriptionId || getVenuesConfig()[slug]?.subscription || '';
         const price = { currency: 'gbp', unit_amount: Math.round(plan.price * 100), recurring: { interval: 'month' } };
         if (subId) {

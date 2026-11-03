@@ -11,6 +11,7 @@ import sharp from 'sharp';
 import { createClient } from 'redis';
 import { getWebSessionAuth } from './_venues.js';
 import { resolveWatermark } from './_watermark.js';
+import { isFreePlan } from './_billing.js';
 import { renderWatermarkPng, renderWatermarkParts, animatedLogo, VERTICAL, HORIZONTAL } from './_watermark-render.js';
 import { spawn } from 'child_process';
 import ffmpegPath from 'ffmpeg-static';
@@ -341,6 +342,9 @@ export default async function handler(req, res) {
       return res.status(200).json({ done: done + v.done, pending: pending + v.pending, verticalsPending: v.pending, watermarked, horizontal, pendingIds });
     }
 
+    // Free plan: the local / assets™ mark stays on the clips; the Artist plan takes it off
+    if ((body.action === 'remove' || body.action === 'removeMaster') && await isFreePlan(redis, slug).catch(() => false))
+      return res.status(403).json({ error: 'On the Free plan the local / assets™ mark stays on your clips. Move to the Artist plan in Billing to remove it.' });
     if (body.action === 'remove' || body.action === 'restore') {
       const artist = String(body.artist || '').toUpperCase().trim();
       if (!artist) return res.status(400).json({ error: 'Choose a session' });

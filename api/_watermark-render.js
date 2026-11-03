@@ -118,6 +118,14 @@ export async function renderWatermarkPng(wm, L = VERTICAL, width = L.W) {
   return (await compose(wm, L, width, null)).png;
 }
 
+const HOUSE_MARK = 'https://local-assets.com/logos/White@2x.png';
+let houseSrc = null;
+async function houseLayer(s = 1) {
+  if (!houseSrc) houseSrc = await download(HOUSE_MARK);
+  const { data, info } = await sharp(houseSrc).trim({ threshold: 10 }).resize({ width: Math.round(220 * s), kernel: 'lanczos3' }).png().toBuffer({ resolveWithObject: true });
+  return { input: data, w: info.width, h: info.height };
+}
+
 async function compose(wm, L, width, movingLogo) {
   const s = Math.max(1, width / L.W);
   if (s !== 1) L = { W: Math.round(L.W * s), H: Math.round(L.H * s), mx: L.mx * s, top: L.top * s, bottom: L.bottom * s };
@@ -152,11 +160,18 @@ async function compose(wm, L, width, movingLogo) {
       layers.push({ ...t, ...place(tPos, t.w, t.h, shift) });
     }
   }
+  // Free plan: a small local / assets™ wordmark in a corner the Brand Kit isn't using (api/_watermark.js)
+  if (wm.house) {
+    const used = [logo ? position : null, wm.text?.value ? (wm.text.position || 'br') : null];
+    const corner = ['tr', 'tl', 'br', 'bl'].find(c => !used.includes(c)) || 'tr';
+    const h = await houseLayer(s).catch(e => { console.error('[watermark-render] house mark:', e.message); return null; });
+    if (h) layers.push({ ...h, ...place(corner, h.w, h.h, 0), house: true });
+  }
   const moving = layers.find(l => l.moving) || null;
   const still = layers.filter(l => !l.moving);
   const logoAt = moving ? { left: moving.left, top: moving.top, w: moving.w, h: moving.h, opacity: Math.min(1, Math.max(0.3, Number(wm.opacity) || 0.9)), W: L.W, H: L.H } : null;
   if (!still.length) return { png: moving ? await sharp({ create: { width: L.W, height: L.H, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } }).png().toBuffer() : null, logoAt };
-  const faded = await Promise.all(still.map(l => withOpacity(l, wm.opacity)));
+  const faded = await Promise.all(still.map(l => withOpacity(l, l.house ? 0.85 : wm.opacity)));
   const png = await sharp({ create: { width: L.W, height: L.H, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
     .composite(faded.map(l => ({ input: l.input, left: l.left, top: l.top })))
     .png().toBuffer();

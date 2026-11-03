@@ -138,9 +138,9 @@ async function readStandardRates(redis) {
 
 // Plans: a monthly price with usage included; usage above it is billed as overage
 export const DEFAULT_PLANS = [
-  { id: 'dj-trial', name: 'Trial Month', price: 0, signupFee: 49, maxClips: 6, cameras: 0,
+  { id: 'dj-trial', name: 'Free', price: 0, signupFee: 0, maxClips: 6, cameras: 0,
     included: { storedMinutes: 0, deliveredMinutes: 0, fileGB: 0 },
-    features: ['From £49 to join (comes off your first month), then pay as you go', '6 vertical social clips per session', 'Brand Kit and watermark', 'Connect your DJI, Sony Alpha and more', 'Distribution History', 'Usage charged to your card on the 1st'] },
+    features: ['Free to join, then pay as you go', 'local / assets™ mark on your clips', '6 vertical social clips per session', 'Brand Kit and watermark', 'Connect your DJI, Sony Alpha and more', 'Distribution History', 'Usage charged to your card on the 1st'] },
   { id: 'starter-distribution', name: 'Starter', price: 2750, maxClips: 6, cameras: 0,
     included: { storedMinutes: 10000, deliveredMinutes: 25000, fileGB: 1000 },
     features: ['Camera available as an add-on', 'Content intake & quality control', 'Up to 8 events processed / month', '6 vertical clips per session', 'Brand Kit, thumbnails & watermark', '1 TB cloud storage'] },
@@ -250,16 +250,27 @@ function trialLikeStarter(list) {
 // Plans with hardware we buy (Live-Set: cameras, Mac mini, Starlink Mini) run for at least 12 months
 // Pro too when it includes a camera (record labels and managements; artists and venues add one for £149 a month)
 export const MIN_TERM_PLANS = ['liveset-creative'];
-export const MIN_TERM_TYPES = { 'liveset-distribution': ['label', 'management'] };   // Pro with its included camera
+export const MIN_TERM_TYPES = { 'liveset-distribution': ['label', 'management', 'venue'] };   // Pro with its included camera
 export const commitEndFor = (planId, type) => MIN_TERM_PLANS.includes(planId) || (MIN_TERM_TYPES[planId] || []).includes(type || 'venue')
   ? new Date(Date.now() + 365 * 86400e3).toISOString().slice(0, 10) : '';
 export const TYPE_FACTOR = { venue: 1, label: 0.5, artist: 0.25 };
 // Set prices that replace the rule for one plan and type (planId → type → £ a month)
+// Pricing of 3 Nov 2026: one plan per buyer on the site (OFFERED). Artist £29 (or Free), Label £499, Venue £995
+// with a camera; Live-Set on request. Subscribers before it keep the price their Stripe subscription was made at.
 export const TYPE_PRICE = {
-  'starter-distribution': { artist: 79, label: 599 },
-  'liveset-distribution': { artist: 199, label: 1299 },
+  'starter-distribution': { artist: 29, label: 499 },
+  'liveset-distribution': { artist: 199, label: 1299, venue: 995 },
   'liveset-creative': { artist: 895, label: 1995 },
 };
+// The plan each buyer is offered on the site, by its name for that buyer; the rest are on request
+export const OFFERED = { artist: ['dj-trial', 'starter-distribution'], label: ['starter-distribution'], management: ['starter-distribution'], venue: ['liveset-distribution'] };
+export const TYPE_NAME = { 'dj-trial': { artist: 'Free' }, 'starter-distribution': { artist: 'Artist', label: 'Label', management: 'Label' }, 'liveset-distribution': { venue: 'Venue' } };
+// Free: an artist on the Trial Month who joined without a fee. Their clips carry the local / assets™ mark
+// (api/_watermark.js); any monthly plan, or a Trial Month paid for before Free existed, doesn't.
+export async function isFreePlan(redis, slug) {
+  const a = (await readAssignments(redis, slug).catch(() => ({}))).venue;
+  return a?.plan === 'dj-trial' && !(Number(a.trialFee) > 0);
+}
 // What each plan includes by type: sets (events for a venue) a month, 0 = unlimited; the video it keeps
 // (stored minutes), minutes streamed and GB of files. Venues keep the plan's own allowances.
 export const TYPE_PLAN = {
@@ -290,7 +301,7 @@ function whoLine(type, planId) {
   return a === Infinity && l === Infinity ? 'One venue, with unlimited artists and record labels' : `One venue, ${n(a)} artists and ${n(l)} record labels`;
 }
 // To join the Trial Month, by type (as charged at checkout, api/create-checkout.js)
-const TRIAL_FEE = { artist: 49, label: 149, management: 149, venue: 349 };
+const TRIAL_FEE = { artist: 0, label: 149, management: 149, venue: 349 };
 // What each plan gives, in plain words, for this kind of account. Artists add a camera separately on Pro and
 // get one camera on Live-Set; venues, labels and managements get the cameras the plan comes with.
 function planFeatures(planId, type, t, included, name) {
@@ -299,6 +310,14 @@ function planFeatures(planId, type, t, included, name) {
   const space = `Room for about ${hours(included.storedMinutes || 0)} hours of full sets; more is charged by the month`;
   const brand = 'Brand Kit: your logo, animations and custom fonts for watermark and thumbnails';
   const who = whoLine(type, planId);
+  if (planId === 'dj-trial' && type === 'artist') return [
+    who,
+    'Free to join: no monthly fee, you pay only for what you use, on the 1st',
+    '6 vertical clips from every set, with a small local / assets™ mark',
+    brand,
+    'Connect your DJI, Sony Alpha and more',
+    'Remove the mark any time with the Artist plan',
+  ];
   if (planId === 'dj-trial' || /venue\s*trial/i.test(String(name || ''))) return [
     who,
     `£${TRIAL_FEE[type] || 49} to join, taken off your first month if you upgrade`,
@@ -310,7 +329,7 @@ function planFeatures(planId, type, t, included, name) {
   if (planId === 'starter-distribution') return [who, sets, '6 vertical clips from every set', brand, space, 'Connect your DJI, Sony Alpha and more\nOr add one of our cameras for £149 a month, 12-month minimum.\nSet up for you, controlled from Camera Control.'];
   // Pro: artists and venues add our PTZ camera for £149 a month; record labels get one included
   if (planId === 'liveset-distribution') return [who, sets, '12 vertical clips from every set', brand, space,
-    artist || type === 'venue' ? 'Connect your DJI, Sony Alpha and more\nOr add one of our cameras for £149 a month, 12-month minimum.\nSet up for you, controlled from Camera Control.' : '1 PTZ camera included, set up for you (12-month minimum)'];
+    artist ? 'Connect your DJI, Sony Alpha and more\nOr add one of our cameras for £149 a month, 12-month minimum.\nSet up for you, controlled from Camera Control.' : '1 PTZ camera included, set up for you (12-month minimum)'];
   if (planId === 'liveset-creative') return [who, sets, 'Unlimited vertical clips from every set', 'Multi-camera auto-edit of the full set, in 4K with HQ audio', brand, space,
     artist ? '1 PTZ camera, Starlink Mini and Mac mini, set up for you\nOr add a second camera for £149 a month, 12-month minimum.\nSet up for you, controlled from Camera Control.' : '2 PTZ cameras, Starlink Mini and Mac mini, set up for you',
     '12-month minimum', 'Quarterly performance reports'];
@@ -332,9 +351,10 @@ export function planForType(plan, type) {
   for (const k of ['storedMinutes', 'deliveredMinutes', 'fileGB']) if (t && t[k] != null) included[k] = t[k];
   const features = planFeatures(plan.id, type, t, included, plan.name) || plan.features;
   const cameras = type === 'artist' ? ({ 'liveset-distribution': 0, 'liveset-creative': 1 }[plan.id] ?? plan.cameras)
-    : type === 'venue' && plan.id === 'liveset-distribution' ? 0 : plan.cameras;
-  if (!(plan.price > 0)) return { ...plan, features };
-  return { ...plan, price: priceForType(plan.price, type, plan.id), included, features, cameras, setsPerMonth: t ? t.sets : undefined };
+    : type === 'venue' && plan.id === 'liveset-distribution' ? Math.max(1, plan.cameras || 0) : plan.cameras;
+  const name = TYPE_NAME[plan.id]?.[type] || plan.name;
+  if (!(plan.price > 0)) return { ...plan, name, features };
+  return { ...plan, name, price: priceForType(plan.price, type, plan.id), included, features, cameras, setsPerMonth: t ? t.sets : undefined };
 }
 export async function readPlansRaw(redis) {
   // The Trial Month is always offered, even when the saved plan list predates it
