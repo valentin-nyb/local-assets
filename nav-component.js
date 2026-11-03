@@ -259,7 +259,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         window._laApplyTheme = apply;
 
-        // Accent colour: one of the Brand Kit's colours for every detail (buttons, links, the logo, active menu item…).
+        // Accent colour: one of the Brand Kit's colours for every detail (buttons, links, the logo on hover, active menu item…).
         // A dot shows the colour; Save keeps it with the login, so every device shows it ('' = the original neon green).
         // This device remembers the saved one (la_accent) so pages open in it straight away.
         var _accSaved = ''; try { _accSaved = localStorage.getItem('la_accent') || ''; } catch (_) {}

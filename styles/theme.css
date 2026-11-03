@@ -681,7 +681,7 @@ html body.cal-view .cal-panel { border: 0 !important; background: none !importan
     transition: background-position .45s cubic-bezier(.65, 0, .35, 1);
 }
 .la-logo-link { display: flex; width: 160px; height: 26px; }
-.la-logo-link:hover .la-logo, .la-logo-link:focus-visible .la-logo { background-position: 0 0; }
+.la-logo-link:hover .la-logo, .la-logo-link:focus-visible .la-logo, .la-logo-link:active .la-logo { background-position: 0 0; }   /* white until hovered or touched, whatever the accent */
 @media (prefers-reduced-motion: reduce) { .la-logo { transition: none; } }
 
 /* Dialog titles in capitals, like every title on the platform */
@@ -840,8 +840,6 @@ html:not(.dark) .la-accent-dots [data-accent="pink"]   { --dot: #DB2777; }
 html:not(.dark) .la-accent-dots [data-accent="indigo"] { --dot: #4F46E5; }
 html:not(.dark) .la-accent-dots [data-accent="blue"]   { --dot: #2563EB; }
 html:not(.dark) .la-accent-dots [data-accent="teal"]   { --dot: #0D9488; }
-/* A chosen accent colours the side menu's logo all the time, not only on hover */
-html[data-accent] .la-logo { background-position: 0 0; }
 /* Save, under the accent dots, while a new colour is being tried */
 .la-accent-save { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 12px; }
 .la-accent-save[hidden] { display: none; }
