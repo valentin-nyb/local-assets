@@ -43,7 +43,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@mux/mux-player@3"></script>
     <!-- Video.js 10: the decks' live sound, Mux audio with no player around it (hls.js) -->
     <script type="module" async src="https://cdn.jsdelivr.net/npm/@videojs/html@10.1.0/media/mux-audio/+esm"></script>
-    <script src="nav-component.js?v=64"></script>
+    <script src="nav-component.js?v=65"></script>
     <script src="la-deckrec.js?v=2"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
@@ -1503,7 +1503,7 @@
         }
         var _macBusy = {}, _mac = null;
         // A camera plugged into this Mac links itself to a camera slot made "On this Mac" that has none yet, with
-        // its own microphone if it has one ("smacker Camera" → "smacker Microphone"). The Mac's built-in camera
+        // its own microphone if it has one ("Studio Camera" → "Studio Microphone"). The Mac's built-in camera
         // and Desk View aren't picked by themselves. Choosing "Not from this Mac" for a camera stops it relinking there.
         var MAC_BUILTIN = /facetime|built-?in|desk view|capture screen|virtual|obs/i;
         function macDeclined(slot, dev) { try { return localStorage.getItem('la_mac_noauto:' + slot + ':' + dev) === '1'; } catch (_) { return false; } }
