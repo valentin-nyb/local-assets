@@ -735,7 +735,12 @@ export async function invoiceVenue(redis, stripe, { slug, auth, email, name, tar
   const customer = await venueCustomer(stripe, redis, target === 'venue' ? slug : `${slug}:${target}`, { email, name, details });
   const currency = priced.currency;
   // Accounts from a sign-up pay the plan through their Stripe subscription: invoice the usage above it only
-  const viaSubscription = !!(await readAssignments(redis, slug))[target]?.subscription;
+  // Only a subscription that exists in this Stripe account counts: one saved in the sandbox (before the switch to
+  // live) would otherwise leave the plan unbilled. Any other error stops this bill rather than charge the plan twice.
+  const as = (await readAssignments(redis, slug))[target] || {};
+  const viaSubscription = !as.subscription ? false : !as.subscriptionId ? true : await stripe.subscriptions.retrieve(as.subscriptionId)
+    .then(s => !['canceled', 'incomplete_expired'].includes(s.status))
+    .catch(e => { if (e.code === 'resource_missing') return false; throw e; });
   if (viaSubscription) priced.total = priced.usageTotal;
   if (priced.total < 0.3) { await redis.set(doneKey, 'none'); return { skipped: true, reason: 'Nothing above the plan to bill' }; }
   if (priced.planAmount && !viaSubscription) {
