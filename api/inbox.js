@@ -30,7 +30,13 @@ async function rs(path, { method = 'GET', body, idem } = {}) {
   const headers = { Authorization: 'Bearer ' + key, 'User-Agent': 'local-assets' };
   if (body) headers['Content-Type'] = 'application/json';
   if (idem) headers['Idempotency-Key'] = idem;
-  const r = await fetch('https://api.resend.com/inboxes/' + encodeURIComponent(INBOX()) + path, { method, headers, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(15000) });
+  let r;
+  // Resend takes 10 requests a second: a "too many" answer waits as it asks (or half a second) and tries again, twice
+  for (let tries = 0; ; tries++) {
+    r = await fetch('https://api.resend.com/inboxes/' + encodeURIComponent(INBOX()) + path, { method, headers, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(15000) });
+    if (r.status !== 429 || tries >= 2) break;
+    await new Promise(ok => setTimeout(ok, Math.min(3000, (Number(r.headers.get('retry-after')) || 0.5) * 1000)));
+  }
   const d = r.status === 204 ? {} : await r.json().catch(() => ({}));
   if (!r.ok) throw Object.assign(new Error(d.message || d.error || ('Resend answered ' + r.status)), { status: r.status });
   return d;
@@ -45,7 +51,15 @@ async function alertsLabelId() {
 }
 
 // Alert emails still in the Inbox (and not labelled yet: one moved back by hand stays) → Alerts label + archive
-async function sortAlerts() {
+// One sort at a time, at most every 20 seconds: every page call asked for it, and together they went over Resend's limit
+let sorting = null, sortedAt = 0;
+function sortAlerts() {
+  if (sorting) return sorting;
+  if (Date.now() - sortedAt < 20000) return Promise.resolve(0);
+  sorting = sortAlertsNow().finally(() => { sortedAt = Date.now(); sorting = null; });
+  return sorting;
+}
+async function sortAlertsNow() {
   const list = await rs('/threads?folders=inbox&limit=100');
   const found = (list.data || []).filter(t => ALERT_FROM.test(String(t.from || '')) && !(t.labels || []).some(l => String(l.name).toLowerCase() === ALERTS.toLowerCase()));
   if (!found.length) return 0;
@@ -111,6 +125,12 @@ export default async function handler(req, res) {
         return res.json({ sent: (await rs('/threads/' + thread + '/emails/' + id(b.email) + '/reply', { method: 'POST', body: { text, html: toHtml(text) }, idem: b.key && id(b.key) ? 'reply-' + b.key : undefined })).id });
       }
       if (b.action === 'move' && thread && FOLDERS.includes(b.folder) && b.folder !== 'sent') { await rs('/threads/' + thread, { method: 'PATCH', body: { folder: b.folder } }); return res.json({ ok: true }); }
+      if (b.action === 'readAll' && b.folder === 'alerts') {
+        const list = await rs('/threads?labels=' + await alertsLabelId() + '&folders=inbox,archive&limit=100');
+        const unread = (list.data || []).filter(t => !t.read);
+        for (const t of unread) await rs('/threads/' + t.id, { method: 'PATCH', body: { read: true } });
+        return res.json({ ok: true, marked: unread.length });
+      }
       if (b.action === 'read' && thread) { await rs('/threads/' + thread, { method: 'PATCH', body: { read: !!b.read } }); return res.json({ ok: true }); }
       return res.status(400).json({ error: 'Unknown action' });
     }

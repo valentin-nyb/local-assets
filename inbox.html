@@ -69,6 +69,7 @@
         .ib-pill { display:inline-block; margin-top:7px; padding:4px 8px; border-radius:999px; border:1px solid var(--la-accent); color:var(--la-accent); font:600 9px/1 'JetBrains Mono', monospace; letter-spacing:.14em; text-transform:uppercase; }
         .ib-pill-sent { border-color:var(--la-line); color:var(--la-dim); }
         .ib-none { padding:28px 16px; font-size:13px; color:var(--la-sub); text-align:center; }
+        .ib-readall { border-top:0 !important; border-bottom:1px solid var(--la-line) !important; color:var(--la-accent) !important; }
         .ib-more { display:block; width:100%; padding:12px; border:0; border-top:1px solid var(--la-line); background:none; color:var(--la-sub); font-size:12px; cursor:pointer; }
         .ib-view { display:flex; flex-direction:column; gap:12px; min-width:0; }
         .ib-empty { border:1px dashed var(--la-line); border-radius:16px; padding:48px 20px; text-align:center; color:var(--la-sub); font-size:13px; }
@@ -176,6 +177,8 @@
                     + (t.has_draft ? '<span class="ib-pill">Reply waiting</span>' : (t.folder === 'sent' && folder === 'inbox' ? '<span class="ib-pill ib-pill-sent">Sent</span>' : ''))
                     + '</button>';
             }).join('') + (more ? '<button type="button" class="ib-more" id="ib-more">Show older</button>' : '');
+            // Alerts: clear the old ones in one go
+            if (folder === 'alerts' && threads.some(function(t) { return !t.read; })) listEl.insertAdjacentHTML('afterbegin', '<button type="button" class="ib-more ib-readall" id="ib-readall">Mark all read</button>');
         }
         function loadList(quiet) {
             if (!quiet) listEl.innerHTML = '<la-spin topic="inbox" inset></la-spin>';
@@ -186,6 +189,12 @@
             api('?view=count').then(function(d) { document.getElementById('ib-unread').textContent = d.unread ? d.unread : ''; document.getElementById('ib-alerts').textContent = d.alerts ? d.alerts : ''; if (window.laInboxBadge) window.laInboxBadge(d.unread); }).catch(function() {});
         }
         listEl.addEventListener('click', function(e) {
+            if (e.target.id === 'ib-readall') {
+                e.target.disabled = true; e.target.textContent = 'Marking…';
+                post({ action: 'readAll', folder: 'alerts' }).then(function() { threads.forEach(function(t) { t.read = true; }); paintList(); loadCount(); })
+                    .catch(function(err) { e.target.disabled = false; e.target.textContent = 'Mark all read'; window.laAlert(err.message); });
+                return;
+            }
             if (e.target.id === 'ib-more') {
                 e.target.disabled = true;
                 api('?folder=' + folder + '&after=' + encodeURIComponent(threads[threads.length - 1].id)).then(function(d) { threads = threads.concat(d.threads); more = d.more; paintList(); }).catch(function() { e.target.disabled = false; });
