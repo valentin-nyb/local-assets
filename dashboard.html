@@ -288,6 +288,7 @@
                             <div class="sh-row"><div class="sh-main"><span class="sh-name">Cameras</span><span class="sh-val"><span id="sh-cam-dot" class="sh-dot"></span><span id="sh-cam">—</span></span></div><span id="sh-cam-detail" class="sh-detail"></span></div>
                             <div class="sh-row"><div class="sh-main"><span class="sh-name">Video processing</span><span class="sh-val"><span id="sh-video-dot" class="sh-dot"></span><span id="sh-video">—</span></span></div><span id="sh-video-detail" class="sh-detail"></span></div>
                             <div class="sh-row"><div class="sh-main"><span class="sh-name">Vertical clips</span><span class="sh-val"><span id="sh-clips-dot" class="sh-dot"></span><span id="sh-clips">—</span></span></div><span id="sh-clips-detail" class="sh-detail"></span></div>
+                            <div class="sh-row"><div class="sh-main"><span class="sh-name">Brand Kit pictures</span><span class="sh-val"><span id="sh-brand-dot" class="sh-dot"></span><span id="sh-brand">—</span></span></div><span id="sh-brand-detail" class="sh-detail"></span></div>
                         </div>
                     </div>
                 </div>
@@ -2975,6 +2976,7 @@
             var problems = [];
             if (_health.pipeline && _health.pipeline.failed) problems.push('clips');
             if (_health.video && _health.video.failed) problems.push('video');
+            if (_health.brand && !_health.brand.ok) problems.push('brand');
             var known = _health.pipeline !== null || _health.video !== null;
             var busy = document.querySelector('.sh-dot[data-level="busy"]:not(.sh-summary .sh-dot)');
             var pill = document.getElementById('sh-summary'), pillText = document.getElementById('sh-summary-text');
@@ -3013,6 +3015,12 @@
                 else if (v.failed) setHealthRow('clips', 'bad', v.failed + ' failed', (v.failedArtists.length ? v.failedArtists.join(', ') + ': ' : '') + 'press Make vertical clips on the session to try again.');
                 else setHealthRow('clips', 'ok', v.done ? v.done + ' made today' : 'Up to date');
                 showOrphanClips();
+
+                const b = data.brand;
+                _health.brand = b;
+                if (b == null) setHealthRow('brand', 'bad', 'Unavailable', 'Could not check the Brand Kit storage.');
+                else if (!b.ok) setHealthRow('brand', 'bad', 'Storage problem', 'The private storage refused a picture (' + (b.why || 'unknown') + '). Pictures are shown from the backup copy meanwhile; we have been alerted.');
+                else setHealthRow('brand', 'ok', 'Loading normally');
             } catch (e) {}
             _health.loaded = true;
             renderHero();

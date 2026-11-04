@@ -3,6 +3,7 @@ import { createClient } from 'redis';
 import { getWebSessionAuth } from './_venues.js';
 import { listLiveStreams } from './_live.js';
 import { verticalsHealth } from './_verticals.js';
+import { brandHealth } from './_brandstore.js';
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
@@ -28,12 +29,14 @@ export default async function handler(req, res) {
     const byId = new Map(cams.filter(c => c.streamId).map(c => [c.streamId, c]));
     return all.filter(s => byId.has(s.id)).map(s => ({ ...s, name: byId.get(s.id).name || s.name }));
   };
-  const [cameras, clips] = await Promise.all([
+  const [cameras, clips, brand] = await Promise.all([
     session.muxAuth && session.venueSlug
       ? ownCameras().catch(e => { console.error('[system-health] live', e.message); return null; })
       : Promise.resolve([]),
     session.venueSlug ? verticals().catch(e => { console.error('[system-health] verticals', e.message); return null; }) : Promise.resolve(null),
+    // Brand Kit pictures: one real file read the way the pages read it
+    brandHealth(session.venueSlug || '').catch(e => ({ ok: false, why: e.message })),
   ]);
 
-  return res.status(200).json({ cameras, clips, timestamp: Date.now() });
+  return res.status(200).json({ cameras, clips, brand, timestamp: Date.now() });
 }

@@ -105,3 +105,19 @@ export async function copyToPrivate(prefix = 'brand/', cursor) {
   } while (cursor);
   return { copied, skipped, failed, more: false };
 }
+
+// System Health: one real Brand Kit file of the account (any, if it has none) read through its signed link,
+// the way the pages read it. { ok, store, why }: a refused or broken read shows red before anyone sees it.
+export async function brandHealth(slug) {
+  if (!privateBrand()) return { ok: true, store: 'public' };
+  try {
+    let page = await blob.list(priv({ prefix: `brand/${slug}/`, limit: 1 }));
+    if (!page.blobs.length) page = await blob.list(priv({ prefix: 'brand/', limit: 1 }));
+    const f = page.blobs[0];
+    if (!f) return { ok: true, store: 'private', why: 'no files yet' };
+    _readable.delete(f.pathname);   // a fresh check, not the one kept from earlier
+    const url = await readUrl(canon(f.pathname), 60);
+    const ok = !!(_readable.get(f.pathname) || {}).ok;
+    return { ok, store: 'private', why: ok ? '' : 'pictures are being shown from the public copy', fallback: url.startsWith(PUBLIC_BASE) };
+  } catch (e) { return { ok: false, store: 'private', why: e.message }; }
+}
