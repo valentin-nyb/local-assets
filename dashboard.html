@@ -686,7 +686,8 @@
                     box.dataset.painted = key;
                     if (isLogo) box.style.setProperty('background', darkNow ? '#141416' : '#f4f4f5', 'important');
                     else box.style.removeProperty('background');
-                    box.innerHTML = '<img src="' + laMux(url).replace(/"/g, '&quot;') + '" alt="" ' + (isLogo ? 'crossorigin="anonymous" onload="fitLogoBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}" style="width:100%;height:100%;object-fit:contain;padding:5px"' : 'crossorigin="anonymous" onload="fitArtistPic(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}" style="width:100%;height:100%;object-fit:cover"') + '>';
+                    if (box._orig == null) box._orig = box.innerHTML;
+                    box.innerHTML = '<img src="' + laMux(url).replace(/"/g, '&quot;') + '" alt="" ' + (isLogo ? 'crossorigin="anonymous" onload="fitLogoBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}else laPicFailed(this)" style="width:100%;height:100%;object-fit:contain;padding:5px"' : 'crossorigin="anonymous" onload="fitArtistPic(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}else laPicFailed(this)" style="width:100%;height:100%;object-fit:cover"') + '>';
                 });
                 // Session rows: the venue's logo from the Brand Kit replaces the calendar icon.
                 // Dark theme shows a white logo on a dark tile, light theme a black logo on a light tile.
@@ -707,7 +708,8 @@
                         box.dataset.painted = pkey; box.title = 'Venue profile picture from Brand Kit';
                         box.style.setProperty('background', dark ? '#141416' : '#f4f4f5', 'important');
                         // A logo shows whole (contained, with a little room); a photo fills the tile
-                        box.innerHTML = '<img src="' + prof.replace(/"/g, '&quot;') + '" alt="" crossorigin="anonymous" style="width:100%;height:100%;' + (profLogo ? 'object-fit:contain;padding:4px' : 'object-fit:cover') + '" onload="fitLogoBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}">';
+                        if (box._orig == null) box._orig = box.innerHTML;
+                        box.innerHTML = '<img src="' + prof.replace(/"/g, '&quot;') + '" alt="" crossorigin="anonymous" style="width:100%;height:100%;' + (profLogo ? 'object-fit:contain;padding:4px' : 'object-fit:cover') + '" onload="fitLogoBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}else laPicFailed(this)">';
                         return;
                     }
                     if (!list || !list.length) { missing = true; [box.dataset.venueName, box.dataset.labelName].forEach(function(n) { if (n && !(nameKey(n) in _linkedAsked)) _linkedWant[nameKey(n)] = n; }); box.title = 'No Brand Kit logo found for venue "' + (box.dataset.venueName || '') + '"'; return; }
@@ -716,7 +718,8 @@
                     box.dataset.painted = key;
                     box.title = 'Venue logo from Brand Kit';
                     box.style.setProperty('background', dark ? '#141416' : '#f4f4f5', 'important');
-                    box.innerHTML = '<img src="' + laMux(url).replace(/"/g, '&quot;') + '" alt="" crossorigin="anonymous" style="width:100%;height:100%;object-fit:contain;padding:4px" onload="fitLogoBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}">';
+                    if (box._orig == null) box._orig = box.innerHTML;
+                    box.innerHTML = '<img src="' + laMux(url).replace(/"/g, '&quot;') + '" alt="" crossorigin="anonymous" style="width:100%;height:100%;object-fit:contain;padding:4px" onload="fitLogoBg(this)" onerror="if(this.crossOrigin){this.removeAttribute(\'crossorigin\');this.src=this.src}else laPicFailed(this)">';
                 });
                 // Venues and labels with an account of their own on the platform: their own Brand Kit logos
                 var want = Object.keys(_linkedWant);
@@ -789,6 +792,13 @@
         // An animated GIF: a browser reads only its first frame onto a canvas, and that frame can be empty
         // (a logo that animates in). Decode a frame from the middle instead, where the logo shows.
         // An artist picture with see-through parts is a logo (not in the kit's logos): shown whole, like one
+        // A picture that can't be loaded (its file deleted or moved): the tile's own icon again, not a broken image
+        function laPicFailed(img) {
+            var box = img.parentNode;
+            if (!box || box._orig == null) { img.style.visibility = 'hidden'; return; }
+            box.style.removeProperty('background');
+            box.innerHTML = box._orig;
+        }
         function fitArtistPic(img) {
             try {
                 var c = document.createElement('canvas'), n = 24; c.width = n; c.height = n;
