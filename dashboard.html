@@ -279,17 +279,17 @@
                 </div>
 
                 <div class="space-y-6">
-                    <div class="bg-card border border-border rounded-2xl sh-card">
-                        <div class="sh-head">
-                            <h3 class="sh-title">System Status</h3>
-                            <span class="sh-summary" id="sh-summary" data-level=""><span class="sh-dot"></span><span id="sh-summary-text">Checking</span></span>
+                    <div class="bg-card border border-border rounded-2xl overflow-hidden sh-card">
+                        <div class="p-5 border-b border-border flex justify-between items-center">
+                            <h3 class="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-zinc-500">System Status</h3>
+                            <span class="sh-summary font-mono" id="sh-summary" data-level=""><span class="sh-dot"></span><span id="sh-summary-text">Checking</span></span>
                         </div>
                         <div class="sh-list">
-                            <div class="sh-row"><div class="sh-main"><span class="sh-name">Cameras</span><span class="sh-val"><span id="sh-cam-dot" class="sh-dot"></span><span id="sh-cam">—</span></span></div><span id="sh-cam-detail" class="sh-detail"></span></div>
-                            <div class="sh-row"><div class="sh-main"><span class="sh-name">Recordings</span><span class="sh-val"><span id="sh-video-dot" class="sh-dot"></span><span id="sh-video">—</span></span></div><span id="sh-video-detail" class="sh-detail"></span></div>
-                            <div class="sh-row"><div class="sh-main"><span class="sh-name">Vertical clips</span><span class="sh-val"><span id="sh-clips-dot" class="sh-dot"></span><span id="sh-clips">—</span></span></div><span id="sh-clips-detail" class="sh-detail"></span></div>
+                            <div class="sh-row"><div class="sh-l"><span class="sh-name">Cameras</span><span class="sh-sub" id="sh-cam-sub"></span></div><span class="sh-val" id="sh-cam-val"><span id="sh-cam-dot" class="sh-dot"></span><span id="sh-cam">—</span></span><div id="sh-cam-detail" class="sh-detail"></div></div>
+                            <div class="sh-row"><div class="sh-l"><span class="sh-name">Recordings</span><span class="sh-sub" id="sh-video-sub"></span></div><span class="sh-val" id="sh-video-val"><span id="sh-video-dot" class="sh-dot"></span><span id="sh-video">—</span></span><div id="sh-video-detail" class="sh-detail"></div></div>
+                            <div class="sh-row"><div class="sh-l"><span class="sh-name">Vertical clips</span><span class="sh-sub" id="sh-clips-sub"></span></div><span class="sh-val" id="sh-clips-val"><span id="sh-clips-dot" class="sh-dot"></span><span id="sh-clips">—</span></span><div id="sh-clips-detail" class="sh-detail"></div></div>
                         </div>
-                        <div class="sh-foot" id="sh-foot"></div>
+                        <div class="sh-foot font-mono" id="sh-foot"></div>
                     </div>
                 </div>
             </div>
@@ -2442,19 +2442,19 @@
         // Recordings: what's being prepared, else the latest set and that it's ready to use
         function paintRecordings() {
             var v = _health.video || {}, l = _health.latest;
-            if (v.preparing) { setHealthRow('video', 'busy', 'Processing', v.preparing + (v.preparing === 1 ? ' file is' : ' files are') + ' being prepared. Ready to stream and download in a few minutes.'); return; }
-            if (!l) { setHealthRow('video', 'ok', 'Ready', 'Your sets appear here as soon as they are recorded.'); return; }
-            var day = l.day || l.meta.date || '';
-            var when = /^\d{4}-\d{2}-\d{2}$/.test(day) ? new Date(day + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
-            setHealthRow('video', 'ok', 'Ready', 'Latest set: ' + (l.meta.artist || 'Untitled') + (when ? ', ' + when : '') + '. Available to stream, download and share.');
+            if (v.preparing) { setHealthRow('video', 'busy', 'Processing', '', v.preparing + (v.preparing === 1 ? ' file' : ' files') + ' in progress'); return; }
+            var day = l ? (l.day || l.meta.date || '') : '';
+            var when = /^\d{4}-\d{2}-\d{2}$/.test(day) ? new Date(day + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+            setHealthRow('video', 'ok', 'Ready', '', l ? 'Latest' + (when ? ' · ' + when : '') : 'No sets yet');
         }
-        function setHealthRow(key, level, text, detail) {
-            var dot = document.getElementById('sh-' + key + '-dot');
-            var val = document.getElementById('sh-' + key);
-            var det = document.getElementById('sh-' + key + '-detail');
+        function setHealthRow(key, level, text, detail, sub) {
+            var dot = document.getElementById('sh-' + key + '-dot'), box = document.getElementById('sh-' + key + '-val');
+            var val = document.getElementById('sh-' + key), det = document.getElementById('sh-' + key + '-detail'), sb = document.getElementById('sh-' + key + '-sub');
             if (val) val.textContent = text;
-            if (det) det.textContent = detail || '';
+            if (det) det.textContent = level === 'bad' ? (detail || '') : '';
+            if (sb) sb.textContent = sub || '';
             if (dot) dot.dataset.level = level;
+            if (box) box.dataset.level = level;
         }
 
         function renderVideoHealth(assets) {
@@ -2480,7 +2480,7 @@
             // The same failure many times reads once, with a count
             var counts = {}; failedNames.forEach(function(n) { counts[n] = (counts[n] || 0) + 1; });
             var grouped = Object.keys(counts).map(function(n) { return n + (counts[n] > 1 ? ' ×' + counts[n] : ''); });
-            if (failed) setHealthRow('video', 'bad', failed + (failed === 1 ? ' file' : ' files') + ' failed', 'These uploads could not be processed (empty or damaged): ' + grouped.join(', ') + '.');
+            if (failed) setHealthRow('video', 'bad', failed + ' failed', 'Could not be processed (empty or damaged): ' + grouped.join(', ') + '.', 'Needs attention');
             else paintRecordings();
             var det = document.getElementById('sh-video-detail');
             if (det && failed) {
@@ -2988,9 +2988,9 @@
             var pill = document.getElementById('sh-summary'), pillText = document.getElementById('sh-summary-text');
             if (pill) {
                 pill.dataset.level = !known ? '' : problems.length ? 'bad' : busy ? 'busy' : 'ok';
-                pillText.textContent = !known ? 'Checking' : problems.length ? 'Action needed' : busy ? 'Processing' : 'All systems operational';
+                pillText.textContent = !known ? 'Checking' : problems.length ? 'Attention' : busy ? 'Processing' : 'Operational';
                 var foot = document.getElementById('sh-foot');
-                if (foot && known) foot.textContent = 'Updated ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                if (foot && known) foot.textContent = 'Updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             }
             var text = !known ? 'Checking…' : problems.length ? 'Needs attention' : 'All systems OK';
             var color = !known ? 'var(--la-dim)' : problems.length ? 'var(--la-bad)' : 'var(--la-ok)';
@@ -3009,20 +3009,20 @@
                 _health.cameras = data.cameras;
 
                 const cams = data.cameras;
-                if (cams == null) setHealthRow('cam', 'off', 'Checking', 'Camera status will update in a moment.');
-                else if (!cams.length) setHealthRow('cam', 'off', 'None connected', 'Connect a camera on the Camera page to record your sets automatically.');
+                if (cams == null) setHealthRow('cam', 'off', '—', '', 'Checking');
+                else if (!cams.length) setHealthRow('cam', 'off', 'Off', '', 'None connected');
                 else {
                     const on = cams.filter(c => c.status === 'active');
-                    setHealthRow('cam', on.length ? 'ok' : 'off', on.length ? on.length + ' of ' + cams.length + ' live' : 'Standby',
-                        on.length ? 'Streaming now: ' + on.map(c => c.name).join(', ') + '.' : cams.length + (cams.length === 1 ? ' camera' : ' cameras') + ' connected. Not streaming at the moment.');
+                    setHealthRow('cam', on.length ? 'ok' : 'off', on.length ? 'Live' : 'Standby', '',
+                        on.length ? on.map(c => c.name).join(' · ') : cams.length + (cams.length === 1 ? ' camera' : ' cameras'));
                 }
 
                 const v = data.clips;
                 _health.pipeline = v ? { failed: v.failed } : null;
-                if (v == null) setHealthRow('clips', 'off', 'Checking', 'Clip status will update in a moment.');
-                else if (v.processing) setHealthRow('clips', 'busy', 'In progress', v.processing + (v.processing === 1 ? ' set is' : ' sets are') + ' being cut into vertical clips. They appear on the session when ready.');
-                else if (v.failed) setHealthRow('clips', 'bad', v.failed + ' failed', (v.failedArtists.length ? v.failedArtists.join(', ') + ': ' : '') + 'press Make vertical clips on the session to try again.');
-                else setHealthRow('clips', 'ok', 'Up to date', v.done ? v.done + (v.done === 1 ? ' set' : ' sets') + ' cut into vertical clips today.' : 'Every set has its vertical clips.');
+                if (v == null) setHealthRow('clips', 'off', '—', '', 'Checking');
+                else if (v.processing) setHealthRow('clips', 'busy', 'Cutting', '', v.processing + (v.processing === 1 ? ' set' : ' sets') + ' in progress');
+                else if (v.failed) setHealthRow('clips', 'bad', v.failed + ' failed', (v.failedArtists.length ? v.failedArtists.join(', ') + ': ' : '') + 'press Make vertical clips on the session to try again.', 'Needs a retry');
+                else setHealthRow('clips', 'ok', 'Up to date', '', v.done ? v.done + (v.done === 1 ? ' set' : ' sets') + ' cut today' : 'All sets');
                 showOrphanClips();
             } catch (e) {}
             _health.loaded = true;
@@ -4129,21 +4129,26 @@
         .se-del { margin-right:auto; display:inline-flex; align-items:center; gap:6px; height:36px; padding:0 4px; background:none; border:none; color:var(--la-bad); font-size:13px; font-weight:500; cursor:pointer; }
         .se-del iconify-icon { font-size:15px; }
         @media (hover:hover) { .se-del:hover { text-decoration:underline; text-underline-offset:3px; } }
-        .sh-card { padding:0; overflow:hidden; }
-        .sh-title { margin:0; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--la-text); }
-        .sh-head { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:56px; padding:0 22px; }
-        .sh-summary { display:inline-flex; align-items:center; gap:7px; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--la-dim); white-space:nowrap; }
+        /* System Status: Distribution History's header and footer; each row a name over a mono line, the status on the right */
+        .sh-card { padding:0; }
+        .sh-summary { display:inline-flex; align-items:center; gap:8px; font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--la-dim); white-space:nowrap; }
         .sh-summary[data-level="ok"] { color:var(--la-ok); }
         .sh-summary[data-level="busy"] { color:var(--la-warn); }
         .sh-summary[data-level="bad"] { color:var(--la-bad); }
         .sh-list { display:flex; flex-direction:column; }
-        .sh-row { display:flex; flex-direction:column; justify-content:center; gap:5px; min-width:0; min-height:56px; padding:14px 22px; border-top:1px solid var(--la-line); box-sizing:border-box; }
-        .sh-main { display:flex; align-items:center; gap:12px; min-width:0; }
-        .sh-name { font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--la-text); flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        .sh-val { display:inline-flex; align-items:center; gap:7px; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:11px; font-weight:500; letter-spacing:.06em; text-transform:uppercase; color:var(--la-sub, var(--la-dim)); white-space:nowrap; flex-shrink:0; }
-        .sh-detail { font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:11px; line-height:1.5; color:var(--la-dim); }
+        .sh-row { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; column-gap:16px; padding:18px 20px; }
+        .sh-row + .sh-row { border-top:1px solid var(--la-line); }
+        .sh-l { display:flex; flex-direction:column; gap:6px; min-width:0; }
+        .sh-name { font:400 15px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:0; text-transform:uppercase; color:var(--la-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .sh-sub { font-family:'JetBrains Mono', monospace; font-size:9px; line-height:1.3; letter-spacing:.2em; text-transform:uppercase; color:var(--la-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .sh-sub:empty::before { content:'\00a0'; }
+        .sh-val { display:inline-flex; align-items:center; gap:8px; font-family:'JetBrains Mono', monospace; font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--la-dim); white-space:nowrap; }
+        .sh-val[data-level="ok"] { color:var(--la-text); }
+        .sh-val[data-level="busy"] { color:var(--la-warn); }
+        .sh-val[data-level="bad"] { color:var(--la-bad); }
+        .sh-detail { grid-column:1 / -1; margin-top:10px; font:12px/1.5 'Helvetica Neue', Helvetica, Arial, sans-serif; color:var(--la-dim); }
         .sh-detail:empty { display:none; }
-        .sh-foot { padding:12px 22px; border-top:1px solid var(--la-line); font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--la-dim); }
+        .sh-foot { padding:14px 20px; border-top:1px solid var(--la-line); font-size:9px; letter-spacing:.2em; text-transform:uppercase; color:var(--la-text); text-align:right; }
         .sh-foot:empty { display:none; }
         .sh-dot { width:6px; height:6px; border-radius:50%; background:var(--la-dim); flex-shrink:0; }
         .sh-dot[data-level="ok"], .sh-summary[data-level="ok"] .sh-dot { background:var(--la-ok); }
