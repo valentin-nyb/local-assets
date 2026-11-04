@@ -63,8 +63,12 @@ export async function readUrl(url, ttlSec = 300) {
   const seen = _readable.get(p);
   if (signed && seen && Date.now() - seen.at < 600e3) return seen.ok ? signed : canon(p);
   if (signed) {
-    const r = await fetch(signed, { method: 'HEAD', signal: AbortSignal.timeout(5000) }).catch(e => ({ ok: false, status: e.message }));
+    // A GET for its first byte (a link is signed for one operation: a HEAD on a GET link is always refused)
+    const r = await fetch(signed, { headers: { Range: 'bytes=0-0', Origin: 'https://local-assets.com' }, signal: AbortSignal.timeout(5000) }).catch(e => ({ ok: false, status: e.message }));
+    r.body?.cancel?.().catch?.(() => {});
     if (!r.ok) why = 'HTTP ' + r.status;
+    // Pictures are shown with crossorigin: without this header the browser refuses them though the store gave them
+    else if (!_corsNoted) { _corsNoted = true; console.log('[brandstore] private read OK, CORS', r.headers.get('access-control-allow-origin') || 'none'); }
     _readable.set(p, { ok: !!r.ok, at: Date.now() });
     if (r.ok) return signed;
   }
@@ -73,7 +77,7 @@ export async function readUrl(url, ttlSec = 300) {
   say('[brandstore] private store could not give', p.split('/').slice(0, 3).join('/') + '/…', why, '→ public copy');
   return canon(p);
 }
-let _alertAt = 0;
+let _alertAt = 0, _corsNoted = false;
 const _readable = new Map();   // path → { ok, at }: whether its signed link worked
 // fetch() for a Brand Kit file (or any address), through its signed link
 export const brandFetch = async (url, init) => fetch(await readUrl(url), init);
