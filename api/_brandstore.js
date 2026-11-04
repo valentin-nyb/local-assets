@@ -106,22 +106,6 @@ export async function copyToPrivate(prefix = 'brand/', cursor) {
   return { copied, skipped, failed, more: false };
 }
 
-// System Health: one real Brand Kit file of the account (any, if it has none) read through its signed link,
-// the way the pages read it. { ok, store, why }: a refused or broken read shows red before anyone sees it.
-export async function brandHealth(slug) {
-  if (!privateBrand()) return { ok: true, store: 'public' };
-  try {
-    let page = await blob.list(priv({ prefix: `brand/${slug}/`, limit: 1 }));
-    if (!page.blobs.length) page = await blob.list(priv({ prefix: 'brand/', limit: 1 }));
-    const f = page.blobs[0];
-    if (!f) return { ok: true, store: 'private', why: 'no files yet' };
-    // Read the way the pages get pictures now: the server, with the store's key
-    const g = await blob.get(f.pathname, { access: 'private', token: PRIVATE_TOKEN() });
-    g?.stream?.cancel?.().catch?.(() => {});
-    const ok = !!g && g.statusCode === 200;
-    return { ok, store: 'private', why: ok ? '' : 'the private store did not give ' + f.pathname.split('/').slice(0, 3).join('/') + '/…' };
-  } catch (e) { return { ok: false, store: 'private', why: e.message }; }
-}
 
 // A Brand Kit file's bytes, read by the server with the store's own key (no signed link for the browser to
 // fail on): the private store first, the public copy if the private one can't give it. Files up to 4 MB
@@ -141,7 +125,9 @@ export async function brandBytes(url) {
   if (privateBrand()) {
     const r = await read(async () => { const g = await blob.get(p, { access: 'private', token: PRIVATE_TOKEN() }); return g && g.statusCode === 200 && { stream: g.stream, size: g.blob?.size, type: g.blob?.contentType }; });
     if (r?.buf || r?.big) return r;
-    console.warn('[brandstore] private read', p.split('/').slice(0, 3).join('/') + '/…', r?.err || 'not found', '→ public copy');
+    // Never seen by clients (they get the public copy); the first one an hour alerts us through Rollbar
+    const say = Date.now() - _alertAt > 3600e3 ? (_alertAt = Date.now(), console.error) : console.warn;
+    say('[brandstore] private read', p.split('/').slice(0, 3).join('/') + '/…', r?.err || 'not found', '→ public copy');
   }
   return read(async () => { const f = await fetch(canon(p), { signal: AbortSignal.timeout(10000) }); return f.ok ? { stream: f.body, size: Number(f.headers.get('content-length')) || null, type: f.headers.get('content-type') } : null; });
 }

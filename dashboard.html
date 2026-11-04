@@ -281,15 +281,15 @@
                 <div class="space-y-6">
                     <div class="bg-card border border-border rounded-2xl sh-card">
                         <div class="sh-head">
-                            <h3 class="sh-title">System Health</h3>
+                            <h3 class="sh-title">System Status</h3>
                             <span class="sh-summary" id="sh-summary" data-level=""><span class="sh-dot"></span><span id="sh-summary-text">Checking</span></span>
                         </div>
                         <div class="sh-list">
                             <div class="sh-row"><div class="sh-main"><span class="sh-name">Cameras</span><span class="sh-val"><span id="sh-cam-dot" class="sh-dot"></span><span id="sh-cam">—</span></span></div><span id="sh-cam-detail" class="sh-detail"></span></div>
-                            <div class="sh-row"><div class="sh-main"><span class="sh-name">Video processing</span><span class="sh-val"><span id="sh-video-dot" class="sh-dot"></span><span id="sh-video">—</span></span></div><span id="sh-video-detail" class="sh-detail"></span></div>
+                            <div class="sh-row"><div class="sh-main"><span class="sh-name">Recordings</span><span class="sh-val"><span id="sh-video-dot" class="sh-dot"></span><span id="sh-video">—</span></span></div><span id="sh-video-detail" class="sh-detail"></span></div>
                             <div class="sh-row"><div class="sh-main"><span class="sh-name">Vertical clips</span><span class="sh-val"><span id="sh-clips-dot" class="sh-dot"></span><span id="sh-clips">—</span></span></div><span id="sh-clips-detail" class="sh-detail"></span></div>
-                            <div class="sh-row"><div class="sh-main"><span class="sh-name">Brand Kit pictures</span><span class="sh-val"><span id="sh-brand-dot" class="sh-dot"></span><span id="sh-brand">—</span></span></div><span id="sh-brand-detail" class="sh-detail"></span></div>
                         </div>
+                        <div class="sh-foot" id="sh-foot"></div>
                     </div>
                 </div>
             </div>
@@ -2439,6 +2439,15 @@
             };
             det.appendChild(b);
         }
+        // Recordings: what's being prepared, else the latest set and that it's ready to use
+        function paintRecordings() {
+            var v = _health.video || {}, l = _health.latest;
+            if (v.preparing) { setHealthRow('video', 'busy', 'Processing', v.preparing + (v.preparing === 1 ? ' file is' : ' files are') + ' being prepared. Ready to stream and download in a few minutes.'); return; }
+            if (!l) { setHealthRow('video', 'ok', 'Ready', 'Your sets appear here as soon as they are recorded.'); return; }
+            var day = l.day || l.meta.date || '';
+            var when = /^\d{4}-\d{2}-\d{2}$/.test(day) ? new Date(day + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+            setHealthRow('video', 'ok', 'Ready', 'Latest set: ' + (l.meta.artist || 'Untitled') + (when ? ', ' + when : '') + '. Available to stream, download and share.');
+        }
         function setHealthRow(key, level, text, detail) {
             var dot = document.getElementById('sh-' + key + '-dot');
             var val = document.getElementById('sh-' + key);
@@ -2468,14 +2477,11 @@
                 else ready++;
             });
             _health.video = { ready: ready, preparing: preparing, failed: failed };
-            var parts = [ready + ' ready'];
-            if (preparing) parts.push(preparing + ' processing');
-            if (failed) parts.push(failed + ' failed');
             // The same failure many times reads once, with a count
             var counts = {}; failedNames.forEach(function(n) { counts[n] = (counts[n] || 0) + 1; });
             var grouped = Object.keys(counts).map(function(n) { return n + (counts[n] > 1 ? ' ×' + counts[n] : ''); });
-            setHealthRow('video', failed ? 'bad' : preparing ? 'busy' : 'ok', parts.join(' · '),
-                failed ? 'Cloud Storage could not process: ' + grouped.join(', ') + '. These files are empty or broken.' : '');
+            if (failed) setHealthRow('video', 'bad', failed + (failed === 1 ? ' file' : ' files') + ' failed', 'These uploads could not be processed (empty or damaged): ' + grouped.join(', ') + '.');
+            else paintRecordings();
             var det = document.getElementById('sh-video-detail');
             if (det && failed) {
                 var b = document.createElement('button');
@@ -2518,6 +2524,7 @@
                 if (!latest || day > latest.day || (day === latest.day && Number(a.created_at) > Number(latest.a.created_at))) latest = { a: a, meta: meta, day: day };
             });
             _health.latest = latest;
+            if (_health.video && !_health.video.failed) paintRecordings();
             renderHero();
         }
 
@@ -2976,13 +2983,14 @@
             var problems = [];
             if (_health.pipeline && _health.pipeline.failed) problems.push('clips');
             if (_health.video && _health.video.failed) problems.push('video');
-            if (_health.brand && !_health.brand.ok) problems.push('brand');
             var known = _health.pipeline !== null || _health.video !== null;
             var busy = document.querySelector('.sh-dot[data-level="busy"]:not(.sh-summary .sh-dot)');
             var pill = document.getElementById('sh-summary'), pillText = document.getElementById('sh-summary-text');
             if (pill) {
                 pill.dataset.level = !known ? '' : problems.length ? 'bad' : busy ? 'busy' : 'ok';
-                pillText.textContent = !known ? 'Checking' : problems.length ? 'Needs attention' : busy ? 'Working' : 'Operational';
+                pillText.textContent = !known ? 'Checking' : problems.length ? 'Action needed' : busy ? 'Processing' : 'All systems operational';
+                var foot = document.getElementById('sh-foot');
+                if (foot && known) foot.textContent = 'Updated ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
             }
             var text = !known ? 'Checking…' : problems.length ? 'Needs attention' : 'All systems OK';
             var color = !known ? 'var(--la-dim)' : problems.length ? 'var(--la-bad)' : 'var(--la-ok)';
@@ -3001,26 +3009,21 @@
                 _health.cameras = data.cameras;
 
                 const cams = data.cameras;
-                if (cams == null) setHealthRow('cam', 'bad', 'Unavailable', 'Could not reach the cameras. Try again in a minute.');
-                else if (!cams.length) setHealthRow('cam', 'off', 'None added');
+                if (cams == null) setHealthRow('cam', 'off', 'Checking', 'Camera status will update in a moment.');
+                else if (!cams.length) setHealthRow('cam', 'off', 'None connected', 'Connect a camera on the Camera page to record your sets automatically.');
                 else {
-                    const live = cams.filter(c => c.status === 'active').length;
-                    setHealthRow('cam', live ? 'ok' : 'off', live ? live + ' of ' + cams.length + ' live' : cams.length + ' offline');
+                    const on = cams.filter(c => c.status === 'active');
+                    setHealthRow('cam', on.length ? 'ok' : 'off', on.length ? on.length + ' of ' + cams.length + ' live' : 'Standby',
+                        on.length ? 'Streaming now: ' + on.map(c => c.name).join(', ') + '.' : cams.length + (cams.length === 1 ? ' camera' : ' cameras') + ' connected. Not streaming at the moment.');
                 }
 
                 const v = data.clips;
                 _health.pipeline = v ? { failed: v.failed } : null;
-                if (v == null) setHealthRow('clips', 'bad', 'Unavailable', 'Could not check the vertical clips.');
-                else if (v.processing) setHealthRow('clips', 'busy', v.processing + ' processing', 'New clips replace the current ones when they are ready.');
+                if (v == null) setHealthRow('clips', 'off', 'Checking', 'Clip status will update in a moment.');
+                else if (v.processing) setHealthRow('clips', 'busy', 'In progress', v.processing + (v.processing === 1 ? ' set is' : ' sets are') + ' being cut into vertical clips. They appear on the session when ready.');
                 else if (v.failed) setHealthRow('clips', 'bad', v.failed + ' failed', (v.failedArtists.length ? v.failedArtists.join(', ') + ': ' : '') + 'press Make vertical clips on the session to try again.');
-                else setHealthRow('clips', 'ok', v.done ? v.done + ' made today' : 'Up to date');
+                else setHealthRow('clips', 'ok', 'Up to date', v.done ? v.done + (v.done === 1 ? ' set' : ' sets') + ' cut into vertical clips today.' : 'Every set has its vertical clips.');
                 showOrphanClips();
-
-                const b = data.brand;
-                _health.brand = b;
-                if (b == null) setHealthRow('brand', 'bad', 'Unavailable', 'Could not check the Brand Kit storage.');
-                else if (!b.ok) setHealthRow('brand', 'bad', 'Storage problem', 'The private storage refused a picture (' + (b.why || 'unknown') + '). Pictures are shown from the backup copy meanwhile; we have been alerted.');
-                else setHealthRow('brand', 'ok', 'Loading normally');
             } catch (e) {}
             _health.loaded = true;
             renderHero();
@@ -4140,6 +4143,8 @@
         .sh-val { display:inline-flex; align-items:center; gap:7px; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:11px; font-weight:500; letter-spacing:.06em; text-transform:uppercase; color:var(--la-sub, var(--la-dim)); white-space:nowrap; flex-shrink:0; }
         .sh-detail { font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:11px; line-height:1.5; color:var(--la-dim); }
         .sh-detail:empty { display:none; }
+        .sh-foot { padding:12px 22px; border-top:1px solid var(--la-line); font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--la-dim); }
+        .sh-foot:empty { display:none; }
         .sh-dot { width:6px; height:6px; border-radius:50%; background:var(--la-dim); flex-shrink:0; }
         .sh-dot[data-level="ok"], .sh-summary[data-level="ok"] .sh-dot { background:var(--la-ok); }
         .sh-dot[data-level="busy"], .sh-summary[data-level="busy"] .sh-dot { background:var(--la-warn); animation:shPulse 1.6s ease-in-out infinite; }
