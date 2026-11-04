@@ -68,9 +68,12 @@ export async function readUrl(url, ttlSec = 300) {
     _readable.set(p, { ok: !!r.ok, at: Date.now() });
     if (r.ok) return signed;
   }
-  console.warn('[brandstore] private store could not give', p.split('/').slice(0, 3).join('/') + '/…', why, '→ public copy');
+  // The first one an hour is an error (a Rollbar alert reaches us); the rest are warnings
+  const say = Date.now() - _alertAt > 3600e3 ? (_alertAt = Date.now(), console.error) : console.warn;
+  say('[brandstore] private store could not give', p.split('/').slice(0, 3).join('/') + '/…', why, '→ public copy');
   return canon(p);
 }
+let _alertAt = 0;
 const _readable = new Map();   // path → { ok, at }: whether its signed link worked
 // fetch() for a Brand Kit file (or any address), through its signed link
 export const brandFetch = async (url, init) => fetch(await readUrl(url), init);
