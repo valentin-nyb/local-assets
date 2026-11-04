@@ -55,8 +55,23 @@ export async function readUrl(url, ttlSec = 300) {
     const validUntil = Math.max(until, Date.now() + 3600e3) + 60e3;
     _deleg = { tok: await blob.issueSignedToken({ token: PRIVATE_TOKEN(), pathname: '*', operations: ['get', 'head'], validUntil }), until: validUntil };
   }
-  return (await blob.presignUrl(_deleg.tok, { operation: 'get', pathname: p, access: 'private', validUntil: until })).presignedUrl;
+  // Each file's signed link is tried once (kept 10 minutes): a file the private store can't give (not copied
+  // there, or the link refused) is read from the public store, which still has every file, and the reason logged
+  let signed = null, why = '';
+  try { signed = (await blob.presignUrl(_deleg.tok, { operation: 'get', pathname: p, access: 'private', validUntil: until })).presignedUrl; }
+  catch (e) { why = 'sign: ' + e.message; }
+  const seen = _readable.get(p);
+  if (signed && seen && Date.now() - seen.at < 600e3) return seen.ok ? signed : canon(p);
+  if (signed) {
+    const r = await fetch(signed, { method: 'HEAD', signal: AbortSignal.timeout(5000) }).catch(e => ({ ok: false, status: e.message }));
+    if (!r.ok) why = 'HTTP ' + r.status;
+    _readable.set(p, { ok: !!r.ok, at: Date.now() });
+    if (r.ok) return signed;
+  }
+  console.warn('[brandstore] private store could not give', p.split('/').slice(0, 3).join('/') + '/…', why, '→ public copy');
+  return canon(p);
 }
+const _readable = new Map();   // path → { ok, at }: whether its signed link worked
 // fetch() for a Brand Kit file (or any address), through its signed link
 export const brandFetch = async (url, init) => fetch(await readUrl(url), init);
 
