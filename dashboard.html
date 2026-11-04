@@ -795,6 +795,13 @@
         // An artist picture with see-through parts is a logo (not in the kit's logos): shown whole, like one
         // A picture that can't be loaded (its file deleted or moved): the tile's own icon again, not a broken image
         function laPicFailed(img) {
+            // Which file, for us (its address only: the media key is left out), through the page's error reporting
+            try {
+                var src = img.getAttribute('src') || '', u = /[?&]u=([^&]+)/.exec(src);
+                var file = u ? decodeURIComponent(u[1]) : src.split('?')[0];
+                var data = JSON.stringify({ name: 'Picture', message: 'Picture could not load: ' + file.slice(0, 300), stack: '', page: location.origin + location.pathname });
+                if (navigator.sendBeacon) navigator.sendBeacon('/api/client-error', new Blob([data], { type: 'application/json' }));
+            } catch (_) {}
             var box = img.parentNode;
             if (!box || box._orig == null) { img.style.visibility = 'hidden'; return; }
             box.style.removeProperty('background');
