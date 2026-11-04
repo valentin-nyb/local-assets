@@ -1,6 +1,6 @@
 // Weekly numbers for the founders: MRR, churn, cost to serve each account and gross margin, emailed every
 // Monday (api/billing.js ?cron=weekly) and kept week by week in Redis (metrics_weekly, newest first).
-import { MUX_PRICES, readRunning, readAssignments, venueEntries, accountTypeOf, stripeFeesThisMonth, monthRange } from './_billing.js';
+import { MUX_PRICES, readRunning, readAssignments, venueEntries, accountTypeOf, stripeFeesThisMonth, monthRange, readTestAccounts, stripeLive } from './_billing.js';
 import { isAdminVenue } from './_venues.js';
 
 const DAY = 86400e3;
@@ -21,10 +21,18 @@ function monthly(sub) {
 
 export async function weeklyMetrics(redis, stripe, overview) {
   const now = Date.now(), weekAgo = now - 7 * DAY, monthAgo = now - 30 * DAY;
+  // Test accounts (marked in Billing → All accounts) count nowhere: not their payments, not their video
+  const tests = await readTestAccounts(redis);
+  // Only the live Stripe account counts: sandbox payments were tests, never money
+  const liveStripe = stripeLive();
+  const slugOf = o => o?.metadata?.venueSlug || o?.parent?.subscription_details?.metadata?.venueSlug || o?.subscription_details?.metadata?.venueSlug || '';
 
   // Subscriptions: what's live now, what started and what ended
-  const subs = [];
-  for await (const s of stripe.subscriptions.list({ status: 'all', limit: 100 })) subs.push(s);
+  const subs = [], testCustomers = new Set();
+  if (liveStripe) for await (const s of stripe.subscriptions.list({ status: 'all', limit: 100 })) {
+    if (tests.has(slugOf(s))) { if (s.customer) testCustomers.add(String(s.customer)); continue; }
+    subs.push(s);
+  }
   const live = subs.filter(s => LIVE.includes(s.status));
   const endedAt = s => (s.ended_at || s.canceled_at || 0) * 1000;
   const ended = since => subs.filter(s => s.status === 'canceled' && endedAt(s) >= since);
@@ -39,15 +47,17 @@ export async function weeklyMetrics(redis, stripe, overview) {
 
   // Cash in: invoices paid in the last 30 days, before VAT
   let revenue30 = 0;
-  for await (const inv of stripe.invoices.list({ status: 'paid', created: { gte: Math.floor((monthAgo - 31 * DAY) / 1000) }, limit: 100 })) {
+  if (liveStripe) for await (const inv of stripe.invoices.list({ status: 'paid', created: { gte: Math.floor((monthAgo - 31 * DAY) / 1000) }, limit: 100 })) {
     const paidAt = (inv.status_transitions?.paid_at || inv.created) * 1000;
+    if (tests.has(slugOf(inv)) || testCustomers.has(String(inv.customer || ''))) continue;
     if (paidAt >= monthAgo && inv.currency === 'gbp') revenue30 += (inv.total_excluding_tax ?? inv.subtotal ?? inv.amount_paid) / 100;
   }
 
-  // Accounts by plan and type (local / assets itself left out)
-  const accounts = { total: 0, paying: 0, free: 0, byType: {} };
+  // Accounts by plan and type (local / assets itself and test accounts left out)
+  const accounts = { total: 0, paying: 0, free: 0, tests: 0, byType: {} };
   for (const { slug, cfg } of venueEntries()) {
     if (isAdminVenue({ slug, ...cfg })) continue;
+    if (tests.has(slug)) { accounts.tests++; continue; }
     const a = (await readAssignments(redis, slug).catch(() => ({}))).venue || {};
     const type = await accountTypeOf(redis, slug).catch(() => 'venue');
     accounts.total++;
@@ -60,17 +70,21 @@ export async function weeklyMetrics(redis, stripe, overview) {
   // plus the fixed services (Billing → Running costs), in pounds
   const { start, end } = monthRange();
   const part = Math.max(0.1, Math.min(1, (now - start) / (end - start)));
-  const muxGbp = (overview?.totals?.costGbp || 0) / part;
-  const stripeGbp = (await stripeFeesThisMonth(stripe).catch(() => 0)) / part;
+  // Mux: only the clients' share of the bill (not local / assets' own, test or deleted accounts' video)
+  const ovRows = (overview?.rows || []).filter(r => r.cost != null);
+  const client = r => r.slug && r.type !== 'admin' && !tests.has(r.slug);
+  const allMux = ovRows.reduce((t, r) => t + r.cost, 0), clientMux = ovRows.filter(client).reduce((t, r) => t + r.cost, 0);
+  const muxGbp = (overview?.totals?.costGbp || 0) * (allMux > 0 ? clientMux / allMux : 0) / part;
+  const stripeGbp = liveStripe ? (await stripeFeesThisMonth(stripe).catch(() => 0)) / part : 0;
   let fixed = 0;
   for (const r of await readRunning(redis)) if (!r.auto && r.cost > 0) fixed += r.cur === 'usd' ? r.cost * MUX_PRICES.usdToGbp : r.cost;
   const cost = Math.round((muxGbp + stripeGbp + fixed) * 100) / 100;
   // Each venue's own video cost (from the overview), on average, plus its share of the fixed costs
-  const venueRows = (overview?.rows || []).filter(r => r.type === 'venue' && r.cost != null);
+  const venueRows = ovRows.filter(r => r.type === 'venue' && client(r));
   const venueMux = venueRows.length ? venueRows.reduce((t, r) => t + r.cost, 0) * MUX_PRICES.usdToGbp / part / venueRows.length : null;
 
   return {
-    at: now, mrr, arr: Math.round(mrr * 12), subscriptions: live.length,
+    at: now, live: liveStripe, mrr, arr: Math.round(mrr * 12), subscriptions: live.length,
     newMrr7: sum(started(weekAgo).filter(s => LIVE.includes(s.status))), newCount7: started(weekAgo).filter(s => LIVE.includes(s.status)).length,
     churn, revenue30: Math.round(revenue30 * 100) / 100, accounts,
     cost: { monthly: cost, mux: Math.round(muxGbp * 100) / 100, stripe: Math.round(stripeGbp * 100) / 100, fixed: Math.round(fixed * 100) / 100,
@@ -109,7 +123,7 @@ export function metricsEmail(m, prev) {
 <table style="border-collapse:collapse;width:100%"><tr>${['', 'This week', 'Last week', 'Change', ''].map(h => `<th style="${td};text-align:left;font-weight:600;color:#71717a;font-size:12px">${h}</th>`).join('')}</tr>
 ${rows.map(r => `<tr><td style="${td};font-weight:600">${esc(r[0])}</td><td style="${td}">${esc(r[1])}</td><td style="${td};color:#71717a">${esc(r[2])}</td><td style="${td}">${esc(r[3])}</td><td style="${td};color:#71717a;font-size:12px">${esc(r[4])}</td></tr>`).join('')}
 </table>
-<p style="font:12px/1.5 Helvetica,Arial,sans-serif;color:#71717a;margin-top:16px">Accounts: ${esc(types || 'none yet')}. Mux and Stripe are this month so far brought to a full month; services are the fixed costs in Billing → Running costs. Discounts and VAT are left out of MRR.</p>
+<p style="font:12px/1.5 Helvetica,Arial,sans-serif;color:#71717a;margin-top:16px">Accounts: ${esc(types || 'none yet')}${m.accounts.tests ? ` (${m.accounts.tests} test account${m.accounts.tests === 1 ? '' : 's'} left out)` : ''}. Mux and Stripe are this month so far brought to a full month; services are the fixed costs in Billing → Running costs. Discounts and VAT are left out of MRR.</p>
 <p style="font:12px Helvetica,Arial,sans-serif;color:#71717a">LOCAL / ASSETS LTD · company no. 17559431</p></div>`;
   const text = rows.map(r => `${r[0]}: ${r[1]}${r[2] !== '—' ? ` (last week ${r[2]})` : ''}`).join('\n');
   return { subject: `Weekly numbers: MRR ${money(m.mrr)} · margin ${pct(m.margin)} · churn ${pct(m.churn.rate30)}`, html, text };

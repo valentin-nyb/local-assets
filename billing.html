@@ -948,7 +948,8 @@
                 t.innerHTML = '<thead><tr><th>Account</th><th>Plan</th><th class="num">Video kept</th><th class="num">Watched</th><th class="num">Recorded</th><th class="num">Files</th><th class="num">Costs us</th><th class="num">We bill</th></tr></thead><tbody>' +
                     d.rows.map(function(x) {
                         if (x.error) return '<tr><td data-l="Account">' + esc(x.name) + '</td><td colspan="7" class="bl-msg">Could not read: ' + esc(x.error) + '</td></tr>';
-                        return '<tr><td data-l="Account"><b>' + esc(x.name) + '</b><br><span class="bl-msg">' + (TYPE[x.type] || x.type) + (x.shared ? ' · shares its video storage with another account' : '') + '</span></td>' +
+                        return '<tr><td data-l="Account"><b>' + esc(x.name) + '</b><br><span class="bl-msg">' + (TYPE[x.type] || x.type) + (x.shared ? ' · shares its video storage with another account' : '') + '</span>' +
+                            (x.slug && x.type !== 'admin' ? '<br><label class="bl-msg" style="display:inline-flex;gap:6px;align-items:center;margin-top:4px;cursor:pointer"><input type="checkbox" data-test-slug="' + esc(x.slug) + '"' + (x.test ? ' checked' : '') + '> Test account (left out of the weekly numbers)</label>' : '') + '</td>' +
                             '<td data-l="Plan">' + esc(x.plan) + '</td><td class="num" data-l="Video kept">' + h(x.storedHours) + '</td><td class="num" data-l="Watched">' + h(x.streamedHours) + '</td>' +
                             '<td class="num" data-l="Recorded">' + h(x.recordedHours) + '</td><td class="num" data-l="Files">' + (Math.round(x.fileGB * 10) / 10) + ' GB</td>' +
                             '<td class="num" data-l="Costs us">' + money(x.cost, 'usd') + '</td><td class="num" data-l="We bill">' + (x.type === 'admin' ? '—' : money(x.billed, cur)) + '</td></tr>';
@@ -957,6 +958,17 @@
             btn.disabled = false;
         }
         document.getElementById('bl-ov-refresh').addEventListener('click', function() { loadOverview(true); });
+        // Test accounts: ticked here, left out of the weekly numbers (worked out again at once)
+        document.getElementById('bl-ov-table').addEventListener('change', async function(e) {
+            var box = e.target.closest('input[data-test-slug]'); if (!box) return;
+            box.disabled = true;
+            try {
+                var r = await laFetch('/api/billing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setTest', slug: box.dataset.testSlug, test: box.checked }) });
+                var d = await r.json(); if (!r.ok) throw new Error(d.error || r.status);
+                laToast(box.checked ? 'Marked as a test account: left out of the weekly numbers' : 'Counted in the weekly numbers again');
+            } catch (err) { box.checked = !box.checked; laAlert('Could not change it: ' + err.message, { tone: 'error' }); }
+            box.disabled = false;
+        });
         // Mux's usage report: Mux dashboard → Usage → Export CSV, then upload it here
         document.getElementById('bl-ov-mux-up').addEventListener('click', function() { document.getElementById('bl-ov-mux-file').click(); });
         document.getElementById('bl-ov-mux-file').addEventListener('change', async function() {
@@ -1039,7 +1051,7 @@
         // Weekly numbers (admin): this week next to last week, as in the Monday email
         function renderMetrics(weeks) {
             var t = document.getElementById('bl-metrics'), m = weeks[0], p = weeks[1];
-            if (!m) return;
+            if (!m) { t.innerHTML = '<tbody><tr><td class="bl-empty">No weeks from the live Stripe account yet. Press Email now for this week\'s numbers.</td></tr></tbody>'; return; }
             var esc = function(v) { return String(v == null ? '' : v).replace(/[&<>"]/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
             var money = function(n) { return n == null ? '—' : '£' + Number(n).toLocaleString('en-GB', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }); };
             var pct = function(n) { return n == null ? '—' : (Math.round(n * 1000) / 10) + '%'; };

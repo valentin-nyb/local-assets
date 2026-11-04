@@ -666,6 +666,14 @@ export function stripeClient() {
   const sk = (process.env.LA_STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY);   // local / assets own Stripe account first, else the Vercel integration
   return sk ? new Stripe(sk) : null;
 }
+// Whether the Stripe key in use takes real payments (sk_live_ / rk_live_), not the sandbox
+export const stripeLive = () => /^(sk|rk)_live_/.test(String(process.env.LA_STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY || '').trim());
+
+// Accounts marked as tests by local / assets (Billing → All accounts): left out of the weekly numbers
+export const TEST_ACCOUNTS_KEY = 'test_accounts';
+export async function readTestAccounts(redis) {
+  return new Set(await redis.sMembers(TEST_ACCOUNTS_KEY).catch(() => []) || []);
+}
 
 // The venue's Stripe customer, made on first use
 const EU = new Set('AT BE BG CY CZ DE DK EE ES FI FR GR HR HU IE IT LT LU LV MT NL PL PT RO SE SI SK'.split(' '));

@@ -9,7 +9,7 @@ import { venueAuth } from './_verticals.js';
 import { createCheckout } from './_checkout.js';
 import {
   readRates, readPlans, cleanPlans, readAssignments, assignKey, venueUsage, venueArtists, priceUsage,
-  monthRange, stripeClient, invoiceVenue, venueEntries, DEFAULT_RATES, applyDetails, usageByDay, planForType, priceForType, commitEndFor, OFFERED, readKit, cleanKit, KIT_PLANS, accountTypeOf, sendInvoiceEmail, billingEmailFor, readDiscount, muxCost, MUX_PRICES, parseMuxReport, accountRatesKey, readRunning, cleanRunning, stripeFeesThisMonth, venueCustomer } from './_billing.js';
+  monthRange, stripeClient, invoiceVenue, venueEntries, DEFAULT_RATES, applyDetails, usageByDay, planForType, priceForType, commitEndFor, OFFERED, readKit, cleanKit, KIT_PLANS, accountTypeOf, sendInvoiceEmail, billingEmailFor, readDiscount, muxCost, MUX_PRICES, parseMuxReport, accountRatesKey, readRunning, cleanRunning, stripeFeesThisMonth, venueCustomer, stripeLive, readTestAccounts, TEST_ACCOUNTS_KEY } from './_billing.js';
 
 // Minutes Mux had encoded by kind, read off Mux's bill (Billing → Summary) before the webhook noted every video;
 // a month's encoding never counts as less than this
@@ -27,6 +27,7 @@ const MUX_BILL_FLOOR = {
 //   POST { action: 'setKit', kit }                               admin: kit expenses for Pro and Live-Set
 //   POST { action: 'setRunning', running }                       admin: running costs (the services we pay for)
 //   GET  ?metrics=1 · POST { action: 'sendMetrics' }             admin: the weekly numbers, or email them now
+//   POST { action: 'setTest', slug, test }                       admin: mark an account as a test (left out of the numbers)
 //   GET  ?cron=weekly                      (Vercel cron, Mondays) emails the weekly numbers
 //   GET  ?runningFees=1                                          admin: this month's Stripe fees, for running costs
 //   POST { action: 'repriceSubscriptions', apply }               admin: subscriptions to their plan's current price
@@ -134,7 +135,8 @@ async function overviewThisMonth(redis, fresh = false, isAdminEntry = k => isAdm
 async function sendWeeklyMetrics(stripe) {
   return withRedis(async redis => {
     const m = await weeklyMetrics(redis, stripe, await overviewThisMonth(redis).catch(() => null));
-    const prev = JSON.parse(await redis.lIndex(METRICS_KEY, 0).catch(() => null) || 'null');
+    // Compared with the last week worked out from the same Stripe account (sandbox weeks never mix with live)
+    const prev = (await redis.lRange(METRICS_KEY, 0, 51).catch(() => [])).map(v => JSON.parse(v)).find(w => !!w.live === !!m.live) || null;
     await redis.lPush(METRICS_KEY, JSON.stringify(m));
     await redis.lTrim(METRICS_KEY, 0, 155);   // three years of Mondays
     const mail = metricsEmail(m, prev);
@@ -254,14 +256,18 @@ export default async function handler(req, res) {
     // Storage environments, and the local / assets one) and what it is billed. Kept 10 minutes (?fresh=1 to redo).
     if (req.method === 'GET' && req.query.overview) {
       if (!isAdmin) return res.status(403).json({ error: 'Admin only' });
-      const out = await withRedis(redis => overviewThisMonth(redis, !!req.query.fresh, isAdminEntry));
+      const out = await withRedis(async redis => {
+        const ov = await overviewThisMonth(redis, !!req.query.fresh, isAdminEntry), tests = await readTestAccounts(redis);
+        return { ...ov, rows: ov.rows.map(r => ({ ...r, test: !!r.slug && tests.has(r.slug) })) };
+      });
       return res.status(200).json(out);
     }
 
     // Weekly numbers (admin): the weeks so far, newest first; POST { action: 'sendMetrics' } emails them now
     if (req.method === 'GET' && req.query.metrics) {
       if (!isAdmin) return res.status(403).json({ error: 'Admin only' });
-      const weeks = await withRedis(async redis => (await redis.lRange(METRICS_KEY, 0, 51).catch(() => [])).map(v => JSON.parse(v)));
+      const live = stripeLive();
+      const weeks = await withRedis(async redis => (await redis.lRange(METRICS_KEY, 0, 51).catch(() => [])).map(v => JSON.parse(v)).filter(w => !!w.live === live));
       return res.status(200).json({ weeks });
     }
 
@@ -903,6 +909,14 @@ export default async function handler(req, res) {
         catch (e) { console.error('[billing] customer details', slug, target, e.message); }
       }
       return res.status(200).json({ ok: true, stripeUpdated });
+    }
+
+    // Admin: mark an account as a test (or not): test accounts are left out of the weekly numbers
+    if (body.action === 'setTest') {
+      const s = String(body.slug || '');
+      if (!s || !getVenuesConfig()[s]) return res.status(400).json({ error: 'Unknown account' });
+      await withRedis(r => body.test ? r.sAdd(TEST_ACCOUNTS_KEY, s) : r.sRem(TEST_ACCOUNTS_KEY, s));
+      return res.status(200).json({ ok: true, test: !!body.test });
     }
 
     if (body.action === 'setAccountType') {
