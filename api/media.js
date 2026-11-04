@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import { createClient } from 'redis';
 import { getWebSessionAuth, findVenueByEmail, findVenuesByEmail, freshVenues, getVenuesConfig, getMuxAuthForVenue, platformAdmins, isAdminVenue, artistOf, sameArtist, appSecret } from './_venues.js';
 import { signingFor, signUrl, playerTickets } from './_signing.js';
-import { pathOf, readUrl, copyToPrivate, privateBrand } from './_brandstore.js';
+import { pathOf, readUrl, copyToPrivate, privateBrand, brandBytes } from './_brandstore.js';
 
 // Every video, thumbnail and download goes through here once videos are signed (Mux signed playback):
 // the address is only signed for someone signed in to the account the video belongs to, for 2 hours
@@ -147,6 +147,17 @@ export default async function handler(req, res) {
       if (dl) {
         await redis.lPush(`downloads:${out.o.slug}`, JSON.stringify({ at: Date.now(), by: k.e, file: dl, url: String(req.query.u).split('?')[0] })).catch(() => {});
         await redis.lTrim(`downloads:${out.o.slug}`, 0, 1999).catch(() => {});
+      }
+      // A Brand Kit picture: its bytes from here, read with the store's own key (the private store, else the public
+      // copy), so the browser never depends on a signed link. Downloads and files over 4 MB keep the link.
+      const bp = pathOf(String(req.query.u || ''));
+      if (!dl && bp && bp.startsWith('brand/')) {
+        const b = await brandBytes(String(req.query.u));
+        if (b?.buf) {
+          res.setHeader('Content-Type', b.type);
+          res.setHeader('Cache-Control', 'private, max-age=3000');
+          return res.status(200).send(b.buf);
+        }
       }
       res.setHeader('Cache-Control', dl ? 'no-store' : 'private, max-age=3000');
       res.setHeader('Referrer-Policy', 'origin');

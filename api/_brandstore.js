@@ -115,9 +115,33 @@ export async function brandHealth(slug) {
     if (!page.blobs.length) page = await blob.list(priv({ prefix: 'brand/', limit: 1 }));
     const f = page.blobs[0];
     if (!f) return { ok: true, store: 'private', why: 'no files yet' };
-    _readable.delete(f.pathname);   // a fresh check, not the one kept from earlier
-    const url = await readUrl(canon(f.pathname), 60);
-    const ok = !!(_readable.get(f.pathname) || {}).ok;
-    return { ok, store: 'private', why: ok ? '' : 'pictures are being shown from the public copy', fallback: url.startsWith(PUBLIC_BASE) };
+    // Read the way the pages get pictures now: the server, with the store's key
+    const g = await blob.get(f.pathname, { access: 'private', token: PRIVATE_TOKEN() });
+    g?.stream?.cancel?.().catch?.(() => {});
+    const ok = !!g && g.statusCode === 200;
+    return { ok, store: 'private', why: ok ? '' : 'the private store did not give ' + f.pathname.split('/').slice(0, 3).join('/') + '/…' };
   } catch (e) { return { ok: false, store: 'private', why: e.message }; }
+}
+
+// A Brand Kit file's bytes, read by the server with the store's own key (no signed link for the browser to
+// fail on): the private store first, the public copy if the private one can't give it. Files up to 4 MB
+// (a function's reply is limited to 4.5 MB); null for bigger ones or when neither store has it.
+export async function brandBytes(url) {
+  const p = pathOf(url);
+  if (!isBrand(p)) return null;
+  const MAX = 4e6;
+  const read = async (fn) => {
+    try {
+      const r = await fn();
+      if (!r || (r.size != null && r.size > MAX)) return r ? { big: true } : null;
+      const buf = Buffer.from(await new Response(r.stream).arrayBuffer());
+      return buf.length > MAX ? { big: true } : { buf, type: r.type || 'application/octet-stream' };
+    } catch (e) { return { err: e.message }; }
+  };
+  if (privateBrand()) {
+    const r = await read(async () => { const g = await blob.get(p, { access: 'private', token: PRIVATE_TOKEN() }); return g && g.statusCode === 200 && { stream: g.stream, size: g.blob?.size, type: g.blob?.contentType }; });
+    if (r?.buf || r?.big) return r;
+    console.warn('[brandstore] private read', p.split('/').slice(0, 3).join('/') + '/…', r?.err || 'not found', '→ public copy');
+  }
+  return read(async () => { const f = await fetch(canon(p), { signal: AbortSignal.timeout(10000) }); return f.ok ? { stream: f.body, size: Number(f.headers.get('content-length')) || null, type: f.headers.get('content-type') } : null; });
 }
