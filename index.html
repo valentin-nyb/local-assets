@@ -115,7 +115,7 @@
         .vc-tag { position:absolute; top:-10px; left:16px; z-index:2; font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.2em; padding:3px 8px; border-radius:999px; background:#111; border:1px solid #27272a; color:#a1a1aa; }
         .vc-card { border:1px solid #27272a; border-radius:16px; background:#0e0e10; overflow:hidden; }
         .vc-stage { position:relative; aspect-ratio:16/9; background:#000; }
-        .vc-stage img, .vc-clips img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
+        .vc-stage img, .vc-clips img, .vc-stage video, .vc-clips video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
         .vc-meta { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:14px 14px 0; }
         .vc-label { font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.15em; color:#e4e4e7; }
         .vc-live { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.15em; padding:4px 10px; border-radius:999px; background:#ef4444; color:#fff; }
@@ -516,6 +516,16 @@
                 </div>
             </div>
             <script>
+            // The other looping videos on the page (the phone, the cameras example): fetched when near the screen, paused off it
+            (function () {
+                var vs = document.querySelectorAll('video.la-lazy'), still = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+                function wake(v) { if (!v.src) v.src = v.dataset.src; if (!still) { var p = v.play(); if (p && p.catch) p.catch(function () {}); } }
+                if (!('IntersectionObserver' in window)) return Array.prototype.forEach.call(vs, wake);
+                var io = new IntersectionObserver(function (es) { es.forEach(function (e) { e.isIntersecting ? wake(e.target) : e.target.pause(); }); }, { rootMargin: '200px 0px', threshold: 0.01 });
+                Array.prototype.forEach.call(vs, function (v) { io.observe(v); });
+            })();
+            </script>
+            <script>
             (function () {
                 var root = document.getElementById('how-it-works'); if (!root) return;
                 var still = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -677,7 +687,7 @@
 
                             <div class="bg-[#111] border border-[#222] p-4 rounded-xl shrink-0">
                                 <div class="relative aspect-video rounded overflow-hidden mb-4 bg-zinc-900 border border-white/5">
-                                    <img src="/img/af/live.webp" class="w-full h-full object-cover" alt="Live Feed">
+                                    <video class="la-lazy w-full h-full object-cover" muted playsinline loop preload="none" poster="/img/af/live-poster.jpg" data-src="/img/af/live.mp4"></video>
                                 </div>
                                 <div class="space-y-2.5 font-mono text-[9px] uppercase tracking-widest">
                                     <p class="text-primary leading-relaxed">Live Feed Room 1 // Main Floor</p>
@@ -728,7 +738,7 @@
                     <div class="vc-ex" aria-label="Example of a connected camera">
                         <span class="vc-tag">EXAMPLE</span>
                         <div class="vc-card">
-                            <div class="vc-stage"><img alt="" loading="lazy" src="/img/af/stage.webp"></div>
+                            <div class="vc-stage"><video class="la-lazy" muted playsinline loop preload="none" poster="/img/af/stage-poster.jpg" data-src="/img/af/stage.mp4"></video></div>
                             <div class="vc-meta"><span class="vc-label">CAM 01 // MAIN FLOOR</span><span class="vc-live">LIVE · REC</span></div>
                             <div class="vc-chips"><span class="vc-chip">OBSBOT Tail 2</span><span class="vc-chip ndi">NDI · MAIN FLOOR</span></div>
                             <div class="vc-onstage"><span><span class="lbl">ON STAGE</span><span class="val">ARTIST NAME</span></span><span class="go">From calendar</span></div>
@@ -737,7 +747,7 @@
                         <div class="vc-result">
                             <div class="vc-result-head"><b>ARTIST NAME</b> · new session in your library</div>
                             <ol class="vc-flow" aria-label="What happens to the recording"><li>Reframe</li><li>Highlights</li><li>Watermark</li><li>HD export</li></ol>
-                            <div class="vc-clips"><i><img alt="" loading="lazy" src="/img/af/v1.webp"><span class="vc-wm"></span><span class="vc-name">ARTIST NAME</span></i><i><img alt="" loading="lazy" src="/img/af/v2.webp"><span class="vc-wm"></span><span class="vc-name">ARTIST NAME</span></i><i><img alt="" loading="lazy" src="/img/af/v3.webp"><span class="vc-wm"></span><span class="vc-name">ARTIST NAME</span></i><i><img alt="" loading="lazy" src="/img/af/v4.webp"><span class="vc-wm"></span><span class="vc-name">ARTIST NAME</span></i></div>
+                            <div class="vc-clips"><i><video class="la-lazy" muted playsinline loop preload="none" poster="/img/af/v1-poster.jpg" data-src="/img/af/v1.mp4"></video><span class="vc-wm"></span><span class="vc-name">ARTIST NAME</span></i><i><video class="la-lazy" muted playsinline loop preload="none" poster="/img/af/v2-poster.jpg" data-src="/img/af/v2.mp4"></video><span class="vc-wm"></span><span class="vc-name">ARTIST NAME</span></i><i><video class="la-lazy" muted playsinline loop preload="none" poster="/img/af/v3-poster.jpg" data-src="/img/af/v3.mp4"></video><span class="vc-wm"></span><span class="vc-name">ARTIST NAME</span></i><i><video class="la-lazy" muted playsinline loop preload="none" poster="/img/af/v4-poster.jpg" data-src="/img/af/v4.mp4"></video><span class="vc-wm"></span><span class="vc-name">ARTIST NAME</span></i></div>
                             <p class="vc-foot">Vertical clips at 1080 × 1920, ready to post. The full recording is kept too.</p>
                         </div>
                     </div>
