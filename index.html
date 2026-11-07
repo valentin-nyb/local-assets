@@ -517,13 +517,14 @@
             </div>
             <script>
             // The other looping videos on the page (the phone, the cameras example): fetched when near the screen, paused off it
-            (function () {
+            // (once the page is read: these videos come further down than this script)
+            document.addEventListener('DOMContentLoaded', function () {
                 var vs = document.querySelectorAll('video.la-lazy'), still = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
                 function wake(v) { if (!v.src) v.src = v.dataset.src; if (!still) { var p = v.play(); if (p && p.catch) p.catch(function () {}); } }
                 if (!('IntersectionObserver' in window)) return Array.prototype.forEach.call(vs, wake);
                 var io = new IntersectionObserver(function (es) { es.forEach(function (e) { e.isIntersecting ? wake(e.target) : e.target.pause(); }); }, { rootMargin: '200px 0px', threshold: 0.01 });
                 Array.prototype.forEach.call(vs, function (v) { io.observe(v); });
-            })();
+            });
             </script>
             <script>
             (function () {
