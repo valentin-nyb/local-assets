@@ -115,8 +115,11 @@
         .vc-eyebrow { font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.3em; text-transform:uppercase; color:#39FF14; }
         .vc-title { font:900 28px/1.15 "Helvetica Neue", Helvetica, Arial, sans-serif; text-transform:uppercase; letter-spacing:-.01em; color:#fff; margin:12px 0; }
         .vc-text { font-size:15px; line-height:1.65; color:#a1a1aa; max-width:540px; }
-        .vc-order { display:inline-flex; align-items:center; justify-content:center; min-width:200px; margin-top:24px; padding:13px 26px; border-radius:999px; background:#39FF14; color:#000; font:600 13px/1 'JetBrains Mono', monospace; letter-spacing:.14em; text-transform:uppercase; text-decoration:none; transition:transform .2s ease, box-shadow .2s ease; }
-        .vc-order:hover { transform:translateY(-1px); box-shadow:0 10px 30px -10px rgba(57,255,20,.7); }
+        /* Like the site's main buttons: green; on hover black slides in from the left and the text turns green */
+        .vc-order { position:relative; overflow:hidden; isolation:isolate; display:inline-flex; align-items:center; justify-content:center; min-width:200px; margin-top:24px; padding:13px 26px; border:1px solid #39FF14; border-radius:999px; background:#39FF14; color:#000; font:600 13px/1 'JetBrains Mono', monospace; letter-spacing:.14em; text-transform:uppercase; text-decoration:none; transition:color .3s cubic-bezier(.65,0,.35,1), transform .15s ease; }
+        .vc-order::before { content:""; position:absolute; inset:-1px; z-index:-1; border-radius:inherit; background:#0a0a0a; transform:scaleX(0); transform-origin:right center; transition:transform .42s cubic-bezier(.65,0,.35,1); }
+        @media (hover:hover) { .vc-order:hover { color:#39FF14; } .vc-order:hover::before { transform:scaleX(1); transform-origin:left center; } }
+        .vc-order:active { transform:scale(.97); } .vc-order:focus-visible { outline:2px solid #39FF14; outline-offset:3px; }
         .vc-note { font-size:12px; color:#71717a; margin-top:12px; }
         .vc-steps { list-style:none; margin:28px 0 0; padding:24px 0 0; border-top:1px solid #1f1f22; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px 28px; }
         .vc-steps li { display:flex; gap:12px; }
@@ -150,7 +153,7 @@
         .vc-wm { position:absolute; z-index:1; bottom:6.25%; left:5.6%; width:12%; height:6.5%; background:url(/logos/a-white.png) left center/contain no-repeat; }
         .vc-name { position:absolute; z-index:1; bottom:9%; transform:translateY(50%); right:calc(7% + 4px); max-width:55%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font:900 7px/1 "Helvetica Neue", Helvetica, Arial, sans-serif; color:#fff; }
         .vc-foot { font-size:11px; color:#71717a; margin-top:10px; }
-        .vc-order { border:0; cursor:pointer; }
+        .vc-order { cursor:pointer; }
         .ord-wrap { position:fixed; inset:0; z-index:100; display:none; align-items:center; justify-content:center; padding:16px; background:rgba(0,0,0,.75); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); }
         .ord-wrap.open { display:flex; }
         .ord-panel { position:relative; width:100%; max-width:540px; max-height:calc(100dvh - 32px); overflow-y:auto; background:#0e0e10; border:1px solid rgba(250,250,250,.14); border-radius:14px; padding:28px; color:#fff; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; }
@@ -330,8 +333,10 @@
                 @keyframes bxBlink { 50% { opacity:0; } }
                 .bx-intro h2 { margin:26px 0 12px; padding:0 20px; font:600 clamp(30px,3.6vw,44px)/1 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:-.03em; color:#fff; }
                 .bx-intro p { max-width:380px; margin:0 auto; padding:0 20px; font:400 14px/1.6 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#a1a1aa; }
-                .bx-cta { display:inline-flex; align-items:center; justify-content:center; min-width:200px; margin-top:24px; padding:13px 26px; border-radius:999px; background:#39FF14; color:#000; font:600 13px 'JetBrains Mono', monospace; letter-spacing:.14em; text-transform:uppercase; text-decoration:none; transition:transform .2s ease, box-shadow .2s ease; }
-                .bx-cta:hover { transform:translateY(-1px); box-shadow:0 10px 30px -10px rgba(57,255,20,.7); }
+                .bx-cta { position:relative; overflow:hidden; isolation:isolate; display:inline-flex; align-items:center; justify-content:center; min-width:200px; margin-top:24px; padding:13px 26px; border:1px solid #39FF14; border-radius:999px; background:#39FF14; color:#000; font:600 13px/1 'JetBrains Mono', monospace; letter-spacing:.14em; text-transform:uppercase; text-decoration:none; transition:color .3s cubic-bezier(.65,0,.35,1), transform .15s ease; }
+                .bx-cta::before { content:""; position:absolute; inset:-1px; z-index:-1; border-radius:inherit; background:#0a0a0a; transform:scaleX(0); transform-origin:right center; transition:transform .42s cubic-bezier(.65,0,.35,1); }
+                @media (hover:hover) { .bx-cta:hover { color:#39FF14; } .bx-cta:hover::before { transform:scaleX(1); transform-origin:left center; } }
+                .bx-cta:active { transform:scale(.97); } .bx-cta:focus-visible { outline:2px solid #39FF14; outline-offset:3px; }
                 .bx-card { position:relative; display:flex; flex-direction:column; align-items:center; padding:20px 18px 16px; border:1px solid #1f1f22; border-radius:22px; background:#111113; overflow:hidden; }
                 .bx-card h3 { margin:0 0 16px; font:600 15px/1.2 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:-.01em; color:#fff; text-align:center; }
                 .bx-tag { margin-top:auto; padding:3px 7px; border-radius:5px; background:#39FF14; color:#000; font:700 9px/1 'JetBrains Mono', monospace; letter-spacing:.12em; }
@@ -498,7 +503,7 @@
                     <div class="bx-card bx-w reveal delay-200" data-bx="publish">
                         <h3>Live everywhere</h3>
                         <div class="bx-body bx-pub">
-                            <div class="bx-clip"><video muted playsinline loop preload="none" poster="/img/af/v4-poster.jpg" data-src="/img/af/v4.mp4"></video></div>
+                            <div class="bx-clip"><video muted playsinline loop preload="none" poster="/img/af/v5-poster.jpg" data-src="/img/af/v5.mp4"></video></div>
                             <div class="bx-plats">
                                 <div class="bx-plat"><b>YouTube</b><span>WAITING</span><i></i></div>
                                 <div class="bx-plat"><b>SoundCloud</b><span>WAITING</span><i></i></div>
