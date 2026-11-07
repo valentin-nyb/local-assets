@@ -313,10 +313,9 @@ function planFeatures(planId, type, t, included, name) {
   if (planId === 'dj-trial' && type === 'artist') return [
     who,
     'Free to join: no monthly fee, you pay only for what you use, on the 1st',
-    '6 vertical clips from every set, with a small local / assets™ mark',
+    '6 vertical clips from every set',
     brand,
     'Connect your DJI, Sony Alpha and more',
-    'Remove the mark any time with the Artist plan',
   ];
   if (planId === 'dj-trial' || /venue\s*trial/i.test(String(name || ''))) return [
     who,
