@@ -329,9 +329,9 @@
             <style>
                 /* A grid of cards, each a short looping video with controls you can press. Videos are small MP4 loops:
                    the poster paints at once, the video loads when the card is near the screen and pauses off it. */
-                #how-it-works { padding-top:80px; }
-                @media (min-width:768px) { #how-it-works { padding-top:112px; padding-bottom:112px; } }
-                .bx-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
+                #how-it-works { padding-top:64px; }
+                @media (min-width:768px) { #how-it-works { padding-top:88px; padding-bottom:88px; } }
+                .bx-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; max-width:960px; margin:0 auto; }
                 .bx-grid > * { min-width:0; }
                 .bx-w { grid-column:span 2; }
                 .bx-intro { grid-column:span 2; position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:0 0 28px; margin:10px 22px 0; border:1px dashed #3f3f46; }
@@ -340,16 +340,16 @@
                 .bx-intro-tag { align-self:stretch; padding:14px 0 12px; border-bottom:1px dashed #3f3f46; font:700 13px 'JetBrains Mono', monospace; letter-spacing:.2em; color:#39FF14; }
                 .bx-intro-tag i { display:inline-block; width:8px; height:13px; margin-left:6px; vertical-align:-2px; background:#39FF14; animation:bxBlink 1s steps(1) infinite; }
                 @keyframes bxBlink { 50% { opacity:0; } }
-                .bx-intro h2 { margin:34px 0 14px; padding:0 20px; font:600 clamp(34px,4.6vw,56px)/1 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:-.03em; color:#fff; }
-                .bx-intro p { max-width:420px; margin:0 auto; padding:0 20px; font:400 16px/1.6 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#a1a1aa; }
-                .bx-cta { display:inline-flex; align-items:center; justify-content:center; min-width:220px; margin-top:30px; padding:16px 30px; border-radius:999px; background:#39FF14; color:#000; font:600 13px 'JetBrains Mono', monospace; letter-spacing:.14em; text-transform:uppercase; text-decoration:none; transition:transform .2s ease, box-shadow .2s ease; }
+                .bx-intro h2 { margin:26px 0 12px; padding:0 20px; font:600 clamp(30px,3.6vw,44px)/1 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:-.03em; color:#fff; }
+                .bx-intro p { max-width:380px; margin:0 auto; padding:0 20px; font:400 14px/1.6 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#a1a1aa; }
+                .bx-cta { display:inline-flex; align-items:center; justify-content:center; min-width:200px; margin-top:24px; padding:13px 26px; border-radius:999px; background:#39FF14; color:#000; font:600 13px 'JetBrains Mono', monospace; letter-spacing:.14em; text-transform:uppercase; text-decoration:none; transition:transform .2s ease, box-shadow .2s ease; }
                 .bx-cta:hover { transform:translateY(-1px); box-shadow:0 10px 30px -10px rgba(57,255,20,.7); }
-                .bx-card { position:relative; display:flex; flex-direction:column; align-items:center; padding:26px 22px 20px; border:1px solid #1f1f22; border-radius:28px; background:#111113; overflow:hidden; }
-                .bx-card h3 { margin:0 0 20px; font:600 17px/1.2 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:-.01em; color:#fff; text-align:center; }
+                .bx-card { position:relative; display:flex; flex-direction:column; align-items:center; padding:20px 18px 16px; border:1px solid #1f1f22; border-radius:22px; background:#111113; overflow:hidden; }
+                .bx-card h3 { margin:0 0 16px; font:600 15px/1.2 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:-.01em; color:#fff; text-align:center; }
                 .bx-tag { margin-top:auto; padding:3px 7px; border-radius:5px; background:#39FF14; color:#000; font:700 9px/1 'JetBrains Mono', monospace; letter-spacing:.12em; }
-                .bx-body { width:100%; margin:auto 0 18px; }
+                .bx-body { width:100%; margin:auto 0 14px; }
                 .bx-card > .bx-tag { margin-top:auto; }
-                [data-bx="live"] .bx-stack { aspect-ratio:4/3; }
+                [data-bx="live"] .bx-stack { aspect-ratio:4/3; } [data-bx="live"] .bx-pills { flex-wrap:nowrap; gap:4px; } [data-bx="live"] .bx-pill { padding:7px 9px; letter-spacing:.06em; }
                 /* Videos stacked in one frame: changing camera is a fade, never a reload */
                 .bx-stack { position:relative; width:100%; aspect-ratio:16/9; border-radius:14px; overflow:hidden; background:#000; }
                 .bx-stack video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; transition:opacity .35s ease; }
@@ -360,7 +360,7 @@
                 .bx-cap { position:absolute; left:50%; bottom:10px; z-index:2; transform:translateX(-50%); padding:3px 8px; border-radius:4px; background:#fff; color:#000; font:600 11px 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; white-space:nowrap; }
                 .bx-pills { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:6px; margin-bottom:18px; }
                 .bx-pills > span { margin-right:6px; font:500 11px 'JetBrains Mono', monospace; letter-spacing:.12em; color:#a1a1aa; }
-                .bx-pill { padding:9px 16px; border:1px solid #3f3f46; border-radius:999px; background:none; color:#e4e4e7; font:500 11px 'JetBrains Mono', monospace; letter-spacing:.1em; text-transform:uppercase; cursor:pointer; transition:background-color .2s ease, color .2s ease, border-color .2s ease; }
+                .bx-pill { padding:7px 13px; border:1px solid #3f3f46; border-radius:999px; background:none; color:#e4e4e7; font:500 11px 'JetBrains Mono', monospace; letter-spacing:.1em; text-transform:uppercase; cursor:pointer; transition:background-color .2s ease, color .2s ease, border-color .2s ease; }
                 .bx-pill:hover { border-color:#71717a; }
                 .bx-pill[aria-pressed="true"] { background:#fafafa; border-color:#fafafa; color:#000; }
                 .bx-pill:focus { outline:none; } .bx-pill:focus-visible { outline:2px solid #39FF14; outline-offset:2px; }
@@ -381,7 +381,7 @@
                 .bx-wave::after { content:""; position:absolute; top:-3px; bottom:-3px; left:var(--p,0%); width:2px; background:#39FF14; box-shadow:0 0 6px rgba(57,255,20,.7); }
                 /* Clips: three vertical clips, the Brand Kit's watermark on or off */
                 .bx-clips { display:flex; justify-content:center; gap:10px; }
-                .bx-clip { position:relative; width:30%; max-width:170px; aspect-ratio:9/16; border-radius:12px; overflow:hidden; background:#000; container-type:inline-size; }
+                .bx-clip { position:relative; width:30%; max-width:128px; aspect-ratio:9/16; border-radius:12px; overflow:hidden; background:#000; container-type:inline-size; }
                 .bx-clip:nth-child(2) { transform:translateY(-10px); }
                 .bx-clip video { width:100%; height:100%; object-fit:cover; display:block; }
                 .bx-clip::before { content:""; position:absolute; bottom:6.25%; left:5.6%; width:13%; height:7%; background:url(/logos/a-white.png) left center/contain no-repeat; transition:opacity .3s ease; }
@@ -401,7 +401,7 @@
                 @keyframes bxFill { to { width:100%; } }
                 /* Publish: the platforms, each going from waiting to posted */
                 .bx-pub { display:grid; grid-template-columns:auto 1fr; gap:16px; align-items:center; }
-                .bx-pub .bx-clip { width:118px; transform:none; }
+                .bx-pub .bx-clip { width:100px; transform:none; }
                 .bx-plats { display:flex; flex-direction:column; gap:8px; }
                 .bx-plat { display:grid; grid-template-columns:1fr auto; align-items:center; gap:4px 10px; padding:10px 12px; border:1px solid #27272a; border-radius:12px; }
                 .bx-plat b { font:600 13px 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#fff; }
