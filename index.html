@@ -109,50 +109,6 @@
         .tr-feat-add { display:block; margin-top:3px; color:#39FF14; }
     </style>
     <style>
-        /* Venue Command Center: how the cameras work */
-        .vc-cams { margin-top:96px; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,400px); gap:48px; align-items:start; border:1px solid #27272a; background:#0a0a0a; border-radius:20px; padding:32px; }
-        .vc-eyebrow { font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.3em; text-transform:uppercase; color:#39FF14; }
-        .vc-title { font:900 28px/1.15 "Helvetica Neue", Helvetica, Arial, sans-serif; text-transform:uppercase; letter-spacing:-.01em; color:#fff; margin:12px 0; }
-        .vc-text { font-size:15px; line-height:1.65; color:#a1a1aa; max-width:540px; }
-        /* Like the site's main buttons: green; on hover black slides in from the left and the text turns green */
-        .vc-order { position:relative; overflow:hidden; isolation:isolate; display:inline-flex; align-items:center; justify-content:center; min-width:200px; margin-top:24px; padding:13px 26px; border:1px solid #39FF14; border-radius:999px; background:#39FF14; color:#000; font:600 13px/1 'JetBrains Mono', monospace; letter-spacing:.14em; text-transform:uppercase; text-decoration:none; transition:color .3s cubic-bezier(.65,0,.35,1), transform .15s ease; }
-        .vc-order::before { content:""; position:absolute; inset:-1px; z-index:-1; border-radius:inherit; background:#0a0a0a; transform:scaleX(0); transform-origin:right center; transition:transform .42s cubic-bezier(.65,0,.35,1); }
-        @media (hover:hover) { .vc-order:hover { color:#39FF14; } .vc-order:hover::before { transform:scaleX(1); transform-origin:left center; } }
-        .vc-order:active { transform:scale(.97); } .vc-order:focus-visible { outline:2px solid #39FF14; outline-offset:3px; }
-        .vc-note { font-size:12px; color:#71717a; margin-top:12px; }
-        .vc-steps { list-style:none; margin:28px 0 0; padding:24px 0 0; border-top:1px solid #1f1f22; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px 28px; }
-        .vc-steps li { display:flex; gap:12px; }
-        .vc-steps li > b { flex-shrink:0; width:24px; height:24px; border-radius:999px; background:rgba(57,255,20,.1); color:#39FF14; font-size:12px; display:flex; align-items:center; justify-content:center; }
-        .vc-steps strong { display:block; font:700 14px/1.35 "Helvetica Neue", Helvetica, Arial, sans-serif; color:#fff; margin-bottom:4px; }
-        .vc-steps span { font-size:13px; line-height:1.55; color:#a1a1aa; }
-        .vc-ex { position:relative; }
-        .vc-tag { position:absolute; top:-10px; left:16px; z-index:2; font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.2em; padding:3px 8px; border-radius:999px; background:#111; border:1px solid #27272a; color:#a1a1aa; }
-        .vc-card { border:1px solid #27272a; border-radius:16px; background:#0e0e10; overflow:hidden; }
-        .vc-stage { position:relative; aspect-ratio:16/9; background:#000; }
-        .vc-stage img, .vc-clips img, .vc-stage video, .vc-clips video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
-        .vc-meta { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:14px 14px 0; }
-        .vc-label { font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.15em; color:#e4e4e7; }
-        .vc-live { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.15em; padding:4px 10px; border-radius:999px; background:#ef4444; color:#fff; }
-        .vc-chips { display:flex; gap:6px; flex-wrap:wrap; padding:10px 14px 0; }
-        .vc-chip { font-family:'JetBrains Mono',monospace; font-size:10px; padding:4px 8px; border-radius:6px; background:#18181b; color:#a1a1aa; }
-        .vc-chip.ndi { color:#39FF14; background:rgba(57,255,20,.08); }
-        .vc-onstage { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:12px 14px 14px; padding:12px; border-radius:10px; background:#18181b; }
-        .vc-onstage .lbl { font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.2em; color:#71717a; margin-right:8px; }
-        .vc-onstage .val { font:700 14px/1 "Helvetica Neue", Helvetica, Arial, sans-serif; color:#fff; }
-        .vc-onstage .go { font-size:11px; color:#a1a1aa; white-space:nowrap; }
-        .vc-arrow { text-align:center; padding:12px 0; font-size:11px; color:#71717a; }
-        .vc-result { border:1px solid #27272a; border-radius:16px; padding:14px; background:#0a0a0a; }
-        .vc-result-head { font:700 12px/1.3 "Helvetica Neue", Helvetica, Arial, sans-serif; text-transform:uppercase; color:#a1a1aa; }
-        .vc-result-head b { color:#fff; font-weight:600; }
-        .vc-flow { list-style:none; margin:14px 0 0; padding:0; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; counter-reset:flow; }
-        .vc-flow li { counter-increment:flow; display:flex; align-items:baseline; gap:6px; text-transform:uppercase; white-space:nowrap; font:700 10.5px/1 "Helvetica Neue", Helvetica, Arial, sans-serif; letter-spacing:.02em; color:#fff; padding:9px 12px; border-radius:999px; background:#18181b; }
-        .vc-flow li::before { content:counter(flow, decimal-leading-zero); font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.08em; color:#39FF14; }
-        .vc-clips { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:12px; }
-        .vc-clips i { position:relative; overflow:hidden; aspect-ratio:9/16; border-radius:6px; background:#18181b; border:1px solid #27272a; }
-        .vc-wm { position:absolute; z-index:1; bottom:6.25%; left:5.6%; width:12%; height:6.5%; background:url(/logos/a-white.png) left center/contain no-repeat; }
-        .vc-name { position:absolute; z-index:1; bottom:9%; transform:translateY(50%); right:calc(7% + 4px); max-width:55%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font:900 7px/1 "Helvetica Neue", Helvetica, Arial, sans-serif; color:#fff; }
-        .vc-foot { font-size:11px; color:#71717a; margin-top:10px; }
-        .vc-order { cursor:pointer; }
         .ord-wrap { position:fixed; inset:0; z-index:100; display:none; align-items:center; justify-content:center; padding:16px; background:rgba(0,0,0,.75); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); }
         .ord-wrap.open { display:flex; }
         .ord-panel { position:relative; width:100%; max-width:540px; max-height:calc(100dvh - 32px); overflow-y:auto; background:#0e0e10; border:1px solid rgba(250,250,250,.14); border-radius:14px; padding:28px; color:#fff; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; }
@@ -244,17 +200,12 @@
         
         .ord-done { font-size:14px; line-height:1.6; color:#a1a1aa; margin-top:10px; }
         @media (max-width:480px) { .ord-feats { grid-template-columns:1fr; } .ord-panel { padding:18px; } .ord-hero { height:170px; } }
-        @media (max-width:900px) {
-            .vc-cams { grid-template-columns:minmax(0,1fr); padding:22px 18px; gap:32px; margin-top:64px; }
-            .vc-title { font-size:22px; }
-            .vc-steps { grid-template-columns:minmax(0,1fr); }
-        }
             </style>
     <style>
         /* Titles: Helvetica Neue Black, all caps (same rule as styles/theme.css) */
         h1:not(header h1), h2, h3 { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif !important; font-weight: 900 !important; text-transform: uppercase !important; letter-spacing: 0 !important; font-style: normal !important; }
     </style>
-    <link rel="stylesheet" href="styles/home-light.css?v=2">
+    <link rel="stylesheet" href="styles/home-light.css?v=3">
 </head>
 
 <body class="font-sans antialiased bg-background text-foreground overflow-x-hidden selection:bg-primary selection:text-black">
@@ -411,6 +362,31 @@
                 .bx-plat.done span { color:#39FF14; }
                 .bx-plat i { grid-column:span 2; height:2px; border-radius:2px; background:#27272a; overflow:hidden; }
                 .bx-plat i::after { content:""; display:block; height:100%; width:var(--w,0%); background:#39FF14; transition:width .25s linear; }
+                /* A card opens to the middle of the screen, larger, with more about it (the + at its top right, or a click anywhere on it) */
+                .bx-card[data-bx] { cursor:pointer; }
+                .bx-x { position:absolute; top:14px; right:14px; z-index:3; width:28px; height:28px; display:flex; align-items:center; justify-content:center; padding:0; border:1px solid #3f3f46; border-radius:999px; background:#111113; color:#e4e4e7; cursor:pointer; transition:transform .35s cubic-bezier(.65,0,.35,1), border-color .2s ease, background-color .2s ease; }
+                .bx-x svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
+                .bx-x:hover { border-color:#fafafa; }
+                .bx-x:focus { outline:none; } .bx-x:focus-visible { outline:2px solid #39FF14; outline-offset:2px; }
+                .bx-more { display:none; width:100%; max-width:600px; margin:-6px auto 22px; text-align:left; }
+                .bx-more p { margin:0 0 14px; font:400 15px/1.55 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#a1a1aa; }
+                .bx-more ul { margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:8px; }
+                .bx-more li { display:flex; gap:10px; align-items:baseline; font:500 14px/1.4 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#e4e4e7; }
+                .bx-more li::before { content:""; flex-shrink:0; width:6px; height:6px; border-radius:999px; background:#39FF14; transform:translateY(-2px); }
+                .bx-ph { visibility:hidden; }
+                .bx-scrim { position:fixed; inset:0; z-index:95; background:rgba(0,0,0,.72); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); opacity:0; transition:opacity .35s ease; }
+                .bx-scrim.on { opacity:1; }
+                .bx-card.bx-open { position:fixed; z-index:96; margin:0; cursor:default; overflow:auto; overscroll-behavior:contain; padding:28px 28px 22px; box-shadow:0 40px 120px -20px rgba(0,0,0,.8); transition:top .45s cubic-bezier(.65,0,.35,1), left .45s cubic-bezier(.65,0,.35,1), width .45s cubic-bezier(.65,0,.35,1), height .45s cubic-bezier(.65,0,.35,1) !important; transform:none !important; opacity:1 !important; }
+                .bx-card.bx-open h3 { font-size:22px; margin-bottom:22px; }
+                .bx-card.bx-open .bx-x { transform:rotate(45deg); }
+                .bx-card.bx-open .bx-more { display:block; animation:bxIn .4s .2s ease both; }
+                @keyframes bxIn { from { opacity:0; transform:translateY(8px); } }
+                .bx-card.bx-open .bx-body { margin-top:0; max-width:640px; }
+                .bx-card.bx-open .bx-clip { max-width:200px; }
+                .bx-card.bx-open .bx-pub .bx-clip { width:180px; }
+                .bx-card.bx-open[data-bx="live"] .bx-stack { aspect-ratio:16/9; }
+                .bx-card.bx-open .bx-kit { max-width:460px; margin:0 auto; }
+                html.bx-lock, html.bx-lock body { overflow:hidden; }
                 @media (max-width:900px) { .bx-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .bx-intro { margin:10px 0 0; } }
                 @media (max-width:640px) { .bx-grid { grid-template-columns:minmax(0,1fr); } .bx-w, .bx-intro { grid-column:auto; } .bx-split, .bx-pub { grid-template-columns:minmax(0,1fr); } .bx-pub .bx-clip { width:46%; margin:0 auto; } }
                 @media (prefers-reduced-motion:reduce) { .bx-grid *, .bx-grid *::before, .bx-grid *::after { animation:none !important; transition:none !important; } }
@@ -426,6 +402,8 @@
 
                     <div class="bx-card reveal delay-100" data-bx="live">
                         <h3>Live recording</h3>
+                        <button type="button" class="bx-x" aria-label="Open" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+                        <div class="bx-more"><p>The cameras start on their own when the night starts, over the venue's Wi-Fi or a cable. Switch between up to three angles while you watch from your phone.</p><ul><li>Starts and stops with the events in your Google or Apple Calendar</li><li>Each set recorded in full, with the DJ's audio</li><li>Watch every camera live from the dashboard</li></ul></div>
                         <div class="bx-body">
                             <div class="bx-stack">
                                 <span class="bx-badge"><i></i>REC <span data-bx-clock>01:42:15</span></span>
@@ -442,6 +420,8 @@
 
                     <div class="bx-card reveal delay-200" data-bx="kit">
                         <h3>Your Brand Kit</h3>
+                        <button type="button" class="bx-x" aria-label="Open" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+                        <div class="bx-more"><p>Upload your logos, fonts and colour looks once. Every clip, thumbnail and post gets them, with no editing.</p><ul><li>Logos as PNG, or a moving GIF or WebP</li><li>Your own fonts for the artist's name</li><li>Colour looks as .cube files</li><li>One kit for the venue and one for each artist</li></ul></div>
                         <div class="bx-body bx-kit">
                             <div class="bx-kit-row"><span class="bx-kit-ico bx-kit-logo"></span><p>Logo<small data-kit="logo">PNG · MOVING GIF</small></p><em>ON</em></div>
                             <div class="bx-kit-row"><span class="bx-kit-ico bx-kit-font" data-kit-font>Aa</span><p>Font<small data-kit="font">HELVETICA BLACK</small></p><em>ON</em></div>
@@ -453,6 +433,8 @@
 
                     <div class="bx-card bx-w reveal delay-100" data-bx="edit">
                         <h3>Cut to the music</h3>
+                        <button type="button" class="bx-x" aria-label="Open" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+                        <div class="bx-more"><p>Every set is edited to the beat: the camera changes on the bar, so the cut moves with the music.</p><ul><li>Cuts every 4, 8 or 16 bars</li><li>Uses every camera in the room</li><li>The peak moments, like the drops, are picked out for the clips</li></ul></div>
                         <div class="bx-body">
                             <div class="bx-stack">
                                 <span class="bx-badge">EDIT · <span data-bx-cam>CAM 1</span></span>
@@ -471,6 +453,8 @@
 
                     <div class="bx-card bx-w reveal delay-200" data-bx="clips">
                         <h3>Clips, ready to post</h3>
+                        <button type="button" class="bx-x" aria-label="Open" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+                        <div class="bx-more"><p>Vertical clips from every set, sized for Reels, TikTok and Shorts, with your brand already on them.</p><ul><li>6 clips from every set, at 1080 × 1920</li><li>Your logo, still or moving, and the artist's name</li><li>Download them or post them straight away</li></ul></div>
                         <div class="bx-body">
                             <div class="bx-clips move">
                                 <div class="bx-clip"><video muted playsinline loop preload="none" poster="/img/af/v1-poster.jpg" data-src="/img/af/v1.mp4"></video></div>
@@ -484,6 +468,8 @@
 
                     <div class="bx-card bx-w reveal delay-100" data-bx="sets">
                         <h3>Saved for every DJ</h3>
+                        <button type="button" class="bx-x" aria-label="Open" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+                        <div class="bx-more"><p>Each set is cut at its exact times from your calendar and saved under the DJ's name, so every artist has their own library.</p><ul><li>Saved by artist and date</li><li>The full recording is kept, with the clips</li><li>Thumbnails, horizontal and vertical, with your watermark</li></ul></div>
                         <div class="bx-body bx-split">
                             <div class="bx-stack">
                                 <span class="bx-badge" data-bx-set>22:00 · ARTIST NAME</span>
@@ -502,6 +488,8 @@
 
                     <div class="bx-card bx-w reveal delay-200" data-bx="publish">
                         <h3>Live everywhere</h3>
+                        <button type="button" class="bx-x" aria-label="Open" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+                        <div class="bx-more"><p>When a set is ready, it goes out. Nobody uploads anything.</p><ul><li>Sent to YouTube and SoundCloud</li><li>Clips ready for Instagram and TikTok</li><li>Posted under your venue's or the artist's name</li></ul></div>
                         <div class="bx-body bx-pub">
                             <div class="bx-clip"><video muted playsinline loop preload="none" poster="/img/af/v5-poster.jpg" data-src="/img/af/v5.mp4"></video></div>
                             <div class="bx-plats">
@@ -538,6 +526,45 @@
                     var io = new IntersectionObserver(function (es) { es.forEach(function (e) { e.target._seen = e.isIntersecting; vids(e.target).forEach(function (v) { e.isIntersecting ? wake(v) : v.pause(); }); }); }, { rootMargin: '200px 0px', threshold: 0.01 });
                     Array.prototype.forEach.call(cards, function (c) { io.observe(c); });
                 } else Array.prototype.forEach.call(cards, function (c) { c._seen = true; vids(c).forEach(wake); });
+                // Open a card: it grows from where it is to the middle of the screen; a stand-in keeps its place in the grid
+                var scrim = document.createElement('div'), openCard = null, ph = null;
+                scrim.className = 'bx-scrim'; scrim.hidden = true; document.body.appendChild(scrim);
+                function place(card, r) { card.style.top = r.top + 'px'; card.style.left = r.left + 'px'; card.style.width = r.width + 'px'; card.style.height = r.height + 'px'; }
+                function openUp(card, byKey) {
+                    if (openCard) return;
+                    var r = card.getBoundingClientRect(), gap = innerWidth < 640 ? 16 : 32;
+                    ph = document.createElement('div'); ph.className = 'bx-ph' + (card.classList.contains('bx-w') ? ' bx-w' : ''); ph.style.height = r.height + 'px';
+                    card.parentNode.insertBefore(ph, card);
+                    openCard = card; card.classList.add('bx-open'); document.documentElement.classList.add('bx-lock');
+                    var W = Math.min(card.classList.contains('bx-w') ? 860 : 720, innerWidth - gap * 2);
+                    card.style.transition = 'none'; card.style.width = W + 'px'; card.style.height = 'auto';
+                    var H = Math.min(card.offsetHeight, innerHeight - gap * 2);
+                    place(card, r); card.offsetWidth; card.style.transition = '';
+                    place(card, { top: (innerHeight - H) / 2, left: (innerWidth - W) / 2, width: W, height: H });
+                    scrim.hidden = false; scrim.offsetWidth; scrim.classList.add('on');
+                    var x = card.querySelector('.bx-x'); x.setAttribute('aria-expanded', 'true'); x.setAttribute('aria-label', 'Close'); if (byKey) x.focus({ preventScroll: true });
+                    vids(card).forEach(wake);
+                }
+                function close() {
+                    var card = openCard; if (!card) return;
+                    openCard = null; scrim.classList.remove('on');
+                    var x = card.querySelector('.bx-x'); x.setAttribute('aria-expanded', 'false'); x.setAttribute('aria-label', 'Open');
+                    card.scrollTop = 0; place(card, ph.getBoundingClientRect());
+                    setTimeout(function () {
+                        card.classList.remove('bx-open'); card.removeAttribute('style'); ph.remove(); ph = null; scrim.hidden = true;
+                        document.documentElement.classList.remove('bx-lock'); if (document.activeElement === document.body || card.contains(document.activeElement)) x.focus({ preventScroll: true });
+                    }, still ? 0 : 460);
+                }
+                Array.prototype.forEach.call(cards, function (card) {
+                    if (!card.dataset.bx) return;
+                    card.addEventListener('click', function (e) {
+                        if (e.target.closest('.bx-x')) return openCard === card ? close() : openUp(card, e.detail === 0);
+                        if (openCard !== card && !e.target.closest('button, a')) openUp(card);
+                    });
+                });
+                scrim.addEventListener('click', close);
+                document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+                window.addEventListener('resize', function () { if (openCard) close(); });
                 // A row of buttons that picks one of the stacked videos (by data-i); auto moves on every ms unless pressed
                 function picker(card, sel, ms, after) {
                     var btns = card.querySelectorAll(sel), stack = card.querySelectorAll('.bx-stack video'), i = 0, t;
@@ -718,43 +745,6 @@
                         <div class="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-black to-transparent pointer-events-none z-20"></div>
                     </div>
 
-                </div>
-            </div>
-            <div class="max-w-6xl mx-auto px-4 md:px-8">
-                <div class="vc-cams reveal">
-                    <div>
-                        <span class="vc-eyebrow">// Cameras</span>
-                        <h3 class="vc-title">Record every set. Get the clips automatically.</h3>
-                        <p class="vc-text">Each OBSBOT Tail 2 streams over the venue's Wi-Fi or network straight to your cloud. When the set ends, the recording is a session for the artist on stage, with vertical clips ready for social media.</p>
-                        <button type="button" class="vc-order" onclick="openCameraOrder()">Order cameras · buy or hire</button>
-                        <p class="vc-note">Setup and integration included with every camera ordered from us.</p>
-                        <ol class="vc-steps">
-                            <li><b>1</b><div><strong>Plug in</strong><span>Power the OBSBOT Tail 2 and connect it to the venue's Wi-Fi or an Ethernet cable.</span></div></li>
-                            <li><b>2</b><div><strong>Connect it</strong><span>Add the camera in your dashboard and give it a name. It gets its own stream address and key.</span></div></li>
-                            <li><b>3</b><div><strong>Connect Google or Apple Calendar</strong><span>Paste the calendar's private iCal link. Each event is a set: the title is the DJ, the start and end are the exact times.</span></div></li>
-                            <li><b>4</b><div><strong>Stream the night</strong><span>Start the camera before the first set and stop it after the last. Each set is cut at its exact times and saved for its DJ.</span></div></li>
-                            <li><b>5</b><div><strong>Add your Brand Kit</strong><span>Upload logos and fonts for your venue and each artist.</span></div></li>
-                            <li><b>6</b><div><strong>Set the watermark</strong><span>Pick the logo, position and size, and add the artist's name in one of your fonts. Every clip gets it.</span></div></li>
-                            <li><b>7</b><div><strong>Choose thumbnails</strong><span>Use any artwork or photo as a session thumbnail, horizontal and vertical, watermarked.</span></div></li>
-                            <li><b>8</b><div><strong>Post</strong><span>Download the clips, or send them to YouTube and SoundCloud.</span></div></li>
-                        </ol>
-                    </div>
-                    <div class="vc-ex" aria-label="Example of a connected camera">
-                        <span class="vc-tag">EXAMPLE</span>
-                        <div class="vc-card">
-                            <div class="vc-stage"><video class="la-lazy" muted playsinline loop preload="none" poster="/img/af/stage-poster.jpg" data-src="/img/af/stage.mp4"></video></div>
-                            <div class="vc-meta"><span class="vc-label">CAM 01 // MAIN FLOOR</span><span class="vc-live">LIVE · REC</span></div>
-                            <div class="vc-chips"><span class="vc-chip">OBSBOT Tail 2</span><span class="vc-chip ndi">NDI · MAIN FLOOR</span></div>
-                            <div class="vc-onstage"><span><span class="lbl">ON STAGE</span><span class="val">ARTIST NAME</span></span><span class="go">From calendar</span></div>
-                        </div>
-                        <div class="vc-arrow">When the stream stops</div>
-                        <div class="vc-result">
-                            <div class="vc-result-head"><b>ARTIST NAME</b> · new session in your library</div>
-                            <ol class="vc-flow" aria-label="What happens to the recording"><li>Reframe</li><li>Highlights</li><li>Watermark</li><li>HD export</li></ol>
-                            <div class="vc-clips"><i><video class="la-lazy" muted playsinline loop preload="none" poster="/img/af/v1-poster.jpg" data-src="/img/af/v1.mp4"></video><span class="vc-wm"></span><span class="vc-name">ARTIST NAME</span></i><i><video class="la-lazy" muted playsinline loop preload="none" poster="/img/af/v2-poster.jpg" data-src="/img/af/v2.mp4"></video><span class="vc-wm"></span><span class="vc-name">ARTIST NAME</span></i><i><video class="la-lazy" muted playsinline loop preload="none" poster="/img/af/v3-poster.jpg" data-src="/img/af/v3.mp4"></video><span class="vc-wm"></span><span class="vc-name">ARTIST NAME</span></i><i><video class="la-lazy" muted playsinline loop preload="none" poster="/img/af/v4-poster.jpg" data-src="/img/af/v4.mp4"></video><span class="vc-wm"></span><span class="vc-name">ARTIST NAME</span></i></div>
-                            <p class="vc-foot">Vertical clips at 1080 × 1920, ready to post. The full recording is kept too.</p>
-                        </div>
-                    </div>
                 </div>
             </div>
         </section>
