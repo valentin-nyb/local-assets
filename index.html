@@ -54,9 +54,21 @@
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         @keyframes scanline { 0% { transform: translateY(-100%); } 100% { transform: translateY(100%); } }
         .bg-scanlines { background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.2) 50%, rgba(0, 0, 0, 0.2)); background-size: 100% 4px; }
-        /* Seamless marquee ticker */
-        .animate-marquee { display: flex; width: max-content; animation: marquee 24s linear infinite; }
-        @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+        /* The hero's ticker: the platform's loop, one event to the next, as numbered pills (like the cameras flow) */
+        .lt-ticker { position:relative; overflow:hidden; padding:10px 0; background:#0a0a0a; -webkit-mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent); mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent); }
+        .lt-track { display:flex; width:max-content; animation:ltMove 40s linear infinite; }
+        .lt-ticker:hover .lt-track { animation-play-state:paused; }
+        @keyframes ltMove { to { transform:translateX(-50%); } }
+        .lt-group { display:flex; align-items:center; gap:8px; margin:0; padding:0 8px 0 0; list-style:none; }
+        .lt-group li { display:flex; align-items:center; gap:7px; white-space:nowrap; padding:8px 14px; border-radius:999px; background:#18181b; color:#fff; font:700 11px/1 "Helvetica Neue", Helvetica, Arial, sans-serif; letter-spacing:.04em; text-transform:uppercase; }
+        .lt-group li b { font:500 9.5px/1 'JetBrains Mono', monospace; letter-spacing:.08em; color:#39FF14; }
+        .lt-group .lt-arrow { padding:0; background:none; color:#52525b; font:500 12px/1 'JetBrains Mono', monospace; }
+        .lt-group .lt-rec { gap:6px; background:none; border:1px solid #3f3f46; color:#e4e4e7; font:500 10px/1 'JetBrains Mono', monospace; letter-spacing:.14em; }
+        .lt-rec i { width:6px; height:6px; border-radius:999px; background:#ff3b30; animation:ltBlink 1.2s steps(1) infinite; }
+        @keyframes ltBlink { 50% { opacity:.25; } }
+        .lt-group .lt-loop { background:#39FF14; color:#000; }
+        .lt-loop i { font-style:normal; font-size:13px; }
+        @media (prefers-reduced-motion:reduce) { .lt-track, .lt-rec i { animation:none; } }
 
         /* ── Dashboard / Sign in button ── */
         /* Like the site's main buttons (Start the trial): green; on hover black slides in from the left and the text turns green */
@@ -290,36 +302,12 @@
             </div>
 
             <div class="absolute bottom-0 left-0 right-0 border-t border-border bg-background/80 backdrop-blur-sm z-20">
-                <div class="w-full overflow-hidden border-y border-[#27272a] bg-[#0a0a0a] py-3 relative z-20">
-                    <div class="animate-marquee">
-                        <div class="flex items-center text-[#39FF14] font-mono text-[10px] tracking-[0.3em] uppercase whitespace-nowrap pr-8">
-                            <span class="px-4">CAPTURE //</span>
-                            <span class="px-4">DISTRIBUTE //</span>
-                            <span class="px-4">MONETIZE //</span>
-                            <span class="px-4">REPEAT //</span>
-                            <span class="px-4">CAPTURE //</span>
-                            <span class="px-4">DISTRIBUTE //</span>
-                            <span class="px-4">MONETIZE //</span>
-                            <span class="px-4">REPEAT //</span>
-                            <span class="px-4">CAPTURE //</span>
-                            <span class="px-4">DISTRIBUTE //</span>
-                            <span class="px-4">MONETIZE //</span>
-                            <span class="px-4">REPEAT //</span>
-                        </div>
-                        <div class="flex items-center text-[#39FF14] font-mono text-[10px] tracking-[0.3em] uppercase whitespace-nowrap pr-8">
-                            <span class="px-4">CAPTURE //</span>
-                            <span class="px-4">DISTRIBUTE //</span>
-                            <span class="px-4">MONETIZE //</span>
-                            <span class="px-4">REPEAT //</span>
-                            <span class="px-4">CAPTURE //</span>
-                            <span class="px-4">DISTRIBUTE //</span>
-                            <span class="px-4">MONETIZE //</span>
-                            <span class="px-4">REPEAT //</span>
-                            <span class="px-4">CAPTURE //</span>
-                            <span class="px-4">DISTRIBUTE //</span>
-                            <span class="px-4">MONETIZE //</span>
-                            <span class="px-4">REPEAT //</span>
-                        </div>
+                <div class="lt-ticker" aria-label="How it works: record the set, cut the clips, add your brand, post everywhere, get paid, then the next event">
+                    <div class="lt-track">
+                        <ul class="lt-group"><li class="lt-rec"><i></i>Rec</li><li><b>01</b>Record the set</li><li class="lt-arrow" aria-hidden="true">→</li><li><b>02</b>Cut the clips</li><li class="lt-arrow" aria-hidden="true">→</li><li><b>03</b>Add your brand</li><li class="lt-arrow" aria-hidden="true">→</li><li><b>04</b>Post everywhere</li><li class="lt-arrow" aria-hidden="true">→</li><li><b>05</b>Get paid</li><li class="lt-arrow" aria-hidden="true">→</li><li class="lt-loop"><i aria-hidden="true">↻</i>Next event</li></ul>
+                        <ul class="lt-group" aria-hidden="true"><li class="lt-rec"><i></i>Rec</li><li><b>01</b>Record the set</li><li class="lt-arrow" aria-hidden="true">→</li><li><b>02</b>Cut the clips</li><li class="lt-arrow" aria-hidden="true">→</li><li><b>03</b>Add your brand</li><li class="lt-arrow" aria-hidden="true">→</li><li><b>04</b>Post everywhere</li><li class="lt-arrow" aria-hidden="true">→</li><li><b>05</b>Get paid</li><li class="lt-arrow" aria-hidden="true">→</li><li class="lt-loop"><i aria-hidden="true">↻</i>Next event</li></ul>
+                        <ul class="lt-group" aria-hidden="true"><li class="lt-rec"><i></i>Rec</li><li><b>01</b>Record the set</li><li class="lt-arrow" aria-hidden="true">→</li><li><b>02</b>Cut the clips</li><li class="lt-arrow" aria-hidden="true">→</li><li><b>03</b>Add your brand</li><li class="lt-arrow" aria-hidden="true">→</li><li><b>04</b>Post everywhere</li><li class="lt-arrow" aria-hidden="true">→</li><li><b>05</b>Get paid</li><li class="lt-arrow" aria-hidden="true">→</li><li class="lt-loop"><i aria-hidden="true">↻</i>Next event</li></ul>
+                        <ul class="lt-group" aria-hidden="true"><li class="lt-rec"><i></i>Rec</li><li><b>01</b>Record the set</li><li class="lt-arrow" aria-hidden="true">→</li><li><b>02</b>Cut the clips</li><li class="lt-arrow" aria-hidden="true">→</li><li><b>03</b>Add your brand</li><li class="lt-arrow" aria-hidden="true">→</li><li><b>04</b>Post everywhere</li><li class="lt-arrow" aria-hidden="true">→</li><li><b>05</b>Get paid</li><li class="lt-arrow" aria-hidden="true">→</li><li class="lt-loop"><i aria-hidden="true">↻</i>Next event</li></ul>
                     </div>
                 </div>
             </div>
