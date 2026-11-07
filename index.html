@@ -325,141 +325,263 @@
             </div>
         </section>
 
-        <section class="md:py-32 md:px-8 pt-24 pr-4 pb-24 pl-4 relative" id="how-it-works">
+        <section class="md:py-28 md:px-8 pt-20 pr-4 pb-20 pl-4 relative" id="how-it-works">
             <style>
-                .nt-head { text-align:center; margin-bottom:48px; }
-                .nt-head h2 { font:900 clamp(28px,4vw,44px)/1.05 'Helvetica Neue', Helvetica, Arial, sans-serif; text-transform:uppercase; color:#fff; margin:0 0 12px; }
-                .nt-head p { font:400 16px/1.5 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#a1a1aa; margin:0 0 18px; }
-                .nt-live { display:inline-flex; align-items:center; gap:8px; padding:6px 14px; border:1px solid rgba(239,68,68,.5); background:rgba(239,68,68,.08); border-radius:999px; font:600 11px 'JetBrains Mono', monospace; letter-spacing:.18em; color:#ef4444; }
-                .nt-live i, .nt-rec i { width:8px; height:8px; border-radius:50%; background:#ef4444; animation:ntPulse 1.4s ease-in-out infinite; }
-                @keyframes ntPulse { 50% { opacity:.3; } }
-                .nt-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; list-style:none; margin:0; padding:0; counter-reset:nt; }
-                /* Square cards like the rest of the page: mono label on the picture, step + night progress, specs as a key/value table */
-                .nt-card { position:relative; border:1px solid #27272a; background:rgba(10,10,10,.5); overflow:hidden; transition:border-color .25s ease, background-color .25s ease; }
-                .nt-card:hover { border-color:rgba(57,255,20,.5); background:rgba(57,255,20,.03); }
-                .nt-vis { position:relative; height:206px; padding-top:20px; box-sizing:border-box; background:#0c0c0e radial-gradient(rgba(255,255,255,.06) 1px, transparent 1px) 0 0/16px 16px; display:flex; align-items:center; justify-content:center; overflow:hidden; }
-                .nt-vis::before { content:attr(data-tag); position:absolute; left:14px; top:12px; font:500 10px 'JetBrains Mono', monospace; letter-spacing:.2em; text-transform:uppercase; color:rgba(57,255,20,.7); }
-                .nt-vis::after { content:"AUTO"; position:absolute; right:14px; top:12px; font:500 10px 'JetBrains Mono', monospace; letter-spacing:.2em; color:#52525b; }
-                .nt-prog { height:2px; background:#1f1f22; }
-                .nt-prog::after { content:""; display:block; height:100%; width:calc(var(--n) * 100% / 6); background:#39FF14; box-shadow:0 0 6px rgba(57,255,20,.6); }
-                .nt-txt { padding:20px 22px 22px; }
-                .nt-meta { display:flex; justify-content:space-between; align-items:baseline; }
-                .nt-time { font:700 12px 'JetBrains Mono', monospace; color:#39FF14; letter-spacing:.06em; }
-                .nt-step { font:500 10px 'JetBrains Mono', monospace; letter-spacing:.2em; color:#52525b; }
-                .nt-txt h3 { font:600 20px/1.2 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif !important; text-transform:uppercase !important; letter-spacing:-.01em; color:#fff; margin:10px 0 8px; }
-                .nt-txt p { font:400 13px/1.6 'JetBrains Mono', monospace; color:#a1a1aa; margin:0; }
-                .nt-spec { margin:16px 0 0; border-top:1px solid #1f1f22; }
-                .nt-spec div { display:flex; justify-content:space-between; gap:12px; padding:7px 0; border-bottom:1px dashed #1f1f22; font:400 11px/1.4 'JetBrains Mono', monospace; letter-spacing:.02em; }
-                .nt-spec dt { color:#71717a; text-transform:uppercase; letter-spacing:.14em; font-size:10px; white-space:nowrap; }
-                .nt-spec dd { margin:0; color:#d4d4d8; text-align:right; }
-                /* 1 calendar → camera on */
-                .nt-cal { width:120px; border:1px solid #2a2a2e; border-radius:12px; background:#141416; overflow:hidden; font:500 11px 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#d4d4d8; }
-                .nt-cal b { display:block; padding:7px 10px; background:#1c1c1f; font:700 10px 'JetBrains Mono', monospace; letter-spacing:.12em; color:#71717a; }
-                .nt-cal span { display:block; margin:8px; padding:8px; border-radius:8px; background:rgba(57,255,20,.12); color:#39FF14; font-weight:700; }
-                .nt-arrow { margin:0 14px; color:#3f3f46; font-size:22px; }
-                .nt-camera { position:relative; width:64px; height:64px; color:#e4e4e7; }
-                .nt-camera svg { width:64px; height:64px; }
-                .nt-rec { position:absolute; top:-14px; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:5px; font:700 9px 'JetBrains Mono', monospace; letter-spacing:.12em; color:#ef4444; }
-                /* 2 phone control: a landscape phone running Camera Control */
-                .nt-phone { position:relative; width:262px; height:132px; padding:7px; border-radius:26px; background:linear-gradient(145deg,#2a2a2e,#111113); box-shadow:0 0 0 1px #3f3f46, 0 18px 40px -16px rgba(0,0,0,.8); }
-                .nt-screen { position:relative; width:100%; height:100%; border-radius:20px; overflow:hidden; background:#000 url(/img/af/feed.webp) center/cover; }
-                .nt-island { position:absolute; left:6px; top:50%; width:9px; height:34px; margin-top:-17px; border-radius:6px; background:#000; }
-                .nt-recb { position:absolute; left:22px; top:8px; display:flex; align-items:center; gap:5px; padding:3px 7px; border-radius:6px; background:rgba(0,0,0,.55); font:700 8px 'JetBrains Mono', monospace; letter-spacing:.1em; color:#fff; }
-                .nt-recb i { width:6px; height:6px; border-radius:50%; background:#ef4444; animation:ntPulse 1.4s ease-in-out infinite; }
-                /* Tracking box like a real camera overlay: corner brackets, a confidence readout, a centre point, small uneven moves */
-                .nt-track { --c:rgba(57,255,20,.9); position:absolute; left:31%; top:33%; width:44px; height:50px; background:
-                    linear-gradient(var(--c),var(--c)) 0 0/9px 1px, linear-gradient(var(--c),var(--c)) 0 0/1px 9px,
-                    linear-gradient(var(--c),var(--c)) 100% 0/9px 1px, linear-gradient(var(--c),var(--c)) 100% 0/1px 9px,
-                    linear-gradient(var(--c),var(--c)) 0 100%/9px 1px, linear-gradient(var(--c),var(--c)) 0 100%/1px 9px,
-                    linear-gradient(var(--c),var(--c)) 100% 100%/9px 1px, linear-gradient(var(--c),var(--c)) 100% 100%/1px 9px;
-                    background-repeat:no-repeat; outline:1px solid rgba(57,255,20,.18); animation:ntTrack 6s cubic-bezier(.45,0,.3,1) infinite; }
-                .nt-track::before { content:""; position:absolute; left:50%; top:42%; width:3px; height:3px; margin:-1.5px 0 0 -1.5px; border-radius:50%; background:var(--c); }
-                .nt-track::after { content:"DJ 0.97"; position:absolute; top:-10px; left:0; white-space:nowrap; padding:0 3px; background:rgba(0,0,0,.6); color:#39FF14; font:500 6.5px/9px 'JetBrains Mono', monospace; letter-spacing:.06em; animation:ntConf 6s steps(1) infinite; }
-                @keyframes ntTrack { 0%,100% { transform:translate(0,0); width:44px; } 18% { transform:translate(3px,1px); } 37% { transform:translate(1px,2px); width:46px; } 55% { transform:translate(6px,2px); width:43px; } 72% { transform:translate(4px,0); } 86% { transform:translate(-1px,1px); width:45px; } }
-                @keyframes ntConf { 0% { content:"DJ 0.97"; } 33% { content:"DJ 0.94"; } 66% { content:"DJ 0.98"; } }
-                .nt-joy { position:absolute; right:12px; bottom:12px; width:44px; height:44px; border-radius:50%; border:1px solid rgba(255,255,255,.35); background:rgba(0,0,0,.35); backdrop-filter:blur(4px); }
-                .nt-joy i { position:absolute; left:50%; top:50%; width:18px; height:18px; margin:-9px 0 0 -9px; border-radius:50%; background:#fff; animation:ntPad 3.2s ease-in-out infinite; }
-                @keyframes ntPad { 0%,100% { transform:translate(0,0); } 25% { transform:translate(8px,-4px); } 50% { transform:translate(-7px,5px); } 75% { transform:translate(4px,7px); } }
-                .nt-zoom { position:absolute; left:22px; bottom:10px; display:flex; gap:2px; padding:2px; border-radius:999px; background:rgba(0,0,0,.55); }
-                .nt-zoom b { padding:2px 6px; border-radius:999px; font:700 8px 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#d4d4d8; }
-                .nt-zoom b.on { background:#fff; color:#000; }
-                /* 3 saved session */
-                .nt-sess { width:210px; border:1px solid #2a2a2e; border-radius:12px; background:#141416; padding:8px; display:flex; gap:10px; align-items:center; }
-                .nt-sess div:first-child { width:76px; height:48px; border-radius:7px; background:url(/img/af/session.jpg) center/cover; flex-shrink:0; }
-                .nt-sess b { display:block; font:800 13px 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#fff; }
-                .nt-sess span { display:block; margin-top:3px; font:500 10px 'JetBrains Mono', monospace; color:#71717a; letter-spacing:.06em; }
-                .nt-stack { position:relative; }
-                .nt-stack::before, .nt-stack::after { content:""; position:absolute; left:10px; right:10px; height:100%; border:1px solid #1f1f22; border-radius:12px; background:#101012; z-index:-1; }
-                .nt-stack::before { top:8px; } .nt-stack::after { top:16px; left:20px; right:20px; }
-                /* 4 multi-camera edit */
-                .nt-mc { width:230px; }
-                .nt-tiles { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:12px; }
-                .nt-tiles div { aspect-ratio:16/10; border-radius:6px; background-size:cover; background-position:center; border:2px solid transparent; opacity:.45; animation:ntTile 4.5s infinite; }
-                .nt-tiles div:nth-child(1) { background-image:url(/img/af/tile900.jpg); }
-                .nt-tiles div:nth-child(2) { background-image:url(/img/af/tile3900.jpg); animation-delay:1.5s; }
-                .nt-tiles div:nth-child(3) { background-image:url(/img/af/tile6300.jpg); animation-delay:3s; }
-                @keyframes ntTile { 0%,30% { opacity:1; border-color:#39FF14; } 34%,100% { opacity:.45; border-color:transparent; } }
-                .nt-wave { position:relative; display:flex; align-items:center; gap:2px; height:40px; }
-                .nt-wave span { flex:1; border-radius:2px; background:#3f3f46; }
-                .nt-wave::after { content:""; position:absolute; top:-4px; bottom:-4px; width:2px; background:#39FF14; left:0; animation:ntHead 4.5s linear infinite; }
-                @keyframes ntHead { to { left:100%; } }
-                /* 5 vertical clips */
-                .nt-clips { display:flex; gap:8px; }
-                .nt-clips div { position:relative; width:58px; height:104px; border-radius:9px; background-size:cover; background-position:center; border:1px solid #2a2a2e; overflow:hidden; }
-                /* The watermark as on the real clips (and the clips under Total venue control): the logo bottom left, the artist bottom right */
-                .nt-clips div { container-type:inline-size; }
-                .nt-clips div::before { content:""; position:absolute; bottom:6.25%; left:5.6%; width:12%; height:6.5%; background:url(/logos/a-white.png) left center/contain no-repeat; }
-                .nt-clips div::after { content:"ARTIST NAME"; position:absolute; bottom:9%; transform:translateY(50%); right:calc(7% + 2px); max-width:60%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font:900 6.5cqw/1 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#fff; }
-                .nt-clips div:nth-child(2) { transform:translateY(-8px); }
-                /* 6 posted */
-                .nt-posts { display:grid; grid-template-columns:repeat(2,auto); gap:10px; }
-                .nt-posts span { display:flex; align-items:center; gap:8px; padding:8px 12px; border:1px solid #2a2a2e; border-radius:999px; background:#141416; font:600 12px 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#e4e4e7; }
-                .nt-posts i { width:16px; height:16px; border-radius:50%; background:#39FF14; color:#000; font:900 10px/16px 'Helvetica Neue', Helvetica, Arial, sans-serif; text-align:center; font-style:normal; opacity:0; animation:ntCheck 4s ease infinite; }
-                .nt-posts span:nth-child(2) i { animation-delay:.4s; } .nt-posts span:nth-child(3) i { animation-delay:.8s; } .nt-posts span:nth-child(4) i { animation-delay:1.2s; }
-                @keyframes ntCheck { 0%,15% { opacity:0; transform:scale(.4); } 25%,85% { opacity:1; transform:none; } 100% { opacity:0; } }
-                @media (max-width:900px) { .nt-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-                @media (max-width:600px) { .nt-grid { grid-template-columns:minmax(0,1fr); } }
-                @media (prefers-reduced-motion:reduce) { .nt-grid *, .nt-grid *::after { animation:none !important; } }
+                /* A grid of cards, each a short looping video with controls you can press. Videos are small MP4 loops:
+                   the poster paints at once, the video loads when the card is near the screen and pauses off it. */
+                .bx-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
+                .bx-grid > * { min-width:0; }
+                .bx-w { grid-column:span 2; }
+                .bx-intro { grid-column:span 2; position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:0 0 28px; margin:10px 22px 0; border:1px dashed #3f3f46; }
+                .bx-intro::before, .bx-intro::after { content:"+"; position:absolute; top:-9px; font:400 14px/1 'JetBrains Mono', monospace; color:#71717a; }
+                .bx-intro::before { left:-5px; } .bx-intro::after { right:-5px; }
+                .bx-intro-tag { align-self:stretch; padding:14px 0 12px; border-bottom:1px dashed #3f3f46; font:700 13px 'JetBrains Mono', monospace; letter-spacing:.2em; color:#39FF14; }
+                .bx-intro-tag i { display:inline-block; width:8px; height:13px; margin-left:6px; vertical-align:-2px; background:#39FF14; animation:bxBlink 1s steps(1) infinite; }
+                @keyframes bxBlink { 50% { opacity:0; } }
+                .bx-intro h2 { margin:34px 0 14px; padding:0 20px; font:600 clamp(34px,4.6vw,56px)/1 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:-.03em; color:#fff; }
+                .bx-intro p { max-width:420px; margin:0 auto; padding:0 20px; font:400 16px/1.6 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#a1a1aa; }
+                .bx-cta { display:inline-flex; align-items:center; justify-content:center; min-width:220px; margin-top:30px; padding:16px 30px; border-radius:999px; background:#39FF14; color:#000; font:600 13px 'JetBrains Mono', monospace; letter-spacing:.14em; text-transform:uppercase; text-decoration:none; transition:transform .2s ease, box-shadow .2s ease; }
+                .bx-cta:hover { transform:translateY(-1px); box-shadow:0 10px 30px -10px rgba(57,255,20,.7); }
+                .bx-card { position:relative; display:flex; flex-direction:column; align-items:center; padding:26px 22px 20px; border:1px solid #1f1f22; border-radius:28px; background:#111113; overflow:hidden; }
+                .bx-card h3 { margin:0 0 20px; font:600 17px/1.2 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:-.01em; color:#fff; text-align:center; }
+                .bx-tag { margin-top:auto; padding:3px 7px; border-radius:5px; background:#39FF14; color:#000; font:700 9px/1 'JetBrains Mono', monospace; letter-spacing:.12em; }
+                .bx-body { width:100%; margin:auto 0 18px; }
+                .bx-card > .bx-tag { margin-top:auto; }
+                [data-bx="live"] .bx-stack { aspect-ratio:4/3; }
+                /* Videos stacked in one frame: changing camera is a fade, never a reload */
+                .bx-stack { position:relative; width:100%; aspect-ratio:16/9; border-radius:14px; overflow:hidden; background:#000; }
+                .bx-stack video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; transition:opacity .35s ease; }
+                .bx-stack video.on { opacity:1; }
+                .bx-badge { position:absolute; left:10px; top:10px; z-index:2; display:flex; align-items:center; gap:6px; padding:4px 8px; border-radius:6px; background:rgba(0,0,0,.6); font:700 10px 'JetBrains Mono', monospace; letter-spacing:.1em; color:#fff; }
+                .bx-badge i { width:7px; height:7px; border-radius:50%; background:#ef4444; animation:bxPulse 1.4s ease-in-out infinite; }
+                @keyframes bxPulse { 50% { opacity:.3; } }
+                .bx-cap { position:absolute; left:50%; bottom:10px; z-index:2; transform:translateX(-50%); padding:3px 8px; border-radius:4px; background:#fff; color:#000; font:600 11px 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; white-space:nowrap; }
+                .bx-pills { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:6px; margin-bottom:18px; }
+                .bx-pills > span { margin-right:6px; font:500 11px 'JetBrains Mono', monospace; letter-spacing:.12em; color:#a1a1aa; }
+                .bx-pill { padding:9px 16px; border:1px solid #3f3f46; border-radius:999px; background:none; color:#e4e4e7; font:500 11px 'JetBrains Mono', monospace; letter-spacing:.1em; text-transform:uppercase; cursor:pointer; transition:background-color .2s ease, color .2s ease, border-color .2s ease; }
+                .bx-pill:hover { border-color:#71717a; }
+                .bx-pill[aria-pressed="true"] { background:#fafafa; border-color:#fafafa; color:#000; }
+                .bx-pill:focus { outline:none; } .bx-pill:focus-visible { outline:2px solid #39FF14; outline-offset:2px; }
+                /* Peak moments: what the analysis asks of every stretch of the set */
+                .bx-qs { width:100%; display:flex; flex-direction:column; gap:16px; }
+                .bx-q p { margin:0 0 7px; font:400 13px/1.35 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#e4e4e7; }
+                .bx-q div { display:flex; align-items:center; gap:6px; }
+                .bx-q b { padding:3px 9px; border:1px solid #3f3f46; border-radius:999px; font:700 9px 'JetBrains Mono', monospace; letter-spacing:.1em; color:#71717a; transition:all .25s ease; }
+                .bx-q b.on { background:#39FF14; border-color:#39FF14; color:#000; }
+                .bx-q b.on.no { background:#fafafa; border-color:#fafafa; }
+                .bx-q em { margin-left:auto; font:400 10px 'JetBrains Mono', monospace; font-style:normal; color:#71717a; }
+                /* Edit: the camera tiles and the music under them */
+                .bx-tiles { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:10px; }
+                .bx-tiles button { aspect-ratio:16/9; padding:0; border:2px solid transparent; border-radius:9px; background:#000 center/cover; opacity:.45; cursor:pointer; transition:opacity .3s ease, border-color .3s ease; }
+                .bx-tiles button[aria-pressed="true"] { opacity:1; border-color:#39FF14; }
+                .bx-wave { position:relative; display:flex; align-items:center; gap:2px; height:34px; margin-top:12px; }
+                .bx-wave span { flex:1; border-radius:2px; background:#3f3f46; }
+                .bx-wave::after { content:""; position:absolute; top:-3px; bottom:-3px; left:var(--p,0%); width:2px; background:#39FF14; box-shadow:0 0 6px rgba(57,255,20,.7); }
+                /* Clips: three vertical clips, the Brand Kit's watermark on or off */
+                .bx-clips { display:flex; justify-content:center; gap:10px; }
+                .bx-clip { position:relative; width:30%; max-width:170px; aspect-ratio:9/16; border-radius:12px; overflow:hidden; background:#000; container-type:inline-size; }
+                .bx-clip:nth-child(2) { transform:translateY(-10px); }
+                .bx-clip video { width:100%; height:100%; object-fit:cover; display:block; }
+                .bx-clip::before { content:""; position:absolute; bottom:6.25%; left:5.6%; width:13%; height:7%; background:url(/logos/a-white.png) left center/contain no-repeat; transition:opacity .3s ease; }
+                .bx-clip::after { content:"ARTIST NAME"; position:absolute; bottom:9.5%; transform:translateY(50%); right:7%; font:900 7cqw/1 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#fff; transition:opacity .3s ease; }
+                .bx-clips.no-logo .bx-clip::before, .bx-clips.no-name .bx-clip::after { opacity:0; }
+                /* Saved: the night's sets, one row each */
+                .bx-split { display:grid; grid-template-columns:1.25fr 1fr; gap:14px; align-items:center; }
+                .bx-sets { display:flex; flex-direction:column; gap:6px; }
+                .bx-sets button { display:grid; grid-template-columns:auto 1fr; gap:2px 10px; padding:10px 12px; border:1px solid #27272a; border-radius:12px; background:none; text-align:left; cursor:pointer; transition:border-color .25s ease, background-color .25s ease; }
+                .bx-sets button[aria-pressed="true"] { border-color:#3f3f46; background:#18181b; }
+                .bx-sets time { grid-row:span 2; font:700 11px 'JetBrains Mono', monospace; color:#39FF14; }
+                .bx-sets b { font:700 12px 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#fff; letter-spacing:.02em; }
+                .bx-sets small { font:400 10px 'JetBrains Mono', monospace; color:#71717a; letter-spacing:.06em; }
+                .bx-sets button i { grid-column:2; height:2px; margin-top:6px; border-radius:2px; background:#27272a; overflow:hidden; }
+                .bx-sets button i::after { content:""; display:block; height:100%; width:0; background:#39FF14; }
+                .bx-sets button[aria-pressed="true"] i::after { animation:bxFill 4s linear forwards; }
+                @keyframes bxFill { to { width:100%; } }
+                /* Publish: the platforms, each going from waiting to posted */
+                .bx-pub { display:grid; grid-template-columns:auto 1fr; gap:16px; align-items:center; }
+                .bx-pub .bx-clip { width:118px; transform:none; }
+                .bx-plats { display:flex; flex-direction:column; gap:8px; }
+                .bx-plat { display:grid; grid-template-columns:1fr auto; align-items:center; gap:4px 10px; padding:10px 12px; border:1px solid #27272a; border-radius:12px; }
+                .bx-plat b { font:600 13px 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#fff; }
+                .bx-plat span { white-space:nowrap; font:700 9px 'JetBrains Mono', monospace; letter-spacing:.12em; color:#71717a; }
+                .bx-plat.done span { color:#39FF14; }
+                .bx-plat i { grid-column:span 2; height:2px; border-radius:2px; background:#27272a; overflow:hidden; }
+                .bx-plat i::after { content:""; display:block; height:100%; width:var(--w,0%); background:#39FF14; transition:width .25s linear; }
+                @media (max-width:900px) { .bx-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .bx-intro { margin:10px 0 0; } }
+                @media (max-width:640px) { .bx-grid { grid-template-columns:minmax(0,1fr); } .bx-w, .bx-intro { grid-column:auto; } .bx-split, .bx-pub { grid-template-columns:minmax(0,1fr); } .bx-pub .bx-clip { width:46%; margin:0 auto; } }
+                @media (prefers-reduced-motion:reduce) { .bx-grid *, .bx-grid *::after { animation:none !important; transition:none !important; } }
             </style>
             <div class="max-w-6xl mx-auto">
-                <div class="nt-head reveal active">
-                    <h2>Saturday night // 02:00 AM</h2>
-                    <p>One night at your venue. Nobody presses a button.</p>
-                    <span class="nt-live"><i></i>LIVE</span>
+                <div class="bx-grid">
+                    <div class="bx-intro reveal active">
+                        <div class="bx-intro-tag">// RECORD<i></i></div>
+                        <h2>Every set, filmed.</h2>
+                        <p>Cameras that start themselves, edits cut to the music, clips with your brand on them, posted the second they're ready. Nobody presses a button.</p>
+                        <a class="bx-cta" href="#pricing-plans">Start recording</a>
+                    </div>
+
+                    <div class="bx-card reveal delay-100" data-bx="live">
+                        <h3>Live recording</h3>
+                        <div class="bx-body">
+                            <div class="bx-stack">
+                                <span class="bx-badge"><i></i>REC <span data-bx-clock>01:42:15</span></span>
+                                <video class="on" muted playsinline loop preload="none" poster="/img/af/stage-poster.jpg" data-src="/img/af/stage.mp4"></video>
+                                <video muted playsinline loop preload="none" poster="/img/af/live-poster.jpg" data-src="/img/af/live.mp4"></video>
+                                <video muted playsinline loop preload="none" poster="/img/af/feed-poster.jpg" data-src="/img/af/feed.mp4"></video>
+                            </div>
+                        </div>
+                        <div class="bx-pills" role="group" aria-label="Camera">
+                            <button type="button" class="bx-pill" aria-pressed="true" data-i="0">Cam 1</button><button type="button" class="bx-pill" aria-pressed="false" data-i="1">Cam 2</button><button type="button" class="bx-pill" aria-pressed="false" data-i="2">Cam 3</button>
+                        </div>
+                        <span class="bx-tag">AUTO</span>
+                    </div>
+
+                    <div class="bx-card reveal delay-200" data-bx="peak">
+                        <h3>Peak moments</h3>
+                        <div class="bx-body bx-qs">
+                            <div class="bx-q"><p>Is this a drop?</p><div><b data-v="yes">YES</b><b data-v="no" class="no">NO</b><em>0.96</em></div></div>
+                            <div class="bx-q"><p>Is someone playing?</p><div><b data-v="yes">YES</b><b data-v="no" class="no">NO</b><em>0.99</em></div></div>
+                            <div class="bx-q"><p>Is the booth empty?</p><div><b data-v="yes">YES</b><b data-v="no" class="no">NO</b><em>0.03</em></div></div>
+                        </div>
+                        <span class="bx-tag">AUTO</span>
+                    </div>
+
+                    <div class="bx-card bx-w reveal delay-100" data-bx="edit">
+                        <h3>Cut to the music</h3>
+                        <div class="bx-body">
+                            <div class="bx-stack">
+                                <span class="bx-badge">EDIT · <span data-bx-cam>CAM 1</span></span>
+                                <video class="on" muted playsinline loop preload="none" poster="/img/af/stage-poster.jpg" data-src="/img/af/stage.mp4"></video>
+                                <video muted playsinline loop preload="none" poster="/img/af/live-poster.jpg" data-src="/img/af/live.mp4"></video>
+                                <video muted playsinline loop preload="none" poster="/img/af/feed-poster.jpg" data-src="/img/af/feed.mp4"></video>
+                            </div>
+                            <div class="bx-tiles" role="group" aria-label="Camera in the edit">
+                                <button type="button" aria-pressed="true" aria-label="Camera 1" data-i="0" style="background-image:url(/img/af/stage-poster.jpg)"></button><button type="button" aria-pressed="false" aria-label="Camera 2" data-i="1" style="background-image:url(/img/af/live-poster.jpg)"></button><button type="button" aria-pressed="false" aria-label="Camera 3" data-i="2" style="background-image:url(/img/af/feed-poster.jpg)"></button>
+                            </div>
+                            <div class="bx-wave" aria-hidden="true"><span style="height:30%"></span><span style="height:55%"></span><span style="height:80%"></span><span style="height:45%"></span><span style="height:95%"></span><span style="height:60%"></span><span style="height:35%"></span><span style="height:70%"></span><span style="height:90%"></span><span style="height:50%"></span><span style="height:25%"></span><span style="height:65%"></span><span style="height:85%"></span><span style="height:40%"></span><span style="height:75%"></span><span style="height:55%"></span><span style="height:30%"></span><span style="height:60%"></span><span style="height:95%"></span><span style="height:45%"></span><span style="height:70%"></span><span style="height:35%"></span><span style="height:80%"></span><span style="height:50%"></span><span style="height:65%"></span><span style="height:90%"></span><span style="height:40%"></span><span style="height:75%"></span><span style="height:30%"></span><span style="height:60%"></span><span style="height:85%"></span><span style="height:50%"></span></div>
+                        </div>
+                        <div class="bx-pills" role="group" aria-label="Cuts"><span>CUTS:</span><button type="button" class="bx-pill" aria-pressed="false" data-bars="4">4 bars</button><button type="button" class="bx-pill" aria-pressed="true" data-bars="8">8 bars</button><button type="button" class="bx-pill" aria-pressed="false" data-bars="16">16 bars</button></div>
+                        <span class="bx-tag">AUTO</span>
+                    </div>
+
+                    <div class="bx-card bx-w reveal delay-200" data-bx="clips">
+                        <h3>Clips, ready to post</h3>
+                        <div class="bx-body">
+                            <div class="bx-clips">
+                                <div class="bx-clip"><video muted playsinline loop preload="none" poster="/img/af/v1-poster.jpg" data-src="/img/af/v1.mp4"></video></div>
+                                <div class="bx-clip"><video muted playsinline loop preload="none" poster="/img/af/v2-poster.jpg" data-src="/img/af/v2.mp4"></video></div>
+                                <div class="bx-clip"><video muted playsinline loop preload="none" poster="/img/af/v3-poster.jpg" data-src="/img/af/v3.mp4"></video></div>
+                            </div>
+                        </div>
+                        <div class="bx-pills" role="group" aria-label="Watermark"><span>BRAND:</span><button type="button" class="bx-pill" aria-pressed="true" data-wm="logo">Logo</button><button type="button" class="bx-pill" aria-pressed="true" data-wm="name">Artist name</button></div>
+                        <span class="bx-tag">1080 × 1920</span>
+                    </div>
+
+                    <div class="bx-card bx-w reveal delay-100" data-bx="sets">
+                        <h3>Saved for every DJ</h3>
+                        <div class="bx-body bx-split">
+                            <div class="bx-stack">
+                                <span class="bx-badge" data-bx-set>22:00 · ARTIST NAME</span>
+                                <video class="on" muted playsinline loop preload="none" poster="/img/af/live-poster.jpg" data-src="/img/af/live.mp4"></video>
+                                <video muted playsinline loop preload="none" poster="/img/af/stage-poster.jpg" data-src="/img/af/stage.mp4"></video>
+                                <video muted playsinline loop preload="none" poster="/img/af/feed-poster.jpg" data-src="/img/af/feed.mp4"></video>
+                            </div>
+                            <div class="bx-sets" role="group" aria-label="Sets">
+                                <button type="button" aria-pressed="true" data-i="0"><time>22:00</time><b>ARTIST NAME</b><small>WARM-UP · 1H 00M</small><i></i></button>
+                                <button type="button" aria-pressed="false" data-i="1"><time>23:00</time><b>ARTIST NAME</b><small>MAIN · 2H 00M</small><i></i></button>
+                                <button type="button" aria-pressed="false" data-i="2"><time>01:00</time><b>ARTIST NAME</b><small>CLOSING · 1H 30M</small><i></i></button>
+                            </div>
+                        </div>
+                        <span class="bx-tag">BY ARTIST · DATE</span>
+                    </div>
+
+                    <div class="bx-card bx-w reveal delay-200" data-bx="publish">
+                        <h3>Live everywhere</h3>
+                        <div class="bx-body bx-pub">
+                            <div class="bx-clip"><video muted playsinline loop preload="none" poster="/img/af/v4-poster.jpg" data-src="/img/af/v4.mp4"></video></div>
+                            <div class="bx-plats">
+                                <div class="bx-plat"><b>YouTube</b><span>WAITING</span><i></i></div>
+                                <div class="bx-plat"><b>SoundCloud</b><span>WAITING</span><i></i></div>
+                                <div class="bx-plat"><b>Instagram · TikTok</b><span>WAITING</span><i></i></div>
+                            </div>
+                        </div>
+                        <div class="bx-pills"><button type="button" class="bx-pill" aria-pressed="false" data-bx-post>Post again</button></div>
+                        <span class="bx-tag">AUTO</span>
+                    </div>
                 </div>
-                <ol class="nt-grid">
-                    <li style="--n:1" class="nt-card reveal delay-100">
-                        <div class="nt-vis" data-tag="// Schedule"><div class="nt-cal"><b>SAT 23:00</b><span>ARTIST NAME</span></div><span class="nt-arrow">→</span><div class="nt-camera"><span class="nt-rec"><i></i>REC</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3"/></svg></div></div>
-                        <div class="nt-prog"></div>
-                        <div class="nt-txt"><div class="nt-meta"><span class="nt-time">22:00</span><span class="nt-step">01 / 06</span></div><h3>Cameras start themselves</h3><p>Your calendar switches them on for every set.</p><dl class="nt-spec"><div><dt>Trigger</dt><dd>iCal sync</dd></div><div><dt>Pre-roll</dt><dd>2 min early</dd></div><div><dt>Ingest</dt><dd>RTMP → cloud</dd></div></dl></div>
-                    </li>
-                    <li style="--n:2" class="nt-card reveal delay-200">
-                        <div class="nt-vis" data-tag="// Control"><div class="nt-phone"><div class="nt-screen"><span class="nt-island"></span><span class="nt-recb"><i></i>REC · CAM 01</span><span class="nt-track"></span><span class="nt-zoom"><b>1×</b><b class="on">2×</b><b>4×</b></span><span class="nt-joy"><i></i></span></div></div></div>
-                        <div class="nt-prog"></div>
-                        <div class="nt-txt"><div class="nt-meta"><span class="nt-time">23:00</span><span class="nt-step">02 / 06</span></div><h3>Every angle, on your phone</h3><p>Move, zoom and follow the DJ.</p><dl class="nt-spec"><div><dt>Protocol</dt><dd>VISCA over IP</dd></div><div><dt>Recall</dt><dd>Presets</dd></div><div><dt>Follow</dt><dd>AI tracking</dd></div></dl></div>
-                    </li>
-                    <li style="--n:3" class="nt-card reveal delay-300">
-                        <div class="nt-vis" data-tag="// Archive"><div class="nt-stack"><div class="nt-sess"><div></div><div><b>ARTIST NAME</b><span>SAT · 2H 07M</span></div></div></div></div>
-                        <div class="nt-prog"></div>
-                        <div class="nt-txt"><div class="nt-meta"><span class="nt-time">02:00</span><span class="nt-step">03 / 06</span></div><h3>Saved for the DJ</h3><p>Every set, filed by artist and date.</p><dl class="nt-spec"><div><dt>Split</dt><dd>Calendar times</dd></div><div><dt>Master</dt><dd>4K</dd></div><div><dt>Index</dt><dd>Artist · date</dd></div></dl></div>
-                    </li>
-                    <li style="--n:4" class="nt-card reveal delay-100">
-                        <div class="nt-vis" data-tag="// Edit"><div class="nt-mc"><div class="nt-tiles"><div></div><div></div><div></div></div><div class="nt-wave"><span style="height:30%"></span><span style="height:55%"></span><span style="height:80%"></span><span style="height:45%"></span><span style="height:95%"></span><span style="height:60%"></span><span style="height:35%"></span><span style="height:70%"></span><span style="height:90%"></span><span style="height:50%"></span><span style="height:25%"></span><span style="height:65%"></span><span style="height:85%"></span><span style="height:40%"></span><span style="height:75%"></span><span style="height:55%"></span><span style="height:30%"></span><span style="height:60%"></span><span style="height:95%"></span><span style="height:45%"></span><span style="height:70%"></span><span style="height:35%"></span><span style="height:80%"></span><span style="height:50%"></span></div></div></div>
-                        <div class="nt-prog"></div>
-                        <div class="nt-txt"><div class="nt-meta"><span class="nt-time">02:15</span><span class="nt-step">04 / 06</span></div><h3>Cut to the music</h3><p>Every camera, edited into one full set.</p><dl class="nt-spec"><div><dt>Sync</dt><dd>Console audio</dd></div><div><dt>Cuts</dt><dd>Every 4–16 bars</dd></div><div><dt>Render</dt><dd>Mac mini</dd></div></dl></div>
-                    </li>
-                    <li style="--n:5" class="nt-card reveal delay-200">
-                        <div class="nt-vis" data-tag="// Clips"><div class="nt-clips"><div style="background-image:url(/img/af/v1.webp)"></div><div style="background-image:url(/img/af/v2.webp)"></div><div style="background-image:url(/img/af/v3.webp)"></div></div></div>
-                        <div class="nt-prog"></div>
-                        <div class="nt-txt"><div class="nt-meta"><span class="nt-time">03:00</span><span class="nt-step">05 / 06</span></div><h3>Clips, ready to post</h3><p>Vertical and branded with your logo.</p><dl class="nt-spec"><div><dt>Format</dt><dd>1080 × 1920</dd></div><div><dt>Reframe</dt><dd>On the DJ</dd></div><div><dt>Brand</dt><dd>Logo · your fonts</dd></div></dl></div>
-                    </li>
-                    <li style="--n:6" class="nt-card reveal delay-300">
-                        <div class="nt-vis" data-tag="// Publish"><div class="nt-posts"><span><i>✓</i>YouTube</span><span><i>✓</i>SoundCloud</span><span><i>✓</i>Instagram</span><span><i>✓</i>TikTok</span></div></div>
-                        <div class="nt-prog"></div>
-                        <div class="nt-txt"><div class="nt-meta"><span class="nt-time">03:01</span><span class="nt-step">06 / 06</span></div><h3>Live everywhere</h3><p>Posted the second it's ready.</p><dl class="nt-spec"><div><dt>Direct</dt><dd>YouTube · SoundCloud</dd></div><div><dt>Delivery</dt><dd>Streaming · downloads</dd></div></dl></div>
-                    </li>
-                </ol>
             </div>
+            <script>
+            (function () {
+                var root = document.getElementById('how-it-works'); if (!root) return;
+                var still = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+                function vids(el) { return Array.prototype.slice.call(el.querySelectorAll('video')); }
+                // Play only what is on screen; the file is fetched the first time its card comes near
+                function wake(v) { if (!v.src && v.dataset.src) v.src = v.dataset.src; if (!still) { var p = v.play(); if (p && p.catch) p.catch(function () {}); } }
+                var cards = root.querySelectorAll('.bx-card');
+                if ('IntersectionObserver' in window) {
+                    var io = new IntersectionObserver(function (es) { es.forEach(function (e) { e.target._seen = e.isIntersecting; vids(e.target).forEach(function (v) { e.isIntersecting ? wake(v) : v.pause(); }); }); }, { rootMargin: '200px 0px', threshold: 0.01 });
+                    Array.prototype.forEach.call(cards, function (c) { io.observe(c); });
+                } else Array.prototype.forEach.call(cards, function (c) { c._seen = true; vids(c).forEach(wake); });
+                // A row of buttons that picks one of the stacked videos (by data-i); auto moves on every ms unless pressed
+                function picker(card, sel, ms, after) {
+                    var btns = card.querySelectorAll(sel), stack = card.querySelectorAll('.bx-stack video'), i = 0, t;
+                    function show(n) {
+                        i = n;
+                        Array.prototype.forEach.call(btns, function (b, k) { b.setAttribute('aria-pressed', k === n ? 'true' : 'false'); });
+                        Array.prototype.forEach.call(stack, function (v, k) { v.classList.toggle('on', k === n); if (k === n && card._seen) wake(v); });
+                        if (after) after(n);
+                    }
+                    function loop() { clearInterval(t); if (ms && !still) t = setInterval(function () { if (card._seen) show((i + 1) % btns.length); }, ms); }
+                    Array.prototype.forEach.call(btns, function (b, k) { b.addEventListener('click', function () { show(k); loop(); }); });
+                    loop(); return { set: function (m) { ms = m; loop(); } };
+                }
+                var live = root.querySelector('[data-bx="live"]');
+                picker(live, '.bx-pill', 3200);
+                var clock = live.querySelector('[data-bx-clock]'), s = 6135;
+                setInterval(function () { s++; var h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, x = s % 60; clock.textContent = ('0' + h).slice(-2) + ':' + ('0' + m).slice(-2) + ':' + ('0' + x).slice(-2); }, 1000);
+                // Edit: the camera changes on the beat; the cut length sets how often
+                var edit = root.querySelector('[data-bx="edit"]'), camLbl = edit.querySelector('[data-bx-cam]'), wave = edit.querySelector('.bx-wave');
+                var ed = picker(edit, '.bx-tiles button', 2000, function (n) { camLbl.textContent = 'CAM ' + (n + 1); });
+                Array.prototype.forEach.call(edit.querySelectorAll('[data-bars]'), function (b, k, all) {
+                    b.addEventListener('click', function () { Array.prototype.forEach.call(all, function (o) { o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); }); ed.set(+b.dataset.bars * 250); });
+                });
+                var p = 0; if (!still) setInterval(function () { if (!edit._seen) return; p = (p + 0.4) % 100; wave.style.setProperty('--p', p + '%'); }, 50);
+                // Clips: the watermark's logo and artist name on or off
+                var clips = root.querySelector('[data-bx="clips"]'), row = clips.querySelector('.bx-clips');
+                Array.prototype.forEach.call(clips.querySelectorAll('[data-wm]'), function (b) {
+                    b.addEventListener('click', function () { var on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', on ? 'true' : 'false'); row.classList.toggle('no-' + b.dataset.wm, !on); });
+                });
+                // Sets: one row per DJ, each played in turn
+                var sets = root.querySelector('[data-bx="sets"]'), setLbl = sets.querySelector('[data-bx-set]');
+                picker(sets, '.bx-sets button', 4000, function (n) { setLbl.textContent = sets.querySelectorAll('.bx-sets time')[n].textContent + ' · ARTIST NAME'; });
+                // Publish: each platform fills up and turns to posted, one after the other
+                var pub = root.querySelector('[data-bx="publish"]'), plats = pub.querySelectorAll('.bx-plat'), done = ['POSTED', 'POSTED', 'READY'], run = 0;
+                function post() {
+                    var me = ++run;
+                    Array.prototype.forEach.call(plats, function (pl) { pl.classList.remove('done'); pl.querySelector('span').textContent = 'WAITING'; pl.style.setProperty('--w', '0%'); });
+                    (function one(k) {
+                        if (me !== run || k >= plats.length) return;
+                        var pl = plats[k], w = 0; pl.querySelector('span').textContent = 'UPLOADING';
+                        var t = setInterval(function () {
+                            if (me !== run) return clearInterval(t);
+                            w = Math.min(100, w + 9); pl.style.setProperty('--w', w + '%');
+                            if (w >= 100) { clearInterval(t); pl.classList.add('done'); pl.querySelector('span').textContent = done[k]; setTimeout(function () { one(k + 1); }, 250); }
+                        }, still ? 1 : 70);
+                    })(0);
+                }
+                pub.querySelector('[data-bx-post]').addEventListener('click', post);
+                var posted = false;
+                if ('IntersectionObserver' in window) new IntersectionObserver(function (es, o) { if (es[0].isIntersecting && !posted) { posted = true; post(); o.disconnect(); } }, { threshold: 0.4 }).observe(pub);
+                else post();
+                // Peak moments: the answers change as the analysis moves along the set
+                var qs = root.querySelectorAll('[data-bx="peak"] .bx-q'), frames = [[['yes', '0.96'], ['yes', '0.99'], ['no', '0.03']], [['no', '0.21'], ['yes', '0.97'], ['no', '0.02']], [['yes', '0.91'], ['yes', '0.98'], ['no', '0.05']]], f = 0;
+                function answer() {
+                    frames[f].forEach(function (a, k) { var q = qs[k]; Array.prototype.forEach.call(q.querySelectorAll('b'), function (b) { b.classList.toggle('on', b.dataset.v === a[0]); }); q.querySelector('em').textContent = a[1]; });
+                    f = (f + 1) % frames.length;
+                }
+                answer(); if (!still) setInterval(answer, 2600);
+            })();
+            </script>
         </section>
 
         <section class="py-24 relative overflow-hidden">
