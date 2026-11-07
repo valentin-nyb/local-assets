@@ -325,7 +325,9 @@ function planFeatures(planId, type, t, included, name) {
     brand,
     'Connect your DJI, Sony Alpha and more',
   ];
-  if (planId === 'starter-distribution') return [who, sets, '6 vertical clips from every set', brand, space, 'Connect your DJI, Sony Alpha and more\nOr add one of our cameras for £149 a month, 12-month minimum.\nSet up for you, controlled from Camera Control.'];
+  // Labels (and managements) give their artists access: invited by email (api/brand.js), or signing up themselves
+  const access = type === 'label' || type === 'management' ? ['Give your artists access: invite them, or they sign up, and each sees all their sets, events and venues in one place'] : [];
+  if (planId === 'starter-distribution') return [who, sets, ...access, '6 vertical clips from every set', brand, space, 'Connect your DJI, Sony Alpha and more\nOr add one of our cameras for £149 a month, 12-month minimum.\nSet up for you, controlled from Camera Control.'];
   // Pro: artists and venues add our PTZ camera for £149 a month; record labels get one included
   if (planId === 'liveset-distribution') return [who, sets, '12 vertical clips from every set', brand, space,
     artist ? 'Connect your DJI, Sony Alpha and more\nOr add one of our cameras for £149 a month, 12-month minimum.\nSet up for you, controlled from Camera Control.' : '1 PTZ camera included, set up for you (12-month minimum)'];
