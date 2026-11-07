@@ -89,14 +89,18 @@
         #status.ok  { color: var(--green); }
 
         .foot { position: fixed; left: 0; right: 0; bottom: calc(max(env(safe-area-inset-bottom), 12px) + 18px); text-align: center;
-                font-family: var(--mono); font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: #52564f; z-index: 1; }
+                padding: 0 24px; font-family: var(--mono); font-size: 9px; line-height: 1.9; letter-spacing: .14em; text-transform: uppercase; color: #52564f; z-index: 1; }
+        /* One line per part on a phone; one line, dot-separated, on a wide screen */
+        .foot span { display: block; }
         .foot a { font-family: var(--mono); color: #7c8178; }
 
         @media (min-width: 980px) {
             :root { --col: 420px; }
             .wordmark { top: 40px; left: 24px; }
             h1 { font-size: 50px; }
-            .foot { bottom: 32px; }
+            .foot { bottom: 32px; font-size: 10px; letter-spacing: .18em; }
+            .foot span { display: inline; }
+            .foot span + span::before { content: ' · '; }
         }
     </style>
     <script>// No right-click menu anywhere in the app (text fields keep theirs, to paste)
@@ -137,7 +141,7 @@
         <p class="terms">By continuing you agree to our <a href="/terms">Terms of Service</a> and <a href="/privacy">Privacy policy</a>. Only invited accounts can sign in.</p>
     </main>
 
-    <p class="foot">© 2026 LOCAL / ASSETS LTD · Registered in England and Wales, company no. 17559431 · 66 Paul Street, London EC2A 4NA</p>
+    <p class="foot"><span>© 2026 LOCAL / ASSETS LTD</span><span>Registered in England and Wales</span><span>Company no. 17559431</span><span>66 Paul Street, London EC2A 4NA</span></p>
 
 
     <script>
