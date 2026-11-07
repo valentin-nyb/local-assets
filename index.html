@@ -103,8 +103,8 @@
         .vc-eyebrow { font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.3em; text-transform:uppercase; color:#39FF14; }
         .vc-title { font:900 28px/1.15 "Helvetica Neue", Helvetica, Arial, sans-serif; text-transform:uppercase; letter-spacing:-.01em; color:#fff; margin:12px 0; }
         .vc-text { font-size:15px; line-height:1.65; color:#a1a1aa; max-width:540px; }
-        .vc-order { display:inline-flex; align-items:center; height:44px; padding:0 20px; margin-top:22px; border-radius:10px; background:#39FF14; color:#000; font:700 14px/1 "Helvetica Neue", Helvetica, Arial, sans-serif; text-decoration:none; transition:background .2s; }
-        .vc-order:hover { background:#fff; }
+        .vc-order { display:inline-flex; align-items:center; justify-content:center; min-width:200px; margin-top:24px; padding:13px 26px; border-radius:999px; background:#39FF14; color:#000; font:600 13px/1 'JetBrains Mono', monospace; letter-spacing:.14em; text-transform:uppercase; text-decoration:none; transition:transform .2s ease, box-shadow .2s ease; }
+        .vc-order:hover { transform:translateY(-1px); box-shadow:0 10px 30px -10px rgba(57,255,20,.7); }
         .vc-note { font-size:12px; color:#71717a; margin-top:12px; }
         .vc-steps { list-style:none; margin:28px 0 0; padding:24px 0 0; border-top:1px solid #1f1f22; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px 28px; }
         .vc-steps li { display:flex; gap:12px; }
@@ -387,6 +387,9 @@
                 .bx-clip::before { content:""; position:absolute; bottom:6.25%; left:5.6%; width:13%; height:7%; background:url(/logos/a-white.png) left center/contain no-repeat; transition:opacity .3s ease; }
                 .bx-clip::after { content:"ARTIST NAME"; position:absolute; bottom:9.5%; transform:translateY(50%); right:7%; font:900 7cqw/1 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#fff; transition:opacity .3s ease; }
                 .bx-clips.no-logo .bx-clip::before, .bx-clips.no-name .bx-clip::after { opacity:0; }
+                /* A moving logo (an animated GIF or WebP in the Brand Kit) plays on every clip */
+                .bx-clips.move .bx-clip::before { transform-origin:30% 50%; animation:bxLogo 2.4s ease-in-out infinite; }
+                @keyframes bxLogo { 0%,100% { transform:none; } 20% { transform:scale(1.25) rotate(-8deg); } 40% { transform:rotateY(180deg); } 60% { transform:rotateY(360deg); } 80% { transform:translateY(-12%) scale(1.1); } }
                 /* Saved: the night's sets, one row each */
                 .bx-split { display:grid; grid-template-columns:1.25fr 1fr; gap:14px; align-items:center; }
                 .bx-sets { display:flex; flex-direction:column; gap:6px; }
@@ -411,7 +414,7 @@
                 .bx-plat i::after { content:""; display:block; height:100%; width:var(--w,0%); background:#39FF14; transition:width .25s linear; }
                 @media (max-width:900px) { .bx-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .bx-intro { margin:10px 0 0; } }
                 @media (max-width:640px) { .bx-grid { grid-template-columns:minmax(0,1fr); } .bx-w, .bx-intro { grid-column:auto; } .bx-split, .bx-pub { grid-template-columns:minmax(0,1fr); } .bx-pub .bx-clip { width:46%; margin:0 auto; } }
-                @media (prefers-reduced-motion:reduce) { .bx-grid *, .bx-grid *::after { animation:none !important; transition:none !important; } }
+                @media (prefers-reduced-motion:reduce) { .bx-grid *, .bx-grid *::before, .bx-grid *::after { animation:none !important; transition:none !important; } }
             </style>
             <div class="max-w-6xl mx-auto">
                 <div class="bx-grid">
@@ -469,13 +472,13 @@
                     <div class="bx-card bx-w reveal delay-200" data-bx="clips">
                         <h3>Clips, ready to post</h3>
                         <div class="bx-body">
-                            <div class="bx-clips">
+                            <div class="bx-clips move">
                                 <div class="bx-clip"><video muted playsinline loop preload="none" poster="/img/af/v1-poster.jpg" data-src="/img/af/v1.mp4"></video></div>
                                 <div class="bx-clip"><video muted playsinline loop preload="none" poster="/img/af/v2-poster.jpg" data-src="/img/af/v2.mp4"></video></div>
                                 <div class="bx-clip"><video muted playsinline loop preload="none" poster="/img/af/v3-poster.jpg" data-src="/img/af/v3.mp4"></video></div>
                             </div>
                         </div>
-                        <div class="bx-pills" role="group" aria-label="Watermark"><span>BRAND:</span><button type="button" class="bx-pill" aria-pressed="true" data-wm="logo">Logo</button><button type="button" class="bx-pill" aria-pressed="true" data-wm="name">Artist name</button></div>
+                        <div class="bx-pills" role="group" aria-label="Watermark"><span>BRAND:</span><button type="button" class="bx-pill" aria-pressed="true" data-wm="logo">Logo</button><button type="button" class="bx-pill" aria-pressed="true" data-wm="name">Artist name</button><button type="button" class="bx-pill" aria-pressed="true" data-wm="move">Moving</button></div>
                         <span class="bx-tag">1080 × 1920</span>
                     </div>
 
@@ -551,7 +554,7 @@
                 // Clips: the watermark's logo and artist name on or off
                 var clips = root.querySelector('[data-bx="clips"]'), row = clips.querySelector('.bx-clips');
                 Array.prototype.forEach.call(clips.querySelectorAll('[data-wm]'), function (b) {
-                    b.addEventListener('click', function () { var on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', on ? 'true' : 'false'); row.classList.toggle('no-' + b.dataset.wm, !on); });
+                    b.addEventListener('click', function () { var on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', on ? 'true' : 'false'); if (b.dataset.wm === 'move') row.classList.toggle('move', on); else row.classList.toggle('no-' + b.dataset.wm, !on); });
                 });
                 // Sets: one row per DJ, each played in turn
                 var sets = root.querySelector('[data-bx="sets"]'), setLbl = sets.querySelector('[data-bx-set]');
