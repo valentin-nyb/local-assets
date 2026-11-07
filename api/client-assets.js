@@ -11,7 +11,9 @@ export default async function handler(req, res) {
   const session = await getClientSession(req);
   if (!session) return res.status(401).json({ error: 'Not authenticated' });
 
-  const { auth } = getMuxAuth(session.profile);
+  const mux = getMuxAuth(session.profile);
+  if (!mux) return res.status(409).json({ error: 'This account has no video storage yet' });
+  const { auth } = mux;
 
   try {
     const muxRes = await fetch('https://api.mux.com/video/v1/assets?limit=100', {

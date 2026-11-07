@@ -32,15 +32,16 @@ export async function getClientSession(req) {
   }
 }
 
-// Returns a Mux-compatible Basic auth header for this client,
-// falling back to the global credentials if none are stored.
+// Returns a Mux-compatible Basic auth header for this client, from ITS OWN keys only: never local / assets'
+// keys, so a client without video storage sees nothing rather than someone else's videos. null when none.
 export function getMuxAuth(profile) {
-  const tokenId     = profile.muxTokenId     || process.env.PROD_MUX_TOKEN_ID || process.env.MUX_TOKEN_ID     || '';
-  const tokenSecret = profile.muxTokenSecret || process.env.PROD_MUX_TOKEN_SECRET || process.env.MUX_TOKEN_SECRET || '';
+  const tokenId     = String(profile.muxTokenId || '').trim();
+  const tokenSecret = String(profile.muxTokenSecret || '').trim();
+  if (!tokenId || !tokenSecret) return null;
   return {
     tokenId,
     tokenSecret,
     auth: Buffer.from(`${tokenId}:${tokenSecret}`).toString('base64'),
-    envKey: profile.muxEnvKey || process.env.MUX_ENVIRONMENT_KEY || '',
+    envKey: profile.muxEnvKey || '',
   };
 }
