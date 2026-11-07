@@ -2,6 +2,7 @@
 <html lang="en" class="dark scroll-smooth">
 <head>
     <meta charset="UTF-8">
+    <script>(function(){try{var t=localStorage.getItem('la_theme'),h=document.documentElement;if(t==='light'||(t==='auto'&&matchMedia('(prefers-color-scheme:light)').matches))h.classList.remove('dark');}catch(e){}})()</script>
     <script src="/la-errors.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
@@ -27,7 +28,6 @@
     <link rel="icon" type="image/svg+xml" href="favicon/favicon.svg?v=4">
     <link rel="apple-touch-icon" href="favicon/apple-touch-icon.png?v=3">
     <link rel="manifest" href="favicon/site.webmanifest?v=3">
-    <script>document.documentElement.classList.add('dark');</script>
     <link rel="stylesheet" href="styles/tailwind.css">
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -255,6 +255,7 @@
         /* Titles: Helvetica Neue Black, all caps (same rule as styles/theme.css) */
         h1:not(header h1), h2, h3 { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif !important; font-weight: 900 !important; text-transform: uppercase !important; letter-spacing: 0 !important; font-style: normal !important; }
     </style>
+    <link rel="stylesheet" href="styles/home-light.css?v=1">
 </head>
 
 <body class="font-sans antialiased bg-background text-foreground overflow-x-hidden selection:bg-primary selection:text-black">
@@ -959,8 +960,8 @@
         const SPACING = 30;
         const DOT_SIZE = 1.2;
         const GLOW_RADIUS = 120;
-        const COLOR_IDLE = '#1a1a1a';
-        const COLOR_ACTIVE = '57, 255, 20';
+        // Dots: dark grey and green on dark, light grey and orange on light
+        const isLight = () => !document.documentElement.classList.contains('dark');
 
         function initCanvases() {
             canvases.forEach((canvas, index) => {
@@ -1000,12 +1001,12 @@
 
                     if (distance < GLOW_RADIUS) {
                         const opacity = 1 - (distance / GLOW_RADIUS);
-                        ctx.fillStyle = `rgba(${COLOR_ACTIVE}, ${opacity})`;
+                        ctx.fillStyle = `rgba(${isLight() ? '234, 88, 12' : '57, 255, 20'}, ${opacity})`;
                         ctx.beginPath();
                         ctx.arc(dot.x, dot.y, DOT_SIZE + 0.5, 0, Math.PI * 2);
                         ctx.fill();
                     } else {
-                        ctx.fillStyle = COLOR_IDLE;
+                        ctx.fillStyle = isLight() ? '#d4d4d8' : '#1a1a1a';
                         ctx.beginPath();
                         ctx.arc(dot.x, dot.y, DOT_SIZE, 0, Math.PI * 2);
                         ctx.fill();
@@ -1283,6 +1284,53 @@
         if (!o) return;
         history.replaceState({}, '', '/');
         if (o === 'success') showCameraOrder('<p class="ord-eyebrow">Order received</p><h3 class="ord-title" id="ord-title">Thank you</h3><p class="ord-done">Your cameras are ordered. We\'ll email you the delivery details and book the setup with you. Once they arrive, sign in and add each one under Cameras.</p>');
+    })();
+    </script>
+
+    <!-- Theme: a switch floating at the bottom right; it drifts a little with the mouse and lags behind the scroll -->
+    <style>
+        .la-tt { position:fixed; right:max(24px, env(safe-area-inset-right)); bottom:calc(24px + env(safe-area-inset-bottom)); z-index:90; will-change:transform; }
+        .la-tt button { position:relative; display:flex; align-items:center; justify-content:space-between; width:64px; height:32px; padding:4px; border:1px solid #27272a; border-radius:999px; background:rgba(9,9,11,.85); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); box-shadow:0 12px 32px -12px rgba(0,0,0,.7); cursor:pointer; transition:background-color .3s ease, border-color .3s ease, box-shadow .3s ease, transform .15s ease; }
+        .la-tt button:active { transform:scale(.95); }
+        .la-tt button:focus { outline:none; } .la-tt button:focus-visible { outline:2px solid #39FF14; outline-offset:3px; }
+        .la-tt-knob { position:absolute; left:4px; top:3px; width:24px; height:24px; border-radius:999px; background:#27272a; transition:transform .3s cubic-bezier(.65,0,.35,1), background-color .3s ease; }
+        .la-tt svg { position:relative; z-index:1; width:16px; height:16px; margin:0 4px; fill:none; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; transition:stroke .3s ease; }
+        .la-tt-moon { stroke:#fff; } .la-tt-sun { stroke:#71717a; }
+        html:not(.dark) .la-tt button { border-color:#e4e4e7; background:rgba(255,255,255,.9); box-shadow:0 12px 32px -14px rgba(0,0,0,.25); }
+        html:not(.dark) .la-tt button:focus-visible { outline-color:#EA580C; }
+        html:not(.dark) .la-tt-knob { transform:translateX(32px); background:#e5e7eb; }
+        html:not(.dark) .la-tt-moon { stroke:#000; } html:not(.dark) .la-tt-sun { stroke:#374151; }
+        @media (max-width:640px) { .la-tt { right:16px; bottom:calc(16px + env(safe-area-inset-bottom)); } }
+        @media (prefers-reduced-motion:reduce) { .la-tt-knob, .la-tt svg, .la-tt button { transition:none; } }
+    </style>
+    <div class="la-tt" id="la-tt">
+        <button type="button" role="switch" aria-checked="false" aria-label="Light theme">
+            <span class="la-tt-knob" aria-hidden="true"></span>
+            <svg class="la-tt-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+            <svg class="la-tt-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+        </button>
+    </div>
+    <script>
+    (function () {
+        var wrap = document.getElementById('la-tt'), btn = wrap.querySelector('button'), html = document.documentElement;
+        function sync() { btn.setAttribute('aria-checked', String(!html.classList.contains('dark'))); }
+        sync();
+        btn.addEventListener('click', function () {
+            var light = html.classList.toggle('dark') === false;
+            try { localStorage.setItem('la_theme', light ? 'light' : 'dark'); } catch (e) {}
+            sync(); document.dispatchEvent(new CustomEvent('la-theme', { detail: { light: light } }));
+        });
+        // Parallax: up to 8px towards the mouse, and a lag of up to 14px behind the scroll that springs back
+        if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        var mx = 0, my = 0, x = 0, y = 0, lastY = window.scrollY, lag = 0, raf = 0;
+        window.addEventListener('mousemove', function (e) { mx = (e.clientX / innerWidth - .5) * 16; my = (e.clientY / innerHeight - .5) * 16; kick(); }, { passive: true });
+        window.addEventListener('scroll', function () { var d = window.scrollY - lastY; lastY = window.scrollY; lag = Math.max(-14, Math.min(14, lag - d * .25)); kick(); }, { passive: true });
+        function kick() { if (!raf) raf = requestAnimationFrame(step); }
+        function step() {
+            raf = 0; lag *= .88; x += (mx - x) * .08; y += (my + lag - y) * .12;
+            wrap.style.transform = 'translate3d(' + x.toFixed(2) + 'px,' + y.toFixed(2) + 'px,0)';
+            if (Math.abs(mx - x) > .05 || Math.abs(my + lag - y) > .05 || Math.abs(lag) > .05) kick();
+        }
     })();
     </script>
 </body>
