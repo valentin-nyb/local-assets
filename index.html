@@ -352,14 +352,20 @@
                 .bx-pill:hover { border-color:#71717a; }
                 .bx-pill[aria-pressed="true"] { background:#fafafa; border-color:#fafafa; color:#000; }
                 .bx-pill:focus { outline:none; } .bx-pill:focus-visible { outline:2px solid #39FF14; outline-offset:2px; }
-                /* Peak moments: what the analysis asks of every stretch of the set */
-                .bx-qs { width:100%; display:flex; flex-direction:column; gap:16px; }
-                .bx-q p { margin:0 0 7px; font:400 13px/1.35 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#e4e4e7; }
-                .bx-q div { display:flex; align-items:center; gap:6px; }
-                .bx-q b { padding:3px 9px; border:1px solid #3f3f46; border-radius:999px; font:700 9px 'JetBrains Mono', monospace; letter-spacing:.1em; color:#71717a; transition:all .25s ease; }
-                .bx-q b.on { background:#39FF14; border-color:#39FF14; color:#000; }
-                .bx-q b.on.no { background:#fafafa; border-color:#fafafa; }
-                .bx-q em { margin-left:auto; font:400 10px 'JetBrains Mono', monospace; font-style:normal; color:#71717a; }
+                /* Brand Kit: the logo, font and colour look put on every clip, one kit for the venue and one for each artist */
+                .bx-kit { width:100%; display:flex; flex-direction:column; gap:8px; }
+                .bx-kit-row { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:10px; padding:9px 10px; border:1px solid #27272a; border-radius:12px; }
+                .bx-kit-row p { margin:0; display:flex; flex-direction:column; gap:3px; font:600 13px/1.1 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#fff; }
+                .bx-kit-row small { font:400 9px/1 'JetBrains Mono', monospace; letter-spacing:.1em; color:#71717a; transition:opacity .25s ease; }
+                .bx-kit-row em { font:700 9px 'JetBrains Mono', monospace; font-style:normal; letter-spacing:.12em; color:#39FF14; }
+                .bx-kit-ico { width:34px; height:34px; border-radius:9px; background:#000; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+                .bx-kit-logo { background:#000 url(/logos/a-white-anim.gif) center/62% no-repeat; }
+                .bx-kit-font { color:#fff; font:900 15px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; transition:font .25s ease; }
+                .bx-kit[data-k="1"] .bx-kit-font { font:italic 400 16px/1 Georgia, 'Times New Roman', serif; }
+                .bx-kit-look { gap:3px; }
+                .bx-kit-look i { width:7px; height:18px; border-radius:3px; background:var(--c); transition:background-color .35s ease; }
+                .bx-kit-look i:nth-child(1) { --c:#ff7a1a; } .bx-kit-look i:nth-child(2) { --c:#ffc35c; } .bx-kit-look i:nth-child(3) { --c:#7a2e14; }
+                .bx-kit[data-k="1"] .bx-kit-look i:nth-child(1) { --c:#39FF14; } .bx-kit[data-k="1"] .bx-kit-look i:nth-child(2) { --c:#2dd4bf; } .bx-kit[data-k="1"] .bx-kit-look i:nth-child(3) { --c:#1e3a8a; }
                 /* Edit: the camera tiles and the music under them */
                 .bx-tiles { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:10px; }
                 .bx-tiles button { aspect-ratio:16/9; padding:0; border:2px solid transparent; border-radius:9px; background:#000 center/cover; opacity:.45; cursor:pointer; transition:opacity .3s ease, border-color .3s ease; }
@@ -429,14 +435,15 @@
                         <span class="bx-tag">AUTO</span>
                     </div>
 
-                    <div class="bx-card reveal delay-200" data-bx="peak">
-                        <h3>Peak moments</h3>
-                        <div class="bx-body bx-qs">
-                            <div class="bx-q"><p>Is this a drop?</p><div><b data-v="yes">YES</b><b data-v="no" class="no">NO</b><em>0.96</em></div></div>
-                            <div class="bx-q"><p>Is someone playing?</p><div><b data-v="yes">YES</b><b data-v="no" class="no">NO</b><em>0.99</em></div></div>
-                            <div class="bx-q"><p>Is the booth empty?</p><div><b data-v="yes">YES</b><b data-v="no" class="no">NO</b><em>0.03</em></div></div>
+                    <div class="bx-card reveal delay-200" data-bx="kit">
+                        <h3>Your Brand Kit</h3>
+                        <div class="bx-body bx-kit">
+                            <div class="bx-kit-row"><span class="bx-kit-ico bx-kit-logo"></span><p>Logo<small data-kit="logo">PNG · MOVING GIF</small></p><em>ON</em></div>
+                            <div class="bx-kit-row"><span class="bx-kit-ico bx-kit-font" data-kit-font>Aa</span><p>Font<small data-kit="font">HELVETICA BLACK</small></p><em>ON</em></div>
+                            <div class="bx-kit-row"><span class="bx-kit-ico bx-kit-look"><i></i><i></i><i></i></span><p>Colour look<small data-kit="look">WARM · .CUBE</small></p><em>ON</em></div>
                         </div>
-                        <span class="bx-tag">AUTO</span>
+                        <div class="bx-pills" role="group" aria-label="Brand Kit"><button type="button" class="bx-pill" aria-pressed="true" data-i="0">Venue</button><button type="button" class="bx-pill" aria-pressed="false" data-i="1">Artist</button></div>
+                        <span class="bx-tag">EVERY CLIP</span>
                     </div>
 
                     <div class="bx-card bx-w reveal delay-100" data-bx="edit">
@@ -577,13 +584,16 @@
                 var posted = false;
                 if ('IntersectionObserver' in window) new IntersectionObserver(function (es, o) { if (es[0].isIntersecting && !posted) { posted = true; post(); o.disconnect(); } }, { threshold: 0.4 }).observe(pub);
                 else post();
-                // Peak moments: the answers change as the analysis moves along the set
-                var qs = root.querySelectorAll('[data-bx="peak"] .bx-q'), frames = [[['yes', '0.96'], ['yes', '0.99'], ['no', '0.03']], [['no', '0.21'], ['yes', '0.97'], ['no', '0.02']], [['yes', '0.91'], ['yes', '0.98'], ['no', '0.05']]], f = 0;
-                function answer() {
-                    frames[f].forEach(function (a, k) { var q = qs[k]; Array.prototype.forEach.call(q.querySelectorAll('b'), function (b) { b.classList.toggle('on', b.dataset.v === a[0]); }); q.querySelector('em').textContent = a[1]; });
-                    f = (f + 1) % frames.length;
+                // Brand Kit: the venue's kit and an artist's, one after the other (or the one pressed)
+                var kit = root.querySelector('[data-bx="kit"]'), kitBody = kit.querySelector('.bx-kit'), kitPills = kit.querySelectorAll('.bx-pill'),
+                    kits = [{ logo: 'PNG · MOVING GIF', font: 'HELVETICA BLACK', look: 'WARM · .CUBE' }, { logo: 'ARTIST LOGO · PNG', font: 'CUSTOM · .OTF', look: 'NIGHT · .CUBE' }], k = 0, kitTimer;
+                function showKit(i) {
+                    k = i; kitBody.dataset.k = i;
+                    Array.prototype.forEach.call(kitPills, function (b) { b.setAttribute('aria-pressed', String(+b.dataset.i === i)); });
+                    Object.keys(kits[i]).forEach(function (n) { kitBody.querySelector('[data-kit="' + n + '"]').textContent = kits[i][n]; });
                 }
-                answer(); if (!still) setInterval(answer, 2600);
+                Array.prototype.forEach.call(kitPills, function (b) { b.addEventListener('click', function () { clearInterval(kitTimer); showKit(+b.dataset.i); }); });
+                if (!still) kitTimer = setInterval(function () { showKit(1 - k); }, 3200);
             })();
             </script>
         </section>
