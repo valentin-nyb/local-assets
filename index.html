@@ -788,6 +788,7 @@
         .tr-card > .tr-btn { margin-top:auto; }
         .tr-card .tr-btn { margin-top:26px; }
         .tr-btn::before { content:""; position:absolute; inset:-1px; z-index:-1; border-radius:inherit; background:#fafafa; transform:scaleX(0); transform-origin:right center; transition:transform .42s cubic-bezier(.65,0,.35,1); }
+        .tr-btn-off { cursor:default; pointer-events:none; opacity:.6; text-transform:uppercase; letter-spacing:.08em; font-size:13px; }
         .tr-btn-main { background:#39FF14; border-color:#39FF14; color:#000; }
         .tr-btn-main::before { background:#0a0a0a; }
         @media (hover:hover) { .tr-btn:hover { color:#000; border-color:#fafafa; } .tr-btn:hover::before { transform:scaleX(1); transform-origin:left center; } .tr-btn-main:hover { color:#39FF14; border-color:#39FF14; } }
@@ -821,7 +822,7 @@
                 <div class="tr-price"><b>£0</b><span>to join</span></div>
                 <p class="tr-for">For DJs starting out: pay only for what you use.</p>
                 <ul class="tr-feats"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>3 vertical clips from every set</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Brand Kit: your logo and fonts on every clip</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Connect your DJI, Sony Alpha and more</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>What you use is charged to your card on the 1st</span></li></ul>
-                <span class="tr-spacer"></span><button type="button" onclick="selectTier('dj-trial')" class="tr-btn">Start free</button>
+                <span class="tr-spacer"></span><span class="tr-btn tr-btn-off" aria-disabled="true">Only by invite</span>
             </div>
             <div class="tr-card tr-feat" data-for="artist" data-plan="starter-distribution">
                 <span class="tr-badge">Most popular</span>
@@ -829,7 +830,7 @@
                 <div class="tr-price"><b>£29</b><span>/ month</span></div>
                 <p class="tr-for">Your brand only, no local / assets™ mark.</p>
                 <ul class="tr-feats"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Up to 4 sets a month, each checked and stored safely</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>6 vertical clips from every set</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Brand Kit: your logo, animations and custom fonts</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Connect your DJI, Sony Alpha and more</span></li></ul>
-                <span class="tr-spacer"></span><button type="button" onclick="selectTier('starter-distribution')" class="tr-btn tr-btn-main">Choose Artist</button>
+                <span class="tr-spacer"></span><span class="tr-btn tr-btn-off" aria-disabled="true">Coming soon</span>
             </div>
             <div class="tr-card tr-feat" data-for="label" data-plan="starter-distribution">
                 <p class="tr-name">Label</p>
