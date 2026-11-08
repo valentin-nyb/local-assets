@@ -200,7 +200,7 @@
         <div class="flex-1 overflow-y-auto la-page la-page-scroll">
             <div class="dash-head">
                 <h2 id="venue-tier" class="dash-h">ADMIN</h2>
-                <script>(function(){ try { var a = JSON.parse(localStorage.getItem('la_admin') || '{}'); if ((a.venueSlug === 'local-assets-admin' || (function(c){ return /^local\s*[\/-]?\s*assets\b/i.test(String(c ? c.name : (a.venue || '')).trim()); })((a.venues || []).filter(function(v){ return v && v.slug === a.venueSlug; })[0]))) { document.getElementById('venue-tier').classList.add('is-la'); return; } var k = 'la_venue_logo4:' + (a.venueSlug || ''), v = JSON.parse(localStorage.getItem(k) || 'null'); if (v && (v.mask || v.img)) { var h = document.getElementById('venue-tier'); h.classList.add('has-logo', 'logo-early'); if (v.img) h.classList.add('logo-img'); h.style.setProperty('--logo', 'url("' + (v.img ? v.url : v.mask) + '")'); h.style.setProperty('--logo-w', Math.round(Math.min(200, Math.max(28, 28 * v.ar))) + 'px'); } } catch (_) {} })();</script>
+                <script>(function(){ try { var a = JSON.parse(localStorage.getItem('la_admin') || '{}'); if ((a.venueSlug === 'local-assets-admin' || (function(c){ return /^local\s*[\/-]?\s*assets\b/i.test(String(c ? c.name : (a.venue || '')).trim()); })((a.venues || []).filter(function(v){ return v && v.slug === a.venueSlug; })[0]))) { document.getElementById('venue-tier').classList.add('is-la'); return; } var k = 'la_venue_logo5:' + (a.venueSlug || ''), v = JSON.parse(localStorage.getItem(k) || 'null'); if (v && (v.mask || v.img)) { var h = document.getElementById('venue-tier'); h.classList.add('has-logo', 'logo-early'); if (v.img) h.classList.add('logo-img'); h.style.setProperty('--logo', 'url("' + (v.img ? v.url : v.mask) + '")'); h.style.setProperty('--logo-w', Math.round(Math.min(200, Math.max(28, 28 * v.ar))) + 'px'); } } catch (_) {} })();</script>
                 <button type="button" id="logo-slot" class="logo-slot" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg><span><b>Add your logo</b><small>PNG, SVG or WebP</small></span></button>
                 <input type="file" id="logo-slot-file" accept="image/png,image/svg+xml,image/webp" hidden>
                 <p class="dash-sub" id="venue-tier-sub">Your sessions, files and channels.</p>
@@ -2551,7 +2551,8 @@
         // The page title as the venue's logo, drawn in the text colour (so it suits light and dark). A logo on a solid
         // background has that background taken out and its empty margins cut off first; the result is kept for this
         // venue so the next page shows it straight away, without the name appearing first.
-        function venueLogoKey() { try { return 'la_venue_logo4:' + (JSON.parse(localStorage.getItem('la_admin') || '{}').venueSlug || ''); } catch (_) { return 'la_venue_logo4:'; } }
+        // logo5: logos saved by earlier versions (a one-colour logo drawn inside out, a photo) are worked out again
+        function venueLogoKey() { try { return 'la_venue_logo5:' + (JSON.parse(localStorage.getItem('la_admin') || '{}').venueSlug || ''); } catch (_) { return 'la_venue_logo5:'; } }
         // Only a client account shows its venue's logo (the admin account keeps its name)
         function isClientAcct() { return !_adminView; }
         function applyVenueLogo(v) {
