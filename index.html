@@ -471,9 +471,13 @@
             // (once the page is read: these videos come further down than this script)
             document.addEventListener('DOMContentLoaded', function () {
                 var vs = document.querySelectorAll('video.la-lazy'), still = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-                function wake(v) { if (!v.src) v.src = v.dataset.src; if (!still) { var p = v.play(); if (p && p.catch) p.catch(function () {}); } }
+                // Phones: muted set on the element itself, and a play that's refused (too many videos at once, or not loaded
+                // yet) tried again when it can play and on the first touch
+                function wake(v) { v.muted = v.defaultMuted = true; if (!v.src) v.src = v.dataset.src; if (still) return; v._want = true; var p = v.play(); if (p && p.catch) p.catch(function () { v.addEventListener('canplay', function () { if (v._want) v.play().catch(function () {}); }, { once: true }); }); }
+                function nap(v) { v._want = false; v.pause(); }
+                document.addEventListener('touchstart', function () { Array.prototype.forEach.call(vs, function (v) { if (v._want && v.paused) v.play().catch(function () {}); }); }, { passive: true, once: true });
                 if (!('IntersectionObserver' in window)) return Array.prototype.forEach.call(vs, wake);
-                var io = new IntersectionObserver(function (es) { es.forEach(function (e) { e.isIntersecting ? wake(e.target) : e.target.pause(); }); }, { rootMargin: '200px 0px', threshold: 0.01 });
+                var io = new IntersectionObserver(function (es) { es.forEach(function (e) { e.isIntersecting ? wake(e.target) : nap(e.target); }); }, { rootMargin: '200px 0px', threshold: 0.01 });
                 Array.prototype.forEach.call(vs, function (v) { io.observe(v); });
             });
             </script>
@@ -482,20 +486,29 @@
                 var root = document.getElementById('how-it-works'); if (!root) return;
                 var still = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
                 function vids(el) { return Array.prototype.slice.call(el.querySelectorAll('video')); }
-                // Play only what is on screen; the file is fetched the first time its card comes near
-                function wake(v) { if (!v.src && v.dataset.src) v.src = v.dataset.src; if (!still) { var p = v.play(); if (p && p.catch) p.catch(function () {}); } }
+                // The videos that show: in a stack of cameras only the one on (phones play only so many videos at once)
+                function shown(el) { return vids(el).filter(function (v) { return !v.closest('.bx-stack') || v.classList.contains('on'); }); }
+                // Play only what is on screen; the file is fetched the first time its card comes near. A play that's refused
+                // (not loaded yet, or too many at once) is tried again when it can play and on the first touch
+                function wake(v) {
+                    v.muted = v.defaultMuted = true; if (!v.src && v.dataset.src) v.src = v.dataset.src; if (still) return;
+                    v._want = true; var p = v.play();
+                    if (p && p.catch) p.catch(function () { v.addEventListener('canplay', function () { if (v._want) v.play().catch(function () {}); }, { once: true }); });
+                }
+                function nap(v) { v._want = false; v.pause(); }
+                document.addEventListener('touchstart', function () { vids(root).forEach(function (v) { if (v._want && v.paused) v.play().catch(function () {}); }); }, { passive: true, once: true });
                 var cards = root.querySelectorAll('.bx-card');
                 if ('IntersectionObserver' in window) {
-                    var io = new IntersectionObserver(function (es) { es.forEach(function (e) { e.target._seen = e.isIntersecting; vids(e.target).forEach(function (v) { e.isIntersecting ? wake(v) : v.pause(); }); }); }, { rootMargin: '200px 0px', threshold: 0.01 });
+                    var io = new IntersectionObserver(function (es) { es.forEach(function (e) { e.target._seen = e.isIntersecting; vids(e.target).forEach(nap); if (e.isIntersecting) shown(e.target).forEach(wake); }); }, { rootMargin: '200px 0px', threshold: 0.01 });
                     Array.prototype.forEach.call(cards, function (c) { io.observe(c); });
-                } else Array.prototype.forEach.call(cards, function (c) { c._seen = true; vids(c).forEach(wake); });
+                } else Array.prototype.forEach.call(cards, function (c) { c._seen = true; shown(c).forEach(wake); });
                 // A row of buttons that picks one of the stacked videos (by data-i); auto moves on every ms unless pressed
                 function picker(card, sel, ms, after) {
                     var btns = card.querySelectorAll(sel), stack = card.querySelectorAll('.bx-stack video'), i = 0, t;
                     function show(n) {
                         i = n;
                         Array.prototype.forEach.call(btns, function (b, k) { b.setAttribute('aria-pressed', k === n ? 'true' : 'false'); });
-                        Array.prototype.forEach.call(stack, function (v, k) { v.classList.toggle('on', k === n); if (k === n && card._seen) wake(v); });
+                        Array.prototype.forEach.call(stack, function (v, k) { v.classList.toggle('on', k === n); if (k === n && card._seen) wake(v); else if (k !== n) nap(v); });
                         if (after) after(n);
                     }
                     function loop() { clearInterval(t); if (ms && !still) t = setInterval(function () { if (card._seen) show((i + 1) % btns.length); }, ms); }
@@ -1202,7 +1215,7 @@
 
     <!-- Theme: a switch floating at the bottom right; it drifts a little with the mouse and lags behind the scroll -->
     <style>
-        .la-tt { position:fixed; right:max(24px, env(safe-area-inset-right)); bottom:calc(24px + env(safe-area-inset-bottom)); z-index:90; will-change:transform; }
+        .la-tt { position:fixed; right:max(24px, env(safe-area-inset-right)); bottom:calc(24px + env(safe-area-inset-bottom)); z-index:90; }
         .la-tt button { position:relative; display:flex; align-items:center; justify-content:space-between; width:64px; height:32px; padding:4px; border:1px solid #27272a; border-radius:999px; background:rgba(9,9,11,.85); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); box-shadow:0 12px 32px -12px rgba(0,0,0,.7); cursor:pointer; transition:background-color .3s ease, border-color .3s ease, box-shadow .3s ease, transform .15s ease; }
         .la-tt button:active { transform:scale(.95); }
         .la-tt button:focus { outline:none; } .la-tt button:focus-visible { outline:2px solid #39FF14; outline-offset:3px; }
@@ -1233,17 +1246,6 @@
             try { localStorage.setItem('la_theme', light ? 'light' : 'dark'); } catch (e) {}
             sync(); document.dispatchEvent(new CustomEvent('la-theme', { detail: { light: light } }));
         });
-        // Parallax: up to 8px towards the mouse, and a lag of up to 14px behind the scroll that springs back
-        if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-        var mx = 0, my = 0, x = 0, y = 0, lastY = window.scrollY, lag = 0, raf = 0;
-        window.addEventListener('mousemove', function (e) { mx = (e.clientX / innerWidth - .5) * 16; my = (e.clientY / innerHeight - .5) * 16; kick(); }, { passive: true });
-        window.addEventListener('scroll', function () { var d = window.scrollY - lastY; lastY = window.scrollY; lag = Math.max(-14, Math.min(14, lag - d * .25)); kick(); }, { passive: true });
-        function kick() { if (!raf) raf = requestAnimationFrame(step); }
-        function step() {
-            raf = 0; lag *= .88; x += (mx - x) * .08; y += (my + lag - y) * .12;
-            wrap.style.transform = 'translate3d(' + x.toFixed(2) + 'px,' + y.toFixed(2) + 'px,0)';
-            if (Math.abs(mx - x) > .05 || Math.abs(my + lag - y) > .05 || Math.abs(lag) > .05) kick();
-        }
     })();
     </script>
 </body>
