@@ -203,7 +203,7 @@
                     <h2 id="venue-tier" class="dash-h">ADMIN</h2>
                     <button type="button" id="logo-edit" class="logo-edit" aria-label="Take the logo off" title="Take the logo off" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
                 </div>
-                <script>(function(){ try { var a = JSON.parse(localStorage.getItem('la_admin') || '{}'); if ((a.venueSlug === 'local-assets-admin' || (function(c){ return /^local\s*[\/-]?\s*assets\b/i.test(String(c ? c.name : (a.venue || '')).trim()); })((a.venues || []).filter(function(v){ return v && v.slug === a.venueSlug; })[0]))) { document.getElementById('venue-tier').classList.add('is-la'); return; } var k = 'la_venue_logo5:' + (a.venueSlug || ''), v = JSON.parse(localStorage.getItem(k) || 'null'); if (v && (v.mask || v.img)) { var h = document.getElementById('venue-tier'); h.classList.add('has-logo', 'logo-early'); if (v.img) h.classList.add('logo-img'); h.style.setProperty('--logo', 'url("' + (v.img ? v.url : v.mask) + '")'); h.style.setProperty('--logo-w', Math.round(Math.min(200, Math.max(28, 28 * v.ar))) + 'px'); } } catch (_) {} })();</script>
+                <script>(function(){ try { var a = JSON.parse(localStorage.getItem('la_admin') || '{}'); if ((a.venueSlug === 'local-assets-admin' || (function(c){ return /^local\s*[\/-]?\s*assets\b/i.test(String(c ? c.name : (a.venue || '')).trim()); })((a.venues || []).filter(function(v){ return v && v.slug === a.venueSlug; })[0]))) { document.getElementById('venue-tier').classList.add('is-la'); return; } var k = 'la_venue_logo6:' + (a.venueSlug || ''), v = JSON.parse(localStorage.getItem(k) || 'null'); if (v && (v.mask || v.img)) { var h = document.getElementById('venue-tier'); h.classList.add('has-logo', 'logo-early'); if (v.img) h.classList.add('logo-img'); h.style.setProperty('--logo', 'url("' + (v.img ? v.url : v.mask) + '")'); h.style.setProperty('--logo-w', Math.round(Math.min(200, Math.max(28, 28 * v.ar))) + 'px'); } } catch (_) {} })();</script>
                 <button type="button" id="logo-slot" class="logo-slot" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg><span><b>Add your logo</b><small>PNG, SVG or WebP</small></span></button>
                 <input type="file" id="logo-slot-file" accept="image/png,image/svg+xml,image/webp" hidden>
                 <p class="dash-sub" id="venue-tier-sub">Your sessions, files and channels.</p>
@@ -2552,11 +2552,11 @@
 
         var _heroTimer = null;
         // The account's own type (from its Brand Kit): a venue's sessions were played there
-        // The page title as the venue's logo, drawn in the text colour (so it suits light and dark). A logo on a solid
-        // background has that background taken out and its empty margins cut off first; the result is kept for this
-        // venue so the next page shows it straight away, without the name appearing first.
-        // logo5: logos saved by earlier versions (a one-colour logo drawn inside out, a photo) are worked out again
-        function venueLogoKey() { try { return 'la_venue_logo5:' + (JSON.parse(localStorage.getItem('la_admin') || '{}').venueSlug || ''); } catch (_) { return 'la_venue_logo5:'; } }
+        // The page title as the venue's logo. A plain one-colour logo on see-through (letters only) is drawn in the
+        // text colour, so it suits light and dark; any other logo (colours, a background, a badge) is shown as it is,
+        // never cut out by guesswork. The result is kept for this venue so the next page shows it straight away.
+        // logo6: logos worked out by earlier versions (backgrounds and badges cut away, sometimes wrongly) again
+        function venueLogoKey() { try { return 'la_venue_logo6:' + (JSON.parse(localStorage.getItem('la_admin') || '{}').venueSlug || ''); } catch (_) { return 'la_venue_logo6:'; } }
         // Only a client account shows its venue's logo (the admin account keeps its name)
         function isClientAcct() { return !_adminView; }
         function applyVenueLogo(v) {
@@ -2567,65 +2567,31 @@
             h.style.setProperty('--logo-w', Math.round(Math.min(200, Math.max(28, 28 * v.ar))) + 'px');
         }
         function venueLogoMask(url) {
-            return new Promise(function(res, rej) {
+            return new Promise(function(res) {
                 var im = new Image(); im.crossOrigin = 'anonymous';
+                var asIs = function() { res({ url: url, img: true, ar: im.naturalWidth && im.naturalHeight ? im.naturalWidth / im.naturalHeight : 3 }); };
                 im.onload = function() {
                     try {
                         var H = 120, W = Math.max(1, Math.min(1200, Math.round(im.naturalWidth * H / Math.max(1, im.naturalHeight))));
                         var c = document.createElement('canvas'); c.width = W; c.height = H;
                         var g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(im, 0, 0, W, H);
                         var id = g.getImageData(0, 0, W, H), d = id.data;
-                        // The background: the colour in the corners (when it's solid)
-                        var cs = [0, W - 1, (H - 1) * W, H * W - 1].map(function(i) { return [d[i * 4], d[i * 4 + 1], d[i * 4 + 2], d[i * 4 + 3]]; });
-                        var bg = [0, 1, 2, 3].map(function(k) { return cs.reduce(function(t, x) { return t + x[k]; }, 0) / 4; });
-                        var solid = bg[3] > 200, x0 = W, y0 = H, x1 = -1, y1 = -1;
-                        // A logo printed on a badge (one colour fills most of what's drawn, e.g. white letters on a black
-                        // block): that colour is background too, so only the letters are kept
-                        var badge = null;
-                        // A plate fills most of the box around what's drawn; plain letters (one colour on see-through) don't
-                        function plateLike() {
-                            var bx0 = W, by0 = H, bx1 = -1, by1 = -1, n = 0;
-                            for (var py = 0; py < H; py++) for (var px = 0; px < W; px++) if (d[(py * W + px) * 4 + 3] > 128) { n++; if (px < bx0) bx0 = px; if (px > bx1) bx1 = px; if (py < by0) by0 = py; if (py > by1) by1 = py; }
-                            return bx1 >= 0 && n / ((bx1 - bx0 + 1) * (by1 - by0 + 1)) > 0.6;
+                        // What's drawn: one colour (to within a little), with see-through around it
+                        var n = 0, clear = 0, sum = [0, 0, 0], x0 = W, y0 = H, x1 = -1, y1 = -1;
+                        for (var i = 0; i < d.length; i += 4) {
+                            if (d[i + 3] < 24) { clear++; continue; }
+                            if (d[i + 3] > 200) { n++; sum[0] += d[i]; sum[1] += d[i + 1]; sum[2] += d[i + 2]; }
+                            var p = i / 4, x = p % W, y = (p - x) / W;
+                            if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
                         }
-                        if (!solid) {
-                            var counts = {}, sums = {}, opaque = 0;
-                            for (var j = 0; j < d.length; j += 4) { if (d[j + 3] < 200) continue; opaque++; var q = (d[j] >> 5) << 6 | (d[j + 1] >> 5) << 3 | (d[j + 2] >> 5); counts[q] = (counts[q] || 0) + 1; var sm = sums[q] || (sums[q] = [0, 0, 0]); sm[0] += d[j]; sm[1] += d[j + 1]; sm[2] += d[j + 2]; }
-                            var top = null; Object.keys(counts).forEach(function(q) { if (!top || counts[q] > counts[top]) top = q; });
-                            var share = top ? counts[top] / Math.max(1, opaque) : 0;
-                            if (share > 0.45 && share < 0.97) badge = sums[top].map(function(v) { return v / counts[top]; });
-                            // One colour only: a plate with the letters cut out of it. The holes are the letters, so
-                            // within the plate (row by row, between its edges) what's see-through becomes the mark
-                            else if (share >= 0.97 && plateLike()) {
-                                var spans = [], py0 = -1, py1 = -1, m = Math.max(2, Math.round(H * 0.03));   // m: the plate's soft edge, left out
-                                for (var ry = 0; ry < H; ry++) {
-                                    var lx = -1, rx = -1;
-                                    for (var cx = 0; cx < W; cx++) if (d[(ry * W + cx) * 4 + 3] > 128) { if (lx < 0) lx = cx; rx = cx; }
-                                    spans.push([lx, rx]); if (lx >= 0) { if (py0 < 0) py0 = ry; py1 = ry; }
-                                }
-                                for (var ry2 = 0; ry2 < H; ry2++) {
-                                    var sp = spans[ry2], inside = sp[0] >= 0 && ry2 >= py0 + m && ry2 <= py1 - m;
-                                    for (var cx2 = 0; cx2 < W; cx2++) { var ii = (ry2 * W + cx2) * 4; d[ii + 3] = inside && cx2 >= sp[0] + m && cx2 <= sp[1] - m ? 255 - d[ii + 3] : 0; }
-                                }
-                            }
-                        }
-                        for (var y = 0; y < H; y++) for (var x = 0; x < W; x++) {
-                            var i = (y * W + x) * 4, al = d[i + 3];
-                            var ref = solid ? bg : badge;
-                            if (ref) { var diff = Math.abs(d[i] - ref[0]) + Math.abs(d[i + 1] - ref[1]) + Math.abs(d[i + 2] - ref[2]); al = Math.max(0, Math.min(255, (diff - 30) * 2.2)) * al / 255; }
-                            d[i] = d[i + 1] = d[i + 2] = 0; d[i + 3] = al;
-                            if (al > 24) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
-                        }
-                        // Check the result looks like a logo: almost nothing left (an outline) or a solid block means
-                        // the logo wasn't understood, so the logo itself is shown instead
-                        var on = 0; for (var q2 = 3; q2 < d.length; q2 += 4) if (d[q2] > 24) on++;
-                        var cover = x1 < 0 ? 0 : on / ((x1 - x0 + 1) * (y1 - y0 + 1));
-                        if (x1 < 0 || cover < 0.12 || cover > 0.9) return res({ url: url, img: true, ar: im.naturalWidth && im.naturalHeight ? im.naturalWidth / im.naturalHeight : 3 });
-                        g.putImageData(id, 0, 0);
+                        if (!n || clear < d.length / 4 * 0.2) return asIs();   // no see-through: a picture or a logo on its own background
+                        var avg = sum.map(function(v) { return v / n; }), off = 0;
+                        for (var j = 0; j < d.length; j += 4) if (d[j + 3] > 200 && Math.abs(d[j] - avg[0]) + Math.abs(d[j + 1] - avg[1]) + Math.abs(d[j + 2] - avg[2]) > 60) off++;
+                        if (off / n > 0.03) return asIs();   // more than one colour
                         var o = document.createElement('canvas'); o.width = x1 - x0 + 1; o.height = y1 - y0 + 1;
                         o.getContext('2d').drawImage(c, x0, y0, o.width, o.height, 0, 0, o.width, o.height);
                         res({ url: url, mask: o.toDataURL('image/png'), ar: o.width / o.height });
-                    } catch (e) { res({ url: url, img: true, ar: im.naturalWidth && im.naturalHeight ? im.naturalWidth / im.naturalHeight : 3 }); }
+                    } catch (e) { asIs(); }
                 };
                 im.onerror = function() { res({ url: url, img: true, ar: 3 }); }; im.src = laMux(url);
             });
@@ -4100,7 +4066,6 @@
         /* The local / assets admin account: its own logo as the title */
         #venue-tier.is-la { width:176px; max-width:100%; height:22px; font-size:0 !important; color:transparent !important; background:var(--la-text); -webkit-mask:url(/logos/White@2x.png) left center / contain no-repeat; mask:url(/logos/White@2x.png) left center / contain no-repeat; }
         #venue-tier.has-logo.logo-img { background:var(--logo) left center / contain no-repeat !important; -webkit-mask:none !important; mask:none !important; }
-        html:not(.dark) #venue-tier.has-logo.logo-img { filter:brightness(0); }   /* light theme: the logo in black */
         #venue-tier.has-logo { width:var(--logo-w); height:28px; font-size:0 !important; color:transparent !important; background:var(--la-text); -webkit-mask:var(--logo) left center / contain no-repeat; mask:var(--logo) left center / contain no-repeat; }
         /* No logo yet: a dashed place for one in front of the name; picking a file uploads it to the Brand Kit's logos */
         .logo-slot { display:inline-flex; align-items:center; gap:12px; margin:0 0 6px; padding:10px 16px 10px 12px; border:1px dashed var(--la-dim); border-radius:12px; background:transparent; color:var(--la-sub); cursor:pointer; text-align:left; transition:border-color .2s ease, color .2s ease; }
