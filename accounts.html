@@ -37,7 +37,7 @@
     <script>(function(){try{var a=localStorage.getItem('la_accent'),h=document.documentElement;if(a){h.setAttribute('data-accent',a);if(a[0]==='#'){var n=parseInt(a.slice(1),16);h.style.setProperty('--la-accent',a);h.style.setProperty('--la-accent-ink',(0.299*(n>>16)+0.587*(n>>8&255)+0.114*(n&255))>150?'#000000':'#ffffff')}}}catch(e){}window.laAccentHex=function(){return getComputedStyle(document.documentElement).getPropertyValue('--la-accent').trim()||'#39FF14'};var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=8"></script>
-    <script src="/la-media.js?v=2"></script>
+    <script src="/la-media.js?v=3"></script>
     <script src="nav-component.js?v=68"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
@@ -241,7 +241,7 @@
                         + '<div class="vp-head"><span class="vp-name">' + esc(names[a.slug] || a.slug) + '</span>' + pill + '</div>'
                         + '<div class="vp-steps">'
                         + '<div class="vp-step"><small>1 · Prepare</small><span>Gives every video a private link beside its public one. Viewers notice nothing.</span><button type="button" class="cam-btn ghost" data-sw="add" data-slug="' + sl + '">Prepare videos</button></div>'
-                        + '<div class="vp-step"><small>2 · Protect</small><span>Turns the public links off, so the videos only play on local-assets.com.</span><button type="button" class="cam-btn primary" data-sw="lock" data-slug="' + sl + '">Protect videos</button></div>'
+                        + '<div class="vp-step"><small>2 · Protect</small><span>The red button if something leaks: turns the public links off and ends every shared link, so the videos only play on local-assets.com.</span><button type="button" class="cam-btn primary" data-sw="lock" data-slug="' + sl + '">Protect videos</button></div>'
                         + '</div>'
                         + '<p class="vp-msg" data-sw-msg style="margin-top:10px"></p>'
                         + '<p class="vp-undo" data-undo' + (a.locked ? '' : ' hidden') + '>Something not playing? <button type="button" data-sw="undo" data-slug="' + sl + '">Undo protection</button> puts the public addresses back.</p>'
@@ -274,7 +274,7 @@
         document.getElementById('ac-prot-list').addEventListener('click', async function(e) {
             var b = e.target.closest('[data-sw]'); if (!b) return;
             var step = b.dataset.sw, slug = b.dataset.slug, row = b.closest('[data-row]'), msg = row.querySelector('[data-sw-msg]');
-            if (step === 'lock' && !(await laConfirm({ title: 'Protect this account\'s videos?', message: 'Their public addresses stop working: the videos only play on local-assets.com for someone signed in, and in links you share. Do Prepare videos first. Undo protection puts public addresses back (with new links).', confirmText: 'Protect' }))) return;
+            if (step === 'lock' && !(await laConfirm({ title: 'Protect this account\'s videos?', message: 'Their public addresses stop working, and every link this account shared ends: the videos only play on local-assets.com for someone signed in, and in links shared from now on. Do Prepare videos first. Undo protection puts public addresses back (with new links).', confirmText: 'Protect' }))) return;
             row.querySelectorAll('[data-sw]').forEach(function(x) { x.disabled = true; });
             var page = 1, changed = 0, failed = 0;
             try {

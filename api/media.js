@@ -13,11 +13,12 @@ import { pathOf, readUrl, copyToPrivate, privateBrand, brandBytes } from './_bra
 //   POST { action: 'sign', urls: [] }      these Mux addresses, signed (scripts that fetch or play directly)
 //   GET  ?u=<Mux address>&k=<media key>[&dl=<file name>]   → the signed address (a download when dl is given)
 //   POST { action: 'check' }               (local / assets) each account's signing key and site-only rule
-//   POST { action: 'share', pid, title, days }   a link to one video for anyone, ending after days (7, at most 30)
+//   POST { action: 'share', pid, title, days }   a link to one video for anyone, for good (or ending after days)
 //   POST { action: 'unshare', share }      ends a link now
 //   POST { action: 'switch', slug, step, page }   (local / assets) one account's existing videos and cameras:
 //        step add: each gets a signed playback ID beside its public one (nothing changes for viewers);
-//        lock: the public ones are removed, so only signed addresses play; undo: public ones are added again.
+//        lock: the public ones are removed, so only signed addresses play, and every shared link ends (the red
+//        button if something leaks); undo: public ones are added again.
 //        A page of 100 videos at a time; { more, page } says where to go on.
 // Someone opening a shared link has no sign-in: the share id (s) stands in for the media key, for its video only.
 const TTL = 2 * 3600, DL_TTL = 15 * 60;
@@ -113,7 +114,7 @@ export default async function handler(req, res) {
     // <img>, video and download addresses: the media key in the address
     // A shared link: its one video, until the link ends
     const share = shareMode ? JSON.parse(await redis.get(`share:${shareId}`).catch(() => null) || 'null') : null;
-    if (shareMode && (!share || share.exp < Date.now())) return req.method === 'GET' ? res.status(410).send('This link has ended. Ask for a new one.') : res.status(410).json({ error: 'This link has ended. Ask for a new one.' });
+    if (shareMode && (!share || (share.exp && share.exp < Date.now()))) return req.method === 'GET' ? res.status(410).send('This link has ended. Ask for a new one.') : res.status(410).json({ error: 'This link has ended. Ask for a new one.' });
     if (share) {
       const pidOf = u => { try { return (/^\/([A-Za-z0-9]+)/.exec(new URL(u).pathname) || [])[1]; } catch { return null; } };
       const auth = authOf(share.slug);
@@ -191,10 +192,11 @@ export default async function handler(req, res) {
       const pid = String(body.pid || '');
       const o = /^[A-Za-z0-9]{10,80}$/.test(pid) ? await ownerOf(redis, pid, slugs).catch(() => null) : null;
       if (!allowed(o, member)) return res.status(403).json({ error: 'This isn\'t yours to share.' });
-      const days = Math.min(30, Math.max(1, Math.round(Number(body.days) || 7)));
+      // Links are for good unless days are given (then at most a year): they end with unshare, or Protect videos
+      const days = Number(body.days) > 0 ? Math.min(365, Math.round(Number(body.days))) : 0;
       const id = crypto.randomBytes(15).toString('base64url');
-      const exp = Date.now() + days * 86400e3;
-      await redis.set(`share:${id}`, JSON.stringify({ slug: o.slug, pid, policy: o.policy, title: String(body.title || '').slice(0, 120), by: session.email, exp }), { EX: days * 86400 });
+      const exp = days ? Date.now() + days * 86400e3 : 0;
+      await redis.set(`share:${id}`, JSON.stringify({ slug: o.slug, pid, policy: o.policy, title: String(body.title || '').slice(0, 120), by: session.email, exp }), days ? { EX: days * 86400 } : {});
       await redis.hSet(`shares:${o.slug}`, id, JSON.stringify({ pid, title: String(body.title || '').slice(0, 120), by: session.email, exp })).catch(() => {});
       const title = String(body.title || '');
       return res.status(200).json({ url: `https://local-assets.com/player.html?s=${id}&v=${encodeURIComponent(pid)}${title ? '&title=' + encodeURIComponent(title) : ''}`, exp, days });
@@ -204,9 +206,10 @@ export default async function handler(req, res) {
       const path = pathOf(String(body.url || ''));
       const slug = path && path.startsWith('brand/') ? path.split('/')[1] : '';
       if (!slug || !slugs.includes(slug)) return res.status(403).json({ error: 'This isn\'t yours to share.' });
-      const days = Math.min(30, Math.max(1, Math.round(Number(body.days) || 7)));
-      const id = crypto.randomBytes(15).toString('base64url'), exp = Date.now() + days * 86400e3;
-      await redis.set(`share:${id}`, JSON.stringify({ kind: 'file', slug, path, by: session.email, exp }), { EX: days * 86400 });
+      const days = Number(body.days) > 0 ? Math.min(365, Math.round(Number(body.days))) : 0;   // for good unless given
+      const id = crypto.randomBytes(15).toString('base64url'), exp = days ? Date.now() + days * 86400e3 : 0;
+      await redis.set(`share:${id}`, JSON.stringify({ kind: 'file', slug, path, by: session.email, exp }), days ? { EX: days * 86400 } : {});
+      await redis.hSet(`shares:${slug}`, id, JSON.stringify({ file: path, by: session.email, exp })).catch(() => {});
       return res.status(200).json({ url: 'https://local-assets.com/asset/' + path.slice('brand/'.length).split('/').map(encodeURIComponent).join('/') + '?s=' + id, exp, days });
     }
     if (body.action === 'unshare') {
@@ -262,6 +265,10 @@ export default async function handler(req, res) {
         }
         for await (const batch of redis.scanIterator({ MATCH: 'lf_sound2:*', COUNT: 200 })) { const ks = [].concat(batch); if (ks.length) await redis.del(ks); }
         await redis.hSet('signed_accounts', slug, String(Date.now()));
+        // The red button: every link this account shared (videos and Brand Kit files) ends with it
+        const ids = Object.keys(await redis.hGetAll(`shares:${slug}`).catch(() => ({})) || {});
+        if (ids.length) { await redis.del(ids.map(id => `share:${id}`)).catch(() => {}); await redis.del(`shares:${slug}`).catch(() => {}); }
+        console.log('[media] protect', slug, 'ended', ids.length, 'shared links');
       }
       if (!more && step === 'undo') await redis.hDel('signed_accounts', slug).catch(() => {});
       console.log('[media] switch', slug, step, 'changed', changed, 'failed', failed, more ? 'page ' + page + ' next' : 'done');

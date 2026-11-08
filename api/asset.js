@@ -70,7 +70,7 @@ export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'private, no-store');
   const s = String(req.query.s || '');
   const share = await shareOf(s).catch(() => null);
-  if (!share || share.kind !== 'file' || share.path !== path || share.exp < Date.now()) return res.status(410).send('This link has ended or isn\'t valid. Ask for a new one.');
+  if (!share || share.kind !== 'file' || share.path !== path || (share.exp && share.exp < Date.now())) return res.status(410).send('This link has ended or isn\'t valid. Ask for a new one.');
   try {
     const blob = await head(path);
     // The file itself: a signed link of a few minutes (the private store), or the storage address before

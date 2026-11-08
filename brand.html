@@ -38,7 +38,7 @@
     <script>(function(){try{var a=localStorage.getItem('la_accent'),h=document.documentElement;if(a){h.setAttribute('data-accent',a);if(a[0]==='#'){var n=parseInt(a.slice(1),16);h.style.setProperty('--la-accent',a);h.style.setProperty('--la-accent-ink',(0.299*(n>>16)+0.587*(n>>8&255)+0.114*(n&255))>150?'#000000':'#ffffff')}}}catch(e){}window.laAccentHex=function(){return getComputedStyle(document.documentElement).getPropertyValue('--la-accent').trim()||'#39FF14'};var t=localStorage.getItem('la_theme');if(t==='light')document.documentElement.classList.remove('dark');else if(t==='auto'){if(window.matchMedia('(prefers-color-scheme:light)').matches)document.documentElement.classList.remove('dark');else document.documentElement.classList.add('dark');}else document.documentElement.classList.add('dark');})()</script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <script src="/la-dialogs.js?v=8"></script>
-    <script src="/la-media.js?v=2"></script>
+    <script src="/la-media.js?v=3"></script>
     <script src="nav-component.js?v=68"></script>
     <style>
         .nav-link { font-family: 'JetBrains Mono', monospace !important; font-size: 12px !important; border-left: 2px solid transparent; }
@@ -539,11 +539,11 @@
         // in a new tab never shows the storage address
         // Brand Kit files show through /api/media (the account's own, a signed link of a few minutes)
         function fileSrc(u) { return laMux(String(u || '')); }
-        // A link to one Brand Kit file for anyone, ending after 7 days (local-assets.com/asset/…?s=…)
+        // A link to one Brand Kit file for anyone, for good (local-assets.com/asset/…?s=…)
         var _fileLinks = {};
         function shareFileLink(url) {
-            if (_fileLinks[url] && _fileLinks[url].at > Date.now() - 3600e3) return Promise.resolve(_fileLinks[url].u);
-            return laFetch('/api/media', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'shareFile', url: url, days: 7 }) })
+            if (_fileLinks[url]) return Promise.resolve(_fileLinks[url].u);
+            return laFetch('/api/media', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'shareFile', url: url }) })
                 .then(function(r) { return r.json().then(function(d) { if (!r.ok) throw new Error(d.error || r.status); _fileLinks[url] = { u: d.url, at: Date.now() }; return d.url; }); });
         }
         // Copies text that's still on its way (Safari only allows the clipboard during the tap itself)
@@ -1530,7 +1530,7 @@
             wrap.querySelectorAll('[data-del]').forEach(function(b) { b.addEventListener('click', function() { removeFile(b.dataset.del, b); }); });
             wrap.querySelectorAll('[data-copy]').forEach(function(b) {
                 b.addEventListener('click', function() {
-                    copyLater(shareFileLink(b.dataset.copy)).then(function() { laToast('Link copied: it works for 7 days');
+                    copyLater(shareFileLink(b.dataset.copy)).then(function() { laToast('Link copied');
                         var i = b.querySelector('iconify-icon'); i.setAttribute('icon', 'solar:check-circle-linear');
                         setTimeout(function() { i.setAttribute('icon', 'solar:link-round-linear'); }, 1500);
                     });
@@ -1767,7 +1767,7 @@
         function openFilePreview(url) {
             var f = _files.filter(function(x) { return x.url === url; })[0];
             if (!f) return;
-            var link = '';   // made below: a link that works for 7 days
+            var link = '';   // made below: a link that works for good
             if (f.post) return openPostPreview(f.owner, f.post, postImages(f.owner, f.post).indexOf(f));
             if (/\.cube$/i.test(f.name)) return openLutPreview(f);
             var view = IMG_EXT.test(f.name)
@@ -1781,7 +1781,7 @@
                 view +
                 '<p class="bk-meta" style="margin-top:10px">' + fmtSize(f.size) + ' · ' + fmtDate(f.uploadedAt) + '</p>' +
                 '<label class="bk-share-label" for="bk-share-link">Share link</label>' +
-                '<div class="bk-share"><input id="bk-share-link" readonly placeholder="Making a link (works for 7 days)…" value="' + esc(link) + '"><button type="button" class="cam-btn ghost" id="bk-share-copy">Copy link</button></div>' +
+                '<div class="bk-share"><input id="bk-share-link" readonly placeholder="Making a link…" value="' + esc(link) + '"><button type="button" class="cam-btn ghost" id="bk-share-copy">Copy link</button></div>' +
                 '<div class="cam-form-actions" style="margin-top:16px">' +
                     (thumbFile(f) ? '<button type="button" class="cam-btn ghost" id="bk-file-event">Add to event</button>' : '') +
                     (wmLogoFile(f) ? '<button type="button" class="cam-btn ghost" id="bk-file-wm">' + (wmUsesLogo(f) ? 'Used as watermark' : 'Use as watermark') + '</button>' : '') +
@@ -1993,7 +1993,7 @@
                 pre.src = fileSrc(f.url);
                 document.getElementById('bk-post-count').textContent = (idx + 1) + ' / ' + imgs.length;
                 document.getElementById('bk-post-meta').textContent = f.name + ' · ' + fmtSize(f.size) + ' · ' + fmtDate(f.uploadedAt);
-                var li = document.getElementById('bk-share-link'); li.value = ''; li.placeholder = 'Making a link (works for 7 days)…';
+                var li = document.getElementById('bk-share-link'); li.value = ''; li.placeholder = 'Making a link…';
                 shareFileLink(f.url).then(function(u) { if (n === want) li.value = u; }).catch(function() { li.placeholder = 'Could not make a link'; });
                 var prev = document.getElementById('bk-post-prev'), next = document.getElementById('bk-post-next');
                 if (prev) prev.disabled = idx === 0;
@@ -2164,7 +2164,7 @@
                     (FONT_EXT.test(f.name) ? '' : '<button type="button" data-file-preview="' + esc(f.url) + '" title="Open"><iconify-icon icon="solar:eye-linear"></iconify-icon></button>') +
                     (f.category === 'photos' || (f.category === 'logos' && /\.(png|jpe?g|webp|gif|svg)$/i.test(f.name)) ? '<button type="button" data-photo="' + esc(f.url) + '" title="' + (f.owner.indexOf('artist-') === 0 ? 'Use as artist photo' : 'Use as profile photo') + '" class="' + (_ownerPhotos[f.owner] === f.url ? 'is-on' : '') + '"><iconify-icon icon="solar:user-circle-' + (_ownerPhotos[f.owner] === f.url ? 'bold' : 'linear') + '"></iconify-icon></button>' : '') +
                     (FONT_EXT.test(f.name) ? '<button type="button" data-font-preview="' + esc(f.url) + '" title="Preview font"><iconify-icon icon="solar:eye-linear"></iconify-icon></button>' : '') +
-                    '<button type="button" data-copy="' + esc(f.url) + '" title="Copy a link that works for 7 days"><iconify-icon icon="solar:link-round-linear"></iconify-icon></button>' +
+                    '<button type="button" data-copy="' + esc(f.url) + '" title="Copy a link to share"><iconify-icon icon="solar:link-round-linear"></iconify-icon></button>' +
                     '<button type="button" class="del" data-del="' + esc(f.url) + '" title="Delete"><iconify-icon icon="solar:trash-bin-minimalistic-linear"></iconify-icon></button>' +
                 '</div></div>';
         }

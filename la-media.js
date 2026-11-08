@@ -9,8 +9,12 @@
     var KEY = 'la_mkey', key = '', exp = 0;
     // A shared link (player.html?s=…): no sign-in; the share id opens its one video
     var share = (new URLSearchParams(location.search).get('s') || '').replace(/[^A-Za-z0-9_-]/g, '');
-    try { var c = JSON.parse(localStorage.getItem(KEY) || 'null'); if (c && c.exp > Date.now() + 60e3) { key = c.key; exp = c.exp; } } catch (_) {}
     var token = function() { try { return JSON.parse(localStorage.getItem('la_admin') || '{}').webToken || ''; } catch (_) { return ''; } };
+    // A key kept on this device is used only by the person it was made for: signing in as someone else (another
+    // account's email) on the same device kept the last person's key, and every file of the new account was refused
+    var whoKey = function(k) { try { return JSON.parse(atob(String(k).split('.')[0].replace(/-/g, '+').replace(/_/g, '/'))).e || ''; } catch (_) { return ''; } };
+    var me = function() { try { return String(JSON.parse(localStorage.getItem('la_admin') || '{}').email || '').toLowerCase(); } catch (_) { return ''; } };
+    try { var c = JSON.parse(localStorage.getItem(KEY) || 'null'); if (c && c.exp > Date.now() + 60e3 && (!me() || String(whoKey(c.key)).toLowerCase() === me())) { key = c.key; exp = c.exp; } } catch (_) {}
     var post = function(body) {
         var t = token();
         if (share) body.share = share; else if (!t) return Promise.reject(new Error('Not signed in'));
@@ -40,8 +44,8 @@
     }
     laMux.ready = share || (key && exp - Date.now() > 2 * 3600e3) ? Promise.resolve() : renew().catch(function() {});
     if (!share) setInterval(function() { if (exp - Date.now() < 2 * 3600e3) renew().catch(function() {}); }, 30 * 60e3);
-    // A link to one video for anyone (days: until it ends, 7 unless given)
-    laMux.share = function(pid, title, days) { return post({ action: 'share', pid: pid, title: title || '', days: days || 7 }); };
+    // A link to one video for anyone, for good (days: until it ends, when given)
+    laMux.share = function(pid, title, days) { return post({ action: 'share', pid: pid, title: title || '', days: days || 0 }); };
     laMux.shared = !!share;
     // Mux Player: tickets for its playback, poster and storyboard, then the playback ID (public videos: none needed)
     var _tickets = {};
