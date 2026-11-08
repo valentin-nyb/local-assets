@@ -205,7 +205,7 @@
         /* Titles: Helvetica Neue Black, all caps (same rule as styles/theme.css) */
         h1:not(header h1), h2, h3 { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif !important; font-weight: 900 !important; text-transform: uppercase !important; letter-spacing: 0 !important; font-style: normal !important; }
     </style>
-    <link rel="stylesheet" href="styles/home-light.css?v=3">
+    <link rel="stylesheet" href="styles/home-light.css?v=4">
 </head>
 
 <body class="font-sans antialiased bg-background text-foreground overflow-x-hidden selection:bg-primary selection:text-black">
@@ -667,50 +667,51 @@
                 </div>
 
                 <div class="flex-1 flex justify-center relative reveal delay-200 w-full">
-                    <div class="relative w-[280px] h-[580px] border-[8px] border-[#1a1a1a] rounded-[3rem] bg-black overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.8)] flex flex-col shrink-0 z-10">
-                        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-1/3 h-5 bg-[#1a1a1a] rounded-b-xl z-20"></div>
-                        
-                        <div class="p-4 pt-10 flex-1 flex flex-col overflow-y-auto no-scrollbar relative z-10 space-y-4 pb-12">
-                            
-                            
-                            <div class="bg-[#111] border border-[#222] p-4 rounded-xl shrink-0">
-                                <span class="text-[9px] font-mono text-muted-foreground uppercase tracking-widest block mb-2">Cloud Archive</span>
-                                <div class="flex justify-between items-end mb-3">
-                                    <span class="text-lg font-bold text-primary leading-none">6.8 TB <span class="text-[10px] font-mono font-normal text-muted-foreground">of 10 TB</span></span>
-                                    <span class="text-[9px] text-muted-foreground font-mono leading-none">Syncing...</span>
-                                </div>
-                                <div class="w-full bg-white/5 h-1.5 rounded-full overflow-hidden">
-                                    <div class="bg-primary h-full shadow-[0_0_5px_#39FF14]" style="width:68%"></div>
+                    <style>
+                        /* The phone: a thin even bezel, a pill at the top; light in light mode */
+                        .ph { --ph-frame:#27272a; --ph-screen:#000; --ph-card:#111113; --ph-line:#1f1f22; --ph-text:#fafafa; --ph-mute:#71717a; --ph-acc:#39FF14; --ph-track:rgba(255,255,255,.06);
+                              position:relative; z-index:10; flex-shrink:0; width:280px; height:580px; padding:5px; border-radius:46px; background:var(--ph-frame); box-shadow:0 30px 80px -20px rgba(0,0,0,.7); }
+                        html:not(.dark) .ph { --ph-frame:#d4d4d8; --ph-screen:#fafafa; --ph-card:#ffffff; --ph-line:#e4e4e7; --ph-text:#09090b; --ph-mute:#71717a; --ph-acc:#EA580C; --ph-track:#f4f4f5; box-shadow:0 30px 80px -24px rgba(0,0,0,.25); }
+                        .ph-screen { position:relative; height:100%; border-radius:41px; background:var(--ph-screen); overflow:hidden; display:flex; flex-direction:column; gap:14px; padding:52px 14px 20px; }
+                        .ph-screen::before { content:""; position:absolute; top:12px; left:50%; width:84px; height:24px; margin-left:-42px; border-radius:999px; background:#000; }
+                        .ph-card { padding:14px; border:1px solid var(--ph-line); border-radius:18px; background:var(--ph-card); }
+                        .ph-lbl { display:block; margin-bottom:8px; font:500 9px 'JetBrains Mono', monospace; letter-spacing:.18em; text-transform:uppercase; color:var(--ph-mute); }
+                        .ph-row { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:12px; }
+                        .ph-big { font:700 18px/1 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; color:var(--ph-acc); }
+                        .ph-big small, .ph-row > span:last-child { font:400 10px 'JetBrains Mono', monospace; color:var(--ph-mute); }
+                        .ph-bar { height:6px; border-radius:999px; background:var(--ph-track); overflow:hidden; }
+                        .ph-bar i { display:block; height:100%; width:68%; border-radius:inherit; background:var(--ph-acc); }
+                        .ph-vid { aspect-ratio:16/9; margin-bottom:14px; border-radius:10px; overflow:hidden; background:#18181b; }
+                        .ph-vid video { width:100%; height:100%; object-fit:cover; display:block; }
+                        .ph-lines { display:flex; flex-direction:column; gap:9px; font:500 9px 'JetBrains Mono', monospace; letter-spacing:.16em; text-transform:uppercase; }
+                        .ph-lines p { margin:0; color:var(--ph-text); } .ph-lines .on { color:var(--ph-acc); } .ph-lines .rec { color:#ef4444; }
+                        .ph-asset { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; }
+                        .ph-asset b { display:block; font:700 10px 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:.04em; color:var(--ph-text); }
+                        .ph-asset small { display:block; margin-top:4px; font:400 8px 'JetBrains Mono', monospace; color:var(--ph-mute); }
+                        .ph-spin { width:16px; height:16px; border:2px solid var(--ph-track); border-top-color:var(--ph-acc); border-radius:999px; animation:spin 1s linear infinite; }
+                        .ph-screen::after { content:""; position:absolute; left:50%; bottom:8px; width:96px; height:4px; margin-left:-48px; border-radius:999px; background:var(--ph-text); opacity:.35; }
+                    </style>
+                    <div class="ph">
+                        <div class="ph-screen">
+                            <div class="ph-card">
+                                <span class="ph-lbl">Cloud Archive</span>
+                                <div class="ph-row"><span class="ph-big">6.8 TB <small>of 10 TB</small></span><span>Syncing...</span></div>
+                                <div class="ph-bar"><i></i></div>
+                            </div>
+                            <div class="ph-card">
+                                <div class="ph-vid"><video class="la-lazy" muted playsinline loop preload="none" poster="/img/af/live-poster.jpg" data-src="/img/af/live.mp4"></video></div>
+                                <div class="ph-lines">
+                                    <p class="on">Live Feed Room 1 // Main Floor</p>
+                                    <p>Artist: ARTIST NAME</p>
+                                    <p class="rec">Elapsed <span id="venue-elapsed">01:42:15</span></p>
+                                    <p class="on">Cameras 3/3 Active</p>
                                 </div>
                             </div>
-
-                            <div class="bg-[#111] border border-[#222] p-4 rounded-xl shrink-0">
-                                <div class="relative aspect-video rounded overflow-hidden mb-4 bg-zinc-900 border border-white/5">
-                                    <video class="la-lazy w-full h-full object-cover" muted playsinline loop preload="none" poster="/img/af/live-poster.jpg" data-src="/img/af/live.mp4"></video>
-                                </div>
-                                <div class="space-y-2.5 font-mono text-[9px] uppercase tracking-widest">
-                                    <p class="text-primary leading-relaxed">Live Feed Room 1 // Main Floor</p>
-                                    <p class="text-white">Artist: ARTIST NAME</p>
-                                    <p class="text-red-500">Elapsed <span id="venue-elapsed">01:42:15</span></p>
-                                    <p class="text-primary">Cameras 3/3 Active</p>
-                                </div>
-                            </div>
-
-                            <div class="shrink-0 pt-2 pb-4">
-                                <span class="text-[9px] font-mono text-muted-foreground uppercase tracking-widest block mb-3 pl-1">Processing Asset</span>
-                                <div class="flex items-center justify-between p-3 bg-[#111] border border-[#222] rounded-xl">
-                                    <div class="flex items-center gap-3">
-                                        <div>
-                                            <p class="text-[10px] font-bold uppercase text-white tracking-wide">ARTIST NAME</p>
-                                            <p class="text-[8px] font-mono text-muted-foreground uppercase mt-1">41 GB • ROOM 2</p>
-                                        </div>
-                                    </div>
-                                    <div class="w-4 h-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-                                </div>
+                            <div>
+                                <span class="ph-lbl" style="padding-left:4px">Processing Asset</span>
+                                <div class="ph-card ph-asset"><div><b>ARTIST NAME</b><small>41 GB • ROOM 2</small></div><div class="ph-spin"></div></div>
                             </div>
                         </div>
-                        
-                        <div class="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-black to-transparent pointer-events-none z-20"></div>
                     </div>
 
                 </div>

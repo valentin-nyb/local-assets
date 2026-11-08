@@ -188,3 +188,8 @@ html:not(.dark) .tr-btn { border:1px solid rgba(9,9,11,.3) !important; color:#09
 html:not(.dark) .tr-btn::before { background:#09090b !important; }
 html:not(.dark) .tr-btn-main { background:#EA580C !important; border-color:#EA580C !important; }
 html:not(.dark) .tr-ent { border:1px solid rgba(9,9,11,.12) !important; background:#ffffff !important; }
+
+/* Hover fills are never black in light mode: an orange button fills white (orange text), an outlined one fills orange (white text) */
+html:not(.dark) :is(.bx-cta, .la-dashboard-btn, .ord-go, .tr-btn-main)::before { background:#ffffff !important; }
+html:not(.dark) .tr-btn:not(.tr-btn-main)::before { background:#EA580C !important; }
+@media (hover:hover) { html:not(.dark) .tr-btn:not(.tr-btn-main):hover { border-color:#EA580C !important; } }
