@@ -203,6 +203,7 @@
                 <script>(function(){ try { var a = JSON.parse(localStorage.getItem('la_admin') || '{}'); if ((a.venueSlug === 'local-assets-admin' || (function(c){ return /^local\s*[\/-]?\s*assets\b/i.test(String(c ? c.name : (a.venue || '')).trim()); })((a.venues || []).filter(function(v){ return v && v.slug === a.venueSlug; })[0]))) { document.getElementById('venue-tier').classList.add('is-la'); return; } var k = 'la_venue_logo5:' + (a.venueSlug || ''), v = JSON.parse(localStorage.getItem(k) || 'null'); if (v && (v.mask || v.img)) { var h = document.getElementById('venue-tier'); h.classList.add('has-logo', 'logo-early'); if (v.img) h.classList.add('logo-img'); h.style.setProperty('--logo', 'url("' + (v.img ? v.url : v.mask) + '")'); h.style.setProperty('--logo-w', Math.round(Math.min(200, Math.max(28, 28 * v.ar))) + 'px'); } } catch (_) {} })();</script>
                 <button type="button" id="logo-slot" class="logo-slot" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg><span><b>Add your logo</b><small>PNG, SVG or WebP</small></span></button>
                 <input type="file" id="logo-slot-file" accept="image/png,image/svg+xml,image/webp" hidden>
+                <button type="button" id="logo-edit" class="logo-edit" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg>Change logo</button>
                 <p class="dash-sub" id="venue-tier-sub">Your sessions, files and channels.</p>
             </div>
             <a id="live-feed-hero" href="/camera.html" class="block cursor-pointer hover:border-primary/50 transition-all duration-500 w-full bg-[#050505] border border-[#27272a] rounded-2xl p-5 md:p-8 relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-4 md:gap-6 shadow-2xl no-underline" style="background:#050505!important">
@@ -752,7 +753,7 @@
                     var prof = d.ownerPhotos && d.ownerPhotos.venue, chosen = lgs.filter(function(f) { return f.url === prof; })[0];
                     // A PNG first: phones (Safari) can't always read an SVG logo's pixels
                     var lg = chosen || lgs.filter(function(f) { return !/\.svg(\?|$)/i.test(f.name || f.url || ''); })[0] || lgs[0];
-                    if (lg) showVenueLogo(lg.url); else logoSlot(d);
+                    if (lg) { showVenueLogo(lg.url); logoEdit(d); } else logoSlot(d);
                 }
                 if (d && d.orgType === 'artist' && _brandPhotos.venue) {
                     var own = 'artist-' + brandSlug(d.orgName || getVenueName());
@@ -2637,33 +2638,52 @@
         // page), then stands in for the name. Artists with access to another account have no slot: it isn't their logo.
         function logoSlot(d) {
             var btn = document.getElementById('logo-slot'), inp = document.getElementById('logo-slot-file');
-            var tier = document.getElementById('venue-tier');
+            var tier = document.getElementById('venue-tier'), edit = document.getElementById('logo-edit');
             if (!btn || !inp || !tier || _isMemberAcct()) return;
             // A logo kept from an earlier visit (painted before the Brand Kit answered) that's no longer there
             tier.classList.remove('has-logo', 'logo-early', 'logo-img'); tier.style.removeProperty('--logo'); tier.style.removeProperty('--logo-w');
             try { localStorage.removeItem(venueLogoKey()); } catch (_) {}
-            btn.hidden = false; tier.hidden = true;   // in the logo's place; the name stays in the breadcrumb
-            btn.onclick = function() { inp.click(); };
+            btn.hidden = false; tier.hidden = true; if (edit) edit.hidden = true;   // in the logo's place; the name stays in the breadcrumb
+            btn.onclick = function() { pickLogo(d, btn, btn.querySelector('b')); };
+        }
+        // A logo showing: Change logo under it
+        function logoEdit(d) {
+            var edit = document.getElementById('logo-edit');
+            if (!edit || _isMemberAcct()) return;
+            edit.hidden = false;
+            edit.onclick = function() { pickLogo(d, edit, null); };
+        }
+        // Picks a file and uploads it to the account's own logos (as from the Brand Kit page); it then stands in for the
+        // name. The Brand Kit lists the newest first, so it's the one shown; and when the profile picture was the old
+        // logo, the new one takes its place there too.
+        function pickLogo(d, btn, label) {
+            var inp = document.getElementById('logo-slot-file'), say = function(t) { if (label) label.textContent = t; else btn.lastChild.textContent = t; };
+            var was = label ? label.textContent : btn.lastChild.textContent;
             inp.onchange = async function() {
                 var f = inp.files && inp.files[0]; inp.value = '';
                 if (!f) return;
-                var label = btn.querySelector('b'), sess = {};
+                var sess = {};
                 try { sess = JSON.parse(localStorage.getItem('la_admin') || '{}'); } catch (_) {}
-                if (!/^image\/(png|svg\+xml|webp)$/.test(f.type)) { label.textContent = 'Use a PNG, SVG or WebP'; return; }
-                btn.classList.add('busy'); label.textContent = 'Uploading…';
+                if (!/^image\/(png|svg\+xml|webp)$/.test(f.type)) { say('Use a PNG, SVG or WebP'); return; }
+                btn.classList.add('busy'); say('Uploading\u2026');
                 try {
                     var blob = await import('https://cdn.jsdelivr.net/npm/@vercel/blob@2.8.2/client/+esm');
                     var safe = f.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^-+/, '').slice(-120) || 'logo.png';
                     var up = await blob.upload('brand/' + sess.venueSlug + '/venue/logos/' + safe, f, { access: d.privateStore ? 'private' : 'public', handleUploadUrl: '/api/brand', headers: { Authorization: 'Bearer ' + sess.webToken } });
                     // A file in the private store keeps the Brand Kit's usual address (its path), as on the Brand Kit page
                     var url = d.privateStore && up.pathname ? 'https://puws5w9zdemfusjd.public.blob.vercel-storage.com/' + up.pathname.split('/').map(encodeURIComponent).join('/') : up.url;
-                    btn.hidden = true; tier.hidden = false; _brandPhotosAt = 0;
-                    showVenueLogo(url);
+                    var prof = d.ownerPhotos && d.ownerPhotos.venue;
+                    if (prof && (d.files || []).some(function(x) { return x.url === prof && x.owner === 'venue' && x.category === 'logos'; })) {
+                        await laFetch('/api/brand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setPhoto', url: url }) }).catch(function() {});
+                    }
+                    document.getElementById('logo-slot').hidden = true; document.getElementById('venue-tier').hidden = false; _brandPhotosAt = 0;
+                    say(was); showVenueLogo(url); logoEdit(d);
                 } catch (e) {
                     console.error('[logo] upload', e && e.message);
-                    label.textContent = 'Couldn\u2019t upload: try again';
+                    say('Couldn\u2019t upload: try again');
                 } finally { btn.classList.remove('busy'); }
             };
+            inp.click();
         }
         function _isMemberAcct() { return document.documentElement.classList.contains('la-member'); }
         function _orgTypeHero() { return window._heroOrgType || ''; }
@@ -4084,6 +4104,12 @@
         .logo-slot b { display:block; font:600 13px/1.2 'Geist', 'Helvetica Neue', Helvetica, Arial, sans-serif; color:var(--la-text); }
         .logo-slot small { display:block; margin-top:2px; font:400 11px/1.2 'Geist', 'Helvetica Neue', Helvetica, Arial, sans-serif; color:var(--la-dim); }
         .logo-slot.busy { pointer-events:none; opacity:.6; }
+        /* A logo showing: a small button under it to put in another */
+        .logo-edit { display:inline-flex; align-items:center; gap:6px; margin:8px 0 2px; padding:4px 10px 4px 8px; border:1px solid var(--la-line); border-radius:999px; background:transparent; color:var(--la-sub); font:500 11px/1 'Geist', 'Helvetica Neue', Helvetica, Arial, sans-serif; cursor:pointer; transition:opacity .2s ease, color .2s ease, border-color .2s ease; }
+        .logo-edit[hidden] { display:none; }
+        .logo-edit svg { width:12px; height:12px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+        .logo-edit:hover { color:var(--la-text); border-color:var(--la-dim); }
+        .logo-edit.busy { pointer-events:none; opacity:.6; }
         /* Stat cards, like the side menu: Geist, a plain label, a large number, a quiet line under it */
         .kpi { border-radius:12px; padding:20px 22px; background-image:none !important; box-shadow:none !important; }
         .kpi-label { font:500 13px/1.2 'Geist', 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing:0; text-transform:none; color:var(--la-sub); }
