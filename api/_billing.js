@@ -310,9 +310,15 @@ function planFeatures(planId, type, t, included, name) {
   const space = `Room for about ${hours(included.storedMinutes || 0)} hours of full sets; more is charged by the month`;
   const brand = 'Brand Kit: your logo, animations and custom fonts for watermark and thumbnails';
   const who = whoLine(type, planId);
+  // Every account: venues and labels (and managements) give their artists access, invited by email (api/brand.js) or
+  // signing up themselves; one sign-in then reaches every account they're on (switch-venue.js)
+  const access = artist ? 'One sign-in for all your sets, events and venues: the venues and labels that invite you are there too'
+    : type === 'venue' ? 'Give your DJs access: invite them, or they sign up, and each sees their sets from your nights, with all their events and venues, in one place'
+    : 'Give your artists access: invite them, or they sign up, and each sees all their sets, events and venues in one place';
   if (planId === 'dj-trial' && type === 'artist') return [
     who,
     'Free to join: no monthly fee, you pay only for what you use, on the 1st',
+    access,
     '6 vertical clips from every set',
     brand,
     'Connect your DJI, Sony Alpha and more',
@@ -321,17 +327,16 @@ function planFeatures(planId, type, t, included, name) {
     who,
     `£${TRIAL_FEE[type] || 49} to join, taken off your first month if you upgrade`,
     'No monthly fee: you pay only for what you use, on the 1st',
+    access,
     '6 vertical clips from every set',
     brand,
     'Connect your DJI, Sony Alpha and more',
   ];
-  // Labels (and managements) give their artists access: invited by email (api/brand.js), or signing up themselves
-  const access = type === 'label' || type === 'management' ? ['Give your artists access: invite them, or they sign up, and each sees all their sets, events and venues in one place'] : [];
-  if (planId === 'starter-distribution') return [who, sets, ...access, '6 vertical clips from every set', brand, space, 'Connect your DJI, Sony Alpha and more\nOr add one of our cameras for £149 a month, 12-month minimum.\nSet up for you, controlled from Camera Control.'];
+  if (planId === 'starter-distribution') return [who, sets, access, '6 vertical clips from every set', brand, space, 'Connect your DJI, Sony Alpha and more\nOr add one of our cameras for £149 a month, 12-month minimum.\nSet up for you, controlled from Camera Control.'];
   // Pro: artists and venues add our PTZ camera for £149 a month; record labels get one included
-  if (planId === 'liveset-distribution') return [who, sets, '12 vertical clips from every set', brand, space,
+  if (planId === 'liveset-distribution') return [who, sets, access, '12 vertical clips from every set', brand, space,
     artist ? 'Connect your DJI, Sony Alpha and more\nOr add one of our cameras for £149 a month, 12-month minimum.\nSet up for you, controlled from Camera Control.' : '1 PTZ camera included, set up for you (12-month minimum)'];
-  if (planId === 'liveset-creative') return [who, sets, 'Unlimited vertical clips from every set', 'Multi-camera auto-edit of the full set, in 4K with HQ audio', brand, space,
+  if (planId === 'liveset-creative') return [who, sets, access, 'Unlimited vertical clips from every set', 'Multi-camera auto-edit of the full set, in 4K with HQ audio', brand, space,
     artist ? '1 PTZ camera, Starlink Mini and Mac mini, set up for you\nOr add a second camera for £149 a month, 12-month minimum.\nSet up for you, controlled from Camera Control.' : '2 PTZ cameras, Starlink Mini and Mac mini, set up for you',
     '12-month minimum', 'Quarterly performance reports'];
   return null;

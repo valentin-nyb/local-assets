@@ -362,31 +362,20 @@
                 .bx-plat.done span { color:#39FF14; }
                 .bx-plat i { grid-column:span 2; height:2px; border-radius:2px; background:#27272a; overflow:hidden; }
                 .bx-plat i::after { content:""; display:block; height:100%; width:var(--w,0%); background:#39FF14; transition:width .25s linear; }
-                /* A card opens to the middle of the screen, larger, with more about it (the + at its top right, or a click anywhere on it) */
-                .bx-card[data-bx] { cursor:pointer; }
-                .bx-x { position:absolute; top:14px; right:14px; z-index:3; width:28px; height:28px; display:flex; align-items:center; justify-content:center; padding:0; border:1px solid #3f3f46; border-radius:999px; background:#111113; color:#e4e4e7; cursor:pointer; transition:transform .35s cubic-bezier(.65,0,.35,1), border-color .2s ease, background-color .2s ease; }
+                /* Each card is open; the − at its top right (or a click on its title) closes it down to its title, + opens it again */
+                .bx-card[data-bx] h3 { cursor:pointer; padding:0 30px; }
+                .bx-x { position:absolute; top:14px; right:14px; z-index:3; width:28px; height:28px; display:flex; align-items:center; justify-content:center; padding:0; border:1px solid #3f3f46; border-radius:999px; background:#111113; color:#e4e4e7; cursor:pointer; transition:border-color .2s ease; }
                 .bx-x svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
+                .bx-x-v { transform-origin:center; transform:scaleY(0); transition:transform .3s cubic-bezier(.65,0,.35,1); }
                 .bx-x:hover { border-color:#fafafa; }
                 .bx-x:focus { outline:none; } .bx-x:focus-visible { outline:2px solid #39FF14; outline-offset:2px; }
-                .bx-more { display:none; width:100%; max-width:600px; margin:-6px auto 22px; text-align:left; }
-                .bx-more p { margin:0 0 14px; font:400 15px/1.55 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#a1a1aa; }
-                .bx-more ul { margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:8px; }
-                .bx-more li { display:flex; gap:10px; align-items:baseline; font:500 14px/1.4 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#e4e4e7; }
-                .bx-more li::before { content:""; flex-shrink:0; width:6px; height:6px; border-radius:999px; background:#39FF14; transform:translateY(-2px); }
-                .bx-ph { visibility:hidden; }
-                .bx-scrim { position:fixed; inset:0; z-index:95; background:rgba(0,0,0,.72); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); opacity:0; transition:opacity .35s ease; }
-                .bx-scrim.on { opacity:1; }
-                .bx-card.bx-open { position:fixed; z-index:96; margin:0; cursor:default; overflow:auto; overscroll-behavior:contain; padding:28px 28px 22px; box-shadow:0 40px 120px -20px rgba(0,0,0,.8); transition:top .45s cubic-bezier(.65,0,.35,1), left .45s cubic-bezier(.65,0,.35,1), width .45s cubic-bezier(.65,0,.35,1), height .45s cubic-bezier(.65,0,.35,1) !important; transform:none !important; opacity:1 !important; }
-                .bx-card.bx-open h3 { font-size:22px; margin-bottom:22px; }
-                .bx-card.bx-open .bx-x { transform:rotate(45deg); }
-                .bx-card.bx-open .bx-more { display:block; animation:bxIn .4s .2s ease both; }
-                @keyframes bxIn { from { opacity:0; transform:translateY(8px); } }
-                .bx-card.bx-open .bx-body { margin-top:0; max-width:640px; }
-                .bx-card.bx-open .bx-clip { max-width:200px; }
-                .bx-card.bx-open .bx-pub .bx-clip { width:180px; }
-                .bx-card.bx-open[data-bx="live"] .bx-stack { aspect-ratio:16/9; }
-                .bx-card.bx-open .bx-kit { max-width:460px; margin:0 auto; }
-                html.bx-lock, html.bx-lock body { overflow:hidden; }
+                .bx-card.bx-anim { transition:height .4s cubic-bezier(.65,0,.35,1) !important; }
+                .bx-card > :not(h3):not(.bx-x) { transition:opacity .25s ease; }
+                .bx-card.bx-shut { align-self:start; cursor:pointer; }
+                .bx-card.bx-shut h3 { margin-bottom:0; }
+                .bx-card.bx-shut > :not(h3):not(.bx-x) { opacity:0; visibility:hidden; }
+                .bx-card.bx-shut:not(.bx-anim) > :not(h3):not(.bx-x) { display:none; }
+                .bx-card.bx-shut .bx-x-v { transform:scaleY(1); }
                 @media (max-width:900px) { .bx-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .bx-intro { margin:10px 0 0; } }
                 @media (max-width:640px) { .bx-grid { grid-template-columns:minmax(0,1fr); } .bx-w, .bx-intro { grid-column:auto; } .bx-split, .bx-pub { grid-template-columns:minmax(0,1fr); } .bx-pub .bx-clip { width:46%; margin:0 auto; } }
                 @media (prefers-reduced-motion:reduce) { .bx-grid *, .bx-grid *::before, .bx-grid *::after { animation:none !important; transition:none !important; } }
@@ -402,8 +391,7 @@
 
                     <div class="bx-card reveal delay-100" data-bx="live">
                         <h3>Live recording</h3>
-                        <button type="button" class="bx-x" aria-label="Open" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
-                        <div class="bx-more"><p>The cameras start on their own when the night starts, over the venue's Wi-Fi or a cable. Switch between up to three angles while you watch from your phone.</p><ul><li>Starts and stops with the events in your Google or Apple Calendar</li><li>Each set recorded in full, with the DJ's audio</li><li>Watch every camera live from the dashboard</li></ul></div>
+                        <button type="button" class="bx-x" aria-label="Close" aria-expanded="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="bx-x-v" d="M12 5v14"/><path d="M5 12h14"/></svg></button>
                         <div class="bx-body">
                             <div class="bx-stack">
                                 <span class="bx-badge"><i></i>REC <span data-bx-clock>01:42:15</span></span>
@@ -420,8 +408,7 @@
 
                     <div class="bx-card reveal delay-200" data-bx="kit">
                         <h3>Your Brand Kit</h3>
-                        <button type="button" class="bx-x" aria-label="Open" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
-                        <div class="bx-more"><p>Upload your logos, fonts and colour looks once. Every clip, thumbnail and post gets them, with no editing.</p><ul><li>Logos as PNG, or a moving GIF or WebP</li><li>Your own fonts for the artist's name</li><li>Colour looks as .cube files</li><li>One kit for the venue and one for each artist</li></ul></div>
+                        <button type="button" class="bx-x" aria-label="Close" aria-expanded="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="bx-x-v" d="M12 5v14"/><path d="M5 12h14"/></svg></button>
                         <div class="bx-body bx-kit">
                             <div class="bx-kit-row"><span class="bx-kit-ico bx-kit-logo"></span><p>Logo<small data-kit="logo">PNG · MOVING GIF</small></p><em>ON</em></div>
                             <div class="bx-kit-row"><span class="bx-kit-ico bx-kit-font" data-kit-font>Aa</span><p>Font<small data-kit="font">HELVETICA BLACK</small></p><em>ON</em></div>
@@ -433,8 +420,7 @@
 
                     <div class="bx-card bx-w reveal delay-100" data-bx="edit">
                         <h3>Cut to the music</h3>
-                        <button type="button" class="bx-x" aria-label="Open" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
-                        <div class="bx-more"><p>Every set is edited to the beat: the camera changes on the bar, so the cut moves with the music.</p><ul><li>Cuts every 4, 8 or 16 bars</li><li>Uses every camera in the room</li><li>The peak moments, like the drops, are picked out for the clips</li></ul></div>
+                        <button type="button" class="bx-x" aria-label="Close" aria-expanded="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="bx-x-v" d="M12 5v14"/><path d="M5 12h14"/></svg></button>
                         <div class="bx-body">
                             <div class="bx-stack">
                                 <span class="bx-badge">EDIT · <span data-bx-cam>CAM 1</span></span>
@@ -453,8 +439,7 @@
 
                     <div class="bx-card bx-w reveal delay-200" data-bx="clips">
                         <h3>Clips, ready to post</h3>
-                        <button type="button" class="bx-x" aria-label="Open" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
-                        <div class="bx-more"><p>Vertical clips from every set, sized for Reels, TikTok and Shorts, with your brand already on them.</p><ul><li>6 clips from every set, at 1080 × 1920</li><li>Your logo, still or moving, and the artist's name</li><li>Download them or post them straight away</li></ul></div>
+                        <button type="button" class="bx-x" aria-label="Close" aria-expanded="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="bx-x-v" d="M12 5v14"/><path d="M5 12h14"/></svg></button>
                         <div class="bx-body">
                             <div class="bx-clips move">
                                 <div class="bx-clip"><video muted playsinline loop preload="none" poster="/img/af/v1-poster.jpg" data-src="/img/af/v1.mp4"></video></div>
@@ -468,8 +453,7 @@
 
                     <div class="bx-card bx-w reveal delay-100" data-bx="sets">
                         <h3>Saved for every DJ</h3>
-                        <button type="button" class="bx-x" aria-label="Open" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
-                        <div class="bx-more"><p>Each set is cut at its exact times from your calendar and saved under the DJ's name, so every artist has their own library.</p><ul><li>Saved by artist and date</li><li>The full recording is kept, with the clips</li><li>Thumbnails, horizontal and vertical, with your watermark</li></ul></div>
+                        <button type="button" class="bx-x" aria-label="Close" aria-expanded="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="bx-x-v" d="M12 5v14"/><path d="M5 12h14"/></svg></button>
                         <div class="bx-body bx-split">
                             <div class="bx-stack">
                                 <span class="bx-badge" data-bx-set>22:00 · ARTIST NAME</span>
@@ -488,8 +472,7 @@
 
                     <div class="bx-card bx-w reveal delay-200" data-bx="publish">
                         <h3>Live everywhere</h3>
-                        <button type="button" class="bx-x" aria-label="Open" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
-                        <div class="bx-more"><p>When a set is ready, it goes out. Nobody uploads anything.</p><ul><li>Sent to YouTube and SoundCloud</li><li>Clips ready for Instagram and TikTok</li><li>Posted under your venue's or the artist's name</li></ul></div>
+                        <button type="button" class="bx-x" aria-label="Close" aria-expanded="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="bx-x-v" d="M12 5v14"/><path d="M5 12h14"/></svg></button>
                         <div class="bx-body bx-pub">
                             <div class="bx-clip"><video muted playsinline loop preload="none" poster="/img/af/v5-poster.jpg" data-src="/img/af/v5.mp4"></video></div>
                             <div class="bx-plats">
@@ -523,48 +506,33 @@
                 function wake(v) { if (!v.src && v.dataset.src) v.src = v.dataset.src; if (!still) { var p = v.play(); if (p && p.catch) p.catch(function () {}); } }
                 var cards = root.querySelectorAll('.bx-card');
                 if ('IntersectionObserver' in window) {
-                    var io = new IntersectionObserver(function (es) { es.forEach(function (e) { e.target._seen = e.isIntersecting; vids(e.target).forEach(function (v) { e.isIntersecting ? wake(v) : v.pause(); }); }); }, { rootMargin: '200px 0px', threshold: 0.01 });
+                    var io = new IntersectionObserver(function (es) { es.forEach(function (e) { e.target._seen = e.isIntersecting; vids(e.target).forEach(function (v) { e.isIntersecting && !e.target.classList.contains('bx-shut') ? wake(v) : v.pause(); }); }); }, { rootMargin: '200px 0px', threshold: 0.01 });
                     Array.prototype.forEach.call(cards, function (c) { io.observe(c); });
                 } else Array.prototype.forEach.call(cards, function (c) { c._seen = true; vids(c).forEach(wake); });
-                // Open a card: it grows from where it is to the middle of the screen; a stand-in keeps its place in the grid
-                var scrim = document.createElement('div'), openCard = null, ph = null;
-                scrim.className = 'bx-scrim'; scrim.hidden = true; document.body.appendChild(scrim);
-                function place(card, r) { card.style.top = r.top + 'px'; card.style.left = r.left + 'px'; card.style.width = r.width + 'px'; card.style.height = r.height + 'px'; }
-                function openUp(card, byKey) {
-                    if (openCard) return;
-                    var r = card.getBoundingClientRect(), gap = innerWidth < 640 ? 16 : 32;
-                    ph = document.createElement('div'); ph.className = 'bx-ph' + (card.classList.contains('bx-w') ? ' bx-w' : ''); ph.style.height = r.height + 'px';
-                    card.parentNode.insertBefore(ph, card);
-                    openCard = card; card.classList.add('bx-open'); document.documentElement.classList.add('bx-lock');
-                    var W = Math.min(card.classList.contains('bx-w') ? 860 : 720, innerWidth - gap * 2);
-                    card.style.transition = 'none'; card.style.width = W + 'px'; card.style.height = 'auto';
-                    var H = Math.min(card.offsetHeight, innerHeight - gap * 2);
-                    place(card, r); card.offsetWidth; card.style.transition = '';
-                    place(card, { top: (innerHeight - H) / 2, left: (innerWidth - W) / 2, width: W, height: H });
-                    scrim.hidden = false; scrim.offsetWidth; scrim.classList.add('on');
-                    var x = card.querySelector('.bx-x'); x.setAttribute('aria-expanded', 'true'); x.setAttribute('aria-label', 'Close'); if (byKey) x.focus({ preventScroll: true });
-                    vids(card).forEach(wake);
-                }
-                function close() {
-                    var card = openCard; if (!card) return;
-                    openCard = null; scrim.classList.remove('on');
-                    var x = card.querySelector('.bx-x'); x.setAttribute('aria-expanded', 'false'); x.setAttribute('aria-label', 'Open');
-                    card.scrollTop = 0; place(card, ph.getBoundingClientRect());
-                    setTimeout(function () {
-                        card.classList.remove('bx-open'); card.removeAttribute('style'); ph.remove(); ph = null; scrim.hidden = true;
-                        document.documentElement.classList.remove('bx-lock'); if (document.activeElement === document.body || card.contains(document.activeElement)) x.focus({ preventScroll: true });
-                    }, still ? 0 : 460);
+                // Close a card down to its title (or open it again): its height slides between the two
+                function toggle(card, byKey) {
+                    var shut = !card.classList.contains('bx-shut'), from = card.offsetHeight, x = card.querySelector('.bx-x');
+                    card.classList.remove('bx-anim'); card.style.height = '';
+                    card.classList.toggle('bx-shut', shut);
+                    if (!shut) card.style.alignSelf = 'start';
+                    var to = card.offsetHeight;
+                    card.style.alignSelf = '';
+                    x.setAttribute('aria-expanded', shut ? 'false' : 'true'); x.setAttribute('aria-label', shut ? 'Open' : 'Close');
+                    if (byKey) x.focus({ preventScroll: true });
+                    if (shut) vids(card).forEach(function (v) { v.pause(); }); else if (card._seen) vids(card).forEach(wake);
+                    if (still) return;
+                    card.classList.add('bx-anim'); if (!shut) card.style.alignSelf = 'start';
+                    card.style.height = from + 'px'; card.offsetWidth; card.style.height = to + 'px';
+                    clearTimeout(card._t);
+                    card._t = setTimeout(function () { card.classList.remove('bx-anim'); card.style.height = ''; card.style.alignSelf = ''; }, 420);
                 }
                 Array.prototype.forEach.call(cards, function (card) {
                     if (!card.dataset.bx) return;
                     card.addEventListener('click', function (e) {
-                        if (e.target.closest('.bx-x')) return openCard === card ? close() : openUp(card, e.detail === 0);
-                        if (openCard !== card && !e.target.closest('button, a')) openUp(card);
+                        if (e.target.closest('.bx-x')) return toggle(card, e.detail === 0);
+                        if (card.classList.contains('bx-shut') || e.target.closest('h3')) toggle(card);
                     });
                 });
-                scrim.addEventListener('click', close);
-                document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
-                window.addEventListener('resize', function () { if (openCard) close(); });
                 // A row of buttons that picks one of the stacked videos (by data-i); auto moves on every ms unless pressed
                 function picker(card, sel, ms, after) {
                     var btns = card.querySelectorAll(sel), stack = card.querySelectorAll('.bx-stack video'), i = 0, t;
@@ -1057,9 +1025,9 @@
         // Pricing: one plan for each kind of account (api/_billing.js OFFERED). Artists: Free or Artist; record
         // labels: Label; venues: Venue. Live-Set is on request. Prices and features come from /api/plans.
         var WHO_TEXT = {
-            artist: '<b>An artist account is you: one artist.</b> Tag any record labels you release on and any venues you play. Every set, clip and file is under your name.',
+            artist: '<b>An artist account is you: one artist.</b> Tag any record labels you release on and any venues you play. Every set, clip and file is under your name, and the venues and labels that invite you are in the same place.',
             label: '<b>A record label account is one label.</b> Upload sets for up to 5 artists, played at any venue. Your artists get their own access, by invite or by signing up, with all their events and venues in one place.',
-            venue: '<b>A venue account is one venue.</b> Upload every artist who plays there and the record labels they come with.',
+            venue: '<b>A venue account is one venue.</b> Upload every artist who plays there and the record labels they come with. Your DJs get their own access, by invite or by signing up, with all their events and venues in one place.',
         };
         var _whoType = 'artist';
         function paintWho() {
