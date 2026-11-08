@@ -319,7 +319,7 @@ function planFeatures(planId, type, t, included, name) {
     who,
     'Free to join: no monthly fee, you pay only for what you use, on the 1st',
     access,
-    '6 vertical clips from every set',
+    `${ARTIST_FREE_CLIPS} vertical clips from every set`,
     brand,
     'Connect your DJI, Sony Alpha and more',
   ];
@@ -359,7 +359,7 @@ export function planForType(plan, type) {
   const cameras = type === 'artist' ? ({ 'liveset-distribution': 0, 'liveset-creative': 1 }[plan.id] ?? plan.cameras)
     : type === 'venue' && plan.id === 'liveset-distribution' ? Math.max(1, plan.cameras || 0) : plan.cameras;
   const name = TYPE_NAME[plan.id]?.[type] || plan.name;
-  if (!(plan.price > 0)) return { ...plan, name, features };
+  if (!(plan.price > 0)) return { ...plan, name, features, ...(plan.id === 'dj-trial' && type === 'artist' ? { maxClips: ARTIST_FREE_CLIPS } : {}) };
   return { ...plan, name, price: priceForType(plan.price, type, plan.id), included, features, cameras, setsPerMonth: t ? t.sets : undefined };
 }
 export async function readPlansRaw(redis) {
@@ -451,10 +451,12 @@ export async function readAssignments(redis, slug) {
   for (const [k, v] of Object.entries(raw || {})) { try { out[k] = JSON.parse(v); } catch {} }
   return out;
 }
-// How many vertical clips a session of this account may have (its plan's limit, 5 without a plan)
+// How many vertical clips a session of this account may have (its plan's limit, 5 without a plan; 3 for an artist on Free)
+export const ARTIST_FREE_CLIPS = 3;
 export async function planMaxClips(redis, slug) {
   const plan = await readPlan(redis, slug, 'venue').catch(() => null);
   const def = DEFAULT_PLANS.find(d => d.id === plan?.id);
+  if (plan?.id === 'dj-trial' && await accountTypeOf(redis, slug) === 'artist') return ARTIST_FREE_CLIPS;
   const n = plan && plan.maxClips != null ? Number(plan.maxClips) : def ? def.maxClips : 5;
   return n === 0 ? 60 : Math.min(60, Math.max(1, n || 5));   // 0 = unlimited (up to 60 a session)
 }

@@ -205,7 +205,7 @@
         /* Titles: Helvetica Neue Black, all caps (same rule as styles/theme.css) */
         h1:not(header h1), h2, h3 { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif !important; font-weight: 900 !important; text-transform: uppercase !important; letter-spacing: 0 !important; font-style: normal !important; }
     </style>
-    <link rel="stylesheet" href="styles/home-light.css?v=4">
+    <link rel="stylesheet" href="styles/home-light.css?v=6">
 </head>
 
 <body class="font-sans antialiased bg-background text-foreground overflow-x-hidden selection:bg-primary selection:text-black">
@@ -362,20 +362,6 @@
                 .bx-plat.done span { color:#39FF14; }
                 .bx-plat i { grid-column:span 2; height:2px; border-radius:2px; background:#27272a; overflow:hidden; }
                 .bx-plat i::after { content:""; display:block; height:100%; width:var(--w,0%); background:#39FF14; transition:width .25s linear; }
-                /* Each card is open; the − at its top right (or a click on its title) closes it down to its title, + opens it again */
-                .bx-card[data-bx] h3 { cursor:pointer; padding:0 30px; }
-                .bx-x { position:absolute; top:14px; right:14px; z-index:3; width:28px; height:28px; display:flex; align-items:center; justify-content:center; padding:0; border:1px solid #3f3f46; border-radius:999px; background:#111113; color:#e4e4e7; cursor:pointer; transition:border-color .2s ease; }
-                .bx-x svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
-                .bx-x-v { transform-origin:center; transform:scaleY(0); transition:transform .3s cubic-bezier(.65,0,.35,1); }
-                .bx-x:hover { border-color:#fafafa; }
-                .bx-x:focus { outline:none; } .bx-x:focus-visible { outline:2px solid #39FF14; outline-offset:2px; }
-                .bx-card.bx-anim { transition:height .4s cubic-bezier(.65,0,.35,1) !important; }
-                .bx-card > :not(h3):not(.bx-x) { transition:opacity .25s ease; }
-                .bx-card.bx-shut { align-self:start; cursor:pointer; }
-                .bx-card.bx-shut h3 { margin-bottom:0; }
-                .bx-card.bx-shut > :not(h3):not(.bx-x) { opacity:0; visibility:hidden; }
-                .bx-card.bx-shut:not(.bx-anim) > :not(h3):not(.bx-x) { display:none; }
-                .bx-card.bx-shut .bx-x-v { transform:scaleY(1); }
                 @media (max-width:900px) { .bx-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .bx-intro { margin:10px 0 0; } }
                 @media (max-width:640px) { .bx-grid { grid-template-columns:minmax(0,1fr); } .bx-w, .bx-intro { grid-column:auto; } .bx-split, .bx-pub { grid-template-columns:minmax(0,1fr); } .bx-pub .bx-clip { width:46%; margin:0 auto; } }
                 @media (prefers-reduced-motion:reduce) { .bx-grid *, .bx-grid *::before, .bx-grid *::after { animation:none !important; transition:none !important; } }
@@ -391,13 +377,12 @@
 
                     <div class="bx-card reveal delay-100" data-bx="live">
                         <h3>Live recording</h3>
-                        <button type="button" class="bx-x" aria-label="Close" aria-expanded="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="bx-x-v" d="M12 5v14"/><path d="M5 12h14"/></svg></button>
                         <div class="bx-body">
                             <div class="bx-stack">
                                 <span class="bx-badge"><i></i>REC <span data-bx-clock>01:42:15</span></span>
                                 <video class="on" muted playsinline loop preload="none" poster="/img/af/stage-poster.jpg" data-src="/img/af/stage.mp4"></video>
                                 <video muted playsinline loop preload="none" poster="/img/af/live-poster.jpg" data-src="/img/af/live.mp4"></video>
-                                <video muted playsinline loop preload="none" poster="/img/af/feed-poster.jpg" data-src="/img/af/feed.mp4"></video>
+                                <video muted playsinline loop preload="none" poster="/img/af/feed-poster.jpg" data-src="/img/af/feed.mp4?v=2"></video>
                             </div>
                         </div>
                         <div class="bx-pills" role="group" aria-label="Camera">
@@ -408,7 +393,6 @@
 
                     <div class="bx-card reveal delay-200" data-bx="kit">
                         <h3>Your Brand Kit</h3>
-                        <button type="button" class="bx-x" aria-label="Close" aria-expanded="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="bx-x-v" d="M12 5v14"/><path d="M5 12h14"/></svg></button>
                         <div class="bx-body bx-kit">
                             <div class="bx-kit-row"><span class="bx-kit-ico bx-kit-logo"></span><p>Logo<small data-kit="logo">PNG · MOVING GIF</small></p><em>ON</em></div>
                             <div class="bx-kit-row"><span class="bx-kit-ico bx-kit-font" data-kit-font>Aa</span><p>Font<small data-kit="font">HELVETICA BLACK</small></p><em>ON</em></div>
@@ -420,13 +404,12 @@
 
                     <div class="bx-card bx-w reveal delay-100" data-bx="edit">
                         <h3>Cut to the music</h3>
-                        <button type="button" class="bx-x" aria-label="Close" aria-expanded="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="bx-x-v" d="M12 5v14"/><path d="M5 12h14"/></svg></button>
                         <div class="bx-body">
                             <div class="bx-stack">
                                 <span class="bx-badge">EDIT · <span data-bx-cam>CAM 1</span></span>
                                 <video class="on" muted playsinline loop preload="none" poster="/img/af/stage-poster.jpg" data-src="/img/af/stage.mp4"></video>
                                 <video muted playsinline loop preload="none" poster="/img/af/live-poster.jpg" data-src="/img/af/live.mp4"></video>
-                                <video muted playsinline loop preload="none" poster="/img/af/feed-poster.jpg" data-src="/img/af/feed.mp4"></video>
+                                <video muted playsinline loop preload="none" poster="/img/af/feed-poster.jpg" data-src="/img/af/feed.mp4?v=2"></video>
                             </div>
                             <div class="bx-tiles" role="group" aria-label="Camera in the edit">
                                 <button type="button" aria-pressed="true" aria-label="Camera 1" data-i="0" style="background-image:url(/img/af/stage-poster.jpg)"></button><button type="button" aria-pressed="false" aria-label="Camera 2" data-i="1" style="background-image:url(/img/af/live-poster.jpg)"></button><button type="button" aria-pressed="false" aria-label="Camera 3" data-i="2" style="background-image:url(/img/af/feed-poster.jpg)"></button>
@@ -439,12 +422,11 @@
 
                     <div class="bx-card bx-w reveal delay-200" data-bx="clips">
                         <h3>Clips, ready to post</h3>
-                        <button type="button" class="bx-x" aria-label="Close" aria-expanded="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="bx-x-v" d="M12 5v14"/><path d="M5 12h14"/></svg></button>
                         <div class="bx-body">
                             <div class="bx-clips move">
                                 <div class="bx-clip"><video muted playsinline loop preload="none" poster="/img/af/v1-poster.jpg" data-src="/img/af/v1.mp4"></video></div>
                                 <div class="bx-clip"><video muted playsinline loop preload="none" poster="/img/af/v2-poster.jpg" data-src="/img/af/v2.mp4"></video></div>
-                                <div class="bx-clip"><video muted playsinline loop preload="none" poster="/img/af/v3-poster.jpg" data-src="/img/af/v3.mp4"></video></div>
+                                <div class="bx-clip"><video muted playsinline loop preload="none" poster="/img/af/v3-poster.jpg" data-src="/img/af/v3.mp4?v=2"></video></div>
                             </div>
                         </div>
                         <div class="bx-pills" role="group" aria-label="Watermark"><span>BRAND:</span><button type="button" class="bx-pill" aria-pressed="true" data-wm="logo">Logo</button><button type="button" class="bx-pill" aria-pressed="true" data-wm="name">Artist name</button><button type="button" class="bx-pill" aria-pressed="true" data-wm="move">Moving</button></div>
@@ -453,13 +435,12 @@
 
                     <div class="bx-card bx-w reveal delay-100" data-bx="sets">
                         <h3>Saved for every DJ</h3>
-                        <button type="button" class="bx-x" aria-label="Close" aria-expanded="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="bx-x-v" d="M12 5v14"/><path d="M5 12h14"/></svg></button>
                         <div class="bx-body bx-split">
                             <div class="bx-stack">
                                 <span class="bx-badge" data-bx-set>22:00 · ARTIST NAME</span>
                                 <video class="on" muted playsinline loop preload="none" poster="/img/af/live-poster.jpg" data-src="/img/af/live.mp4"></video>
                                 <video muted playsinline loop preload="none" poster="/img/af/stage-poster.jpg" data-src="/img/af/stage.mp4"></video>
-                                <video muted playsinline loop preload="none" poster="/img/af/feed-poster.jpg" data-src="/img/af/feed.mp4"></video>
+                                <video muted playsinline loop preload="none" poster="/img/af/feed-poster.jpg" data-src="/img/af/feed.mp4?v=2"></video>
                             </div>
                             <div class="bx-sets" role="group" aria-label="Sets">
                                 <button type="button" aria-pressed="true" data-i="0"><time>22:00</time><b>ARTIST NAME</b><small>WARM-UP · 1H 00M</small><i></i></button>
@@ -472,7 +453,6 @@
 
                     <div class="bx-card bx-w reveal delay-200" data-bx="publish">
                         <h3>Live everywhere</h3>
-                        <button type="button" class="bx-x" aria-label="Close" aria-expanded="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="bx-x-v" d="M12 5v14"/><path d="M5 12h14"/></svg></button>
                         <div class="bx-body bx-pub">
                             <div class="bx-clip"><video muted playsinline loop preload="none" poster="/img/af/v5-poster.jpg" data-src="/img/af/v5.mp4"></video></div>
                             <div class="bx-plats">
@@ -506,33 +486,9 @@
                 function wake(v) { if (!v.src && v.dataset.src) v.src = v.dataset.src; if (!still) { var p = v.play(); if (p && p.catch) p.catch(function () {}); } }
                 var cards = root.querySelectorAll('.bx-card');
                 if ('IntersectionObserver' in window) {
-                    var io = new IntersectionObserver(function (es) { es.forEach(function (e) { e.target._seen = e.isIntersecting; vids(e.target).forEach(function (v) { e.isIntersecting && !e.target.classList.contains('bx-shut') ? wake(v) : v.pause(); }); }); }, { rootMargin: '200px 0px', threshold: 0.01 });
+                    var io = new IntersectionObserver(function (es) { es.forEach(function (e) { e.target._seen = e.isIntersecting; vids(e.target).forEach(function (v) { e.isIntersecting ? wake(v) : v.pause(); }); }); }, { rootMargin: '200px 0px', threshold: 0.01 });
                     Array.prototype.forEach.call(cards, function (c) { io.observe(c); });
                 } else Array.prototype.forEach.call(cards, function (c) { c._seen = true; vids(c).forEach(wake); });
-                // Close a card down to its title (or open it again): its height slides between the two
-                function toggle(card, byKey) {
-                    var shut = !card.classList.contains('bx-shut'), from = card.offsetHeight, x = card.querySelector('.bx-x');
-                    card.classList.remove('bx-anim'); card.style.height = '';
-                    card.classList.toggle('bx-shut', shut);
-                    if (!shut) card.style.alignSelf = 'start';
-                    var to = card.offsetHeight;
-                    card.style.alignSelf = '';
-                    x.setAttribute('aria-expanded', shut ? 'false' : 'true'); x.setAttribute('aria-label', shut ? 'Open' : 'Close');
-                    if (byKey) x.focus({ preventScroll: true });
-                    if (shut) vids(card).forEach(function (v) { v.pause(); }); else if (card._seen) vids(card).forEach(wake);
-                    if (still) return;
-                    card.classList.add('bx-anim'); if (!shut) card.style.alignSelf = 'start';
-                    card.style.height = from + 'px'; card.offsetWidth; card.style.height = to + 'px';
-                    clearTimeout(card._t);
-                    card._t = setTimeout(function () { card.classList.remove('bx-anim'); card.style.height = ''; card.style.alignSelf = ''; }, 420);
-                }
-                Array.prototype.forEach.call(cards, function (card) {
-                    if (!card.dataset.bx) return;
-                    card.addEventListener('click', function (e) {
-                        if (e.target.closest('.bx-x')) return toggle(card, e.detail === 0);
-                        if (card.classList.contains('bx-shut') || e.target.closest('h3')) toggle(card);
-                    });
-                });
                 // A row of buttons that picks one of the stacked videos (by data-i); auto moves on every ms unless pressed
                 function picker(card, sel, ms, after) {
                     var btns = card.querySelectorAll(sel), stack = card.querySelectorAll('.bx-stack video'), i = 0, t;
@@ -671,9 +627,8 @@
                         /* The phone: a thin even bezel, a pill at the top; light in light mode */
                         .ph { --ph-frame:#27272a; --ph-screen:#000; --ph-card:#111113; --ph-line:#1f1f22; --ph-text:#fafafa; --ph-mute:#71717a; --ph-acc:#39FF14; --ph-track:rgba(255,255,255,.06);
                               position:relative; z-index:10; flex-shrink:0; width:280px; height:580px; padding:5px; border-radius:46px; background:var(--ph-frame); box-shadow:0 30px 80px -20px rgba(0,0,0,.7); }
-                        html:not(.dark) .ph { --ph-frame:#d4d4d8; --ph-screen:#fafafa; --ph-card:#ffffff; --ph-line:#e4e4e7; --ph-text:#09090b; --ph-mute:#71717a; --ph-acc:#EA580C; --ph-track:#f4f4f5; box-shadow:0 30px 80px -24px rgba(0,0,0,.25); }
-                        .ph-screen { position:relative; height:100%; border-radius:41px; background:var(--ph-screen); overflow:hidden; display:flex; flex-direction:column; gap:14px; padding:52px 14px 20px; }
-                        .ph-screen::before { content:""; position:absolute; top:12px; left:50%; width:84px; height:24px; margin-left:-42px; border-radius:999px; background:#000; }
+                        html:not(.dark) .ph { --ph-frame:#d4d4d8; --ph-screen:#fafafa; --ph-card:#ffffff; --ph-line:#e4e4e7; --ph-text:#09090b; --ph-mute:#71717a; --ph-acc:#39FF14; --ph-track:#f4f4f5; box-shadow:0 30px 80px -24px rgba(0,0,0,.25); }
+                        .ph-screen { position:relative; height:100%; border-radius:41px; background:var(--ph-screen); overflow:hidden; display:flex; flex-direction:column; gap:14px; padding:24px 14px 20px; }
                         .ph-card { padding:14px; border:1px solid var(--ph-line); border-radius:18px; background:var(--ph-card); }
                         .ph-lbl { display:block; margin-bottom:8px; font:500 9px 'JetBrains Mono', monospace; letter-spacing:.18em; text-transform:uppercase; color:var(--ph-mute); }
                         .ph-row { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:12px; }
@@ -853,7 +808,7 @@
                 <p class="tr-name">Free</p>
                 <div class="tr-price"><b>£0</b><span>to join</span></div>
                 <p class="tr-for">For DJs starting out: pay only for what you use.</p>
-                <ul class="tr-feats"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>6 vertical clips from every set</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Brand Kit: your logo and fonts on every clip</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Connect your DJI, Sony Alpha and more</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>What you use is charged to your card on the 1st</span></li></ul>
+                <ul class="tr-feats"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>3 vertical clips from every set</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Brand Kit: your logo and fonts on every clip</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Connect your DJI, Sony Alpha and more</span></li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>What you use is charged to your card on the 1st</span></li></ul>
                 <span class="tr-spacer"></span><button type="button" onclick="selectTier('dj-trial')" class="tr-btn">Start free</button>
             </div>
             <div class="tr-card tr-feat" data-for="artist" data-plan="starter-distribution">
@@ -959,7 +914,7 @@
 
                     if (distance < GLOW_RADIUS) {
                         const opacity = 1 - (distance / GLOW_RADIUS);
-                        ctx.fillStyle = `rgba(${isLight() ? '234, 88, 12' : '57, 255, 20'}, ${opacity})`;
+                        ctx.fillStyle = `rgba(${'57, 255, 20'}, ${opacity})`;
                         ctx.beginPath();
                         ctx.arc(dot.x, dot.y, DOT_SIZE + 0.5, 0, Math.PI * 2);
                         ctx.fill();
@@ -1255,7 +1210,7 @@
         .la-tt svg { position:relative; z-index:1; width:16px; height:16px; margin:0 4px; fill:none; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; transition:stroke .3s ease; }
         .la-tt-moon { stroke:#fff; } .la-tt-sun { stroke:#71717a; }
         html:not(.dark) .la-tt button { border-color:#e4e4e7; background:rgba(255,255,255,.9); box-shadow:0 12px 32px -14px rgba(0,0,0,.25); }
-        html:not(.dark) .la-tt button:focus-visible { outline-color:#EA580C; }
+        html:not(.dark) .la-tt button:focus-visible { outline-color:#39FF14; }
         html:not(.dark) .la-tt-knob { transform:translateX(32px); background:#e5e7eb; }
         html:not(.dark) .la-tt-moon { stroke:#000; } html:not(.dark) .la-tt-sun { stroke:#374151; }
         @media (max-width:640px) { .la-tt { right:16px; bottom:calc(16px + env(safe-area-inset-bottom)); } }
