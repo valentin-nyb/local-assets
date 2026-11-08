@@ -88,7 +88,10 @@ window.laOpenPage = function(url) {
 // No right-click menu anywhere in the app (text fields keep theirs, to paste)
 document.addEventListener('contextmenu', function(e) { var t = e.target; if (t && t.closest && t.closest('input, textarea, [contenteditable=""], [contenteditable="true"]')) return; e.preventDefault(); }, true);
 // The accent colours (the Brand Kit's colours), in the order the dots show them
-var LA_ACCENTS = [['', 'Neon green'], ['yellow', 'Yellow'], ['orange', 'Orange'], ['red', 'Red'], ['pink', 'Pink'], ['indigo', 'Indigo'], ['blue', 'Blue'], ['teal', 'Teal']];
+// No choice ('') is the original, which another dot already shows (neon green in dark, orange in light), so it has no
+// dot of its own: the one it matches is ticked (laAccentDot)
+var LA_ACCENTS = [['green', 'Neon green'], ['yellow', 'Yellow'], ['orange', 'Orange'], ['red', 'Red'], ['pink', 'Pink'], ['indigo', 'Indigo'], ['blue', 'Blue']];
+function laAccentDot(a) { return a || (document.documentElement.classList.contains('dark') ? 'green' : 'orange'); }
 // The breadcrumb's account name: the local / assets account shows its company name as written.
 // Defined before the page loads: pages call it from their own scripts while still loading.
 window.laSetBreadcrumb = function(el, name) {
@@ -205,7 +208,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 </button>
             </div>
             <div class="la-accent-dots" role="radiogroup" aria-label="Accent colour">
-                ${LA_ACCENTS.map(function(a) { return '<button type="button" role="radio" data-accent="' + a[0] + '" aria-label="' + a[1] + '" title="' + a[1] + '" aria-checked="' + ((localStorage.getItem('la_accent') || '') === a[0]) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>'; }).join('')}
+                ${LA_ACCENTS.map(function(a) { return '<button type="button" role="radio" data-accent="' + a[0] + '" aria-label="' + a[1] + '" title="' + a[1] + '" aria-checked="' + (laAccentDot(localStorage.getItem('la_accent') || '') === a[0]) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>'; }).join('')}
                 <button type="button" role="radio" data-accent-own aria-label="Your own colour (HEX)" title="Your own colour (HEX)" aria-checked="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
             </div>
             <div class="la-accent-hex" hidden><input type="color" id="la-accent-pick" aria-label="Pick a colour"><input type="text" id="la-accent-hex" maxlength="7" placeholder="#RRGGBB" spellcheck="false" autocomplete="off" aria-label="HEX colour"></div>
@@ -280,7 +283,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (a) root.setAttribute('data-accent', a); else root.removeAttribute('data-accent');
             if (isHex(a)) { var shown = root.classList.contains('dark') ? a : onWhite(a); root.style.setProperty('--la-accent', shown); root.style.setProperty('--la-accent-ink', inkOf(shown)); }
             else { root.style.removeProperty('--la-accent'); root.style.removeProperty('--la-accent-ink'); }
-            document.querySelectorAll('.la-accent-dots button[data-accent]').forEach(function(b) { b.setAttribute('aria-checked', b.getAttribute('data-accent') === a ? 'true' : 'false'); });
+            document.querySelectorAll('.la-accent-dots button[data-accent]').forEach(function(b) { b.setAttribute('aria-checked', b.getAttribute('data-accent') === laAccentDot(a) ? 'true' : 'false'); });
             document.querySelectorAll('.la-accent-dots button[data-accent-own]').forEach(function(b) { b.setAttribute('aria-checked', isHex(a) ? 'true' : 'false'); if (isHex(a)) b.style.setProperty('--dot', a); });
             document.querySelectorAll('#la-accent-pick').forEach(function(i) { if (isHex(a)) i.value = a.toLowerCase(); });
             document.querySelectorAll('#la-accent-hex').forEach(function(i) { if (isHex(a) && document.activeElement !== i) i.value = a.toUpperCase(); });

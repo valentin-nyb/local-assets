@@ -731,6 +731,7 @@ html body .la-statusbar.la-statusbar > div, html body .la-statusbar.la-statusbar
 /* ── Accent colour (side menu → the dots under the theme switcher) ──
    Each choice is one of the Brand Kit's colours: bright in dark mode, a deeper shade in light mode so it reads on white.
    No choice (data-accent unset) keeps the original: neon green in dark, orange in light. */
+html[data-accent="green"]  { --la-accent: #39FF14; }
 html[data-accent="yellow"] { --la-accent: #FACC15; }
 html[data-accent="orange"] { --la-accent: #FB923C; }
 html[data-accent="red"]    { --la-accent: #F87171; }
@@ -738,7 +739,7 @@ html[data-accent="pink"]   { --la-accent: #F472B6; }
 html[data-accent="indigo"] { --la-accent: #818CF8; }
 html[data-accent="blue"]   { --la-accent: #60A5FA; }
 html[data-accent="teal"]   { --la-accent: #2DD4BF; }
-html[data-accent="yellow"]:not(.dark) { --la-accent: #CA8A04; }
+html[data-accent="yellow"]:not(.dark) { --la-accent: #FACC15; }   /* the same yellow as in dark */
 html[data-accent="orange"]:not(.dark) { --la-accent: #FF7A00; }
 html[data-accent="red"]:not(.dark)    { --la-accent: #DC2626; }
 html[data-accent="pink"]:not(.dark)   { --la-accent: #DB2777; }
@@ -749,7 +750,7 @@ html[data-accent] { --la-accent-soft: color-mix(in srgb, var(--la-accent) 9%, tr
 html[data-accent].dark { --la-accent-ink: #000000; }
 html[data-accent]:not(.dark) { --la-accent-ink: #ffffff; }
 /* Light accents bright enough that black reads better on them than white */
-html[data-accent="yellow"]:not(.dark), html[data-accent="orange"]:not(.dark), html[data-accent="teal"]:not(.dark) { --la-accent-ink: #000000; }
+html[data-accent="green"]:not(.dark), html[data-accent="yellow"]:not(.dark), html[data-accent="orange"]:not(.dark), html[data-accent="teal"]:not(.dark) { --la-accent-ink: #000000; }
 /* Text on an accent fill: black or white, whichever reads on the chosen colour */
 html[data-accent] :is(.bg-\[\#39FF14\], .bg-primary):is(.text-black, .text-white) { color: var(--la-accent-ink) !important; }
 /* Tailwind's hover:text-white on a light page: white on white */
@@ -817,6 +818,7 @@ html[data-accent] .group:hover .group-hover\:text-primary,html[data-accent] .gro
 html:not(.dark) .la-accent-dots button svg { color: #fff; }
 .la-accent-dots [data-accent=""]       { --dot: #39FF14; }
 html:not(.dark) .la-accent-dots [data-accent=""] { --dot: #FF7A00; }
+.la-accent-dots [data-accent="green"]  { --dot: #39FF14; }
 .la-accent-dots [data-accent="yellow"] { --dot: #FACC15; }
 .la-accent-dots [data-accent="orange"] { --dot: #FB923C; }
 .la-accent-dots [data-accent="red"]    { --dot: #F87171; }
@@ -833,7 +835,7 @@ html:not(.dark) .la-accent-dots [data-accent=""] { --dot: #FF7A00; }
 .la-accent-hex input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 50%; }
 .la-accent-hex input[type="text"] { width: 96px; padding: 6px 10px; border: 1px solid var(--la-border, #27272a); border-radius: 9999px; background: transparent; color: var(--la-text); font: 500 11px/14px 'JetBrains Mono', monospace; letter-spacing: .06em; text-transform: uppercase; text-align: center; outline: none; }
 .la-accent-hex input[type="text"]:focus { border-color: var(--la-accent); }
-html:not(.dark) .la-accent-dots [data-accent="yellow"] { --dot: #CA8A04; }
+html:not(.dark) .la-accent-dots [data-accent="yellow"] { --dot: #FACC15; }
 html:not(.dark) .la-accent-dots [data-accent="orange"] { --dot: #FF7A00; }
 html:not(.dark) .la-accent-dots [data-accent="red"]    { --dot: #DC2626; }
 html:not(.dark) .la-accent-dots [data-accent="pink"]   { --dot: #DB2777; }

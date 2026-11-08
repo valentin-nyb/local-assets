@@ -6,8 +6,8 @@ import { maxResolution } from './_video-quality.js';
 // How the app looks for one person, kept with their login so it's the same on every device
 // (side menu → the accent dots → Save). Redis hash ui_prefs:<email>.
 //   GET                        { accent, video4k } (video4k: the account has 4K on in Accounts)
-//   POST { accent }            saved ('' = the original neon green, or the person's own colour as #RRGGBB)
-const ACCENTS = ['', 'yellow', 'orange', 'red', 'pink', 'indigo', 'blue', 'teal'];
+//   POST { accent }            saved ('' = the original: neon green in dark, orange in light; 'green' = neon green in both; or the person's own colour as #RRGGBB)
+const ACCENTS = ['', 'green', 'yellow', 'orange', 'red', 'pink', 'indigo', 'blue', 'teal'];   // teal: no longer offered, kept for those who chose it
 const ok = a => ACCENTS.includes(a) || /^#[0-9a-f]{6}$/.test(a);
 
 export default async function handler(req, res) {
