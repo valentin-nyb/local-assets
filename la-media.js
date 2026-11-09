@@ -72,6 +72,47 @@
     laMux.players = function(root) {
         (root || document).querySelectorAll('mux-player[data-pid]:not([playback-id])').forEach(function(el) { laMux.player(el, el.getAttribute('data-pid')); });
     };
+    // Phones and tablets: a download never takes the page's place (from the home screen there's no Back to return
+    // with), the share sheet saves it instead (Photos, Files, Instagram…)
+    laMux.touch = function() { try { return matchMedia('(pointer: coarse)').matches; } catch (_) { return false; } };
+    var EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'image/svg+xml': 'svg', 'video/mp4': 'mp4', 'audio/mp4': 'm4a', 'audio/x-m4a': 'm4a', 'application/pdf': 'pdf' };
+    // The sheet's button: sharing needs a fresh tap once the file has taken a while to arrive
+    function offer(file, url) {
+        var d = document.createElement('div');
+        d.style.cssText = 'position:fixed;inset:0;z-index:2147483646;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.5);padding:16px 16px calc(16px + env(safe-area-inset-bottom))';
+        d.innerHTML = '<div style="width:100%;max-width:420px;background:var(--la-card,#111);color:var(--la-text,#fafafa);border-radius:18px;padding:18px;font:15px/1.4 system-ui,sans-serif;display:grid;gap:10px">' +
+            '<b style="font-size:16px">Your file is ready</b>' +
+            '<button type="button" data-go style="height:46px;border-radius:999px;border:0;background:var(--la-accent,#39FF14);color:var(--la-accent-ink,#000);font-weight:700;font-size:15px">' + (file ? 'Save or share' : 'Open file') + '</button>' +
+            '<button type="button" data-x style="height:42px;border-radius:999px;border:1px solid rgba(127,127,127,.4);background:transparent;color:inherit;font-size:15px">Cancel</button></div>';
+        var close = function() { d.remove(); };
+        d.addEventListener('click', function(e) {
+            if (e.target.closest('[data-go]')) { if (file) navigator.share({ files: [file] }).catch(function() {}); else window.open(url, '_blank'); close(); }
+            else if (e.target === d || e.target.closest('[data-x]')) close();
+        });
+        document.body.appendChild(d);
+    }
+    laMux.save = function(url, name) {
+        try { name = name || new URL(url, location.href).searchParams.get('dl'); } catch (_) {}
+        name = name || 'file';
+        if (!navigator.canShare) return offer(null, url);
+        return fetch(url).then(function(r) {
+            if (!r.ok) throw new Error(r.status);
+            if (Number(r.headers.get('content-length')) > 150e6) throw new Error('too big to hold');   // a long video: opened instead
+            return r.blob();
+        }).then(function(b) {
+            var type = (b.type || '').split(';')[0], ext = EXT[type];
+            var f = new File([b], /\.[A-Za-z0-9]{2,4}$/.test(name) || !ext ? name : name + '.' + ext, { type: type || 'application/octet-stream' });
+            if (!navigator.canShare({ files: [f] })) return offer(null, url);
+            return navigator.share({ files: [f] }).catch(function(e) { if (!e || e.name !== 'AbortError') offer(f, url); });
+        }).catch(function() { offer(null, url); });
+    };
+    document.addEventListener('click', function(e) {
+        if (e.defaultPrevented || !laMux.touch()) return;
+        var a = e.target.closest && e.target.closest('a[href*="/api/media?"]');
+        if (!a || !/[?&]dl=/.test(a.getAttribute('href') || '')) return;
+        e.preventDefault();
+        laMux.save(a.href);
+    }, true);
     window.laMux = laMux;
     // Players written into the page later (lists, popups) get theirs as they appear
     var watch = function() {
