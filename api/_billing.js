@@ -312,7 +312,7 @@ function planFeatures(planId, type, t, included, name) {
   const who = whoLine(type, planId);
   // Every account: venues and labels (and managements) give their artists access, invited by email (api/brand.js) or
   // signing up themselves; one sign-in then reaches every account they're on (switch-venue.js)
-  const access = artist ? 'One sign-in for all your sets, events and venues: the venues and labels that invite you are there too'
+  const access = artist ? 'One account for every gig: when a venue or label invites you, their recordings of your sets show up in it'
     : type === 'venue' ? 'Give your DJs access: invite them, or they sign up, and each sees their sets from your nights, with all their events and venues, in one place'
     : 'Give your artists access: invite them, or they sign up, and each sees all their sets, events and venues in one place';
   if (planId === 'dj-trial' && type === 'artist') return [
