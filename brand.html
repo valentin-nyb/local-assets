@@ -541,6 +541,12 @@
         function fileSrc(u) { return laMux(String(u || '')); }
         // A link to one Brand Kit file for anyone, for good (local-assets.com/asset/…?s=…)
         var _fileLinks = {};
+        // A file's Download: through /api/media, which checks it's this account's and saves it under its own name
+        // (a file's local-assets.com link needs its share code, made by Copy link, so it can't be the download)
+        function fileDl(f) {
+            var name = decodeURIComponent(String(f.url || '').split('?')[0].split('/').pop() || 'file').replace(/-[A-Za-z0-9]{20,40}(\.[^.]+)$/, '$1');
+            return laMux(f.url, { dl: name });
+        }
         function shareFileLink(url) {
             if (_fileLinks[url]) return Promise.resolve(_fileLinks[url].u);
             return laFetch('/api/media', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'shareFile', url: url }) })
@@ -1785,7 +1791,7 @@
                 '<div class="cam-form-actions" style="margin-top:16px">' +
                     (thumbFile(f) ? '<button type="button" class="cam-btn ghost" id="bk-file-event">Add to event</button>' : '') +
                     (wmLogoFile(f) ? '<button type="button" class="cam-btn ghost" id="bk-file-wm">' + (wmUsesLogo(f) ? 'Used as watermark' : 'Use as watermark') + '</button>' : '') +
-                    '<a class="cam-btn primary" href="' + esc(f.link ? f.link + '?download' : f.downloadUrl) + '">Download</a></div>');
+                    '<a class="cam-btn primary" href="' + esc(fileDl(f)) + '">Download</a></div>');
             var useWm = document.getElementById('bk-file-wm');
             if (useWm) useWm.addEventListener('click', function() { useLogoAsWatermark(f.url); });
             var addEvent = document.getElementById('bk-file-event');
@@ -1824,7 +1830,7 @@
                     '<p class="bk-tester-chars" style="font-size:18px">ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz<br>0123456789 &amp; ! ? @ £ € % ( ) . , : ;</p>' +
                 '</div>' +
                 '<p id="bk-tester-status" class="bk-meta">Loading font…</p>' +
-                '<div class="cam-form-actions" style="margin-top:14px"><a class="cam-btn ghost" href="' + esc(f.link ? f.link + '?download' : f.downloadUrl || url) + '"><span>Download</span></a>' +
+                '<div class="cam-form-actions" style="margin-top:14px"><a class="cam-btn ghost" href="' + esc(fileDl(f)) + '"><span>Download</span></a>' +
                     (WM_TEXT_FONT.test(f.name) ? '<button type="button" class="cam-btn primary" id="bk-tester-wm">Use as watermark</button>' : '') + '</div>' +
                 (WM_TEXT_FONT.test(f.name) ? '' : '<p class="bk-meta" style="margin-top:8px">To use this font for watermark text, upload it as TTF, OTF or WOFF.</p>') +
                 '</div>');
@@ -2014,7 +2020,7 @@
             // Download all: every image of the post in one ZIP, numbered in order
             document.getElementById('bk-post-dl').addEventListener('click', async function() {
                 var b = this, label = b.textContent;
-                if (!many) { location.href = imgs[0].link ? imgs[0].link + '?download' : imgs[0].downloadUrl; return; }
+                if (!many) { location.href = fileDl(imgs[0]); return; }
                 if (!window.downloadZip) return;
                 b.disabled = true; b.textContent = 'Preparing…';
                 try {
@@ -2160,7 +2166,7 @@
             return '<div class="bk-file"' + (_member ? '' : ' draggable="true" data-drag-url="' + esc(f.url) + '" data-drag-owner="' + esc(f.owner) + '"') + '>' + preview +
                 '<div class="bk-info"><p class="bk-name" title="' + esc(f.name) + '">' + esc(f.name) + '</p><p class="bk-meta">' + fmtSize(f.size) + ' · ' + fmtDate(f.uploadedAt) + '</p></div>' +
                 '<div class="bk-file-actions">' +
-                    '<a href="' + esc(f.link ? f.link + '?download' : f.downloadUrl) + '" title="Download"><iconify-icon icon="solar:download-minimalistic-linear"></iconify-icon></a>' +
+                    '<a href="' + esc(fileDl(f)) + '" title="Download"><iconify-icon icon="solar:download-minimalistic-linear"></iconify-icon></a>' +
                     (FONT_EXT.test(f.name) ? '' : '<button type="button" data-file-preview="' + esc(f.url) + '" title="Open"><iconify-icon icon="solar:eye-linear"></iconify-icon></button>') +
                     (f.category === 'photos' || (f.category === 'logos' && /\.(png|jpe?g|webp|gif|svg)$/i.test(f.name)) ? '<button type="button" data-photo="' + esc(f.url) + '" title="' + (f.owner.indexOf('artist-') === 0 ? 'Use as artist photo' : 'Use as profile photo') + '" class="' + (_ownerPhotos[f.owner] === f.url ? 'is-on' : '') + '"><iconify-icon icon="solar:user-circle-' + (_ownerPhotos[f.owner] === f.url ? 'bold' : 'linear') + '"></iconify-icon></button>' : '') +
                     (FONT_EXT.test(f.name) ? '<button type="button" data-font-preview="' + esc(f.url) + '" title="Preview font"><iconify-icon icon="solar:eye-linear"></iconify-icon></button>' : '') +

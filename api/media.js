@@ -151,14 +151,18 @@ export default async function handler(req, res) {
       }
       // A Brand Kit picture: its bytes from here, read with the store's own key (the private store, else the public
       // copy), so the browser never depends on a signed link. Downloads and files over 4 MB keep the link.
+      // A download: saved under its name (Content-Disposition), never opened in the page's place
       const bp = pathOf(String(req.query.u || ''));
-      if (!dl && bp && bp.startsWith('brand/')) {
+      if (bp && bp.startsWith('brand/')) {
         const b = await brandBytes(String(req.query.u));
         if (b?.buf) {
           res.setHeader('Content-Type', b.type);
-          res.setHeader('Cache-Control', 'private, max-age=3000');
+          res.setHeader('Cache-Control', dl ? 'no-store' : 'private, max-age=3000');
+          if (dl) res.setHeader('Content-Disposition', `attachment; filename="${dl.replace(/"/g, '')}"`);
           return res.status(200).send(b.buf);
         }
+        // Bigger than a reply can carry: the file's own address, as a download where the store allows it
+        if (dl && /\.public\.blob\.vercel-storage\.com\//.test(out.url)) out.url += (out.url.includes('?') ? '&' : '?') + 'download=1';
       }
       res.setHeader('Cache-Control', dl ? 'no-store' : 'private, max-age=3000');
       res.setHeader('Referrer-Policy', 'origin');
