@@ -83,10 +83,18 @@ function newStreamBody(name, kind = 'obsbot') {
 }
 
 async function mux(muxAuth, path, init = {}) {
-  const r = await fetch('https://api.mux.com' + path, {
+  const ask = ms => fetch('https://api.mux.com' + path, {
     ...init,
     headers: { Authorization: muxAuth, 'Content-Type': 'application/json', ...(init.headers || {}) },
-    signal: AbortSignal.timeout(10000),
+    signal: AbortSignal.timeout(ms),
+  });
+  // Mux now and then takes over 10 s to answer: asked once more, except to create a stream (it may have been
+  // made already, and a second one would be a duplicate camera)
+  const method = String(init.method || 'GET').toUpperCase();
+  const r = await ask(10000).catch(e => {
+    if (method === 'POST' || !/abort|timeout|fetch failed/i.test(e.name + ' ' + e.message)) throw e;
+    console.warn('[cameras] Cloud Storage slow, asking again:', method, path.replace(/live-streams\/[^/?]+/, 'live-streams/…'));
+    return ask(15000);
   });
   const body = r.status === 204 ? {} : await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(body?.error?.messages?.[0] || `Cloud Storage error (${r.status})`);
@@ -479,7 +487,7 @@ export default async function handler(req, res) {
 
     return res.status(400).json({ error: 'Unknown action' });
   } catch (e) {
-    console.error('[cameras]', e.message);
+    console.error('[cameras]', req.method === 'GET' ? 'list' : (req.body?.action || req.method), e.message);
     return res.status(502).json({ error: e.message });
   }
 }

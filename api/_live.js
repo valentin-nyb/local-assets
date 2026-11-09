@@ -2,9 +2,12 @@
 // includeDisabled: also streams switched off between sessions (the camera page's own cameras: closed until a set
 // or Record now, they still exist and must not read as missing), shown with status 'idle'
 export async function listLiveStreams(muxAuth, { includeDisabled = false } = {}) {
-  const res = await fetch('https://api.mux.com/video/v1/live-streams?limit=100', {
-    headers: { Authorization: muxAuth },
-    signal: AbortSignal.timeout(10000),
+  // Mux now and then takes over 10 s to answer: asked once more before the page is told it failed
+  const ask = ms => fetch('https://api.mux.com/video/v1/live-streams?limit=100', { headers: { Authorization: muxAuth }, signal: AbortSignal.timeout(ms) });
+  const res = await ask(10000).catch(e => {
+    if (!/abort|timeout|fetch failed/i.test(e.name + ' ' + e.message)) throw e;
+    console.warn('[live] Cloud Storage slow listing live streams, asking again');
+    return ask(15000);
   });
   if (!res.ok) throw new Error('Cloud Storage live streams ' + res.status);
   const { data = [] } = await res.json();
