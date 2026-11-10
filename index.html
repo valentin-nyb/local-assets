@@ -470,12 +470,13 @@
             // The other looping videos on the page (the phone, the cameras example): fetched when near the screen, paused off it
             // (once the page is read: these videos come further down than this script)
             document.addEventListener('DOMContentLoaded', function () {
-                var vs = document.querySelectorAll('video.la-lazy'), still = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+                var vs = document.querySelectorAll('video.la-lazy');   // muted examples play with Reduce Motion on too
                 // Phones: muted set on the element itself, and a play that's refused (too many videos at once, or not loaded
                 // yet) tried again when it can play and on the first touch
-                function wake(v) { v.muted = v.defaultMuted = true; if (!v.src) v.src = v.dataset.src; if (still) return; v._want = true; var p = v.play(); if (p && p.catch) p.catch(function () { v.addEventListener('canplay', function () { if (v._want) v.play().catch(function () {}); }, { once: true }); }); }
+                function wake(v) { v.muted = v.defaultMuted = true; if (!v.src) v.src = v.dataset.src; v._want = true; var p = v.play(); if (p && p.catch) p.catch(function () { v.addEventListener('canplay', function () { if (v._want) v.play().catch(function () {}); }, { once: true }); }); }
                 function nap(v) { v._want = false; v.pause(); }
-                document.addEventListener('touchstart', function () { Array.prototype.forEach.call(vs, function (v) { if (v._want && v.paused) v.play().catch(function () {}); }); }, { passive: true, once: true });
+                // (every touch, not just the first: Low Power Mode on an iPhone refuses each autoplay until the page is touched)
+                ['touchstart', 'click'].forEach(function (k) { document.addEventListener(k, function () { Array.prototype.forEach.call(vs, function (v) { if (v._want && v.paused) v.play().catch(function () {}); }); }, { passive: true }); });
                 if (!('IntersectionObserver' in window)) return Array.prototype.forEach.call(vs, wake);
                 var io = new IntersectionObserver(function (es) { es.forEach(function (e) { e.isIntersecting ? wake(e.target) : nap(e.target); }); }, { rootMargin: '200px 0px', threshold: 0.01 });
                 Array.prototype.forEach.call(vs, function (v) { io.observe(v); });
@@ -490,12 +491,12 @@
                 // fetched the first time its card comes near. A play that's refused
                 // (not loaded yet, or too many at once) is tried again when it can play and on the first touch
                 function wake(v) {
-                    v.muted = v.defaultMuted = true; if (!v.src && v.dataset.src) v.src = v.dataset.src; if (still) return;
+                    v.muted = v.defaultMuted = true; if (!v.src && v.dataset.src) v.src = v.dataset.src;   // muted examples play with Reduce Motion on too: only the auto-switching stops
                     v._want = true; var p = v.play();
                     if (p && p.catch) p.catch(function () { v.addEventListener('canplay', function () { if (v._want) v.play().catch(function () {}); }, { once: true }); });
                 }
                 function nap(v) { v._want = false; v.pause(); }
-                document.addEventListener('touchstart', function () { vids(root).forEach(function (v) { if (v._want && v.paused) v.play().catch(function () {}); }); }, { passive: true, once: true });
+                ['touchstart', 'click'].forEach(function (k) { document.addEventListener(k, function () { vids(root).forEach(function (v) { if (v._want && v.paused) v.play().catch(function () {}); }); }, { passive: true }); });
                 var cards = root.querySelectorAll('.bx-card');
                 if ('IntersectionObserver' in window) {
                     var io = new IntersectionObserver(function (es) { es.forEach(function (e) { e.target._seen = e.isIntersecting; vids(e.target).forEach(e.isIntersecting ? wake : nap); }); }, { rootMargin: '200px 0px', threshold: 0.01 });
