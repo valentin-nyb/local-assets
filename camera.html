@@ -2090,10 +2090,10 @@
                 (c ? '' : '<div class="cam-obsbot-only cam-howto">' +
                     '<p class="cam-howto-t">How to connect an OBSBOT Tail 2</p>' +
                     '<ol>' +
-                    '<li><b>Put it on the venue network.</b> Ethernet from a PoE+ switch (it powers the camera too) is steadier than Wi-Fi for long sets.</li>' +
-                    '<li><b>Turn on NDI</b> in the OBSBOT Start app and name it, e.g. <code>MAIN FLOOR</code>. Enter that name and the camera\'s IP address below.</li>' +
-                    '<li><b>Send it here.</b> After you add it, Stream setup gives the RTMP address and key for the camera\'s live-streaming settings, or for OBS with the DistroAV plugin.</li>' +
-                    '<li><b>Pan, tilt, zoom and tracking</b> work from Controls on the camera card, on the venue network.</li>' +
+                    '<li><b>One cable to the network.</b> Ethernet from a PoE+ switch powers the camera and carries its picture and control. Wi-Fi works too, but is less steady over a long set.</li>' +
+                    '<li><b>The decks straight into the camera.</b> The mixer\'s <b>Rec Out</b> or <b>Booth Out</b> into the camera\'s <b>LINE IN</b> (3.5 mm jack; an RCA to 3.5 mm cable). Not MIC IN: it\'s too loud for a mixer. The recording and every clip then carry the mixer\'s sound.</li>' +
+                    '<li><b>Send it here.</b> Easiest: the camera\'s USB-C into the venue\'s Mac with a™ open, and link it in <em>This Mac</em>. No other software. Or turn on <b>NDI</b> in the OBSBOT Start app, name it (e.g. <code>MAIN FLOOR</code>) and send it with OBS and the DistroAV plugin: Stream setup gives a ready profile.</li>' +
+                    '<li><b>Control from anywhere.</b> Turn on <em>VISCA over IP</em> in the OBSBOT Start app and enter the camera\'s IP address below: pan, tilt, zoom, tracking and the AI Director then work from <em>Control</em>.</li>' +
                     '</ol>' +
                 '</div>') +
                 (!inApp && !c && window.laDeckRec ? '<label class="cam-check cam-audio-only"><input type="checkbox" name="hereRec" checked><span>Decks plugged into this device<small>The mixer into this iPad, iPhone or computer by USB or the audio jack: recorded here and uploaded as each set\'s HQ audio.</small></span></label>' : '') +
@@ -2101,6 +2101,7 @@
                 '<div class="cam-audio-only cam-howto">' +
                     '<p class="cam-howto-t">How to connect your decks</p>' +
                     '<ol>' +
+                    '<li><b>Got an OBSBOT Tail 2?</b> Plug the mixer\'s Rec Out into the camera\'s <b>LINE IN</b> instead: the camera\'s recording carries the sound, and you don\'t need to add decks audio here.</li>' +
                     '<li><b>Take the sound from the mixer.</b> Use its <b>Rec Out</b> or <b>Booth Out</b>, or its USB port (most Pioneer, Allen &amp; Heath and Rane mixers work as a USB sound card).</li>' +
                     '<li><b>Plug it into something that streams:</b> a computer with OBS (free), a phone with a USB audio adapter and Larix (audio only), or a streaming box like an ATEM Mini Pro.</li>' +
                     '<li><b>Send it here.</b> After you add it, Stream setup gives the address and a QR code to scan with the phone.</li>' +
