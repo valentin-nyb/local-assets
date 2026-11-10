@@ -300,8 +300,6 @@ function whoLine(type, planId) {
   const a = ownerLimit('venue', planId, 'artist'), l = ownerLimit('venue', planId, 'label');
   return a === Infinity && l === Infinity ? 'One venue, with unlimited artists and record labels' : `One venue, ${n(a)} artists and ${n(l)} record labels`;
 }
-// To join the Trial Month, by type (as charged at checkout, api/create-checkout.js)
-const TRIAL_FEE = { artist: 0, label: 149, management: 149, venue: 349 };
 // What each plan gives, in plain words, for this kind of account. Artists add a camera separately on Pro and
 // get one camera on Live-Set; venues, labels and managements get the cameras the plan comes with.
 function planFeatures(planId, type, t, included, name) {
@@ -325,7 +323,6 @@ function planFeatures(planId, type, t, included, name) {
   ];
   if (planId === 'dj-trial' || /venue\s*trial/i.test(String(name || ''))) return [
     who,
-    `£${TRIAL_FEE[type] || 49} to join, taken off your first month if you upgrade`,
     'No monthly fee: you pay only for what you use, on the 1st',
     access,
     '6 vertical clips from every set',
