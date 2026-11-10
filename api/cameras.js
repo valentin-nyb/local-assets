@@ -11,7 +11,7 @@ import { relayKeyHash, cmdsKey, seenKey, tokenKey } from './camera-relay.js';
 import { scheduleWindow } from './camera-schedule.js';
 import { inSession, openSession, closeSession, managedKey } from './_cam-sessions.js';
 import { readArt, eventKey, readLinks } from './next-event.js';
-import { playbackPolicy } from './_signing.js';
+import { playbackPolicy, muxUrlAuto } from './_signing.js';
 
 // The venue relay is online when it polled in the last 45 s
 async function relayStatus(redis, slug) {
@@ -61,6 +61,7 @@ async function withRedis(fn) {
   try { return await fn(redis); } finally { await redis.quit().catch(() => {}); }
 }
 
+const shotsKey = (slug, id) => `cam_shots:${slug}:${id}`;
 async function readCameras(redis, slug) {
   try { return JSON.parse(await redis.get(key(slug)) || '[]'); } catch { return []; }
 }
@@ -452,6 +453,30 @@ export default async function handler(req, res) {
       });
     }
 
+    // AI Director: a picture of what each preset shows, taken from the live stream when the preset is saved
+    // (presetShot), and all of a camera's (presetShots). Kept by camera, at most 16 presets of about 30 KB.
+    if (body.action === 'presetShot' || body.action === 'presetShots') {
+      return await withRedis(async redis => {
+        const cam = (await readCameras(redis, slug)).find(c => c.id === body.id);
+        if (!cam) return res.status(404).json({ error: 'Camera not found' });
+        const k = shotsKey(slug, cam.id);
+        if (body.action === 'presetShots') return res.status(200).json({ shots: await redis.hGetAll(k) });
+        const n = Math.round(Number(body.n));
+        if (!(n >= 1 && n <= 16)) return res.status(400).json({ error: 'Unknown preset' });
+        const s = await mux(session.muxAuth, `/video/v1/live-streams/${encodeURIComponent(cam.streamId)}`);
+        const pid = s?.playback_ids?.[0]?.id;
+        if (s?.status !== 'active' || !pid) return res.status(409).json({ error: 'The camera isn\'t live: the preset is saved, without a picture' });
+        const url = await muxUrlAuto(session.muxAuth, `https://image.mux.com/${pid}/thumbnail.jpg?width=384`, 300);
+        const r = await fetch(url, { signal: AbortSignal.timeout(10000) });
+        if (!r.ok) return res.status(502).json({ error: 'Could not take the picture (' + r.status + ')' });
+        const buf = Buffer.from(await r.arrayBuffer());
+        if (buf.length > 200e3) return res.status(502).json({ error: 'The picture is too big' });
+        const shot = 'data:image/jpeg;base64,' + buf.toString('base64');
+        await redis.hSet(k, String(n), shot);
+        return res.status(200).json({ shot });
+      });
+    }
+
     if (body.action === 'relayKey') {
       // A new key for the venue relay (the old one stops working). Shown once.
       // Only local / assets sets up a venue relay (from the admin account, acting for the client)
@@ -481,6 +506,7 @@ export default async function handler(req, res) {
         }
         await redis.set(key(slug), JSON.stringify(cams.filter(c => c.id !== cam.id)));
         await redis.hDel(STREAM_MAP, cam.streamId);
+        await redis.del(shotsKey(slug, cam.id));
         return res.status(200).json({ ok: true });
       });
     }

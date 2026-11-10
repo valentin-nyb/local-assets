@@ -608,6 +608,25 @@
         .ctl-seg button { flex:1; height:32px; padding:0 4px; font-size:10px; }
         .ctl-seg[data-seg="framing"] { flex-wrap:wrap; } .ctl-seg[data-seg="framing"] button { flex:1 1 calc(33% - 4px); }
         .ctl-fine { margin:16px 0 0; font-size:11px; color:var(--la-dim); }
+        /* AI Director: a grid of views under the picture; the one on air outlined in the accent colour */
+        .ctl-dir { margin-top:16px; }
+        .ctl-off .ctl-dir { opacity:.4; pointer-events:none; }
+        .ctl-dir .ctl-save { height:26px; padding:0 10px; font:500 12px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; color:var(--la-text); background:var(--la-surface); border:1px solid color-mix(in srgb, var(--la-text) 14%, transparent); border-radius:999px; cursor:pointer; text-transform:none; letter-spacing:0; }
+        .ctl-dir .ctl-save.on { background:var(--la-accent); color:var(--la-accent-ink); border-color:var(--la-accent); }
+        .dir-grid { display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:8px; }
+        .dir-tile { position:relative; aspect-ratio:16/9; padding:0; border:2px solid color-mix(in srgb, var(--la-text) 12%, transparent); border-radius:10px; overflow:hidden; cursor:pointer; background:#0b0b0c; color:#fff; text-align:left; transition:border-color .15s, opacity .15s; }
+        .dir-pic { position:absolute; inset:0; background:center/cover no-repeat; }
+        .dir-tile:not(.has) .dir-pic { background-image:repeating-linear-gradient(135deg, rgba(255,255,255,.03) 0 8px, transparent 8px 16px); }
+        .dir-tile.has .dir-pic::after { content:''; position:absolute; inset:0; background:linear-gradient(to top, rgba(0,0,0,.65), transparent 55%); }
+        .dir-tile b { position:absolute; left:8px; bottom:6px; font:700 12px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; text-shadow:0 1px 3px rgba(0,0,0,.6); }
+        .dir-tile i { position:absolute; top:6px; right:6px; display:none; font:700 9px/1 'Helvetica Neue', Helvetica, Arial, sans-serif; font-style:normal; letter-spacing:.08em; text-transform:uppercase; padding:3px 5px; border-radius:4px; background:#ff3b30; color:#fff; }
+        @media (hover:hover) { .dir-tile:hover { border-color:color-mix(in srgb, var(--la-text) 40%, transparent); } }
+        .dir-tile.air { border-color:#ff3b30; }
+        .dir-tile.air i { display:block; }
+        .dir-tile.flash { border-color:var(--la-accent); }
+        .dir-grid.saving .dir-tile:not(.dir-p) { opacity:.3; cursor:default; }
+        .dir-grid.saving .dir-p { border-color:var(--la-accent); border-style:dashed; }
+        @media (max-width: 640px) { .dir-grid { grid-template-columns:repeat(3, minmax(0,1fr)); gap:6px; } }
         /* The camera's picture fits the screen with its controls under it (smaller on short screens) */
         .ctl-full .ctl-stage { width:min(100%, calc((100vh - 470px) * 16 / 9)); min-width:min(100%, 420px); margin-inline:auto; }
         /* Controls in the site's style: sentence case, soft outlines; on/off choices as a segmented control */
@@ -631,7 +650,7 @@
             .ctl-full.ctl-inline { align-content:start; }
             /* Sized by height (the screen minus the header), width from 16:9: a width tied to the column made the card reserve room for a much taller picture */
             .ctl-full.ctl-inline > .ctl-stage { grid-column:1; grid-row:2; height:max(240px, min(calc(100vh - 330px), calc((min(100vw - 320px, 1520px) - 498px) * 9 / 16))); width:auto; max-width:100%; aspect-ratio:16/9; min-width:0; margin:0; justify-self:start; }
-            .ctl-full.ctl-inline > .ctl-msg, .ctl-full.ctl-inline > .ctl-fine { grid-column:1; }
+            .ctl-full.ctl-inline > .ctl-msg, .ctl-full.ctl-inline > .ctl-fine, .ctl-full.ctl-inline > .ctl-dir { grid-column:1; }
             .ctl-full.ctl-inline > .ctl-grid { grid-column:2; grid-row:2 / span 3; margin-top:0; grid-template-columns:repeat(2, minmax(0,1fr)) !important; gap:22px 18px !important; }
         }
         @media (max-width: 760px) { .ctl-grid { grid-template-columns:repeat(2, minmax(0,1fr)); } }
@@ -1757,6 +1776,13 @@
             });
         }
 
+        // The AI Director's views: wide shot, the AI tracking framings, and the saved presets P1 to P6
+        var DIR_VIEWS = [
+            { id: 'wide', name: 'Wide', track: false, cmds: [{ type: 'tracking', on: false }, { type: 'zoomTo', ratio: 1 }, { type: 'home' }] },
+            { id: 'auto', name: 'Auto', track: true, cmds: [{ type: 'tracking', on: true }] },
+            { id: 'close', name: 'Close-up', track: true, framing: 'closeup', cmds: [{ type: 'tracking', on: true }, { type: 'framing', framing: 'closeup' }] },
+            { id: 'full', name: 'Full body', track: true, framing: 'fullbody', cmds: [{ type: 'tracking', on: true }, { type: 'framing', framing: 'fullbody' }] },
+        ].concat([1, 2, 3, 4, 5, 6].map(function(n) { return { id: 'p' + n, name: 'P' + n, p: n, track: false, cmds: [{ type: 'tracking', on: false }, { type: 'preset', op: 'recall', n: n }] }; }));
         function openControl(c, inline) {
             var demo = !!c.demo, panel;
             if (inline) { panel = inline; panel.classList.add('ctl', 'ctl-inline'); }
@@ -1775,11 +1801,14 @@
                 '<div class="ctl-head"><div><p class="cam-eyebrow">' + 'Control' + '</p><h3 class="ctl-title">' + esc(c.name) + '</h3></div><span class="ctl-relay" id="ctl-relay"></span></div>' +
                 '<div class="ctl-stage" id="ctl-stage"></div>' +
                 '<p class="ctl-msg hidden" id="ctl-msg"></p>' +
+                // AI Director: one tap puts a view on air (the camera moves to it); presets show a picture of what they frame
+                '<div class="ctl-dir"><p class="ctl-label">AI Director <button type="button" class="ctl-save" id="ctl-save">Save preset</button></p><div class="dir-grid">' +
+                    DIR_VIEWS.map(function(v) { return '<button type="button" class="dir-tile' + (v.p ? ' dir-p' : '') + '" data-view="' + v.id + '"><span class="dir-pic"></span><b>' + v.name + '</b><i>On air</i></button>'; }).join('') +
+                '</div></div>' +
                 '<div class="ctl-grid">' +
                     '<section><p class="ctl-label">Pan · tilt</p><div class="ctl-pad">' + dirs.map(function(d) { return d[0] === 'home' ? '<button type="button" class="home" data-home>HOME</button>' : '<button type="button" data-dir="' + d[0] + '" aria-label="' + d[0] + '">' + d[1] + '</button>'; }).join('') + '</div>' +
                         '<label class="ctl-speed">Speed<input type="range" id="ctl-speed" min="1" max="10" value="5"></label></section>' +
-                    '<section><p class="ctl-label">Zoom</p><div class="ctl-zoom"><button type="button" data-zoom="out">−</button><button type="button" data-zoom="in">+</button></div>' +
-                        '<p class="ctl-label">Presets <button type="button" class="ctl-save" id="ctl-save">Save</button></p><div class="ctl-presets">' + [1, 2, 3, 4, 5, 6].map(function(n) { return '<button type="button" data-preset="' + n + '">' + n + '</button>'; }).join('') + '</div></section>' +
+                    '<section><p class="ctl-label">Zoom</p><div class="ctl-zoom"><button type="button" data-zoom="out">−</button><button type="button" data-zoom="in">+</button></div></section>' +
                     '<section><p class="ctl-label">AI tracking</p>' + seg('tracking', [['on', 'On'], ['off', 'Off']]) +
                         seg('trackMode', [['single', 'One DJ'], ['multi', 'Group']]) +
                         '<p class="ctl-label">Framing</p>' + seg('framing', [['closeup', 'Close'], ['halfbody', 'Half'], ['knees', 'Knees'], ['fullbody', 'Full'], ['none', 'Off']]) +
@@ -1838,14 +1867,34 @@
                 ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function(ev) { b.addEventListener(ev, stopHold); });
             });
             panel.querySelector('[data-home]').addEventListener('click', function() { send({ type: 'home' }); });
-            var saving = false, saveBtn = body.querySelector('#ctl-save');
-            saveBtn.addEventListener('click', function() { saving = !saving; saveBtn.classList.toggle('on', saving); saveBtn.textContent = saving ? 'Pick a number' : 'Save'; });
-            panel.querySelectorAll('[data-preset]').forEach(function(b) {
+            // AI Director: a view's commands are sent in order (tracking first, so it doesn't pull the camera away)
+            var saving = false, saveBtn = body.querySelector('#ctl-save'), dirGrid = body.querySelector('.dir-grid');
+            function setSaving(on) { saving = on; saveBtn.classList.toggle('on', on); saveBtn.textContent = on ? 'Pick P1 to P6' : 'Save preset'; dirGrid.classList.toggle('saving', on); }
+            saveBtn.addEventListener('click', function() { setSaving(!saving); });
+            function markSeg(name, v) { var g = body.querySelector('[data-seg="' + name + '"]'); if (g) g.querySelectorAll('button').forEach(function(x) { x.classList.toggle('on', x.dataset.v === v); }); }
+            function shotOn(n, src) { var t = dirGrid.querySelector('[data-view="p' + n + '"]'); if (!t || !src) return; t.classList.add('has'); t.querySelector('.dir-pic').style.backgroundImage = 'url("' + src + '")'; }
+            dirGrid.querySelectorAll('.dir-tile').forEach(function(b) {
+                var v = DIR_VIEWS.filter(function(x) { return x.id === b.dataset.view; })[0];
                 b.addEventListener('click', function() {
-                    send({ type: 'preset', op: saving ? 'set' : 'recall', n: Number(b.dataset.preset) });
-                    if (saving) { saving = false; saveBtn.classList.remove('on'); saveBtn.textContent = 'Save'; b.classList.add('saved'); setTimeout(function() { b.classList.remove('saved'); }, 900); }
+                    if (saving && !v.p) return;
+                    if (saving) {
+                        setSaving(false);
+                        b.classList.add('flash'); setTimeout(function() { b.classList.remove('flash'); }, 900);
+                        if (demo) return;
+                        // Saved where the camera is now; its picture taken from the live stream a moment later
+                        send({ type: 'preset', op: 'set', n: v.p }).then(function() { return new Promise(function(r) { setTimeout(r, 1500); }); })
+                            .then(function() { return camApi({ action: 'presetShot', id: c.id, n: v.p }); })
+                            .then(function(d) { shotOn(v.p, d.shot); })
+                            .catch(function(e) { msg.classList.remove('hidden'); msg.textContent = e.message; });
+                        return;
+                    }
+                    dirGrid.querySelectorAll('.dir-tile').forEach(function(x) { x.classList.toggle('air', x === b); });
+                    v.cmds.reduce(function(p, cmd) { return p.then(function() { return send(cmd); }); }, Promise.resolve());
+                    if (v.track != null) markSeg('tracking', v.track ? 'on' : 'off');
+                    if (v.framing) markSeg('framing', v.framing);
                 });
             });
+            if (!demo) camApi({ action: 'presetShots', id: c.id }).then(function(d) { Object.keys(d.shots || {}).forEach(function(n) { shotOn(n, d.shots[n]); }); }).catch(function() {});
             var segCmd = {
                 tracking: function(v) { return { type: 'tracking', on: v === 'on' }; },
                 trackMode: function(v) { return { type: 'trackMode', mode: v }; },
