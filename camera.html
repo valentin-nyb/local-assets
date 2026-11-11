@@ -965,8 +965,12 @@
             _calSets = sets;
             document.getElementById('cal-sched').hidden = !ok || !rows.length;
             var note = document.getElementById('cal-note');
-            note.hidden = !(cal.connected && !cal.error && !rows.length);
-            note.textContent = 'No sets in the next two months. Add one event per set, titled with the DJ\'s name.';
+            // Google's public link with "See only free/busy" hides every title as "Busy"
+            var busy = sets.length && sets.every(function(e) { return e.artist === 'BUSY'; });
+            note.hidden = !(cal.connected && !cal.error && (!rows.length || busy));
+            note.textContent = busy
+                ? 'Every set shows as "Busy": the calendar shares only free/busy times, without the DJ names. In Google Calendar open Settings, choose the calendar, copy "Secret address in iCal format" and connect it here instead (or under Access permissions change "See only free/busy" to "See all event details").'
+                : 'No sets in the next two months. Add one event per set, titled with the DJ\'s name.';
             if (cal.error) document.getElementById('cal-error').textContent = cal.error;
         }
         function niceArtist(n) { n = String(n || ''); return n === n.toUpperCase() ? n.toLowerCase().replace(/(^|[\s\-\/(&.])([a-z])/g, function(m, a, b) { return a + b.toUpperCase(); }) : n; }
