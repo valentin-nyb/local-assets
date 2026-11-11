@@ -616,12 +616,13 @@
         var WM_TEXT_POS = [['tl', 'Top left'], ['tr', 'Top right'], ['bl', 'Bottom left'], ['br', 'Bottom right'], ['cc', 'Middle']];
         // Session names (Edit session in Distribution History), for the subtitle: "ARTIST|date" → title
         var _sessionTitles = {};
+        var _sessionMeta = {};   // "ARTIST|date" → { title, venue, label, date }, kept whole when a name is saved here
         // Session names: the watermark is first drawn once they're in (at most 1.5 s), so it isn't drawn twice on load
         var _titlesIn = false;
         function loadSessionTitles() {
             return laFetch('/api/session-meta').then(function(r) { return r.ok ? r.json() : null; }).then(function(d) {
                 var before = JSON.stringify(_sessionTitles);
-                _sessionTitles = {};
+                _sessionTitles = {}; _sessionMeta = (d && d.sessions) || {};
                 Object.keys((d && d.sessions) || {}).forEach(function(k) { if (d.sessions[k].title) _sessionTitles[k] = d.sessions[k].title; });
                 var late = _titlesIn; _titlesIn = true;
                 if (_wm && late && JSON.stringify(_sessionTitles) !== before) renderWatermark();
@@ -1169,6 +1170,7 @@
                     artist = pt;
                 }
                 artist = String(artist).toUpperCase().trim();
+                if (/\sFULL RECORDING$/.test(artist)) return;   // a camera's uncut recording, not a session
                 // Same session date as Distribution History
                 if (!date) { var ms = Number(a.created_at) * 1000; if (isNaN(ms)) return; date = new Date(ms).toISOString().slice(0, 10); }
                 if (seen[artist + '|' + date]) return;
@@ -1208,7 +1210,9 @@
             openCamDialog('Set as thumbnail',
                 '<form id="bk-thumb-form" class="cam-form">' +
                 (list.length
-                    ? '<label>Session<select name="session">' + opts + '</select><small>Added to this session\'s thumbnails in Distribution History.</small></label>'
+                    ? '<label>Session<select name="session">' + opts + '</select><small>Added to this session\'s thumbnails in Distribution History.</small></label>' +
+                      // The session's name, drawn under the artist's (as on its clips): given here when it has none yet
+                      (_wm && _wm.enabled && !_member ? '<label>Session name<input name="title" maxlength="80" placeholder="Friday late"><small>Shown under the artist name, as on the clips. Saved to the session.</small></label>' : '')
                     : '<p class="cam-dialog-text">This account has no sessions in Cloud Storage yet, so there is nothing to attach it to. You can download the thumbnails now, with your watermark, and set them on a session once a set has been recorded or uploaded.</p>') +
                 '<div class="bk-thumb-previews">' +
                     '<label class="bk-thumb-opt"><input type="checkbox" name="horizontal" checked><span class="bk-thumb-frame h"><canvas id="bk-thumb-h"></canvas></span><span class="bk-thumb-cap">Horizontal · 1920 × 1080<small>YouTube</small></span></label>' +
@@ -1223,6 +1227,9 @@
             var form = document.getElementById('bk-thumb-form'), err = document.getElementById('bk-thumb-error');
             var imgP = loadImage(f.url);
             // Small previews drawn with the same code as the full-size files
+            var sessKey = function() { var x = list[Number(form.session && form.session.value)]; return x ? x.artist + '|' + x.date : ''; };
+            var fillTitle = function() { if (form.title) form.title.value = _sessionTitles[sessKey()] || ''; };
+            fillTitle();
             var drawPreviews = function(img) {
                 var sess = list[Number(form.session && form.session.value)];
                 [['bk-thumb-h', THUMB_LAYOUT.horizontal], ['bk-thumb-v', THUMB_LAYOUT.vertical]].forEach(function(x) {
@@ -1239,7 +1246,13 @@
                 var landscape = img.naturalWidth >= img.naturalHeight;
                 form.horizontal.checked = landscape; form.vertical.checked = !landscape;
                 drawPreviews(img);
-                if (form.session) form.session.addEventListener('change', function() { drawPreviews(img); });
+                if (form.session) form.session.addEventListener('change', function() { fillTitle(); drawPreviews(img); });
+                // Typed name: the previews show it straight away (saved with the thumbnails)
+                if (form.title) form.title.addEventListener('input', function() {
+                    var k = sessKey(), v = form.title.value.trim();
+                    if (v) _sessionTitles[k] = v; else delete _sessionTitles[k];
+                    drawPreviews(img);
+                });
             }).catch(function() { err.textContent = 'This image could not be loaded.'; });
             form.addEventListener('submit', async function(e) {
                 e.preventDefault();
@@ -1263,6 +1276,13 @@
                 }
                 var btn = form.querySelector('[type=submit]'); btn.disabled = true; btn.textContent = 'Saving…'; err.textContent = '';
                 try {
+                    var key = sess.artist + '|' + sess.date, meta = _sessionMeta[key] || {}, newTitle = form.title ? form.title.value.trim() : (meta.title || '');
+                    if (form.title && newTitle !== (meta.title || '')) {
+                        var sm = await laFetch('/api/session-meta', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ artist: sess.artist, date: sess.date, title: newTitle, venue: meta.venue || '', label: meta.label || '', shownDate: meta.date || '' }) });
+                        if (!sm.ok) throw new Error((await sm.json().catch(function() { return {}; })).error || sm.status);
+                        _sessionMeta[key] = Object.assign({}, meta, { title: newTitle });
+                    }
                     var img = await imgP;
                     var tag = sess.artist + ' // THUMB // D:' + sess.date;
                     for (var k = 0; k < kinds.length; k++) {
@@ -1367,7 +1387,8 @@
                 buildSessions(assets);
                 var names = {};
                 // Artists from recordings; a camera's or slot's name is never an artist
-                var NOT_ARTIST = /^(cam(era)?\s*\d*|master|audio|decks(\s+audio)?|untitled\s+set|phone|webcam)$/i;
+                // Not artists: camera and slot names, a calendar shared as free/busy only, a camera's uncut recording
+                var NOT_ARTIST = /^(cam(era)?\s*\d*|master|audio|decks(\s+audio)?|untitled\s+set|phone|webcam|busy)$|\sFULL RECORDING$/i;
                 assets.forEach(function(a) { var n = artistFromAsset(a); if (n && !NOT_ARTIST.test(String(n).trim())) names['artist-' + slugify(n)] = n.toUpperCase(); });
                 _files.forEach(function(f) {
                     if (f.owner !== 'venue' && !names[f.owner]) names[f.owner] = f.owner.replace(/^(artist|venue|label)-/, '').replace(/-/g, ' ').toUpperCase();
