@@ -2,6 +2,7 @@ import './_report.js';   // errors go to Rollbar
 import { bput as put } from './_brandstore.js';
 import { muxUrlAuto, playbackPolicy } from './_signing.js';
 import { processCameraRecording } from './_camera-recording.js';
+import { thumbnailPrefix, encodeThumbPassthrough } from './_thumbnails.js';
 import { createClient } from 'redis';
 import { startVerticals, venueForAsset, startAudioOnly } from './_verticals.js';
 import crypto from 'crypto';
@@ -135,42 +136,25 @@ async function createSocialClips(auth, found, assetId, artistName, duration) {
 }
 
 // ── 3. THUMBNAIL GENERATION ──────────────────────────────────────────
-async function createThumbnails(auth, assetId, artistName, playbackId, duration) {
+// Frames from the recording, saved like uploaded thumbnails (api/_thumbnails.js: Vercel Blob, matched to the
+// session by "ARTIST // THUMB // D:<date> // NN"). Not Mux assets: Mux can't make a video of a single picture.
+async function createThumbnails(auth, slug, artistName, playbackId, duration, createdAt) {
     const count = Math.min(5, Math.max(3, Math.floor(duration / 60)));
     const interval = duration / (count + 1);
+    const date = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date((Number(createdAt) || Date.now() / 1000) * 1000));
 
     for (let i = 0; i < count; i++) {
         const time = Math.round(interval * (i + 1));
-        const tag = artistName + ' // THUMB // ' + String(i + 1).padStart(2, '0');
+        const tag = artistName + ' // THUMB // D:' + date + ' // ' + String(i + 1).padStart(2, '0');
         // Mux reads the frame itself to make the thumbnail: signed for a day when the video is signed
-        const imageUrl = await muxUrlAuto(auth, `https://image.mux.com/${playbackId}/thumbnail.png?width=1920&height=1080&fit_mode=smartcrop&time=${time}`, 86400);
+        const imageUrl = await muxUrlAuto(auth, `https://image.mux.com/${playbackId}/thumbnail.jpg?width=1920&height=1080&fit_mode=smartcrop&time=${time}`, 86400);
         console.log(`[Thumb] ${i + 1}/${count}: ${tag} @ ${time}s`);
-
         try {
             const imgRes = await fetch(imageUrl);
             if (!imgRes.ok) throw new Error(`Image fetch failed: ${imgRes.status}`);
-            const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
-
-            // Upload to Vercel Blob for a public URL Mux can ingest
-            const blob = await put(
-                `thumbnails/${artistName.replace(/[^A-Z0-9]/gi, '_')}_${i + 1}.png`,
-                imgBuffer,
-                { access: 'public', contentType: 'image/png' }
-            );
-
-            // Create Mux asset from the thumbnail
-            const muxRes = await fetch('https://api.mux.com/video/v1/assets', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: auth },
-                body: JSON.stringify({
-                    input: [{ url: blob.url }],
-                    playback_policy: playbackPolicy(), video_quality: 'basic',
-                    passthrough: tag,
-                    static_renditions: [{ resolution: 'highest' }]
-                })
-            });
-            const data = await muxRes.json();
-            console.log(`[Thumb] Created: ${data.data?.id || 'error'}`);
+            const blob = await put(`${thumbnailPrefix(slug)}${encodeThumbPassthrough(tag)}__${Date.now()}.jpg`, Buffer.from(await imgRes.arrayBuffer()),
+                { access: 'public', contentType: 'image/jpeg', addRandomSuffix: true });
+            console.log(`[Thumb] Saved: ${blob.pathname}`);
         } catch (e) {
             console.error(`[Thumb] ${i + 1} error:`, e.message);
         }
@@ -260,7 +244,7 @@ export default async function handler(req, res) {
             const results = await Promise.allSettled([
                 hasSound ? createAudioAsset(auth, assetId, artist) : Promise.resolve(null),
                 createSocialClips(auth, found, assetId, artist, duration),
-                createThumbnails(auth, assetId, artist, playbackId, duration),
+                createThumbnails(auth, found.slug, artist, playbackId, duration, data.created_at),
             ]);
 
             for (const r of results) {
