@@ -1021,8 +1021,11 @@
             });
             // Every clip cut from these recordings, and the watermarked copies of those clips, goes too
             var gone = {}; files.forEach(function(f) { gone[f.id] = true; });
+            // Never another session: a set cut from this recording under another artist's name (the calendar cuts
+            // each DJ's set out of a camera's uncut recording) is that artist's session, and stays with its files
+            var otherSession = function(a) { var n = parsePassthrough(a.passthrough, a.name, a.id).artist; n = String(n || '').toUpperCase().trim(); return !!n && n !== 'UNTITLED' && n !== up; };
             for (var pass = 0; pass < 3; pass++) all.forEach(function(a) {
-                if (gone[a.id]) return;
+                if (gone[a.id] || otherSession(a)) return;
                 if ((a.meta && gone[a.meta.external_id]) || gone[a.source_asset_id]) { gone[a.id] = true; files.push({ id: a.id }); }
             });
             // The camera's full recording the session was cut from, when it has no name of its own (it isn't a
