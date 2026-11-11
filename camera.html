@@ -1819,7 +1819,8 @@
                         '<p class="ctl-label">Only me</p>' + seg('onlyMe', [['on', 'On'], ['off', 'Off']]) + '</section>' +
                     '<section><p class="ctl-label">Picture</p>' + seg('orientation', [['h', 'Horizontal'], ['v', 'Vertical']]) +
                         '<p class="ctl-label">Focus</p>' + seg('focus', [['auto', 'Auto'], ['push', 'Refocus']]) +
-                        '<p class="ctl-label">Exposure</p>' + seg('exposure', [['down', '−'], ['reset', '0'], ['up', '+']]) + '</section>' +
+                        '<p class="ctl-label">Exposure</p>' + seg('exposure', [['down', '−'], ['reset', '0'], ['up', '+']]) +
+                        '<p class="ctl-label">Power</p>' + seg('power', [['on', 'Wake'], ['standby', 'Sleep']]) + '</section>' +
                 '</div>' +
                 (c.placeholder ? '' : '<p class="ctl-fine">' + (demo ? 'Example: nothing is sent. With a camera connected, each button moves or sets the real camera through the venue relay, from anywhere.' : 'Commands go to the camera through the venue relay. Keyboard: arrow keys to move, + and − to zoom.') + '</p>');
             var stage = body.querySelector('#ctl-stage');
@@ -1907,6 +1908,7 @@
                 orientation: function(v) { return { type: 'orientation', vertical: v === 'v' }; },
                 focus: function(v) { return { type: 'focus', mode: v }; },
                 exposure: function(v) { return { type: 'exposure', dir: v }; },
+                power: function(v) { return { type: 'power', on: v === 'on' }; },
             };
             panel.querySelectorAll('[data-seg]').forEach(function(g) {
                 g.querySelectorAll('button').forEach(function(b) {
@@ -2091,6 +2093,7 @@
                 '<label class="cam-obsbot-only">NDI source name<input name="ndiName" maxlength="80" placeholder="OBSBOT-TAIL2 (MAIN FLOOR)" value="' + esc(c && c.ndiName) + '"><small>As shown in the OBSBOT app or NDI Studio Monitor.</small></label>' +
                 '<label class="cam-obsbot-only">IP address<input name="ip" maxlength="70" placeholder="192.168.1.50" value="' + esc(c && c.ip) + '"><small>The camera\'s address on the venue network. Needed for Control.</small></label>' +
                 '<label class="cam-check"><input type="checkbox" name="followCalendar"' + (!c || c.followCalendar !== false ? ' checked' : '') + '><span>Start and stop with the calendar<small>Records each set, 2 minutes either side.</small></span></label>' +
+                '<label class="cam-check cam-obsbot-only"><input type="checkbox" name="sleepBetween"' + (c && c.sleepBetween ? ' checked' : '') + '><span>Sleep between sets<small>Wakes 30 minutes before each set in the calendar and goes to standby after. Needs the IP address, VISCA over IP and the venue relay; keep the camera on PoE.</small></span></label>' +
                 (c ? '' : '<div class="cam-obsbot-only cam-howto">' +
                     '<p class="cam-howto-t">How to connect an OBSBOT Tail 2</p>' +
                     '<ol>' +
@@ -2163,7 +2166,7 @@
                 var k = form.kind.value;
                 var macVid = form.macVideo ? form.macVideo.value : '', macAud = form.macAudio ? form.macAudio.value : '', mixer = form.macMixer ? form.macMixer.value : '';
                 if (k === 'mac' && !macVid) { document.getElementById('cam-form-error').textContent = 'Choose the camera plugged into this Mac.'; btn.disabled = false; btn.textContent = 'Add camera'; return; }
-                camApi({ action: c ? 'update' : 'add', id: c && c.id, kind: k === 'mac' ? 'other' : k, model: k === 'mac' ? 'This Mac' : form.model.value, name: form.name.value, ndiName: form.ndiName.value, ip: form.ip.value, followCalendar: form.followCalendar.checked })
+                camApi({ action: c ? 'update' : 'add', id: c && c.id, kind: k === 'mac' ? 'other' : k, model: k === 'mac' ? 'This Mac' : form.model.value, name: form.name.value, ndiName: form.ndiName.value, ip: form.ip.value, followCalendar: form.followCalendar.checked, sleepBetween: form.sleepBetween.checked })
                     .then(async function(d) {
                         // On this Mac, or the decks' mixer on this Mac: linked straight away, the app streams it
                         var linkKind = !c && k === 'mac' ? 'camera' : !c && k === 'audio' && mixer ? 'audio' : '';

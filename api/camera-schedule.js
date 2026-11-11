@@ -6,6 +6,8 @@ import { pendingKey } from './_camera-recording.js';
 import { sessionSources, startMulticam } from './multicam.js';
 import { listAllAssets } from './_verticals.js';
 import { inSession, openSession, closeSession, isManaged, managedKey } from './_cam-sessions.js';
+import { viscaFor, privateHost } from './_visca.js';
+import { cmdsKey, seenKey } from './camera-relay.js';
 
 // Cameras and the venue calendar (Vercel cron, every minute).
 // A camera's Mux live stream is open while Camera Control is open somewhere (so it shows live; Mux bills
@@ -16,6 +18,10 @@ import { inSession, openSession, closeSession, isManaged, managedKey } from './_
 const BEFORE_MS = 2 * 60e3;   // open 2 min before a set
 const AFTER_MS = 2 * 60e3;    // close 2 min after it ends
 const stateKey = streamId => `cam_sched:${streamId}`;
+// "Sleep between sets" (OBSBOT): woken 30 min before a set (time to start up and find focus), put to standby
+// when no set is on or due within 30 min, nobody watches in Camera Control and no session is running
+const WAKE_MS = 30 * 60e3;
+const powerKey = streamId => `cam_power:${streamId}`;
 
 async function mux(auth, path, method = 'GET') {
   const r = await fetch('https://api.mux.com' + path, { method, headers: { Authorization: auth }, signal: AbortSignal.timeout(10000) });
@@ -81,6 +87,25 @@ export default async function handler(req, res) {
           // From now on, what this camera streams outside sessions isn't kept
           await redis.set(managedKey(cam.streamId), '1');
         } catch (e) { console.error('[camera-schedule]', slug, cam.name, e.message); }
+        // Wake or sleep, sent through the venue relay once each time it changes (tried again next minute
+        // while the relay is offline)
+        const ip = String(cam.ip || '').split(':')[0];
+        if (cam.sleepBetween && (cam.kind || 'obsbot') === 'obsbot' && win && privateHost(ip)) {
+          try {
+            const due = win.open || (win.opensAt && win.opensAt - now <= WAKE_MS);
+            const want = due || manual || viewing ? 'on' : 'standby';
+            if (await redis.get(powerKey(cam.streamId)) !== want) {
+              const seen = JSON.parse(await redis.get(seenKey(slug)) || 'null');
+              if (seen && now - seen.at < 45000) {
+                await redis.rPush(cmdsKey(slug), JSON.stringify({ ip, bytes: viscaFor({ type: 'power', on: want === 'on' }), hold: false, at: now }));
+                await redis.lTrim(cmdsKey(slug), -50, -1);
+                await redis.expire(cmdsKey(slug), 60);
+                await redis.set(powerKey(cam.streamId), want, { EX: 7 * 86400 });
+                changes.push(`${slug}/${cam.name}: ${want === 'on' ? 'woken' : 'asleep'}`);
+              }
+            }
+          } catch (e) { console.error('[camera-schedule] power', slug, cam.name, e.message); }
+        }
       }
     }
     // Sets filmed by several cameras: once every camera's recording is saved (from 15 min after the set,

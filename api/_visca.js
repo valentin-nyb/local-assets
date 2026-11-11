@@ -58,6 +58,8 @@ export function viscaFor(cmd = {}) {
       const z = int(cmd.ratio * 1000, 1000, 12000, 1000);
       return [0x81, 0x01, 0x04, 0x47, ...nib(z, 4), 0xff];
     }
+    // Standard VISCA power: on wakes the camera from standby, off puts it to sleep (PoE keeps the network up)
+    case 'power': return [0x81, 0x01, 0x04, 0x00, cmd.on ? 0x02 : 0x03, 0xff];
     default: return null;
   }
 }

@@ -221,6 +221,7 @@ export default async function handler(req, res) {
             cam.reconnectSet = true;
           }
           if (typeof body.followCalendar === 'boolean') cam.followCalendar = body.followCalendar;
+          if (typeof body.sleepBetween === 'boolean') cam.sleepBetween = kind === 'obsbot' && body.sleepBetween;
           await redis.set(key(slug), JSON.stringify(cams));
           return res.status(200).json({ camera: cam });
         }
@@ -237,6 +238,7 @@ export default async function handler(req, res) {
           artist: clean(body.artist, 60),
           autoClips: true,
           followCalendar: body.followCalendar !== false,
+          sleepBetween: kind === 'obsbot' && body.sleepBetween === true,
           createdAt: Date.now(),
         };
         // Open straight away: live in Camera Control once connected; only sessions are kept (api/_cam-sessions.js)
@@ -366,6 +368,8 @@ export default async function handler(req, res) {
         await redis.rPush(cmdsKey(slug), JSON.stringify({ ip: host, bytes, hold: isContinuous(body.cmd), at: Date.now() }));
         await redis.lTrim(cmdsKey(slug), -50, -1);
         await redis.expire(cmdsKey(slug), 60);
+        // Woken or put to sleep by hand: the schedule knows, and changes it again only when it next should
+        if (body.cmd.type === 'power' && cam.streamId) await redis.set(`cam_power:${cam.streamId}`, body.cmd.on ? 'on' : 'standby', { EX: 7 * 86400 });
         return res.status(200).json({ ok: true });
       });
     }
