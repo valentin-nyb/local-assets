@@ -160,14 +160,16 @@ export function venueAuth(slug) {
 }
 
 // The venue whose Cloud Storage holds this asset (for webhook events, which don't say)
+// null when no venue holds it; { gone: true } when every venue answered "not found" (already deleted)
 export async function venueForAsset(assetId) {
+  let gone = true;
   for (const slug of Object.keys(getVenuesConfig())) {
     const auth = venueAuth(slug);
     if (!auth) continue;
-    const a = await muxReq(auth, `/video/v1/assets/${encodeURIComponent(assetId)}`).catch(() => null);
+    const a = await muxReq(auth, `/video/v1/assets/${encodeURIComponent(assetId)}`).catch(e => { if (e.status !== 404) gone = false; return null; });
     if (a) return { slug, auth, asset: a };
   }
-  return null;
+  return gone ? { gone: true } : null;
 }
 
 // Decks audio: has the recording's sound copied out as an audio-only recording (api/watermark-clips.js)

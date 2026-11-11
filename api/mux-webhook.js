@@ -214,7 +214,10 @@ export default async function handler(req, res) {
         const found = await venueForAsset(assetId);
         // Mux charges for encoding as soon as a video is ready, even if it's deleted later: note its minutes
         // for this month (Billing → What Mux charges), once per video
-        await noteEncoded(found ? found.slug : '', data).catch(e => console.error('[Webhook] encode ledger', e.message));
+        await noteEncoded(found?.slug || '', data).catch(e => console.error('[Webhook] encode ledger', e.message));
+        // Deleted before this message came (seconds streamed outside a session, or a part cut by Stop set):
+        // nothing to do, and not an error
+        if (found?.gone) { console.log('[Webhook] asset.ready for a recording already deleted', assetId); return res.status(200).send('Already deleted'); }
         if (!found) { console.error('[Webhook] No venue Cloud Storage holds', assetId); return res.status(200).send('Unknown asset'); }
         const auth = found.auth;
 
