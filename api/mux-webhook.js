@@ -1,7 +1,7 @@
 import './_report.js';   // errors go to Rollbar
 import { bput as put } from './_brandstore.js';
 import { muxUrlAuto, playbackPolicy } from './_signing.js';
-import { processCameraRecording } from './_camera-recording.js';
+import { processCameraRecording, fullWaitKey, fullOfKey } from './_camera-recording.js';
 import { thumbnailPrefix, encodeThumbPassthrough } from './_thumbnails.js';
 import { createClient } from 'redis';
 import { startVerticals, venueForAsset, startAudioOnly } from './_verticals.js';
@@ -161,6 +161,25 @@ async function createThumbnails(auth, slug, artistName, playbackId, duration, cr
     }
 }
 
+// A camera's uncut recording, kept only until every set cut from it is ready (api/_camera-recording.js).
+// A cut that fails keeps it (failed = true): nothing is lost.
+async function dropUncut(auth, clipId, failed) {
+  if (!(process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL)) return;
+  const r = createClient({ url: (process.env.UPSTASH_REDIS_URL || process.env.REDIS_URL) }); await r.connect();
+  try {
+    const full = await r.get(fullOfKey(clipId));
+    if (!full) return;
+    await r.del(fullOfKey(clipId));
+    if (failed) { await r.del(fullWaitKey(full)); console.log('[Webhook] a cut set failed: uncut recording kept', full); return; }
+    if (!(await r.exists(fullWaitKey(full)))) return;   // a cut failed earlier
+    await r.sRem(fullWaitKey(full), clipId);
+    if (await r.sCard(fullWaitKey(full)) > 0) return;
+    await r.del(fullWaitKey(full));
+    const d = await fetch(`https://api.mux.com/video/v1/assets/${encodeURIComponent(full)}`, { method: 'DELETE', headers: { Authorization: auth }, signal: AbortSignal.timeout(10000) });
+    console.log('[Webhook] every set is ready: uncut recording removed', full, d.status);
+  } finally { await r.quit().catch(() => {}); }
+}
+
 // ── WEBHOOK HANDLER ──────────────────────────────────────────────────
 // Minutes Mux encoded this month, by account and kind (vod|live : quality : resolution); Redis hash mux_ledger:<YYYY-MM>
 async function noteEncoded(slug, a) {
@@ -204,6 +223,9 @@ export default async function handler(req, res) {
         if (found?.gone) { console.log('[Webhook] asset.ready for a recording already deleted', assetId); return res.status(200).send('Already deleted'); }
         if (!found) { console.error('[Webhook] No venue Cloud Storage holds', assetId); return res.status(200).send('Unknown asset'); }
         const auth = found.auth;
+
+        // A set cut from a camera's uncut recording: when the last one is ready, the uncut recording goes
+        await dropUncut(auth, assetId, false).catch(e => console.error('[Webhook] uncut recording', e.message));
 
         console.log(`[Webhook] asset.ready — id:${assetId} pt:"${passthrough}" dur:${duration}s`);
 
@@ -253,6 +275,9 @@ export default async function handler(req, res) {
             console.log(`[Pipeline] Done for "${artist}"`);
         }
     }
+
+    // A set cut from a camera recording failed: its uncut recording is kept
+    if (type === 'video.asset.errored' && !data?.live_stream_id && data?.id) await dropUncut(null, data.id, true).catch(e => console.error('[Webhook] uncut recording', e.message));
 
     // ── BROKEN CAMERA RECORDINGS ARE NEVER KEPT ──
     // A camera or decks stream that connects and drops (a device cutting out, a reconnect) leaves a recording

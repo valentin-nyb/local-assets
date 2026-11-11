@@ -35,7 +35,9 @@ const minute = ms => new Date(ms).toISOString().slice(0, 16) + 'Z';
 const tag = (artist, date, set, camera = 'MASTER', multi = false, at = null) => JSON.stringify({
   ...(set ? { artist, date, camera, start: minute(set.from), end: minute(set.to), ...(multi ? { multi: true } : {}) } : { artist, date, camera }),
   ...(at ? { at: Math.round(at) } : {}) });
-export const pendingKey = slug => `mc_pending:${slug}`;   // hash "ARTIST|DATE" → { end }: sets waiting for every camera's recording
+export const fullWaitKey = id => `cam_full_wait:${id}`;   // set: the cut sets an uncut recording waits for
+export const fullOfKey = id => `cam_full_of:${id}`;       // a cut set → the uncut recording it came from
+export const pendingKey = slug =>`mc_pending:${slug}`;   // hash "ARTIST|DATE" → { end }: sets waiting for every camera's recording
 
 // Splits the recording at each artist change. Times are seconds from the start of the recording.
 export function buildSets(defaultArtist, markers, startMs, duration) {
@@ -152,6 +154,13 @@ export async function processCameraRecording(event) {
         sessions.push({ assetId: clip.id, artist: s.artist });
       }
       await muxReq(auth, `/video/v1/assets/${assetId}`, { method: 'PATCH', body: JSON.stringify({ passthrough: tag(camName + ' FULL RECORDING', date, null, isAudio ? 'AUDIO' : 'MASTER') }) });
+      // The uncut recording isn't a session of its own: once every set cut from it is ready, it is deleted
+      // (api/mux-webhook.js); kept if a cut fails
+      if (sessions.length) {
+        await redis.sAdd(fullWaitKey(assetId), sessions.map(s => s.assetId));
+        await redis.expire(fullWaitKey(assetId), 7 * 86400);
+        for (const s of sessions) await redis.set(fullOfKey(s.assetId), assetId, { EX: 7 * 86400 });
+      }
     }
     console.log(`[camera-rec] ${slug} ${camName}${calSets.length ? ' (calendar)' : ''}: ${sessions.map(s => s.artist).join(', ')}`);
 
